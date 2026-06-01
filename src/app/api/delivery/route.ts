@@ -1,28 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import type { Order, OrderItem, Address } from '@/types';
 
-// Store origin — , Blumenau SC
 const ORIGIN = { lat: 0, lng: 0, cep: '' };
 const LOCAL_RADIUS_KM = 10;
 
-interface ViaCEPResponse {
-  logradouro: string;
-  bairro: string;
-  localidade: string;
-  uf: string;
-  erro?: boolean;
-}
-
-interface CEPCoords {
-  lat: number;
-  lng: number;
-  city: string;
-  state: string;
-  street: string;
-}
-
-// Haversine distance in km
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -35,95 +18,89 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-async function getCEPCoords(cep: string): Promise<CEPCoords | null> {
-  try {
-    const viaCep = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-    const data: ViaCEPResponse = await viaCep.json();
-    if (data.erro) return null;
+async function geocodeCEP(cep: string): Promise<{ lat: number; lng: number } | null> {
+  const clean = cep.replace(/\D/g, '');
+  const viaCep = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+  const data = await viaCep.json();
+  if (data.erro) return null;
 
-    // Geocode via Nominatim (free, no key)
-    const query = encodeURIComponent(`${data.logradouro}, ${data.localidade}, ${data.uf}, Brazil`);
-    const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`, {
-      headers: { 'User-Agent': 'MikmaLencois/1.0' },
-    });
-    const geoData = await geo.json();
-
-    if (!geoData.length) return null;
-
-    return {
-      lat: parseFloat(geoData[0].lat),
-      lng: parseFloat(geoData[0].lon),
-      city: data.localidade,
-      state: data.uf,
-      street: data.logradouro,
-    };
-  } catch {
-    return null;
-  }
+  const query = encodeURIComponent(
+    `${data.logradouro}, ${data.localidade}, ${data.uf}, Brasil`
+  );
+  const geo = await fetch(
+    `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`,
+    { headers: { 'User-Agent': 'MikmaLencois/1.0 ' } }
+  );
+  const [hit] = await geo.json();
+  if (!hit) return null;
+  return { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) };
 }
 
-async function dispatchUberDirect(orderId: string, order: FirebaseFirestore.DocumentData, destAddress: string) {
-  const UBER_KEY = process.env.UBER_DIRECT_API_KEY!;
-  const UBER_CUSTOMER_ID = process.env.UBER_DIRECT_CUSTOMER_ID!;
+async function getBuyerName(userId: string): Promise<string> {
+  const snap = await adminDb.collection('users').doc(userId).get();
+  return snap.data()?.name ?? 'Cliente';
+}
 
-  const items = (order.items as Array<{ name: string; quantity: number }>)
-    .map((i) => `${i.quantity}x ${i.name}`)
-    .join(', ');
+async function dispatchUberDirect(
+  orderId: string,
+  address: Address,
+  buyerName: string,
+  items: OrderItem[]
+): Promise<{ id: string; trackingUrl?: string }> {
+  const manifest = items.map((i) => `${i.quantity}x ${i.productName}`).join(', ');
+  const destAddress = `${address.street}, ${address.number}, ${address.city}, ${address.state}, ${address.cep}`;
 
   const res = await fetch(
-    `https://api.uber.com/v1/customers/${UBER_CUSTOMER_ID}/deliveries`,
+    `https://api.uber.com/v1/customers/${process.env.UBER_DIRECT_CUSTOMER_ID}/deliveries`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${UBER_KEY}`,
+        Authorization: `Bearer ${process.env.UBER_DIRECT_API_KEY}`,
       },
       body: JSON.stringify({
         pickup: {
           name: 'Mikma Lençóis',
-          address: ' ',
+          address: ', Garcia, Blumenau, SC, ',
           phone: process.env.STORE_PHONE,
         },
-        dropoff: {
-          name: order.buyerName,
-          address: destAddress,
-          phone: order.buyerPhone,
-        },
-        manifest: { reference: orderId, description: items },
+        dropoff: { name: buyerName, address: destAddress },
+        manifest: { reference: orderId, description: manifest },
       }),
     }
   );
 
-  if (!res.ok) throw new Error(`Uber Direct error: ${await res.text()}`);
-  return await res.json();
+  if (!res.ok) throw new Error(`Uber Direct: ${await res.text()}`);
+  return res.json();
 }
 
-async function createMelhorEnvioShipment(orderId: string, destCep: string, order: FirebaseFirestore.DocumentData) {
-  const ME_TOKEN = process.env.MELHOR_ENVIO_TOKEN!;
-
-  const totalWeight = (order.items as Array<{ weight: number; quantity: number }>).reduce(
-    (acc, i) => acc + i.weight * i.quantity,
-    0
-  );
+async function addToMelhorEnvioCart(
+  orderId: string,
+  destCep: string,
+  items: OrderItem[]
+): Promise<{ id: string }[]> {
+  const totalWeightKg = items.reduce((acc, i) => acc + 0.8 * i.quantity, 0); // default 800g per unit
 
   const res = await fetch('https://melhorenvio.com.br/api/v2/me/cart', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${ME_TOKEN}`,
+      Authorization: `Bearer ${process.env.MELHOR_ENVIO_TOKEN}`,
       'User-Agent': 'MikmaLencois/1.0 ',
     },
     body: JSON.stringify({
       from: { postal_code: ORIGIN.cep },
-      to: { postal_code: destCep },
-      products: [{ weight: totalWeight, width: 30, height: 20, length: 40, quantity: 1 }],
-      services: '1,2', // PAC + SEDEX
-      options: { receipt: false, own_hand: false },
+      to: { postal_code: destCep.replace(/\D/g, '') },
+      products: [
+        { weight: totalWeightKg, width: 40, height: 20, length: 50, quantity: 1 },
+      ],
+      services: '1,2',
+      options: { receipt: false, own_hand: false, tags: [{ tag: orderId, url: null }] },
     }),
   });
 
-  if (!res.ok) throw new Error(`Melhor Envio error: ${await res.text()}`);
-  return await res.json();
+  if (!res.ok) throw new Error(`Melhor Envio: ${await res.text()}`);
+  return res.json();
 }
 
 export async function POST(req: NextRequest) {
@@ -133,57 +110,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    const decoded = await adminAuth.verifyIdToken(token);
-
-    // Only seller/admin can dispatch
+    const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1]);
     const claims = decoded as { role?: string };
+
     if (!['seller', 'admin'].includes(claims.role ?? '')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { orderId } = await req.json();
+    if (!orderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 });
+
     const orderRef = adminDb.collection('orders').doc(orderId);
     const orderSnap = await orderRef.get();
+    if (!orderSnap.exists) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 
-    if (!orderSnap.exists) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-    }
+    const order = orderSnap.data() as Order;
 
-    const order = orderSnap.data()!;
     if (order.status !== 'paid' && order.status !== 'preparing') {
       return NextResponse.json({ error: 'Order not ready for dispatch' }, { status: 409 });
     }
 
-    const destCep = (order.address.cep as string).replace(/\D/g, '');
-    const coords = await getCEPCoords(destCep);
-    const distKm = coords ? haversine(ORIGIN.lat, ORIGIN.lng, coords.lat, coords.lng) : 999;
+    const coords = await geocodeCEP(order.address.cep);
+    const distKm = coords
+      ? haversine(ORIGIN.lat, ORIGIN.lng, coords.lat, coords.lng)
+      : 9999;
 
-    let carrier = '';
-    let trackingCode = '';
+    let carrier: string;
+    let trackingCode: string;
     let deliveryData: Record<string, unknown> = {};
 
     if (distKm <= LOCAL_RADIUS_KM) {
-      // Try Uber Direct first
       try {
-        const destAddress = `${order.address.street}, ${order.address.number}, ${order.address.city}, ${order.address.state}`;
-        const uberResult = await dispatchUberDirect(orderId, order, destAddress);
+        const buyerName = await getBuyerName(order.userId);
+        const uber = await dispatchUberDirect(orderId, order.address, buyerName, order.items);
         carrier = 'uber_direct';
-        trackingCode = uberResult.id;
-        deliveryData = { uberDeliveryId: uberResult.id, trackingUrl: uberResult.tracking_url };
+        trackingCode = uber.id;
+        deliveryData = { uberDeliveryId: uber.id, trackingUrl: uber.trackingUrl ?? null };
       } catch (uberErr) {
-        console.warn('Uber Direct failed, falling back to Disk & Tenha:', uberErr);
+        console.warn('Uber Direct indisponível, usando Disk & Tenha:', uberErr);
         carrier = 'disk_tenha';
         trackingCode = `DISK-${orderId.slice(-8).toUpperCase()}`;
-        // Disk & Tenha: trigger email notification (no public API)
-        deliveryData = { note: 'Notificação enviada para Disk & Tenha via e-mail' };
+        deliveryData = { fallback: true };
       }
     } else {
-      // National shipping via Melhor Envio
-      const meOptions = await createMelhorEnvioShipment(orderId, destCep, order);
+      const meCart = await addToMelhorEnvioCart(orderId, order.address.cep, order.items);
       carrier = 'melhor_envio';
-      trackingCode = meOptions[0]?.id ?? `ME-${orderId.slice(-8)}`;
-      deliveryData = { melhorEnvioCartId: meOptions[0]?.id, options: meOptions };
+      trackingCode = meCart[0]?.id ?? '';
+      deliveryData = { melhorEnvioCartId: meCart[0]?.id };
     }
 
     await orderRef.update({
@@ -196,7 +169,7 @@ export async function POST(req: NextRequest) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    return NextResponse.json({ carrier, trackingCode, distKm: Math.round(distKm), deliveryData });
+    return NextResponse.json({ carrier, trackingCode, distKm: Math.round(distKm) });
   } catch (err) {
     console.error('delivery dispatch error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
