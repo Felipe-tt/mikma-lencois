@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isSeller() {
+      return isAuth() && (request.auth.token.role == 'seller' || request.auth.token.role == 'admin');
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*')
+        && request.resource.size < 5 * 1024 * 1024; // 5 MB max
+    }
+
+    // Product images — public read, seller write
+    match /products/{productId}/{imageFile} {
+      allow read: if true;
+      allow write: if isSeller() && isValidImage();
+      allow delete: if isSeller();
+    }
+
+    // User avatars
+    match /users/{userId}/avatar {
+      allow read: if true;
+      allow write: if isAuth() && request.auth.uid == userId && isValidImage();
+    }
+
+    // Order documents (etiquetas, NFe)
+    match /orders/{orderId}/{docFile} {
+      allow read: if isAuth();
+      allow write: if isSeller();
+    }
+  }
+}
