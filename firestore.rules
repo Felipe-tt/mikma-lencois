@@ -1,0 +1,95 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── helpers ────────────────────────────────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function isSeller() {
+      return isAuth() && (role() == 'seller' || role() == 'admin');
+    }
+
+    function isAdmin() {
+      return isAuth() && role() == 'admin';
+    }
+
+    // ─── users ───────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuth() && (uid() == userId || isAdmin());
+      allow create: if isAuth() && uid() == userId;
+      allow update: if isAuth() && uid() == userId
+        && !('role' in request.resource.data)       // role changes via Admin SDK only
+        && !('passwordHash' in request.resource.data); // hash via Cloud Function only
+      allow delete: if isAdmin();
+    }
+
+    // ─── products ────────────────────────────────────────────────────────────
+    match /products/{productId} {
+      allow read: if true; // public catalog
+      allow create, update, delete: if isSeller();
+    }
+
+    // ─── inventory ───────────────────────────────────────────────────────────
+    match /inventory/{sku} {
+      allow read: if true;
+      allow write: if isSeller();
+    }
+
+    // ─── orders ──────────────────────────────────────────────────────────────
+    match /orders/{orderId} {
+      // buyer sees own orders; seller/admin see all
+      allow read: if isAuth() && (resource.data.userId == uid() || isSeller());
+      // create via Cloud Function only (server-side)
+      allow create: if false;
+      // buyer cannot update; seller can update status/delivery fields
+      allow update: if isSeller();
+      allow delete: if isAdmin();
+    }
+
+    // ─── carts ───────────────────────────────────────────────────────────────
+    match /carts/{userId} {
+      allow read, write: if isAuth() && uid() == userId;
+    }
+
+    // ─── coupons ─────────────────────────────────────────────────────────────
+    match /coupons/{code} {
+      allow read: if isAuth(); // validate coupon at checkout
+      allow write: if isSeller();
+    }
+
+    // ─── notifications ───────────────────────────────────────────────────────
+    match /notifications/{userId}/items/{notifId} {
+      allow read, update: if isAuth() && uid() == userId;
+      allow create, delete: if false; // Cloud Function only
+    }
+
+    // seller notifications (special "seller" doc)
+    match /notifications/seller/items/{notifId} {
+      allow read, update: if isSeller();
+      allow create, delete: if false;
+    }
+
+    // ─── stock alerts ────────────────────────────────────────────────────────
+    match /stockAlerts/{sku} {
+      allow read, write: if isSeller();
+    }
+
+    // ─── settings ────────────────────────────────────────────────────────────
+    match /settings/{docId} {
+      allow read: if true; // store config is public (shipping thresholds etc.)
+      allow write: if isSeller();
+    }
+
+  }
+}
