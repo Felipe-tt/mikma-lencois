@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import type { Order, OrderItem, Address } from '@/types';
 
 const ORIGIN = { lat: 0, lng: 0, cep: '' };
-const LOCAL_RADIUS_KM = 10;
+// read from Firestore settings/store.localDeliveryRadiusKm
 
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -131,6 +131,8 @@ export async function POST(req: NextRequest) {
     }
 
     const coords = await geocodeCEP(order.address.cep);
+    const settingsSnap = await adminDb.collection("settings").doc("store").get();
+    const LOCAL_RADIUS_KM = settingsSnap.data()?.localDeliveryRadiusKm ?? 10;
     const distKm = coords
       ? haversine(ORIGIN.lat, ORIGIN.lng, coords.lat, coords.lng)
       : 9999;
