@@ -1,10 +1,8 @@
 import { MetadataRoute } from 'next';
-import { adminDb } from '@/lib/firebase/admin';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = 'https://mikmalencois.com.br';
 
-  // Páginas estáticas
   const staticPages: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     { url: `${base}/produtos`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
@@ -13,8 +11,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/termos`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
   ];
 
-  // Páginas de produtos dinâmicos
+  // Só tenta buscar produtos se as credenciais estiverem disponíveis
+  const hasCredentials =
+    process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_CLIENT_EMAIL &&
+    process.env.FIREBASE_PRIVATE_KEY;
+
+  if (!hasCredentials) return staticPages;
+
   try {
+    const { adminDb } = await import('@/lib/firebase/admin');
     const snap = await adminDb
       .collection('products')
       .where('active', '==', true)

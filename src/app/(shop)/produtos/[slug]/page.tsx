@@ -6,6 +6,8 @@ import { formatCurrency } from '@/lib/utils/format';
 import { VariantSelector } from '@/components/product/VariantSelector';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 interface Props {
   params: { slug: string };
 }
