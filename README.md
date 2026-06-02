@@ -1,6 +1,6 @@
 # Mikma Lençóis — Marketplace
 
-Marketplace de lençóis e cama mesa banho com entrega local em Blumenau (SC) e nacional.
+Marketplace de lençóis entrega local e nacional.
 
 ## Stack
 
