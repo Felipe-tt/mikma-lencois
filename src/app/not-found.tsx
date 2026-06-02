@@ -2,18 +2,11 @@ import Link from 'next/link';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center px-4">
-        <p className="text-6xl font-bold text-indigo-600 mb-4">404</p>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Página não encontrada</h1>
-        <p className="text-gray-500 mb-8">O endereço que você acessou não existe ou foi removido.</p>
-        <Link
-          href="/"
-          className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-indigo-700 transition-colors"
-        >
-          Voltar para a loja
-        </Link>
-      </div>
+    <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--white)', flexDirection: 'column', gap: 16, textAlign: 'center', padding: 24 }}>
+      <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 80, fontWeight: 300, color: 'var(--cream-d)', lineHeight: 1 }}>404</p>
+      <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 28, fontWeight: 300, color: 'var(--ink)' }}>Página não encontrada</h1>
+      <p style={{ fontSize: 14, color: 'var(--ink-l)', maxWidth: 320 }}>A página que você procura não existe ou foi movida.</p>
+      <Link href="/" className="btn-primary" style={{ marginTop: 12 }}>Voltar ao início</Link>
     </div>
   );
 }
