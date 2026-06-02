@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 
@@ -19,11 +19,18 @@ export const metadata: Metadata = {
   },
 };
 
-const inter = Inter({ 
-  subsets: ['latin'], 
-  display: 'swap', 
-  preload: false,
-  fallback: ['system-ui', '-apple-system', 'sans-serif']
+// Usa Inter localmente via @fontsource-variable/inter — sem chamada de rede no build
+const inter = localFont({
+  src: [
+    {
+      path: '../../node_modules/@fontsource-variable/inter/files/inter-latin-standard-normal.woff2',
+      weight: '100 900',
+      style: 'normal',
+    },
+  ],
+  display: 'swap',
+  variable: '--font-inter',
+  fallback: ['system-ui', '-apple-system', 'sans-serif'],
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
     "@hookform/resolvers": "^3.6.0",
     "@node-rs/argon2": "^1.7.2",
     "@tanstack/react-query": "^5.40.0",

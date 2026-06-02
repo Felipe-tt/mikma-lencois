@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { adminDb } from '@/lib/firebase/admin';
