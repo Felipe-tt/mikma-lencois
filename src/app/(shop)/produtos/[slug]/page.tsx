@@ -33,85 +33,87 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductPage({ params }: Props) {
-  const [product, inventory] = await Promise.all([getProduct(params.slug), getInventory(params.slug)]);
+  const [product, inventory] = await Promise.all([
+    getProduct(params.slug),
+    getInventory(params.slug),
+  ]);
   if (!product) notFound();
 
   return (
-    <div style={{ background: 'var(--white)' }}>
+    <div className="bg-paper">
       {/* Breadcrumb */}
-      <div style={{ borderBottom: '1px solid var(--cream-d)', padding: '12px 0' }}>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <nav style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--ink-l)' }}>
-            <Link href="/" style={{ color: 'var(--ink-l)', textDecoration: 'none' }}>Início</Link>
-            <span>/</span>
-            <Link href="/produtos" style={{ color: 'var(--ink-l)', textDecoration: 'none' }}>Produtos</Link>
-            <span>/</span>
-            <span style={{ color: 'var(--ink)' }}>{product.name}</span>
-          </nav>
-        </div>
+      <div className="border-b border-cream-dark py-3">
+        <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex gap-2 text-[12px] text-ink-light">
+          <Link href="/" className="text-ink-light no-underline hover:text-ink transition-colors">Início</Link>
+          <span>/</span>
+          <Link href="/produtos" className="text-ink-light no-underline hover:text-ink transition-colors">Produtos</Link>
+          <span>/</span>
+          <span className="text-ink">{product.name}</span>
+        </nav>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 48, paddingBottom: 80 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'start' }}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
 
-          {/* Images */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {product.images.length > 0 ? (
-              <>
-                <div style={{ position: 'relative', aspectRatio: '4/5', overflow: 'hidden', background: 'var(--mist)' }}>
-                  <Image src={product.images[0]} alt={product.name} fill priority sizes="50vw" style={{ objectFit: 'cover' }} />
+          {/* Galeria */}
+          <div className="flex flex-col gap-2">
+            <div className="relative aspect-[4/5] overflow-hidden bg-mist">
+              {product.images[0] ? (
+                <Image src={product.images[0]} alt={product.name} fill priority sizes="(max-width:1024px)100vw,50vw" className="object-cover" />
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <span className="font-display text-[13px] text-ink-light">Sem imagem</span>
                 </div>
-                {product.images.length > 1 && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                    {product.images.slice(1).map((img, i) => (
-                      <div key={i} style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden', background: 'var(--mist)' }}>
-                        <Image src={img} alt={`${product.name} ${i + 2}`} fill sizes="12vw" style={{ objectFit: 'cover' }} />
-                      </div>
-                    ))}
+              )}
+            </div>
+            {product.images.length > 1 && (
+              <div className="grid grid-cols-4 gap-2">
+                {product.images.slice(1).map((img, i) => (
+                  <div key={i} className="relative aspect-square overflow-hidden bg-mist">
+                    <Image src={img} alt={`${product.name} ${i + 2}`} fill sizes="15vw" className="object-cover hover:scale-105 transition-transform duration-300" />
                   </div>
-                )}
-              </>
-            ) : (
-              <div style={{ aspectRatio: '4/5', background: 'var(--mist)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 13, color: 'var(--ink-l)' }}>Sem imagem</span>
+                ))}
               </div>
             )}
           </div>
 
           {/* Info */}
-          <div style={{ position: 'sticky', top: 100 }}>
-            {product.category && (
-              <p className="section-label" style={{ marginBottom: 12 }}>{product.category}</p>
-            )}
-            <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 36, fontWeight: 300, color: 'var(--ink)', lineHeight: 1.2, marginBottom: 16 }}>
+          <div className="lg:sticky lg:top-24 flex flex-col gap-0">
+            {product.category && <p className="section-label mb-3">{product.category}</p>}
+
+            <h1 className="font-display font-light text-[clamp(28px,4vw,40px)] text-ink leading-tight mb-4">
               {product.name}
             </h1>
-            <p style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 28, color: 'var(--ink)', fontWeight: 400, marginBottom: 20 }}>
+
+            <p className="font-display text-[28px] text-ink mb-5">
               {formatCurrency(product.price)}
             </p>
 
-            {product.tags.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 24 }}>
-                {product.tags.map(tag => <span key={tag} className="tag">{tag}</span>)}
+            {product.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-6">
+                {product.tags.map(t => <span key={t} className="tag">{t}</span>)}
               </div>
             )}
 
-            <p style={{ fontSize: 14, color: 'var(--ink-l)', lineHeight: 1.8, marginBottom: 32 }}>
+            <p className="text-[14px] text-ink-light leading-relaxed mb-8">
               {product.description}
             </p>
 
-            <div style={{ borderTop: '1px solid var(--cream-d)', paddingTop: 28 }}>
+            <div className="border-t border-cream-dark pt-7">
               <VariantSelector product={product} inventory={inventory} />
             </div>
 
-            {/* Delivery info */}
-            <div style={{ marginTop: 28, padding: '16px 20px', background: 'var(--cream)', border: '1px solid var(--cream-d)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Entrega */}
+            <div className="mt-7 bg-cream border border-cream-dark p-5 flex flex-col gap-2.5">
               {[
-                '◎ Entrega local em Blumenau em até 1h',
-                '◎ Frete para todo o Brasil via PAC/SEDEX',
-                '◎ Pagamento via PIX com confirmação imediata',
-              ].map(t => (
-                <p key={t} style={{ fontSize: 12, color: 'var(--ink-m)', letterSpacing: '0.02em' }}>{t}</p>
+                { icon: '→', text: 'Entrega local em Blumenau em até 1h' },
+                { icon: '→', text: 'Frete para todo o Brasil via PAC/SEDEX' },
+                { icon: '→', text: 'Pagamento PIX com confirmação imediata' },
+              ].map(({ icon, text }) => (
+                <p key={text} className="text-[12px] text-ink-mid flex gap-2 items-start">
+                  <span className="text-warm-dark mt-px shrink-0">{icon}</span>
+                  {text}
+                </p>
               ))}
             </div>
           </div>
