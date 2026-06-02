@@ -1,33 +1,34 @@
-# dependencies
+# Dependências
 /node_modules
 /.pnp
 .pnp.js
 
-# next.js
+# Next.js build
 /.next/
 /out/
-
-# production
 /build
 
-# misc
+# Variáveis de ambiente (NUNCA commitar)
+.env
+.env.local
+.env*.local
+
+# Misc
 .DS_Store
 *.pem
+Thumbs.db
 
-# debug
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env
-.env*.local
-.env
-
-# vercel
+# Vercel
 .vercel
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
-.github/
-.github/
+
+# Firebase service account (se baixar localmente)
+*-firebase-adminsdk-*.json

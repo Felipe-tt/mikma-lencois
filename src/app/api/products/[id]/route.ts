@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebase/admin'
+import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 async function getSeller(req: NextRequest) {
@@ -24,9 +25,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const body = await req.json()
   const allowed = z.object({
-    name: z.string().optional(),
-    description: z.string().optional(),
-    priceCents: z.number().int().positive().optional(),
+    name: z.string().min(2).optional(),
+    description: z.string().min(10).optional(),
+    price: z.number().int().positive().optional(), // centavos
     images: z.array(z.string()).optional(),
     category: z.string().optional(),
     tags: z.array(z.string()).optional(),
@@ -35,14 +36,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (!allowed.success) return NextResponse.json({ error: allowed.error.flatten() }, { status: 400 })
 
-  await adminDb.collection('products').doc(params.id).update({ ...allowed.data, updatedAt: new Date() })
+  await adminDb.collection('products').doc(params.id).update({
+    ...allowed.data,
+    updatedAt: FieldValue.serverTimestamp(),
+  })
   return NextResponse.json({ ok: true })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const seller = await getSeller(req)
   if (!seller) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  // Soft delete
-  await adminDb.collection('products').doc(params.id).update({ active: false, updatedAt: new Date() })
+  // Soft delete — mantém histórico
+  await adminDb.collection('products').doc(params.id).update({
+    active: false,
+    updatedAt: FieldValue.serverTimestamp(),
+  })
   return NextResponse.json({ ok: true })
 }
