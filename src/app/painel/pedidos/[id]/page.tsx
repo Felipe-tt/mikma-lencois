@@ -24,7 +24,8 @@ const STATUS_NEXT: Partial<Record<Order['status'], Order['status']>> = {
 
 export default function PainelPedidoDetalhe() {
   const { id } = useParams<{ id: string }>()
-  const { user, role } = useAuth()
+  const { user } = useAuth()
+  const role = user?.role
   const router = useRouter()
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
