@@ -29,56 +29,56 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
-        <div style={{ marginBottom: 40, textAlign: 'center' }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <span style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 24, color: 'var(--ink)' }}>Mikma</span>
-            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--warm-d)', letterSpacing: '0.18em', textTransform: 'uppercase', marginLeft: 6 }}>Lençóis</span>
+    <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-[400px]">
+        <div className="text-center mb-10">
+          <Link href="/" className="no-underline inline-flex items-baseline gap-1.5">
+            <span className="font-display text-[24px] text-ink">Mikma</span>
+            <span className="text-[10px] font-semibold text-warm-dark tracking-[0.2em] uppercase">Lençóis</span>
           </Link>
-          <p style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 26, fontWeight: 300, color: 'var(--ink)', marginTop: 24, marginBottom: 4 }}>Criar conta</p>
-          <p style={{ fontSize: 13, color: 'var(--ink-l)' }}>Cadastre-se para comprar</p>
+          <p className="font-display font-light text-[26px] text-ink mt-6 mb-1">Criar conta</p>
+          <p className="text-[13px] text-ink-light">Cadastre-se para comprar</p>
         </div>
 
-        <div style={{ background: 'var(--white)', border: '1px solid var(--cream-d)', padding: 32 }}>
+        <div className="bg-paper border border-cream-dark p-8">
           {error && (
-            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', padding: '10px 14px', marginBottom: 20, fontSize: 13, color: 'var(--red)' }}>
+            <div className="bg-red-50 border border-red-200 px-4 py-3 mb-5 text-[13px] text-red-700">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 18 }}>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div>
               <label className="label-field">Nome completo</label>
               <input type="text" required value={name} onChange={e => setName(e.target.value)} className="input-field" placeholder="Seu nome" />
             </div>
-            <div style={{ marginBottom: 18 }}>
+            <div>
               <label className="label-field">E-mail</label>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input-field" placeholder="seu@email.com" />
             </div>
-            <div style={{ marginBottom: 28 }}>
+            <div>
               <label className="label-field">Senha</label>
               <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} className="input-field" placeholder="Mínimo 8 caracteres" />
             </div>
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+            <button type="submit" disabled={loading} className="btn-primary w-full justify-center mt-1">
               {loading ? 'Criando conta…' : 'Criar conta'}
             </button>
           </form>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--cream-d)' }} />
-            <span style={{ fontSize: 11, color: 'var(--ink-l)', letterSpacing: '0.08em' }}>ou</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--cream-d)' }} />
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-cream-dark" />
+            <span className="text-[11px] text-ink-light tracking-[0.08em]">ou</span>
+            <div className="flex-1 h-px bg-cream-dark" />
           </div>
 
-          <button onClick={async () => { await loginWithGoogle(); router.push('/'); }} className="btn-outline" style={{ width: '100%', justifyContent: 'center', gap: 8 }}>
+          <button onClick={async () => { await loginWithGoogle(); router.push('/'); }} className="btn-outline w-full justify-center gap-2">
             <GoogleIcon /> Continuar com Google
           </button>
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: 'var(--ink-l)' }}>
+        <p className="text-center mt-6 text-[13px] text-ink-light">
           Já tem conta?{' '}
-          <Link href="/entrar" style={{ color: 'var(--ink)', fontWeight: 500, textDecoration: 'none' }}>Entrar</Link>
+          <Link href="/entrar" className="text-ink font-medium no-underline hover:underline">Entrar</Link>
         </p>
       </div>
     </div>
