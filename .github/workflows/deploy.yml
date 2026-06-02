@@ -38,21 +38,21 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Deploy Firestore rules & indexes
-        if: github.ref == "refs/heads/main" && github.event_name == "push"
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only firestore
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
       - name: Deploy Storage rules
-        if: github.ref == "refs/heads/main" && github.event_name == "push"
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only storage
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
       - name: Deploy Hosting
-        if: github.ref == "refs/heads/main" && github.event_name == "push"
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only hosting
