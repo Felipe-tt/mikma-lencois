@@ -1,12 +1,14 @@
-import { PainelSidebar } from '@/components/painel/PainelSidebar';
 import { PainelGuard } from '@/components/painel/PainelGuard';
+import { PainelSidebar } from '@/components/painel/PainelSidebar';
 
 export default function PainelLayout({ children }: { children: React.ReactNode }) {
   return (
     <PainelGuard>
-      <div className="flex min-h-screen bg-gray-50">
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--white)' }}>
         <PainelSidebar />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
+        <main style={{ flex: 1, padding: '36px 40px', background: 'var(--white)', overflowY: 'auto' }}>
+          {children}
+        </main>
       </div>
     </PainelGuard>
   );
