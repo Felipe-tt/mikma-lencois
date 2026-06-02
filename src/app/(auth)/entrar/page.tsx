@@ -55,7 +55,7 @@ export default function LoginPage() {
           <span className="text-xs text-gray-400">ou</span>
           <div className="h-px flex-1 bg-gray-200" />
         </div>
-        <button onClick={loginWithGoogle}
+        <button onClick={async () => { await loginWithGoogle(); router.push('/'); }}
           className="w-full rounded-lg border border-gray-300 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
           Continuar com Google
         </button>
