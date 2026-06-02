@@ -94,3 +94,4 @@ src/
 │   └── utils/           # formatCurrency, formatDate
 └── types/               # Tipos TypeScript
 ```
+
