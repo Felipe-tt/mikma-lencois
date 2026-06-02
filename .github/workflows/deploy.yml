@@ -9,15 +9,13 @@ on:
 env:
   NODE_VERSION: '20'
 
-permissions:
-  contents: read
-  actions: read
-
 jobs:
-  # ── Build (inclui lint) ──────────────────────────────────────────────────────
-  build:
-    name: Build & Lint
+  build-and-deploy:
+    name: Build & Deploy
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     env:
       NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
       NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -40,48 +38,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build Next.js
         run: npm run build
 
-      - name: Lint (após build — precisa do .next/types)
+      - name: Lint
         run: npm run lint
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next
-          retention-days: 1
-
-  # ── Deploy (apenas na main) ──────────────────────────────────────────────────
-  deploy:
-    name: Deploy → Firebase Hosting
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    permissions:
-      contents: read
-      actions: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - run: npm ci
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next
-
       - name: Deploy Firestore rules & indexes
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only firestore
@@ -89,6 +56,7 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Deploy Storage rules
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only storage
@@ -96,6 +64,7 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Deploy Hosting
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
