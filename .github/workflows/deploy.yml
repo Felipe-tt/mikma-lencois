@@ -9,6 +9,10 @@ on:
 env:
   NODE_VERSION: '20'
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   # ── Build (inclui lint) ──────────────────────────────────────────────────────
   build:
@@ -57,6 +61,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
