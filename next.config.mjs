@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@node-rs/argon2'],
+  experimental: {
+    serverExternalPackages: ['@node-rs/argon2'],
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
@@ -8,5 +10,4 @@ const nextConfig = {
     ]
   }
 }
-
 export default nextConfig
