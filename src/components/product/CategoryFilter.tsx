@@ -9,40 +9,33 @@ export function CategoryFilter({ categories, active }: Props) {
 
   function go(cat?: string) {
     const params = new URLSearchParams(sp.toString());
-    if (cat) params.set('categoria', cat);
-    else params.delete('categoria');
+    if (cat) params.set('categoria', cat); else params.delete('categoria');
     router.push(`/produtos?${params.toString()}`);
   }
 
+  const all = [{ label: 'Todos', value: undefined }, ...categories.map(c => ({ label: c, value: c }))];
+
   return (
     <div>
-      <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--warm-d)', marginBottom: 16 }}>
-        Categoria
-      </p>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <li>
-          <button onClick={() => go()} style={{
-            width: '100%', textAlign: 'left', background: !active ? 'var(--ink)' : 'transparent',
-            color: !active ? 'var(--white)' : 'var(--ink-m)',
-            border: 'none', padding: '8px 12px', fontSize: 13, cursor: 'pointer',
-            fontWeight: !active ? 500 : 400, transition: 'all 0.15s'
-          }}>
-            Todos
-          </button>
-        </li>
-        {categories.map(cat => (
-          <li key={cat}>
-            <button onClick={() => go(cat)} style={{
-              width: '100%', textAlign: 'left',
-              background: active === cat ? 'var(--ink)' : 'transparent',
-              color: active === cat ? 'var(--white)' : 'var(--ink-m)',
-              border: 'none', padding: '8px 12px', fontSize: 13, cursor: 'pointer',
-              fontWeight: active === cat ? 500 : 400, transition: 'all 0.15s'
-            }}>
-              {cat}
-            </button>
-          </li>
-        ))}
+      <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-warm-dark mb-4">Categoria</p>
+      <ul className="list-none p-0 m-0 flex flex-col gap-0.5">
+        {all.map(({ label, value }) => {
+          const isActive = value === active;
+          return (
+            <li key={label}>
+              <button
+                onClick={() => go(value)}
+                className={`w-full text-left px-3 py-2 text-[13px] border-l-2 transition-all duration-150 bg-transparent border-none cursor-pointer
+                  ${isActive
+                    ? 'border-l-warm-dark text-ink font-semibold bg-cream'
+                    : 'border-l-transparent text-ink-mid font-normal hover:text-ink hover:bg-cream/60'
+                  }`}
+              >
+                {label}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

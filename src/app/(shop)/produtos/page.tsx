@@ -13,46 +13,49 @@ async function getCategories(): Promise<string[]> {
 }
 
 async function getProducts(categoria?: string): Promise<Product[]> {
-  let query = adminDb.collection('products').where('active', '==', true).orderBy('createdAt', 'desc');
-  if (categoria) query = query.where('category', '==', categoria) as typeof query;
-  const snap = await query.limit(48).get();
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+  let q = adminDb.collection('products').where('active', '==', true).orderBy('createdAt', 'desc');
+  if (categoria) q = q.where('category', '==', categoria) as typeof q;
+  const snap = await q.limit(48).get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
-  const [products, categories] = await Promise.all([getProducts(searchParams.categoria), getCategories()]);
+  const [products, categories] = await Promise.all([
+    getProducts(searchParams.categoria),
+    getCategories(),
+  ]);
 
   return (
-    <div style={{ background: 'var(--white)' }}>
-      {/* Page header */}
-      <div style={{ borderBottom: '1px solid var(--cream-d)', background: 'var(--cream)', padding: '40px 0' }}>
+    <div className="bg-paper">
+      {/* Header */}
+      <div className="border-b border-cream-dark bg-cream py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <p className="section-label" style={{ marginBottom: 8 }}>Catálogo</p>
-          <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 38, fontWeight: 300, color: 'var(--ink)' }}>
+          <p className="section-label mb-2">Catálogo</p>
+          <h1 className="font-display font-light text-[38px] text-ink">
             {searchParams.categoria ?? 'Todos os produtos'}
           </h1>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 40, paddingBottom: 64 }}>
-        <div style={{ display: 'flex', gap: 48, alignItems: 'flex-start' }}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 pb-20">
+        <div className="flex gap-12 items-start">
           {/* Sidebar */}
-          <aside style={{ width: 160, flexShrink: 0, position: 'sticky', top: 100 }}>
+          <aside className="hidden md:block w-40 shrink-0 sticky top-24">
             <CategoryFilter categories={categories} active={searchParams.categoria} />
           </aside>
 
           {/* Grid */}
-          <div style={{ flex: 1 }}>
+          <div className="flex-1 min-w-0">
             {products.length === 0 ? (
-              <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--ink-l)', fontSize: 14 }}>
+              <div className="py-20 text-center text-[14px] text-ink-light">
                 Nenhum produto encontrado.
               </div>
             ) : (
               <>
-                <p style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 20, letterSpacing: '0.04em' }}>
+                <p className="text-[12px] text-ink-light mb-5 tracking-[0.04em]">
                   {products.length} produto{products.length !== 1 ? 's' : ''}
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 1, background: 'var(--cream-d)' }}>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-px bg-cream-dark">
                   {products.map(p => <ProductCard key={p.id} product={p} />)}
                 </div>
               </>
