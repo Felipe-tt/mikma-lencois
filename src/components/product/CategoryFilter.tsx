@@ -1,57 +1,49 @@
 'use client';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-import { useRouter, usePathname } from 'next/navigation';
-
-interface Props {
-  categories: string[];
-  active?: string;
-}
+interface Props { categories: string[]; active?: string; }
 
 export function CategoryFilter({ categories, active }: Props) {
   const router = useRouter();
-  const pathname = usePathname();
+  const sp = useSearchParams();
 
-  function select(cat: string | undefined) {
-    const params = new URLSearchParams();
+  function go(cat?: string) {
+    const params = new URLSearchParams(sp.toString());
     if (cat) params.set('categoria', cat);
-    router.push(`${pathname}?${params.toString()}`);
+    else params.delete('categoria');
+    router.push(`/produtos?${params.toString()}`);
   }
 
-  if (categories.length === 0) return null;
-
   return (
-    <nav aria-label="Filtrar por categoria">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+    <div>
+      <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--warm-d)', marginBottom: 16 }}>
         Categoria
       </p>
-      <ul className="space-y-1">
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <li>
-          <button
-            onClick={() => select(undefined)}
-            className={`w-full rounded-md px-3 py-1.5 text-left text-sm ${
-              !active
-                ? 'bg-blue-50 font-medium text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Todas
+          <button onClick={() => go()} style={{
+            width: '100%', textAlign: 'left', background: !active ? 'var(--ink)' : 'transparent',
+            color: !active ? 'var(--white)' : 'var(--ink-m)',
+            border: 'none', padding: '8px 12px', fontSize: 13, cursor: 'pointer',
+            fontWeight: !active ? 500 : 400, transition: 'all 0.15s'
+          }}>
+            Todos
           </button>
         </li>
-        {categories.map((cat) => (
+        {categories.map(cat => (
           <li key={cat}>
-            <button
-              onClick={() => select(cat)}
-              className={`w-full rounded-md px-3 py-1.5 text-left text-sm ${
-                active === cat
-                  ? 'bg-blue-50 font-medium text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
+            <button onClick={() => go(cat)} style={{
+              width: '100%', textAlign: 'left',
+              background: active === cat ? 'var(--ink)' : 'transparent',
+              color: active === cat ? 'var(--white)' : 'var(--ink-m)',
+              border: 'none', padding: '8px 12px', fontSize: 13, cursor: 'pointer',
+              fontWeight: active === cat ? 500 : 400, transition: 'all 0.15s'
+            }}>
               {cat}
             </button>
           </li>
         ))}
       </ul>
-    </nav>
+    </div>
   );
 }

@@ -5,71 +5,59 @@ import type { Product } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-interface Props {
-  searchParams: { categoria?: string; busca?: string };
-}
+interface Props { searchParams: { categoria?: string }; }
 
 async function getCategories(): Promise<string[]> {
-  const snap = await adminDb
-    .collection('products')
-    .where('active', '==', true)
-    .select('category')
-    .get();
-  const set = new Set(snap.docs.map((d) => d.data().category as string));
-  return Array.from(set).sort();
+  const snap = await adminDb.collection('products').where('active', '==', true).select('category').get();
+  return Array.from(new Set(snap.docs.map(d => d.data().category as string))).sort();
 }
 
 async function getProducts(categoria?: string): Promise<Product[]> {
-  let query = adminDb
-    .collection('products')
-    .where('active', '==', true)
-    .orderBy('createdAt', 'desc');
-
-  if (categoria) {
-    query = query.where('category', '==', categoria) as typeof query;
-  }
-
+  let query = adminDb.collection('products').where('active', '==', true).orderBy('createdAt', 'desc');
+  if (categoria) query = query.where('category', '==', categoria) as typeof query;
   const snap = await query.limit(48).get();
-  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Product));
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
-  const [products, categories] = await Promise.all([
-    getProducts(searchParams.categoria),
-    getCategories(),
-  ]);
+  const [products, categories] = await Promise.all([getProducts(searchParams.categoria), getCategories()]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="mb-6 text-2xl font-semibold text-gray-900">Produtos</h1>
+    <div style={{ background: 'var(--white)' }}>
+      {/* Page header */}
+      <div style={{ borderBottom: '1px solid var(--cream-d)', background: 'var(--cream)', padding: '40px 0' }}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <p className="section-label" style={{ marginBottom: 8 }}>Catálogo</p>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 38, fontWeight: 300, color: 'var(--ink)' }}>
+            {searchParams.categoria ?? 'Todos os produtos'}
+          </h1>
+        </div>
+      </div>
 
-      <div className="flex flex-col gap-8 lg:flex-row">
-        {/* Sidebar */}
-        <aside className="w-full shrink-0 lg:w-48">
-          <CategoryFilter
-            categories={categories}
-            active={searchParams.categoria}
-          />
-        </aside>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 40, paddingBottom: 64 }}>
+        <div style={{ display: 'flex', gap: 48, alignItems: 'flex-start' }}>
+          {/* Sidebar */}
+          <aside style={{ width: 160, flexShrink: 0, position: 'sticky', top: 100 }}>
+            <CategoryFilter categories={categories} active={searchParams.categoria} />
+          </aside>
 
-        {/* Grid */}
-        <div className="flex-1">
-          {products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24">
-              <p className="text-gray-400">Nenhum produto encontrado.</p>
-            </div>
-          ) : (
-            <>
-              <p className="mb-4 text-sm text-gray-500">
-                {products.length} produto{products.length !== 1 ? 's' : ''}
-              </p>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
-                {products.map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
+          {/* Grid */}
+          <div style={{ flex: 1 }}>
+            {products.length === 0 ? (
+              <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--ink-l)', fontSize: 14 }}>
+                Nenhum produto encontrado.
               </div>
-            </>
-          )}
+            ) : (
+              <>
+                <p style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 20, letterSpacing: '0.04em' }}>
+                  {products.length} produto{products.length !== 1 ? 's' : ''}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 1, background: 'var(--cream-d)' }}>
+                  {products.map(p => <ProductCard key={p.id} product={p} />)}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
