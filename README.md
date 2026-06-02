@@ -94,9 +94,3 @@ src/
 │   └── utils/           # formatCurrency, formatDate
 └── types/               # Tipos TypeScript
 ```
-
-## Endereço de origem (loja)
-
-** — Blumenau, SC — CEP **
-
-Entregas locais (Uber Direct) para endereços até **10 km** deste ponto.
