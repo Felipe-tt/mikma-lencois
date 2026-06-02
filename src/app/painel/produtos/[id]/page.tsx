@@ -1,0 +1,29 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
+import ProductForm from '@/components/seller/ProductForm';
+import type { Product } from '@/types';
+
+export default function EditarProdutoPage({ params }: { params: { id: string } }) {
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getDoc(doc(db, 'products', params.id)).then(snap => {
+      if (snap.exists()) setProduct({ id: snap.id, ...snap.data() } as Product);
+      setLoading(false);
+    });
+  }, [params.id]);
+
+  if (loading) return <div className="p-6 text-sm text-gray-500">Carregando...</div>;
+  if (!product) return <div className="p-6 text-sm text-red-500">Produto não encontrado.</div>;
+
+  return (
+    <div className="p-6">
+      <h1 className="text-xl font-semibold text-gray-900 mb-6">Editar produto</h1>
+      <ProductForm initial={product} />
+    </div>
+  );
+}
