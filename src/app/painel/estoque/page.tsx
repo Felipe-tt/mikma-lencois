@@ -25,7 +25,7 @@ export default function EstoquePage() {
     const unsub = onSnapshot(q, async (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem));
       // enrich with product names
-      const productIds = [...new Set(data.map(i => i.productId))];
+      const productIds = Array.from(new Set(data.map(i => i.productId)));
       const nameMap: Record<string, string> = {};
       await Promise.all(productIds.map(async pid => {
         const { getDoc, doc: docRef } = await import('firebase/firestore');

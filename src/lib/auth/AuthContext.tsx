@@ -16,6 +16,7 @@ interface AuthUser {
   displayName: string | null;
   photoURL: string | null;
   role: 'buyer' | 'seller' | 'admin';
+  getIdToken: () => Promise<string>;
 }
 
 interface AuthContextValue {
@@ -23,6 +24,7 @@ interface AuthContextValue {
   loading: boolean;
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  userData: { name: string; email: string | null } | null;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -35,6 +37,7 @@ async function mapUser(firebaseUser: User): Promise<AuthUser> {
     displayName: firebaseUser.displayName,
     photoURL: firebaseUser.photoURL,
     role: (tokenResult.claims.role as AuthUser['role']) ?? 'buyer',
+    getIdToken: () => firebaseUser.getIdToken(),
   };
 }
 
@@ -65,8 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithPopup(auth, provider);
   };
 
+  const userData = user
+    ? { name: user.displayName ?? '', email: user.email }
+    : null;
+
   return (
-    <AuthContext.Provider value={{ user, loading, logout, loginWithGoogle }}>
+    <AuthContext.Provider value={{ user, loading, logout, loginWithGoogle, userData }}>
       {children}
     </AuthContext.Provider>
   );

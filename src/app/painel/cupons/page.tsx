@@ -20,7 +20,7 @@ const EMPTY = { code: '', type: 'percent' as const, value: 10, minOrderCents: 0,
 
 export default function CuponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState<{ code: string; type: 'percent' | 'fixed'; value: number; minOrderCents: number; maxUses: number; expiresAt: string }>(EMPTY);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

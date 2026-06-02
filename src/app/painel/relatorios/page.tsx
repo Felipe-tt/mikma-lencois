@@ -45,10 +45,10 @@ export default function RelatoriosPage() {
       for (const order of orders) {
         for (const item of order.items) {
           if (!productMap[item.productId]) {
-            productMap[item.productId] = { name: item.name, qty: 0, revenue: 0 };
+            productMap[item.productId] = { name: item.productName, qty: 0, revenue: 0 };
           }
           productMap[item.productId].qty += item.quantity;
-          productMap[item.productId].revenue += item.priceCents * item.quantity;
+          productMap[item.productId].revenue += item.unitPrice * item.quantity;
         }
       }
       const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);

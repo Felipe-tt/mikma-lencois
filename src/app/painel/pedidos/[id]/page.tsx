@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/lib/auth/AuthContext'
 import type { Order } from '@/types'
 
 const STATUS_LABELS: Record<Order['status'], string> = {
@@ -135,10 +135,10 @@ export default function PainelPedidoDetalhe() {
             <div key={i} className="flex justify-between items-center py-2 border-b border-border-tertiary last:border-0">
               <div>
                 <p className="text-sm text-text-primary">{item.productName}</p>
-                <p className="text-xs text-text-secondary">{item.variantLabel} · Qtd: {item.quantity}</p>
+                <p className="text-xs text-text-secondary">{`${item.variant.size} · ${item.variant.color}`} · Qtd: {item.quantity}</p>
               </div>
               <span className="text-sm font-medium text-text-primary">
-                R$ {((item.priceCents * item.quantity) / 100).toFixed(2)}
+                R$ {((item.unitPrice * item.quantity) / 100).toFixed(2)}
               </span>
             </div>
           ))}
@@ -155,7 +155,7 @@ export default function PainelPedidoDetalhe() {
         <address className="text-sm text-text-secondary not-italic space-y-1">
           <p>{order.address.street}, {order.address.number}{order.address.complement ? ` — ${order.address.complement}` : ''}</p>
           <p>{order.address.neighborhood} · {order.address.city} — {order.address.state}</p>
-          <p>CEP {order.address.zipCode}</p>
+          <p>CEP {order.address.cep}</p>
         </address>
       </div>
 
