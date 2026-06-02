@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverExternalPackages: ['@node-rs/argon2'],
+    serverComponentsExternalPackages: ['@node-rs/argon2'],
   },
   images: {
     remotePatterns: [
