@@ -3,8 +3,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 
-const inter = Inter({ subsets: ['latin'] });
-
 export const metadata: Metadata = {
   title: {
     default: 'Mikma Lençóis — Blumenau SC',
@@ -20,6 +18,13 @@ export const metadata: Metadata = {
     siteName: 'Mikma Lençóis',
   },
 };
+
+const inter = Inter({ 
+  subsets: ['latin'], 
+  display: 'swap', 
+  preload: false,
+  fallback: ['system-ui', '-apple-system', 'sans-serif']
+});
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
