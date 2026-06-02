@@ -1,360 +1,164 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth/AuthContext'
-import { db } from '@/lib/firebase/client'
-import { doc, onSnapshot } from 'firebase/firestore'
-import { Cart, Address, DeliveryQuote } from '@/types'
-import { formatCurrency } from '@/lib/utils/format'
-
-const emptyAddress: Address = {
-  cep: '',
-  street: '',
-  number: '',
-  complement: '',
-  neighborhood: '',
-  city: '',
-  state: '',
-}
+'use client';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase/client';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { formatCurrency } from '@/lib/utils/format';
+import type { Cart, Address } from '@/types';
+import { PIXModal } from '@/components/checkout/PIXModal';
 
 export default function CheckoutPage() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
-
-  const [cart, setCart] = useState<Cart | null>(null)
-  const [address, setAddress] = useState<Address>(emptyAddress)
-  const [cepLoading, setCepLoading] = useState(false)
-  const [couponCode, setCouponCode] = useState('')
-  const [couponDiscount, setCouponDiscount] = useState(0)
-  const [couponError, setCouponError] = useState('')
-  const [couponApplied, setCouponApplied] = useState(false)
-  const [deliveryQuotes, setDeliveryQuotes] = useState<DeliveryQuote[]>([])
-  const [selectedCarrier, setSelectedCarrier] = useState<string>('')
-  const [quotesLoading, setQuotesLoading] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; orderId: string } | null>(null)
-  const [copied, setCopied] = useState(false)
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [cartLoading, setCartLoading] = useState(true);
+  const [address, setAddress] = useState<Address>({ cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' });
+  const [cepLoading, setCepLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [pixData, setPixData] = useState<{ txId: string; qrCode: string; copyPaste: string } | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) router.push('/entrar?next=/checkout')
-  }, [user, loading, router])
-
-  useEffect(() => {
-    if (!user) return
+    if (loading) return;
+    if (!user) { router.push('/entrar'); return; }
     const unsub = onSnapshot(doc(db, 'carts', user.uid), (snap) => {
-      if (snap.exists()) setCart(snap.data() as Cart)
-    })
-    return unsub
-  }, [user])
+      if (!snap.exists() || !snap.data()?.items?.length) { router.push('/carrinho'); return; }
+      setCart(snap.data() as Cart); setCartLoading(false);
+    });
+    getDoc(doc(db, 'users', user.uid)).then(snap => { if (snap.data()?.address) setAddress(snap.data()!.address); });
+    return unsub;
+  }, [user, loading, router]);
 
-  // Pre-fill address from user profile
-  useEffect(() => {
-    if (!user) return
-    import('firebase/firestore').then(({ getDoc }) => {
-      getDoc(doc(db, 'users', user.uid)).then((snap) => {
-        if (snap.exists() && snap.data().address) {
-          setAddress(snap.data().address as Address)
-        }
-      })
-    })
-  }, [user])
-
-  const subtotal = cart?.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0) ?? 0
-  const selectedQuote = deliveryQuotes.find((q) => q.carrier === selectedCarrier)
-  const deliveryCents = selectedQuote?.priceCents ?? 0
-  const total = subtotal - couponDiscount + deliveryCents
-
-  async function lookupCep(cep: string) {
-    const clean = cep.replace(/\D/g, '')
-    if (clean.length !== 8) return
-    setCepLoading(true)
+  async function lookupCEP(cep: string) {
+    const clean = cep.replace(/\D/g, '');
+    if (clean.length !== 8) return;
+    setCepLoading(true);
     try {
-      const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`)
-      const data = await res.json()
-      if (!data.erro) {
-        setAddress((a) => ({
-          ...a,
-          street: data.logradouro,
-          neighborhood: data.bairro,
-          city: data.localidade,
-          state: data.uf,
-          cep: clean,
-        }))
-        fetchQuotes(clean)
-      }
-    } finally {
-      setCepLoading(false)
-    }
+      const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+      const data = await res.json();
+      if (!data.erro) setAddress(a => ({ ...a, street: data.logradouro, neighborhood: data.bairro, city: data.localidade, state: data.uf, cep: clean }));
+    } finally { setCepLoading(false); }
   }
 
-  async function fetchQuotes(cep: string) {
-    setQuotesLoading(true)
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user || !cart) return;
+    setSubmitting(true); setError('');
     try {
-      const token = await user?.getIdToken()
-      const res = await fetch('/api/delivery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ destinationCep: cep, orderCents: subtotal }),
-      })
-      const data = await res.json()
-      if (data.quotes) {
-        setDeliveryQuotes(data.quotes)
-        const first = data.quotes.find((q: DeliveryQuote) => q.available)
-        if (first) setSelectedCarrier(first.carrier)
-      }
-    } finally {
-      setQuotesLoading(false)
-    }
+      const token = await auth.currentUser!.getIdToken();
+      const totalCents = cart.items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
+      const orderId = `${user.uid}_${Date.now()}`;
+      await setDoc(doc(db, 'orders', orderId), {
+        userId: user.uid, items: cart.items, status: 'pending_payment', address, totalCents,
+        payment: { method: 'pix' }, delivery: {}, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      });
+      await setDoc(doc(db, 'users', user.uid), { address }, { merge: true });
+      const res = await fetch('/api/payment/create-pix', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orderId, amountCents: totalCents, customerName: user.displayName ?? '', customerEmail: user.email ?? '' }),
+      });
+      if (!res.ok) throw new Error('Erro ao gerar PIX');
+      setPixData(await res.json());
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao finalizar pedido');
+    } finally { setSubmitting(false); }
   }
 
-  async function applyCoupon() {
-    setCouponError('')
-    const token = await user?.getIdToken()
-    const res = await fetch('/api/checkout/validate-coupon', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ code: couponCode, orderCents: subtotal }),
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      setCouponError(data.error)
-    } else {
-      setCouponDiscount(data.discountCents)
-      setCouponApplied(true)
-    }
-  }
+  if (loading || cartLoading) return (
+    <div style={{ minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ fontSize: 13, color: 'var(--ink-l)' }}>Carregando…</p>
+    </div>
+  );
 
-  async function handleSubmit() {
-    if (!user || !cart || cart.items.length === 0) return
-    if (!selectedCarrier) { alert('Selecione uma opção de entrega'); return }
-    setSubmitting(true)
-    try {
-      const token = await user.getIdToken()
-
-      // 1. Create order
-      const orderRes = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ address, couponCode: couponApplied ? couponCode : undefined }),
-      })
-      const orderData = await orderRes.json()
-      if (!orderRes.ok) { alert(orderData.error); setSubmitting(false); return }
-
-      // 2. Create PIX
-      const pixRes = await fetch('/api/payment/create-pix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ orderId: orderData.orderId, amountCents: orderData.totalCents }),
-      })
-      const pixJson = await pixRes.json()
-      if (!pixRes.ok) { alert(pixJson.error); setSubmitting(false); return }
-
-      setPixData({ qrCode: pixJson.qrCode, copyPaste: pixJson.copyPaste, orderId: orderData.orderId })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  function copyPix() {
-    if (!pixData) return
-    navigator.clipboard.writeText(pixData.copyPaste)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2500)
-  }
-
-  if (loading || !cart) {
-    return <div className="checkout-loading">Carregando...</div>
-  }
-
-  if (pixData) {
-    return (
-      <main className="checkout-pix-page">
-        <div className="checkout-pix-card">
-          <div className="checkout-pix-icon">💸</div>
-          <h1 className="checkout-pix-title">Pedido gerado!</h1>
-          <p className="checkout-pix-sub">Pague via PIX para confirmar o pedido</p>
-          {pixData.qrCode && (
-            <img src={pixData.qrCode} alt="QR Code PIX" className="checkout-pix-qr" />
-          )}
-          <div className="checkout-pix-copy-row">
-            <span className="checkout-pix-code">{pixData.copyPaste}</span>
-            <button className="checkout-pix-btn" onClick={copyPix}>
-              {copied ? '✓ Copiado' : 'Copiar'}
-            </button>
-          </div>
-          <p className="checkout-pix-note">Assim que o pagamento for confirmado você receberá um e-mail.</p>
-          <a href={`/pedidos/${pixData.orderId}`} className="checkout-pix-link">
-            Acompanhar pedido →
-          </a>
-        </div>
-      </main>
-    )
-  }
+  const items = cart?.items ?? [];
+  const totalCents = items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
 
   return (
-    <main className="checkout-page">
-      <h1 className="checkout-title">Finalizar compra</h1>
-
-      <div className="checkout-grid">
-        {/* Left: address + delivery + coupon */}
-        <div className="checkout-left">
-          <section className="checkout-section">
-            <h2 className="checkout-section-title">Endereço de entrega</h2>
-            <div className="checkout-field-row">
-              <div className="checkout-field">
-                <label className="checkout-label">CEP</label>
-                <input
-                  className="checkout-input"
-                  placeholder="00000-000"
-                  value={address.cep}
-                  onChange={(e) => {
-                    setAddress((a) => ({ ...a, cep: e.target.value }))
-                    lookupCep(e.target.value)
-                  }}
-                />
-                {cepLoading && <span className="checkout-cep-loading">Buscando...</span>}
-              </div>
-              <div className="checkout-field checkout-field--grow">
-                <label className="checkout-label">Rua</label>
-                <input
-                  className="checkout-input"
-                  placeholder="Nome da rua"
-                  value={address.street}
-                  onChange={(e) => setAddress((a) => ({ ...a, street: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="checkout-field-row">
-              <div className="checkout-field">
-                <label className="checkout-label">Número</label>
-                <input
-                  className="checkout-input"
-                  placeholder="123"
-                  value={address.number}
-                  onChange={(e) => setAddress((a) => ({ ...a, number: e.target.value }))}
-                />
-              </div>
-              <div className="checkout-field checkout-field--grow">
-                <label className="checkout-label">Complemento</label>
-                <input
-                  className="checkout-input"
-                  placeholder="Apto, bloco..."
-                  value={address.complement}
-                  onChange={(e) => setAddress((a) => ({ ...a, complement: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="checkout-field-row">
-              <div className="checkout-field checkout-field--grow">
-                <label className="checkout-label">Bairro</label>
-                <input
-                  className="checkout-input"
-                  value={address.neighborhood}
-                  onChange={(e) => setAddress((a) => ({ ...a, neighborhood: e.target.value }))}
-                />
-              </div>
-              <div className="checkout-field checkout-field--grow">
-                <label className="checkout-label">Cidade</label>
-                <input
-                  className="checkout-input"
-                  value={address.city}
-                  onChange={(e) => setAddress((a) => ({ ...a, city: e.target.value }))}
-                />
-              </div>
-              <div className="checkout-field checkout-field--sm">
-                <label className="checkout-label">UF</label>
-                <input
-                  className="checkout-input"
-                  maxLength={2}
-                  value={address.state}
-                  onChange={(e) => setAddress((a) => ({ ...a, state: e.target.value.toUpperCase() }))}
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="checkout-section">
-            <h2 className="checkout-section-title">Entrega</h2>
-            {quotesLoading && <p className="checkout-quotes-loading">Calculando frete...</p>}
-            {!quotesLoading && deliveryQuotes.length === 0 && (
-              <p className="checkout-quotes-empty">Informe o CEP para ver as opções de entrega.</p>
-            )}
-            <div className="checkout-delivery-list">
-              {deliveryQuotes.filter((q) => q.available).map((q) => (
-                <label key={q.carrier} className={`checkout-delivery-option${selectedCarrier === q.carrier ? ' checkout-delivery-option--selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="carrier"
-                    value={q.carrier}
-                    checked={selectedCarrier === q.carrier}
-                    onChange={() => setSelectedCarrier(q.carrier)}
-                    className="checkout-delivery-radio"
-                  />
-                  <span className="checkout-delivery-label">{q.label}</span>
-                  <span className="checkout-delivery-days">{q.estimatedDays}d úteis</span>
-                  <span className="checkout-delivery-price">{formatCurrency(q.priceCents)}</span>
-                </label>
-              ))}
-            </div>
-          </section>
-
-          <section className="checkout-section">
-            <h2 className="checkout-section-title">Cupom de desconto</h2>
-            {couponApplied ? (
-              <p className="checkout-coupon-applied">✓ Cupom {couponCode.toUpperCase()} aplicado — {formatCurrency(couponDiscount)} de desconto</p>
-            ) : (
-              <div className="checkout-coupon-row">
-                <input
-                  className="checkout-input checkout-coupon-input"
-                  placeholder="CÓDIGO"
-                  value={couponCode}
-                  onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
-                />
-                <button className="checkout-coupon-btn" onClick={applyCoupon}>Aplicar</button>
-              </div>
-            )}
-            {couponError && <p className="checkout-coupon-error">{couponError}</p>}
-          </section>
+    <div style={{ background: 'var(--white)' }}>
+      <div style={{ borderBottom: '1px solid var(--cream-d)', background: 'var(--cream)', padding: '36px 0' }}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <p className="section-label" style={{ marginBottom: 6 }}>Compra</p>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 34, fontWeight: 300, color: 'var(--ink)' }}>
+            Finalizar pedido
+          </h1>
         </div>
-
-        {/* Right: order summary */}
-        <aside className="checkout-summary">
-          <h2 className="checkout-summary-title">Resumo</h2>
-          <div className="checkout-summary-items">
-            {cart.items.map((item) => (
-              <div key={item.sku} className="checkout-summary-item">
-                <span className="checkout-summary-item-name">{item.productName} <span className="checkout-summary-item-variant">({item.variant.size})</span></span>
-                <span className="checkout-summary-item-qty">×{item.quantity}</span>
-                <span className="checkout-summary-item-price">{formatCurrency(item.unitPrice * item.quantity)}</span>
-              </div>
-            ))}
-          </div>
-          <div className="checkout-summary-line">
-            <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
-          </div>
-          {couponDiscount > 0 && (
-            <div className="checkout-summary-line checkout-summary-line--discount">
-              <span>Desconto</span><span>− {formatCurrency(couponDiscount)}</span>
-            </div>
-          )}
-          <div className="checkout-summary-line">
-            <span>Frete</span>
-            <span>{selectedQuote ? formatCurrency(deliveryCents) : '—'}</span>
-          </div>
-          <div className="checkout-summary-total">
-            <span>Total</span><span>{formatCurrency(total)}</span>
-          </div>
-          <button
-            className="checkout-submit-btn"
-            onClick={handleSubmit}
-            disabled={submitting || !selectedCarrier}
-          >
-            {submitting ? 'Processando...' : 'Gerar PIX'}
-          </button>
-          <p className="checkout-submit-note">Pagamento 100% via PIX — sem cartão</p>
-        </aside>
       </div>
-    </main>
-  )
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 40, paddingBottom: 80 }}>
+        {pixData ? (
+          <PIXModal pixData={pixData} totalCents={totalCents} onClose={() => router.push('/conta/pedidos')} />
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 48, alignItems: 'start' }}>
+            {/* Form */}
+            <form onSubmit={handleSubmit}>
+              <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 20, color: 'var(--ink)', marginBottom: 24 }}>Endereço de entrega</p>
+              {error && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', padding: '10px 14px', marginBottom: 20, fontSize: 13, color: 'var(--red)' }}>{error}</div>}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label className="label-field">CEP</label>
+                  <input type="text" required maxLength={9} value={address.cep} placeholder="00000-000" className="input-field"
+                    onChange={e => { setAddress(a => ({ ...a, cep: e.target.value })); lookupCEP(e.target.value); }} />
+                  {cepLoading && <p style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>Buscando…</p>}
+                </div>
+                <div>
+                  <label className="label-field">Estado</label>
+                  <input type="text" required value={address.state} onChange={e => setAddress(a => ({ ...a, state: e.target.value }))} className="input-field" />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label className="label-field">Rua</label>
+                <input type="text" required value={address.street} onChange={e => setAddress(a => ({ ...a, street: e.target.value }))} className="input-field" />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label className="label-field">Número</label>
+                  <input type="text" required value={address.number} onChange={e => setAddress(a => ({ ...a, number: e.target.value }))} className="input-field" />
+                </div>
+                <div>
+                  <label className="label-field">Complemento</label>
+                  <input type="text" value={address.complement} onChange={e => setAddress(a => ({ ...a, complement: e.target.value }))} className="input-field" />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
+                <div>
+                  <label className="label-field">Bairro</label>
+                  <input type="text" required value={address.neighborhood} onChange={e => setAddress(a => ({ ...a, neighborhood: e.target.value }))} className="input-field" />
+                </div>
+                <div>
+                  <label className="label-field">Cidade</label>
+                  <input type="text" required value={address.city} onChange={e => setAddress(a => ({ ...a, city: e.target.value }))} className="input-field" />
+                </div>
+              </div>
+
+              <button type="submit" disabled={submitting} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                {submitting ? 'Gerando PIX…' : `Gerar PIX — ${formatCurrency(totalCents)}`}
+              </button>
+            </form>
+
+            {/* Summary */}
+            <div style={{ position: 'sticky', top: 100, border: '1px solid var(--cream-d)', padding: '24px 22px', background: 'var(--cream)' }}>
+              <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 18, color: 'var(--ink)', marginBottom: 18 }}>Resumo</p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                {items.map(item => (
+                  <li key={item.sku} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ink-m)' }}>
+                    <span style={{ flex: 1, marginRight: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.productName} × {item.quantity}</span>
+                    <span style={{ flexShrink: 0 }}>{formatCurrency(item.unitPrice * item.quantity)}</span>
+                  </li>
+                ))}
+              </ul>
+              <div style={{ borderTop: '1px solid var(--cream-d)', paddingTop: 14, display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Total</span>
+                <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 20, color: 'var(--ink)' }}>{formatCurrency(totalCents)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
