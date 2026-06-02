@@ -12,84 +12,77 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const fn = () => setScrolled(window.scrollY > 12);
+    window.addEventListener('scroll', fn, { passive: true });
+    return () => window.removeEventListener('scroll', fn);
   }, []);
 
   return (
-    <header
-      style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: 'var(--white)',
-        borderBottom: scrolled ? '1px solid var(--cream-d)' : '1px solid transparent',
-        transition: 'border-color 0.2s, box-shadow 0.2s',
-        boxShadow: scrolled ? '0 1px 16px rgba(28,24,21,0.06)' : 'none',
-      }}
-    >
-      {/* Top bar */}
-      <div style={{ background: 'var(--ink)', color: 'var(--cream)', fontSize: 12, textAlign: 'center', padding: '6px 16px', letterSpacing: '0.08em' }}>
+    <header className={`sticky top-0 z-50 bg-paper transition-all duration-200 ${scrolled ? 'border-b border-cream-dark shadow-sm shadow-ink/5' : 'border-b border-transparent'}`}>
+      {/* Announcement bar */}
+      <div className="bg-ink text-cream text-[11px] text-center py-1.5 px-4 tracking-[0.08em]">
         Entrega local em Blumenau em até 1h · Frete para todo o Brasil
       </div>
 
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         {/* Logo */}
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <span style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 22, fontWeight: 400, color: 'var(--ink)', letterSpacing: '0.04em' }}>
-            Mikma
-          </span>
-          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, fontWeight: 500, color: 'var(--warm-d)', letterSpacing: '0.18em', textTransform: 'uppercase', marginLeft: 6 }}>
-            Lençóis
-          </span>
+        <Link href="/" className="no-underline flex items-baseline gap-1.5">
+          <span className="font-display text-[22px] text-ink tracking-[0.04em]">Mikma</span>
+          <span className="text-[10px] font-semibold text-warm-dark tracking-[0.2em] uppercase">Lençóis</span>
         </Link>
 
         {/* Nav desktop */}
-        <nav className="hidden items-center gap-8 md:flex">
-          <Link href="/produtos" style={{ fontSize: 13, color: 'var(--ink-m)', letterSpacing: '0.04em', fontWeight: 500, textDecoration: 'none' }}
-            className="hover:text-ink transition-colors">Produtos</Link>
-          <Link href="/sobre" style={{ fontSize: 13, color: 'var(--ink-m)', letterSpacing: '0.04em', fontWeight: 500, textDecoration: 'none' }}
-            className="hover:text-ink transition-colors">Sobre</Link>
+        <nav className="hidden md:flex items-center gap-8">
+          {[
+            { href: '/produtos', label: 'Produtos' },
+            { href: '/sobre', label: 'Sobre' },
+          ].map(({ href, label }) => (
+            <Link key={href} href={href} className="text-[13px] text-ink-mid font-medium tracking-[0.03em] no-underline hover:text-ink transition-colors">
+              {label}
+            </Link>
+          ))}
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {/* Cart */}
-          <Link href="/carrinho" aria-label="Carrinho" style={{ position: 'relative', display: 'flex', alignItems: 'center', padding: '8px', color: 'var(--ink-m)', textDecoration: 'none' }}
-            className="hover:text-ink transition-colors">
+          <Link href="/carrinho" aria-label="Carrinho" className="relative flex items-center p-2 text-ink-mid hover:text-ink transition-colors no-underline">
             <CartIcon />
             {cartCount > 0 && (
-              <span style={{
-                position: 'absolute', top: 2, right: 2,
-                minWidth: 18, height: 18, borderRadius: '50%',
-                background: 'var(--warm-d)', color: 'var(--white)',
-                fontSize: 10, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
+              <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] rounded-full bg-warm-dark text-paper text-[10px] font-semibold flex items-center justify-center">
                 {cartCount > 9 ? '9+' : cartCount}
               </span>
             )}
           </Link>
 
+          {/* Auth desktop */}
           {user ? (
-            <div className="hidden items-center gap-3 md:flex">
+            <div className="hidden md:flex items-center gap-3">
               {(user.role === 'seller' || user.role === 'admin') && (
-                <Link href="/painel" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink)', border: '1px solid var(--ink)', padding: '5px 14px', textDecoration: 'none' }}
-                  className="transition-colors hover:bg-ink hover:text-white-pure">Painel</Link>
+                <Link href="/painel" className="text-[11px] font-semibold tracking-[0.1em] uppercase text-ink border border-ink px-3.5 py-1.5 no-underline hover:bg-ink hover:text-paper transition-all">
+                  Painel
+                </Link>
               )}
-              <Link href="/conta" style={{ fontSize: 13, color: 'var(--ink-m)', textDecoration: 'none' }} className="hover:text-ink transition-colors">
+              <Link href="/conta" className="text-[13px] text-ink-mid no-underline hover:text-ink transition-colors">
                 {user.displayName?.split(' ')[0] ?? 'Conta'}
               </Link>
-              <button onClick={logout} style={{ fontSize: 13, color: 'var(--ink-l)', background: 'none', border: 'none', cursor: 'pointer' }}
-                className="hover:text-ink transition-colors">Sair</button>
+              <button onClick={logout} className="text-[13px] text-ink-light bg-none border-none hover:text-ink transition-colors">
+                Sair
+              </button>
             </div>
           ) : (
-            <div className="hidden items-center gap-3 md:flex">
-              <Link href="/entrar" style={{ fontSize: 13, color: 'var(--ink-m)', textDecoration: 'none' }} className="hover:text-ink transition-colors">Entrar</Link>
-              <Link href="/cadastro" className="btn-primary" style={{ padding: '7px 18px', fontSize: 12, letterSpacing: '0.08em' }}>Cadastrar</Link>
+            <div className="hidden md:flex items-center gap-3">
+              <Link href="/entrar" className="text-[13px] text-ink-mid no-underline hover:text-ink transition-colors">Entrar</Link>
+              <Link href="/cadastro" className="btn-primary !py-1.5 !px-4 !text-[12px] !tracking-[0.08em]">Cadastrar</Link>
             </div>
           )}
 
           {/* Hamburger */}
-          <button className="md:hidden" onClick={() => setMenuOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: 'var(--ink)' }}>
+          <button
+            className="md:hidden p-1.5 text-ink bg-transparent border-none"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Menu"
+          >
             {menuOpen ? <XIcon /> : <MenuIcon />}
           </button>
         </div>
@@ -97,26 +90,26 @@ export function Header() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div style={{ borderTop: '1px solid var(--cream-d)', background: 'var(--white)', padding: '20px 24px 24px' }}>
-          <nav className="flex flex-col gap-4">
-            <Link href="/produtos" onClick={() => setMenuOpen(false)} style={{ fontSize: 15, color: 'var(--ink-m)', textDecoration: 'none', fontWeight: 500 }}>Produtos</Link>
-            <Link href="/sobre" onClick={() => setMenuOpen(false)} style={{ fontSize: 15, color: 'var(--ink-m)', textDecoration: 'none', fontWeight: 500 }}>Sobre</Link>
-            <hr className="divider" />
-            {user ? (
-              <>
-                <Link href="/conta" onClick={() => setMenuOpen(false)} style={{ fontSize: 14, color: 'var(--ink-m)', textDecoration: 'none' }}>Minha conta</Link>
-                {(user.role === 'seller' || user.role === 'admin') && (
-                  <Link href="/painel" onClick={() => setMenuOpen(false)} style={{ fontSize: 14, color: 'var(--ink-m)', textDecoration: 'none' }}>Painel</Link>
-                )}
-                <button onClick={() => { logout(); setMenuOpen(false); }} style={{ textAlign: 'left', fontSize: 14, color: 'var(--ink-l)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Sair</button>
-              </>
-            ) : (
-              <>
-                <Link href="/entrar" onClick={() => setMenuOpen(false)} style={{ fontSize: 14, color: 'var(--ink-m)', textDecoration: 'none' }}>Entrar</Link>
-                <Link href="/cadastro" onClick={() => setMenuOpen(false)} className="btn-primary" style={{ fontSize: 13 }}>Criar conta</Link>
-              </>
-            )}
-          </nav>
+        <div className="border-t border-cream-dark bg-paper px-6 py-5 flex flex-col gap-4 animate-fade-in md:hidden">
+          <Link href="/produtos" onClick={() => setMenuOpen(false)} className="text-[15px] text-ink-mid font-medium no-underline">Produtos</Link>
+          <Link href="/sobre" onClick={() => setMenuOpen(false)} className="text-[15px] text-ink-mid font-medium no-underline">Sobre</Link>
+          <hr className="divider" />
+          {user ? (
+            <>
+              <Link href="/conta" onClick={() => setMenuOpen(false)} className="text-[14px] text-ink-mid no-underline">Minha conta</Link>
+              {(user.role === 'seller' || user.role === 'admin') && (
+                <Link href="/painel" onClick={() => setMenuOpen(false)} className="text-[14px] text-ink-mid no-underline">Painel</Link>
+              )}
+              <button onClick={() => { logout(); setMenuOpen(false); }} className="text-left text-[14px] text-ink-light bg-transparent border-none p-0">
+                Sair
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/entrar" onClick={() => setMenuOpen(false)} className="text-[14px] text-ink-mid no-underline">Entrar</Link>
+              <Link href="/cadastro" onClick={() => setMenuOpen(false)} className="btn-primary !text-[13px]">Criar conta</Link>
+            </>
+          )}
         </div>
       )}
     </header>
