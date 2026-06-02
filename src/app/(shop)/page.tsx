@@ -13,91 +13,87 @@ async function getFeaturedProducts(): Promise<Product[]> {
       .orderBy('createdAt', 'desc')
       .limit(8)
       .get();
-
     return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Product));
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 export default async function HomePage() {
   const products = await getFeaturedProducts();
 
   return (
-    <div className="bg-white">
+    <div style={{ background: 'var(--white)' }}>
+
       {/* Hero */}
-      <section className="border-b border-gray-100 bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">
-            Lençóis com qualidade
-            <br />
-            <span className="text-blue-600">direto de Blumenau</span>
+      <section style={{ background: 'var(--cream)', borderBottom: '1px solid var(--cream-d)', overflow: 'hidden', position: 'relative' }}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 80, paddingBottom: 80 }}>
+          <p className="section-label" style={{ marginBottom: 20 }}>Blumenau, SC</p>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(42px, 6vw, 72px)', fontWeight: 300, color: 'var(--ink)', lineHeight: 1.1, maxWidth: 660, marginBottom: 20 }}>
+            Lençóis com qualidade<br />
+            <em>direto da fábrica</em>
           </h1>
-          <p className="mt-4 max-xl text-lg text-gray-500">
+          <p style={{ fontSize: 15, color: 'var(--ink-l)', maxWidth: 440, lineHeight: 1.7, marginBottom: 36 }}>
             Entrega local em até 1h ou para todo o Brasil com rastreamento em tempo real.
           </p>
-          <div className="mt-8 flex gap-4">
-            <Link
-              href="/produtos"
-              className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              Ver produtos
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <Link href="/produtos" className="btn-primary">Ver coleção</Link>
+            <Link href="/sobre" className="btn-outline">Nossa história</Link>
+          </div>
+        </div>
+        {/* Decorative line */}
+        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 1, background: 'var(--cream-d)' }} />
+      </section>
+
+      {/* Benefits */}
+      <section style={{ borderBottom: '1px solid var(--cream-d)' }}>
+        <div className="mx-auto max-w-7xl" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          {[
+            { icon: '◎', title: 'Entrega local em 1h', desc: 'Para endereços em Blumenau via Uber Direct.' },
+            { icon: '◎', title: 'Frete para o Brasil', desc: 'PAC, SEDEX e transportadoras com rastreio.' },
+            { icon: '◎', title: 'Pagamento PIX', desc: 'QR Code na hora, confirmação automática.' },
+          ].map((b, i) => (
+            <div key={i} style={{
+              padding: '32px 32px',
+              borderRight: i < 2 ? '1px solid var(--cream-d)' : 'none',
+              display: 'flex', flexDirection: 'column', gap: 6
+            }}>
+              <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 22, color: 'var(--warm-d)' }}>{b.icon}</span>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginTop: 4 }}>{b.title}</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-l)', lineHeight: 1.6 }}>{b.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Featured products */}
+      <section style={{ padding: '64px 0' }}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 40, borderBottom: '1px solid var(--cream-d)', paddingBottom: 16 }}>
+            <div>
+              <p className="section-label" style={{ marginBottom: 6 }}>Coleção</p>
+              <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 34, fontWeight: 400, color: 'var(--ink)' }}>
+                Produtos em destaque
+              </h2>
+            </div>
+            <Link href="/produtos" style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--ink-l)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+              className="hover:text-ink transition-colors">
+              Ver todos →
             </Link>
-            <Link
-              href="/sobre"
-              className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Sobre nós
-            </Link>
           </div>
+
+          {products.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--ink-l)', fontSize: 14 }}>
+              Nenhum produto cadastrado ainda.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 1, background: 'var(--cream-d)' }}>
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Products */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-gray-900">Produtos em destaque</h2>
-          <Link href="/produtos" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-            Ver todos →
-          </Link>
-        </div>
-
-        {products.length === 0 ? (
-          <p className="py-20 text-center text-gray-400">
-            Nenhum produto cadastrado ainda.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Benefits strip */}
-      <section className="border-t border-gray-100 bg-gray-50">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-0 divide-y divide-gray-200 px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6 lg:px-8">
-          <div className="py-8 pr-0 sm:pr-8">
-            <p className="text-sm font-semibold text-gray-900">Entrega local em 1h</p>
-            <p className="mt-1 text-sm text-gray-500">
-              Para endereços até 10 km de Blumenau via Uber Direct.
-            </p>
-          </div>
-          <div className="py-8 sm:px-8">
-            <p className="text-sm font-semibold text-gray-900">Frete para todo o Brasil</p>
-            <p className="mt-1 text-sm text-gray-500">
-              PAC, SEDEX e transportadoras via Melhor Envio com rastreio.
-            </p>
-          </div>
-          <div className="py-8 pl-0 sm:pl-8">
-            <p className="text-sm font-semibold text-gray-900">Pagamento PIX</p>
-            <p className="mt-1 text-sm text-gray-500">
-              QR Code gerado na hora, confirmação automática do pedido.
-            </p>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
