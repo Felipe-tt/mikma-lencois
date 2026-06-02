@@ -1,11 +1,5 @@
 import Link from 'next/link';
 
-const LINKS = {
-  Loja:  [{ href: '/produtos', label: 'Produtos' }, { href: '/sobre', label: 'Sobre nós' }],
-  Conta: [{ href: '/conta/pedidos', label: 'Meus pedidos' }, { href: '/conta', label: 'Meu perfil' }],
-  Legal: [{ href: '/privacidade', label: 'Privacidade (LGPD)' }, { href: '/termos', label: 'Termos de uso' }],
-};
-
 export function Footer() {
   return (
     <footer className="bg-ink text-cream mt-auto">
@@ -13,34 +7,43 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 py-14">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <p className="font-display text-[20px] tracking-[0.04em] mb-2">
-              Mikma{' '}
-              <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-warm align-middle">Lençóis</span>
+            <p className="font-display text-xl tracking-[0.04em] mb-2">
+              Mikma <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-warm align-middle ml-0.5">Lençóis</span>
             </p>
             <p className="text-[12px] text-cream/50 leading-relaxed">
-              <br />
-              Garcia · Blumenau, SC
+              <br />Garcia · Blumenau, SC
             </p>
           </div>
 
-          {/* Link groups */}
-          {Object.entries(LINKS).map(([title, items]) => (
-            <div key={title}>
-              <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-warm mb-4">{title}</p>
-              <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
-                {items.map(({ href, label }) => (
-                  <li key={href}>
-                    <Link href={href} className="text-[13px] text-cream/65 no-underline hover:text-cream transition-colors">
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Loja */}
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-warm mb-4">Loja</p>
+            <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
+              <li><Link href="/produtos" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Produtos</Link></li>
+              <li><Link href="/sobre" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Sobre nós</Link></li>
+            </ul>
+          </div>
+
+          {/* Conta */}
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-warm mb-4">Conta</p>
+            <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
+              <li><Link href="/conta/pedidos" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Meus pedidos</Link></li>
+              <li><Link href="/conta" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Meu perfil</Link></li>
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-warm mb-4">Legal</p>
+            <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
+              <li><Link href="/privacidade" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Privacidade (LGPD)</Link></li>
+              <li><Link href="/termos" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Termos de uso</Link></li>
+            </ul>
+          </div>
         </div>
 
-        <div className="border-t border-cream/10 py-5 flex items-center justify-between flex-wrap gap-2">
+        <div className="border-t border-cream/10 py-5 flex flex-wrap items-center justify-between gap-2">
           <p className="text-[11px] text-cream/30 tracking-[0.04em]">
             © {new Date().getFullYear()} Mikma Lençóis. Todos os direitos reservados.
           </p>

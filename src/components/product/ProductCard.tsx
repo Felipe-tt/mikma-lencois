@@ -3,44 +3,47 @@ import Image from 'next/image';
 import type { Product } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 
-interface ProductCardProps { product: Product; }
-
-export function ProductCard({ product }: ProductCardProps) {
-  const firstImage = product.images[0] ?? null;
+export function ProductCard({ product }: { product: Product }) {
+  const img = product.images[0] ?? null;
 
   return (
-    <Link href={`/produtos/${product.id}`} className="card-product" style={{ textDecoration: 'none' }}>
-      <div style={{ position: 'relative', aspectRatio: '4/5', overflow: 'hidden', background: 'var(--mist)' }}>
-        {firstImage ? (
+    <Link href={`/produtos/${product.id}`} className="group card-product no-underline">
+      {/* Imagem */}
+      <div className="relative aspect-[4/5] overflow-hidden bg-mist">
+        {img ? (
           <Image
-            src={firstImage}
+            src={img}
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            style={{ objectFit: 'cover', transition: 'transform 0.5s ease' }}
-            className="group-hover:scale-105"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 13, color: 'var(--ink-l)' }}>Sem imagem</span>
+          <div className="flex h-full items-center justify-center">
+            <span className="font-display text-[13px] text-ink-light">Sem imagem</span>
           </div>
         )}
-        {product.tags.length > 0 && (
-          <span className="tag" style={{ position: 'absolute', top: 12, left: 12 }}>
-            {product.tags[0]}
-          </span>
+
+        {/* Tag */}
+        {product.tags?.length > 0 && (
+          <span className="tag absolute top-3 left-3">{product.tags[0]}</span>
         )}
+
+        {/* Overlay hover */}
+        <div className="absolute inset-0 bg-ink/40 flex items-end justify-center pb-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span className="bg-paper text-ink text-[12px] font-semibold tracking-[0.1em] uppercase px-5 py-2.5 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+            Ver produto
+          </span>
+        </div>
       </div>
 
-      <div style={{ padding: '16px 18px 20px', background: 'var(--white)' }}>
-        <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)', marginBottom: 4, lineHeight: 1.4 }}
-          className="line-clamp-2">{product.name}</p>
+      {/* Info */}
+      <div className="px-4 py-4 bg-paper flex flex-col gap-1">
+        <p className="text-[14px] font-medium text-ink leading-snug line-clamp-2">{product.name}</p>
         {product.category && (
-          <p style={{ fontSize: 11, color: 'var(--ink-l)', letterSpacing: '0.06em', marginBottom: 10, textTransform: 'uppercase' }}>{product.category}</p>
+          <p className="text-[10px] text-ink-light tracking-[0.07em] uppercase">{product.category}</p>
         )}
-        <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 18, fontWeight: 500, color: 'var(--ink)' }}>
-          {formatCurrency(product.price)}
-        </p>
+        <p className="font-display text-[18px] text-ink mt-1">{formatCurrency(product.price)}</p>
       </div>
     </Link>
   );

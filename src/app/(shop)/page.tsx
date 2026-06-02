@@ -13,7 +13,7 @@ async function getFeaturedProducts(): Promise<Product[]> {
       .orderBy('createdAt', 'desc')
       .limit(8)
       .get();
-    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Product));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
   } catch { return []; }
 }
 
@@ -21,76 +21,102 @@ export default async function HomePage() {
   const products = await getFeaturedProducts();
 
   return (
-    <div style={{ background: 'var(--white)' }}>
+    <div className="bg-paper">
 
       {/* Hero */}
-      <section style={{ background: 'var(--cream)', borderBottom: '1px solid var(--cream-d)', overflow: 'hidden', position: 'relative' }}>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 80, paddingBottom: 80 }}>
-          <p className="section-label" style={{ marginBottom: 20 }}>Blumenau, SC</p>
-          <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(42px, 6vw, 72px)', fontWeight: 300, color: 'var(--ink)', lineHeight: 1.1, maxWidth: 660, marginBottom: 20 }}>
-            Lençóis com qualidade<br />
-            <em>direto da fábrica</em>
-          </h1>
-          <p style={{ fontSize: 15, color: 'var(--ink-l)', maxWidth: 440, lineHeight: 1.7, marginBottom: 36 }}>
-            Entrega local em até 1h ou para todo o Brasil com rastreamento em tempo real.
-          </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <Link href="/produtos" className="btn-primary">Ver coleção</Link>
-            <Link href="/sobre" className="btn-outline">Nossa história</Link>
+      <section className="bg-cream border-b border-cream-dark overflow-hidden">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-0 min-h-[480px] items-stretch">
+
+            {/* Texto */}
+            <div className="py-20 lg:py-28 flex flex-col justify-center lg:pr-16">
+              <p className="section-label mb-5">Blumenau, SC</p>
+              <h1 className="font-display font-light text-ink leading-[1.08] text-[clamp(40px,5.5vw,68px)] mb-6">
+                Lençóis com qualidade<br />
+                <em>direto da fábrica</em>
+              </h1>
+              <p className="text-[15px] text-ink-light max-w-[400px] leading-relaxed mb-8">
+                Entrega local em até 1h ou para todo o Brasil com rastreamento em tempo real.
+              </p>
+              <div className="flex gap-3 flex-wrap">
+                <Link href="/produtos" className="btn-primary">Ver coleção</Link>
+                <Link href="/sobre" className="btn-outline">Nossa história</Link>
+              </div>
+            </div>
+
+            {/* Decoração */}
+            <div className="hidden lg:flex items-center justify-center border-l border-cream-dark">
+              <div className="text-center px-16">
+                <p className="font-display text-[80px] text-ink/8 leading-none select-none">M</p>
+                <div className="w-px h-16 bg-cream-dark mx-auto my-4" />
+                <p className="section-label">Est. Blumenau</p>
+              </div>
+            </div>
           </div>
         </div>
-        {/* Decorative line */}
-        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 1, background: 'var(--cream-d)' }} />
       </section>
 
-      {/* Benefits */}
-      <section style={{ borderBottom: '1px solid var(--cream-d)' }}>
-        <div className="mx-auto max-w-7xl" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
-          {[
-            { icon: '◎', title: 'Entrega local em 1h', desc: 'Para endereços em Blumenau via Uber Direct.' },
-            { icon: '◎', title: 'Frete para o Brasil', desc: 'PAC, SEDEX e transportadoras com rastreio.' },
-            { icon: '◎', title: 'Pagamento PIX', desc: 'QR Code na hora, confirmação automática.' },
-          ].map((b, i) => (
-            <div key={i} style={{
-              padding: '32px 32px',
-              borderRight: i < 2 ? '1px solid var(--cream-d)' : 'none',
-              display: 'flex', flexDirection: 'column', gap: 6
-            }}>
-              <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 22, color: 'var(--warm-d)' }}>{b.icon}</span>
-              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginTop: 4 }}>{b.title}</p>
-              <p style={{ fontSize: 13, color: 'var(--ink-l)', lineHeight: 1.6 }}>{b.desc}</p>
-            </div>
-          ))}
+      {/* Diferenciais */}
+      <section className="border-b border-cream-dark">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-cream-dark">
+            {[
+              { label: 'Entrega local em 1h', desc: 'Para endereços em Blumenau via Uber Direct.' },
+              { label: 'Frete para o Brasil', desc: 'PAC, SEDEX e transportadoras com rastreio.' },
+              { label: 'Pagamento PIX', desc: 'QR Code na hora, confirmação automática.' },
+            ].map((b) => (
+              <div key={b.label} className="flex flex-col gap-1.5 px-8 py-8">
+                <div className="w-5 h-px bg-warm-dark mb-2" />
+                <p className="text-[13px] font-semibold text-ink">{b.label}</p>
+                <p className="text-[13px] text-ink-light leading-relaxed">{b.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Featured products */}
-      <section style={{ padding: '64px 0' }}>
+      {/* Produtos em destaque */}
+      <section className="py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 40, borderBottom: '1px solid var(--cream-d)', paddingBottom: 16 }}>
+          <div className="flex items-end justify-between border-b border-cream-dark pb-4 mb-10">
             <div>
-              <p className="section-label" style={{ marginBottom: 6 }}>Coleção</p>
-              <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 34, fontWeight: 400, color: 'var(--ink)' }}>
-                Produtos em destaque
-              </h2>
+              <p className="section-label mb-2">Coleção</p>
+              <h2 className="font-display text-[34px] font-light text-ink">Produtos em destaque</h2>
             </div>
-            <Link href="/produtos" style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--ink-l)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-              className="hover:text-ink transition-colors">
+            <Link href="/produtos" className="text-[12px] font-medium tracking-[0.07em] text-ink-light no-underline hover:text-ink transition-colors hidden sm:block">
               Ver todos →
             </Link>
           </div>
 
           {products.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--ink-l)', fontSize: 14 }}>
+            <div className="py-20 text-center text-[14px] text-ink-light">
               Nenhum produto cadastrado ainda.
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 1, background: 'var(--cream-d)' }}>
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-cream-dark">
+              {products.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
+
+          <div className="mt-8 text-center sm:hidden">
+            <Link href="/produtos" className="btn-outline">Ver todos os produtos</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="bg-ink text-paper py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-warm mb-5">Qualidade garantida</p>
+          <h2 className="font-display font-light text-[clamp(28px,4vw,48px)] text-paper mb-6 max-w-xl mx-auto leading-snug">
+            Tecido que dura, conforto que fica
+          </h2>
+          <p className="text-[14px] text-cream/60 max-w-md mx-auto mb-8 leading-relaxed">
+            Fios selecionados, acabamento cuidadoso e controle de qualidade em cada peça.
+          </p>
+          <Link href="/produtos" className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-[13px] font-semibold tracking-[0.08em] bg-paper text-ink hover:bg-cream transition-colors">
+            Comprar agora
+          </Link>
         </div>
       </section>
 
