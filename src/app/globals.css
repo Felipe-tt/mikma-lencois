@@ -1,23 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --color-brand: #2563eb;
-    --color-brand-dark: #1d4ed8;
+    --cream:    #F5F0E8;
+    --cream-d:  #EDE7D9;
+    --warm:     #C8A96E;
+    --warm-d:   #A8863F;
+    --ink:      #1C1815;
+    --ink-m:    #3D3530;
+    --ink-l:    #7A6E65;
+    --mist:     #EAE4DA;
+    --white:    #FDFBF7;
+    --red:      #C0392B;
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
+  html { scroll-behavior: smooth; }
 
   body {
-    @apply bg-white text-gray-900 antialiased;
+    background: var(--white);
+    color: var(--ink);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    line-height: 1.15;
+    font-weight: 400;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium tracking-wide transition-all duration-200;
+    background: var(--ink);
+    color: var(--white);
+    border: 1px solid var(--ink);
+  }
+  .btn-primary:hover {
+    background: var(--ink-m);
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium tracking-wide transition-all duration-200;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink-m);
+  }
+  .btn-outline:hover {
+    background: var(--mist);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-1 text-sm transition-colors duration-150;
+    color: var(--ink-l);
+  }
+  .btn-ghost:hover { color: var(--ink); }
+
+  .input-field {
+    @apply w-full px-4 py-3 text-sm outline-none transition-all duration-150;
+    background: var(--white);
+    border: 1px solid #D5CFC6;
+    color: var(--ink);
+  }
+  .input-field:focus {
+    border-color: var(--warm);
+    box-shadow: 0 0 0 3px rgba(200,169,110,0.12);
+  }
+  .input-field::placeholder { color: var(--ink-l); }
+
+  .label-field {
+    @apply block text-xs font-medium tracking-wider uppercase mb-1.5;
+    color: var(--ink-l);
+  }
+
+  .card-product {
+    @apply flex flex-col overflow-hidden transition-all duration-300;
+    background: var(--white);
+    border: 1px solid var(--cream-d);
+  }
+  .card-product:hover {
+    border-color: var(--warm);
+    box-shadow: 0 8px 32px rgba(28,24,21,0.08);
+    transform: translateY(-2px);
+  }
+
+  .tag {
+    @apply inline-block px-2.5 py-0.5 text-xs tracking-wide;
+    background: var(--mist);
+    color: var(--ink-m);
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--cream-d);
+  }
+
+  .section-label {
+    @apply text-xs font-medium tracking-widest uppercase;
+    color: var(--warm-d);
   }
 }
 
 @layer utilities {
+  .font-display { font-family: 'Cormorant Garamond', Georgia, serif; }
+  .text-ink     { color: var(--ink); }
+  .text-ink-m   { color: var(--ink-m); }
+  .text-ink-l   { color: var(--ink-l); }
+  .text-warm    { color: var(--warm); }
+  .text-warm-d  { color: var(--warm-d); }
+  .bg-cream     { background: var(--cream); }
+  .bg-cream-d   { background: var(--cream-d); }
+  .bg-mist      { background: var(--mist); }
+  .bg-white-pure{ background: var(--white); }
+  .border-cream { border-color: var(--cream-d); }
+  .border-warm  { border-color: var(--warm); }
+
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;

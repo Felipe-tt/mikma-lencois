@@ -2,74 +2,53 @@ import Link from 'next/link';
 
 export function Footer() {
   return (
-    <footer className="border-t border-gray-200 bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+    <footer style={{ background: 'var(--ink)', color: 'var(--cream)', marginTop: 'auto' }}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div style={{ padding: '56px 0 40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 40 }}>
+          {/* Brand */}
           <div>
-            <p className="text-sm font-semibold text-gray-900">Mikma Lençóis</p>
-            <p className="mt-2 text-xs text-gray-500">
-              
+            <p style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 20, fontWeight: 400, letterSpacing: '0.04em', marginBottom: 8 }}>
+              Mikma <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--warm)', verticalAlign: 'middle' }}>Lençóis</span>
+            </p>
+            <p style={{ fontSize: 12, color: 'rgba(245,240,232,0.55)', lineHeight: 1.7 }}>
               <br />
-              Garcia — Blumenau, SC
+              Garcia · Blumenau, SC
             </p>
           </div>
 
+          {/* Loja */}
           <div>
-            <p className="text-sm font-semibold text-gray-900">Loja</p>
-            <ul className="mt-2 space-y-1">
-              <li>
-                <Link href="/produtos" className="text-xs text-gray-500 hover:text-gray-900">
-                  Produtos
-                </Link>
-              </li>
-              <li>
-                <Link href="/sobre" className="text-xs text-gray-500 hover:text-gray-900">
-                  Sobre nós
-                </Link>
-              </li>
+            <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--warm)', marginBottom: 14 }}>Loja</p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <li><Link href="/produtos" style={{ fontSize: 13, color: 'rgba(245,240,232,0.7)', textDecoration: 'none' }} className="hover:text-cream transition-colors">Produtos</Link></li>
+              <li><Link href="/sobre" style={{ fontSize: 13, color: 'rgba(245,240,232,0.7)', textDecoration: 'none' }} className="hover:text-cream transition-colors">Sobre nós</Link></li>
             </ul>
           </div>
 
+          {/* Conta */}
           <div>
-            <p className="text-sm font-semibold text-gray-900">Conta</p>
-            <ul className="mt-2 space-y-1">
-              <li>
-                <Link href="/conta/pedidos" className="text-xs text-gray-500 hover:text-gray-900">
-                  Meus pedidos
-                </Link>
-              </li>
-              <li>
-                <Link href="/conta" className="text-xs text-gray-500 hover:text-gray-900">
-                  Meu perfil
-                </Link>
-              </li>
+            <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--warm)', marginBottom: 14 }}>Conta</p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <li><Link href="/conta/pedidos" style={{ fontSize: 13, color: 'rgba(245,240,232,0.7)', textDecoration: 'none' }} className="hover:text-cream transition-colors">Meus pedidos</Link></li>
+              <li><Link href="/conta" style={{ fontSize: 13, color: 'rgba(245,240,232,0.7)', textDecoration: 'none' }} className="hover:text-cream transition-colors">Meu perfil</Link></li>
             </ul>
           </div>
 
+          {/* Legal */}
           <div>
-            <p className="text-sm font-semibold text-gray-900">Legal</p>
-            <ul className="mt-2 space-y-1">
-              <li>
-                <Link
-                  href="/privacidade"
-                  className="text-xs text-gray-500 hover:text-gray-900"
-                >
-                  Privacidade (LGPD)
-                </Link>
-              </li>
-              <li>
-                <Link href="/termos" className="text-xs text-gray-500 hover:text-gray-900">
-                  Termos de uso
-                </Link>
-              </li>
+            <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--warm)', marginBottom: 14 }}>Legal</p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <li><Link href="/privacidade" style={{ fontSize: 13, color: 'rgba(245,240,232,0.7)', textDecoration: 'none' }} className="hover:text-cream transition-colors">Privacidade (LGPD)</Link></li>
+              <li><Link href="/termos" style={{ fontSize: 13, color: 'rgba(245,240,232,0.7)', textDecoration: 'none' }} className="hover:text-cream transition-colors">Termos de uso</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-8 border-t border-gray-100 pt-6">
-          <p className="text-xs text-gray-400">
+        <div style={{ borderTop: '1px solid rgba(245,240,232,0.1)', padding: '20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <p style={{ fontSize: 11, color: 'rgba(245,240,232,0.35)', letterSpacing: '0.04em' }}>
             © {new Date().getFullYear()} Mikma Lençóis. Todos os direitos reservados.
           </p>
+          <p style={{ fontSize: 11, color: 'rgba(245,240,232,0.25)' }}>Blumenau, SC · Brasil</p>
         </div>
       </div>
     </footer>
