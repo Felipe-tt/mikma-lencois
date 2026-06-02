@@ -3,15 +3,21 @@ import { ProductCard } from '@/components/product/ProductCard';
 import type { Product } from '@/types';
 import Link from 'next/link';
 
-async function getFeaturedProducts(): Promise<Product[]> {
-  const snap = await adminDb
-    .collection('products')
-    .where('active', '==', true)
-    .orderBy('createdAt', 'desc')
-    .limit(8)
-    .get();
+export const dynamic = 'force-dynamic';
 
-  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Product));
+async function getFeaturedProducts(): Promise<Product[]> {
+  try {
+    const snap = await adminDb
+      .collection('products')
+      .where('active', '==', true)
+      .orderBy('createdAt', 'desc')
+      .limit(8)
+      .get();
+
+    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Product));
+  } catch {
+    return [];
+  }
 }
 
 export default async function HomePage() {
@@ -27,7 +33,7 @@ export default async function HomePage() {
             <br />
             <span className="text-blue-600">direto de Blumenau</span>
           </h1>
-          <p className="mt-4 max-w-xl text-lg text-gray-500">
+          <p className="mt-4 max-xl text-lg text-gray-500">
             Entrega local em até 1h ou para todo o Brasil com rastreamento em tempo real.
           </p>
           <div className="mt-8 flex gap-4">
