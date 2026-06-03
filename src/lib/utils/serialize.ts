@@ -2,8 +2,7 @@
  * Serializa dados do Firestore para plain objects seguros para RSC→Client.
  * Converte Timestamp, DocumentReference e qualquer objeto com protótipo especial.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function serialize<T>(data: any): T {
+export function serialize<T>(data: unknown): T {
   if (data === null || data === undefined) return data;
   if (typeof data !== 'object') return data;
 
@@ -19,8 +18,8 @@ export function serialize<T>(data: any): T {
 
   // Plain object / DocumentData
   const result: Record<string, unknown> = {};
-  for (const key of Object.keys(data)) {
-    result[key] = serialize(data[key]);
+  for (const key of Object.keys(data as object)) {
+    result[key] = serialize((data as Record<string, unknown>)[key]);
   }
   return result as T;
 }
