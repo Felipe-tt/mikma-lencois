@@ -9,7 +9,7 @@ import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 
 export const dynamic = 'force-dynamic';
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 async function getProduct(id: string): Promise<Product | null> {
   const snap = await adminDb.collection('products').doc(id).get();
@@ -22,18 +22,19 @@ async function getInventory(id: string): Promise<InventoryItem[]> {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const p = await getProduct(params.slug);
+  const { slug } = await params;
+  const p = await getProduct(slug);
   if (!p) return { title: 'Produto não encontrado' };
   return { title: p.name, description: p.description.slice(0,160), openGraph: { images: p.images[0] ? [{ url: p.images[0] }] : [] } };
 }
 
 export default async function ProductPage({ params }: Props) {
-  const [product, inventory] = await Promise.all([getProduct(params.slug), getInventory(params.slug)]);
+  const { slug } = await params;
+  const [product, inventory] = await Promise.all([getProduct(slug), getInventory(slug)]);
   if (!product) notFound();
 
   return (
     <div>
-      {/* Breadcrumb */}
       <div className="border-b border-mist bg-paper">
         <div className="container-shop py-3">
           <nav className="flex items-center gap-2 text-xs text-faint">
@@ -49,7 +50,6 @@ export default async function ProductPage({ params }: Props) {
       <div className="container-shop py-12 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
 
-          {/* Images */}
           <div className="flex flex-col gap-3">
             <div className="relative aspect-[3/4] overflow-hidden bg-warm">
               {product.images[0] ? (
@@ -72,7 +72,6 @@ export default async function ProductPage({ params }: Props) {
             )}
           </div>
 
-          {/* Info */}
           <div className="lg:sticky lg:top-28">
             {product.category && <span className="eyebrow mb-4 block">{product.category}</span>}
             <h1 className="font-display font-normal text-ink mb-3 leading-tight" style={{fontSize:'clamp(1.75rem,4vw,2.75rem)'}}>
@@ -94,7 +93,6 @@ export default async function ProductPage({ params }: Props) {
               <VariantSelector product={product} inventory={inventory} />
             </div>
 
-            {/* Trust signals */}
             <div className="mt-8 grid grid-cols-1 gap-3">
               {[
                 { icon:'🚀', text:'Entrega local em Blumenau em até 1h' },
