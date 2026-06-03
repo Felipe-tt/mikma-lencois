@@ -28,7 +28,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 })
     }
 
-    const { passwordHash } = userDoc.data() as { passwordHash: string }
+    const { passwordHash } = userDoc.data() as { passwordHash?: string }
+
+    // Usuário criado via Google OAuth — não tem senha, deve usar Google
+    if (!passwordHash) {
+      return NextResponse.json({ error: 'Esta conta usa login com Google. Clique em "Continuar com Google".' }, { status: 401 })
+    }
 
     const { verify } = await import('@node-rs/argon2')
     const valid = await verify(passwordHash, password)
