@@ -36,25 +36,29 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
+    const payload = {
+      data: {
+        amount: amountCents,
+        description: `Pedido Mikma Lençóis #${orderId}`,
+        expiresIn: 900,
+        customer: {
+          name: customerName,
+          email: customerEmail,
+          ...(customerCpf && { taxId: customerCpf }),
+        },
+        metadata: { orderId, userId: uid },
+      },
+    };
+
+    console.log('AbacatePay payload:', JSON.stringify(payload, null, 2));
+
     const pixRes = await fetch(`${ABACATEPAY_BASE}/transparents/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${ABACATEPAY_KEY}`,
       },
-      body: JSON.stringify({
-        data: {
-          amount: amountCents,
-          description: `Pedido Mikma Lençóis #${orderId}`,
-          expiresIn: 900,
-          customer: {
-            name: customerName,
-            email: customerEmail,
-            ...(customerCpf && { taxId: customerCpf }),
-          },
-          metadata: { orderId, userId: uid },
-        },
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!pixRes.ok) {
