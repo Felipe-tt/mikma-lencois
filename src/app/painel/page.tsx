@@ -1,108 +1,101 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase/client';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { Order } from '@/types';
+import { db } from '@/lib/firebase/client';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
+import type { Order } from '@/types';
 import Link from 'next/link';
 
-interface KPIs { todayOrders: number; todayRevenue: number; monthOrders: number; monthRevenue: number; pendingOrders: number; }
-
-const STATUS_LABEL: Record<string, string> = {
-  pending_payment: 'Aguardando', paid: 'Pago', preparing: 'Em preparo',
-  shipped: 'Em rota', delivered: 'Entregue', cancelled: 'Cancelado',
-};
-const STATUS_CLS: Record<string, string> = {
-  pending_payment: 'bg-amber-50 text-amber-700',
-  paid:            'bg-green-50 text-green-700',
-  preparing:       'bg-blue-50 text-blue-700',
-  shipped:         'bg-purple-50 text-purple-700',
-  delivered:       'bg-green-50 text-green-700',
-  cancelled:       'bg-red-50 text-red-700',
+const STATUS: Record<string, { label: string; cls: string }> = {
+  pending_payment: { label: 'Aguardando pag.', cls: 'badge-pending' },
+  paid:            { label: 'Pago',            cls: 'badge-paid' },
+  preparing:       { label: 'Em preparo',      cls: 'badge-default' },
+  shipped:         { label: 'Em rota',         cls: 'badge badge-default' },
+  delivered:       { label: 'Entregue',        cls: 'badge-paid' },
+  cancelled:       { label: 'Cancelado',       cls: 'badge-canceled' },
 };
 
-export default function PainelDashboard() {
+export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [kpis, setKpis] = useState<KPIs>({ todayOrders: 0, todayRevenue: 0, monthOrders: 0, monthRevenue: 0, pendingOrders: 0 });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(10));
-    return onSnapshot(q, snap => {
-      const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Order));
-      setOrders(all);
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const paid = all.filter(o => o.status !== 'pending_payment' && o.status !== 'cancelled');
-      setKpis({
-        todayOrders: paid.filter(o => o.createdAt >= todayStart).length,
-        todayRevenue: paid.filter(o => o.createdAt >= todayStart).reduce((s, o) => s + o.totalCents, 0),
-        monthOrders: paid.filter(o => o.createdAt >= monthStart).length,
-        monthRevenue: paid.filter(o => o.createdAt >= monthStart).reduce((s, o) => s + o.totalCents, 0),
-        pendingOrders: all.filter(o => o.status === 'pending_payment').length,
-      });
-    });
+    return onSnapshot(
+      query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(20)),
+      snap => { setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); setLoading(false); }
+    );
   }, []);
 
-  const kpiCards = [
-    { label: 'Pedidos hoje', value: kpis.todayOrders, fmt: 'n' as const },
-    { label: 'Receita hoje', value: kpis.todayRevenue, fmt: 'c' as const },
-    { label: 'Pedidos no mês', value: kpis.monthOrders, fmt: 'n' as const },
-    { label: 'Receita no mês', value: kpis.monthRevenue, fmt: 'c' as const },
-    { label: 'Aguardando pag.', value: kpis.pendingOrders, fmt: 'n' as const, alert: kpis.pendingOrders > 0 },
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const paid = orders.filter(o => o.status !== 'pending_payment' && o.status !== 'cancelled');
+
+  const kpis = [
+    { label: 'Hoje — pedidos', value: paid.filter(o => o.createdAt >= startOfDay).length, format: 'n' as const },
+    { label: 'Hoje — receita', value: paid.filter(o => o.createdAt >= startOfDay).reduce((s, o) => s + o.totalCents, 0), format: 'c' as const },
+    { label: 'Mês — pedidos', value: paid.filter(o => o.createdAt >= startOfMonth).length, format: 'n' as const },
+    { label: 'Mês — receita', value: paid.filter(o => o.createdAt >= startOfMonth).reduce((s, o) => s + o.totalCents, 0), format: 'c' as const },
+    { label: 'Aguardando pag.', value: orders.filter(o => o.status === 'pending_payment').length, format: 'n' as const, alert: true },
   ];
 
   return (
     <div>
-      <div className="border-b border-cream-dark pb-5 mb-8">
-        <p className="section-label mb-1">Visão geral</p>
-        <h1 className="font-display font-light text-[30px] text-ink">Dashboard</h1>
+      <div className="border-b border-stone-200 pb-6 mb-8">
+        <span className="eyebrow text-stone-400 mb-2 block">Visão geral</span>
+        <h1 className="font-display text-3xl font-light text-stone-900">Dashboard</h1>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-cream-dark mb-10">
-        {kpiCards.map(k => (
-          <div key={k.label} className={`flex flex-col gap-2 px-5 py-6 ${k.alert ? 'bg-amber-50' : 'bg-paper'}`}>
-            <p className={`text-[10px] font-semibold tracking-[0.14em] uppercase ${k.alert ? 'text-amber-700' : 'text-ink-light'}`}>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-stone-200 mb-10">
+        {kpis.map(k => (
+          <div key={k.label} className={`flex flex-col gap-2 p-5 ${k.alert && k.value > 0 ? 'bg-amber-50' : 'bg-white'}`}>
+            <p className={`text-2xs font-semibold tracking-widest uppercase ${k.alert && k.value > 0 ? 'text-amber-600' : 'text-stone-400'}`}>
               {k.label}
             </p>
-            <p className={`font-display text-[26px] ${k.alert ? 'text-amber-700' : 'text-ink'}`}>
-              {k.fmt === 'c' ? formatCurrency(k.value) : k.value}
+            <p className={`font-display text-3xl font-light ${k.alert && k.value > 0 ? 'text-amber-700' : 'text-stone-900'}`}>
+              {k.format === 'c' ? formatCurrency(k.value) : k.value}
             </p>
           </div>
         ))}
       </div>
 
       {/* Pedidos recentes */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <p className="font-display text-[20px] text-ink">Pedidos recentes</p>
-          <Link href="/painel/pedidos" className="text-[12px] text-ink-light no-underline hover:text-ink transition-colors">Ver todos →</Link>
-        </div>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="font-display text-xl font-light text-stone-900">Pedidos recentes</h2>
+        <Link href="/painel/pedidos" className="text-sm text-stone-500 hover:text-stone-900 transition-colors">Ver todos →</Link>
+      </div>
 
-        <div className="border border-cream-dark overflow-hidden">
-          <div className="grid grid-cols-[130px_1fr_110px_110px_60px] bg-cream border-b border-cream-dark px-4 py-2.5">
-            {['Pedido', 'Status', 'Data', 'Total', ''].map((h, i) => (
-              <span key={i} className="text-[10px] font-semibold tracking-[0.12em] uppercase text-ink-light">{h}</span>
-            ))}
-          </div>
-
-          {orders.length === 0 ? (
-            <div className="px-4 py-8 text-center text-[13px] text-ink-light">Nenhum pedido ainda.</div>
-          ) : orders.map((order, idx) => (
-            <div key={order.id} className={`grid grid-cols-[130px_1fr_110px_110px_60px] items-center px-4 py-3.5 ${idx < orders.length - 1 ? 'border-b border-cream-dark' : ''} hover:bg-cream/40 transition-colors`}>
-              <span className="text-[12px] font-mono text-ink-mid">#{order.id.slice(-8).toUpperCase()}</span>
-              <span className={`badge text-[11px] ${STATUS_CLS[order.status] ?? 'bg-gray-50 text-gray-600'}`}>
-                {STATUS_LABEL[order.status] ?? order.status}
-              </span>
-              <span className="text-[12px] text-ink-light">{formatDate(order.createdAt)}</span>
-              <span className="font-display text-[15px] text-ink">{formatCurrency(order.totalCents)}</span>
-              <Link href={`/painel/pedidos/${order.id}`} className="text-[12px] text-warm-dark no-underline font-medium hover:text-ink transition-colors">
-                Ver →
-              </Link>
-            </div>
+      <div className="border border-stone-200 overflow-hidden">
+        {/* Cabeçalho */}
+        <div className="grid grid-cols-[150px_1fr_140px_120px_60px] gap-4 bg-stone-50 border-b border-stone-200 px-5 py-3">
+          {['Pedido', 'Status', 'Data', 'Total', ''].map((h, i) => (
+            <span key={i} className="text-2xs font-semibold tracking-widest uppercase text-stone-400">{h}</span>
           ))}
         </div>
+
+        {loading ? (
+          <div className="py-12 flex justify-center"><div className="spinner" /></div>
+        ) : orders.length === 0 ? (
+          <p className="py-12 text-center text-sm text-stone-400">Nenhum pedido ainda.</p>
+        ) : (
+          <ul>
+            {orders.map((order, idx) => {
+              const s = STATUS[order.status] ?? { label: order.status, cls: 'badge-default' };
+              return (
+                <li key={order.id} className={`grid grid-cols-[150px_1fr_140px_120px_60px] gap-4 items-center px-5 py-4 hover:bg-stone-50 transition-colors ${idx < orders.length - 1 ? 'border-b border-stone-100' : ''}`}>
+                  <span className="font-mono text-xs text-stone-500">#{order.id.slice(-8).toUpperCase()}</span>
+                  <span className={`badge ${s.cls} self-start`}>{s.label}</span>
+                  <span className="text-xs text-stone-500">{formatDate(order.createdAt)}</span>
+                  <span className="font-display text-lg text-stone-900">{formatCurrency(order.totalCents)}</span>
+                  <Link href={`/painel/pedidos/${order.id}`} className="text-xs font-medium text-gold-600 hover:text-stone-900 transition-colors">
+                    Ver →
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
   );
