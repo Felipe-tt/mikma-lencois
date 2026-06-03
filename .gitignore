@@ -32,3 +32,6 @@ next-env.d.ts
 
 # Firebase service account (se baixar localmente)
 *-firebase-adminsdk-*.json
+
+# Firebase deploy cache
+.firebase/
