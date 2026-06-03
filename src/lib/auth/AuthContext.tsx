@@ -30,7 +30,8 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function mapUser(firebaseUser: User): Promise<AuthUser> {
-  const tokenResult = await firebaseUser.getIdTokenResult();
+  // forceRefresh=true garante que custom claims recém-setados sejam lidos
+  const tokenResult = await firebaseUser.getIdTokenResult(true);
   return {
     uid: firebaseUser.uid,
     email: firebaseUser.email,
@@ -65,7 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    // Força refresh do token logo após login para pegar claims atualizados
+    const mapped = await mapUser(result.user);
+    setUser(mapped);
   };
 
   const userData = user
