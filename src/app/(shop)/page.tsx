@@ -20,7 +20,7 @@ export default async function HomePage() {
       {/* ── Hero ── */}
       <section className="bg-warm overflow-hidden">
         <div className="container-shop">
-          <div className="grid lg:grid-cols-2 min-h-[560px]">
+          <div className="grid lg:grid-cols-2 min-h-[580px]">
 
             {/* Left text */}
             <div className="flex flex-col justify-center py-20 lg:py-28 lg:pr-16">
@@ -41,12 +41,44 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Right — decorative */}
-            <div className="hidden lg:flex items-center justify-center border-l border-mist relative overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#E8E4DC_0%,transparent_70%)]" />
-              <div className="relative text-center select-none">
-                <p className="font-display font-bold text-mist leading-none" style={{fontSize:220}}>M</p>
-                <p className="eyebrow text-faint -mt-8">Mikma Lençóis</p>
+            {/* Right — visual elegante */}
+            <div className="hidden lg:flex items-center justify-center border-l border-mist relative overflow-hidden bg-warm">
+              {/* Grid pattern de fundo tipo tecido */}
+              <div className="absolute inset-0" style={{
+                backgroundImage: `
+                  linear-gradient(rgba(28,28,26,0.04) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(28,28,26,0.04) 1px, transparent 1px)
+                `,
+                backgroundSize: '32px 32px'
+              }}/>
+              {/* Círculo decorativo */}
+              <div className="absolute w-80 h-80 rounded-full border border-clay/15" style={{top:'50%',left:'50%',transform:'translate(-50%,-50%)'}}/>
+              <div className="absolute w-96 h-96 rounded-full border border-clay/08" style={{top:'50%',left:'50%',transform:'translate(-50%,-50%)'}}/>
+
+              {/* Logo central */}
+              <div className="relative flex flex-col items-center gap-6 z-10">
+                {/* M estilizado em SVG inline */}
+                <svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <text x="50%" y="85%" dominantBaseline="auto" textAnchor="middle"
+                        fontFamily="Georgia, 'Playfair Display', serif"
+                        fontSize="110" fontWeight="400"
+                        fill="#1C1C1A" opacity="1">M</text>
+                </svg>
+                <div className="text-center">
+                  <p className="eyebrow text-ink/40 tracking-[0.3em] text-xs">MIKMA LENÇÓIS</p>
+                  <div className="mt-2 w-8 h-px bg-clay mx-auto"/>
+                  <p className="mt-2 text-xs text-mid/60 tracking-wider">BLUMENAU · SC</p>
+                </div>
+              </div>
+
+              {/* Tags flutuantes de produto */}
+              <div className="absolute top-16 right-12 bg-white/80 backdrop-blur-sm border border-mist px-4 py-2 shadow-sm">
+                <p className="text-xs text-mid">400 fios</p>
+                <p className="text-sm font-semibold text-ink">100% Algodão</p>
+              </div>
+              <div className="absolute bottom-20 left-10 bg-white/80 backdrop-blur-sm border border-mist px-4 py-2 shadow-sm">
+                <p className="text-xs text-mid">Entrega</p>
+                <p className="text-sm font-semibold text-ink">Em 1h · Blumenau</p>
               </div>
             </div>
           </div>
