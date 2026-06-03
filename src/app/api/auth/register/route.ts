@@ -7,7 +7,7 @@ const schema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
   password: z.string().min(8).max(128),
-  recaptchaToken: z.string(),
+  recaptchaToken: z.string().optional(),
 })
 
 async function verifyRecaptcha(token: string): Promise<boolean> {
@@ -29,10 +29,12 @@ export async function POST(req: NextRequest) {
 
     const { name, email, password, recaptchaToken } = parsed.data
 
-    // Verify reCAPTCHA
-    const captchaOk = await verifyRecaptcha(recaptchaToken)
-    if (!captchaOk) {
-      return NextResponse.json({ error: 'reCAPTCHA inválido' }, { status: 400 })
+    // Verify reCAPTCHA (optional — skip if token not provided)
+    if (recaptchaToken) {
+      const captchaOk = await verifyRecaptcha(recaptchaToken)
+      if (!captchaOk) {
+        return NextResponse.json({ error: 'reCAPTCHA inválido' }, { status: 400 })
+      }
     }
 
     // Hash password with Argon2id
