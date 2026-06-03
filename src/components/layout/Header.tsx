@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useCartCount } from '@/lib/hooks/useCartCount';
@@ -43,14 +44,8 @@ export function Header() {
           </button>
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 mr-auto md:mr-0 group">
-            <div className="w-8 h-8 bg-ink flex items-center justify-center group-hover:bg-clay transition-colors duration-250">
-              <span className="font-display text-paper text-base font-bold leading-none">M</span>
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="font-display text-ink text-lg font-medium tracking-tight leading-none">Mikma</span>
-              <span className="text-2xs text-clay font-semibold tracking-[0.2em] uppercase leading-none mt-0.5">Lençóis</span>
-            </div>
+          <Link href="/" className="mr-auto md:mr-0">
+            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={110} height={55} className="h-10 w-auto object-contain" priority />
           </Link>
 
           {/* Nav desktop */}
@@ -109,11 +104,8 @@ export function Header() {
           <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm animate-fade-in" onClick={() => setMenuOpen(false)} />
           <div className="fixed top-0 left-0 z-50 w-80 h-full bg-paper shadow-2xl animate-slide-in flex flex-col">
             <div className="flex items-center justify-between px-6 h-16 border-b border-mist">
-              <Link href="/" className="flex items-center gap-2.5" onClick={() => setMenuOpen(false)}>
-                <div className="w-7 h-7 bg-ink flex items-center justify-center">
-                  <span className="font-display text-paper text-sm font-bold">M</span>
-                </div>
-                <span className="font-display text-ink text-lg">Mikma</span>
+              <Link href="/" className="" onClick={() => setMenuOpen(false)}>
+                <Image src="/logo-dark.png" alt="Mikma Lençóis" width={100} height={50} className="h-9 w-auto object-contain" />
               </Link>
               <button className="btn-ghost p-2" onClick={() => setMenuOpen(false)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">

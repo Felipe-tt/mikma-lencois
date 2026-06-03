@@ -2,6 +2,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { ProductCard } from '@/components/product/ProductCard';
 import type { Product } from '@/types';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,17 +57,10 @@ export default async function HomePage() {
               <div className="absolute w-96 h-96 rounded-full border border-clay/08" style={{top:'50%',left:'50%',transform:'translate(-50%,-50%)'}}/>
 
               {/* Logo central */}
-              <div className="relative flex flex-col items-center gap-6 z-10">
-                {/* M estilizado em SVG inline */}
-                <svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <text x="50%" y="85%" dominantBaseline="auto" textAnchor="middle"
-                        fontFamily="Georgia, 'Playfair Display', serif"
-                        fontSize="110" fontWeight="400"
-                        fill="#1C1C1A" opacity="1">M</text>
-                </svg>
+              <div className="relative flex flex-col items-center gap-4 z-10">
+                <Image src="/logo-dark.png" alt="Mikma Lençóis" width={220} height={110} className="w-48 h-auto object-contain" />
                 <div className="text-center">
-                  <p className="eyebrow text-ink/40 tracking-[0.3em] text-xs">MIKMA LENÇÓIS</p>
-                  <div className="mt-2 w-8 h-px bg-clay mx-auto"/>
+                  <div className="w-8 h-px bg-clay mx-auto"/>
                   <p className="mt-2 text-xs text-mid/60 tracking-wider">BLUMENAU · SC</p>
                 </div>
               </div>

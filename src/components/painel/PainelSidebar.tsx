@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 
@@ -21,14 +22,9 @@ export function PainelSidebar() {
     <aside className="w-52 shrink-0 flex flex-col border-r border-mist bg-paper min-h-screen">
       {/* Brand */}
       <div className="h-14 flex items-center px-5 border-b border-mist">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-ink flex items-center justify-center">
-            <span className="font-display text-paper text-sm font-bold">M</span>
-          </div>
-          <div>
-            <p className="font-display text-ink text-base leading-none">Mikma</p>
-            <p className="text-2xs text-clay font-semibold tracking-[0.2em] uppercase leading-none mt-0.5">Painel</p>
-          </div>
+        <Link href="/" className="flex items-center gap-2">
+          <Image src="/logo-dark.png" alt="Mikma Lençóis" width={90} height={45} className="h-8 w-auto object-contain" />
+          <span className="text-2xs text-clay font-semibold tracking-[0.2em] uppercase leading-none">Painel</span>
         </Link>
       </div>
 
