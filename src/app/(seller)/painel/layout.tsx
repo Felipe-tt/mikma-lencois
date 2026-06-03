@@ -1,53 +1,60 @@
-'use client'
-
-import { useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
-import Link from 'next/link'
-import { useAuth } from '@/lib/auth/AuthContext'
+'use client';
+import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 const NAV = [
-  { href: '/painel', label: 'Dashboard', icon: '📊' },
-  { href: '/painel/pedidos', label: 'Pedidos', icon: '🛒' },
-  { href: '/painel/produtos/novo', label: 'Novo produto', icon: '➕' },
-  { href: '/painel/estoque', label: 'Estoque', icon: '📦' },
-  { href: '/painel/configuracoes', label: 'Configurações', icon: '⚙️' },
-]
+  { href: '/painel', label: 'Dashboard', exact: true },
+  { href: '/painel/pedidos', label: 'Pedidos' },
+  { href: '/painel/produtos/novo', label: 'Novo produto' },
+  { href: '/painel/estoque', label: 'Estoque' },
+  { href: '/painel/configuracoes', label: 'Configurações' },
+];
 
 export default function SellerLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
-  const router = useRouter()
-  const pathname = usePathname()
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (loading) return
-    if (!user) { router.push('/entrar'); return }
-    // Role check happens server-side too, but let's guard client side
-    // role is stored in Firestore; we rely on Firestore rules for real auth
-  }, [user, loading, router])
+    if (loading) return;
+    if (!user) router.push('/entrar');
+  }, [user, loading, router]);
 
-  if (loading) return <div className="seller-loading">Carregando...</div>
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center"><div className="spinner" /></div>;
+  }
 
   return (
-    <div className="seller-layout">
-      <aside className="seller-sidebar">
-        <div className="seller-sidebar-brand">
-          <span className="seller-sidebar-icon">🛏</span>
-          <span className="seller-sidebar-name">Mikma</span>
+    <div className="flex min-h-screen bg-paper">
+      <aside className="w-52 shrink-0 flex flex-col border-r border-cream-dark bg-paper min-h-screen">
+        <div className="h-14 flex items-center px-5 border-b border-cream-dark">
+          <Link href="/" className="no-underline flex items-baseline gap-1">
+            <span className="font-display text-[17px] text-ink">Mikma</span>
+            <span className="text-[9px] font-semibold tracking-[0.2em] uppercase text-warm-dark ml-1">Painel</span>
+          </Link>
         </div>
-        <nav className="seller-nav">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`seller-nav-item${pathname === item.href ? ' seller-nav-item--active' : ''}`}
-            >
-              <span className="seller-nav-icon">{item.icon}</span>
-              <span className="seller-nav-label">{item.label}</span>
-            </Link>
-          ))}
+        <nav className="flex-1 py-3 px-2">
+          <ul className="list-none p-0 m-0 flex flex-col gap-0.5">
+            {NAV.map(({ href, label, exact }) => {
+              const active = exact ? pathname === href : pathname.startsWith(href);
+              return (
+                <li key={href}>
+                  <Link href={href} className={`flex items-center px-3 py-2 text-[13px] no-underline border-l-2 transition-all duration-150
+                    ${active
+                      ? 'border-l-warm-dark text-ink font-semibold bg-cream'
+                      : 'border-l-transparent text-ink-light hover:text-ink hover:bg-cream/50'
+                    }`}>
+                    {label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
       </aside>
-      <main className="seller-main">{children}</main>
+      <main className="flex-1 px-10 py-9">{children}</main>
     </div>
-  )
+  );
 }

@@ -6,76 +6,133 @@
 
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-paper text-ink font-sans antialiased;
-    font-size: 15px;
+    @apply bg-stone-50 text-stone-900 font-sans antialiased;
     line-height: 1.6;
   }
-  h1, h2, h3, h4 { @apply font-display font-normal leading-tight; }
-  img  { display: block; }
-  *:focus-visible { @apply outline-2 outline-warm outline-offset-2; }
+
+  h1, h2, h3, h4, h5 { @apply font-display font-light leading-tight; }
+
+  a { @apply no-underline; }
+
+  button { @apply cursor-pointer; }
+
+  img, video { @apply block max-w-full; }
+
+  *:focus-visible {
+    @apply outline-2 outline-gold-500 outline-offset-2;
+  }
 }
 
 @layer components {
-  /* Buttons */
+
+  /* ─── Buttons ─── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           font-sans text-sm font-medium tracking-wide
+           border transition-colors duration-250
+           disabled:opacity-50 disabled:pointer-events-none
+           whitespace-nowrap select-none;
+  }
+
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3
-           text-sm font-medium tracking-wide
-           bg-ink text-paper border border-ink
-           transition-all duration-200
-           hover:-translate-y-px hover:shadow-lg hover:shadow-ink/10
-           active:translate-y-0 active:shadow-none
-           disabled:opacity-50 disabled:pointer-events-none;
+    @apply btn px-6 py-3
+           bg-stone-900 text-stone-50 border-stone-900
+           hover:bg-stone-800 hover:border-stone-800;
   }
+
+  .btn-primary-lg {
+    @apply btn px-8 py-4
+           bg-stone-900 text-stone-50 border-stone-900
+           hover:bg-stone-800 text-base font-semibold tracking-wider uppercase;
+  }
+
   .btn-outline {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3
-           text-sm font-medium tracking-wide
-           bg-transparent text-ink border border-ink/40
-           transition-all duration-200
-           hover:bg-ink hover:text-paper hover:border-ink hover:-translate-y-px
-           active:translate-y-0;
+    @apply btn px-6 py-3
+           bg-transparent text-stone-900 border-stone-900
+           hover:bg-stone-900 hover:text-stone-50;
   }
+
   .btn-ghost {
-    @apply inline-flex items-center gap-1.5 text-sm
-           text-ink-light bg-transparent border-none
-           transition-colors duration-150 hover:text-ink;
+    @apply btn px-3 py-2 border-transparent
+           bg-transparent text-stone-600
+           hover:text-stone-900 hover:bg-stone-100;
   }
 
-  /* Fields */
-  .input-field {
+  .btn-gold {
+    @apply btn px-6 py-3
+           bg-gold-600 text-stone-50 border-gold-600
+           hover:bg-gold-700 hover:border-gold-700;
+  }
+
+  /* ─── Form controls ─── */
+  .input {
     @apply w-full px-4 py-3 text-sm
-           bg-paper text-ink border border-cream-dark
-           outline-none appearance-none rounded-none
-           transition-all duration-150
-           placeholder:text-ink-light/60
-           focus:border-warm focus:ring-2 focus:ring-warm/10;
-  }
-  .label-field {
-    @apply block text-[10px] font-semibold tracking-[0.14em] uppercase mb-1.5 text-ink-light;
+           bg-white text-stone-900
+           border border-stone-300 outline-none
+           placeholder:text-stone-400
+           focus:border-gold-500 focus:ring-2 focus:ring-gold-500/15
+           transition-colors duration-250;
   }
 
-  /* Product card */
-  .card-product {
-    @apply flex flex-col overflow-hidden
-           bg-paper border border-cream-dark
-           transition-all duration-300
-           hover:border-warm hover:shadow-xl hover:shadow-ink/8 hover:-translate-y-0.5;
+  .label {
+    @apply block text-2xs font-semibold tracking-widest uppercase
+           text-stone-500 mb-1.5;
   }
 
-  /* Tags / badges */
-  .tag {
-    @apply inline-block px-2.5 py-0.5 text-[11px] tracking-wide bg-mist text-ink-mid;
+  /* ─── Cards ─── */
+  .product-card {
+    @apply group flex flex-col bg-stone-50
+           border border-stone-200
+           transition-shadow duration-250
+           hover:shadow-lg hover:shadow-stone-900/8;
   }
-  .divider { @apply border-0 border-t border-cream-dark; }
-  .section-label {
-    @apply text-[10px] font-semibold tracking-[0.18em] uppercase text-warm-dark;
+
+  /* ─── Section label ─── */
+  .eyebrow {
+    @apply block text-2xs font-semibold tracking-[0.2em] uppercase text-gold-600;
   }
-}
 
-@layer utilities {
-  .font-display { @apply font-display; }
+  /* ─── Badges ─── */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5
+           text-xs font-medium rounded-sm;
+  }
+  .badge-pending  { @apply badge bg-amber-50  text-amber-700; }
+  .badge-paid     { @apply badge bg-emerald-50 text-emerald-700; }
+  .badge-shipped  { @apply badge bg-sky-50 text-sky-700; }
+  .badge-canceled { @apply badge bg-red-50 text-red-700; }
+  .badge-default  { @apply badge bg-stone-100 text-stone-600; }
 
-  /* Hover text reveal for product cards */
-  .group:hover .group-hover\:opacity-100 { opacity: 1; }
+  /* ─── Page header ─── */
+  .page-hero {
+    @apply bg-stone-100 border-b border-stone-200 py-12;
+  }
+
+  /* ─── Container ─── */
+  .container-shop {
+    @apply mx-auto max-w-8xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ─── Divider ─── */
+  .divider { @apply border-0 border-t border-stone-200; }
+
+  /* ─── Spinner ─── */
+  .spinner {
+    @apply inline-block w-5 h-5 rounded-full
+           border-2 border-stone-200 border-t-stone-700
+           animate-spin;
+  }
+
+  /* ─── Order summary sticky ─── */
+  .order-summary {
+    @apply sticky top-24 bg-stone-100 border border-stone-200 p-6;
+  }
 }
