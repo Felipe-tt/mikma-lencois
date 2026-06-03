@@ -7,8 +7,7 @@ export const dynamic = 'force-dynamic';
 
 async function getFeatured(): Promise<Product[]> {
   try {
-    const snap = await adminDb.collection('products').where('active', '==', true)
-      .orderBy('createdAt', 'desc').limit(8).get();
+    const snap = await adminDb.collection('products').where('active','==',true).orderBy('createdAt','desc').limit(8).get();
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
   } catch { return []; }
 }
@@ -19,100 +18,109 @@ export default async function HomePage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="bg-stone-900 text-stone-50 overflow-hidden">
+      <section className="bg-warm overflow-hidden">
         <div className="container-shop">
-          <div className="grid lg:grid-cols-[1fr_480px] gap-0 min-h-[520px] items-center">
+          <div className="grid lg:grid-cols-2 min-h-[560px]">
 
-            {/* Texto */}
-            <div className="py-20 lg:py-28 lg:pr-20">
-              <span className="eyebrow text-gold-400 mb-6 block">Coleção atual</span>
-              <h1 className="font-display font-light text-5xl sm:text-6xl text-stone-50 mb-6 leading-none">
-                Durabilidade<br />
-                <em className="text-gold-400">e conforto</em><br />
-                real.
+            {/* Left text */}
+            <div className="flex flex-col justify-center py-20 lg:py-28 lg:pr-16">
+              <span className="eyebrow mb-5">Blumenau, SC — Coleção {new Date().getFullYear()}</span>
+              <h1 className="font-display font-normal text-ink leading-[1.08]" style={{fontSize:'clamp(3rem,7vw,5.5rem)'}}>
+                Lençóis<br/>
+                <em className="text-clay">feitos pra<br/>durar.</em>
               </h1>
-              <p className="text-base text-stone-400 max-w-sm mb-10 leading-relaxed">
-                Produzido em Blumenau, SC. Entrega local em até 1h ou para todo o Brasil com rastreamento.
+              <p className="mt-7 text-base text-mid max-w-xs leading-relaxed">
+                Qualidade direto da fábrica. Entrega em até 1h em Blumenau ou para todo o Brasil.
               </p>
-              <div className="flex gap-3 flex-wrap">
-                <Link href="/produtos" className="btn-primary-lg">
-                  Ver coleção
-                </Link>
-                <Link href="/sobre" className="btn px-8 py-4 border-stone-700 text-stone-300 hover:bg-stone-800 hover:text-stone-50 text-base font-semibold tracking-wider uppercase">
+              <div className="mt-10 flex items-center gap-4 flex-wrap">
+                <Link href="/produtos" className="btn-primary-lg">Ver produtos</Link>
+                <Link href="/sobre" className="text-sm font-medium text-mid hover:text-clay transition-colors inline-flex items-center gap-2">
                   Nossa história
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </Link>
               </div>
             </div>
 
-            {/* Decorativo — seria substituído por imagem real */}
-            <div className="hidden lg:flex items-center justify-center border-l border-stone-800 h-full">
-              <div className="text-center">
-                <p className="font-display text-[140px] text-stone-800 leading-none select-none">M</p>
-                <p className="eyebrow text-stone-600 mt-2">Mikma Lençóis</p>
+            {/* Right — decorative */}
+            <div className="hidden lg:flex items-center justify-center border-l border-mist relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#E8E4DC_0%,transparent_70%)]" />
+              <div className="relative text-center select-none">
+                <p className="font-display font-bold text-mist leading-none" style={{fontSize:220}}>M</p>
+                <p className="eyebrow text-faint -mt-8">Mikma Lençóis</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Faixa de diferenciais ── */}
-      <section className="bg-stone-100 border-y border-stone-200">
+      {/* ── Diferenciais ── */}
+      <section className="border-y border-mist bg-paper">
         <div className="container-shop">
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-stone-200">
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-mist">
             {[
-              { title: 'Entrega em 1h', sub: 'Para endereços em Blumenau via Uber Direct' },
-              { title: 'Frete para o Brasil', sub: 'PAC, SEDEX e transportadoras com rastreio' },
-              { title: 'Pague com PIX', sub: 'Confirmação automática e instantânea' },
+              { n:'01', title:'Entrega em 1h', sub:'Para endereços em Blumenau via Uber Direct.' },
+              { n:'02', title:'Frete nacional', sub:'PAC, SEDEX e transportadoras com rastreio em tempo real.' },
+              { n:'03', title:'Pague com PIX', sub:'Confirmação automática e instantânea.' },
             ].map(b => (
-              <div key={b.title} className="px-8 py-8">
-                <div className="w-6 h-0.5 bg-gold-500 mb-4" />
-                <p className="text-sm font-semibold text-stone-900 mb-1">{b.title}</p>
-                <p className="text-sm text-stone-500">{b.sub}</p>
+              <div key={b.n} className="px-8 py-8 flex gap-5 items-start">
+                <span className="font-display text-3xl text-clay/30 leading-none font-normal shrink-0 mt-0.5">{b.n}</span>
+                <div>
+                  <p className="text-sm font-semibold text-ink mb-1">{b.title}</p>
+                  <p className="text-sm text-mid leading-relaxed">{b.sub}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Produtos em destaque ── */}
-      <section className="py-16">
+      {/* ── Produtos ── */}
+      <section className="py-20">
         <div className="container-shop">
-          <div className="flex items-end justify-between mb-10">
+          <div className="flex items-end justify-between mb-12">
             <div>
-              <span className="eyebrow mb-2 block">Destaques</span>
-              <h2 className="font-display text-4xl text-stone-900 font-light">Produtos</h2>
+              <span className="eyebrow mb-3 block">Destaques</span>
+              <h2 className="font-display font-normal text-ink" style={{fontSize:'clamp(2rem,4vw,3rem)'}}>Produtos em destaque</h2>
             </div>
-            <Link href="/produtos" className="text-sm text-stone-500 hover:text-stone-900 transition-colors hidden sm:block">
-              Ver todos →
+            <Link href="/produtos" className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-mid hover:text-clay transition-colors">
+              Ver todos
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
           </div>
 
           {products.length === 0 ? (
-            <p className="py-20 text-center text-sm text-stone-400">Nenhum produto cadastrado ainda.</p>
+            <div className="py-24 text-center">
+              <p className="font-display text-2xl text-faint font-normal">Nenhum produto ainda.</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-stone-200">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-mist">
               {products.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
 
-          <div className="mt-8 text-center sm:hidden">
+          <div className="mt-8 sm:hidden text-center">
             <Link href="/produtos" className="btn-outline">Ver todos os produtos</Link>
           </div>
         </div>
       </section>
 
-      {/* ── CTA banner ── */}
-      <section className="bg-stone-100 border-t border-stone-200 py-20">
-        <div className="container-shop flex flex-col sm:flex-row items-center justify-between gap-8">
-          <div>
-            <span className="eyebrow mb-3 block">Qualidade garantida</span>
-            <h2 className="font-display text-4xl font-light text-stone-900 max-w-md leading-tight">
-              Tecido que dura, conforto que fica
-            </h2>
+      {/* ── CTA ── */}
+      <section className="bg-ink py-20">
+        <div className="container-shop">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
+            <div>
+              <span className="eyebrow text-clay mb-3 block">Qualidade real</span>
+              <h2 className="font-display font-normal text-paper leading-tight" style={{fontSize:'clamp(2rem,4vw,3.5rem)'}}>
+                Tecido que dura,<br/>
+                <em className="text-clay">conforto que fica.</em>
+              </h2>
+            </div>
+            <div className="shrink-0">
+              <Link href="/produtos" className="btn-clay text-sm font-semibold px-8 py-4 tracking-wide">
+                Comprar agora
+              </Link>
+            </div>
           </div>
-          <Link href="/produtos" className="btn-primary shrink-0">
-            Comprar agora
-          </Link>
         </div>
       </section>
     </>
