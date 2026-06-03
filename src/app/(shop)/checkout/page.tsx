@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { formatCurrency } from '@/lib/utils/format';
@@ -47,17 +47,11 @@ export default function CheckoutPage() {
     try {
       const token = await auth.currentUser!.getIdToken();
       const totalCents = cart.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-      const orderId = `${user.uid}_${Date.now()}`;
-      await setDoc(doc(db, 'orders', orderId), {
-        userId: user.uid, items: cart.items, status: 'pending_payment',
-        address: addr, totalCents, payment: { method: 'pix' }, delivery: {},
-        createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-      });
       await setDoc(doc(db, 'users', user.uid), { address: addr }, { merge: true });
       const res = await fetch('/api/payment/create-pix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ orderId, amountCents: totalCents, customerName: user.displayName ?? '', customerEmail: user.email ?? '' }),
+        body: JSON.stringify({ items: cart.items, address: addr, amountCents: totalCents, customerName: user.displayName ?? '', customerEmail: user.email ?? '' }),
       });
       if (!res.ok) throw new Error('Erro ao gerar PIX');
       setPixData(await res.json());

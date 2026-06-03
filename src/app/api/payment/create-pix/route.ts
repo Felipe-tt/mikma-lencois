@@ -16,18 +16,26 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token);
     const uid = decoded.uid;
 
-    const { orderId, amountCents, customerName, customerEmail, customerCpf } = await req.json();
+    const { items, address, amountCents, customerName, customerEmail, customerCpf } = await req.json();
 
-    if (!orderId || !amountCents || !customerName || !customerEmail) {
+    if (!items || !amountCents || !customerName || !customerEmail) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Verify order belongs to user
+    // Create order via Admin SDK (bypasses client Firestore rules)
+    const orderId = `${uid}_${Date.now()}`;
     const orderRef = adminDb.collection('orders').doc(orderId);
-    const orderSnap = await orderRef.get();
-    if (!orderSnap.exists || orderSnap.data()?.userId !== uid) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-    }
+    await orderRef.set({
+      userId: uid,
+      items,
+      address,
+      status: 'pending_payment',
+      totalCents: amountCents,
+      payment: { method: 'pix' },
+      delivery: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     // Create PIX QR Code via AbacatePay
     const pixRes = await fetch(`${ABACATEPAY_BASE}/pixQrCode/create`, {
@@ -68,6 +76,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
+      orderId,
       txId: pix.id,
       qrCode: pix.qrCode,
       copyPaste: pix.brCode,
