@@ -7,7 +7,8 @@
     "source": ".",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "frameworksBackend": {
-      "region": "southamerica-east1"
+      "region": "southamerica-east1",
+      "secrets": ["ABACATEPAY_API_KEY"]
     }
   },
   "storage": {
