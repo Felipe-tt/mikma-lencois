@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function Footer() {
   return (
@@ -8,14 +9,8 @@ export function Footer() {
         {/* Top row */}
         <div className="grid grid-cols-2 md:grid-cols-[1fr_auto_auto_auto] gap-12 pb-12 border-b border-paper/10">
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 bg-clay flex items-center justify-center">
-                <span className="font-display text-paper text-base font-bold leading-none">M</span>
-              </div>
-              <div>
-                <p className="font-display text-paper text-lg leading-none">Mikma</p>
-                <p className="text-2xs text-clay font-semibold tracking-[0.2em] uppercase leading-none mt-0.5">Lençóis</p>
-              </div>
+            <div className="mb-4">
+              <Image src="/logo-white.png" alt="Mikma Lençóis" width={120} height={60} className="h-10 w-auto object-contain" />
             </div>
             <p className="text-sm text-paper/40 leading-relaxed max-w-[220px]">
               Produzido em Blumenau, SC.<br/>

@@ -56,8 +56,8 @@ export default async function ProductPage({ params }: Props) {
                 <Image src={product.images[0]} alt={product.name} fill priority sizes="(max-width:1024px) 100vw, 50vw"
                   className="object-cover" />
               ) : (
-                <div className="flex h-full items-center justify-center">
-                  <span className="font-display text-6xl text-mist">M</span>
+                <div className="flex h-full items-center justify-center bg-warm/50">
+                  <Image src="/logo-dark.png" alt="Mikma Lençóis" width={100} height={50} className="w-20 h-auto object-contain opacity-25" />
                 </div>
               )}
             </div>

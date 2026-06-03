@@ -14,8 +14,8 @@ export function ProductCard({ product }: { product: Product }) {
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className="object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
         ) : (
-          <div className="flex h-full items-center justify-center">
-            <span className="font-display text-5xl text-mist font-light">M</span>
+          <div className="flex h-full items-center justify-center bg-warm/50">
+            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={80} height={40} className="w-16 h-auto object-contain opacity-30" />
           </div>
         )}
         {product.tags?.[0] && (

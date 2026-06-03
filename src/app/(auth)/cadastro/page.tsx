@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function RegisterPage() {
   const { loginWithGoogle } = useAuth();
@@ -26,14 +27,8 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-warm flex">
       <div className="hidden lg:flex w-1/2 bg-ink flex-col justify-between p-16">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-clay flex items-center justify-center">
-            <span className="font-display text-paper text-lg font-bold">M</span>
-          </div>
-          <div>
-            <p className="font-display text-paper text-xl leading-none">Mikma</p>
-            <p className="text-2xs text-clay font-semibold tracking-[0.2em] uppercase leading-none mt-0.5">Lençóis</p>
-          </div>
+        <Link href="/">
+          <Image src="/logo-white.png" alt="Mikma Lençóis" width={140} height={70} className="h-12 w-auto object-contain" />
         </Link>
         <div>
           <p className="font-display text-paper font-normal leading-tight mb-6" style={{fontSize:'3.5rem'}}>
@@ -48,11 +43,8 @@ export default function RegisterPage() {
 
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md">
-          <Link href="/" className="flex items-center gap-2.5 mb-10 lg:hidden">
-            <div className="w-8 h-8 bg-ink flex items-center justify-center">
-              <span className="font-display text-paper text-base font-bold">M</span>
-            </div>
-            <span className="font-display text-ink text-xl">Mikma Lençóis</span>
+          <Link href="/" className="flex mb-10 lg:hidden">
+            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={120} height={60} className="h-10 w-auto object-contain" />
           </Link>
 
           <h1 className="font-display font-normal text-ink text-3xl mb-2">Criar conta</h1>

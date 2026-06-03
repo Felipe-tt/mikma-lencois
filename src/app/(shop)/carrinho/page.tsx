@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -73,7 +74,7 @@ export default function CartPage() {
                   <div className="relative w-24 h-28 shrink-0 overflow-hidden bg-warm">
                     {item.image
                       ? <Image src={item.image} alt={item.productName} fill sizes="96px" className="object-cover" />
-                      : <div className="flex h-full items-center justify-center"><span className="font-display text-2xl text-mist">M</span></div>
+                      : <div className="flex h-full items-center justify-center bg-warm/50"><Image src="/logo-dark.png" alt="" width={40} height={20} className="w-8 h-auto opacity-25" /></div>
                     }
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col gap-1">
