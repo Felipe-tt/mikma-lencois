@@ -37,7 +37,7 @@ export default function LoginPage() {
         </Link>
         <blockquote>
           <p className="font-display text-3xl text-stone-100 font-light leading-snug mb-4">
-            "Qualidade que se sente na primeira noite."
+            &ldquo;Qualidade que se sente na primeira noite.&rdquo;
           </p>
           <p className="text-sm text-stone-500">Blumenau, SC</p>
         </blockquote>
