@@ -3,23 +3,23 @@
  * Converte Timestamp, DocumentReference e qualquer objeto com protótipo especial.
  */
 export function serialize<T>(data: unknown): T {
-  if (data === null || data === undefined) return data;
-  if (typeof data !== 'object') return data;
+  if (data === null || data === undefined) return data as T;
+  if (typeof data !== 'object') return data as T;
 
   // Firestore Timestamp
-  if (typeof data.toDate === 'function') {
-    return data.toDate().toISOString() as unknown as T;
+  if ('toDate' in (data as object) && typeof (data as Record<string, unknown>).toDate === 'function') {
+    return ((data as Record<string, unknown>).toDate as () => Date)().toISOString() as unknown as T;
   }
 
   // Array
   if (Array.isArray(data)) {
-    return data.map(serialize) as unknown as T;
+    return data.map((item) => serialize(item)) as unknown as T;
   }
 
-  // Plain object / DocumentData
+  // Plain object
   const result: Record<string, unknown> = {};
   for (const key of Object.keys(data as object)) {
     result[key] = serialize((data as Record<string, unknown>)[key]);
   }
-  return result as T;
+  return result as unknown as T;
 }
