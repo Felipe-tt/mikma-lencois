@@ -36,6 +36,11 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
+    if (!ABACATEPAY_KEY) {
+      console.error('ABACATEPAY_API_KEY is not set in environment variables');
+      return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
+    }
+
     const payload = {
       method: 'PIX',
       data: {
@@ -43,12 +48,12 @@ export async function POST(req: NextRequest) {
         description: `Pedido Mikma Lencois #${orderId}`,
         expiresIn: 900,
         externalId: orderId,
-        customer: {
-          name: customerName,
-          email: customerEmail,
-          ...(customerCpf ? { taxId: customerCpf } : {}),
-        },
         metadata: { orderId, userId: uid },
+      },
+      customer: {
+        name: customerName,
+        email: customerEmail,
+        ...(customerCpf ? { taxId: customerCpf } : {}),
       },
     };
 
