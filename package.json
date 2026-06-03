@@ -12,9 +12,6 @@
     "@fontsource-variable/inter": "^5.2.8",
     "@hookform/resolvers": "^3.6.0",
     "@node-rs/argon2": "^1.7.2",
-    "@tanstack/react-query": "^5.40.0",
-    "axios": "^1.7.2",
-    "clsx": "^2.1.1",
     "firebase": "^10.12.0",
     "firebase-admin": "^12.1.0",
     "lucide-react": "^0.383.0",
@@ -22,10 +19,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.51.5",
-    "resend": "^3.3.0",
-    "tailwind-merge": "^2.3.0",
-    "zod": "^3.23.8",
-    "zustand": "^5.0.3"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.19.41",
