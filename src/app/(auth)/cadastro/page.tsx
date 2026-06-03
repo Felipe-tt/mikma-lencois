@@ -13,7 +13,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true); setError('');
     try {
@@ -21,7 +21,7 @@ export default function RegisterPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+      if (!res.ok) throw new Error((await res.json()).error);
       router.push('/');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao cadastrar');
@@ -29,57 +29,72 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-[400px]">
-        <div className="text-center mb-10">
-          <Link href="/" className="no-underline inline-flex items-baseline gap-1.5">
-            <span className="font-display text-[24px] text-ink">Mikma</span>
-            <span className="text-[10px] font-semibold text-warm-dark tracking-[0.2em] uppercase">Lençóis</span>
-          </Link>
-          <p className="font-display font-light text-[26px] text-ink mt-6 mb-1">Criar conta</p>
-          <p className="text-[13px] text-ink-light">Cadastre-se para comprar</p>
+    <div className="min-h-screen bg-stone-100 grid lg:grid-cols-2">
+      <div className="hidden lg:flex flex-col justify-between bg-stone-900 p-12">
+        <Link href="/" className="flex items-baseline gap-2">
+          <span className="font-display text-2xl text-stone-100">Mikma</span>
+          <span className="text-2xs font-semibold tracking-[0.2em] uppercase text-gold-400">Lençóis</span>
+        </Link>
+        <div>
+          <p className="font-display text-4xl text-stone-100 font-light leading-tight mb-4">
+            Cadastre-se e<br />receba em casa.
+          </p>
+          <p className="text-sm text-stone-500 leading-relaxed">
+            Direto da fábrica para a sua cama.<br />Entrega em Blumenau em até 1 hora.
+          </p>
         </div>
+        <p className="text-xs text-stone-700 tracking-widest uppercase">Est. Blumenau · SC</p>
+      </div>
 
-        <div className="bg-paper border border-cream-dark p-8">
+      <div className="flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-sm">
+          <Link href="/" className="lg:hidden flex items-baseline gap-2 mb-10 justify-center">
+            <span className="font-display text-2xl text-stone-900">Mikma</span>
+            <span className="text-2xs font-semibold tracking-[0.2em] uppercase text-gold-600">Lençóis</span>
+          </Link>
+
+          <h1 className="font-display text-3xl font-light text-stone-900 mb-1">Criar conta</h1>
+          <p className="text-sm text-stone-500 mb-8">Cadastre-se para comprar</p>
+
           {error && (
-            <div className="bg-red-50 border border-red-200 px-4 py-3 mb-5 text-[13px] text-red-700">
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 mb-6">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <form onSubmit={submit} className="flex flex-col gap-5">
             <div>
-              <label className="label-field">Nome completo</label>
-              <input type="text" required value={name} onChange={e => setName(e.target.value)} className="input-field" placeholder="Seu nome" />
+              <label className="label">Nome completo</label>
+              <input type="text" required value={name} onChange={e => setName(e.target.value)} className="input" placeholder="Seu nome" />
             </div>
             <div>
-              <label className="label-field">E-mail</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input-field" placeholder="seu@email.com" />
+              <label className="label">E-mail</label>
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input" placeholder="seu@email.com" />
             </div>
             <div>
-              <label className="label-field">Senha</label>
-              <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} className="input-field" placeholder="Mínimo 8 caracteres" />
+              <label className="label">Senha</label>
+              <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} className="input" placeholder="Mínimo 8 caracteres" />
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full justify-center mt-1">
-              {loading ? 'Criando conta…' : 'Criar conta'}
+            <button type="submit" disabled={loading} className="btn-primary w-full mt-1 py-3.5">
+              {loading ? <span className="spinner w-4 h-4" /> : 'Criar conta'}
             </button>
           </form>
 
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-cream-dark" />
-            <span className="text-[11px] text-ink-light tracking-[0.08em]">ou</span>
-            <div className="flex-1 h-px bg-cream-dark" />
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-stone-200" />
+            <span className="text-xs text-stone-400 uppercase tracking-widest">ou</span>
+            <div className="flex-1 h-px bg-stone-200" />
           </div>
 
-          <button onClick={async () => { await loginWithGoogle(); router.push('/'); }} className="btn-outline w-full justify-center gap-2">
+          <button onClick={async () => { await loginWithGoogle(); router.push('/'); }} className="btn-outline w-full gap-2.5">
             <GoogleIcon /> Continuar com Google
           </button>
-        </div>
 
-        <p className="text-center mt-6 text-[13px] text-ink-light">
-          Já tem conta?{' '}
-          <Link href="/entrar" className="text-ink font-medium no-underline hover:underline">Entrar</Link>
-        </p>
+          <p className="text-center mt-8 text-sm text-stone-500">
+            Já tem conta?{' '}
+            <Link href="/entrar" className="text-stone-900 font-semibold hover:underline">Entrar</Link>
+          </p>
+        </div>
       </div>
     </div>
   );
