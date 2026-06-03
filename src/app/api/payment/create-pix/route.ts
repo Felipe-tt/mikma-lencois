@@ -40,14 +40,20 @@ export async function POST(req: NextRequest) {
       method: 'PIX',
       data: {
         amount: amountCents,
-        description: `Pedido Mikma Lençóis #${orderId}`,
+        description: `Pedido Mikma Lencois #${orderId}`,
         expiresIn: 900,
         externalId: orderId,
+        customer: {
+          name: customerName,
+          email: customerEmail,
+          ...(customerCpf ? { taxId: customerCpf } : {}),
+        },
         metadata: { orderId, userId: uid },
       },
     };
 
-    console.log('AbacatePay payload:', JSON.stringify(payload, null, 2));
+    console.log('AbacatePay key prefix:', ABACATEPAY_KEY?.slice(0, 12) ?? 'KEY_MISSING');
+    console.log('AbacatePay payload:', JSON.stringify(payload));
 
     const pixRes = await fetch(`${ABACATEPAY_BASE}/transparents/create`, {
       method: 'POST',
@@ -58,13 +64,14 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(payload),
     });
 
+    const pixText = await pixRes.text();
+    console.log('AbacatePay response status:', pixRes.status, 'body:', pixText);
+
     if (!pixRes.ok) {
-      const err = await pixRes.text();
-      console.error('AbacatePay error:', err);
-      return NextResponse.json({ error: 'Payment provider error' }, { status: 502 });
+      return NextResponse.json({ error: 'Payment provider error', detail: pixText }, { status: 502 });
     }
 
-    const pixJson = await pixRes.json();
+    const pixJson = JSON.parse(pixText);
     const pix = pixJson.data;
 
     await orderRef.update({
