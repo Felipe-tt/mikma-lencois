@@ -3,13 +3,14 @@ import { ProductCard } from '@/components/product/ProductCard';
 import type { Product } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
+import { serialize } from '@/lib/utils/serialize';
 
 export const dynamic = 'force-dynamic';
 
 async function getFeatured(): Promise<Product[]> {
   try {
     const snap = await adminDb.collection('products').where('active','==',true).orderBy('createdAt','desc').limit(8).get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+    return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
   } catch { return []; }
 }
 

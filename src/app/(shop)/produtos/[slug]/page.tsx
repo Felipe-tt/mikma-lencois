@@ -6,6 +6,7 @@ import type { Product, InventoryItem } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { VariantSelector } from '@/components/product/VariantSelector';
 import type { Metadata } from 'next';
+import { serialize } from '@/lib/utils/serialize';
 
 export const dynamic = 'force-dynamic';
 interface Props { params: { slug: string } }
@@ -13,11 +14,11 @@ interface Props { params: { slug: string } }
 async function getProduct(id: string): Promise<Product | null> {
   const snap = await adminDb.collection('products').doc(id).get();
   if (!snap.exists || !snap.data()?.active) return null;
-  return { id: snap.id, ...snap.data() } as Product;
+  return serialize<Product>({ id: snap.id, ...snap.data() });
 }
 async function getInventory(id: string): Promise<InventoryItem[]> {
   const snap = await adminDb.collection('inventory').where('productId','==',id).get();
-  return snap.docs.map(d => ({ sku: d.id, ...d.data() } as InventoryItem));
+  return snap.docs.map(d => serialize<InventoryItem>({ sku: d.id, ...d.data() }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

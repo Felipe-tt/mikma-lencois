@@ -2,6 +2,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { ProductCard } from '@/components/product/ProductCard';
 import { CategoryFilter } from '@/components/product/CategoryFilter';
 import type { Product } from '@/types';
+import { serialize } from '@/lib/utils/serialize';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ async function getProducts(cat?: string): Promise<Product[]> {
   let q = adminDb.collection('products').where('active','==',true).orderBy('createdAt','desc');
   if (cat) q = q.where('category','==',cat) as typeof q;
   const snap = await q.limit(48).get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+  return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
