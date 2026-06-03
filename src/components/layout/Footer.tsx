@@ -2,54 +2,67 @@ import Link from 'next/link';
 
 export function Footer() {
   return (
-    <footer className="bg-ink text-cream mt-auto">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 py-14">
+    <footer className="bg-stone-900 text-stone-400 mt-auto">
+      <div className="container-shop py-14">
+        <div className="grid grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr] gap-10">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <p className="font-display text-xl tracking-[0.04em] mb-2">
-              Mikma <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-warm align-middle ml-0.5">Lençóis</span>
+            <p className="font-display text-xl text-stone-100 mb-1">Mikma</p>
+            <p className="text-2xs tracking-[0.2em] uppercase text-gold-500 mb-4">Lençóis · Blumenau</p>
+            <p className="text-sm leading-relaxed text-stone-500">
+              Fios selecionados, acabamento cuidadoso,<br />
+              direto da nossa fábrica para sua casa.
             </p>
-            <p className="text-[12px] text-cream/50 leading-relaxed">
-              <br />Garcia · Blumenau, SC
-            </p>
           </div>
 
-          {/* Loja */}
           <div>
-            <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-warm mb-4">Loja</p>
-            <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
-              <li><Link href="/produtos" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Produtos</Link></li>
-              <li><Link href="/sobre" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Sobre nós</Link></li>
-            </ul>
+            <p className="eyebrow text-stone-500 mb-4">Loja</p>
+            <FooterLinks links={[
+              { href: '/produtos', label: 'Produtos' },
+              { href: '/sobre', label: 'Sobre nós' },
+            ]} />
           </div>
 
-          {/* Conta */}
           <div>
-            <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-warm mb-4">Conta</p>
-            <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
-              <li><Link href="/conta/pedidos" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Meus pedidos</Link></li>
-              <li><Link href="/conta" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Meu perfil</Link></li>
-            </ul>
+            <p className="eyebrow text-stone-500 mb-4">Conta</p>
+            <FooterLinks links={[
+              { href: '/conta/pedidos', label: 'Meus pedidos' },
+              { href: '/perfil', label: 'Meu perfil' },
+            ]} />
           </div>
 
-          {/* Legal */}
           <div>
-            <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-warm mb-4">Legal</p>
-            <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
-              <li><Link href="/privacidade" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Privacidade (LGPD)</Link></li>
-              <li><Link href="/termos" className="text-[13px] text-cream/60 no-underline hover:text-cream transition-colors">Termos de uso</Link></li>
-            </ul>
+            <p className="eyebrow text-stone-500 mb-4">Legal</p>
+            <FooterLinks links={[
+              { href: '/privacidade', label: 'Privacidade (LGPD)' },
+              { href: '/termos', label: 'Termos de uso' },
+            ]} />
           </div>
         </div>
+      </div>
 
-        <div className="border-t border-cream/10 py-5 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[11px] text-cream/30 tracking-[0.04em]">
+      <div className="border-t border-stone-800">
+        <div className="container-shop py-5 flex flex-wrap justify-between gap-2 items-center">
+          <p className="text-xs text-stone-600">
             © {new Date().getFullYear()} Mikma Lençóis. Todos os direitos reservados.
           </p>
-          <p className="text-[11px] text-cream/20">Blumenau, SC · Brasil</p>
+          <p className="text-xs text-stone-700 uppercase tracking-widest">Blumenau · SC</p>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterLinks({ links }: { links: { href: string; label: string }[] }) {
+  return (
+    <ul className="flex flex-col gap-2.5">
+      {links.map(({ href, label }) => (
+        <li key={href}>
+          <Link href={href} className="text-sm text-stone-500 hover:text-stone-200 transition-colors">
+            {label}
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
