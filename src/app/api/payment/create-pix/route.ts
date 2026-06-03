@@ -37,23 +37,26 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
-    // Create PIX QR Code via AbacatePay
-    const pixRes = await fetch(`${ABACATEPAY_BASE}/pixQrCode/create`, {
+    // Create PIX QR Code via AbacatePay v2 transparents API
+    const pixRes = await fetch(`${ABACATEPAY_BASE}/transparents/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${ABACATEPAY_KEY}`,
       },
       body: JSON.stringify({
-        amount: amountCents,
-        description: `Pedido Mikma Lençóis #${orderId}`,
-        expiresIn: 900, // 15 minutes
-        customer: {
-          name: customerName,
-          email: customerEmail,
-          ...(customerCpf && { taxId: customerCpf }),
+        method: 'PIX',
+        data: {
+          amount: amountCents,
+          description: `Pedido Mikma Lençóis #${orderId}`,
+          expiresIn: 900,
+          customer: {
+            name: customerName,
+            email: customerEmail,
+            ...(customerCpf && { taxId: customerCpf }),
+          },
+          metadata: { orderId, userId: uid },
         },
-        metadata: { orderId, userId: uid },
       }),
     });
 
@@ -63,14 +66,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment provider error' }, { status: 502 });
     }
 
-    const pix = await pixRes.json();
+    const pixJson = await pixRes.json();
+    const pix = pixJson.data;
 
     // Save PIX transaction ID to order
     await orderRef.update({
       'payment.txId': pix.id,
-      'payment.qrCode': pix.qrCode,
+      'payment.qrCode': pix.brCodeBase64,
       'payment.copyPaste': pix.brCode,
-      'payment.expiresAt': new Date(Date.now() + 900_000),
+      'payment.expiresAt': new Date(pix.expiresAt),
       status: 'pending_payment',
       updatedAt: new Date(),
     });
@@ -78,7 +82,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       orderId,
       txId: pix.id,
-      qrCode: pix.qrCode,
+      qrCode: pix.brCodeBase64,
       copyPaste: pix.brCode,
       expiresAt: pix.expiresAt,
     });
