@@ -6,7 +6,7 @@ import { serialize } from '@/lib/utils/serialize';
 
 export const dynamic = 'force-dynamic';
 
-interface Props { searchParams: { categoria?: string } }
+interface Props { searchParams: Promise<{ categoria?: string }> }
 
 async function getCategories(): Promise<string[]> {
   const snap = await adminDb.collection('products').where('active','==',true).select('category').get();
@@ -20,16 +20,16 @@ async function getProducts(cat?: string): Promise<Product[]> {
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
-  const [products, categories] = await Promise.all([getProducts(searchParams.categoria), getCategories()]);
+  const { categoria } = await searchParams;
+  const [products, categories] = await Promise.all([getProducts(categoria), getCategories()]);
 
   return (
     <div>
-      {/* Header */}
       <div className="page-header">
         <div className="container-shop">
           <span className="eyebrow mb-3 block">Catálogo</span>
           <h1 className="font-display font-normal text-ink" style={{fontSize:'clamp(2.25rem,5vw,3.5rem)'}}>
-            {searchParams.categoria ?? 'Todos os produtos'}
+            {categoria ?? 'Todos os produtos'}
           </h1>
           <p className="text-sm text-mid mt-2">{products.length} produto{products.length !== 1 ? 's' : ''} encontrado{products.length !== 1 ? 's' : ''}</p>
         </div>
@@ -37,14 +37,12 @@ export default async function ProdutosPage({ searchParams }: Props) {
 
       <div className="container-shop py-12">
         <div className="flex gap-12 items-start">
-          {/* Sidebar */}
           {categories.length > 0 && (
             <aside className="w-44 shrink-0 sticky top-24">
-              <CategoryFilter categories={categories} active={searchParams.categoria} />
+              <CategoryFilter categories={categories} active={categoria} />
             </aside>
           )}
 
-          {/* Grid */}
           <div className="flex-1 min-w-0">
             {products.length === 0 ? (
               <div className="py-32 text-center">
