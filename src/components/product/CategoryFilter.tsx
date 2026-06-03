@@ -1,34 +1,43 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-interface Props { categories: string[]; active?: string; }
+interface Props {
+  categories: string[];
+  active?: string;
+  onClose?: () => void;
+}
 
-export function CategoryFilter({ categories, active }: Props) {
+export function CategoryFilter({ categories, active, onClose }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
 
-  function go(cat?: string) {
+  function navigate(cat?: string) {
     const params = new URLSearchParams(sp.toString());
-    if (cat) params.set('categoria', cat); else params.delete('categoria');
+    if (cat) params.set('categoria', cat);
+    else params.delete('categoria');
     router.push(`/produtos?${params.toString()}`);
+    onClose?.();
   }
 
-  const all = [{ label: 'Todos', value: undefined }, ...categories.map(c => ({ label: c, value: c }))];
+  const items = [
+    { label: 'Todos', value: undefined },
+    ...categories.map(c => ({ label: c, value: c })),
+  ];
 
   return (
     <div>
-      <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-warm-dark mb-4">Categoria</p>
-      <ul className="list-none p-0 m-0 flex flex-col gap-0.5">
-        {all.map(({ label, value }) => {
+      <p className="eyebrow text-stone-500 mb-4">Categoria</p>
+      <ul className="flex flex-col gap-0.5">
+        {items.map(({ label, value }) => {
           const isActive = value === active;
           return (
             <li key={label}>
               <button
-                onClick={() => go(value)}
-                className={`w-full text-left px-3 py-2 text-[13px] border-l-2 transition-all duration-150 bg-transparent border-none cursor-pointer
+                onClick={() => navigate(value)}
+                className={`w-full text-left px-3 py-2.5 text-sm border-l-2 transition-colors duration-150
                   ${isActive
-                    ? 'border-l-warm-dark text-ink font-semibold bg-cream'
-                    : 'border-l-transparent text-ink-mid font-normal hover:text-ink hover:bg-cream/60'
+                    ? 'border-l-gold-600 text-stone-900 font-semibold bg-stone-100'
+                    : 'border-l-transparent text-stone-500 font-normal hover:text-stone-900 hover:bg-stone-100'
                   }`}
               >
                 {label}
