@@ -58,7 +58,7 @@ export default async function HomePage() {
 
               {/* Logo central */}
               <div className="relative flex flex-col items-center gap-4 z-10">
-                <Image src="/logo-dark.png" alt="Mikma Lençóis" width={220} height={110} className="w-48 h-auto object-contain" />
+                <Image src="/logo-white.png" alt="Mikma Lençóis" width={220} height={110} className="w-48 h-auto object-contain" />
                 <div className="text-center">
                   <div className="w-8 h-px bg-clay mx-auto"/>
                   <p className="mt-2 text-xs text-mid/60 tracking-wider">BLUMENAU · SC</p>
