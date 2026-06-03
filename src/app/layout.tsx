@@ -4,14 +4,32 @@ import { Providers } from '@/components/Providers';
 
 export const metadata: Metadata = {
   title: { default: 'Mikma Lençóis — Blumenau SC', template: '%s | Mikma Lençóis' },
-  description: 'Lençóis, jogos de cama e toalhas com qualidade premium. Entrega em todo o Brasil. Blumenau, SC.',
+  description: 'Lençóis, jogos de cama e toalhas direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
   keywords: ['lençóis', 'jogos de cama', 'cama mesa banho', 'blumenau', 'mikma'],
-  openGraph: { type: 'website', locale: 'pt_BR', url: 'https://mikmalencois.com.br', siteName: 'Mikma Lençóis' },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+      { url: '/favicon.png', sizes: '64x64', type: 'image/png' },
+    ],
+    apple: [{ url: '/favicon.png' }],
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    url: 'https://mikmalencois.com.br',
+    siteName: 'Mikma Lençóis',
+    images: [{ url: '/logo.png', width: 400, height: 400, alt: 'Mikma Lençóis' }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>
