@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
       outputLen: 32,
     })
 
-    // Create Firebase Auth user
-    const userRecord = await adminAuth.createUser({ email, displayName: name })
+    // Create Firebase Auth user with password
+    const userRecord = await adminAuth.createUser({ email, password, displayName: name })
 
     // Set role claim
     await adminAuth.setCustomUserClaims(userRecord.uid, { role: 'buyer' })
@@ -66,10 +66,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     })
 
-    // Return custom token for client sign-in
-    const customToken = await adminAuth.createCustomToken(userRecord.uid, { role: 'buyer' })
-
-    return NextResponse.json({ customToken }, { status: 201 })
+    return NextResponse.json({ success: true }, { status: 201 })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Erro interno'
     if (msg.includes('email-already-exists')) {

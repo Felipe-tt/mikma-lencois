@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase/client';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -19,6 +21,8 @@ export default function RegisterPage() {
     try {
       const res = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name,email,password}) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+      // Login automático após cadastro
+      await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
     } catch(err: unknown) { setError(err instanceof Error ? err.message : 'Erro ao cadastrar'); }
     finally { setLoading(false); }
