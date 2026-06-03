@@ -37,17 +37,15 @@ export async function POST(req: NextRequest) {
     });
 
     const payload = {
-      data: {
-        amount: amountCents,
-        description: `Pedido Mikma Lençóis #${orderId}`,
-        expiresIn: 900,
-        customer: {
-          name: customerName,
-          email: customerEmail,
-          ...(customerCpf && { taxId: customerCpf }),
-        },
-        metadata: { orderId, userId: uid },
+      amount: amountCents,
+      description: `Pedido Mikma Lençóis #${orderId}`,
+      expiresIn: 900,
+      customer: {
+        name: customerName,
+        email: customerEmail,
+        ...(customerCpf && { cpfCnpj: customerCpf }),
       },
+      metadata: { orderId, userId: uid },
     };
 
     console.log('AbacatePay payload:', JSON.stringify(payload, null, 2));
