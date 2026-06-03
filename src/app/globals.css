@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,133 +6,105 @@
 
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
-
-  html {
-    scroll-behavior: smooth;
-    font-size: 16px;
-    -webkit-text-size-adjust: 100%;
-  }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
   body {
-    @apply bg-stone-50 text-stone-900 font-sans antialiased;
+    @apply bg-paper text-ink font-sans antialiased;
     line-height: 1.6;
   }
 
-  h1, h2, h3, h4, h5 { @apply font-display font-light leading-tight; }
-
+  h1, h2, h3 { @apply font-display leading-tight; }
   a { @apply no-underline; }
-
   button { @apply cursor-pointer; }
-
   img, video { @apply block max-w-full; }
 
   *:focus-visible {
-    @apply outline-2 outline-gold-500 outline-offset-2;
+    outline: 2px solid #C4714A;
+    outline-offset: 2px;
   }
 }
 
 @layer components {
 
-  /* ─── Buttons ─── */
+  /* Buttons */
   .btn {
     @apply inline-flex items-center justify-center gap-2
-           font-sans text-sm font-medium tracking-wide
-           border transition-colors duration-250
-           disabled:opacity-50 disabled:pointer-events-none
+           font-sans text-sm font-medium
+           border transition-all duration-250
+           disabled:opacity-40 disabled:pointer-events-none
            whitespace-nowrap select-none;
   }
-
   .btn-primary {
-    @apply btn px-6 py-3
-           bg-stone-900 text-stone-50 border-stone-900
-           hover:bg-stone-800 hover:border-stone-800;
+    @apply btn px-6 py-3 bg-ink text-paper border-ink
+           hover:bg-clay hover:border-clay;
   }
-
   .btn-primary-lg {
-    @apply btn px-8 py-4
-           bg-stone-900 text-stone-50 border-stone-900
-           hover:bg-stone-800 text-base font-semibold tracking-wider uppercase;
+    @apply btn px-9 py-4 text-base font-semibold tracking-wide
+           bg-ink text-paper border-ink
+           hover:bg-clay hover:border-clay;
   }
-
   .btn-outline {
-    @apply btn px-6 py-3
-           bg-transparent text-stone-900 border-stone-900
-           hover:bg-stone-900 hover:text-stone-50;
+    @apply btn px-6 py-3 bg-transparent text-ink border-ink
+           hover:bg-ink hover:text-paper;
   }
-
   .btn-ghost {
-    @apply btn px-3 py-2 border-transparent
-           bg-transparent text-stone-600
-           hover:text-stone-900 hover:bg-stone-100;
+    @apply btn px-3 py-2 border-transparent bg-transparent text-mid
+           hover:text-ink hover:bg-warm;
+  }
+  .btn-clay {
+    @apply btn px-6 py-3 bg-clay text-paper border-clay
+           hover:bg-clay-d hover:border-clay-d;
   }
 
-  .btn-gold {
-    @apply btn px-6 py-3
-           bg-gold-600 text-stone-50 border-gold-600
-           hover:bg-gold-700 hover:border-gold-700;
-  }
-
-  /* ─── Form controls ─── */
+  /* Inputs */
   .input {
-    @apply w-full px-4 py-3 text-sm
-           bg-white text-stone-900
-           border border-stone-300 outline-none
-           placeholder:text-stone-400
-           focus:border-gold-500 focus:ring-2 focus:ring-gold-500/15
+    @apply w-full px-4 py-3 text-sm bg-white text-ink
+           border border-mist outline-none
+           placeholder:text-faint
+           focus:border-clay focus:ring-2 focus:ring-clay/10
            transition-colors duration-250;
   }
-
   .label {
-    @apply block text-2xs font-semibold tracking-widest uppercase
-           text-stone-500 mb-1.5;
+    @apply block text-2xs font-semibold tracking-widest uppercase text-mid mb-1.5;
   }
 
-  /* ─── Cards ─── */
+  /* Cards */
   .product-card {
-    @apply flex flex-col bg-stone-50
-           border border-stone-200
-           transition-shadow duration-250
-           hover:shadow-lg;
+    @apply flex flex-col bg-paper border border-mist
+           transition-all duration-300
+           hover:border-clay/40 hover:shadow-xl hover:shadow-ink/5
+           hover:-translate-y-0.5;
   }
 
-  /* ─── Section label ─── */
+  /* Labels */
   .eyebrow {
-    @apply block text-2xs font-semibold tracking-[0.2em] uppercase text-gold-600;
+    @apply block text-2xs font-semibold tracking-[0.22em] uppercase text-clay;
   }
 
-  /* ─── Badges ─── */
-  .badge {
-    @apply inline-flex items-center px-2 py-0.5
-           text-xs font-medium rounded-sm;
-  }
-  .badge-pending  { @apply badge bg-amber-50  text-amber-700; }
-  .badge-paid     { @apply badge bg-emerald-50 text-emerald-700; }
-  .badge-shipped  { @apply badge bg-sky-50 text-sky-700; }
-  .badge-canceled { @apply badge bg-red-50 text-red-700; }
-  .badge-default  { @apply badge bg-stone-100 text-stone-600; }
+  /* Badges */
+  .badge { @apply inline-flex items-center px-2.5 py-1 text-xs font-medium; }
+  .badge-pending  { @apply badge bg-amber-50  text-amber-700 border border-amber-200; }
+  .badge-paid     { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-preparing{ @apply badge bg-blue-50 text-blue-700 border border-blue-200; }
+  .badge-shipped  { @apply badge bg-violet-50 text-violet-700 border border-violet-200; }
+  .badge-delivered{ @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-cancelled{ @apply badge bg-red-50 text-red-700 border border-red-200; }
 
-  /* ─── Page header ─── */
-  .page-hero {
-    @apply bg-stone-100 border-b border-stone-200 py-12;
-  }
-
-  /* ─── Container ─── */
-  .container-shop {
-    @apply mx-auto max-w-8xl px-4 sm:px-6 lg:px-8;
-  }
-
-  /* ─── Divider ─── */
-  .divider { @apply border-0 border-t border-stone-200; }
-
-  /* ─── Spinner ─── */
+  /* Layout */
+  .container-shop { @apply mx-auto max-w-8xl px-4 sm:px-6 lg:px-8; }
+  .page-header { @apply bg-warm border-b border-mist py-12 md:py-16; }
+  .divider { @apply border-0 border-t border-mist; }
   .spinner {
     @apply inline-block w-5 h-5 rounded-full
-           border-2 border-stone-200 border-t-stone-700
-           animate-spin;
+           border-2 border-mist border-t-clay animate-spin;
   }
+}
 
-  /* ─── Order summary sticky ─── */
-  .order-summary {
-    @apply sticky top-24 bg-stone-100 border border-stone-200 p-6;
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
