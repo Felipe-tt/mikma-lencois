@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Create order via Admin SDK (bypasses client Firestore rules)
     const orderId = `${uid}_${Date.now()}`;
     const orderRef = adminDb.collection('orders').doc(orderId);
     await orderRef.set({
@@ -37,7 +36,6 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
-    // Create PIX QR Code via AbacatePay v2 transparents API
     const pixRes = await fetch(`${ABACATEPAY_BASE}/transparents/create`, {
       method: 'POST',
       headers: {
@@ -45,7 +43,6 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${ABACATEPAY_KEY}`,
       },
       body: JSON.stringify({
-        method: 'PIX',
         data: {
           amount: amountCents,
           description: `Pedido Mikma Lençóis #${orderId}`,
@@ -69,7 +66,6 @@ export async function POST(req: NextRequest) {
     const pixJson = await pixRes.json();
     const pix = pixJson.data;
 
-    // Save PIX transaction ID to order
     await orderRef.update({
       'payment.txId': pix.id,
       'payment.qrCode': pix.brCodeBase64,

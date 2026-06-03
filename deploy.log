@@ -1,0 +1,188 @@
+No Firebase app associated with site mikma-lencois, injecting project default config.
+  You can link a Web app to a Hosting site here https://console.firebase.google.com/project/mikma-lencois/settings/general/web
+
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+  ▲ Next.js 14.2.29
+
+  - Environments: .env.local
+
+
+   Creating an optimized production build ...
+
+ ✓ Compiled successfully
+
+   Linting and checking validity of types ...
+
+   Collecting page data ...
+
+   Generating static pages (0/27) ...
+
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+
+   Generating static pages (6/27) 
+
+   Generating static pages (13/27) 
+
+ReferenceError: location is not defined
+    at /home/itzkingofking/mikma-lencois/.next/server/chunks/5820.js:3:210270
+    at /home/itzkingofking/mikma-lencois/.next/server/chunks/5820.js:3:211135
+    at t.startTransition (/home/itzkingofking/mikma-lencois/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:108991)
+    at Object.push (/home/itzkingofking/mikma-lencois/.next/server/chunks/5820.js:3:211123)
+    at c (/home/itzkingofking/mikma-lencois/.next/server/app/(shop)/perfil/page.js:1:4332)
+    at nj (/home/itzkingofking/mikma-lencois/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:46252)
+    at nM (/home/itzkingofking/mikma-lencois/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47572)
+    at nN (/home/itzkingofking/mikma-lencois/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64547)
+    at nI (/home/itzkingofking/mikma-lencois/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47011)
+    at nM (/home/itzkingofking/mikma-lencois/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47718)
+
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+
+   Generating static pages (20/27) 
+
+ ✓ Generating static pages (27/27)
+
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+
+
+Route (app)                              Size     First Load JS
+┌ ƒ /                                    185 B           101 kB
+├ ○ /_not-found                          150 B          87.3 kB
+├ ƒ /api/auth/login                      0 B                0 B
+├ ƒ /api/auth/register                   0 B                0 B
+├ ƒ /api/checkout/validate-coupon        0 B                0 B
+├ ƒ /api/delivery                        0 B                0 B
+├ ƒ /api/orders                          0 B                0 B
+├ ƒ /api/payment/create-pix              0 B                0 B
+├ ƒ /api/payment/webhook                 0 B                0 B
+├ ƒ /api/products                        0 B                0 B
+├ ƒ /api/products/[id]                   0 B                0 B
+├ ƒ /api/user/delete                     0 B                0 B
+├ ƒ /api/user/export                     0 B                0 B
+├ ○ /cadastro                            3.17 kB         220 kB
+├ ○ /carrinho                            3.17 kB         220 kB
+├ ○ /checkout                            3.94 kB         207 kB
+├ ○ /conta                               1.72 kB         213 kB
+├ ○ /conta/pedidos                       2.52 kB         214 kB
+├ ○ /entrar                              1.95 kB         214 kB
+├ ○ /painel                              2 kB            214 kB
+├ ○ /painel/configuracoes                1.76 kB         205 kB
+├ ○ /painel/cupons                       2.14 kB         205 kB
+├ ○ /painel/estoque                      1.68 kB         205 kB
+├ ○ /painel/pedidos                      2.23 kB         205 kB
+├ ƒ /painel/pedidos/[id]                 2.64 kB         206 kB
+├ ○ /painel/produtos                     1.64 kB         213 kB
+├ ƒ /painel/produtos/[id]                543 B           207 kB
+├ ○ /painel/produtos/novo                181 B           206 kB
+├ ○ /painel/relatorios                   1.78 kB         205 kB
+├ ○ /pedidos                             1.89 kB         214 kB
+├ ƒ /pedidos/[orderId]                   2.63 kB         206 kB
+├ ○ /perfil                              2.29 kB         205 kB
+├ ○ /privacidade                         150 B          87.3 kB
+├ ƒ /produtos                            755 B           102 kB
+├ ƒ /produtos/[slug]                     2.14 kB         219 kB
+├ ○ /robots.txt                          0 B                0 B
+├ ○ /sitemap.xml                         0 B                0 B
+├ ○ /sobre                               150 B          87.3 kB
+└ ○ /termos                              150 B          87.3 kB
++ First Load JS shared by all            87.2 kB
+  ├ chunks/117-4e25f76cfa8e79d7.js       31.6 kB
+  ├ chunks/fd9d1056-8330337790fd1d70.js  53.6 kB
+  └ other shared chunks (total)          1.95 kB
+
+
+ƒ Middleware                             24.9 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+Building a Cloud Function to run this application. This is needed due to:
+ • middleware
+ • Image Optimization
+ • non-static component /api/auth/register/route
+ • non-static component /api/checkout/validate-coupon/route
+ • non-static component /api/orders/route
+ • and 14 other reasons, use --debug to see more
+
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'firebase-frameworks@0.11.8',
+npm warn EBADENGINE   required: { node: '^16.0.0 || ^18.0.0 || ^20.0.0 || ^22.0.0' },
+npm warn EBADENGINE   current: { node: 'v24.16.0', npm: '11.16.0' }
+npm warn EBADENGINE }
+
+up to date in 4s
+
+69 packages are looking for funding
+  run `npm fund` for details
+npm warn allow-scripts 2 packages have install scripts not yet covered by allowScripts:
+npm warn allow-scripts   protobufjs@7.6.2 (install: (install scripts present))
+npm warn allow-scripts   sharp@0.33.5 (install: node install/check)
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+
+=== Deploying to 'mikma-lencois'...
+
+i  deploying functions, storage, firestore, hosting
+i  functions: preparing codebase firebase-frameworks-mikma-lencois for deployment
+i  functions: ensuring required API cloudfunctions.googleapis.com is enabled...
+i  functions: ensuring required API cloudbuild.googleapis.com is enabled...
+i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled...
+⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory.
+⚠  functions: Please note that there will be breaking changes when you upgrade.
+i  functions: Loading and analyzing source code for codebase firebase-frameworks-mikma-lencois to determine what to deploy
+Serving at port 8698
+
+i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled...
+i  functions: Loaded environment variables from .env.
+i  functions: preparing .firebase/mikma-lencois/functions directory for uploading...
+i  functions: packaged /home/itzkingofking/mikma-lencois/.firebase/mikma-lencois/functions (25.55 MB) for uploading
+i  functions: ensuring required API run.googleapis.com is enabled...
+i  functions: ensuring required API eventarc.googleapis.com is enabled...
+i  functions: ensuring required API pubsub.googleapis.com is enabled...
+i  functions: ensuring required API storage.googleapis.com is enabled...
+i  functions: generating the service identity for pubsub.googleapis.com...
+i  functions: generating the service identity for eventarc.googleapis.com...
+i  storage: ensuring required API firebasestorage.googleapis.com is enabled...
+i  firebase.storage: checking storage.rules for compilation errors...
+✔  firebase.storage: rules file storage.rules compiled successfully
+i  firestore: ensuring required API firestore.googleapis.com is enabled...
+i  firestore: ensuring required API firestore.googleapis.com is enabled...
+i  firestore: reading indexes from firestore.indexes.json...
+i  cloud.firestore: checking firestore.rules for compilation errors...
+✔  cloud.firestore: rules file firestore.rules compiled successfully
+⚠  functions: GOOGLE_CLOUD_QUOTA_PROJECT is not usable when uploading source for Cloud Functions.
+✔  functions: .firebase/mikma-lencois/functions source uploaded successfully
+i  storage: latest version of storage.rules already up to date, skipping upload...
+i  firestore: latest version of firestore.rules already up to date, skipping upload...
+i  firestore: deploying indexes...
+✔  firestore: deployed indexes in firestore.indexes.json successfully for (default) database
+i  hosting[mikma-lencois]: beginning deploy...
+i  hosting[mikma-lencois]: found 65 files in .firebase/mikma-lencois/hosting
+✔  hosting[mikma-lencois]: file upload complete
+i  functions: updating Node.js 24 (2nd Gen) function firebase-frameworks-mikma-lencois:ssrmikmalencois(southamerica-east1)...
+✔  functions[firebase-frameworks-mikma-lencois:ssrmikmalencois(southamerica-east1)] Successful update operation.
+Function URL (firebase-frameworks-mikma-lencois:ssrmikmalencois(southamerica-east1)): https://ssrmikmalencois-k62tgyyiyq-rj.a.run.app
+✔  storage: released rules storage.rules to firebase.storage
+✔  firestore: released rules firestore.rules to cloud.firestore
+i  hosting[mikma-lencois]: finalizing version...
+✔  hosting[mikma-lencois]: version finalized
+i  hosting[mikma-lencois]: releasing new version...
+✔  hosting[mikma-lencois]: release complete
+
+✔  Deploy complete!
+
+Project Console: https://console.firebase.google.com/project/mikma-lencois/overview
+Hosting URL: https://mikma-lencois.web.app
