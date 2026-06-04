@@ -16,12 +16,18 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token);
     const uid = decoded.uid;
 
-    const { items, address, amountCents, customerName, customerEmail, customerCpf } = await req.json();
+    const { items, address, amountCents } = await req.json();
 
-    if (!items || !amountCents || !customerName || !customerEmail) {
+    if (!items?.length || !amountCents) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    if (!ABACATEPAY_KEY) {
+      console.error('ABACATEPAY_API_KEY not set');
+      return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
+    }
+
+    // Create order via Admin SDK (bypasses Firestore client rules)
     const orderId = `${uid}_${Date.now()}`;
     const orderRef = adminDb.collection('orders').doc(orderId);
     await orderRef.set({
@@ -36,12 +42,9 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
-    if (!ABACATEPAY_KEY) {
-      console.error('ABACATEPAY_API_KEY is not set in environment variables');
-      return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
-    }
-
-    const payload = {
+    // AbacatePay v2 — payload correto: method + data no root, customer DENTRO de data
+    // customer só é enviado se tiver todos os 4 campos obrigatórios
+    const pixPayload = {
       method: 'PIX',
       data: {
         amount: amountCents,
@@ -50,15 +53,10 @@ export async function POST(req: NextRequest) {
         externalId: orderId,
         metadata: { orderId, userId: uid },
       },
-      customer: {
-        name: customerName,
-        email: customerEmail,
-        ...(customerCpf ? { taxId: customerCpf } : {}),
-      },
     };
 
-    console.log('AbacatePay key prefix:', ABACATEPAY_KEY?.slice(0, 12) ?? 'KEY_MISSING');
-    console.log('AbacatePay payload:', JSON.stringify(payload));
+    console.log('AbacatePay key prefix:', ABACATEPAY_KEY.slice(0, 12));
+    console.log('AbacatePay payload:', JSON.stringify(pixPayload));
 
     const pixRes = await fetch(`${ABACATEPAY_BASE}/transparents/create`, {
       method: 'POST',
@@ -66,13 +64,15 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${ABACATEPAY_KEY}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(pixPayload),
     });
 
     const pixText = await pixRes.text();
-    console.log('AbacatePay response status:', pixRes.status, 'body:', pixText);
+    console.log('AbacatePay status:', pixRes.status, 'body:', pixText);
 
     if (!pixRes.ok) {
+      // cleanup orphan order
+      await orderRef.delete();
       return NextResponse.json({ error: 'Payment provider error', detail: pixText }, { status: 502 });
     }
 
@@ -81,10 +81,9 @@ export async function POST(req: NextRequest) {
 
     await orderRef.update({
       'payment.txId': pix.id,
-      'payment.qrCode': pix.brCodeBase64,
-      'payment.copyPaste': pix.brCode,
+      'payment.pixQrCode': pix.brCodeBase64,
+      'payment.pixCopyPaste': pix.brCode,
       'payment.expiresAt': new Date(pix.expiresAt),
-      status: 'pending_payment',
       updatedAt: new Date(),
     });
 
