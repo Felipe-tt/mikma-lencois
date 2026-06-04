@@ -22,3 +22,22 @@ export function formatDateTime(iso: string): string {
     minute: '2-digit',
   }).format(new Date(iso));
 }
+
+/** Converte Firestore Timestamp { seconds, nanoseconds } ou string ISO para Date */
+export function tsToDate(val: unknown): Date {
+  if (!val) return new Date(0);
+  if (val instanceof Date) return val;
+  if (typeof val === 'string') return new Date(val);
+  if (typeof val === 'object' && 'seconds' in (val as object)) {
+    return new Date((val as { seconds: number }).seconds * 1000);
+  }
+  return new Date(0);
+}
+
+export function formatTs(val: unknown): string {
+  return formatDate(tsToDate(val).toISOString());
+}
+
+export function formatTsDateTime(val: unknown): string {
+  return formatDateTime(tsToDate(val).toISOString());
+}
