@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase/client';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import type { Order } from '@/types';
-import { formatCurrency } from '@/lib/utils/format';
+import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import Link from 'next/link';
 
 const BADGE: Record<string,string> = { pending_payment:'badge-pending', paid:'badge-paid', preparing:'badge-preparing', shipped:'badge-shipped', delivered:'badge-delivered', cancelled:'badge-cancelled' };
@@ -74,7 +74,7 @@ export default function PainelDashboard() {
               <span className="text-xs font-mono text-faint shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
               <span className={BADGE[o.status] ?? 'badge badge-default'}>{LABEL[o.status] ?? o.status}</span>
             </div>
-            <span className="text-xs text-faint">{o.createdAt ? new Date((o.createdAt as unknown as {seconds:number}).seconds*1000).toLocaleDateString('pt-BR') : '—'}</span>
+            <span className="text-xs text-faint">{formatTsDateTime(o.createdAt)}</span>
             <span className="font-display text-base text-ink">{formatCurrency(o.totalCents)}</span>
             <Link href={`/painel/pedidos/${o.id}`} className="text-xs font-semibold text-clay hover:text-clay-d transition-colors">Ver →</Link>
           </div>

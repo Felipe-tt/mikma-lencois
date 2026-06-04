@@ -4,7 +4,7 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
-import { formatCurrency, formatDateTime } from '@/lib/utils/format';
+import { formatCurrency, formatDateTime, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
 import Link from 'next/link';
 
@@ -66,7 +66,7 @@ export default function PedidosPage() {
                     <p className="text-xs text-faint font-mono mb-1">#{order.id.slice(-10).toUpperCase()}</p>
                     <p className="font-display text-2xl text-ink">{formatCurrency(order.totalCents)}</p>
                     <p className="text-xs text-faint mt-1">
-                      {order.createdAt ? formatDateTime(new Date((order.createdAt as unknown as {seconds:number}).seconds * 1000).toISOString()) : '—'}
+                      {order.createdAt ? formatTsDateTime(order.createdAt) : '—'}
                     </p>
                   </div>
                   <span className={BADGES[order.status] ?? 'badge badge-default'}>

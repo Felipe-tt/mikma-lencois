@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
-import { formatCurrency, formatDateTime } from '@/lib/utils/format';
+import { formatCurrency, formatDateTime, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -82,7 +82,7 @@ export default function PainelPedidos() {
                   <p className="mt-0.5 text-sm font-semibold text-gray-900">{formatCurrency(order.totalCents)}</p>
                   <p className="text-xs text-gray-500">
                     {order.createdAt
-                      ? formatDateTime(new Date((order.createdAt as unknown as { seconds: number }).seconds * 1000).toISOString())
+                      ? formatTsDateTime(order.createdAt)
                       : '—'}
                   </p>
                 </div>
