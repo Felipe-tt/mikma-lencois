@@ -1,10 +1,12 @@
 'use client';
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
   onAuthStateChanged,
   signOut,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   User,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
@@ -45,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    getRedirectResult(auth).catch(() => {});
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const mapped = await mapUser(firebaseUser);
@@ -64,18 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (err: unknown) {
-      // popup fechado pelo usuário — ignora
-      if (err instanceof Error && err.message.includes('popup-closed-by-user')) return;
-      throw err;
-    }
+    await signInWithRedirect(auth, provider);
   };
 
-  const userData = user
-    ? { name: user.displayName ?? '', email: user.email }
-    : null;
+  const userData = user ? { name: user.displayName ?? '', email: user.email } : null;
 
   return (
     <AuthContext.Provider value={{ user, loading, logout, loginWithGoogle, userData }}>

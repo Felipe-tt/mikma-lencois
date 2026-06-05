@@ -85,7 +85,7 @@ export default function RegisterPage() {
             <div className="flex-1 divider" />
           </div>
 
-          <button onClick={async () => { await loginWithGoogle(); router.push('/'); }} className="btn-outline w-full gap-3 py-3.5">
+          <button onClick={() => loginWithGoogle()} className="btn-outline w-full gap-3 py-3.5">
             <GoogleIcon />
             <span className="text-sm font-medium">Continuar com Google</span>
           </button>
