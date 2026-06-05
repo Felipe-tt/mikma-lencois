@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { ProductCard } from '@/components/product/ProductCard';
 import { CategoryFilter } from '@/components/product/CategoryFilter';
+import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
 import type { Product } from '@/types';
 import { serialize } from '@/lib/utils/serialize';
 
@@ -28,25 +29,37 @@ export default async function ProdutosPage({ searchParams }: Props) {
       <div className="page-header">
         <div className="container-shop">
           <span className="eyebrow mb-3 block">Catálogo</span>
-          <h1 className="font-display font-normal text-ink" style={{fontSize:'clamp(2.25rem,5vw,3.5rem)'}}>
+          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">
             {categoria ?? 'Todos os produtos'}
           </h1>
-          <p className="text-sm text-mid mt-2">{products.length} produto{products.length !== 1 ? 's' : ''} encontrado{products.length !== 1 ? 's' : ''}</p>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-sm text-mid">
+              {products.length} produto{products.length !== 1 ? 's' : ''}
+            </p>
+            {/* Filtro mobile — só aparece em telas pequenas */}
+            <div className="lg:hidden">
+              <MobileFilterSheet categories={categories} active={categoria} />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="container-shop py-12">
-        <div className="flex gap-12 items-start">
+      <div className="container-shop py-8 sm:py-12 pb-20">
+        <div className="flex gap-10 items-start">
+          {/* Sidebar — só desktop */}
           {categories.length > 0 && (
-            <aside className="w-44 shrink-0 sticky top-24">
+            <aside className="hidden lg:block w-44 shrink-0 sticky top-24">
               <CategoryFilter categories={categories} active={categoria} />
             </aside>
           )}
 
           <div className="flex-1 min-w-0">
             {products.length === 0 ? (
-              <div className="py-32 text-center">
+              <div className="py-24 text-center">
                 <p className="font-display text-2xl text-faint font-normal">Nenhum produto encontrado.</p>
+                <a href="/produtos" className="text-sm text-mid hover:text-clay transition-colors mt-4 block">
+                  Limpar filtros →
+                </a>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-px bg-mist">
