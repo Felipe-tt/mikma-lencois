@@ -51,30 +51,78 @@ function rgbToHex(r: number, g: number, b: number) {
   return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 }
 
+// ── Detecção automática via Claude API ───────────────────────────────────────
+async function detectFromLabel(dataUrl: string): Promise<{
+  size?: string;
+  fabric?: string;
+  category?: string;
+  name?: string;
+}> {
+  try {
+    const base64 = dataUrl.split(',')[1];
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: 'image/jpeg', data: base64 },
+              },
+              {
+                type: 'text',
+                text: `Esta é a foto de um lençol ou jogo de cama da marca Mikma Lençóis. 
+Olhe com atenção o rótulo da embalagem (etiqueta). Nele há checkboxes marcados indicando o tipo do produto.
+Identifique e responda APENAS com JSON válido, sem markdown, no formato:
+{
+  "size": "solteiro" | "casal" | "queen" | "king" | null,
+  "fabric": "Algodão" | "Malha" | "Percal 200 fios" | "Percal 300 fios" | "Cetim" | null,
+  "category": "Lençóis" | "Fronhas" | "Jogos de cama" | "Edredons" | "Travesseiros" | null,
+  "name": "nome sugerido curto para o produto" | null
+}
+Se não conseguir identificar algo, deixe null.`,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text ?? '';
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
+}
+
 // ── Camera Modal ─────────────────────────────────────────────────────────────
 function CameraModal({
   onCapture,
   onClose,
 }: {
-  onCapture: (dataUrl: string, hex: string, blob: Blob) => void;
+  onCapture: (dataUrl: string, hex: string, blob: Blob, detected: { size?: string; fabric?: string; category?: string; name?: string }) => void;
   onClose: () => void;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [crosshair, setCrosshair] = useState({ x: 0.5, y: 0.5 });
   const [pickedHex, setPickedHex] = useState<string>('#cccccc');
-  const [isDragging, setIsDragging] = useState(false);
+  const [detecting, setDetecting] = useState(false);
 
-  // Pega a foto — câmera nativa no mobile
   const handleFile = async (file: File) => {
     const { blob, dataUrl } = await compressImage(file, 900);
     setPreview(dataUrl);
     setCapturedBlob(blob);
-    // Sample center pixel
     sampleColor(dataUrl, 0.5, 0.5);
+    // Detecção automática pelo rótulo em background
+    setDetecting(true);
+    detectFromLabel(dataUrl).then(() => setDetecting(false)).catch(() => setDetecting(false));
   };
 
   const sampleColor = useCallback((src: string, fx: number, fy: number) => {
@@ -93,8 +141,9 @@ function CameraModal({
     img.src = src;
   }, []);
 
+  // Toque/clique único já move o crosshair — sem necessidade de arrastar
   const handleImgPointer = useCallback(
-    (e: React.PointerEvent<HTMLImageElement>) => {
+    (e: React.PointerEvent<HTMLDivElement>) => {
       if (!preview) return;
       const rect = e.currentTarget.getBoundingClientRect();
       const fx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
@@ -105,22 +154,26 @@ function CameraModal({
     [preview, sampleColor],
   );
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!preview || !capturedBlob) return;
-    onCapture(preview, pickedHex, capturedBlob);
+    setDetecting(true);
+    const detected = await detectFromLabel(preview).catch(() => ({}));
+    setDetecting(false);
+    onCapture(preview, pickedHex, capturedBlob, detected);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/90" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="flex items-center justify-between px-4 py-3 text-white">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/95">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
         <span className="text-sm font-semibold">Foto do produto</span>
-        <button onClick={onClose} className="text-white/60 hover:text-white text-xl leading-none">✕</button>
+        <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center">✕</button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4 overflow-y-auto">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4 overflow-y-auto pb-6">
         {!preview ? (
           <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-            {/* Botão principal — abre câmera traseira direto no mobile */}
+            {/* Câmera traseira direto no mobile */}
             <label className="w-full cursor-pointer">
               <input
                 ref={fileRef}
@@ -130,14 +183,14 @@ function CameraModal({
                 className="hidden"
                 onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
               />
-              <div className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/30 rounded-xl py-12 px-6 text-white/80 hover:border-white/60 transition-colors">
-                <span className="text-5xl">📷</span>
-                <span className="text-sm font-medium text-center">Toque para tirar foto</span>
-                <span className="text-xs text-white/50 text-center">Foto do lençol, fronha ou conjunto</span>
+              <div className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/30 rounded-2xl py-14 px-6 text-white/80 active:border-white/60">
+                <span className="text-6xl">📷</span>
+                <span className="text-base font-semibold text-center">Tirar foto</span>
+                <span className="text-xs text-white/50 text-center">Aponte para o produto ou rótulo</span>
               </div>
             </label>
 
-            {/* Alternativa galeria */}
+            {/* Galeria */}
             <label className="cursor-pointer text-xs text-white/40 hover:text-white/70 underline underline-offset-2">
               <input
                 type="file"
@@ -150,16 +203,17 @@ function CameraModal({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-            {/* Preview com crosshair para selecionar a cor */}
-            <div className="relative w-full rounded-xl overflow-hidden border border-white/20" style={{ aspectRatio: '1/1' }}>
+            {/* Preview: toque em qualquer ponto para selecionar a cor */}
+            <div
+              className="relative w-full rounded-2xl overflow-hidden border border-white/20 cursor-crosshair"
+              style={{ aspectRatio: '1/1' }}
+              onPointerDown={handleImgPointer}
+              onPointerMove={(e) => e.buttons > 0 && handleImgPointer(e)}
+            >
               <img
-                ref={imgRef}
                 src={preview}
                 alt="preview"
-                className="w-full h-full object-cover select-none"
-                onPointerDown={(e) => { setIsDragging(true); handleImgPointer(e); e.currentTarget.setPointerCapture(e.pointerId); }}
-                onPointerMove={(e) => isDragging && handleImgPointer(e)}
-                onPointerUp={() => setIsDragging(false)}
+                className="w-full h-full object-cover select-none pointer-events-none"
                 draggable={false}
               />
               {/* Crosshair */}
@@ -171,46 +225,46 @@ function CameraModal({
                   transform: 'translate(-50%, -50%)',
                 }}
               >
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-full border-2 border-white shadow-lg" style={{ background: pickedHex }} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-1 h-1 bg-white rounded-full" />
-                  </div>
-                  {/* linhas de mira */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-px w-12 h-0.5 bg-white/70 -ml-4" />
-                  <div className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-px h-12 w-0.5 bg-white/70 -mt-4" />
-                </div>
+                {/* Linhas de mira */}
+                <div className="absolute top-1/2 -translate-y-px bg-white/80 h-px" style={{ width: 40, left: -20 }} />
+                <div className="absolute left-1/2 -translate-x-px bg-white/80 w-px" style={{ height: 40, top: -20 }} />
+                {/* Círculo de cor */}
+                <div
+                  className="w-9 h-9 rounded-full border-[3px] border-white shadow-lg -translate-x-1/2 -translate-y-1/2 absolute top-0 left-0"
+                  style={{ background: pickedHex }}
+                />
               </div>
             </div>
 
-            <p className="text-xs text-white/60 text-center">
-              Arraste o círculo para selecionar a cor do produto
+            <p className="text-xs text-white/60 text-center -mt-1">
+              Toque na imagem para selecionar a cor do produto
             </p>
 
             {/* Cor selecionada */}
-            <div className="flex items-center gap-3 bg-white/10 rounded-lg px-4 py-2">
+            <div className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-2.5 w-full">
               <div className="w-6 h-6 rounded-full border border-white/30 shrink-0" style={{ background: pickedHex }} />
-              <span className="text-sm text-white font-mono">{pickedHex}</span>
+              <span className="text-sm text-white font-mono flex-1">{pickedHex}</span>
+              {detecting && <span className="text-xs text-white/40">Lendo rótulo…</span>}
             </div>
 
             <div className="flex gap-3 w-full">
               <button
                 onClick={() => { setPreview(null); setCapturedBlob(null); }}
-                className="flex-1 border border-white/30 text-white/70 text-sm font-medium py-3 rounded-xl hover:bg-white/10 transition-colors"
+                className="flex-1 border border-white/30 text-white/70 text-sm font-medium py-3.5 rounded-2xl active:bg-white/10"
               >
                 Tirar outra
               </button>
               <button
                 onClick={confirm}
-                className="flex-1 bg-white text-black text-sm font-semibold py-3 rounded-xl hover:bg-white/90 transition-colors"
+                disabled={detecting}
+                className="flex-1 bg-white text-black text-sm font-semibold py-3.5 rounded-2xl active:bg-white/90 disabled:opacity-60"
               >
-                Usar esta foto
+                {detecting ? 'Analisando…' : 'Usar esta foto'}
               </button>
             </div>
           </div>
         )}
       </div>
-      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }
@@ -227,7 +281,6 @@ export default function ProductForm({ initial }: Props) {
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
 
-  // Imagens: cada entrada tem dataUrl (preview) + blob (para upload) + hex da cor
   type ImgEntry = { dataUrl: string; blob?: Blob; url?: string; hex: string };
   const [images, setImages] = useState<ImgEntry[]>(
     (initial?.images ?? []).map((url) => ({ dataUrl: url, url, hex: '#cccccc' })),
@@ -241,12 +294,24 @@ export default function ProductForm({ initial }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const handleCapture = (dataUrl: string, hex: string, blob: Blob) => {
+  const handleCapture = (
+    dataUrl: string,
+    hex: string,
+    blob: Blob,
+    detected: { size?: string; fabric?: string; category?: string; name?: string },
+  ) => {
     setShowCamera(false);
     setImages((prev) => [...prev, { dataUrl, blob, hex }]);
-    // Auto-adiciona variação com a cor detectada se ainda não houver
+
+    // Preenche automaticamente com o que foi detectado no rótulo
+    if (detected.name && !name) setName(detected.name);
+    if (detected.category) setCategory(detected.category);
+
+    // Adiciona variação automaticamente com os dados detectados
+    const autoSize = detected.size ?? SIZES[0];
+    const autoFabric = detected.fabric ?? FABRICS[0];
     if (variants.length === 0) {
-      setVariants([{ size: SIZES[0], fabric: FABRICS[0], color: hex, qty: 1 }]);
+      setVariants([{ size: autoSize, fabric: autoFabric, color: hex, qty: 1 }]);
     }
   };
 
@@ -329,9 +394,9 @@ export default function ProductForm({ initial }: Props) {
         <CameraModal onCapture={handleCapture} onClose={() => setShowCamera(false)} />
       )}
 
-      <div className="max-w-lg mx-auto px-1">
+      <div className="max-w-lg mx-auto">
         {error && (
-          <div className="mb-4 border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600 rounded-md">
+          <div className="mb-4 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 rounded-xl">
             {error}
           </div>
         )}
@@ -341,23 +406,23 @@ export default function ProductForm({ initial }: Props) {
           {/* ── Fotos ── */}
           <div>
             <label className="label mb-2 block">Fotos do produto</label>
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-wrap gap-2 mb-1">
               {images.map((img, i) => (
                 <div key={i} className="relative group">
                   <img
                     src={img.dataUrl}
                     alt=""
-                    className="h-20 w-20 rounded-lg border border-mist object-cover"
+                    className="h-20 w-20 rounded-xl border border-mist object-cover"
                   />
-                  {/* Cor extraída */}
+                  {/* Bolinha de cor extraída */}
                   <div
-                    className="absolute bottom-1 left-1 w-4 h-4 rounded-full border border-white shadow"
+                    className="absolute bottom-1.5 left-1.5 w-4 h-4 rounded-full border-2 border-white shadow"
                     style={{ background: img.hex }}
                     title={img.hex}
                   />
                   <button
                     onClick={() => removeImage(i)}
-                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow"
                   >
                     ✕
                   </button>
@@ -367,7 +432,7 @@ export default function ProductForm({ initial }: Props) {
               {/* Botão câmera */}
               <button
                 onClick={() => setShowCamera(true)}
-                className="h-20 w-20 rounded-lg border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/60 hover:border-clay hover:text-clay transition-colors"
+                className="h-20 w-20 rounded-xl border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 active:border-clay active:text-clay transition-colors"
               >
                 <span className="text-2xl">📷</span>
                 <span className="text-xs font-medium">Foto</span>
@@ -375,7 +440,7 @@ export default function ProductForm({ initial }: Props) {
             </div>
             {images.length > 0 && (
               <p className="text-xs text-faint">
-                Cor detectada: <span className="font-mono">{images[0].hex}</span>
+                Cor: <span className="font-mono">{images[0].hex}</span>
               </p>
             )}
           </div>
@@ -387,7 +452,7 @@ export default function ProductForm({ initial }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jogo de cama queen algodão"
-              className="w-full border border-mist rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+              className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
             />
           </div>
 
@@ -399,7 +464,7 @@ export default function ProductForm({ initial }: Props) {
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Material, medidas, cuidados com lavagem..."
-              className="w-full resize-none border border-mist rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+              className="w-full resize-none border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
             />
           </div>
 
@@ -412,7 +477,7 @@ export default function ProductForm({ initial }: Props) {
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="49,90"
                 inputMode="decimal"
-                className="w-full border border-mist rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+                className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
               />
             </div>
             <div>
@@ -420,7 +485,7 @@ export default function ProductForm({ initial }: Props) {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full border border-mist rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+                className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
               >
                 {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
               </select>
@@ -434,7 +499,7 @@ export default function ProductForm({ initial }: Props) {
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="algodão, casal, branco"
-              className="w-full border border-mist rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+              className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
             />
           </div>
 
@@ -442,13 +507,13 @@ export default function ProductForm({ initial }: Props) {
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-medium text-mid">Variações</label>
-              <button onClick={addVariant} className="text-xs font-semibold text-clay hover:text-clay-d">
+              <button onClick={addVariant} className="text-xs font-semibold text-clay active:text-clay-d">
                 + Adicionar
               </button>
             </div>
 
             {variants.length === 0 && (
-              <p className="text-xs text-faint py-2">Nenhuma variação. Toque em + Adicionar.</p>
+              <p className="text-xs text-faint py-2">Tire uma foto para preencher automaticamente, ou toque em + Adicionar.</p>
             )}
 
             <div className="flex flex-col gap-2">
@@ -460,7 +525,7 @@ export default function ProductForm({ initial }: Props) {
                       <select
                         value={v.size}
                         onChange={(e) => updateVariant(i, 'size', e.target.value)}
-                        className="w-full rounded-md border border-mist bg-paper px-2 py-2 text-sm"
+                        className="w-full rounded-lg border border-mist bg-paper px-2 py-2 text-sm"
                       >
                         {SIZES.map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
                       </select>
@@ -470,15 +535,14 @@ export default function ProductForm({ initial }: Props) {
                       <select
                         value={v.fabric}
                         onChange={(e) => updateVariant(i, 'fabric', e.target.value)}
-                        className="w-full rounded-md border border-mist bg-paper px-2 py-2 text-sm"
+                        className="w-full rounded-lg border border-mist bg-paper px-2 py-2 text-sm"
                       >
                         {FABRICS.map((f) => <option key={f}>{f}</option>)}
                       </select>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {/* Cor — input nativo + preview */}
+                  <div className="flex items-end gap-2">
                     <div className="flex-1">
                       <label className="text-2xs text-faint mb-0.5 block">Cor (hex)</label>
                       <div className="flex items-center gap-2">
@@ -486,14 +550,14 @@ export default function ProductForm({ initial }: Props) {
                           type="color"
                           value={v.color.startsWith('#') ? v.color : '#cccccc'}
                           onChange={(e) => updateVariant(i, 'color', e.target.value)}
-                          className="w-10 h-9 rounded border border-mist cursor-pointer p-0.5"
+                          className="w-10 h-9 rounded-lg border border-mist cursor-pointer p-0.5 shrink-0"
                         />
                         <input
                           type="text"
                           value={v.color}
                           onChange={(e) => updateVariant(i, 'color', e.target.value)}
                           placeholder="#ffffff"
-                          className="flex-1 rounded-md border border-mist px-2 py-2 text-sm font-mono"
+                          className="flex-1 rounded-lg border border-mist px-2 py-2 text-sm font-mono"
                         />
                       </div>
                     </div>
@@ -507,14 +571,14 @@ export default function ProductForm({ initial }: Props) {
                           value={v.qty}
                           onChange={(e) => updateVariant(i, 'qty', Number(e.target.value))}
                           inputMode="numeric"
-                          className="w-full rounded-md border border-mist px-2 py-2 text-sm text-center"
+                          className="w-full rounded-lg border border-mist px-2 py-2 text-sm text-center"
                         />
                       </div>
                     )}
 
                     <button
                       onClick={() => removeVariant(i)}
-                      className="self-end mb-0.5 text-red-400 hover:text-red-600 text-lg leading-none pb-1"
+                      className="text-red-400 active:text-red-600 text-xl leading-none pb-1"
                     >
                       ✕
                     </button>
@@ -536,17 +600,17 @@ export default function ProductForm({ initial }: Props) {
           </label>
 
           {/* ── Ações ── */}
-          <div className="flex gap-3 pt-2 pb-6">
+          <div className="flex gap-3 pt-2 pb-8">
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="btn-primary flex-1 py-3 text-base"
+              className="btn-primary flex-1 py-3.5 text-base rounded-xl"
             >
               {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
             </button>
             <button
               onClick={() => router.push('/painel/produtos')}
-              className="border border-mist px-5 py-3 text-sm font-medium text-mid rounded-md hover:bg-warm transition-colors"
+              className="border border-mist px-5 py-3.5 text-sm font-medium text-mid rounded-xl active:bg-warm transition-colors"
             >
               Cancelar
             </button>

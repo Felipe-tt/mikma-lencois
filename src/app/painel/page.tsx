@@ -61,7 +61,7 @@ export default function PainelDashboard() {
         <h1 className="font-display font-normal text-ink text-2xl sm:text-3xl">Dashboard</h1>
       </div>
 
-      {/* KPIs — 2 cols mobile, 5 cols large */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         {kpis.map((k) => (
           <div
@@ -100,9 +100,8 @@ export default function PainelDashboard() {
             <Link
               key={o.id}
               href={`/painel/pedidos/${o.id}`}
-              className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-mist bg-paper hover:bg-warm transition-colors"
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-mist bg-paper active:bg-warm transition-colors"
             >
-              {/* ID + status */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-mono text-faint">#{o.id.slice(-8).toUpperCase()}</span>
@@ -110,12 +109,7 @@ export default function PainelDashboard() {
                 </div>
                 <p className="text-xs text-faint">{formatTsDateTime(o.createdAt)}</p>
               </div>
-              {/* Total */}
               <span className="font-display text-base text-ink shrink-0">{formatCurrency(o.totalCents)}</span>
-              {/* Arrow */}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-faint shrink-0">
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
             </Link>
           ))}
         </div>
