@@ -32,7 +32,21 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao entrar');
+      if (err instanceof Error) {
+        // Traduz erros do Firebase Auth
+        const msg = err.message;
+        if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found')) {
+          setError('Credenciais inválidas');
+        } else if (msg.includes('auth/too-many-requests')) {
+          setError('Muitas tentativas. Tente novamente em alguns minutos.');
+        } else if (msg.includes('auth/network-request-failed')) {
+          setError('Erro de conexão. Verifique sua internet.');
+        } else {
+          setError(msg || 'Erro ao entrar');
+        }
+      } else {
+        setError('Erro ao entrar');
+      }
     } finally {
       setLoading(false);
     }
