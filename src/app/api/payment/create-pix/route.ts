@@ -87,20 +87,24 @@ export async function POST(req: NextRequest) {
     // ── AbacatePay v2 — POST /transparents/create ─────────────────────────────
     // Only include customer if we have at least email; metadata must be omitted
     // if not needed (API rejects unknown object shapes with 422)
+    // For PIX, customer requires ALL fields (name, email, taxId, cellphone)
+    // Only include customer if we have everything; otherwise omit entirely
+    const hasAllCustomerFields = userData.email && userData.cpf && userData.phone &&
+      (userData.displayName ?? userData.name);
+    const customerData = hasAllCustomerFields ? {
+      name: userData.displayName ?? userData.name,
+      email: userData.email,
+      taxId: userData.cpf,
+      cellphone: userData.phone,
+    } : undefined;
+
     const pixPayload: Record<string, unknown> = {
       method: 'PIX',
       data: {
         amount: amountCents,
         description: `Pedido #${orderId.slice(-8).toUpperCase()}`,
         expiresIn: 900,
-        ...(userData.email ? {
-          customer: {
-            name: userData.displayName ?? userData.name ?? 'Cliente',
-            email: userData.email,
-            ...(userData.phone ? { cellphone: userData.phone } : {}),
-            ...(userData.cpf ? { taxId: userData.cpf } : {}),
-          },
-        } : {}),
+        ...(customerData ? { customer: customerData } : {}),
       },
     };
 
