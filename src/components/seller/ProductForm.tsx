@@ -146,7 +146,7 @@ export default function ProductForm({ initial }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Jogo de cama queen algodão"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           />
         </div>
 
@@ -158,7 +158,7 @@ export default function ProductForm({ initial }: Props) {
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             placeholder="Descreva o produto, material, cuidados com a lavagem..."
-            className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           />
         </div>
 
@@ -170,7 +170,7 @@ export default function ProductForm({ initial }: Props) {
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="49,90"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
           </div>
           <div>
@@ -178,7 +178,7 @@ export default function ProductForm({ initial }: Props) {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
             >
               {CATEGORIES.map((c) => (
                 <option key={c}>{c}</option>
@@ -196,7 +196,7 @@ export default function ProductForm({ initial }: Props) {
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="algodão, casal, branco"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           />
         </div>
 
@@ -240,7 +240,7 @@ export default function ProductForm({ initial }: Props) {
             <label className="block text-sm font-medium text-gray-700">Variações</label>
             <button
               onClick={addVariant}
-              className="text-xs font-medium text-blue-600 hover:text-blue-800"
+              className="text-xs font-medium text-gray-600 hover:text-gray-900"
             >
               + Adicionar variação
             </button>
@@ -323,7 +323,7 @@ export default function ProductForm({ initial }: Props) {
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+            className="bg-gray-900 text-white px-6 py-2 text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
           >
             {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
           </button>
