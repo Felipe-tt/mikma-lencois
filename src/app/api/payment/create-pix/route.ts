@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
     // Only include customer if we have at least email; metadata must be omitted
     // if not needed (API rejects unknown object shapes with 422)
     const pixPayload: Record<string, unknown> = {
+      method: 'PIX',
       data: {
         amount: amountCents,
         description: `Pedido #${orderId.slice(-8).toUpperCase()}`,
