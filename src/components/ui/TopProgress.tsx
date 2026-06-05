@@ -7,7 +7,7 @@ export function TopProgress() {
   const [width, setWidth] = useState(0);
   const [visible, setVisible] = useState(false);
   const prevPathname = useRef(pathname);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (prevPathname.current === pathname) return;
