@@ -37,7 +37,21 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // scrollbar-none utility
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    function({ addUtilities }: { addUtilities: (u: Record<string, Record<string, string>>) => void }) {
+      addUtilities({
+        '.scrollbar-none': {
+          'scrollbar-width': 'none',
+          '-ms-overflow-style': 'none',
+        },
+        '.scrollbar-none::-webkit-scrollbar': {
+          display: 'none',
+        },
+      });
+    },
+  ],
 }
 
 export default config
