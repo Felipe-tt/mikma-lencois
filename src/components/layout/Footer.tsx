@@ -1,21 +1,24 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
-export function Footer() {
+interface Props {
+  storeName?: string;
+  storeCity?: string;
+  footerTagline?: string;
+}
+
+export function Footer({ storeName = 'Mikma Lençóis', storeCity = 'Blumenau, SC', footerTagline }: Props) {
+  const tagline = footerTagline ?? `Produzido em ${storeCity}. Entregamos em todo o Brasil.`;
+
   return (
     <footer className="bg-ink text-paper/50 mt-auto">
       <div className="container-shop pt-16 pb-10">
-
-        {/* Top row */}
         <div className="grid grid-cols-2 md:grid-cols-[1fr_auto_auto_auto] gap-12 pb-12 border-b border-paper/10">
           <div className="col-span-2 md:col-span-1">
             <div className="mb-4">
-              <Image src="/logo-white.png" alt="Mikma Lençóis" width={120} height={60} className="h-10 w-auto object-contain" />
+              <Image src="/logo-white.png" alt={storeName} width={120} height={60} className="h-10 w-auto object-contain" />
             </div>
-            <p className="text-sm text-paper/40 leading-relaxed max-w-[220px]">
-              Produzido em Blumenau, SC.<br/>
-              Entregamos em todo o Brasil.
-            </p>
+            <p className="text-sm text-paper/40 leading-relaxed max-w-[220px]">{tagline}</p>
           </div>
 
           {[
@@ -36,10 +39,9 @@ export function Footer() {
           ))}
         </div>
 
-        {/* Bottom row */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
-          <p className="text-xs text-paper/25">© {new Date().getFullYear()} Mikma Lençóis. Todos os direitos reservados.</p>
-          <p className="text-xs text-paper/20 tracking-widest uppercase font-medium">Blumenau · SC · Brasil</p>
+          <p className="text-xs text-paper/25">© {new Date().getFullYear()} {storeName}. Todos os direitos reservados.</p>
+          <p className="text-xs text-paper/20 tracking-widest uppercase font-medium">{storeCity.toUpperCase().replace(', ', ' · ')}</p>
         </div>
       </div>
     </footer>

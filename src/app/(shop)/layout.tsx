@@ -1,12 +1,14 @@
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { getSettings } from '@/lib/settings';
 
-export default function ShopLayout({ children }: { children: React.ReactNode }) {
+export default async function ShopLayout({ children }: { children: React.ReactNode }) {
+  const s = await getSettings();
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
+      <Header topbarText={s.topbarText} />
       <main className="flex-1">{children}</main>
-      <Footer />
+      <Footer storeName={s.storeName} storeCity={s.storeCity} />
     </div>
   );
 }

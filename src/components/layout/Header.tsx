@@ -6,7 +6,10 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { useCartCount } from '@/lib/hooks/useCartCount';
 import { usePathname } from 'next/navigation';
 
-export function Header() {
+// topbarText é passado pelo Server Component pai (ShopLayout)
+interface Props { topbarText?: string }
+
+export function Header({ topbarText }: Props) {
   const { user, logout } = useAuth();
   const count = useCartCount();
   const pathname = usePathname();
@@ -28,27 +31,25 @@ export function Header() {
 
   return (
     <>
-      {/* Topbar */}
-      <div className="bg-ink text-paper/60 text-2xs text-center py-2 tracking-[0.15em] uppercase font-medium">
-        Entrega local Blumenau em 1h &nbsp;·&nbsp; PIX com confirmação automática
-      </div>
+      {topbarText && (
+        <div className="bg-ink text-paper/60 text-2xs text-center py-2 tracking-[0.15em] uppercase font-medium">
+          {topbarText}
+        </div>
+      )}
 
       <header className={`sticky top-0 z-40 bg-paper transition-all duration-250 ${scrolled ? 'shadow-[0_1px_0_0_#E8E4DC]' : ''}`}>
         <div className="container-shop h-16 flex items-center gap-4">
 
-          {/* Mobile menu btn */}
           <button className="btn-ghost p-2 -ml-2 md:hidden" onClick={() => setMenuOpen(true)} aria-label="Menu">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
               <path d="M3 7h18M3 12h12M3 17h18"/>
             </svg>
           </button>
 
-          {/* Logo */}
           <Link href="/" className="mr-auto md:mr-0">
-            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={110} height={55} className="h-10 w-auto object-contain" priority />
+            <Image src="/logo-dark.png" alt="Logo" width={110} height={55} className="h-10 w-auto object-contain" priority />
           </Link>
 
-          {/* Nav desktop */}
           <nav className="hidden md:flex items-center gap-8 mx-auto">
             {[{href:'/produtos',label:'Produtos'},{href:'/sobre',label:'Sobre'}].map(({href,label}) => (
               <Link key={href} href={href}
@@ -60,7 +61,6 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Actions */}
           <div className="flex items-center gap-1 ml-auto md:ml-0">
             {user ? (
               <>
@@ -80,8 +80,6 @@ export function Header() {
                 </Link>
               </>
             )}
-
-            {/* Cart */}
             <Link href="/carrinho" className="btn-ghost relative p-2" aria-label="Carrinho">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
@@ -98,14 +96,13 @@ export function Header() {
         </div>
       </header>
 
-      {/* Mobile drawer */}
       {menuOpen && (
         <>
           <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm animate-fade-in" onClick={() => setMenuOpen(false)} />
           <div className="fixed top-0 left-0 z-50 w-80 h-full bg-paper shadow-2xl animate-slide-in flex flex-col">
             <div className="flex items-center justify-between px-6 h-16 border-b border-mist">
-              <Link href="/" className="" onClick={() => setMenuOpen(false)}>
-                <Image src="/logo-dark.png" alt="Mikma Lençóis" width={100} height={50} className="h-9 w-auto object-contain" />
+              <Link href="/" onClick={() => setMenuOpen(false)}>
+                <Image src="/logo-dark.png" alt="Logo" width={100} height={50} className="h-9 w-auto object-contain" />
               </Link>
               <button className="btn-ghost p-2" onClick={() => setMenuOpen(false)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
@@ -115,10 +112,7 @@ export function Header() {
             </div>
             <nav className="flex-1 px-3 py-6 flex flex-col gap-0.5 overflow-y-auto">
               {[{href:'/produtos',label:'Produtos'},{href:'/sobre',label:'Sobre'}].map(({href,label}) => (
-                <Link key={href} href={href}
-                  className="px-4 py-3.5 text-base font-medium text-ink hover:bg-warm rounded-sm transition-colors">
-                  {label}
-                </Link>
+                <Link key={href} href={href} className="px-4 py-3.5 text-base font-medium text-ink hover:bg-warm rounded-sm transition-colors">{label}</Link>
               ))}
               <div className="divider my-3 mx-4" />
               {user ? (
