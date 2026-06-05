@@ -5,6 +5,7 @@ import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp
 import { db, auth } from '@/lib/firebase/client';
 import { formatCurrency, formatDateTime, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
 const STATUS_LABEL: Record<string, string> = {
   pending_payment: 'Aguardando pag.', paid: 'Pago', preparing: 'Em preparo', shipped: 'Em rota', delivered: 'Entregue',
@@ -54,7 +55,7 @@ export default function PainelPedidos() {
 
   const filtered = filter === 'todos' ? orders : orders.filter(o => o.status === filter);
 
-  if (loading) return <div className="flex min-h-64 items-center justify-center"><p className="text-sm text-gray-400">Carregando…</p></div>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-6">

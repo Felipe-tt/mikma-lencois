@@ -8,6 +8,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { PerfilSkeleton } from '@/components/ui/Skeleton';
 
 export default function PerfilPage() {
   const { user, userData, logout } = useAuth();
