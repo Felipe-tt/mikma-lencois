@@ -4,9 +4,10 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
-import { formatCurrency, formatDateTime, formatTsDateTime } from '@/lib/utils/format';
+import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
 import Link from 'next/link';
+import { OrdersListSkeleton } from '@/components/ui/Skeleton';
 
 const BADGES: Record<string, string> = {
   pending_payment:'badge-pending', paid:'badge-paid', preparing:'badge-preparing',
@@ -32,17 +33,13 @@ export default function PedidosPage() {
     );
   }, [user, loading, router]);
 
-  if (loading || ordersLoading) return (
-    <div className="min-h-[50vh] flex items-center justify-center"><span className="spinner" /></div>
-  );
-
   return (
     <div>
       <div className="page-header">
         <div className="container-shop flex items-end justify-between">
           <div>
             <span className="eyebrow mb-3 block">Conta</span>
-            <h1 className="font-display font-normal text-ink" style={{fontSize:'clamp(2rem,5vw,3rem)'}}>Meus pedidos</h1>
+            <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Meus pedidos</h1>
           </div>
           <Link href="/perfil" className="text-sm text-mid hover:text-clay transition-colors font-medium hidden sm:block">
             Meu perfil →
@@ -50,8 +47,10 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      <div className="container-shop py-12 max-w-3xl">
-        {orders.length === 0 ? (
+      <div className="container-shop py-8 sm:py-12 pb-20 max-w-3xl">
+        {loading || ordersLoading ? (
+          <OrdersListSkeleton />
+        ) : orders.length === 0 ? (
           <div className="py-24 flex flex-col items-center gap-5 text-center">
             <p className="font-display text-2xl text-ink font-normal">Nenhum pedido ainda</p>
             <p className="text-sm text-mid">Você ainda não fez nenhum pedido.</p>
@@ -60,11 +59,11 @@ export default function PedidosPage() {
         ) : (
           <div className="flex flex-col gap-4">
             {orders.map(order => (
-              <div key={order.id} className="border border-mist bg-paper p-6">
+              <div key={order.id} className="border border-mist bg-paper p-5 sm:p-6">
                 <div className="flex items-start justify-between gap-4 mb-5">
                   <div>
                     <p className="text-xs text-faint font-mono mb-1">#{order.id.slice(-10).toUpperCase()}</p>
-                    <p className="font-display text-2xl text-ink">{formatCurrency(order.totalCents)}</p>
+                    <p className="font-display text-xl sm:text-2xl text-ink">{formatCurrency(order.totalCents)}</p>
                     <p className="text-xs text-faint mt-1">
                       {order.createdAt ? formatTsDateTime(order.createdAt) : '—'}
                     </p>
@@ -76,8 +75,8 @@ export default function PedidosPage() {
                 <div className="border-t border-mist pt-4 flex flex-col gap-2">
                   {order.items.map(item => (
                     <div key={item.sku} className="flex justify-between text-sm text-mid">
-                      <span className="font-medium text-ink">{item.productName}</span>
-                      <span>{item.quantity}× {formatCurrency(item.unitPrice)}</span>
+                      <span className="font-medium text-ink truncate mr-4">{item.productName}</span>
+                      <span className="shrink-0">{item.quantity}× {formatCurrency(item.unitPrice)}</span>
                     </div>
                   ))}
                 </div>
