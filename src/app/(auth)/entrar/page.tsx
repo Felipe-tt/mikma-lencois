@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { auth } from '@/lib/firebase/client';
@@ -8,8 +8,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function LoginPage() {
-  const { loginWithGoogle } = useAuth();
+  const { loginWithGoogle, user } = useAuth();
   const router = useRouter();
+
+  // Redirect after Google login completes (signInWithRedirect flow)
+  useEffect(() => {
+    if (user) router.push('/');
+  }, [user, router]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -125,7 +130,7 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={async () => { await loginWithGoogle(); router.push('/'); }}
+            onClick={() => loginWithGoogle()}
             className="btn-outline w-full gap-3 py-3.5"
           >
             <GoogleIcon />
