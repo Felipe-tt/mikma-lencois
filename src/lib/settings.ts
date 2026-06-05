@@ -1,5 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
-import { STORE_DEFAULTS, type StoreSettings } from '@/app/painel/configuracoes/page';
+import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 
 let cached: StoreSettings | null = null;
 let cachedAt = 0;

@@ -17,7 +17,7 @@ async function getFeatured(): Promise<Product[]> {
 
 export default async function HomePage() {
   const [products, s] = await Promise.all([getFeatured(), getSettings()]);
-  const heroLines = s.heroTitle.split('\n');
+  const heroLines = (s.heroTitle ?? 'Mikma\nLençóis').split('\n');
 
   return (
     <>
@@ -120,7 +120,7 @@ export default async function HomePage() {
             <div>
               <span className="eyebrow text-clay mb-3 block">Qualidade real</span>
               <h2 className="font-display font-normal text-paper leading-tight text-3xl sm:text-4xl lg:text-5xl">
-                {s.storeSlogan.split(',').map((part, i, arr) => (
+                {(s.storeSlogan ?? 'Qualidade, conforto').split(',').map((part, i, arr) => (
                   <span key={i}>{i === 0 ? part + ',' : <em className="text-clay">{part}</em>}{i < arr.length - 1 && i > 0 && <br/>}</span>
                 ))}
               </h2>
