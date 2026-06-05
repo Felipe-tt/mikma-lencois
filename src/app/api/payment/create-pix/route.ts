@@ -1,25 +1,32 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { rateLimit } from '@/lib/rateLimit';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 10 PIX requests per user per hour
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  if (!rateLimit(`pix:${ip}`, 10, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: 'Muitas tentativas. Tente em 1 hora.' }, { status: 429 });
+  }
+
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1]);
     const uid = decoded.uid;
 
-    const { items, address, amountCents } = await req.json();
+    const { items, address } = await req.json();
+    // NOTE: amountCents is NOT trusted from client — calculated server-side from Firestore prices
 
-    if (!items?.length || !amountCents) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!address) {
+      return NextResponse.json({ error: 'Endereço obrigatório' }, { status: 400 });
     }
 
     if (!ABACATEPAY_KEY) {
@@ -27,12 +34,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
     }
 
-    // Create order first via Admin SDK (bypasses Firestore client rules)
+    // ── Load cart from Firestore (server-side, trusted) ──────────────────────
+    const cartSnap = await adminDb.collection('carts').doc(uid).get();
+    if (!cartSnap.exists || !cartSnap.data()?.items?.length) {
+      return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
+    }
+    const cartItems: Array<{ sku: string; productId: string; quantity: number }> =
+      cartSnap.data()!.items;
+
+    // ── Load product prices from Firestore (never trust client prices) ───────
+    const productIds = Array.from(new Set(cartItems.map(i => i.productId)));
+    const productDocs = await Promise.all(
+      productIds.map(id => adminDb.collection('products').doc(id).get())
+    );
+    const priceMap: Record<string, number> = {};
+    for (const snap of productDocs) {
+      if (snap.exists) priceMap[snap.id] = snap.data()!.price as number;
+    }
+
+    // ── Build verified order items ────────────────────────────────────────────
+    const verifiedItems = cartItems.map(ci => {
+      const price = priceMap[ci.productId];
+      if (!price) throw new Error(`Produto ${ci.productId} não encontrado`);
+      return { ...ci, unitPrice: price };
+    });
+
+    const amountCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+
+    if (amountCents <= 0) {
+      return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
+    }
+
+    // ── Create order ─────────────────────────────────────────────────────────
     const orderId = `${uid}_${Date.now()}`;
     const orderRef = adminDb.collection('orders').doc(orderId);
     await orderRef.set({
       userId: uid,
-      items,
+      items: verifiedItems,
       address,
       status: 'pending_payment',
       totalCents: amountCents,
@@ -42,19 +80,15 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
-    // AbacatePay v2 — POST /transparents/create
-    // Campos suportados em data: amount (obrigatório), description, expiresIn, customer, metadata
-    // NÃO há campo "method" no root — só transparents já implica PIX
+    // ── AbacatePay v2 — POST /transparents/create ─────────────────────────────
     const pixPayload = {
       data: {
         amount: amountCents,
         description: `Pedido #${orderId.slice(-8).toUpperCase()}`,
-        expiresIn: 900, // 15 minutos
+        expiresIn: 900,
         metadata: { orderId, userId: uid },
       },
     };
-
-    console.log('AbacatePay payload:', JSON.stringify(pixPayload));
 
     const pixRes = await fetch(`${ABACATEPAY_BASE}/transparents/create`, {
       method: 'POST',
@@ -69,18 +103,16 @@ export async function POST(req: NextRequest) {
     console.log('AbacatePay status:', pixRes.status, 'body:', pixText);
 
     if (!pixRes.ok) {
-      await orderRef.delete(); // cleanup orphan order
+      await orderRef.delete();
       return NextResponse.json({ error: 'Payment provider error', detail: pixText }, { status: 502 });
     }
 
-    // Response envelope: { data: { id, brCode, brCodeBase64, expiresAt, ... }, success: true }
-    const pixJson = JSON.parse(pixText);
-    const pix = pixJson.data;
+    const pix = JSON.parse(pixText).data;
 
     await orderRef.update({
       'payment.txId': pix.id,
-      'payment.pixQrCode': pix.brCodeBase64,   // imagem PNG base64
-      'payment.pixCopyPaste': pix.brCode,        // copia-e-cola
+      'payment.pixQrCode': pix.brCodeBase64,
+      'payment.pixCopyPaste': pix.brCode,
       'payment.expiresAt': pix.expiresAt ? new Date(pix.expiresAt) : null,
       updatedAt: new Date(),
     });
@@ -94,6 +126,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('create-pix error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }
