@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function DELETE(req: NextRequest) {
   const token = req.headers.get('authorization')?.split('Bearer ')[1];
@@ -14,18 +15,33 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
 
-  // delete all user data from Firestore
+  // Cancel any pending orders before deleting account
+  const pendingOrders = await adminDb
+    .collection('orders')
+    .where('userId', '==', uid)
+    .where('status', '==', 'pending_payment')
+    .get();
+
   const batch = adminDb.batch();
+
+  for (const orderDoc of pendingOrders.docs) {
+    batch.update(orderDoc.ref, {
+      status: 'cancelled',
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Delete user data
   batch.delete(adminDb.doc(`users/${uid}`));
   batch.delete(adminDb.doc(`carts/${uid}`));
 
-  // delete user notifications subcollection
+  // Delete notifications subcollection
   const notifSnap = await adminDb.collection(`notifications/${uid}/items`).get();
-  notifSnap.docs.forEach(d => batch.delete(d.ref));
+  for (const d of notifSnap.docs) batch.delete(d.ref);
 
   await batch.commit();
 
-  // delete Firebase Auth account
+  // Delete Firebase Auth account last
   await adminAuth.deleteUser(uid);
 
   return NextResponse.json({ ok: true });
