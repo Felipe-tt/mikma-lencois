@@ -15,7 +15,7 @@ export function PainelGuard({ children }: { children: React.ReactNode }) {
   }, [user, loading, router]);
 
   if (loading || !user || (user.role !== 'seller' && user.role !== 'admin')) {
-    return <div className="flex min-h-screen items-center justify-center"><p className="text-sm text-gray-400">Verificando acesso…</p></div>;
+    return <div className="flex min-h-screen items-center justify-center"><p className="text-sm text-faint">Verificando acesso…</p></div>;
   }
 
   return <>{children}</>;

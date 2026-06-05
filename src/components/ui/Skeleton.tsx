@@ -271,3 +271,86 @@ export function PerfilSkeleton() {
     </div>
   );
 }
+
+/* ─── Account Page Skeleton ─────────────────────────────────────── */
+export function AccountSkeleton() {
+  return (
+    <div>
+      <div className="page-header">
+        <div className="container-shop">
+          <Skeleton className="h-2.5 w-24 mb-3" />
+          <Skeleton className="h-10 w-56" />
+          <Skeleton className="h-3 w-40 mt-2" />
+        </div>
+      </div>
+      <div className="container-shop py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-mist max-w-2xl">
+          {[1, 2].map(i => (
+            <div key={i} className="bg-paper px-6 py-7 flex items-start gap-5">
+              <Skeleton className="w-6 h-6 shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-2 flex-1">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-3.5 w-full" />
+                <Skeleton className="h-3 w-16 mt-2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Order Detail Skeleton ─────────────────────────────────────── */
+export function OrderDetailSkeleton() {
+  return (
+    <div>
+      <div className="page-header">
+        <div className="container-shop">
+          <Skeleton className="h-2.5 w-16 mb-3" />
+          <Skeleton className="h-9 w-48" />
+        </div>
+      </div>
+      <div className="container-shop py-10 max-w-3xl">
+        {/* Progress bar */}
+        <div className="flex items-start gap-0 mb-10">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-2">
+              <Skeleton className="w-6 h-6 rounded-full" rounded />
+              <Skeleton className="h-2.5 w-14" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-8">
+          {/* Items */}
+          <div className="border border-mist p-5 flex flex-col gap-4">
+            <Skeleton className="h-2.5 w-24" />
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex justify-between py-3 border-t border-mist first:border-0 first:pt-0">
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+            <div className="flex justify-between pt-3 border-t border-mist">
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+          </div>
+          {/* Sidebar */}
+          <div className="flex flex-col gap-4">
+            {[80, 80, 60].map((h, i) => (
+              <div key={i} className="border border-mist p-5 flex flex-col gap-2">
+                <Skeleton className="h-2.5 w-20 mb-1" />
+                <Skeleton className={`h-3.5 w-full`} />
+                <Skeleton className="h-3.5 w-3/4" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

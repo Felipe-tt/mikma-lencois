@@ -58,30 +58,30 @@ export default function PainelPedidos() {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-900">Pedidos</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-semibold text-ink">Pedidos</h1>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
         {FILTER_OPTIONS.map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${filter === f ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+            className={` px-3 py-1 text-xs font-medium transition-colors ${filter === f ? 'bg-clay text-paper' : 'bg-paper border border-mist text-mid hover:bg-warm'}`}>
             {f === 'todos' ? 'Todos' : STATUS_LABEL[f]}
           </button>
         ))}
       </div>
 
       {filtered.length === 0 ? (
-        <p className="py-16 text-center text-sm text-gray-400">Nenhum pedido nesse filtro.</p>
+        <p className="py-16 text-center text-sm text-faint">Nenhum pedido nesse filtro.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {filtered.map(order => (
-            <div key={order.id} className="rounded-lg border border-gray-200 bg-white p-5">
+            <div key={order.id} className=" border border-mist bg-paper p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs text-gray-400">#{order.id.slice(-8).toUpperCase()}</p>
-                  <p className="mt-0.5 text-sm font-semibold text-gray-900">{formatCurrency(order.totalCents)}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-faint">#{order.id.slice(-8).toUpperCase()}</p>
+                  <p className="mt-0.5 text-sm font-semibold text-ink">{formatCurrency(order.totalCents)}</p>
+                  <p className="text-xs text-faint">
                     {order.createdAt
                       ? formatTsDateTime(order.createdAt)
                       : '—'}
@@ -89,39 +89,39 @@ export default function PainelPedidos() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLOR[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                  <span className={` px-2.5 py-1 text-xs font-medium ${STATUS_COLOR[order.status] ?? 'bg-warm text-mid'}`}>
                     {STATUS_LABEL[order.status] ?? order.status}
                   </span>
 
                   {order.status === 'paid' && (
                     <button onClick={() => markPreparing(order.id)}
-                      className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                      className=" border border-mist px-3 py-1 text-xs font-medium text-mid hover:bg-warm">
                       Iniciar preparo
                     </button>
                   )}
 
                   {order.status === 'preparing' && (
                     <button onClick={() => dispatch(order.id)} disabled={dispatching === order.id}
-                      className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                      className=" bg-clay px-3 py-1 text-xs font-medium text-paper hover:bg-blue-700 disabled:opacity-50">
                       {dispatching === order.id ? 'Despachando…' : 'Despachar'}
                     </button>
                   )}
                 </div>
               </div>
 
-              <ul className="mt-3 space-y-1 border-t border-gray-100 pt-3">
+              <ul className="mt-3 flex flex-col gap-1 border-t border-mist pt-3">
                 {order.items.map(item => (
-                  <li key={item.sku} className="flex justify-between text-sm text-gray-600">
-                    <span>{item.productName} × {item.quantity} <span className="text-xs text-gray-400">({item.variant.size}{item.variant.color ? ` · ${item.variant.color}` : ''})</span></span>
+                  <li key={item.sku} className="flex justify-between text-sm text-mid">
+                    <span>{item.productName} × {item.quantity} <span className="text-xs text-faint">({item.variant.size}{item.variant.color ? ` · ${item.variant.color}` : ''})</span></span>
                     <span>{formatCurrency(item.unitPrice * item.quantity)}</span>
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">
+              <div className="mt-3 border-t border-mist pt-3 text-xs text-faint">
                 <p>{order.address.street}, {order.address.number} — {order.address.city}/{order.address.state} · {order.address.cep}</p>
                 {order.delivery?.trackingCode && (
-                  <p className="mt-1">Rastreio: <span className="font-medium text-gray-700">{order.delivery.trackingCode}</span> ({order.delivery.carrier})</p>
+                  <p className="mt-1">Rastreio: <span className="font-medium text-mid">{order.delivery.trackingCode}</span> ({order.delivery.carrier})</p>
                 )}
               </div>
             </div>

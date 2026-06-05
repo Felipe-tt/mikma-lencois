@@ -11,13 +11,15 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { PerfilSkeleton } from '@/components/ui/Skeleton';
 
 export default function PerfilPage() {
-  const { user, userData, logout } = useAuth();
+  const { user, userData, loading, logout } = useAuth();
   const router = useRouter();
   const [name, setName] = useState(userData?.name ?? '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  if (loading) return <PerfilSkeleton />;
 
   if (!user) {
     router.push('/entrar');

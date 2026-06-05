@@ -113,18 +113,18 @@ export default function ConfiguracoesPage() {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  if (loading) return <div className="p-6 text-sm text-gray-500">Carregando…</div>;
+  if (loading) return <div className="p-6 text-sm text-faint">Carregando…</div>;
 
   return (
     <div className="p-6 max-w-2xl">
-      <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
-        <h1 className="text-xl font-semibold text-gray-900">Configurações da loja</h1>
+      <div className="flex items-center justify-between mb-8 pb-6 border-b border-mist">
+        <h1 className="text-xl font-semibold text-ink">Configurações da loja</h1>
         <div className="flex items-center gap-3">
           {saved && <span className="text-sm text-green-600 font-medium">✓ Salvo!</span>}
           <button
             onClick={handleSave}
             disabled={saving}
-            className="bg-gray-900 text-white px-5 py-2 text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
+            className="bg-ink text-paper px-5 py-2 text-sm font-medium hover:bg-clay-d disabled:opacity-50 transition-colors"
           >
             {saving ? 'Salvando…' : 'Salvar tudo'}
           </button>
@@ -132,15 +132,15 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* Section tabs */}
-      <div className="flex gap-1 mb-8 border-b border-gray-200">
+      <div className="flex gap-1 mb-8 border-b border-mist">
         {SECTIONS.map(s => (
           <button
             key={s.id}
             onClick={() => setActive(s.id)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               active === s.id
-                ? 'border-gray-900 text-gray-900'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-ink text-ink'
+                : 'border-transparent text-faint hover:text-mid'
             }`}
           >
             {s.label}
@@ -148,7 +148,7 @@ export default function ConfiguracoesPage() {
         ))}
       </div>
 
-      <div className="space-y-5">
+      <div className="flex flex-col gap-5">
         {/* ── Identidade ── */}
         {active === 'identidade' && <>
           <Field label="Nome da loja" value={settings.storeName} onChange={v => set('storeName', v)} />
@@ -176,7 +176,7 @@ export default function ConfiguracoesPage() {
             <Field label="Tag flutuante 2 — label" value={settings.heroFloatTag2Label} onChange={v => set('heroFloatTag2Label', v)} placeholder="Entrega" />
             <Field label="Tag flutuante 2 — valor" value={settings.heroFloatTag2Value} onChange={v => set('heroFloatTag2Value', v)} placeholder="Em 1h · Blumenau" />
           </div>
-          <p className="text-xs font-bold tracking-[0.15em] uppercase text-gray-400 pt-2">Diferenciais (seção abaixo do hero)</p>
+          <p className="text-xs font-bold tracking-[0.15em] uppercase text-faint pt-2">Diferenciais (seção abaixo do hero)</p>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Diferencial 1 — título" value={settings.feat1Title} onChange={v => set('feat1Title', v)} />
             <Field label="Diferencial 1 — descrição" value={settings.feat1Sub} onChange={v => set('feat1Sub', v)} />
@@ -200,7 +200,7 @@ export default function ConfiguracoesPage() {
 
         {/* ── Logística ── */}
         {active === 'logistica' && <>
-          <p className="text-xs font-bold tracking-[0.15em] uppercase text-gray-400">Origem das entregas</p>
+          <p className="text-xs font-bold tracking-[0.15em] uppercase text-faint">Origem das entregas</p>
           <div className="grid grid-cols-2 gap-4">
             <NumField label="Latitude de origem" value={settings.originLat} onChange={v => set('originLat', v)} step={0.0001} />
             <NumField label="Longitude de origem" value={settings.originLng} onChange={v => set('originLng', v)} step={0.0001} />
@@ -209,7 +209,7 @@ export default function ConfiguracoesPage() {
           <NumField label="Raio de entrega local — Uber Direct (km)" value={settings.localDeliveryRadiusKm} onChange={v => set('localDeliveryRadiusKm', v)} hint={`Pedidos dentro de ${settings.localDeliveryRadiusKm} km usarão Uber Direct.`} min={1} max={100} />
           <NumField label="Peso padrão por unidade (kg)" value={settings.defaultItemWeightKg} onChange={v => set('defaultItemWeightKg', v)} step={0.1} hint="Usado para cotação no Melhor Envio quando o produto não tem peso cadastrado." />
           <Field label="Horário de corte para despacho (HH:MM)" value={settings.dispatchCutoffTime} onChange={v => set('dispatchCutoffTime', v)} type="time" hint={`Pedidos pagos após ${settings.dispatchCutoffTime} são despachados no próximo dia útil.`} />
-          <p className="text-xs font-bold tracking-[0.15em] uppercase text-gray-400 pt-2">Frete grátis</p>
+          <p className="text-xs font-bold tracking-[0.15em] uppercase text-faint pt-2">Frete grátis</p>
           <NumField
             label="Frete grátis a partir de (R$) — 0 para desativar"
             value={settings.freeShippingThresholdCents / 100}
@@ -217,7 +217,7 @@ export default function ConfiguracoesPage() {
             hint={settings.freeShippingThresholdCents === 0 ? 'Frete grátis desativado.' : `Frete grátis acima de R$ ${(settings.freeShippingThresholdCents / 100).toFixed(2)}.`}
             min={0}
           />
-          <p className="text-xs font-bold tracking-[0.15em] uppercase text-gray-400 pt-2">Estoque</p>
+          <p className="text-xs font-bold tracking-[0.15em] uppercase text-faint pt-2">Estoque</p>
           <NumField label="Alerta de estoque baixo (unidades)" value={settings.lowStockThreshold} onChange={v => set('lowStockThreshold', v)} min={0} hint={`Alerta quando disponível ≤ ${settings.lowStockThreshold} unidades.`} />
         </>}
       </div>
@@ -231,16 +231,16 @@ function Field({ label, value, onChange, hint, placeholder, maxLength, type = 't
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-mid mb-1">{label}</label>
       <input
         type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+        className="input"
       />
-      {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
     </div>
   );
 }
@@ -250,14 +250,14 @@ function Textarea({ label, value, onChange, hint, rows = 3 }: {
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-mid mb-1">{label}</label>
       <textarea
         value={value}
         onChange={e => onChange(e.target.value)}
         rows={rows}
-        className="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 resize-y"
+        className="input resize-y"
       />
-      {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
     </div>
   );
 }
@@ -268,7 +268,7 @@ function NumField({ label, value, onChange, hint, min, max, step = 1 }: {
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-mid mb-1">{label}</label>
       <input
         type="number"
         value={value}
@@ -276,9 +276,9 @@ function NumField({ label, value, onChange, hint, min, max, step = 1 }: {
         min={min}
         max={max}
         step={step}
-        className="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+        className="input"
       />
-      {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
     </div>
   );
 }

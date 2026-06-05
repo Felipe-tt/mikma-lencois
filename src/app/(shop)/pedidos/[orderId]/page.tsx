@@ -8,6 +8,8 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/types';
 import { formatCurrency, formatTs, formatTsDateTime } from '@/lib/utils/format';
 
+import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
+
 const STATUS_STEPS: { status: OrderStatus; label: string }[] = [
   { status: 'pending_payment', label: 'Aguardando pagamento' },
   { status: 'paid', label: 'Pagamento confirmado' },
@@ -47,11 +49,7 @@ export default function OrderDetailPage() {
   }
 
   if (loading || !order) {
-    return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <span className="spinner" />
-      </div>
-    );
+    return <OrderDetailSkeleton />;
   }
 
   const currentStep = stepIndex(order.status);

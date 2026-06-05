@@ -133,52 +133,52 @@ export default function ProductForm({ initial }: Props) {
   return (
     <div className="max-w-2xl">
       {error && (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+        <p className="mb-4  border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
           {error}
         </p>
       )}
 
-      <div className="space-y-5">
+      <div className="flex flex-col gap-5">
         {/* Nome */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Nome do produto</label>
+          <label className="label">Nome do produto</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Jogo de cama queen algodão"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="w-full  border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
           />
         </div>
 
         {/* Descrição */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
+          <label className="label">Descrição</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             placeholder="Descreva o produto, material, cuidados com a lavagem..."
-            className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="w-full resize-none  border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
           />
         </div>
 
         {/* Preço + Categoria */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Preço (R$)</label>
+            <label className="label">Preço (R$)</label>
             <input
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="49,90"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full  border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Categoria</label>
+            <label className="label">Categoria</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full  border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
             >
               {CATEGORIES.map((c) => (
                 <option key={c}>{c}</option>
@@ -189,20 +189,20 @@ export default function ProductForm({ initial }: Props) {
 
         {/* Tags */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Tags <span className="font-normal text-gray-400">(separadas por vírgula)</span>
+          <label className="label">
+            Tags <span className="font-normal text-faint">(separadas por vírgula)</span>
           </label>
           <input
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="algodão, casal, branco"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="w-full  border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
           />
         </div>
 
         {/* Fotos */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Fotos</label>
+          <label className="label">Fotos</label>
           {existingImages.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {existingImages.map((url, i) => (
@@ -210,11 +210,11 @@ export default function ProductForm({ initial }: Props) {
                   <img
                     src={url}
                     alt=""
-                    className="h-16 w-16 rounded-lg border border-gray-200 object-cover"
+                    className="h-16 w-16  border border-mist object-cover"
                   />
                   <button
                     onClick={() => setExistingImages((imgs) => imgs.filter((_, idx) => idx !== i))}
-                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white"
+                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center  bg-red-500 text-xs text-white"
                   >
                     ×
                   </button>
@@ -227,39 +227,39 @@ export default function ProductForm({ initial }: Props) {
             multiple
             accept="image/*"
             onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))}
-            className="text-sm text-gray-500"
+            className="text-sm text-faint"
           />
           {imageFiles.length > 0 && (
-            <p className="mt-1 text-xs text-gray-400">{imageFiles.length} foto(s) selecionada(s)</p>
+            <p className="mt-1 text-xs text-faint">{imageFiles.length} foto(s) selecionada(s)</p>
           )}
         </div>
 
         {/* Variações */}
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label className="block text-sm font-medium text-gray-700">Variações</label>
+            <label className="block text-sm font-medium text-mid">Variações</label>
             <button
               onClick={addVariant}
-              className="text-xs font-medium text-gray-600 hover:text-gray-900"
+              className="text-xs font-medium text-mid hover:text-ink"
             >
               + Adicionar variação
             </button>
           </div>
 
           {variants.length === 0 && (
-            <p className="text-xs text-gray-400">Nenhuma variação. Clique em + Adicionar variação.</p>
+            <p className="text-xs text-faint">Nenhuma variação. Clique em + Adicionar variação.</p>
           )}
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             {variants.map((v, i) => (
               <div
                 key={i}
-                className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2"
+                className="flex flex-wrap items-center gap-2  border border-mist bg-warm p-2"
               >
                 <select
                   value={v.size}
                   onChange={(e) => updateVariant(i, 'size', e.target.value)}
-                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+                  className="rounded border border-mist bg-paper px-2 py-1 text-sm"
                 >
                   {SIZES.map((s) => (
                     <option key={s} value={s}>{SIZE_LABEL[s]}</option>
@@ -268,7 +268,7 @@ export default function ProductForm({ initial }: Props) {
                 <select
                   value={v.fabric}
                   onChange={(e) => updateVariant(i, 'fabric', e.target.value)}
-                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+                  className="rounded border border-mist bg-paper px-2 py-1 text-sm"
                 >
                   {FABRICS.map((f) => (
                     <option key={f}>{f}</option>
@@ -277,7 +277,7 @@ export default function ProductForm({ initial }: Props) {
                 <select
                   value={v.color}
                   onChange={(e) => updateVariant(i, 'color', e.target.value)}
-                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+                  className="rounded border border-mist bg-paper px-2 py-1 text-sm"
                 >
                   {COLORS.map((c) => (
                     <option key={c}>{c}</option>
@@ -290,7 +290,7 @@ export default function ProductForm({ initial }: Props) {
                     value={v.qty}
                     onChange={(e) => updateVariant(i, 'qty', Number(e.target.value))}
                     placeholder="Qtd"
-                    className="w-16 rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+                    className="w-16 rounded border border-mist bg-paper px-2 py-1 text-sm"
                   />
                 )}
                 <button
@@ -311,9 +311,9 @@ export default function ProductForm({ initial }: Props) {
             id="active"
             checked={active}
             onChange={(e) => setActive(e.target.checked)}
-            className="rounded border-gray-300"
+            className="rounded border-mist"
           />
-          <label htmlFor="active" className="text-sm text-gray-700">
+          <label htmlFor="active" className="text-sm text-mid">
             Produto ativo (visível na loja)
           </label>
         </div>
@@ -323,13 +323,13 @@ export default function ProductForm({ initial }: Props) {
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="bg-gray-900 text-white px-6 py-2 text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
+            className="btn-primary"
           >
             {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
           </button>
           <button
             onClick={() => router.push('/painel/produtos')}
-            className="rounded-lg border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className=" border border-mist px-6 py-2 text-sm font-medium text-mid transition-colors hover:bg-warm"
           >
             Cancelar
           </button>
