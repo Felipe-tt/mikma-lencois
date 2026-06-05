@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
+import Link from 'next/link';
 import { ProductCard } from '@/components/product/ProductCard';
 import { CategoryFilter } from '@/components/product/CategoryFilter';
 import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
@@ -57,7 +58,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
             {products.length === 0 ? (
               <div className="py-24 text-center">
                 <p className="font-display text-2xl text-faint font-normal">Nenhum produto encontrado.</p>
-                <a href="/produtos" className="text-sm text-mid hover:text-clay transition-colors mt-4 block">
+                <Link href="/produtos" className="text-sm text-mid hover:text-clay transition-colors mt-4 block">
                   Limpar filtros →
                 </a>
               </div>
