@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Order, OrderItem, Address } from '@/types';
-import { STORE_DEFAULTS, type StoreSettings } from '@/app/painel/configuracoes/page';
+import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 
 async function getStoreSettings(): Promise<StoreSettings> {
   const snap = await adminDb.collection('settings').doc('store').get();
