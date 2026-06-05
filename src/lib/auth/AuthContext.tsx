@@ -1,12 +1,9 @@
 'use client';
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
   onAuthStateChanged,
   signOut,
-  GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithCustomToken,
   User,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
@@ -24,7 +21,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   logout: () => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogleToken: (idToken: string) => Promise<void>;
   userData: { name: string; email: string | null } | null;
 }
 
@@ -47,7 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getRedirectResult(auth).catch(() => {});
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const mapped = await mapUser(firebaseUser);
@@ -65,15 +61,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
+  const loginWithGoogleToken = async (idToken: string) => {
+    const res = await fetch('/api/auth/google-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
+    if (!res.ok) {
+      const { error } = await res.json();
+      throw new Error(error ?? 'Erro ao autenticar com Google');
+    }
+    const { customToken } = await res.json();
+    await signInWithCustomToken(auth, customToken);
   };
 
   const userData = user ? { name: user.displayName ?? '', email: user.email } : null;
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout, loginWithGoogle, userData }}>
+    <AuthContext.Provider value={{ user, loading, logout, loginWithGoogleToken, userData }}>
       {children}
     </AuthContext.Provider>
   );
