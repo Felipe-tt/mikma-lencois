@@ -1,11 +1,11 @@
 'use client';
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
   onAuthStateChanged,
   signOut,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   User,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
@@ -30,7 +30,6 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function mapUser(firebaseUser: User): Promise<AuthUser> {
-  // forceRefresh=true garante que custom claims recém-setados sejam lidos
   const tokenResult = await firebaseUser.getIdTokenResult(true);
   return {
     uid: firebaseUser.uid,
@@ -47,6 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Captura resultado do redirect do Google ao voltar
+    getRedirectResult(auth).then(async (result) => {
+      if (result?.user) {
+        const mapped = await mapUser(result.user);
+        setUser(mapped);
+      }
+    }).catch(() => {});
+
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const mapped = await mapUser(firebaseUser);
@@ -66,10 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    // Força refresh do token logo após login para pegar claims atualizados
-    const mapped = await mapUser(result.user);
-    setUser(mapped);
+    await signInWithRedirect(auth, provider);
+    // página vai redirecionar — resultado capturado no useEffect acima
   };
 
   const userData = user
