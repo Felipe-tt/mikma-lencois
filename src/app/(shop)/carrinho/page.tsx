@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { useRouter } from 'next/navigation';
 import type { Cart, CartItem } from '@/types';
+import { CartSkeleton } from '@/components/ui/Skeleton';
 
 export default function CartPage() {
   const { user, loading } = useAuth();
@@ -34,12 +35,6 @@ export default function CartPage() {
     await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.map(i => i.sku === sku ? {...i, quantity: qty} : i) });
   }
 
-  if (loading || cartLoading) return (
-    <div className="min-h-[50vh] flex items-center justify-center">
-      <span className="spinner" />
-    </div>
-  );
-
   const items: CartItem[] = cart?.items ?? [];
   const total = items.reduce((a, i) => a + i.unitPrice * i.quantity, 0);
 
@@ -48,38 +43,40 @@ export default function CartPage() {
       <div className="page-header">
         <div className="container-shop">
           <span className="eyebrow mb-3 block">Compra</span>
-          <h1 className="font-display font-normal text-ink" style={{fontSize:'clamp(2rem,5vw,3rem)'}}>Carrinho</h1>
+          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Carrinho</h1>
         </div>
       </div>
 
-      <div className="container-shop py-12">
-        {items.length === 0 ? (
-          <div className="py-32 flex flex-col items-center gap-5 text-center">
-            <div className="w-20 h-20 bg-warm flex items-center justify-center">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-faint">
-                <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
-              </svg>
-            </div>
-            <p className="font-display text-2xl text-ink font-normal">Seu carrinho está vazio</p>
-            <p className="text-sm text-mid">Explore nossos produtos e adicione itens ao carrinho.</p>
-            <Link href="/produtos" className="btn-primary mt-2">Ver produtos</Link>
+      {loading || cartLoading ? (
+        <CartSkeleton />
+      ) : items.length === 0 ? (
+        <div className="container-shop py-24 sm:py-32 flex flex-col items-center gap-5 text-center px-6">
+          <div className="w-16 h-16 bg-warm flex items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-faint">
+              <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+            </svg>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-12 items-start">
+          <p className="font-display text-2xl text-ink font-normal">Seu carrinho está vazio</p>
+          <p className="text-sm text-mid">Explore nossos produtos e adicione itens ao carrinho.</p>
+          <Link href="/produtos" className="btn-primary mt-2">Ver produtos</Link>
+        </div>
+      ) : (
+        <div className="container-shop py-8 sm:py-12 pb-20">
+          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_360px] gap-8 lg:gap-12 items-start">
             {/* Items */}
             <div className="flex flex-col divide-y divide-mist">
               {items.map(item => (
-                <div key={item.sku} className="flex gap-5 py-6">
-                  <div className="relative w-24 h-28 shrink-0 overflow-hidden bg-warm">
+                <div key={item.sku} className="flex gap-4 sm:gap-5 py-5 sm:py-6">
+                  <div className="relative w-20 h-24 sm:w-24 sm:h-28 shrink-0 overflow-hidden bg-warm">
                     {item.image
                       ? <Image src={item.image} alt={item.productName} fill sizes="96px" className="object-cover" />
-                      : <div className="flex h-full items-center justify-center bg-warm/50"><Image src="/logo-dark.png" alt="" width={40} height={20} className="w-8 h-auto opacity-25" /></div>
+                      : <div className="flex h-full items-center justify-center bg-warm/50" />
                     }
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col gap-1">
                     <p className="text-sm font-semibold text-ink leading-snug">{item.productName}</p>
-                    <p className="text-xs text-faint">{item.variant.size}{item.variant.color ? ` · ${item.variant.color}` : ''}</p>
-                    <p className="font-display text-xl text-ink mt-1">{formatCurrency(item.unitPrice)}</p>
+                    <p className="text-xs text-faint">{item.variant?.size}{item.variant?.color ? ` · ${item.variant.color}` : ''}</p>
+                    <p className="font-display text-lg sm:text-xl text-ink mt-1">{formatCurrency(item.unitPrice)}</p>
                   </div>
                   <div className="flex flex-col items-end justify-between shrink-0">
                     <button onClick={() => removeItem(item.sku)}
@@ -88,12 +85,12 @@ export default function CartPage() {
                     </button>
                     <div className="flex items-center border border-mist">
                       <button onClick={() => updateQty(item.sku, item.quantity-1)}
-                        className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-lg font-light">
+                        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-lg font-light">
                         −
                       </button>
-                      <span className="w-9 text-center text-sm font-medium text-ink">{item.quantity}</span>
+                      <span className="w-8 sm:w-9 text-center text-sm font-medium text-ink">{item.quantity}</span>
                       <button onClick={() => updateQty(item.sku, item.quantity+1)}
-                        className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-lg font-light">
+                        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-lg font-light">
                         +
                       </button>
                     </div>
@@ -103,7 +100,7 @@ export default function CartPage() {
             </div>
 
             {/* Summary */}
-            <div className="sticky top-28 bg-warm border border-mist p-7 flex flex-col gap-5">
+            <div className="w-full bg-warm border border-mist p-5 sm:p-7 flex flex-col gap-5 lg:sticky lg:top-28">
               <h2 className="font-display font-normal text-ink text-xl">Resumo do pedido</h2>
               <div className="flex flex-col gap-3 text-sm">
                 <div className="flex justify-between text-mid">
@@ -127,8 +124,8 @@ export default function CartPage() {
               </Link>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
