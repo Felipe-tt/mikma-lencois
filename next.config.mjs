@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['@node-rs/argon2', 'firebase-admin'],
-  },
+  serverExternalPackages: ['@node-rs/argon2', 'firebase-admin'],
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
