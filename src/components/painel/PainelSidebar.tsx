@@ -14,7 +14,7 @@ const NAV = [
   { href:'/painel/configuracoes', label:'Config.' },
 ];
 
-export function PainelSidebar() {
+export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
   const pathname = usePathname();
   const { logout, user } = useAuth();
 
