@@ -80,13 +80,26 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
+    // ── Load user profile for customer data ──────────────────────────────────
+    const userSnap = await adminDb.collection('users').doc(uid).get();
+    const userData = userSnap.data() ?? {};
+
     // ── AbacatePay v2 — POST /transparents/create ─────────────────────────────
-    const pixPayload = {
+    // Only include customer if we have at least email; metadata must be omitted
+    // if not needed (API rejects unknown object shapes with 422)
+    const pixPayload: Record<string, unknown> = {
       data: {
         amount: amountCents,
         description: `Pedido #${orderId.slice(-8).toUpperCase()}`,
         expiresIn: 900,
-        metadata: { orderId, userId: uid },
+        ...(userData.email ? {
+          customer: {
+            name: userData.displayName ?? userData.name ?? 'Cliente',
+            email: userData.email,
+            ...(userData.phone ? { cellphone: userData.phone } : {}),
+            ...(userData.cpf ? { taxId: userData.cpf } : {}),
+          },
+        } : {}),
       },
     };
 
