@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
     }
 
-    // Create order via Admin SDK (bypasses Firestore client rules)
+    // Create order first via Admin SDK (bypasses Firestore client rules)
     const orderId = `${uid}_${Date.now()}`;
     const orderRef = adminDb.collection('orders').doc(orderId);
     await orderRef.set({
@@ -42,20 +42,18 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
-    // AbacatePay v2 — payload correto: method + data no root, customer DENTRO de data
-    // customer só é enviado se tiver todos os 4 campos obrigatórios
+    // AbacatePay v2 — POST /transparents/create
+    // Campos suportados em data: amount (obrigatório), description, expiresIn, customer, metadata
+    // NÃO há campo "method" no root — só transparents já implica PIX
     const pixPayload = {
-      method: 'PIX',
       data: {
         amount: amountCents,
-        description: `Pedido Mikma Lencois #${orderId}`,
-        expiresIn: 900,
-        externalId: orderId,
+        description: `Pedido #${orderId.slice(-8).toUpperCase()}`,
+        expiresIn: 900, // 15 minutos
         metadata: { orderId, userId: uid },
       },
     };
 
-    console.log('AbacatePay key prefix:', ABACATEPAY_KEY.slice(0, 12));
     console.log('AbacatePay payload:', JSON.stringify(pixPayload));
 
     const pixRes = await fetch(`${ABACATEPAY_BASE}/transparents/create`, {
@@ -71,19 +69,19 @@ export async function POST(req: NextRequest) {
     console.log('AbacatePay status:', pixRes.status, 'body:', pixText);
 
     if (!pixRes.ok) {
-      // cleanup orphan order
-      await orderRef.delete();
+      await orderRef.delete(); // cleanup orphan order
       return NextResponse.json({ error: 'Payment provider error', detail: pixText }, { status: 502 });
     }
 
+    // Response envelope: { data: { id, brCode, brCodeBase64, expiresAt, ... }, success: true }
     const pixJson = JSON.parse(pixText);
     const pix = pixJson.data;
 
     await orderRef.update({
       'payment.txId': pix.id,
-      'payment.pixQrCode': pix.brCodeBase64,
-      'payment.pixCopyPaste': pix.brCode,
-      'payment.expiresAt': new Date(pix.expiresAt),
+      'payment.pixQrCode': pix.brCodeBase64,   // imagem PNG base64
+      'payment.pixCopyPaste': pix.brCode,        // copia-e-cola
+      'payment.expiresAt': pix.expiresAt ? new Date(pix.expiresAt) : null,
       updatedAt: new Date(),
     });
 
