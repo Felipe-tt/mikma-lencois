@@ -1,77 +1,88 @@
 export const dynamic = 'force-dynamic';
-import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { rateLimit } from '@/lib/rateLimit';
 
 const schema = z.object({
-  name: z.string().min(2).max(100),
-  email: z.string().email(),
+  name: z.string().min(2).max(100).trim(),
+  email: z.string().email().max(256),
   password: z.string().min(8).max(128),
-  recaptchaToken: z.string().optional(),
-})
+  recaptchaToken: z.string().min(1).optional(),
+});
 
 async function verifyRecaptcha(token: string): Promise<boolean> {
-  const res = await fetch(
-    `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
-    { method: 'POST' }
-  )
-  const data = await res.json()
-  return data.success && data.score >= 0.5
+  if (!process.env.RECAPTCHA_SECRET_KEY) return true; // skip if not configured
+  try {
+    const res = await fetch(
+      `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
+      { method: 'POST' }
+    );
+    const data = await res.json();
+    return data.success === true && (data.score == null || data.score >= 0.5);
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 5 registrations per IP per hour
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  if (!rateLimit(`register:${ip}`, 5, 60 * 60 * 1000)) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Tente novamente em 1 hora.' },
+      { status: 429 }
+    );
+  }
+
   try {
-    const body = await req.json()
-    const parsed = schema.safeParse(body)
+    const body = await req.json();
+    const parsed = schema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
 
-    const { name, email, password, recaptchaToken } = parsed.data
+    const { name, email, password, recaptchaToken } = parsed.data;
 
-    // Verify reCAPTCHA (optional — skip if token not provided)
-    if (recaptchaToken) {
-      const captchaOk = await verifyRecaptcha(recaptchaToken)
+    // reCAPTCHA — required when secret is configured
+    if (process.env.RECAPTCHA_SECRET_KEY) {
+      if (!recaptchaToken) {
+        return NextResponse.json({ error: 'reCAPTCHA obrigatório' }, { status: 400 });
+      }
+      const captchaOk = await verifyRecaptcha(recaptchaToken);
       if (!captchaOk) {
-        return NextResponse.json({ error: 'reCAPTCHA inválido' }, { status: 400 })
+        return NextResponse.json({ error: 'reCAPTCHA inválido' }, { status: 400 });
       }
     }
 
-    // Hash password with Argon2id
-    const { hash } = await import('@node-rs/argon2')
+    const { hash } = await import('@node-rs/argon2');
     const passwordHash = await hash(password, {
       memoryCost: 65536,
       timeCost: 3,
       parallelism: 4,
       outputLen: 32,
-    })
+    });
 
-    // Create Firebase Auth user with password
-    const userRecord = await adminAuth.createUser({ email, password, displayName: name })
+    const userRecord = await adminAuth.createUser({ email, password, displayName: name });
+    await adminAuth.setCustomUserClaims(userRecord.uid, { role: 'buyer' });
 
-    // Set role claim
-    await adminAuth.setCustomUserClaims(userRecord.uid, { role: 'buyer' })
-
-    // Save user profile in Firestore
     await adminDb.collection('users').doc(userRecord.uid).set({
       uid: userRecord.uid,
       name,
       email,
       role: 'buyer',
       passwordHash,
-      lgpdConsent: {
-        date: new Date().toISOString(),
-        version: '1.0',
-      },
+      lgpdConsent: { date: new Date().toISOString(), version: '1.0' },
       createdAt: new Date().toISOString(),
-    })
+    });
 
-    return NextResponse.json({ success: true }, { status: 201 })
+    return NextResponse.json({ success: true }, { status: 201 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Erro interno'
+    const msg = error instanceof Error ? error.message : '';
     if (msg.includes('email-already-exists')) {
-      return NextResponse.json({ error: 'E-mail já cadastrado' }, { status: 409 })
+      // Don't reveal if email exists — generic message
+      return NextResponse.json({ success: true }, { status: 201 });
     }
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao criar conta' }, { status: 500 });
   }
 }
