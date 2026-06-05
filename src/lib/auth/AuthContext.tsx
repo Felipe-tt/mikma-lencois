@@ -4,8 +4,7 @@ import {
   onAuthStateChanged,
   signOut,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   User,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
@@ -46,11 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Handle Google redirect result when user comes back from OAuth
-    getRedirectResult(auth).catch(() => {
-      // Ignore errors (e.g. no pending redirect)
-    });
-
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const mapped = await mapUser(firebaseUser);
@@ -70,7 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err: unknown) {
+      // popup fechado pelo usuário — ignora
+      if (err instanceof Error && err.message.includes('popup-closed-by-user')) return;
+      throw err;
+    }
   };
 
   const userData = user
