@@ -51,50 +51,50 @@ function rgbToHex(r: number, g: number, b: number) {
   return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 }
 
-// ── Detecção automática via Claude API ───────────────────────────────────────
-async function detectFromLabel(dataUrl: string): Promise<{
-  size?: string;
-  fabric?: string;
-  category?: string;
-  name?: string;
-}> {
+// ── Detecção local por OCR (Tesseract.js — roda no browser, zero custo) ──────
+type Detected = { size?: string; fabric?: string; category?: string; name?: string };
+
+async function detectFromLabel(dataUrl: string): Promise<Detected> {
   try {
-    const base64 = dataUrl.split(',')[1];
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: { type: 'base64', media_type: 'image/jpeg', data: base64 },
-              },
-              {
-                type: 'text',
-                text: `Esta é a foto de um lençol ou jogo de cama da marca Mikma Lençóis. 
-Olhe com atenção o rótulo da embalagem (etiqueta). Nele há checkboxes marcados indicando o tipo do produto.
-Identifique e responda APENAS com JSON válido, sem markdown, no formato:
-{
-  "size": "solteiro" | "casal" | "queen" | "king" | null,
-  "fabric": "Algodão" | "Malha" | "Percal 200 fios" | "Percal 300 fios" | "Cetim" | null,
-  "category": "Lençóis" | "Fronhas" | "Jogos de cama" | "Edredons" | "Travesseiros" | null,
-  "name": "nome sugerido curto para o produto" | null
-}
-Se não conseguir identificar algo, deixe null.`,
-              },
-            ],
-          },
-        ],
-      }),
+    // Lazy-import: só carrega Tesseract quando a câmera for usada
+    const Tesseract = await import('tesseract.js');
+    const { data: { text } } = await Tesseract.recognize(dataUrl, 'por', {
+      logger: () => {},
     });
-    const data = await res.json();
-    const text = data.content?.[0]?.text ?? '';
-    return JSON.parse(text);
+
+    const t = text.toLowerCase();
+    const result: Detected = {};
+
+    // Tamanho — detecta pelo checkbox marcado no rótulo Mikma
+    // O rótulo tem "Jogo Box Solteiro", "Jogo Box Casal", "Jogo Box Queen", "Jogo Box King"
+    // O marcado tem um "x" ou "v" ou bolinha ao lado
+    if (/casal/.test(t)) result.size = 'casal';
+    else if (/queen/.test(t)) result.size = 'queen';
+    else if (/king/.test(t)) result.size = 'king';
+    else if (/solteiro/.test(t)) result.size = 'solteiro';
+
+    // Tecido
+    if (/percal\s*300/.test(t)) result.fabric = 'Percal 300 fios';
+    else if (/percal\s*200/.test(t)) result.fabric = 'Percal 200 fios';
+    else if (/percal/.test(t)) result.fabric = 'Percal 200 fios';
+    else if (/cetim/.test(t)) result.fabric = 'Cetim';
+    else if (/malha/.test(t)) result.fabric = 'Malha';
+    else if (/algod/.test(t)) result.fabric = 'Algodão';
+
+    // Categoria
+    if (/fronha/.test(t)) result.category = 'Fronhas';
+    else if (/jogo\s*(de\s*cama|box)/.test(t)) result.category = 'Jogos de cama';
+    else if (/len[cç]ol/.test(t)) result.category = 'Lençóis';
+    else if (/edredom|edredon/.test(t)) result.category = 'Edredons';
+
+    // Nome sugerido
+    const sizeName = result.size ? SIZE_LABEL[result.size] : '';
+    const fabricName = result.fabric ?? '';
+    if (sizeName || fabricName) {
+      result.name = ['Jogo de cama', sizeName, fabricName].filter(Boolean).join(' ');
+    }
+
+    return result;
   } catch {
     return {};
   }
@@ -105,7 +105,7 @@ function CameraModal({
   onCapture,
   onClose,
 }: {
-  onCapture: (dataUrl: string, hex: string, blob: Blob, detected: { size?: string; fabric?: string; category?: string; name?: string }) => void;
+  onCapture: (dataUrl: string, hex: string, blob: Blob, detected: Detected) => void;
   onClose: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -120,9 +120,6 @@ function CameraModal({
     setPreview(dataUrl);
     setCapturedBlob(blob);
     sampleColor(dataUrl, 0.5, 0.5);
-    // Detecção automática pelo rótulo em background
-    setDetecting(true);
-    detectFromLabel(dataUrl).then(() => setDetecting(false)).catch(() => setDetecting(false));
   };
 
   const sampleColor = useCallback((src: string, fx: number, fy: number) => {
@@ -141,7 +138,7 @@ function CameraModal({
     img.src = src;
   }, []);
 
-  // Toque/clique único já move o crosshair — sem necessidade de arrastar
+  // Toque/clique único já move o crosshair
   const handleImgPointer = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (!preview) return;
@@ -157,7 +154,7 @@ function CameraModal({
   const confirm = async () => {
     if (!preview || !capturedBlob) return;
     setDetecting(true);
-    const detected = await detectFromLabel(preview).catch(() => ({}));
+    const detected = await detectFromLabel(preview);
     setDetecting(false);
     onCapture(preview, pickedHex, capturedBlob, detected);
   };
@@ -167,7 +164,12 @@ function CameraModal({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
         <span className="text-sm font-semibold">Foto do produto</span>
-        <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center">✕</button>
+        <button
+          onClick={onClose}
+          className="text-white/60 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"
+        >
+          ✕
+        </button>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4 overflow-y-auto pb-6">
@@ -186,7 +188,9 @@ function CameraModal({
               <div className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/30 rounded-2xl py-14 px-6 text-white/80 active:border-white/60">
                 <span className="text-6xl">📷</span>
                 <span className="text-base font-semibold text-center">Tirar foto</span>
-                <span className="text-xs text-white/50 text-center">Aponte para o produto ou rótulo</span>
+                <span className="text-xs text-white/50 text-center">
+                  Aponte para o produto ou rótulo da embalagem
+                </span>
               </div>
             </label>
 
@@ -203,7 +207,7 @@ function CameraModal({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-            {/* Preview: toque em qualquer ponto para selecionar a cor */}
+            {/* Preview — toque para selecionar a cor */}
             <div
               className="relative w-full rounded-2xl overflow-hidden border border-white/20 cursor-crosshair"
               style={{ aspectRatio: '1/1' }}
@@ -225,10 +229,8 @@ function CameraModal({
                   transform: 'translate(-50%, -50%)',
                 }}
               >
-                {/* Linhas de mira */}
                 <div className="absolute top-1/2 -translate-y-px bg-white/80 h-px" style={{ width: 40, left: -20 }} />
                 <div className="absolute left-1/2 -translate-x-px bg-white/80 w-px" style={{ height: 40, top: -20 }} />
-                {/* Círculo de cor */}
                 <div
                   className="w-9 h-9 rounded-full border-[3px] border-white shadow-lg -translate-x-1/2 -translate-y-1/2 absolute top-0 left-0"
                   style={{ background: pickedHex }}
@@ -244,7 +246,6 @@ function CameraModal({
             <div className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-2.5 w-full">
               <div className="w-6 h-6 rounded-full border border-white/30 shrink-0" style={{ background: pickedHex }} />
               <span className="text-sm text-white font-mono flex-1">{pickedHex}</span>
-              {detecting && <span className="text-xs text-white/40">Lendo rótulo…</span>}
             </div>
 
             <div className="flex gap-3 w-full">
@@ -259,7 +260,7 @@ function CameraModal({
                 disabled={detecting}
                 className="flex-1 bg-white text-black text-sm font-semibold py-3.5 rounded-2xl active:bg-white/90 disabled:opacity-60"
               >
-                {detecting ? 'Analisando…' : 'Usar esta foto'}
+                {detecting ? 'Lendo rótulo…' : 'Usar esta foto'}
               </button>
             </div>
           </div>
@@ -294,12 +295,7 @@ export default function ProductForm({ initial }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const handleCapture = (
-    dataUrl: string,
-    hex: string,
-    blob: Blob,
-    detected: { size?: string; fabric?: string; category?: string; name?: string },
-  ) => {
+  const handleCapture = (dataUrl: string, hex: string, blob: Blob, detected: Detected) => {
     setShowCamera(false);
     setImages((prev) => [...prev, { dataUrl, blob, hex }]);
 
@@ -307,7 +303,7 @@ export default function ProductForm({ initial }: Props) {
     if (detected.name && !name) setName(detected.name);
     if (detected.category) setCategory(detected.category);
 
-    // Adiciona variação automaticamente com os dados detectados
+    // Cria variação automática com os dados detectados
     const autoSize = detected.size ?? SIZES[0];
     const autoFabric = detected.fabric ?? FABRICS[0];
     if (variants.length === 0) {
@@ -414,7 +410,6 @@ export default function ProductForm({ initial }: Props) {
                     alt=""
                     className="h-20 w-20 rounded-xl border border-mist object-cover"
                   />
-                  {/* Bolinha de cor extraída */}
                   <div
                     className="absolute bottom-1.5 left-1.5 w-4 h-4 rounded-full border-2 border-white shadow"
                     style={{ background: img.hex }}
@@ -429,7 +424,6 @@ export default function ProductForm({ initial }: Props) {
                 </div>
               ))}
 
-              {/* Botão câmera */}
               <button
                 onClick={() => setShowCamera(true)}
                 className="h-20 w-20 rounded-xl border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 active:border-clay active:text-clay transition-colors"
@@ -513,7 +507,9 @@ export default function ProductForm({ initial }: Props) {
             </div>
 
             {variants.length === 0 && (
-              <p className="text-xs text-faint py-2">Tire uma foto para preencher automaticamente, ou toque em + Adicionar.</p>
+              <p className="text-xs text-faint py-2">
+                Tire uma foto do rótulo para preencher automaticamente, ou toque em + Adicionar.
+              </p>
             )}
 
             <div className="flex flex-col gap-2">
