@@ -4,8 +4,7 @@ import {
   onAuthStateChanged,
   signOut,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   User,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
@@ -46,14 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Captura resultado do redirect do Google ao voltar
-    getRedirectResult(auth).then(async (result) => {
-      if (result?.user) {
-        const mapped = await mapUser(result.user);
-        setUser(mapped);
-      }
-    }).catch(() => {});
-
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const mapped = await mapUser(firebaseUser);
@@ -73,8 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
-    // página vai redirecionar — resultado capturado no useEffect acima
+    await signInWithPopup(auth, provider);
   };
 
   const userData = user
