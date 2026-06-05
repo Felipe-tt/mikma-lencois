@@ -17,7 +17,7 @@ export default function CheckoutPage() {
   const [cepLoading, setCepLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [pixData, setPixData] = useState<{ txId: string; qrCode: string; copyPaste: string } | null>(null);
+  const [pixData, setPixData] = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string } | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -97,7 +97,7 @@ export default function CheckoutPage() {
 
       <div className="container-shop py-10 pb-20">
         {pixData ? (
-          <PIXModal pixData={pixData} totalCents={total} onClose={() => router.push('/conta/pedidos')} />
+          <PIXModal qrCode={pixData.qrCode} copyPaste={pixData.copyPaste} orderId={pixData.orderId} totalCents={total} onClose={() => router.push("/conta/pedidos")} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-12 items-start">
             <form onSubmit={submit} className="flex flex-col gap-6">
