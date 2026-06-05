@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Cart, Address } from '@/types';
 import { PIXModal } from '@/components/checkout/PIXModal';
+import { CheckoutSkeleton } from '@/components/ui/Skeleton';
 
 export default function CheckoutPage() {
   const { user, loading } = useAuth();
@@ -53,15 +54,11 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ items: cart.items, address: addr, amountCents: totalCents, customerName: user.displayName ?? '', customerEmail: user.email ?? '' }),
       });
-      if (!res.ok) throw new Error('Erro ao gerar PIX');
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar PIX');
       setPixData(await res.json());
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao finalizar pedido');
     } finally { setSubmitting(false); }
-  }
-
-  if (loading || cartLoading) {
-    return <div className="min-h-[400px] flex items-center justify-center"><div className="spinner" /></div>;
   }
 
   const items = cart?.items ?? [];
@@ -70,38 +67,36 @@ export default function CheckoutPage() {
   return (
     <div>
       {/* Steps */}
-      <div className="border-b border-stone-200 bg-white">
-        <div className="container-shop py-4">
-          <div className="flex items-center gap-3 text-sm">
-            <span className="flex items-center gap-1.5 text-stone-400"><CheckCircle /> Carrinho</span>
-            <span className="text-stone-300">—</span>
-            <span className="flex items-center gap-1.5 text-stone-900 font-semibold">
-              <span className="w-5 h-5 rounded-full bg-stone-900 text-white flex items-center justify-center text-xs font-bold">2</span>
-              Endereço
-            </span>
-            <span className="text-stone-300">—</span>
-            <span className="flex items-center gap-1.5 text-stone-400">
-              <span className="w-5 h-5 rounded-full border border-stone-300 flex items-center justify-center text-xs text-stone-400">3</span>
-              Pagamento
-            </span>
+      <div className="border-b border-mist bg-paper">
+        <div className="container-shop py-3.5">
+          <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm overflow-x-auto">
+            <StepDone label="Carrinho" />
+            <span className="text-faint shrink-0">—</span>
+            <StepActive label="Endereço" num={2} />
+            <span className="text-faint shrink-0">—</span>
+            <StepPending label="Pagamento" num={3} />
           </div>
         </div>
       </div>
 
-      <div className="page-hero">
+      <div className="page-header">
         <div className="container-shop">
-          <span className="eyebrow mb-2 block">Compra</span>
-          <h1 className="font-display text-4xl font-light text-stone-900">Finalizar pedido</h1>
+          <span className="eyebrow mb-3 block">Compra</span>
+          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Finalizar pedido</h1>
         </div>
       </div>
 
-      <div className="container-shop py-10 pb-20">
-        {pixData ? (
-          <PIXModal qrCode={pixData.qrCode} copyPaste={pixData.copyPaste} orderId={pixData.orderId} totalCents={total} onClose={() => router.push("/conta/pedidos")} />
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-12 items-start">
-            <form onSubmit={submit} className="flex flex-col gap-6">
-              <h2 className="font-display text-2xl font-light text-stone-900">Endereço de entrega</h2>
+      {loading || cartLoading ? (
+        <CheckoutSkeleton />
+      ) : pixData ? (
+        <div className="container-shop py-10 pb-20">
+          <PIXModal qrCode={pixData.qrCode} copyPaste={pixData.copyPaste} orderId={pixData.orderId} totalCents={total} onClose={() => router.push('/conta/pedidos')} />
+        </div>
+      ) : (
+        <div className="container-shop py-8 sm:py-10 pb-20">
+          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_340px] gap-8 lg:gap-12 items-start">
+            <form onSubmit={submit} className="flex flex-col gap-5 sm:gap-6">
+              <h2 className="font-display font-normal text-ink text-2xl">Endereço de entrega</h2>
 
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">{error}</div>
@@ -112,7 +107,7 @@ export default function CheckoutPage() {
                   <label className="label">CEP</label>
                   <input type="text" required maxLength={9} value={addr.cep} placeholder="00000-000" className="input"
                     onChange={e => { setAddr(a => ({ ...a, cep: e.target.value })); lookupCep(e.target.value); }} />
-                  {cepLoading && <p className="text-xs text-stone-400 mt-1">Buscando…</p>}
+                  {cepLoading && <p className="text-xs text-faint mt-1">Buscando…</p>}
                 </div>
                 <div>
                   <label className="label">Estado</label>
@@ -151,36 +146,58 @@ export default function CheckoutPage() {
                 {submitting ? <span className="spinner w-4 h-4" /> : `Gerar PIX — ${formatCurrency(total)}`}
               </button>
 
-              <p className="text-xs text-stone-400 text-center">🔒 Pagamento seguro via PIX — confirmação automática</p>
+              <p className="text-xs text-faint text-center">🔒 Pagamento seguro via PIX — confirmação automática</p>
             </form>
 
             {/* Resumo */}
-            <div className="order-summary flex flex-col gap-4">
-              <h2 className="font-display text-xl font-light text-stone-900">Resumo do pedido</h2>
+            <div className="w-full bg-warm border border-mist p-5 sm:p-7 flex flex-col gap-4 lg:sticky lg:top-28">
+              <h2 className="font-display font-normal text-ink text-xl">Resumo do pedido</h2>
               <ul className="flex flex-col gap-2">
                 {items.map(item => (
-                  <li key={item.sku} className="flex justify-between gap-3 text-sm text-stone-600">
+                  <li key={item.sku} className="flex justify-between gap-3 text-sm text-mid">
                     <span className="truncate">{item.productName} × {item.quantity}</span>
-                    <span className="shrink-0 font-medium">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                    <span className="shrink-0 font-medium text-ink">{formatCurrency(item.unitPrice * item.quantity)}</span>
                   </li>
                 ))}
               </ul>
-              <div className="divider" />
-              <div className="flex justify-between text-sm text-stone-500">
+              <div className="border-t border-mist pt-3 flex justify-between text-xs text-faint">
                 <span>Frete</span><span>calculado após o PIX</span>
               </div>
               <div className="flex justify-between items-baseline">
-                <span className="text-sm font-semibold text-stone-900">Total</span>
-                <span className="font-display text-2xl text-stone-900">{formatCurrency(total)}</span>
+                <span className="text-sm font-semibold text-ink">Total</span>
+                <span className="font-display text-2xl text-ink">{formatCurrency(total)}</span>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function CheckCircle() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+function StepDone({ label }: { label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-faint shrink-0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span className="hidden sm:inline">{label}</span>
+    </span>
+  );
+}
+function StepActive({ label, num }: { label: string; num: number }) {
+  return (
+    <span className="flex items-center gap-1.5 text-ink font-semibold shrink-0">
+      <span className="w-5 h-5 rounded-full bg-ink text-paper flex items-center justify-center text-xs font-bold shrink-0">{num}</span>
+      {label}
+    </span>
+  );
+}
+function StepPending({ label, num }: { label: string; num: number }) {
+  return (
+    <span className="flex items-center gap-1.5 text-faint shrink-0">
+      <span className="w-5 h-5 rounded-full border border-mist flex items-center justify-center text-xs shrink-0">{num}</span>
+      <span className="hidden sm:inline">{label}</span>
+    </span>
+  );
 }
