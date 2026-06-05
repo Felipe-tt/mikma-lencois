@@ -35,7 +35,7 @@ export default function RegisterPage() {
           <Image src="/logo-white.png" alt="Mikma Lençóis" width={140} height={70} className="h-12 w-auto object-contain" />
         </Link>
         <div>
-          <p className="font-display text-paper font-normal leading-tight mb-6" style={{fontSize:'3.5rem'}}>
+          <p className="font-display text-paper font-normal leading-tight mb-6" >
             Crie sua<br/><em className="text-clay">conta.</em>
           </p>
           <p className="text-base text-paper/40 leading-relaxed max-w-xs">

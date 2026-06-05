@@ -62,7 +62,7 @@ export default function OrderDetailPage() {
       <div className="page-header">
         <div className="container-shop">
           <span className="eyebrow mb-3 block">Pedido</span>
-          <h1 className="font-display font-normal text-ink" style={{ fontSize: 'clamp(1.75rem,4vw,2.75rem)' }}>
+          <h1 className="font-display font-normal text-ink" >
             #{order.id.slice(-8).toUpperCase()}
           </h1>
         </div>

@@ -65,7 +65,7 @@ export default function PerfilPage() {
       <div className="page-header">
         <div className="container-shop">
           <span className="eyebrow mb-3 block">Conta</span>
-          <h1 className="font-display font-normal text-ink" style={{ fontSize: 'clamp(2rem,5vw,3rem)' }}>
+          <h1 className="font-display font-normal text-ink" >
             Minha conta
           </h1>
         </div>

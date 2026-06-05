@@ -46,7 +46,7 @@ export default function LoginPage() {
           <Image src="/logo-white.png" alt="Logo" width={140} height={70} className="h-12 w-auto object-contain" />
         </Link>
         <div>
-          <p className="font-display text-paper font-normal leading-tight mb-6" style={{fontSize:'3.5rem'}}>
+          <p className="font-display text-paper font-normal leading-tight mb-6" >
             Bem-vindo<br/>de <em className="text-clay">volta.</em>
           </p>
           <p className="text-base text-paper/40 leading-relaxed max-w-xs">

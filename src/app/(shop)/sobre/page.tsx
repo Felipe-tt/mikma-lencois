@@ -8,7 +8,7 @@ export default async function SobrePage() {
       <div className="page-header">
         <div className="container-shop">
           <span className="eyebrow mb-3 block">Nossa história</span>
-          <h1 className="font-display font-normal text-ink" style={{fontSize:'clamp(2.5rem,6vw,4.5rem)'}}>
+          <h1 className="font-display font-normal text-ink" >
             Sobre a<br/><em className="text-clay">{s.storeName}</em>
           </h1>
         </div>
