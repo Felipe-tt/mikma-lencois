@@ -69,7 +69,7 @@ export default function PrivacidadePage() {
             <h2 className="text-lg font-semibold text-gray-800 mb-2">7. Contato</h2>
             <p>
               Dúvidas ou solicitações relacionadas a privacidade:{' '}
-              <a href="mailto:privacidade@mikmalencois.com.br" className="text-indigo-600 hover:underline">
+              <a href="mailto:privacidade@mikmalencois.com.br" className="text-clay hover:underline">
                 privacidade@mikmalencois.com.br
               </a>
             </p>

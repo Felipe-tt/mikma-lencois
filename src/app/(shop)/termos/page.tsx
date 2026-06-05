@@ -60,7 +60,7 @@ export default function TermosPage() {
             <h2 className="text-lg font-semibold text-gray-800 mb-2">7. Contato</h2>
             <p>
               Dúvidas:{' '}
-              <a href="mailto:" className="text-indigo-600 hover:underline">
+              <a href="mailto:" className="text-clay hover:underline">
                 
               </a>
             </p>
