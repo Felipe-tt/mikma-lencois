@@ -16,11 +16,12 @@ type Coupon = {
   expiresAt: string;
 };
 
-const EMPTY = { code: '', type: 'percent' as const, value: 10, minOrderCents: 0, maxUses: 100, expiresAt: '' };
+type FormState = { code: string; type: 'percent' | 'fixed'; value: number; minOrderCents: number; maxUses: number; expiresAt: string };
+const EMPTY: FormState = { code: '', type: 'percent', value: 10, minOrderCents: 0, maxUses: 100, expiresAt: '' };
 
 export default function CuponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState<FormState>(EMPTY);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

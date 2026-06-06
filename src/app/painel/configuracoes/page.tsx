@@ -105,12 +105,15 @@ export default function ConfiguracoesPage() {
             <Field label="Tag 2 — valor" value={settings.heroFloatTag2Value} onChange={v => set('heroFloatTag2Value', v)} placeholder="Em 1h" />
           </div>
           <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint pt-1">Diferenciais</p>
-          {[1,2,3].map(n => (
-            <div key={n} className="grid grid-cols-2 gap-3">
-              <Field label={`Diferencial ${n} — título`} value={(settings as Record<string,string>)[`feat${n}Title`]} onChange={v => set(`feat${n}Title` as keyof StoreSettings, v)} />
-              <Field label={`Diferencial ${n} — descrição`} value={(settings as Record<string,string>)[`feat${n}Sub`]} onChange={v => set(`feat${n}Sub` as keyof StoreSettings, v)} />
-            </div>
-          ))}
+          {([1,2,3] as const).map(n => {
+            const s = settings as unknown as Record<string,string>;
+            return (
+              <div key={n} className="grid grid-cols-2 gap-3">
+                <Field label={`Diferencial ${n} — título`} value={s[`feat${n}Title`] ?? ''} onChange={v => set(`feat${n}Title` as keyof StoreSettings, v)} />
+                <Field label={`Diferencial ${n} — descrição`} value={s[`feat${n}Sub`] ?? ''} onChange={v => set(`feat${n}Sub` as keyof StoreSettings, v)} />
+              </div>
+            );
+          })}
         </>}
 
         {active === 'sobre' && <>
