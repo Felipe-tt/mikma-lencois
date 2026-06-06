@@ -2,6 +2,11 @@ import { initializeApp, getApps, cert, App } from 'firebase-admin/app'
 import { getFirestore, Firestore } from 'firebase-admin/firestore'
 import { getAuth, Auth } from 'firebase-admin/auth'
 
+// Evita MaxListenersExceededWarning do Firebase Admin em SSR
+if (typeof process !== 'undefined' && process.setMaxListeners) {
+  process.setMaxListeners(25);
+}
+
 function getAdminApp(): App {
   if (getApps().length > 0) return getApps()[0]
 
