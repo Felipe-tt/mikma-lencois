@@ -20,7 +20,7 @@ export default function EditarProdutoPage({ params }: { params: Promise<{ id: st
 
   if (loading) return (
     <div className="flex flex-col gap-3">
-      {[1,2,3,4].map(i => <div key={i} className="h-14 rounded-xl bg-mist/40 animate-pulse" />)}
+      {[1,2,3,4].map(i => <div key={i} className="h-14  bg-mist/40 animate-pulse" />)}
     </div>
   );
 

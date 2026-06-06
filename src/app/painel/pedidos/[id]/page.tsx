@@ -81,7 +81,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   if (loading) return (
     <div className="flex flex-col gap-3">
-      {[1,2,3].map(i => <div key={i} className="h-24 rounded-xl bg-mist/40 animate-pulse" />)}
+      {[1,2,3].map(i => <div key={i} className="h-24  bg-mist/40 animate-pulse" />)}
     </div>
   );
 
@@ -110,20 +110,20 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       <div className="flex flex-col gap-3">
         {/* Ações */}
         {(nextStatus || order.status === 'preparing') && (
-          <div className="bg-paper border border-mist rounded-xl p-4 flex flex-col gap-3">
+          <div className="bg-paper border border-mist  p-4 flex flex-col gap-3">
             <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint">Gestão do pedido</p>
 
             {order.status === 'preparing' && (
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-mid">Código de rastreio</label>
                 <input
-                  className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-clay/20"
+                  className="w-full border border-mist  px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-clay/20"
                   placeholder="BR123456789BR"
                   value={trackingCode}
                   onChange={e => setTrackingCode(e.target.value)}
                 />
                 <button onClick={dispatchDelivery} disabled={updating}
-                  className="w-full border border-mist text-sm font-medium text-mid py-3 rounded-xl active:bg-warm disabled:opacity-50 transition-colors">
+                  className="w-full border border-mist text-sm font-medium text-mid py-3  active:bg-warm disabled:opacity-50 transition-colors">
                   {updating ? 'Processando…' : 'Acionar entrega automática'}
                 </button>
               </div>
@@ -131,7 +131,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
             {nextStatus && (
               <button onClick={advanceStatus} disabled={updating}
-                className="w-full bg-ink text-paper text-sm font-semibold py-3.5 rounded-xl disabled:opacity-50 active:bg-ink/80 transition-colors">
+                className="w-full bg-ink text-paper text-sm font-semibold py-3.5  disabled:opacity-50 active:bg-ink/80 transition-colors">
                 {updating ? 'Salvando…' : `Avançar → ${STATUS_LABELS[nextStatus]}`}
               </button>
             )}
@@ -139,7 +139,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         )}
 
         {/* Itens */}
-        <div className="bg-paper border border-mist rounded-xl p-4">
+        <div className="bg-paper border border-mist  p-4">
           <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Itens do pedido</p>
           <div className="flex flex-col divide-y divide-mist">
             {order.items.map((item, i) => (
@@ -161,7 +161,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </div>
 
         {/* Endereço */}
-        <div className="bg-paper border border-mist rounded-xl p-4">
+        <div className="bg-paper border border-mist  p-4">
           <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint mb-2">Endereço de entrega</p>
           <address className="text-sm text-mid not-italic leading-relaxed">
             {order.address.street}, {order.address.number}
@@ -173,7 +173,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {/* Rastreio */}
         {order.delivery?.carrier && (
-          <div className="bg-paper border border-mist rounded-xl p-4">
+          <div className="bg-paper border border-mist  p-4">
             <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint mb-2">Entrega</p>
             <p className="text-sm font-medium text-ink">{order.delivery.carrier}</p>
             {order.delivery.trackingCode && (

@@ -16,7 +16,7 @@ type Stats = {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-paper border border-mist rounded-xl p-4">
+    <div className="bg-paper border border-mist  p-4">
       <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint mb-2">{label}</p>
       <p className="font-display text-2xl text-ink">{value}</p>
     </div>
@@ -27,10 +27,10 @@ function LoadingSkeleton() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {[1,2,3].map(i => <div key={i} className="h-20 rounded-xl bg-mist/40 animate-pulse" />)}
+        {[1,2,3].map(i => <div key={i} className="h-20  bg-mist/40 animate-pulse" />)}
       </div>
-      <div className="h-48 rounded-xl bg-mist/40 animate-pulse" />
-      <div className="h-32 rounded-xl bg-mist/40 animate-pulse" />
+      <div className="h-48  bg-mist/40 animate-pulse" />
+      <div className="h-32  bg-mist/40 animate-pulse" />
     </div>
   );
 }
@@ -93,7 +93,7 @@ export default function RelatoriosPage() {
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors border ${
+              className={`text-xs px-3 py-1.5  font-semibold transition-colors border ${
                 period === p ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm'
               }`}
             >
@@ -115,7 +115,7 @@ export default function RelatoriosPage() {
           </div>
 
           {/* Produtos mais vendidos */}
-          <div className="bg-paper border border-mist rounded-xl p-4">
+          <div className="bg-paper border border-mist  p-4">
             <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-4">Produtos mais vendidos</h2>
             {stats.topProducts.length === 0 ? (
               <p className="text-sm text-faint py-4 text-center">Sem dados para o período.</p>
@@ -139,7 +139,7 @@ export default function RelatoriosPage() {
 
           {/* Por transportadora */}
           {stats.byCarrier.length > 0 && (
-            <div className="bg-paper border border-mist rounded-xl p-4">
+            <div className="bg-paper border border-mist  p-4">
               <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-4">Entregas por transportadora</h2>
               <div className="flex flex-col divide-y divide-mist">
                 {stats.byCarrier.map((c, i) => (
