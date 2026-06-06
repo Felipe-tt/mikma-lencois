@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit } from '@/lib/rateLimit';
+import { randomBytes } from 'crypto';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1]);
+    const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true); // checkRevoked
     const uid = decoded.uid;
 
     const { items, address } = await req.json();
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Create order ─────────────────────────────────────────────────────────
-    const orderId = `${uid}_${Date.now()}`;
+    const orderId = `ord_${randomBytes(8).toString('hex')}`; // não expõe uid nem timestamp
     const orderRef = adminDb.collection('orders').doc(orderId);
     await orderRef.set({
       userId: uid,

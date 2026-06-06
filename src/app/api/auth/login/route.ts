@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { rateLimit } from '@/lib/rateLimit';
+import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 
 const schema = z.object({
   email: z.string().email(),
@@ -15,10 +15,12 @@ const INVALID = NextResponse.json({ error: 'Credenciais inválidas' }, { status:
 export async function POST(req: NextRequest) {
   // Rate limit: 10 attempts per IP per 15 minutes
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
-  if (!rateLimit(`login:${ip}`, 10, 15 * 60 * 1000)) {
+  const loginKey = `login:${ip}`;
+  if (!rateLimit(loginKey, 10, 15 * 60 * 1000)) {
+    const retryAfter = Math.ceil(rateLimitRetryAfter(loginKey) / 1000);
     return NextResponse.json(
       { error: 'Muitas tentativas. Tente novamente em 15 minutos.' },
-      { status: 429 }
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } }
     );
   }
 

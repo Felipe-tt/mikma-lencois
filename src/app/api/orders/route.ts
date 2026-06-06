@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
-    const decoded = await adminAuth.verifyIdToken(authHeader.slice(7));
+    const decoded = await adminAuth.verifyIdToken(authHeader.slice(7), true);
     const uid = decoded.uid;
 
     const body = await req.json();

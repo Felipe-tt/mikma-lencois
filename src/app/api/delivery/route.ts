@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1]);
+    const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
     if (!['seller', 'admin'].includes((decoded as { role?: string }).role ?? '')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
