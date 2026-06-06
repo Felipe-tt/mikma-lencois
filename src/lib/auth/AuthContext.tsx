@@ -21,7 +21,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   logout: () => Promise<void>;
-  loginWithGoogleToken: (idToken: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   userData: { name: string; email: string | null } | null;
 }
 
@@ -61,10 +61,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const loginWithGoogleToken = async (idToken: string) => {
-    const res = await fetch('/api/auth/google-verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  const loginWithGoogle = async () => {
+    const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes('popup-closed-by-user')) return;
+      throw err;
+    }
+  },
       body: JSON.stringify({ idToken }),
     });
     if (!res.ok) {
@@ -78,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userData = user ? { name: user.displayName ?? '', email: user.email } : null;
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout, loginWithGoogleToken, userData }}>
+    <AuthContext.Provider value={{ user, loading, logout, loginWithGoogle, userData }}>
       {children}
     </AuthContext.Provider>
   );
