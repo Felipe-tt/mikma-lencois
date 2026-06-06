@@ -65,20 +65,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json();
+        throw new Error(error ?? 'Erro ao autenticar com Google');
+      }
+      const { customToken } = await res.json();
+      await signInWithCustomToken(auth, customToken);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes('popup-closed-by-user')) return;
       throw err;
     }
-  },
-      body: JSON.stringify({ idToken }),
-    });
-    if (!res.ok) {
-      const { error } = await res.json();
-      throw new Error(error ?? 'Erro ao autenticar com Google');
-    }
-    const { customToken } = await res.json();
-    await signInWithCustomToken(auth, customToken);
   };
 
   const userData = user ? { name: user.displayName ?? '', email: user.email } : null;
