@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Product, InventoryItem } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { VariantSelector } from '@/components/product/VariantSelector';
+import { ProductGallery } from '@/components/product/ProductGallery';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 
@@ -67,47 +68,7 @@ export default async function ProductPage({ params }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-start">
 
           {/* ── Gallery ── */}
-          <div className="flex flex-col gap-3">
-            {/* Main image */}
-            <div className="relative aspect-[4/5] overflow-hidden bg-warm">
-              {product.images[0] ? (
-                <Image
-                  src={product.images[0]}
-                  alt={product.name}
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center bg-warm">
-                  <span className="font-display text-5xl text-faint select-none">M</span>
-                </div>
-              )}
-              {product.tags?.[0] && (
-                <span className="absolute top-4 left-4 bg-ink text-paper text-2xs font-semibold tracking-widest uppercase px-3 py-1.5">
-                  {product.tags[0]}
-                </span>
-              )}
-            </div>
-
-            {/* Thumbnails */}
-            {product.images.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {product.images.slice(0, 4).map((img, i) => (
-                  <div key={i} className="relative aspect-square overflow-hidden bg-warm">
-                    <Image
-                      src={img}
-                      alt={`${product.name} ${i + 1}`}
-                      fill
-                      sizes="15vw"
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} />
 
           {/* ── Info ── */}
           <div className="lg:sticky lg:top-28 flex flex-col gap-6">

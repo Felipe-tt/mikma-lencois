@@ -60,7 +60,7 @@ export default function CuponsPage() {
         <h1 className="font-display font-normal text-ink text-2xl">Cupons</h1>
         <button
           onClick={() => { setShowForm(s => !s); setError(''); }}
-          className={`text-xs font-semibold px-4 py-2 rounded-lg border transition-colors ${
+          className={`text-xs font-semibold px-4 py-2 border transition-colors ${
             showForm ? 'border-mist text-mid hover:bg-warm' : 'bg-ink text-paper border-ink'
           }`}
         >
@@ -70,9 +70,9 @@ export default function CuponsPage() {
 
       {/* Formulário */}
       {showForm && (
-        <div className="bg-paper border border-mist rounded-xl p-4 mb-5">
+        <div className="bg-paper border border-mist p-4 mb-5">
           <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-4">Novo cupom</h2>
-          {error && <p className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+          {error && <p className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -129,7 +129,7 @@ export default function CuponsPage() {
           </div>
           <button
             onClick={handleCreate} disabled={saving}
-            className="mt-4 w-full bg-ink text-paper text-sm font-semibold py-3 rounded-xl disabled:opacity-50 active:bg-ink/80 transition-colors"
+            className="mt-4 w-full bg-ink text-paper text-sm font-semibold py-3 disabled:opacity-50 active:bg-ink/80 transition-colors"
           >
             {saving ? 'Criando…' : 'Criar cupom'}
           </button>
@@ -138,14 +138,14 @@ export default function CuponsPage() {
 
       {/* Lista — cards no mobile */}
       {coupons.length === 0 ? (
-        <div className="text-center py-16 border border-mist rounded-xl">
+        <div className="text-center py-16 border border-mist ">
           <p className="text-3xl mb-3">🎟</p>
           <p className="text-sm text-faint">Nenhum cupom criado ainda.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           {coupons.map(c => (
-            <div key={c.id} className="bg-paper border border-mist rounded-xl px-4 py-4">
+            <div key={c.id} className="bg-paper border border-mist px-4 py-4">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
                   <span className="font-mono font-bold text-ink text-base tracking-wider">{c.code}</span>
@@ -157,7 +157,7 @@ export default function CuponsPage() {
                 <button
                   onClick={() => toggleActive(c.id, c.active)}
                   className={`text-xs px-2.5 py-1 rounded-full font-semibold border shrink-0 transition-colors ${
-                    c.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-warm text-faint border-mist'
+                    c.active ? 'bg-paper text-clay border border-clay border-emerald-200' : 'bg-warm text-faint border border-mist border-mist'
                   }`}
                 >
                   {c.active ? 'Ativo' : 'Inativo'}

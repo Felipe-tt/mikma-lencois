@@ -39,7 +39,7 @@ export default function ConfiguracoesPage() {
 
   if (loading) return (
     <div className="flex flex-col gap-4">
-      {[1,2,3,4].map(i => <div key={i} className="h-12 rounded-xl bg-mist/40 animate-pulse" />)}
+      {[1,2,3,4].map(i => <div key={i} className="h-12 bg-mist/40 animate-pulse" />)}
     </div>
   );
 
@@ -49,10 +49,10 @@ export default function ConfiguracoesPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display font-normal text-ink text-2xl">Configurações</h1>
         <div className="flex items-center gap-2">
-          {saved && <span className="text-xs text-green-600 font-semibold">✓ Salvo</span>}
+          {saved && <span className="text-xs text-clay font-semibold">✓ Salvo</span>}
           <button
             onClick={handleSave} disabled={saving}
-            className="bg-ink text-paper text-xs font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 active:bg-ink/80 transition-colors"
+            className="bg-ink text-paper text-xs font-semibold px-4 py-2.5 disabled:opacity-50 active:bg-ink/80 transition-colors"
           >
             {saving ? 'Salvando…' : 'Salvar'}
           </button>
@@ -65,7 +65,7 @@ export default function ConfiguracoesPage() {
           <button
             key={s.id}
             onClick={() => setActive(s.id)}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${
               active === s.id ? 'bg-ink text-paper' : 'text-mid hover:bg-warm border border-mist'
             }`}
           >
@@ -149,7 +149,7 @@ export default function ConfiguracoesPage() {
       <div className="mt-8 pb-6">
         <button
           onClick={handleSave} disabled={saving}
-          className="w-full bg-ink text-paper text-sm font-semibold py-4 rounded-xl disabled:opacity-50 active:bg-ink/80 transition-colors"
+          className="w-full bg-ink text-paper text-sm font-semibold py-4 disabled:opacity-50 active:bg-ink/80 transition-colors"
         >
           {saving ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar configurações'}
         </button>
@@ -167,7 +167,7 @@ function Field({ label, value, onChange, hint, placeholder, maxLength, type = 't
       <label className="block text-xs font-semibold text-mid mb-1">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)}
         placeholder={placeholder} maxLength={maxLength}
-        className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20" />
+        className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20" />
       {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
     </div>
   );
@@ -180,7 +180,7 @@ function Textarea({ label, value, onChange, hint, rows = 3 }: {
     <div>
       <label className="block text-xs font-semibold text-mid mb-1">{label}</label>
       <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows}
-        className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 resize-y" />
+        className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 resize-y" />
       {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
     </div>
   );
@@ -195,7 +195,7 @@ function NumField({ label, value, onChange, hint, min, max, step = 1 }: {
       <label className="block text-xs font-semibold text-mid mb-1">{label}</label>
       <input type="number" value={value} onChange={e => onChange(parseFloat(e.target.value) || 0)}
         min={min} max={max} step={step} inputMode="decimal"
-        className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20" />
+        className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20" />
       {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
     </div>
   );
