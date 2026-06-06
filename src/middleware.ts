@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Fix MaxListenersExceededWarning from Firebase Admin / Next.js
-if (typeof process !== 'undefined') {
-  process.setMaxListeners(25);
-}
-
 export function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
