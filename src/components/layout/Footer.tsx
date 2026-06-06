@@ -37,9 +37,9 @@ export function Footer({
             <Image
               src="/logo-white.png"
               alt={storeName}
-              width={100}
-              height={50}
-              className="h-8 w-auto object-contain opacity-80"
+              width={160}
+              height={160}
+              className="h-12 w-auto object-contain"
             />
             <p className="text-sm text-paper/35 leading-relaxed max-w-[22ch]">
               Lençóis de qualidade real,<br />direto de quem fabrica.

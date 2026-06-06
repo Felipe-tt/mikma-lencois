@@ -78,7 +78,7 @@ export function Header({ topbarText }: Props) {
 
           {/* Logo */}
           <Link href="/" className="shrink-0 mr-auto md:mr-0">
-            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={110} height={55} className="h-9 w-auto object-contain" priority />
+            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={160} height={160} className="h-12 w-auto object-contain" priority />
           </Link>
 
           {/* Desktop nav */}
@@ -193,7 +193,7 @@ export function Header({ topbarText }: Props) {
           <div className="fixed top-0 left-0 z-50 w-[300px] h-full bg-paper shadow-modal animate-slide-in flex flex-col">
             <div className="flex items-center justify-between px-5 h-16 border-b border-mist">
               <Link href="/" onClick={() => setMenuOpen(false)}>
-                <Image src="/logo-dark.png" alt="Logo" width={100} height={50} className="h-8 w-auto object-contain" />
+                <Image src="/logo-dark.png" alt="Logo" width={140} height={140} className="h-11 w-auto object-contain" />
               </Link>
               <button className="btn-ghost p-2" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
