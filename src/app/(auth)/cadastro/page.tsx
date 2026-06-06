@@ -36,17 +36,17 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-warm flex">
       <div className="hidden lg:flex w-1/2 bg-ink flex-col justify-between p-16">
         <Link href="/">
-          <Image src="/logo-white.png" alt="Mikma Lençóis" width={140} height={70} className="h-12 w-auto object-contain" />
+          <Image src="/logo-white.png" alt="Mikma Lençóis" width={140} height={70} className="h-16 w-auto object-contain" />
         </Link>
         <div>
-          <p className="font-display text-paper font-normal leading-tight mb-6">
+          <p className="font-display text-paper text-5xl xl:text-6xl font-normal leading-tight mb-6">
             Crie sua<br/><em className="text-clay">conta.</em>
           </p>
-          <p className="text-base text-paper/40 leading-relaxed max-w-xs">
+          <p className="text-xl text-paper/40 leading-relaxed max-w-sm">
             Cadastre-se e comece a comprar com entrega em até 1h em Blumenau.
           </p>
         </div>
-        <p className="text-xs text-paper/20 tracking-widest uppercase">Blumenau · SC · Brasil</p>
+        <p className="text-sm text-paper/20 tracking-widest uppercase">Blumenau · SC · Brasil</p>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12">

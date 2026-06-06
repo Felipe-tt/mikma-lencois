@@ -60,17 +60,17 @@ export default function LoginPage() {
     <div className="min-h-screen bg-warm flex">
       <div className="hidden lg:flex w-1/2 bg-ink flex-col justify-between p-16">
         <Link href="/">
-          <Image src="/logo-white.png" alt="Logo" width={140} height={70} className="h-12 w-auto object-contain" />
+          <Image src="/logo-white.png" alt="Logo" width={200} height={100} className="h-16 w-auto object-contain" />
         </Link>
         <div>
-          <p className="font-display text-paper font-normal leading-tight mb-6">
+          <p className="font-display text-paper font-normal leading-tight mb-8 text-5xl xl:text-6xl">
             Bem-vindo<br/>de <em className="text-clay">volta.</em>
           </p>
-          <p className="text-base text-paper/40 leading-relaxed max-w-xs">
+          <p className="text-xl text-paper/40 leading-relaxed max-w-sm">
             Entre na sua conta para acompanhar pedidos e continuar comprando.
           </p>
         </div>
-        <p className="text-xs text-paper/20 tracking-widest uppercase">Blumenau · SC · Brasil</p>
+        <p className="text-sm text-paper/20 tracking-widest uppercase">Blumenau · SC · Brasil</p>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
