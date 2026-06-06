@@ -1,63 +1,62 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 export function TopProgress() {
   const pathname = usePathname();
-  const [width, setWidth] = useState(0);
+  const searchParams = useSearchParams();
+  const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
-  const prevPathname = useRef(pathname);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const prevKey = useRef(`${pathname}${searchParams}`);
+  const rafRef = useRef<number | undefined>(undefined);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    if (prevPathname.current === pathname) return;
-    prevPathname.current = pathname;
+    const key = `${pathname}${searchParams}`;
+    if (prevKey.current === key) return;
+    prevKey.current = key;
 
-    // Start
+    // Reset
+    cancelAnimationFrame(rafRef.current!);
+    clearTimeout(timerRef.current);
+
+    setProgress(0);
     setVisible(true);
-    setWidth(0);
-    clearTimeout(timer.current);
 
-    // Animate to 90% quickly, then complete
-    requestAnimationFrame(() => {
-      setWidth(15);
-      setTimeout(() => setWidth(60), 100);
-      setTimeout(() => setWidth(85), 400);
-      setTimeout(() => {
-        setWidth(100);
-        timer.current = setTimeout(() => {
-          setVisible(false);
-          setWidth(0);
-        }, 400);
-      }, 800);
+    // Ramp up quickly to show activity, then complete instantly
+    rafRef.current = requestAnimationFrame(() => {
+      setProgress(20);
+      timerRef.current = setTimeout(() => setProgress(70), 120);
     });
 
-    return () => clearTimeout(timer.current);
-  }, [pathname]);
+    // Page already rendered by the time this fires — complete immediately
+    timerRef.current = setTimeout(() => {
+      setProgress(100);
+      timerRef.current = setTimeout(() => {
+        setVisible(false);
+        setProgress(0);
+      }, 300);
+    }, 350);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current!);
+      clearTimeout(timerRef.current);
+    };
+  }, [pathname, searchParams]);
 
   if (!visible) return null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 10000,
-        height: 2,
-        pointerEvents: 'none',
-      }}
-    >
+    <div className="fixed top-0 left-0 right-0 z-[10000] h-[2px] pointer-events-none">
       <div
+        className="h-full bg-clay shadow-[0_0_6px_rgba(196,113,74,0.5)]"
         style={{
-          height: '100%',
-          width: `${width}%`,
-          background: '#C4714A',
-          transition: width === 100
-            ? 'width 0.3s ease'
-            : 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: '0 0 8px rgba(196, 113, 74, 0.6)',
+          width: `${progress}%`,
+          transition: progress === 100
+            ? 'width 0.25s ease'
+            : progress === 0
+            ? 'none'
+            : 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       />
     </div>
