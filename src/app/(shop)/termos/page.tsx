@@ -1,4 +1,7 @@
-export default function TermosPage() {
+import { getSettings } from '@/lib/settings';
+
+export default async function TermosPage() {
+  const settings = await getSettings();
   return (
     <div className="min-h-screen bg-paper py-12">
       <div className="max-w-2xl mx-auto px-4">
@@ -60,8 +63,8 @@ export default function TermosPage() {
             <h2 className="text-lg font-semibold text-ink mb-2">7. Contato</h2>
             <p>
               Dúvidas:{' '}
-              <a href="mailto:" className="text-clay hover:underline">
-                
+              <a href={`mailto:${settings.storeEmail}`} className="text-clay hover:underline">
+                {settings.storeEmail}
               </a>
             </p>
           </section>

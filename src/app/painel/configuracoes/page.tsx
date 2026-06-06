@@ -86,7 +86,7 @@ export default function ConfiguracoesPage() {
           <Field label="Endereço (rua + número)" value={settings.storeAddress} onChange={v => set('storeAddress', v)} />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Bairro" value={settings.storeNeighborhood} onChange={v => set('storeNeighborhood', v)} />
-            <Field label="CEP" value={settings.storeCep} onChange={v => set('storeCep', v)} placeholder="" />
+            <Field label="CEP" value={settings.storeCep} onChange={v => set('storeCep', v)} placeholder="00000-000" />
           </div>
           <Field label="WhatsApp / Telefone" value={settings.storePhone} onChange={v => set('storePhone', v)} placeholder="+55 47 99999-0000" />
           <Field label="E-mail de contato" value={settings.storeEmail} onChange={v => set('storeEmail', v)} placeholder="contato@loja.com.br" />
@@ -128,7 +128,7 @@ export default function ConfiguracoesPage() {
             <NumField label="Latitude" value={settings.originLat} onChange={v => set('originLat', v)} step={0.0001} />
             <NumField label="Longitude" value={settings.originLng} onChange={v => set('originLng', v)} step={0.0001} />
           </div>
-          <Field label="CEP de origem (frete)" value={settings.originCep} onChange={v => set('originCep', v)} placeholder="" />
+          <Field label="CEP de origem (frete)" value={settings.originCep} onChange={v => set('originCep', v)} placeholder="00000-000" />
           <NumField label="Raio entrega local — Uber Direct (km)" value={settings.localDeliveryRadiusKm} onChange={v => set('localDeliveryRadiusKm', v)} hint={`Pedidos dentro de ${settings.localDeliveryRadiusKm} km → Uber Direct`} min={1} max={100} />
           <NumField label="Peso padrão por unidade (kg)" value={settings.defaultItemWeightKg} onChange={v => set('defaultItemWeightKg', v)} step={0.1} hint="Usado para cotação Melhor Envio" />
           <Field label="Horário de corte (HH:MM)" value={settings.dispatchCutoffTime} onChange={v => set('dispatchCutoffTime', v)} type="time" hint={`Após ${settings.dispatchCutoffTime} → despacho no próximo dia útil`} />
