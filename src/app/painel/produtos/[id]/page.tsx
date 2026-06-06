@@ -18,12 +18,20 @@ export default function EditarProdutoPage({ params }: { params: Promise<{ id: st
     });
   }, [id]);
 
-  if (loading) return <div className="p-6 py-10 flex items-center justify-center"><div className="spinner" /></div>;
-  if (!product) return <div className="p-6 text-sm text-red-500">Produto não encontrado.</div>;
+  if (loading) return (
+    <div className="flex flex-col gap-3">
+      {[1,2,3,4].map(i => <div key={i} className="h-14 rounded-xl bg-mist/40 animate-pulse" />)}
+    </div>
+  );
+
+  if (!product) return <div className="py-8 text-center text-sm text-red-500">Produto não encontrado.</div>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold text-ink mb-6">Editar produto</h1>
+    <div>
+      <div className="mb-6">
+        <h1 className="font-display font-normal text-ink text-2xl">Editar produto</h1>
+        <p className="text-xs text-faint mt-1">{product.name}</p>
+      </div>
       <ProductForm initial={product} />
     </div>
   );

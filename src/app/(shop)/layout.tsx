@@ -8,7 +8,12 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
     <div className="flex min-h-screen flex-col">
       <Header topbarText={s.topbarText} />
       <main className="flex-1">{children}</main>
-      <Footer storeName={s.storeName} storeCity={s.storeCity} />
+      <Footer
+        storeName={s.storeName}
+        storeCity={s.storeCity}
+        storePhone={s.storePhone}
+        storeEmail={s.storeEmail}
+      />
     </div>
   );
 }
