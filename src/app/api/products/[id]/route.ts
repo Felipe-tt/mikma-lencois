@@ -1,58 +1,73 @@
 export const dynamic = 'force-dynamic';
-import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, adminAuth } from '@/lib/firebase/admin'
-import { FieldValue } from 'firebase-admin/firestore'
-import { z } from 'zod'
+import { NextRequest, NextResponse } from 'next/server';
+import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { z } from 'zod';
+import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { safeJson, tooManyRequests } from '@/lib/security';
 
 async function getSeller(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (!auth?.startsWith('Bearer ')) return null
+  const auth = req.headers.get('authorization');
+  if (!auth?.startsWith('Bearer ')) return null;
   try {
-    const decoded = await adminAuth.verifyIdToken(auth.slice(7))
-    if (decoded.role !== 'seller' && decoded.role !== 'admin') return null
-    return decoded
-  } catch { return null }
+    const decoded = await adminAuth.verifyIdToken(auth.slice(7), true); // checkRevoked
+    if (decoded.role !== 'seller' && decoded.role !== 'admin') return null;
+    return decoded;
+  } catch { return null; }
 }
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const snap = await adminDb.collection('products').doc(id).get()
-  if (!snap.exists) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
-  return NextResponse.json({ id: snap.id, ...snap.data() })
+  const { id } = await params;
+  const snap = await adminDb.collection('products').doc(id).get();
+  if (!snap.exists) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
+  return NextResponse.json({ id: snap.id, ...snap.data() });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const seller = await getSeller(req)
-  if (!seller) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const seller = await getSeller(req);
+  if (!seller) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
-  const { id } = await params
-  const body = await req.json()
+  const key = `products:update:${seller.uid}`;
+  if (!rateLimit(key, 60, 60 * 60 * 1000)) {
+    return tooManyRequests(rateLimitRetryAfter(key));
+  }
+
+  const { id } = await params;
+  const body = await safeJson(req, 32768);
+  if (!body.ok) return body.response;
+
   const allowed = z.object({
-    name: z.string().min(2).optional(),
-    description: z.string().min(10).optional(),
-    price: z.number().int().positive().optional(),
-    images: z.array(z.string()).optional(),
-    category: z.string().optional(),
-    tags: z.array(z.string()).optional(),
+    name: z.string().min(2).max(200).optional(),
+    description: z.string().min(10).max(5000).optional(),
+    price: z.number().int().positive().max(100_000_00).optional(),
+    images: z.array(z.string().url().max(500)).max(20).optional(),
+    category: z.string().max(100).optional(),
+    tags: z.array(z.string().max(50)).max(20).optional(),
     active: z.boolean().optional(),
-  }).safeParse(body)
+  }).safeParse(body.data);
 
-  if (!allowed.success) return NextResponse.json({ error: allowed.error.flatten() }, { status: 400 })
+  if (!allowed.success) return NextResponse.json({ error: allowed.error.flatten() }, { status: 400 });
 
   await adminDb.collection('products').doc(id).update({
     ...allowed.data,
     updatedAt: FieldValue.serverTimestamp(),
-  })
-  return NextResponse.json({ ok: true })
+  });
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const seller = await getSeller(req)
-  if (!seller) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  const { id } = await params
+  const seller = await getSeller(req);
+  if (!seller) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+
+  const key = `products:delete:${seller.uid}`;
+  if (!rateLimit(key, 20, 60 * 60 * 1000)) {
+    return tooManyRequests(rateLimitRetryAfter(key));
+  }
+
+  const { id } = await params;
   await adminDb.collection('products').doc(id).update({
     active: false,
     updatedAt: FieldValue.serverTimestamp(),
-  })
-  return NextResponse.json({ ok: true })
+  });
+  return NextResponse.json({ ok: true });
 }

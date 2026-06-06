@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { getClientIp, tooManyRequests } from '@/lib/security';
 import type { Order, OrderItem, Address } from '@/types';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 
@@ -107,6 +109,11 @@ export async function POST(req: NextRequest) {
     if (!['seller', 'admin'].includes((decoded as { role?: string }).role ?? '')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+
+    // Rate limit: 30 dispatches/hora por IP
+    const ip = getClientIp(req);
+    const rlKey = `delivery:${ip}`;
+    if (!rateLimit(rlKey, 30, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(rlKey));
 
     const { orderId } = await req.json();
     if (!orderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 });

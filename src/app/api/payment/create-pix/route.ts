@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { rateLimit } from '@/lib/rateLimit';
+import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
+import { tooManyRequests } from '@/lib/security';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
   // Rate limit: 10 PIX requests per user per hour
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
   if (!rateLimit(`pix:${ip}`, 10, 60 * 60 * 1000)) {
-    return NextResponse.json({ error: 'Muitas tentativas. Tente em 1 hora.' }, { status: 429 });
+    return tooManyRequests(rateLimitRetryAfter(`pix:${ip}`));
   }
 
   try {
