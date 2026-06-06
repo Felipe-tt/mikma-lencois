@@ -21,7 +21,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   logout: () => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogleToken: (idToken: string) => Promise<void>;
   userData: { name: string; email: string | null } | null;
 }
 
@@ -61,33 +61,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const loginWithGoogle = async () => {
-    const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
-      const res = await fetch('/api/auth/google-verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-      if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error ?? 'Erro ao autenticar com Google');
-      }
-      const { customToken } = await res.json();
-      await signInWithCustomToken(auth, customToken);
-    } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes('popup-closed-by-user')) return;
-      throw err;
+  const loginWithGoogleToken = async (idToken: string) => {
+    const res = await fetch('/api/auth/google-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
+    if (!res.ok) {
+      const { error } = await res.json();
+      throw new Error(error ?? 'Erro ao autenticar com Google');
     }
+    const { customToken } = await res.json();
+    await signInWithCustomToken(auth, customToken);
   };
 
   const userData = user ? { name: user.displayName ?? '', email: user.email } : null;
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout, loginWithGoogle, userData }}>
+    <AuthContext.Provider value={{ user, loading, logout, loginWithGoogleToken, userData }}>
       {children}
     </AuthContext.Provider>
   );
