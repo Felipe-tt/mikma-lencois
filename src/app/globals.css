@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -27,7 +27,7 @@
 
 @layer components {
 
-  /* ── Buttons ── */
+  /* ── Buttons ─────────────────────────────────────────────────── */
   .btn {
     @apply inline-flex items-center justify-center gap-2
            font-sans text-sm font-medium
@@ -37,16 +37,19 @@
   }
   .btn-primary {
     @apply btn px-6 py-3 bg-ink text-paper border-ink
-           hover:bg-clay hover:border-clay active:scale-[0.98];
+           hover:bg-clay hover:border-clay
+           active:scale-[0.98];
   }
   .btn-primary-lg {
     @apply btn px-8 py-4 text-sm font-semibold tracking-wide
            bg-ink text-paper border-ink
-           hover:bg-clay hover:border-clay active:scale-[0.98];
+           hover:bg-clay hover:border-clay
+           active:scale-[0.98];
   }
   .btn-outline {
-    @apply btn px-6 py-3 bg-transparent text-ink border-ink
-           hover:bg-ink hover:text-paper active:scale-[0.98];
+    @apply btn px-6 py-3 bg-transparent text-ink border-ink/30
+           hover:bg-ink hover:text-paper hover:border-ink
+           active:scale-[0.98];
   }
   .btn-ghost {
     @apply btn px-3 py-2 border-transparent bg-transparent text-mid
@@ -54,34 +57,68 @@
   }
   .btn-clay {
     @apply btn px-6 py-3 bg-clay text-paper border-clay
-           hover:bg-clay-d hover:border-clay-d active:scale-[0.98];
+           hover:bg-clay-d hover:border-clay-d
+           active:scale-[0.98];
+  }
+  .btn-clay-lg {
+    @apply btn px-8 py-4 text-sm font-semibold tracking-wide
+           bg-clay text-paper border-clay
+           hover:bg-clay-d hover:border-clay-d
+           active:scale-[0.98];
+  }
+  .btn-gold {
+    @apply btn px-6 py-3 bg-gold text-paper border-gold
+           hover:bg-[#9A7A30] hover:border-[#9A7A30]
+           active:scale-[0.98];
+  }
+  .btn-icon {
+    @apply inline-flex items-center justify-center
+           w-9 h-9 border border-mist bg-paper text-mid
+           hover:border-clay hover:text-clay hover:bg-warm
+           transition-all duration-200;
   }
 
-  /* ── Inputs ── */
+  /* ── Inputs ──────────────────────────────────────────────────── */
   .input {
     @apply w-full px-4 py-3 text-sm bg-white text-ink
            border border-mist outline-none
            placeholder:text-faint
            focus:border-clay focus:ring-2 focus:ring-clay/10
-           transition-colors duration-200;
+           transition-all duration-200;
+  }
+  .input-sm {
+    @apply w-full px-3 py-2 text-sm bg-white text-ink
+           border border-mist outline-none
+           placeholder:text-faint
+           focus:border-clay focus:ring-1 focus:ring-clay/10
+           transition-all duration-200;
   }
   .label {
     @apply block text-2xs font-semibold tracking-widest uppercase text-mid mb-1.5;
   }
-
-  /* ── Cards ── */
-  .product-card {
-    @apply flex flex-col bg-paper
-           transition-all duration-300
-           hover:-translate-y-0.5;
+  .select {
+    @apply w-full px-4 py-3 text-sm bg-white text-ink
+           border border-mist outline-none appearance-none
+           focus:border-clay focus:ring-2 focus:ring-clay/10
+           transition-all duration-200 cursor-pointer;
   }
 
-  /* ── Typography ── */
+  /* ── Product card ─────────────────────────────────────────────── */
+  .product-card {
+    @apply flex flex-col bg-paper relative
+           transition-all duration-300
+           hover:shadow-card-hover;
+  }
+
+  /* ── Typography ───────────────────────────────────────────────── */
   .eyebrow {
     @apply block text-2xs font-semibold tracking-[0.22em] uppercase text-clay;
   }
+  .section-title {
+    @apply font-display font-normal text-ink leading-tight;
+  }
 
-  /* ── Badges ── */
+  /* ── Badges / Chips ──────────────────────────────────────────── */
   .badge { @apply inline-flex items-center px-2.5 py-1 text-xs font-medium; }
   .badge-pending   { @apply badge bg-amber-50  text-amber-700  border border-amber-200; }
   .badge-paid      { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200; }
@@ -90,10 +127,26 @@
   .badge-delivered { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200; }
   .badge-cancelled { @apply badge bg-red-50    text-red-700    border border-red-200; }
 
-  /* ── Layout ── */
-  .container-shop { @apply mx-auto max-w-7xl px-5 sm:px-8 lg:px-12; }
-  .page-header    { @apply bg-warm border-b border-mist py-10 md:py-14; }
-  .divider        { @apply border-0 border-t border-mist; }
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5
+           text-2xs font-semibold tracking-wider uppercase
+           border transition-all duration-200 cursor-pointer;
+  }
+  .chip-active {
+    @apply chip bg-ink text-paper border-ink;
+  }
+  .chip-idle {
+    @apply chip bg-paper text-mid border-mist hover:border-ink/30 hover:text-ink;
+  }
+
+  /* ── Layout ──────────────────────────────────────────────────── */
+  .container-shop  { @apply mx-auto max-w-7xl px-5 sm:px-8 lg:px-12; }
+  .container-wide  { @apply mx-auto max-w-8xl px-5 sm:px-8 lg:px-12; }
+  .page-header     { @apply bg-warm border-b border-mist py-10 md:py-14; }
+  .divider         { @apply border-0 border-t border-mist; }
+  .section         { @apply py-16 sm:py-24; }
+
+  /* ── Spinners ─────────────────────────────────────────────────── */
   .spinner {
     @apply inline-block w-4 h-4 rounded-full
            border-2 border-paper/30 border-t-paper animate-spin;
@@ -102,12 +155,61 @@
     @apply inline-block w-4 h-4 rounded-full
            border-2 border-mist border-t-clay animate-spin;
   }
+  .spinner-sm {
+    @apply inline-block w-3.5 h-3.5 rounded-full
+           border-[1.5px] border-paper/30 border-t-paper animate-spin;
+  }
 
-  /* ── Section spacing ── */
-  .section { @apply py-16 sm:py-24; }
+  /* ── Skeleton ─────────────────────────────────────────────────── */
+  .skeleton {
+    @apply relative overflow-hidden bg-mist;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.65) 45%,
+      rgba(255,255,255,0.85) 50%,
+      rgba(255,255,255,0.65) 55%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* ── Divider with text ────────────────────────────────────────── */
+  .divider-text {
+    @apply flex items-center gap-3 text-2xs text-faint uppercase tracking-wider;
+  }
+  .divider-text::before,
+  .divider-text::after {
+    content: '';
+    @apply flex-1 border-t border-mist;
+  }
+
+  /* ── Trust bar pill ───────────────────────────────────────────── */
+  .trust-pill {
+    @apply inline-flex items-center gap-2 px-3 py-1.5
+           text-xs font-medium text-mid
+           border border-mist bg-paper
+           whitespace-nowrap;
+  }
+
+  /* ── Section divider ─────────────────────────────────────────── */
+  .section-rule {
+    @apply border-t border-mist;
+  }
 }
 
 @layer utilities {
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -120,30 +222,6 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-}
-
-/* ── Skeleton ── */
-@layer components {
-  .skeleton {
-    @apply relative overflow-hidden bg-mist;
-  }
-  .skeleton::after {
-    content: '';
-    @apply absolute inset-0;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255,255,255,0.6) 45%,
-      rgba(255,255,255,0.8) 50%,
-      rgba(255,255,255,0.6) 55%,
-      transparent 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.6s ease-in-out infinite;
-  }
-}
-
-@layer utilities {
   @keyframes shimmer {
     0%   { background-position: -200% 0; }
     100% { background-position:  200% 0; }
