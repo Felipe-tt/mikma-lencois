@@ -6,7 +6,11 @@
 
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    font-size: clamp(16px, 0.4vw + 10px, 32px);
+  }
 
   body {
     @apply bg-paper text-ink font-sans antialiased;
