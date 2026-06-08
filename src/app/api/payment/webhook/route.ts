@@ -100,14 +100,14 @@ export async function POST(req: NextRequest) {
       .doc();
     batch.set(notifRef, {
       type: 'new_order',
-      orderId: metadata.orderId,
-      message: `Novo pedido pago: #${metadata.orderId.slice(-8).toUpperCase()}`,
+      orderId,
+      message: `Novo pedido pago: #${orderId.slice(-8).toUpperCase()}`,
       read: false,
       createdAt: FieldValue.serverTimestamp(),
     });
 
     await batch.commit();
-    console.log(`Order ${metadata.orderId} confirmed — transparent.completed`);
+    console.log(`Order ${orderId} confirmed — transparent.completed`);
   }
 
   // Always 200 for other event types (transparent.refunded, etc.)
