@@ -51,7 +51,12 @@ export function GoogleSignInButton({ onError }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!gisReady || !window.google?.accounts || !GOOGLE_CLIENT_ID) return;
+    if (!gisReady || !window.google?.accounts || !GOOGLE_CLIENT_ID) {
+      if (gisReady && !GOOGLE_CLIENT_ID) {
+        console.error('NEXT_PUBLIC_GOOGLE_CLIENT_ID não está configurado');
+      }
+      return;
+    }
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: async ({ credential }) => {
