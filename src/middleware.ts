@@ -20,7 +20,7 @@ export function middleware(req: NextRequest) {
     // Next.js precisa de 'self' + nonce idealmente, mas unsafe-inline é aceitável para scripts pequenos.
     // unsafe-eval foi removido — não é necessário para Next.js em produção.
     "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://accounts.google.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com",
     "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://api.abacatepay.com https://viacep.com.br https://nominatim.openstreetmap.org",
