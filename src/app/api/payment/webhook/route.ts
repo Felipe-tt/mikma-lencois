@@ -38,14 +38,14 @@ export async function POST(req: NextRequest) {
   }
 
   // AbacatePay v2 envelope: { event, apiVersion, data: { transparent: { id, externalId, ... }, customer, ... } }
-  const { event, data } = parsed as {
+  const { event: eventType, data } = parsed as {
     event: string;
     data: { transparent: Record<string, unknown>; customer?: Record<string, unknown> };
   };
 
-  console.log('Webhook received:', event);
+  console.log('Webhook received:', eventType);
 
-  if (event === 'transparent.completed') {
+  if (eventType === 'transparent.completed') {
     const transparent = data.transparent;
     const txId = transparent.id as string;
     // externalId was set to orderId when creating the transparent
