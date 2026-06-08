@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
         amount: amountCents,
         description: `Pedido #${orderId.slice(-8).toUpperCase()}`,
         expiresIn: 900,
+        externalId: orderId,
         ...(customerData ? { customer: customerData } : {}),
       },
     };
