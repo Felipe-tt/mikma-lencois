@@ -66,7 +66,8 @@ export async function POST(req: NextRequest) {
     const customToken = await adminAuth.createCustomToken(uid);
     return NextResponse.json({ customToken });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[google-verify]', err);
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno', detail: msg }, { status: 500 });
   }
 }
