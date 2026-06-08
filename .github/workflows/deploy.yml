@@ -49,8 +49,6 @@ jobs:
       ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
       ABACATEPAY_PUBLIC_KEY: ${{ secrets.ABACATEPAY_PUBLIC_KEY }}
       # Entrega
-      UBER_DIRECT_API_KEY: ${{ secrets.UBER_DIRECT_API_KEY }}
-      UBER_DIRECT_CUSTOMER_ID: ${{ secrets.UBER_DIRECT_CUSTOMER_ID }}
       MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
       # App
       NEXT_PUBLIC_APP_URL: https://mikmalencois.com.br
