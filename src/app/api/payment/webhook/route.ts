@@ -30,9 +30,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
-  let event: Record<string, unknown>;
+  let parsed: Record<string, unknown>;
   try {
-    event = JSON.parse(rawBody);
+    parsed = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
