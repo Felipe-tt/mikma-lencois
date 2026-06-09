@@ -8,6 +8,8 @@ const schema = z.object({
   name: z.string().min(2).max(100).trim(),
   email: z.string().email().max(256),
   password: z.string().min(8).max(128),
+  phone: z.string().max(20).optional(),
+  cpf: z.string().length(11).regex(/^\d+$/).optional(),
   recaptchaToken: z.string().min(1).optional(),
 });
 
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
 
-    const { name, email, password, recaptchaToken } = parsed.data;
+    const { name, email, password, phone, cpf, recaptchaToken } = parsed.data;
 
     // reCAPTCHA — required when secret is configured
     if (process.env.RECAPTCHA_SECRET_KEY) {
@@ -72,6 +74,8 @@ export async function POST(req: NextRequest) {
       email,
       role: 'buyer',
       passwordHash,
+      ...(phone ? { phone } : {}),
+      ...(cpf ? { cpf } : {}),
       lgpdConsent: { date: new Date().toISOString(), version: '1.0' },
       createdAt: new Date().toISOString(),
     });
