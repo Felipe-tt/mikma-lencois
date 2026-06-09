@@ -44,7 +44,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
     try {
       await sendPasswordResetEmail(auth, email.trim().toLowerCase(), {
         url: `${window.location.origin}/redefinir-senha`,
-        handleCodeInApp: true,
+        handleCodeInApp: false,
       });
       setStep('sent');
     } catch (err: unknown) {
