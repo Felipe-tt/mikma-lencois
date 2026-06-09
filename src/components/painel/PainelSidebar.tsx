@@ -64,7 +64,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
       {/* User */}
       <div className="border-t border-mist px-5 py-4 flex flex-col gap-2">
         <p className="text-xs text-faint truncate">{user?.email}</p>
-        <Link href="/" className="text-xs text-faint hover:text-clay transition-colors font-medium">← Ver loja</Link>
+        <Link href="/" className="text-xs text-faint hover:text-clay transition-colors font-medium">Ver loja</Link>
         <button onClick={logout} className="text-xs text-faint hover:text-red-500 transition-colors font-medium text-left">
           Sair da conta
         </button>
