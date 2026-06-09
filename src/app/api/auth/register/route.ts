@@ -55,22 +55,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let passwordHash = '';
-    try {
-      const { hash } = await import('@node-rs/argon2');
-      passwordHash = await hash(password, {
-        memoryCost: 65536,
-        timeCost: 3,
-        parallelism: 4,
-        outputLen: 32,
-      });
-    } catch (argonErr) {
-      console.error('[register] argon2 failed:', argonErr);
-      // argon2 falhou (binário nativo indisponível no Cloud Run)
-      // o hash não é crítico aqui pois o Firebase Auth gerencia a senha
-      // armazenamos string vazia e o login usa Firebase Auth diretamente
-      passwordHash = '';
-    }
+    const { hash } = await import('@node-rs/argon2');
+    const passwordHash = await hash(password, {
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 4,
+      outputLen: 32,
+    });
 
     const userRecord = await adminAuth.createUser({ email, password, displayName: name });
     await adminAuth.setCustomUserClaims(userRecord.uid, { role: 'buyer' });
