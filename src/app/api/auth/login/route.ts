@@ -1,23 +1,19 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { getClientIp } from '@/lib/security';
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().email().max(256),
   password: z.string().min(1).max(256),
 });
 
-// Generic error — never reveal whether email exists or password is wrong
-const INVALID = NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
-
 export async function POST(req: NextRequest) {
-  // Rate limit: 10 attempts per IP per 15 minutes
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
-  const loginKey = `login:${ip}`;
-  if (!rateLimit(loginKey, 10, 15 * 60 * 1000)) {
-    const retryAfter = Math.ceil(rateLimitRetryAfter(loginKey) / 1000);
+  const ip = getClientIp(req);
+  const ipKey = `login:ip:${ip}`;
+  if (!rateLimit(ipKey, 10, 15 * 60 * 1000)) {
+    const retryAfter = Math.ceil(rateLimitRetryAfter(ipKey) / 1000);
     return NextResponse.json(
       { error: 'Muitas tentativas. Tente novamente em 15 minutos.' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } }
@@ -27,28 +23,16 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);
-    if (!parsed.success) return INVALID;
+    if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
 
-    const { email, password } = parsed.data;
-
-    const userRecord = await adminAuth.getUserByEmail(email).catch(() => null);
-    if (!userRecord) return INVALID;
-
-    const userDoc = await adminDb.collection('users').doc(userRecord.uid).get();
-    if (!userDoc.exists) return INVALID;
-
-    const { passwordHash } = userDoc.data() as { passwordHash?: string };
-
-    if (!passwordHash) {
-      // Google-only account — same generic error to avoid account enumeration
-      return INVALID;
+    const { email } = parsed.data;
+    const emailKey = `login:email:${email.toLowerCase()}`;
+    if (!rateLimit(emailKey, 8, 15 * 60 * 1000)) {
+      return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 });
     }
 
-    const { verify } = await import('@node-rs/argon2');
-    const valid = await verify(passwordHash, password);
-    if (!valid) return INVALID;
-
-    return NextResponse.json({ success: true });
+    // Rate limit ok — o Firebase Auth no cliente faz a validação real da senha
+    return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }

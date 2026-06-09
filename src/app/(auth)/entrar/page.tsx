@@ -147,21 +147,26 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const res = await fetch('/api/auth/login', {
+      // Rate limit check primeiro
+      const rl = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      if (!res.ok) {
-        const d = await res.json();
+      if (rl.status === 429) {
+        const d = await rl.json();
         throw new Error(d.error);
       }
+
+      // Firebase Auth é a fonte da verdade para a senha
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
     } catch (err: unknown) {
       if (err instanceof Error) {
         const msg = err.message;
-        if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found')) {
+        if (msg.includes('Muitas tentativas')) {
+          setError(msg);
+        } else if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found')) {
           setError('E-mail ou senha incorretos.');
         } else if (msg.includes('auth/too-many-requests')) {
           setError('Muitas tentativas. Tente novamente em alguns minutos.');
