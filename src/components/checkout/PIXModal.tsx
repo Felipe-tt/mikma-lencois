@@ -73,7 +73,7 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, onClose }: Pr
         {/* Footer */}
         <div className="border-t border-mist px-6 py-4 flex justify-center">
           <button onClick={onClose} className="text-sm text-faint hover:text-clay transition-colors font-medium">
-            Fechar e acompanhar pedido →
+            Fechar e acompanhar pedido
           </button>
         </div>
       </div>
