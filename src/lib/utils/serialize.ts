@@ -1,5 +1,5 @@
 /**
- * Serializa dados do Firestore para plain objects seguros para RSC→Client.
+ * Serializa dados do Firestore para plain objects seguros para RSC->Client.
  * Converte Timestamp, DocumentReference e qualquer objeto com protótipo especial.
  */
 export function serialize<T>(data: unknown): T {
