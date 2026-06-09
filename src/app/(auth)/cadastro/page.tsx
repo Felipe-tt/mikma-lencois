@@ -8,6 +8,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 
+declare global {
+  interface Window {
+    grecaptcha?: { execute: (key: string, opts: { action: string }) => Promise<string> };
+  }
+}
+
 export default function RegisterPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -21,10 +27,25 @@ export default function RegisterPage() {
     if (user) router.push('/');
   }, [user, router]);
 
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    if (!key || document.getElementById('recaptcha-script')) return;
+    const script = document.createElement('script');
+    script.id = 'recaptcha-script';
+    script.src = `https://www.google.com/recaptcha/api.js?render=${key}`;
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true); setError('');
     try {
-      const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) });
+      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+      let recaptchaToken: string | undefined;
+      if (siteKey && window.grecaptcha) {
+        recaptchaToken = await window.grecaptcha.execute(siteKey, { action: 'register' });
+      }
+      const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, recaptchaToken }) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
