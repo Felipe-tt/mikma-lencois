@@ -42,7 +42,7 @@ export function Footer({
               className="h-12 w-auto object-contain"
             />
             <p className="text-sm text-paper/35 leading-relaxed max-w-[22ch]">
-              Lençóis de qualidade,<br />direto de fabrica.
+              Lençóis de qualidade,<br />direto de fábrica.
             </p>
 
             {/* Contato inline */}
