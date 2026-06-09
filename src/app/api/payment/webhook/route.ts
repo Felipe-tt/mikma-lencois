@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // 2. Confirm inventory deduction (reserved → sold)
+    // 2. Confirm inventory deduction (reserved -> sold)
     for (const item of order.items as Array<{ sku: string; quantity: number }>) {
       const invRef = adminDb.collection('inventory').doc(item.sku);
       batch.update(invRef, {
