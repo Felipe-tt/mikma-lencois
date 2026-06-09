@@ -63,7 +63,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithGoogleToken = async (idToken: string) => {
-    // Verifica o token server-side primeiro (cria/atualiza user no Firestore)
+    // ⚠️  NÃO ALTERE ESSE FLUXO DE AUTH — está funcionando e é frágil.
+    //
+    // CONTEXTO: o Firebase Admin SDK (createCustomToken) exige a permissão
+    // iam.serviceAccounts.signBlob na service account do Cloud Run.
+    // Essa permissão é difícil de garantir no Firebase Hosting (webframeworks),
+    // então o fluxo foi reescrito pra NÃO usar createCustomToken.
+    //
+    // COMO FUNCIONA AGORA:
+    //   1. O Google ID token (JWT) é enviado pro servidor em /api/auth/google-verify
+    //   2. O servidor valida o token via google-auth-library (sem signBlob)
+    //   3. O servidor cria/atualiza o usuário no Firestore se necessário
+    //   4. O CLIENT usa signInWithCredential(GoogleAuthProvider.credential(idToken))
+    //      diretamente — sem passar pelo Firebase Admin pra gerar custom token
+    //
+    // ⚠️  NÃO TROCAR signInWithCredential por signInWithCustomToken.
+    // ⚠️  NÃO ADICIONAR createCustomToken no /api/auth/google-verify/route.ts.
     const res = await fetch('/api/auth/google-verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -73,7 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await res.json();
       throw new Error(error ?? 'Erro ao autenticar com Google');
     }
-    // Usa o Google ID token diretamente — sem createCustomToken
+    // O servidor validou — agora autentica no Firebase Client com o Google credential.
+    // Isso não passa pelo Admin SDK e não precisa de signBlob.
     const credential = GoogleAuthProvider.credential(idToken);
     await signInWithCredential(auth, credential);
   };

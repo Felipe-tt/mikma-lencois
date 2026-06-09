@@ -63,8 +63,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Retorna o idToken verificado — o client usa signInWithCredential diretamente
-    // sem precisar de createCustomToken (que requer signBlob)
+    // ⚠️  NÃO ADICIONE createCustomToken AQUI.
+    //
+    // createCustomToken exige iam.serviceAccounts.signBlob na service account
+    // do Cloud Run. No Firebase Hosting com webframeworks, essa permissão causou
+    // horas de debug e nunca funcionou de forma estável.
+    //
+    // O fluxo correto é: servidor valida + cria user no Firestore,
+    // client autentica com signInWithCredential(GoogleAuthProvider.credential(idToken)).
+    // Veja AuthContext.tsx > loginWithGoogleToken para o fluxo completo.
     return NextResponse.json({ uid, verified: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
