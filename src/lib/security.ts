@@ -61,3 +61,38 @@ export function tooManyRequests(retryAfterMs: number): NextResponse {
     { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } }
   );
 }
+
+import { adminAuth } from '@/lib/firebase/admin';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+
+export type AuthResult =
+  | { ok: true; decoded: DecodedIdToken }
+  | { ok: false; response: NextResponse };
+
+/** Verifica Bearer token e opcionalmente checa roles. checkRevoked=true por padrão. */
+export async function verifyAuth(
+  req: NextRequest,
+  options: { roles?: string[]; checkRevoked?: boolean } = {}
+): Promise<AuthResult> {
+  const { roles, checkRevoked = true } = options;
+  const header = req.headers.get('authorization');
+  if (!header?.startsWith('Bearer ')) {
+    return { ok: false, response: NextResponse.json({ error: 'Não autenticado' }, { status: 401 }) };
+  }
+  const token = header.slice(7);
+  if (token.length > 4096) {
+    return { ok: false, response: NextResponse.json({ error: 'Token inválido' }, { status: 401 }) };
+  }
+  try {
+    const decoded = await adminAuth.verifyIdToken(token, checkRevoked);
+    if (roles?.length) {
+      const role = (decoded as DecodedIdToken & { role?: string }).role ?? '';
+      if (!roles.includes(role)) {
+        return { ok: false, response: NextResponse.json({ error: 'Acesso negado' }, { status: 403 }) };
+      }
+    }
+    return { ok: true, decoded };
+  } catch {
+    return { ok: false, response: NextResponse.json({ error: 'Token inválido' }, { status: 401 }) };
+  }
+}
