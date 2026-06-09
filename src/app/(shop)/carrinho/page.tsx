@@ -120,7 +120,7 @@ export default function CartPage() {
                 Finalizar compra
               </Link>
               <Link href="/produtos" className="text-center text-xs text-faint hover:text-clay transition-colors font-medium">
-                ← Continuar comprando
+                Continuar comprando
               </Link>
             </div>
           </div>
