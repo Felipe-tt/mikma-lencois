@@ -63,8 +63,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const customToken = await adminAuth.createCustomToken(uid);
-    return NextResponse.json({ customToken });
+    // Retorna o idToken verificado — o client usa signInWithCredential diretamente
+    // sem precisar de createCustomToken (que requer signBlob)
+    return NextResponse.json({ uid, verified: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[google-verify]', err);

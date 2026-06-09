@@ -3,7 +3,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import {
   onAuthStateChanged,
   signOut,
-  signInWithCustomToken,
+  signInWithCredential,
+  GoogleAuthProvider,
   User,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithGoogleToken = async (idToken: string) => {
+    // Verifica o token server-side primeiro (cria/atualiza user no Firestore)
     const res = await fetch('/api/auth/google-verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -71,8 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await res.json();
       throw new Error(error ?? 'Erro ao autenticar com Google');
     }
-    const { customToken } = await res.json();
-    await signInWithCustomToken(auth, customToken);
+    // Usa o Google ID token diretamente — sem createCustomToken
+    const credential = GoogleAuthProvider.credential(idToken);
+    await signInWithCredential(auth, credential);
   };
 
   const userData = user ? { name: user.displayName ?? '', email: user.email } : null;
