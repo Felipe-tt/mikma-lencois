@@ -65,7 +65,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
               <div className="py-24 text-center border border-mist">
                 <p className="font-display text-2xl text-faint font-normal">Nenhum produto encontrado.</p>
                 <Link href="/produtos" className="text-sm text-mid hover:text-clay transition-colors mt-4 inline-block">
-                  Limpar filtros →
+                  Limpar filtros
                 </Link>
               </div>
             ) : (
