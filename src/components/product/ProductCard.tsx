@@ -1,9 +1,9 @@
 'use client';
-import Link from 'next/link';
 import Image from 'next/image';
 import type { Product } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { useState } from 'react';
+import { NavLink } from '@/components/ui/NavLink';
 
 interface Props {
   product: Product;
@@ -17,7 +17,7 @@ export function ProductCard({ product, priority = false }: Props) {
   const isBestSeller = product.tags?.includes('bestseller') || product.tags?.includes('mais vendido');
 
   return (
-    <Link href={`/produtos/${product.id}`} className="product-card group">
+    <NavLink href={`/produtos/${product.id}`} className="product-card group">
       {/* ── Image ── */}
       <div className="relative aspect-[3/4] overflow-hidden bg-warm">
         {img && !imgError ? (
@@ -93,6 +93,6 @@ export function ProductCard({ product, priority = false }: Props) {
           )}
         </div>
       </div>
-    </Link>
+    </NavLink>
   );
 }

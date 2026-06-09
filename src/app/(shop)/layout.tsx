@@ -1,5 +1,6 @@
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { PageTransition } from '@/components/ui/PageTransition';
 import { getSettings } from '@/lib/settings';
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
@@ -7,7 +8,9 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   return (
     <div className="flex min-h-screen flex-col">
       <Header topbarText={s.topbarText} />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <PageTransition>{children}</PageTransition>
+      </main>
       <Footer
         storeName={s.storeName}
         storeCity={s.storeCity}

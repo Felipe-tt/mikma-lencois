@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useCartCount } from '@/lib/hooks/useCartCount';
 import { usePathname, useRouter } from 'next/navigation';
+import { NavLink } from '@/components/ui/NavLink';
 
 interface Props { topbarText?: string }
 
@@ -77,14 +78,14 @@ export function Header({ topbarText }: Props) {
           </button>
 
           {/* Logo */}
-          <Link href="/" className="shrink-0 mr-auto md:mr-0">
+          <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
             <Image src="/logo-dark.png" alt="Mikma Lençóis" width={160} height={160} className="h-12 w-auto object-contain" priority />
-          </Link>
+          </NavLink>
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8 mx-auto">
             {NAV_LINKS.map(({ href, label }) => (
-              <Link
+              <NavLink
                 key={href}
                 href={href}
                 className={`text-sm font-medium transition-colors duration-200 relative pb-0.5
@@ -96,7 +97,7 @@ export function Header({ topbarText }: Props) {
                   }`}
               >
                 {label}
-              </Link>
+              </NavLink>
             ))}
           </nav>
 
@@ -124,26 +125,26 @@ export function Header({ topbarText }: Props) {
             {user ? (
               <>
                 {(user.role === 'seller' || user.role === 'admin') && (
-                  <Link href="/painel" className="hidden md:flex btn-ghost text-2xs font-bold tracking-[0.15em] uppercase">
+                  <NavLink href="/painel" className="hidden md:flex btn-ghost text-2xs font-bold tracking-[0.15em] uppercase">
                     Painel
-                  </Link>
+                  </NavLink>
                 )}
-                <Link href="/conta" className="hidden md:block btn-ghost text-sm">
+                <NavLink href="/conta" className="hidden md:block btn-ghost text-sm">
                   {user.displayName?.split(' ')[0] ?? 'Conta'}
-                </Link>
+                </NavLink>
                 <button onClick={logout} className="hidden md:block btn-ghost text-sm text-faint">Sair</button>
               </>
             ) : (
               <>
-                <Link href="/entrar" className="hidden md:block btn-ghost text-sm">Entrar</Link>
-                <Link href="/cadastro" className="hidden md:flex btn-clay text-2xs font-bold tracking-[0.12em] uppercase px-4 py-2.5 ml-1">
+                <NavLink href="/entrar" className="hidden md:block btn-ghost text-sm">Entrar</NavLink>
+                <NavLink href="/cadastro" className="hidden md:flex btn-clay text-2xs font-bold tracking-[0.12em] uppercase px-4 py-2.5 ml-1">
                   Cadastrar
-                </Link>
+                </NavLink>
               </>
             )}
 
             {/* Cart */}
-            <Link href="/carrinho" className="btn-ghost relative p-2 ml-0.5" aria-label="Carrinho">
+            <NavLink href="/carrinho" className="btn-ghost relative p-2 ml-0.5" aria-label="Carrinho">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
@@ -154,7 +155,7 @@ export function Header({ topbarText }: Props) {
                   {count > 9 ? '9+' : count}
                 </span>
               )}
-            </Link>
+            </NavLink>
           </div>
         </div>
 
@@ -192,9 +193,9 @@ export function Header({ topbarText }: Props) {
           />
           <div className="fixed top-0 left-0 z-50 w-[300px] h-full bg-paper shadow-modal animate-slide-in flex flex-col">
             <div className="flex items-center justify-between px-5 h-16 border-b border-mist">
-              <Link href="/" onClick={() => setMenuOpen(false)}>
+              <NavLink href="/" onClick={() => setMenuOpen(false)}>
                 <Image src="/logo-dark.png" alt="Logo" width={140} height={140} className="h-11 w-auto object-contain" />
-              </Link>
+              </NavLink>
               <button className="btn-ghost p-2" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12"/>
@@ -219,7 +220,7 @@ export function Header({ topbarText }: Props) {
 
             <nav className="flex-1 px-2 py-5 flex flex-col overflow-y-auto">
               {NAV_LINKS.map(({ href, label }) => (
-                <Link
+                <NavLink
                   key={href}
                   href={href}
                   className={`px-4 py-3 text-base font-medium transition-colors ${
@@ -227,14 +228,14 @@ export function Header({ topbarText }: Props) {
                   }`}
                 >
                   {label}
-                </Link>
+                </NavLink>
               ))}
               <div className="divider my-4 mx-4" />
               {user ? (
                 <>
-                  <Link href="/conta" className="px-4 py-3 text-base font-medium text-ink hover:bg-warm transition-colors">Minha conta</Link>
+                  <NavLink href="/conta" className="px-4 py-3 text-base font-medium text-ink hover:bg-warm transition-colors">Minha conta</NavLink>
                   {(user.role === 'seller' || user.role === 'admin') && (
-                    <Link href="/painel" className="px-4 py-3 text-base font-medium text-ink hover:bg-warm transition-colors">Painel</Link>
+                    <NavLink href="/painel" className="px-4 py-3 text-base font-medium text-ink hover:bg-warm transition-colors">Painel</NavLink>
                   )}
                   <button onClick={logout} className="text-left px-4 py-3 text-base font-medium text-faint hover:text-ink hover:bg-warm transition-colors">
                     Sair da conta
@@ -242,9 +243,9 @@ export function Header({ topbarText }: Props) {
                 </>
               ) : (
                 <>
-                  <Link href="/entrar" className="px-4 py-3 text-base font-medium text-ink hover:bg-warm transition-colors">Entrar</Link>
+                  <NavLink href="/entrar" className="px-4 py-3 text-base font-medium text-ink hover:bg-warm transition-colors">Entrar</NavLink>
                   <div className="px-4 pt-3">
-                    <Link href="/cadastro" className="btn-clay w-full justify-center">Criar conta</Link>
+                    <NavLink href="/cadastro" className="btn-clay w-full justify-center">Criar conta</NavLink>
                   </div>
                 </>
               )}

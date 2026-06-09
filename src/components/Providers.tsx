@@ -1,11 +1,14 @@
 'use client';
 
 import { AuthProvider } from '@/lib/auth/AuthContext';
+import { NavigationProvider } from '@/lib/NavigationContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      {children}
+      <NavigationProvider>
+        {children}
+      </NavigationProvider>
     </AuthProvider>
   );
 }
