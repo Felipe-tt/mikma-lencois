@@ -22,7 +22,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const prevPathname = useRef(pathname);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // When pathname actually changes → the new page is rendering → fade it in
+  // When pathname actually changes -> the new page is rendering -> fade it in
   useEffect(() => {
     if (prevPathname.current === pathname) return;
     prevPathname.current = pathname;
