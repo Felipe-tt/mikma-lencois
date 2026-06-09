@@ -140,7 +140,7 @@ export default function PerfilPage() {
         )}
 
         <button onClick={logout} className="text-sm text-faint hover:text-clay transition-colors font-medium">
-          Sair da conta →
+          Sair da conta
         </button>
       </div>
     </div>
