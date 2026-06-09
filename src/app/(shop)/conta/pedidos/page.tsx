@@ -94,7 +94,7 @@ export default function PedidosPage() {
             <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Meus pedidos</h1>
           </div>
           <Link href="/perfil" className="text-sm text-mid hover:text-clay transition-colors font-medium hidden sm:block">
-            Meu perfil →
+            Meu perfil
           </Link>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function PedidosPage() {
                 {order.status !== 'pending_payment' && (
                   <div className="border-t border-mist px-5 sm:px-6 py-3">
                     <Link href={`/pedidos/${order.id}`} className="text-xs font-medium text-mid hover:text-clay transition-colors">
-                      Ver detalhes →
+                      Ver detalhes
                     </Link>
                   </div>
                 )}
