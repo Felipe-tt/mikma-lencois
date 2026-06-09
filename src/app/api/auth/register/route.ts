@@ -81,8 +81,7 @@ export async function POST(req: NextRequest) {
     const msg = error instanceof Error ? error.message : '';
     console.error('[register]', error);
     if (msg.includes('email-already-exists')) {
-      // Don't reveal if email exists — generic message
-      return NextResponse.json({ success: true }, { status: 201 });
+      return NextResponse.json({ error: 'Este e-mail já está cadastrado.' }, { status: 409 });
     }
     return NextResponse.json({ error: 'Erro ao criar conta' }, { status: 500 });
   }
