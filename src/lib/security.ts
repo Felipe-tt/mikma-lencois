@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 /** Extrai o IP real do cliente, respeitando proxies confiáveis (Cloud Run / Vercel). */
 export function getClientIp(req: NextRequest): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  const fwd = req.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0].trim();
+  return req.headers.get('x-real-ip') ?? req.headers.get('x-nf-client-connection-ip') ?? 'unknown';
 }
 
 interface SafeJsonOk<T = unknown> { ok: true; data: T }
