@@ -43,8 +43,8 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
     setLoading(true); setError('');
     try {
       await sendPasswordResetEmail(auth, email.trim().toLowerCase(), {
-        url: `${window.location.origin}/entrar`,
-        handleCodeInApp: false,
+        url: `${window.location.origin}/redefinir-senha`,
+        handleCodeInApp: true,
       });
       setStep('sent');
     } catch (err: unknown) {

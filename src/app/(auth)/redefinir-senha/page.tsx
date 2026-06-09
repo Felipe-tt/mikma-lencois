@@ -74,6 +74,19 @@ function ResetForm() {
     setLoading(true);
     try {
       await confirmPasswordReset(auth, oobCode, password);
+
+      // Atualiza hash no Firestore para manter login email/senha funcionando
+      try {
+        const { signInWithEmailAndPassword: signIn, getIdToken } = await import('firebase/auth');
+        const userCred = await signIn(auth, email, password);
+        const token = await getIdToken(userCred.user);
+        await fetch('/api/auth/update-password-hash', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ password }),
+        });
+      } catch { /* não bloqueia o fluxo se falhar */ }
+
       setStep('success');
       setTimeout(() => router.push('/entrar'), 2500);
     } catch (err: unknown) {
