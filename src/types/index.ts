@@ -22,7 +22,6 @@ export interface User {
   lgpdConsent: { date: string; version: string }
   createdAt: string
   updatedAt?: string
-  timeline?: OrderTimelineEvent[]
 }
 
 // ─── Products ────────────────────────────────────────────────────────────────
@@ -112,6 +111,8 @@ export interface Order {
   discountCents?: number
   couponCode?: string
   createdAt: string
+  updatedAt?: string
+  timeline?: OrderTimelineEvent[]
 }
 
 // ─── Cart ────────────────────────────────────────────────────────────────────
