@@ -21,6 +21,8 @@ export interface User {
   cpf?: string // criptografado, opcional
   lgpdConsent: { date: string; version: string }
   createdAt: string
+  updatedAt?: string
+  timeline?: OrderTimelineEvent[]
 }
 
 // ─── Products ────────────────────────────────────────────────────────────────
@@ -79,6 +81,12 @@ export interface OrderItem {
   variant: ProductVariant
   quantity: number
   unitPrice: number // centavos
+}
+
+export interface OrderTimelineEvent {
+  status: OrderStatus | 'created' | 'payment_initiated' | 'payment_confirmed' | 'payment_expired' | 'payment_failed'
+  at: string // ISO string
+  note?: string
 }
 
 export interface Order {

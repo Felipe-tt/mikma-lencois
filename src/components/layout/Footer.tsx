@@ -6,6 +6,9 @@ interface Props {
   storeCity?: string;
   storePhone?: string;
   storeEmail?: string;
+  instagramUrl?: string;
+  whatsappUrl?: string;
+  reclameAquiUrl?: string;
 }
 
 export function Footer({
@@ -13,9 +16,12 @@ export function Footer({
   storeCity = 'Blumenau, SC',
   storePhone,
   storeEmail,
+  instagramUrl,
+  whatsappUrl,
+  reclameAquiUrl,
 }: Props) {
   const year = new Date().getFullYear();
-  const wa = storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null;
+  const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
 
   return (
     <footer className="bg-ink text-paper mt-auto overflow-hidden">
@@ -69,28 +75,32 @@ export function Footer({
               )}
             </div>
 
-            {/* Redes sociais */}
-            <div className="flex items-center gap-3">
-              <a
-                href="https://instagram.com/mikmalencois"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors"
-              >
-                Instagram
-              </a>
-              <span className="text-paper/15">·</span>
-              {wa && (
-                <a
-                  href={wa}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors"
-                >
-                  WhatsApp
-                </a>
-              )}
-            </div>
+            {/* Redes sociais — só mostra se configurado no painel */}
+            {(instagramUrl || wa) && (
+              <div className="flex items-center gap-3">
+                {instagramUrl && (
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors"
+                  >
+                    Instagram
+                  </a>
+                )}
+                {instagramUrl && wa && <span className="text-paper/15">·</span>}
+                {wa && (
+                  <a
+                    href={wa}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors"
+                  >
+                    WhatsApp
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Col 2 — Loja */}

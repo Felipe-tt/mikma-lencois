@@ -90,6 +90,8 @@ export default function ConfiguracoesPage() {
           </div>
           <Field label="WhatsApp / Telefone" value={settings.storePhone} onChange={v => set('storePhone', v)} placeholder="+55 47 99999-0000" />
           <Field label="E-mail de contato" value={settings.storeEmail} onChange={v => set('storeEmail', v)} placeholder="contato@loja.com.br" />
+          <Field label="Instagram (URL)" value={settings.instagramUrl ?? ''} onChange={v => set('instagramUrl', v)} placeholder="https://instagram.com/minhaloja" hint="Aparece no footer" />
+          <Field label="WhatsApp (URL de chat)" value={settings.whatsappUrl ?? ''} onChange={v => set('whatsappUrl', v)} placeholder="https://wa.me/5547999990000" hint="Link direto para conversa" />
         </>}
 
         {active === 'textos' && <>

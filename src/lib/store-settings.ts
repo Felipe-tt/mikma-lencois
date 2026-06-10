@@ -11,6 +11,8 @@ export type StoreSettings = {
   storeCep: string;
   storePhone: string;
   storeEmail: string;
+  instagramUrl: string;
+  whatsappUrl: string;
   topbarText: string;
   heroTitle: string;
   heroSubtitle: string;
@@ -45,6 +47,8 @@ export const STORE_DEFAULTS: StoreSettings = {
   storeCep: '',
   storePhone: '',
   storeEmail: '',
+  instagramUrl: '',
+  whatsappUrl: '',
   topbarText: '',
   heroTitle: '',
   heroSubtitle: '',

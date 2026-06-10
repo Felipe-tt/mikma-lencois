@@ -16,6 +16,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         storeCity={s.storeCity}
         storePhone={s.storePhone}
         storeEmail={s.storeEmail}
+        instagramUrl={s.instagramUrl}
+        whatsappUrl={s.whatsappUrl}
       />
     </div>
   );

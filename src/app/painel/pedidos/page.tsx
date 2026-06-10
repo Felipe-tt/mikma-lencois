@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
@@ -86,6 +86,26 @@ export default function PainelPedidos() {
           </button>
         ))}
       </div>
+
+      {/* Deletar todos os cancelados */}
+      {orders.filter(o => o.status === 'cancelled').length > 0 && filter !== 'cancelled' || filter === 'cancelled' ? (
+        orders.filter(o => o.status === 'cancelled').length > 0 && (
+          <div className="mb-3 flex justify-end">
+            <button
+              onClick={async () => {
+                const cancelled = orders.filter(o => o.status === 'cancelled');
+                if (!confirm(`Excluir ${cancelled.length} pedido(s) cancelado(s)?`)) return;
+                const batch = writeBatch(db);
+                cancelled.forEach(o => batch.delete(doc(db, 'orders', o.id)));
+                await batch.commit();
+              }}
+              className="text-xs font-semibold text-red-600 border border-red-200 bg-red-50 px-3 py-2 hover:bg-red-100 transition-colors"
+            >
+              Excluir todos cancelados ({orders.filter(o => o.status === 'cancelled').length})
+            </button>
+          </div>
+        )
+      ) : null}
 
       {filtered.length === 0 ? (
         <p className="py-16 text-center text-sm text-faint border border-mist">Nenhum pedido.</p>
