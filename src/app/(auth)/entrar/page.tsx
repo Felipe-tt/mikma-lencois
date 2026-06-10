@@ -195,10 +195,10 @@ export default function LoginPage() {
       <div className="min-h-screen bg-warm flex">
         {/* Painel esquerdo */}
         <div className="hidden lg:flex w-1/2 bg-ink flex-col justify-between p-16">
-          <Link href="/"><Image src="/logo-white.png" alt="Mikma" width={140} height={70} className="h-12 w-auto object-contain" /></Link>
+          <Link href="/"><Image src="/logo-white.png" alt="Mikma" width={160} height={80} className="h-14 w-auto object-contain" /></Link>
           <div>
-            <p className="font-display text-paper font-normal leading-tight mb-6">
-              Bem-vindo<br />de <em className="text-clay">volta.</em>
+            <p className="font-display text-paper font-normal leading-[1.02] mb-6 text-[clamp(2.8rem,4.5vw,4.5rem)]">
+              Bem-vindo<br />de <em className="text-clay not-italic">volta.</em>
             </p>
             <p className="text-base text-paper/40 leading-relaxed max-w-xs">
               Entre na sua conta para acompanhar pedidos e continuar comprando.

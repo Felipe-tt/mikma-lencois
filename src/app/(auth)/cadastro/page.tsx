@@ -171,10 +171,10 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-warm flex">
       {/* Painel esquerdo */}
       <div className="hidden lg:flex w-1/2 bg-ink flex-col justify-between p-16">
-        <Link href="/"><Image src="/logo-white.png" alt="Mikma" width={140} height={70} className="h-12 w-auto object-contain" /></Link>
+        <Link href="/"><Image src="/logo-white.png" alt="Mikma" width={160} height={80} className="h-14 w-auto object-contain" /></Link>
         <div>
-          <p className="font-display text-paper font-normal leading-tight mb-6">
-            Crie sua<br /><em className="text-clay">conta.</em>
+          <p className="font-display text-paper font-normal leading-[1.02] mb-6 text-[clamp(2.8rem,4.5vw,4.5rem)]">
+            Crie sua<br /><em className="text-clay not-italic">conta.</em>
           </p>
           <p className="text-base text-paper/40 leading-relaxed max-w-xs">
             Cadastre-se e comece a comprar com entrega em até 1h em Blumenau.
@@ -184,8 +184,8 @@ export default function RegisterPage() {
       </div>
 
       {/* Formulário */}
-      <div className="flex-1 flex items-start justify-center p-6 sm:p-12 overflow-y-auto">
-        <div className="w-full max-w-md py-8">
+      <div className="flex-1 flex flex-col justify-center p-6 sm:p-12 min-h-screen overflow-y-auto">
+        <div className="w-full max-w-md mx-auto py-10">
           <Link href="/" className="flex mb-10 lg:hidden">
             <Image src="/logo-dark.png" alt="Mikma" width={120} height={60} className="h-10 w-auto object-contain" />
           </Link>

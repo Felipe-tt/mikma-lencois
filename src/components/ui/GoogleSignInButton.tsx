@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 
 declare global {
   interface Window {
@@ -13,9 +12,11 @@ declare global {
             client_id: string;
             callback: (r: { credential: string }) => void;
             use_fedcm_for_prompt?: boolean;
-            ux_mode?: string;
+            auto_select?: boolean;
+            cancel_on_tap_outside?: boolean;
           }) => void;
           renderButton: (el: HTMLElement, opts: object) => void;
+          disableAutoPrompt: () => void;
         };
       };
     };
@@ -24,39 +25,26 @@ declare global {
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '';
 
-interface GooglePayload {
-  name?: string;
-  email?: string;
-  picture?: string;
-}
-
-function parseJwtPayload(token: string): GooglePayload {
-  try {
-    return JSON.parse(atob(token.split('.')[1])) as GooglePayload;
-  } catch {
-    return {};
-  }
-}
-
-interface Props {
-  onError?: (msg: string) => void;
-}
+interface Props { onError?: (msg: string) => void }
 
 export function GoogleSignInButton({ onError }: Props) {
   const { loginWithGoogleToken } = useAuth();
   const router = useRouter();
-  const btnRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState(false);
-  const [userInfo, setUserInfo] = useState<GooglePayload | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading]   = useState(false);
   const [gisReady, setGisReady] = useState(false);
 
+  // Carrega o script GIS uma única vez
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.google?.accounts) { setGisReady(true); return; }
     const existing = document.getElementById('gsi-script');
-    if (existing) { return; }
+    if (existing) {
+      existing.addEventListener('load', () => setGisReady(true));
+      return;
+    }
     const script = document.createElement('script');
-    script.id = 'gsi-script';
+    script.id  = 'gsi-script';
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
@@ -64,72 +52,67 @@ export function GoogleSignInButton({ onError }: Props) {
     document.head.appendChild(script);
   }, []);
 
+  // Quando GIS carregar, inicializa e renderiza o botão oficial do Google
   useEffect(() => {
-    if (!gisReady || !window.google?.accounts || !GOOGLE_CLIENT_ID || !btnRef.current) return;
+    if (!gisReady || !containerRef.current || !GOOGLE_CLIENT_ID) return;
+    if (!window.google?.accounts) return;
 
     window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      ux_mode: 'popup',
-      use_fedcm_for_prompt: false,
+      client_id:             GOOGLE_CLIENT_ID,
+      auto_select:           false,    // nunca disparar One Tap automático
+      cancel_on_tap_outside: false,
+      use_fedcm_for_prompt:  false,
       callback: async ({ credential }) => {
-        const info = parseJwtPayload(credential);
-        setUserInfo(info);
         setLoading(true);
         try {
           await loginWithGoogleToken(credential);
           router.push('/');
         } catch (e) {
-          setLoading(false);
-          setUserInfo(null);
           onError?.(e instanceof Error ? e.message : 'Erro ao entrar com Google');
+        } finally {
+          setLoading(false);
         }
       },
     });
 
-    window.google.accounts.id.renderButton(btnRef.current, {
-      type: 'standard',
-      theme: 'filled_black',
-      size: 'large',
-      width: btnRef.current.offsetWidth || 400,
-      text: 'signin_with',
-      shape: 'rectangular',
-      logo_alignment: 'left',
-    });
+    // Suprime qualquer One Tap automático que o browser possa disparar
+    window.google.accounts.id.disableAutoPrompt();
+
+    // Renderiza o botão oficial dentro do nosso container (centralizado e responsivo)
+    if (containerRef.current) {
+      containerRef.current.innerHTML = '';
+      window.google.accounts.id.renderButton(containerRef.current, {
+        type:   'standard',
+        theme:  'outline',
+        size:   'large',
+        text:   'continue_with',
+        shape:  'square',
+        locale: 'pt-BR',
+        width:  containerRef.current.offsetWidth || 480,
+      });
+    }
   }, [gisReady, loginWithGoogleToken, router, onError]);
 
-  if (loading && userInfo) {
-    return (
-      <div className="w-full rounded-sm overflow-hidden border border-paper/10 bg-[#1a1a1a]">
-        <div
-          className="h-0.5 bg-clay origin-left animate-progress-bar"
-          style={{ animation: 'progress-bar 2.5s ease-in-out infinite' }}
-        />
-        <div className="flex items-center gap-3 px-4 py-3">
-          {userInfo.picture ? (
-            <Image
-              src={userInfo.picture}
-              alt={userInfo.name ?? ''}
-              width={32}
-              height={32}
-              className="rounded-full ring-2 ring-clay/40"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-clay/20 flex items-center justify-center text-clay text-sm font-medium">
-              {userInfo.name?.[0]?.toUpperCase() ?? 'G'}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-paper truncate">{userInfo.name}</p>
-            <p className="text-xs text-mist truncate">{userInfo.email}</p>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-mist">
-            <span className="spinner-sm" />
-            <span>Entrando</span>
-          </div>
+  return (
+    <div className="w-full flex flex-col items-center gap-3">
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-mid py-2">
+          <span className="spinner-dark" />
+          <span>Autenticando…</span>
         </div>
-      </div>
-    );
-  }
-
-  return <div ref={btnRef} className="w-full" />;
+      )}
+      {/* Container do botão oficial do Google — ele se autoexpande */}
+      <div
+        ref={containerRef}
+        className="w-full flex justify-center"
+        style={{ minHeight: 44 }}
+      />
+      {!gisReady && (
+        <div className="flex items-center justify-center gap-2 w-full py-3 border border-mist text-sm text-faint">
+          <span className="spinner-dark" />
+          Carregando…
+        </div>
+      )}
+    </div>
+  );
 }
