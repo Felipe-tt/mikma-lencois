@@ -72,8 +72,13 @@ export default function PainelDashboard() {
       {/* Desktop table */}
       <div className="hidden sm:block border border-mist">
         <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-warm border-b border-mist">
-          {['Pedido / Status', 'Data', 'Total', ''].map((h, i) => (
-            <span key={i} className="text-2xs font-bold tracking-[0.18em] uppercase text-faint">{h}</span>
+          {[
+            { label: 'Pedido / Status', cls: '' },
+            { label: 'Data',            cls: 'text-right' },
+            { label: 'Total',           cls: 'text-right' },
+            { label: '',                cls: '' },
+          ].map((h, i) => (
+            <span key={i} className={`text-2xs font-bold tracking-[0.18em] uppercase text-faint ${h.cls}`}>{h.label}</span>
           ))}
         </div>
         {orders.length === 0 ? (
@@ -84,8 +89,8 @@ export default function PainelDashboard() {
               <span className="text-xs font-mono text-faint shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
               <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
             </div>
-            <span className="text-xs text-faint whitespace-nowrap">{formatTsDateTime(o.createdAt)}</span>
-            <span className="font-display text-base text-ink">{formatCurrency(o.totalCents)}</span>
+            <span className="text-xs text-faint whitespace-nowrap text-right">{formatTsDateTime(o.createdAt)}</span>
+            <span className="font-display text-base text-ink text-right">{formatCurrency(o.totalCents)}</span>
             <Link href={`/painel/pedidos/${o.id}`} className="text-xs font-semibold text-clay hover:text-clay-d transition-colors">Ver</Link>
           </div>
         ))}
