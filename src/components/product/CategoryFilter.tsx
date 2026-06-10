@@ -1,9 +1,10 @@
 'use client';
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Props { categories: string[]; active?: string; onClose?: () => void; }
 
-export function CategoryFilter({ categories, active, onClose }: Props) {
+function Filter({ categories, active, onClose }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -22,9 +23,10 @@ export function CategoryFilter({ categories, active, onClose }: Props) {
           const isActive = active === value;
           return (
             <li key={label}>
-              <button onClick={() => go(value)}
-                className={`w-full text-left px-3 py-2.5 text-sm transition-all duration-200 font-medium
-                  ${isActive ? 'bg-ink text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`}>
+              <button
+                onClick={() => go(value)}
+                className={`w-full text-left px-3 py-2.5 text-sm transition-all duration-200 font-medium ${isActive ? 'bg-ink text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`}
+              >
                 {label}
               </button>
             </li>
@@ -33,4 +35,8 @@ export function CategoryFilter({ categories, active, onClose }: Props) {
       </ul>
     </div>
   );
+}
+
+export function CategoryFilter(props: Props) {
+  return <Suspense fallback={null}><Filter {...props} /></Suspense>;
 }
