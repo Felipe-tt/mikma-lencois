@@ -36,79 +36,137 @@ export default function PainelDashboard() {
   const waiting = orders.filter(o => o.status === 'pending_payment').length;
 
   const kpis = [
-    { label: 'Pedidos hoje', value: paid.filter(o => o.createdAt >= todayStr).length, fmt: 'n' },
-    { label: 'Receita hoje', value: paid.filter(o => o.createdAt >= todayStr).reduce((s, o) => s + o.totalCents, 0), fmt: 'c' },
-    { label: 'Pedidos no mês', value: paid.filter(o => o.createdAt >= monthStr).length, fmt: 'n' },
-    { label: 'Receita no mês', value: paid.filter(o => o.createdAt >= monthStr).reduce((s, o) => s + o.totalCents, 0), fmt: 'c' },
-    { label: 'Aguardando pag.', value: waiting, fmt: 'n', alert: true },
+    {
+      label: 'Pedidos hoje',
+      value: paid.filter(o => o.createdAt >= todayStr).length,
+      fmt: 'n' as const,
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+    },
+    {
+      label: 'Receita hoje',
+      value: paid.filter(o => o.createdAt >= todayStr).reduce((s, o) => s + o.totalCents, 0),
+      fmt: 'c' as const,
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
+    },
+    {
+      label: 'Pedidos no mês',
+      value: paid.filter(o => o.createdAt >= monthStr).length,
+      fmt: 'n' as const,
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    },
+    {
+      label: 'Receita no mês',
+      value: paid.filter(o => o.createdAt >= monthStr).reduce((s, o) => s + o.totalCents, 0),
+      fmt: 'c' as const,
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    },
+    {
+      label: 'Aguardando pag.',
+      value: waiting,
+      fmt: 'n' as const,
+      alert: true,
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    },
   ];
 
   return (
-    <div>
-      <div className="mb-6">
-        <span className="eyebrow mb-1 block">Visão geral</span>
-        <h1 className="font-display font-normal text-ink text-2xl">Dashboard</h1>
+    <div className="max-w-5xl">
+      {/* Page header */}
+      <div className="mb-8">
+        <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Visão geral</p>
+        <h1 className="font-display font-normal text-[#0F0E0C] text-2xl">Dashboard</h1>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-mist mb-8 border border-mist">
+      {/* KPI grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         {kpis.map(k => (
-          <div key={k.label} className={`${k.alert && k.value > 0 ? 'bg-amber-50' : 'bg-paper'} px-4 py-5`}>
-            <p className={`text-2xs font-bold tracking-[0.16em] uppercase mb-2 ${k.alert && k.value > 0 ? 'text-amber-600' : 'text-faint'}`}>
-              {k.label}
-            </p>
-            <p className={`font-display text-xl ${k.alert && k.value > 0 ? 'text-amber-700' : 'text-ink'}`}>
-              {k.fmt === 'c' ? formatCurrency(k.value) : k.value}
-            </p>
+          <div
+            key={k.label}
+            className={`bg-[#FAFAF8] border rounded-sm px-4 py-4 flex flex-col gap-3 ${
+              k.alert && k.value > 0
+                ? 'border-amber-200 bg-amber-50'
+                : 'border-[#E8E4DC]'
+            }`}
+          >
+            <span className={k.alert && k.value > 0 ? 'text-amber-500' : 'text-[#B8B2AA]'}>{k.icon}</span>
+            <div>
+              <p className={`text-[10px] font-semibold tracking-[0.15em] uppercase mb-1 ${
+                k.alert && k.value > 0 ? 'text-amber-600' : 'text-[#B8B2AA]'
+              }`}>
+                {k.label}
+              </p>
+              <p className={`font-display text-xl leading-none ${
+                k.alert && k.value > 0 ? 'text-amber-700' : 'text-[#0F0E0C]'
+              }`}>
+                {k.fmt === 'c' ? formatCurrency(k.value) : k.value}
+              </p>
+            </div>
           </div>
         ))}
       </div>
 
+      {/* Recent orders */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-display font-normal text-ink text-lg">Pedidos recentes</h2>
-        <Link href="/painel/pedidos" className="text-xs font-medium text-clay hover:text-clay-d transition-colors">Ver todos</Link>
+        <h2 className="font-display font-normal text-[#0F0E0C] text-lg">Pedidos recentes</h2>
+        <Link href="/painel/pedidos" className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors tracking-wide uppercase">
+          Ver todos →
+        </Link>
       </div>
 
-      {/* Desktop table */}
-      <div className="hidden sm:block border border-mist">
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-warm border-b border-mist">
-          {[
-            { label: 'Pedido / Status', cls: '' },
-            { label: 'Data',            cls: 'text-right' },
-            { label: 'Total',           cls: 'text-right' },
-            { label: '',                cls: '' },
-          ].map((h, i) => (
-            <span key={i} className={`text-2xs font-bold tracking-[0.18em] uppercase text-faint ${h.cls}`}>{h.label}</span>
-          ))}
+      {/* Table */}
+      <div className="bg-[#FAFAF8] border border-[#E8E4DC] overflow-hidden">
+        {/* Table header */}
+        <div className="grid grid-cols-[1fr_140px_120px_48px] px-5 py-3 border-b border-[#E8E4DC] bg-[#F5F3EF]">
+          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]">Pedido / Status</span>
+          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] text-right">Data</span>
+          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] text-right">Total</span>
+          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]"></span>
         </div>
+
         {orders.length === 0 ? (
-          <p className="px-5 py-12 text-center text-sm text-faint">Nenhum pedido ainda.</p>
+          <p className="px-5 py-14 text-center text-sm text-[#B8B2AA]">Nenhum pedido ainda.</p>
         ) : orders.map((o, idx) => (
-          <div key={o.id} className={`grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-4 items-center ${idx < orders.length - 1 ? 'border-b border-mist' : ''} hover:bg-warm transition-colors`}>
+          <div
+            key={o.id}
+            className={`grid grid-cols-[1fr_140px_120px_48px] px-5 py-3.5 items-center hover:bg-[#F5F3EF] transition-colors ${
+              idx < orders.length - 1 ? 'border-b border-[#E8E4DC]' : ''
+            }`}
+          >
             <div className="flex items-center gap-3 min-w-0">
-              <span className="text-xs font-mono text-faint shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
+              <span className="text-[11px] font-mono text-[#B8B2AA] shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
               <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
             </div>
-            <span className="text-xs text-faint whitespace-nowrap text-right">{formatTsDateTime(o.createdAt)}</span>
-            <span className="font-display text-base text-ink text-right">{formatCurrency(o.totalCents)}</span>
-            <Link href={`/painel/pedidos/${o.id}`} className="text-xs font-semibold text-clay hover:text-clay-d transition-colors">Ver</Link>
+            <span className="text-[11px] text-[#B8B2AA] text-right">{formatTsDateTime(o.createdAt)}</span>
+            <span className="font-display text-sm text-[#0F0E0C] text-right">{formatCurrency(o.totalCents)}</span>
+            <div className="flex justify-end">
+              <Link
+                href={`/painel/pedidos/${o.id}`}
+                className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors"
+              >
+                Ver
+              </Link>
+            </div>
           </div>
         ))}
       </div>
 
       {/* Mobile cards */}
-      <div className="flex flex-col gap-3 sm:hidden">
+      <div className="flex flex-col gap-2 sm:hidden mt-2">
         {orders.length === 0 ? (
-          <p className="py-10 text-center text-sm text-faint">Nenhum pedido ainda.</p>
+          <p className="py-10 text-center text-sm text-[#B8B2AA]">Nenhum pedido ainda.</p>
         ) : orders.map(o => (
-          <Link key={o.id} href={`/painel/pedidos/${o.id}`} className="block border border-mist bg-paper p-4 hover:bg-warm transition-colors">
+          <Link
+            key={o.id}
+            href={`/painel/pedidos/${o.id}`}
+            className="block border border-[#E8E4DC] bg-[#FAFAF8] p-4 hover:bg-[#F5F3EF] transition-colors"
+          >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-mono text-faint">#{o.id.slice(-8).toUpperCase()}</span>
+              <span className="text-[11px] font-mono text-[#B8B2AA]">#{o.id.slice(-8).toUpperCase()}</span>
               <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
             </div>
             <div className="flex items-end justify-between">
-              <span className="text-xs text-faint">{formatTsDateTime(o.createdAt)}</span>
-              <span className="font-display text-base text-ink">{formatCurrency(o.totalCents)}</span>
+              <span className="text-[11px] text-[#B8B2AA]">{formatTsDateTime(o.createdAt)}</span>
+              <span className="font-display text-base text-[#0F0E0C]">{formatCurrency(o.totalCents)}</span>
             </div>
           </Link>
         ))}
