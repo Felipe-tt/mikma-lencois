@@ -7,7 +7,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const s = await getSettings();
   return (
     <div className="flex min-h-screen flex-col">
-      <Header topbarText={s.topbarText} />
+      <Header topbarText={s.topbarText} freeShippingThresholdCents={s.freeShippingThresholdCents} />
       <main className="flex-1">
         <PageTransition>{children}</PageTransition>
       </main>
