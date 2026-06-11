@@ -171,7 +171,10 @@ export default function CheckoutPage() {
                       onChange={e => setCustomer(c => ({ ...c, cpf: maskCpf(e.target.value) }))}
                       className={field('cpf')} placeholder="000.000.000-00" maxLength={14}
                     />
-                    {errors.cpf && <p className="text-xs text-red-500 mt-1">{errors.cpf}</p>}
+                    {errors.cpf
+                      ? <p className="text-[11px] text-red-500 mt-1">{errors.cpf}</p>
+                      : <p className="text-[10px] text-faint mt-1">Para emissão de nota fiscal</p>
+                    }
                   </div>
                   <div>
                     <label className="label">Celular / WhatsApp</label>
@@ -274,32 +277,50 @@ export default function CheckoutPage() {
             </form>
 
             {/* ── Resumo ── */}
-            <div className="w-full bg-warm border border-mist p-5 sm:p-7 flex flex-col gap-4 lg:sticky lg:top-28">
+            <div className="w-full border border-mist p-5 flex flex-col gap-4 lg:sticky lg:top-24" style={{borderRadius:'2px'}}>
               <h2 className="font-display font-normal text-ink text-xl">Resumo do pedido</h2>
-              <ul className="flex flex-col gap-2.5">
+
+              {/* Items with thumbnails */}
+              <ul className="flex flex-col gap-3">
                 {items.map(item => (
-                  <li key={item.sku} className="flex justify-between gap-3 text-sm">
-                    <span className="text-mid truncate">{item.productName} <span className="text-faint">×{item.quantity}</span></span>
-                    <span className="shrink-0 font-medium text-ink">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                  <li key={item.sku} className="flex items-center gap-3">
+                    <div className="relative w-10 h-12 shrink-0 overflow-hidden bg-warm border border-mist/60">
+                      {item.image
+                        ? <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><span className="font-display text-faint text-xs">M</span></div>
+                      }
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-ink text-paper text-[9px] font-bold flex items-center justify-center leading-none" style={{borderRadius:'2px'}}>
+                        {item.quantity}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-medium text-ink leading-snug line-clamp-1">{item.productName}</p>
+                      <p className="text-[10px] text-faint">{item.variant?.size}</p>
+                    </div>
+                    <span className="shrink-0 text-[13px] font-medium text-ink">{formatCurrency(item.unitPrice * item.quantity)}</span>
                   </li>
                 ))}
               </ul>
-              <div className="border-t border-mist pt-3 text-xs text-faint flex justify-between">
+
+              <div className="border-t border-mist pt-3 text-[11px] text-faint flex justify-between">
                 <span>Frete</span><span>calculado após o PIX</span>
               </div>
-              <div className="flex justify-between items-baseline border-t border-mist pt-3">
-                <span className="text-sm font-semibold text-ink">Total</span>
-                <span className="font-display text-2xl text-ink">{formatCurrency(total)}</span>
+              <div className="flex justify-between items-baseline">
+                <span className="text-[13px] font-semibold text-ink">Total</span>
+                <span className="font-display text-[1.5rem] text-ink">{formatCurrency(total)}</span>
               </div>
-              <div className="border-t border-mist pt-4 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-xs text-mid">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  Pagamento via PIX — aprovação imediata
-                </div>
-                <div className="flex items-center gap-2 text-xs text-mid">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  SSL 256-bit · dados protegidos
-                </div>
+
+              <div className="border-t border-mist pt-3 flex flex-col gap-2">
+                {[
+                  'Pagamento via PIX — aprovação imediata',
+                  'SSL 256-bit · dados protegidos',
+                  'Nota fiscal emitida automaticamente',
+                ].map(text => (
+                  <div key={text} className="flex items-center gap-2 text-[11px] text-faint">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    {text}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -312,26 +333,24 @@ export default function CheckoutPage() {
 function StepDone({ label }: { label: string }) {
   return (
     <span className="flex items-center gap-1.5 text-faint shrink-0">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-      </svg>
-      <span className="hidden sm:inline">{label}</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <span className="hidden sm:inline text-[12px]">{label}</span>
     </span>
   );
 }
 function StepActive({ label, num }: { label: string; num: number }) {
   return (
     <span className="flex items-center gap-1.5 text-ink font-semibold shrink-0">
-      <span className="w-5 h-5 rounded-full bg-ink text-paper flex items-center justify-center text-xs font-bold shrink-0">{num}</span>
-      {label}
+      <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0">{num}</span>
+      <span className="text-[12px]">{label}</span>
     </span>
   );
 }
 function StepPending({ label, num }: { label: string; num: number }) {
   return (
     <span className="flex items-center gap-1.5 text-faint shrink-0">
-      <span className="w-5 h-5 rounded-full border border-mist flex items-center justify-center text-xs shrink-0">{num}</span>
-      <span className="hidden sm:inline">{label}</span>
+      <span className="w-5 h-5 border border-mist flex items-center justify-center text-[10px] shrink-0">{num}</span>
+      <span className="hidden sm:inline text-[12px]">{label}</span>
     </span>
   );
 }
