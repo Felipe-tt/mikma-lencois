@@ -1,6 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import type { Product, InventoryItem } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
@@ -38,82 +37,91 @@ export default async function ProductPage({ params }: Props) {
   const [product, inventory] = await Promise.all([getProduct(slug), getInventory(slug)]);
   if (!product) notFound();
 
+  // Extract specs from tags (thread count, fabric composition, etc.)
+  const specTags = product.tags?.filter(t =>
+    /\d+\s*fios|percal|misto|microfibra|algodão|poliéster|bamboo|cetim/i.test(t)
+  ) ?? [];
+
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="border-b border-mist bg-paper">
-        <div className="container-shop py-3.5">
-          <nav className="flex items-center gap-2 text-xs text-faint overflow-x-auto whitespace-nowrap scrollbar-none">
-            <Link href="/" className="hover:text-clay transition-colors shrink-0">Início</Link>
-            <span className="text-mist">/</span>
-            <Link href="/produtos" className="hover:text-clay transition-colors shrink-0">Produtos</Link>
-            {product.category && (
-              <>
-                <span className="text-mist">/</span>
-                <Link
-                  href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
-                  className="hover:text-clay transition-colors shrink-0"
-                >
-                  {product.category}
-                </Link>
-              </>
-            )}
-            <span className="text-mist">/</span>
-            <span className="text-mid font-medium truncate max-w-[180px]">{product.name}</span>
-          </nav>
-        </div>
+      <div className="container-shop pt-5 pb-0">
+        {/* Breadcrumb — integrated, no bg */}
+        <nav className="flex items-center gap-1.5 text-[11px] text-faint overflow-x-auto whitespace-nowrap scrollbar-none mb-8">
+          <Link href="/" className="hover:text-clay transition-colors shrink-0">Início</Link>
+          <span className="text-mist">/</span>
+          <Link href="/produtos" className="hover:text-clay transition-colors shrink-0">Produtos</Link>
+          {product.category && (
+            <>
+              <span className="text-mist">/</span>
+              <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
+                className="hover:text-clay transition-colors shrink-0">
+                {product.category}
+              </Link>
+            </>
+          )}
+          <span className="text-mist">/</span>
+          <span className="text-mid truncate max-w-[180px]">{product.name}</span>
+        </nav>
       </div>
 
-      <div className="container-shop py-10 sm:py-14 lg:py-18 pb-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-start">
+      <div className="container-shop pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 xl:gap-24 items-start">
 
           {/* ── Gallery ── */}
           <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} />
 
           {/* ── Info ── */}
-          <div className="lg:sticky lg:top-28 flex flex-col gap-6">
+          <div className="lg:sticky lg:top-24 flex flex-col gap-5">
+
             {product.category && <span className="eyebrow">{product.category}</span>}
 
             <div>
-              <h1 className="font-display font-normal text-ink leading-tight text-3xl sm:text-4xl lg:text-[2.75rem] mb-4">
+              <h1 className="font-display font-normal text-ink leading-[1.08] text-[2rem] sm:text-[2.4rem] lg:text-[2.6rem] mb-4">
                 {product.name}
               </h1>
-              <p className="font-display text-3xl text-ink">{formatCurrency(product.price)}</p>
+              <p className="font-display text-[1.75rem] text-ink font-normal">
+                {formatCurrency(product.price)}
+              </p>
             </div>
 
-            {product.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {product.tags.map(tag => (
-                  <span key={tag} className="bg-warm text-mid text-xs font-medium tracking-wide px-3 py-1.5 border border-mist">
+            {product.description && (
+              <p className="text-[14px] text-mid leading-relaxed pt-1">
+                {product.description}
+              </p>
+            )}
+
+            {/* Specs from tags */}
+            {specTags.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {specTags.map(tag => (
+                  <span key={tag} className="text-[11px] font-medium text-mid bg-warm border border-mist px-3 py-1.5 uppercase tracking-[0.08em]">
                     {tag}
                   </span>
                 ))}
               </div>
             )}
 
-            {product.description && (
-              <p className="text-sm text-mid leading-relaxed border-t border-mist pt-5">
-                {product.description}
-              </p>
-            )}
-
-            <div className="border-t border-mist pt-6">
+            {/* Variant selector */}
+            <div className="border-t border-mist pt-5">
               <VariantSelector product={product} inventory={inventory} />
             </div>
 
-            {/* Trust signals */}
-            <div className="grid grid-cols-1 gap-2 pt-1">
+            {/* Trust signals — inline, no box */}
+            <div className="flex flex-col gap-2.5 border-t border-mist pt-4">
               {[
                 { icon: <TruckIcon />, text: 'Entrega local em Blumenau em até 1h' },
                 { icon: <PackageIcon />, text: 'Frete para todo o Brasil com rastreio' },
                 { icon: <PixIcon />, text: 'Pagamento PIX com confirmação imediata' },
               ].map(({ icon, text }) => (
-                <div key={text} className="flex items-center gap-3 text-sm text-mid bg-warm px-4 py-3 border border-mist">
-                  <span className="text-clay shrink-0">{icon}</span>
+                <div key={text} className="flex items-center gap-3 text-[13px] text-mid">
+                  <span className="text-clay/80 shrink-0">{icon}</span>
                   <span>{text}</span>
                 </div>
               ))}
             </div>
+
+            {/* Size guide */}
+            <SizeGuide />
           </div>
         </div>
       </div>
@@ -121,30 +129,52 @@ export default async function ProductPage({ params }: Props) {
   );
 }
 
-function TruckIcon() {
+function SizeGuide() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <rect x="1" y="3" width="15" height="13"/>
-      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-      <circle cx="5.5" cy="18.5" r="2.5"/>
-      <circle cx="18.5" cy="18.5" r="2.5"/>
-    </svg>
+    <details className="group border-t border-mist pt-4">
+      <summary className="flex items-center justify-between cursor-pointer list-none text-[12px] font-semibold text-mid tracking-[0.08em] uppercase hover:text-ink transition-colors">
+        Guia de tamanhos
+        <svg className="w-3.5 h-3.5 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </summary>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-[12px] border-collapse">
+          <thead>
+            <tr className="border-b border-mist">
+              {['Tamanho', 'Cama', 'Comprimento', 'Largura'].map(h => (
+                <th key={h} className="text-left font-semibold text-[10px] tracking-[0.12em] uppercase text-faint pb-2 pr-4">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ['Solteiro', '0,88m', '2,20m', '1,40m'],
+              ['Solteiro Plus', '1,00m', '2,20m', '1,50m'],
+              ['Casal', '1,38m', '2,28m', '1,80m'],
+              ['Queen', '1,58m', '2,28m', '2,10m'],
+              ['King', '1,93m', '2,28m', '2,40m'],
+            ].map(([size, bed, length, width]) => (
+              <tr key={size} className="border-b border-mist/50 last:border-0">
+                <td className="py-2 pr-4 font-medium text-ink">{size}</td>
+                <td className="py-2 pr-4 text-mid">{bed}</td>
+                <td className="py-2 pr-4 text-mid">{length}</td>
+                <td className="py-2 pr-4 text-mid">{width}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
   );
+}
+
+function TruckIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
 }
 function PackageIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-      <line x1="12" y1="22.08" x2="12" y2="12"/>
-    </svg>
-  );
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>;
 }
 function PixIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <rect x="3" y="3" width="18" height="18" rx="2"/>
-      <path d="M12 7v10M7 12h10"/>
-    </svg>
-  );
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 7v10M7 12h10"/></svg>;
 }
