@@ -32,7 +32,7 @@ export default async function HomePage() {
         <div className="container-shop">
           <div className="grid lg:grid-cols-[1fr_1px_1fr] min-h-[540px] lg:min-h-[680px]">
 
-            {/* Left: text */}
+            {/* Left: copy */}
             <div className="flex flex-col justify-center py-20 lg:py-32 lg:pr-20">
               <span className="eyebrow mb-6">
                 {s.heroTag ?? 'Blumenau, SC'} — Coleção {new Date().getFullYear()}
@@ -48,65 +48,64 @@ export default async function HomePage() {
               <p className="mt-5 text-[15px] text-mid max-w-[340px] leading-relaxed">
                 {s.heroSubtitle ?? 'Qualidade direto da fábrica. Entrega em até 1h em Blumenau ou para todo o Brasil.'}
               </p>
+
               <div className="mt-10 flex items-center gap-5 flex-wrap">
                 <Link href="/produtos" className="btn-primary-lg">Ver produtos</Link>
-                <Link href="/sobre" className="text-[13px] font-medium text-mid hover:text-ink transition-colors flex items-center gap-1.5">
+                <Link href="/sobre" className="text-[13px] font-medium text-mid hover:text-ink transition-colors flex items-center gap-1.5 group">
                   Nossa história
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  <svg className="transition-transform duration-150 group-hover:translate-x-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </Link>
               </div>
 
-              {/* Inline trust line */}
-              <div className="mt-10 pt-6 border-t border-mist/60 flex flex-wrap gap-x-5 gap-y-1.5">
+              {/* Trust signals — inline, no box */}
+              <div className="mt-10 pt-6 border-t border-mist/60 flex flex-wrap gap-x-6 gap-y-2">
                 {[
-                  { icon: '⚡', text: 'Entrega em 1h em Blumenau' },
-                  { icon: '📦', text: 'Frete para todo Brasil' },
-                  { icon: '✓', text: 'PIX com confirmação imediata' },
+                  { icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>, text: 'Entrega em 1h em Blumenau' },
+                  { icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>, text: 'Frete para todo Brasil' },
+                  { icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>, text: 'PIX com confirmação imediata' },
                 ].map(t => (
-                  <span key={t.text} className="text-[11px] text-mid flex items-center gap-1.5 font-medium">
-                    <span className="text-clay text-[10px]">{t.icon}</span>
+                  <span key={t.text} className="inline-flex items-center gap-1.5 text-[11px] text-mid font-medium">
+                    <span className="text-clay shrink-0">{t.icon}</span>
                     {t.text}
                   </span>
                 ))}
               </div>
             </div>
 
-            {/* Vertical divider */}
+            {/* Divider */}
             <div className="hidden lg:block bg-mist/50" />
 
             {/* Right: logo + float tags */}
             <div className="hidden lg:flex items-center justify-center relative overflow-hidden pl-16">
-              {/* Watermark text */}
-              <p className="font-display text-[16rem] leading-none text-ink/[0.035] font-normal select-none absolute pointer-events-none tracking-[-0.04em]">
-                M
-              </p>
+              {/* Watermark */}
+              <p className="font-display text-[18rem] leading-none text-ink/[0.03] font-normal select-none absolute pointer-events-none tracking-[-0.04em]">M</p>
 
               {/* Logo */}
-              <div className="relative z-10 flex flex-col items-center">
+              <div className="relative z-10 flex flex-col items-center gap-3">
                 <Image
                   src="/logo-transparent.png"
                   alt={s.storeName ?? 'Mikma Lençóis'}
-                  width={200}
-                  height={200}
+                  width={192}
+                  height={192}
                   className="w-48 h-48 object-contain"
                   priority
                 />
-                <p className="text-[10px] font-semibold tracking-[0.32em] uppercase text-faint mt-2">
+                <p className="text-[9px] font-bold tracking-[0.35em] uppercase text-faint">
                   {s.storeCity?.toUpperCase() ?? 'BLUMENAU · SC'}
                 </p>
               </div>
 
-              {/* Float tags — bigger and cleaner */}
+              {/* Float tags */}
               {s.heroFloatTag1Label && (
                 <div className="absolute top-16 right-10 bg-paper border border-mist px-5 py-3.5 shadow-float">
-                  <p className="text-[9px] text-faint uppercase tracking-[0.18em] mb-1">{s.heroFloatTag1Label}</p>
-                  <p className="text-[15px] font-semibold text-ink">{s.heroFloatTag1Value}</p>
+                  <p className="text-[9px] text-faint uppercase tracking-[0.16em] mb-1.5">{s.heroFloatTag1Label}</p>
+                  <p className="text-[15px] font-semibold text-ink leading-none">{s.heroFloatTag1Value}</p>
                 </div>
               )}
               {s.heroFloatTag2Label && (
-                <div className="absolute bottom-20 left-10 bg-ink px-5 py-3.5 shadow-float">
-                  <p className="text-[9px] text-paper/40 uppercase tracking-[0.18em] mb-1">{s.heroFloatTag2Label}</p>
-                  <p className="text-[15px] font-semibold text-paper">{s.heroFloatTag2Value}</p>
+                <div className="absolute bottom-20 left-10 bg-ink px-5 py-3.5">
+                  <p className="text-[9px] text-paper/40 uppercase tracking-[0.16em] mb-1.5">{s.heroFloatTag2Label}</p>
+                  <p className="text-[15px] font-semibold text-paper leading-none">{s.heroFloatTag2Value}</p>
                 </div>
               )}
             </div>
@@ -115,20 +114,20 @@ export default async function HomePage() {
       </section>
 
       {/* ══ DIFERENCIAIS ════════════════════════════════════════════ */}
-      <section className="bg-paper border-b border-mist">
+      <section className="bg-paper border-y border-mist">
         <div className="container-shop">
           <div className="grid grid-cols-1 sm:grid-cols-3">
             {[
-              { n: '01', title: s.feat1Title ?? 'Entrega em 1h',   sub: s.feat1Sub ?? 'Para endereços em Blumenau via Uber Direct.' },
-              { n: '02', title: s.feat2Title ?? 'Frete nacional',   sub: s.feat2Sub ?? 'PAC, SEDEX e transportadoras com rastreio em tempo real.' },
-              { n: '03', title: s.feat3Title ?? 'Pague com PIX',    sub: s.feat3Sub ?? 'Confirmação automática e instantânea.' },
+              { n: '01', title: s.feat1Title ?? 'Entrega em 1h',  sub: s.feat1Sub ?? 'Para endereços em Blumenau via Uber Direct.' },
+              { n: '02', title: s.feat2Title ?? 'Frete nacional', sub: s.feat2Sub ?? 'PAC, SEDEX e transportadoras com rastreio em tempo real.' },
+              { n: '03', title: s.feat3Title ?? 'Pague com PIX',  sub: s.feat3Sub ?? 'Confirmação automática e instantânea.' },
             ].map((b, idx) => (
-              <div key={b.n} className={`px-8 py-10 flex gap-5 items-start hover:bg-warm transition-colors duration-250 relative ${idx > 0 ? 'border-l border-mist' : ''}`}>
-                <span className="font-display text-[3rem] text-clay/15 leading-none font-normal shrink-0 select-none">
+              <div key={b.n} className={`px-8 py-10 flex gap-5 items-start hover:bg-warm transition-colors duration-250 relative ${idx > 0 ? 'border-t sm:border-t-0 sm:border-l border-mist' : ''}`}>
+                <span className="font-display text-[2.8rem] text-clay/12 leading-none font-normal shrink-0 select-none mt-0.5">
                   {b.n}
                 </span>
                 <div>
-                  <p className="text-[14px] font-semibold text-ink mb-2">{b.title}</p>
+                  <p className="text-[14px] font-semibold text-ink mb-2 leading-snug">{b.title}</p>
                   <p className="text-[13px] text-mid leading-relaxed">{b.sub}</p>
                 </div>
               </div>
@@ -141,8 +140,8 @@ export default async function HomePage() {
       {categories.length > 0 && (
         <section className="section-sm bg-paper">
           <div className="container-shop">
-            <div className="flex items-center gap-4 mb-6">
-              <span className="eyebrow">Categorias</span>
+            <div className="flex items-center gap-5 mb-7">
+              <span className="eyebrow shrink-0">Categorias</span>
               <div className="flex-1 h-px bg-mist" />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -150,12 +149,12 @@ export default async function HomePage() {
                 <Link
                   key={cat}
                   href={`/produtos?categoria=${encodeURIComponent(cat)}`}
-                  className="chip-idle text-[11px]"
+                  className="chip-idle"
                 >
                   {cat}
                 </Link>
               ))}
-              <Link href="/produtos" className="chip-idle text-[11px]">
+              <Link href="/produtos" className="chip-idle">
                 Ver todos →
               </Link>
             </div>
@@ -163,8 +162,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ══ PRODUTOS EM DESTAQUE ════════════════════════════════════ */}
-      <section className="section-md bg-paper">
+      {/* ══ PRODUTOS DESTAQUE ═══════════════════════════════════════ */}
+      <section className="section-md bg-paper border-t border-mist">
         <div className="container-shop">
           <div className="flex items-end justify-between mb-10 sm:mb-14">
             <div>
@@ -175,7 +174,7 @@ export default async function HomePage() {
             </div>
             <Link
               href="/produtos"
-              className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-mid hover:text-ink transition-colors group"
+              className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-mid hover:text-ink transition-colors duration-150 group pb-0.5"
             >
               Ver tudo
               <svg className="transition-transform duration-150 group-hover:translate-x-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -200,9 +199,9 @@ export default async function HomePage() {
 
       {/* ══ CTA BANNER ══════════════════════════════════════════════ */}
       <section className="bg-ink py-20 sm:py-28 relative overflow-hidden">
-        {/* Watermark background */}
-        <div className="absolute inset-0 flex items-center justify-end pointer-events-none overflow-hidden pr-8 sm:pr-16">
-          <p className="font-display text-[18rem] sm:text-[22rem] leading-none text-paper/[0.025] font-normal select-none tracking-[-0.05em]">
+        {/* Watermark */}
+        <div className="absolute inset-0 flex items-center justify-end pointer-events-none overflow-hidden pr-4 sm:pr-16">
+          <p className="font-display text-[16rem] sm:text-[22rem] leading-none text-paper/[0.022] font-normal select-none tracking-[-0.05em]">
             M
           </p>
         </div>
@@ -214,14 +213,14 @@ export default async function HomePage() {
               <h2 className="font-display font-normal text-paper leading-[1.05] text-4xl sm:text-5xl lg:text-[3.5rem] text-balance">
                 {s.storeSlogan ?? 'Conforto que\nvocê merece.'}
               </h2>
-              <p className="mt-5 text-[14px] text-paper/50 leading-relaxed max-w-sm">
+              <p className="mt-5 text-[14px] text-paper/45 leading-relaxed max-w-sm">
                 Da nossa fábrica direto para a sua cama. Sem intermediários.
               </p>
             </div>
             <div className="shrink-0 flex flex-col sm:flex-row gap-3">
               <Link href="/produtos" className="btn-clay-lg">Comprar agora</Link>
-              <Link href="/cadastro" className="btn px-8 py-[14px] text-[13px] font-semibold tracking-[0.06em] bg-transparent text-paper border border-paper/20 hover:bg-paper hover:text-ink transition-all duration-150">
-                Criar conta grátis
+              <Link href="/cadastro" className="btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em] bg-transparent text-paper border border-paper/20 hover:bg-paper/10 hover:border-paper/30 transition-all duration-150">
+                Criar conta
               </Link>
             </div>
           </div>

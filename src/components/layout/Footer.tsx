@@ -22,80 +22,48 @@ export function Footer({
 }: Props) {
   const year = new Date().getFullYear();
   const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
+  const city = storeCity.split(',')[0];
 
   return (
     <footer className="bg-ink text-paper mt-auto overflow-hidden">
 
-      {/* ── Frase editorial grande ── */}
-      <div className="container-shop pt-16 pb-12 border-b border-paper/8">
-        <p className="font-display font-normal text-paper/10 text-[clamp(2.5rem,8vw,6rem)] leading-[1.05] tracking-tight select-none pointer-events-none">
-          Feito em {storeCity.split(',')[0]}.<br />
-          <em className="text-paper/20">Dorme bem.</em>
+      {/* ── Frase editorial ── */}
+      <div className="container-shop pt-16 pb-12 border-b border-paper/[0.07]">
+        <p className="font-display font-normal text-paper/[0.13] text-[clamp(2.2rem,7vw,5.5rem)] leading-[1.06] tracking-tight select-none pointer-events-none">
+          Feito em {city}.<br />
+          <em className="text-paper/[0.22] not-italic">Dorme bem.</em>
         </p>
       </div>
 
-      {/* ── Corpo principal ── */}
+      {/* ── Corpo ── */}
       <div className="container-shop py-14">
-        <div className="grid grid-cols-1 md:grid-cols-[1.8fr_1fr_1fr] gap-12 md:gap-8 lg:gap-16 pb-14 border-b border-paper/8">
+        <div className="grid grid-cols-2 md:grid-cols-[1.6fr_1fr_1fr_1fr] gap-10 md:gap-8 lg:gap-12 pb-12 border-b border-paper/[0.07]">
 
           {/* Col 1 — Marca */}
-          <div className="flex flex-col gap-6">
+          <div className="col-span-2 md:col-span-1 flex flex-col gap-5">
             <Image
               src="/logo-white.png"
               alt={storeName}
-              width={160}
-              height={160}
-              className="h-12 w-auto object-contain"
+              width={140}
+              height={56}
+              className="h-10 w-auto object-contain"
             />
-            <p className="text-sm text-paper/35 leading-relaxed max-w-[22ch]">
+            <p className="text-[13px] text-paper/30 leading-relaxed max-w-[20ch]">
               Lençóis de qualidade,<br />direto de fábrica.
             </p>
 
-            {/* Contato inline */}
-            <div className="flex flex-col gap-1.5">
-              {wa && (
-                <a
-                  href={wa}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2 w-fit"
-                >
-                  <span className="text-xs text-paper/25 group-hover:text-paper/50 transition-colors font-medium tracking-wide uppercase">WhatsApp</span>
-                  <svg viewBox="0 0 16 16" fill="none" className="w-3 h-3 text-paper/20 group-hover:text-paper/50 transition-colors -rotate-45" stroke="currentColor" strokeWidth="1.5"><path d="M2 14L14 2M14 2H6M14 2v8"/></svg>
-                </a>
-              )}
-              {storeEmail && (
-                <a
-                  href={`mailto:${storeEmail}`}
-                  className="group flex items-center gap-2 w-fit"
-                >
-                  <span className="text-xs text-paper/25 group-hover:text-paper/50 transition-colors font-medium tracking-wide uppercase">{storeEmail}</span>
-                  <svg viewBox="0 0 16 16" fill="none" className="w-3 h-3 text-paper/20 group-hover:text-paper/50 transition-colors -rotate-45" stroke="currentColor" strokeWidth="1.5"><path d="M2 14L14 2M14 2H6M14 2v8"/></svg>
-                </a>
-              )}
-            </div>
-
-            {/* Redes sociais — só mostra se configurado no painel */}
+            {/* Social */}
             {(instagramUrl || wa) && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4 mt-1">
                 {instagramUrl && (
-                  <a
-                    href={instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors"
-                  >
+                  <a href={instagramUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors duration-150">
                     Instagram
                   </a>
                 )}
-                {instagramUrl && wa && <span className="text-paper/15">·</span>}
                 {wa && (
-                  <a
-                    href={wa}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors"
-                  >
+                  <a href={wa} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors duration-150">
                     WhatsApp
                   </a>
                 )}
@@ -105,14 +73,14 @@ export function Footer({
 
           {/* Col 2 — Loja */}
           <div>
-            <p className="text-2xs font-bold tracking-[0.22em] uppercase text-paper/20 mb-5">Loja</p>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/20 mb-5">Loja</p>
             <ul className="flex flex-col gap-3.5">
               {[
-                { href: '/produtos', label: 'Todos os produtos' },
+                { href: '/produtos', label: 'Produtos' },
                 { href: '/sobre', label: 'Sobre nós' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-sm text-paper/40 hover:text-paper transition-colors duration-150">
+                  <Link href={href} className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
@@ -120,33 +88,69 @@ export function Footer({
             </ul>
           </div>
 
-          {/* Col 3 — Conta & Legal */}
+          {/* Col 3 — Conta */}
           <div>
-            <p className="text-2xs font-bold tracking-[0.22em] uppercase text-paper/20 mb-5">Conta</p>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/20 mb-5">Conta</p>
             <ul className="flex flex-col gap-3.5">
               {[
                 { href: '/conta/pedidos', label: 'Meus pedidos' },
-                { href: '/privacidade', label: 'Privacidade' },
-                { href: '/termos', label: 'Termos de uso' },
+                { href: '/conta', label: 'Minha conta' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-sm text-paper/40 hover:text-paper transition-colors duration-150">
+                  <Link href={href} className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
               ))}
+            </ul>
+          </div>
+
+          {/* Col 4 — Legal + contato */}
+          <div>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/20 mb-5">Contato</p>
+            <ul className="flex flex-col gap-3.5">
+              {storeEmail && (
+                <li>
+                  <a href={`mailto:${storeEmail}`} className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
+                    {storeEmail}
+                  </a>
+                </li>
+              )}
+              {[
+                { href: '/privacidade', label: 'Privacidade' },
+                { href: '/termos', label: 'Termos de uso' },
+              ].map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
+                    {label}
+                  </Link>
+                </li>
+              ))}
+              {reclameAquiUrl && (
+                <li>
+                  <a href={reclameAquiUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
+                    ReclameAqui
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>
 
         {/* ── Rodapé legal ── */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-7">
-          <p className="text-xs text-paper/20">
-            © {year} {storeName}
+          <p className="text-[11px] text-paper/20">
+            © {year} {storeName} · Todos os direitos reservados
           </p>
-          <p className="text-xs text-paper/15 tracking-[0.2em] uppercase">
-            {storeCity.toUpperCase().replace(', ', '\u00a0·\u00a0')}
-          </p>
+          <div className="flex items-center gap-4">
+            {/* Trust seals */}
+            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/15 uppercase">Pagamento seguro</span>
+            <span className="text-paper/10">·</span>
+            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/15 uppercase">PIX</span>
+            <span className="text-paper/10">·</span>
+            <span className="text-[10px] text-paper/15 tracking-[0.16em] uppercase">{storeCity.toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
+          </div>
         </div>
       </div>
 

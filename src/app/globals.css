@@ -42,19 +42,19 @@
            active:scale-[0.98];
   }
   .btn-primary-lg {
-    @apply btn px-8 py-[14px] text-sm font-semibold tracking-[0.06em]
+    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em]
            bg-ink text-paper border-ink
            hover:bg-clay hover:border-clay
            active:scale-[0.98];
   }
   .btn-outline {
-    @apply btn px-6 py-3 bg-transparent text-ink border-ink/25
+    @apply btn px-6 py-3 bg-transparent text-ink border-ink/20
            hover:bg-ink hover:text-paper hover:border-ink
            active:scale-[0.98];
   }
   .btn-outline-lg {
-    @apply btn px-8 py-[14px] text-sm font-semibold tracking-[0.06em]
-           bg-transparent text-ink border-ink/25
+    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em]
+           bg-transparent text-ink border-ink/20
            hover:bg-ink hover:text-paper hover:border-ink
            active:scale-[0.98];
   }
@@ -68,7 +68,7 @@
            active:scale-[0.98];
   }
   .btn-clay-lg {
-    @apply btn px-8 py-[14px] text-sm font-semibold tracking-[0.06em]
+    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em]
            bg-clay text-paper border-clay
            hover:bg-clay-d hover:border-clay-d
            active:scale-[0.98];
@@ -85,45 +85,45 @@
     @apply w-full px-4 py-3 text-sm bg-white text-ink
            border border-mist outline-none
            placeholder:text-faint
-           focus:border-clay/60 focus:ring-2 focus:ring-clay/8
+           focus:border-clay/50 focus:ring-2 focus:ring-clay/10
            transition-colors duration-150;
     border-radius: 2px;
   }
   .input-sm {
-    @apply w-full px-3 py-2 text-sm bg-white text-ink
+    @apply w-full px-3 py-2.5 text-sm bg-white text-ink
            border border-mist outline-none
            placeholder:text-faint
-           focus:border-clay/60 focus:ring-1 focus:ring-clay/8
+           focus:border-clay/50 focus:ring-1 focus:ring-clay/10
            transition-colors duration-150;
     border-radius: 2px;
   }
   .label {
-    @apply block text-[10px] font-semibold tracking-[0.14em] uppercase text-mid mb-1.5;
+    @apply block text-[10px] font-semibold tracking-[0.12em] uppercase text-mid mb-1.5;
   }
   .select {
     @apply w-full px-4 py-3 text-sm bg-white text-ink
            border border-mist outline-none appearance-none
-           focus:border-clay/60 focus:ring-2 focus:ring-clay/8
+           focus:border-clay/50 focus:ring-2 focus:ring-clay/10
            transition-colors duration-150 cursor-pointer;
     border-radius: 2px;
   }
 
   /* ─── Product card ────────────────────────────────────────────── */
   .product-card {
-    @apply flex flex-col bg-paper relative overflow-hidden
-           transition-all duration-250;
+    @apply flex flex-col bg-paper relative overflow-hidden;
   }
+  /* Image zoom on card hover — only the image, not the whole card */
   .product-card:hover .product-card-image {
-    transform: scale(1.04);
+    transform: scale(1.05);
   }
   .product-card-image {
-    @apply transition-transform duration-500;
+    @apply transition-transform duration-700 ease-out;
     will-change: transform;
   }
 
   /* ─── Typography ──────────────────────────────────────────────── */
   .eyebrow {
-    @apply block text-[10px] font-semibold tracking-[0.2em] uppercase text-clay;
+    @apply block text-[10px] font-semibold tracking-[0.18em] uppercase text-clay;
   }
   .section-title {
     @apply font-display font-normal text-ink leading-tight;
@@ -133,39 +133,52 @@
   }
 
   /* ─── Badges ──────────────────────────────────────────────────── */
-  .badge { @apply inline-flex items-center px-2 py-[3px] text-[11px] font-medium tracking-wide; }
+  .badge           { @apply inline-flex items-center px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.08em] uppercase; }
   .badge-pending   { @apply badge bg-amber-50   text-amber-700  border border-amber-200/80; }
   .badge-paid      { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80; }
   .badge-preparing { @apply badge bg-blue-50    text-blue-700   border border-blue-200/80; }
   .badge-shipped   { @apply badge bg-violet-50  text-violet-700 border border-violet-200/80; }
   .badge-delivered { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80; }
-  .badge-cancelled { @apply badge bg-ink/5      text-mid        border border-mist; }
+  .badge-cancelled { @apply badge text-faint; }
 
-  .chip        { @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold tracking-[0.12em] uppercase border transition-all duration-150 cursor-pointer; }
+  .chip        { @apply inline-flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer; }
   .chip-active { @apply chip bg-ink text-paper border-ink; }
-  .chip-idle   { @apply chip bg-paper text-mid border-mist hover:border-ink/20 hover:text-ink; }
+  .chip-idle   { @apply chip bg-paper text-mid border-mist hover:border-ink/30 hover:text-ink hover:bg-warm; }
 
   /* ─── Layout ──────────────────────────────────────────────────── */
   .container-shop  { @apply mx-auto max-w-7xl px-5 sm:px-8 lg:px-12; }
   .container-wide  { @apply mx-auto max-w-8xl px-5 sm:px-8 lg:px-12; }
-  .page-header     { @apply bg-warm border-b border-mist py-10 md:py-14; }
+
+  /* page-header: two variants */
+  .page-header     { @apply border-b border-mist py-10 md:py-14; }
+  .page-header-clean { @apply py-10 md:py-14; }
+
   .divider         { @apply border-0 border-t border-mist; }
 
-  /* Section spacing scale */
+  /* Section spacing scale — use these, nothing else */
   .section-xs  { @apply py-8; }
   .section-sm  { @apply py-12 sm:py-16; }
   .section-md  { @apply py-16 sm:py-24; }
   .section-lg  { @apply py-24 sm:py-32; }
 
-  /* ─── Trust bar ───────────────────────────────────────────────── */
+  /* ─── Trust signals ────────────────────────────────────────────── */
+  /* Inline trust item — no box, no border, just icon + text */
   .trust-item {
     @apply inline-flex items-center gap-2 text-[12px] font-medium text-mid;
   }
 
+  /* ─── Free shipping bar ───────────────────────────────────────── */
+  .shipping-bar-track {
+    @apply h-0.5 w-full bg-mist overflow-hidden;
+  }
+  .shipping-bar-fill {
+    @apply h-full bg-clay transition-all duration-500 ease-out;
+  }
+
   /* ─── Spinners ────────────────────────────────────────────────── */
-  .spinner    { @apply inline-block w-4 h-4 rounded-full border-2 border-paper/30 border-t-paper animate-spin; }
+  .spinner      { @apply inline-block w-4 h-4 rounded-full border-2 border-paper/30 border-t-paper animate-spin; }
   .spinner-dark { @apply inline-block w-4 h-4 rounded-full border-2 border-mist border-t-clay animate-spin; }
-  .spinner-sm { @apply inline-block w-3.5 h-3.5 rounded-full border-[1.5px] border-paper/30 border-t-paper animate-spin; }
+  .spinner-sm   { @apply inline-block w-3.5 h-3.5 rounded-full border-[1.5px] border-paper/30 border-t-paper animate-spin; }
 
   /* ─── Skeleton ────────────────────────────────────────────────── */
   .skeleton {
@@ -194,6 +207,11 @@
   .divider-text::after {
     content: '';
     @apply flex-1 border-t border-mist;
+  }
+
+  /* ─── Form section header ─────────────────────────────────────── */
+  .form-section-title {
+    @apply text-[11px] font-bold tracking-[0.18em] uppercase text-mid pb-4 border-b border-mist mb-5;
   }
 
   /* ─── Section rule ────────────────────────────────────────────── */

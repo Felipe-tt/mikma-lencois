@@ -20,7 +20,7 @@ export default async function SobrePage() {
           {/* Text */}
           <div className="flex flex-col gap-6">
             {[s.aboutPara1, s.aboutPara2, s.aboutPara3].filter(Boolean).map((para, i) => (
-              <p key={i} className={`leading-relaxed text-mid ${i === 0 ? 'text-lg' : 'text-base'}`}>
+              <p key={i} className={`leading-relaxed text-mid ${i === 0 ? 'text-xl font-normal' : 'text-[15px]'}`}>
                 {para}
               </p>
             ))}

@@ -19,9 +19,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
 
   const isNew        = product.tags?.includes('novo') || product.tags?.includes('new');
   const isBestSeller = product.tags?.includes('bestseller') || product.tags?.includes('mais vendido');
-
-  const badgeLabel = isNew ? 'Novo' : isBestSeller ? 'Destaque' : product.tags?.[0] ?? null;
-  const badgeBg    = isNew ? 'bg-clay text-paper' : isBestSeller ? 'bg-ink text-paper' : 'bg-warm-d text-ink border border-mist';
+  const badgeLabel   = isNew ? 'Novo' : isBestSeller ? 'Destaque' : null;
 
   return (
     <NavLink
@@ -40,36 +38,38 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
             fill
             priority={priority}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover product-card-image absolute inset-0 transition-opacity duration-300 ${hovered && img1 ? 'opacity-0' : 'opacity-100'}`}
+            className={`object-cover product-card-image absolute inset-0 transition-opacity duration-400 ${hovered && img1 ? 'opacity-0' : 'opacity-100'}`}
             onError={() => setImgError(true)}
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-warm">
-            <Image src="/logo-dark.png" alt="Mikma" width={60} height={30} className="w-10 h-auto opacity-12" />
+            <Image src="/logo-dark.png" alt="Mikma" width={60} height={30} className="w-10 h-auto opacity-10" />
           </div>
         )}
 
-        {/* Second image on hover */}
-        {img1 && hovered && (
+        {/* Second image — cross-fade on hover */}
+        {img1 && (
           <Image
             src={img1}
-            alt={`${product.name} — vista 2`}
+            alt={`${product.name} — detalhe`}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover absolute inset-0 animate-fade-in"
+            className={`object-cover absolute inset-0 transition-opacity duration-400 ${hovered ? 'opacity-100' : 'opacity-0'}`}
           />
         )}
 
-        {/* Badges */}
+        {/* Badges — top left stack */}
         {(badgeLabel || lowStock) && (
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {badgeLabel && (
-              <span className={`text-[9px] font-bold tracking-[0.18em] uppercase px-2.5 py-[5px] leading-none ${badgeBg}`}>
+              <span className={`text-[9px] font-bold tracking-[0.16em] uppercase px-2.5 py-[5px] leading-none ${
+                isNew ? 'bg-clay text-paper' : 'bg-ink text-paper'
+              }`}>
                 {badgeLabel}
               </span>
             )}
             {lowStock && (
-              <span className="bg-amber-50 text-amber-700 border border-amber-200/80 text-[9px] font-bold tracking-[0.14em] uppercase px-2.5 py-[5px] leading-none">
+              <span className="bg-amber-50 text-amber-700 border border-amber-200/70 text-[9px] font-bold tracking-[0.12em] uppercase px-2.5 py-[5px] leading-none">
                 Últimas unidades
               </span>
             )}
@@ -78,16 +78,18 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
       </div>
 
       {/* ── Info ── */}
-      <div className="px-3.5 py-3.5 flex flex-col gap-1.5 border-t border-mist/60">
+      <div className="px-4 py-3.5 flex flex-col gap-1.5 border-t border-mist/50">
         <p className="text-[12px] font-medium text-ink leading-snug line-clamp-2 min-h-[2.6em]">
           {product.name}
         </p>
         <div className="flex items-center justify-between gap-2">
-          <p className="font-display text-[17px] text-ink font-normal leading-none">
+          <p className="font-display text-[18px] text-ink font-normal leading-none">
             {formatCurrency(product.price)}
           </p>
           {product.variants && product.variants.length > 1 && (
-            <p className="text-[10px] text-faint">{product.variants.length} opções</p>
+            <p className="text-[10px] text-faint tabular-nums">
+              {product.variants.length} opções
+            </p>
           )}
         </div>
       </div>

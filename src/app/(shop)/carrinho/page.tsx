@@ -191,7 +191,7 @@ export default function CartPage() {
             </div>
 
             {/* ── Summary ── */}
-            <div className="w-full border border-mist p-5 sm:p-6 flex flex-col gap-4 lg:sticky lg:top-24" style={{borderRadius: '2px'}}>
+            <div className="w-full border border-mist/80 p-5 sm:p-6 flex flex-col gap-4 lg:sticky lg:top-24" style={{borderRadius:'2px'}}>
               <h2 className="font-display font-normal text-ink text-xl">Resumo</h2>
 
               <div className="flex flex-col gap-2.5 text-[13px]">
@@ -216,7 +216,7 @@ export default function CartPage() {
                 <span className="font-display text-[1.6rem] text-ink">{formatCurrency(total)}</span>
               </div>
 
-              <Link href="/checkout" className="btn-primary w-full py-[15px] text-[13px] font-semibold tracking-[0.04em]">
+              <Link href="/checkout" className="btn h-14 w-full bg-ink text-paper border-ink hover:bg-clay hover:border-clay active:scale-[0.98] text-[13px] font-semibold tracking-[0.06em] transition-all duration-150">
                 Finalizar compra
               </Link>
 
