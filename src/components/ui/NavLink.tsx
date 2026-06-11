@@ -9,6 +9,8 @@ type NavLinkProps = LinkProps & {
   className?: string;
   'aria-label'?: string;
   onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  onMouseEnter?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  onMouseLeave?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 };
 
 export function NavLink({ children, onClick, ...props }: NavLinkProps) {
