@@ -148,37 +148,37 @@ export function OrdersListSkeleton() {
 /* ─── Dashboard Skeleton ────────────────────────────────────────── */
 export function DashboardSkeleton() {
   return (
-    <div>
+    <div className="max-w-5xl">
       {/* Header */}
-      <div className="flex items-end justify-between mb-8 pb-6 border-b border-mist">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-8 w-32" />
-        </div>
-        <Skeleton className="h-3 w-28" />
+      <div className="mb-8">
+        <Skeleton className="h-2.5 w-16 mb-2" />
+        <Skeleton className="h-8 w-32" />
       </div>
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-mist mb-10">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         {[1,2,3,4,5].map(i => (
-          <div key={i} className="bg-paper px-5 py-6 flex flex-col gap-3">
-            <Skeleton className="h-2.5 w-24" />
-            <Skeleton className="h-7 w-20" />
+          <div key={i} className="bg-[#FAFAF8] border border-[#E8E4DC] px-4 py-4 flex flex-col gap-3">
+            <Skeleton className="h-4 w-4" />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-2.5 w-20" />
+              <Skeleton className="h-6 w-24" />
+            </div>
           </div>
         ))}
       </div>
       {/* Table header */}
-      <div className="flex justify-between items-center mb-5">
-        <Skeleton className="h-6 w-36" />
+      <div className="flex justify-between items-center mb-4">
+        <Skeleton className="h-5 w-36" />
         <Skeleton className="h-3 w-16" />
       </div>
-      {/* Table rows */}
-      <div className="border border-mist overflow-hidden">
-        <div className="bg-warm px-5 py-3 border-b border-mist">
+      {/* Table */}
+      <div className="bg-[#FAFAF8] border border-[#E8E4DC] overflow-hidden">
+        <div className="bg-[#F5F3EF] px-5 py-3 border-b border-[#E8E4DC]">
           <Skeleton className="h-2.5 w-48" />
         </div>
         {[1,2,3,4,5].map(i => (
-          <div key={i} className="flex items-center gap-6 px-5 py-4 border-b border-mist last:border-0">
-            <Skeleton className="h-3.5 w-24 font-mono" />
+          <div key={i} className="flex items-center gap-6 px-5 py-3.5 border-b border-[#E8E4DC] last:border-0">
+            <Skeleton className="h-3 w-24 font-mono" />
             <Skeleton className="h-5 w-20" />
             <Skeleton className="h-3 w-24 ml-auto" />
             <Skeleton className="h-5 w-16" />

@@ -38,35 +38,40 @@ export default function ConfiguracoesPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col gap-4">
-      {[1,2,3,4].map(i => <div key={i} className="h-12 bg-mist/40 animate-pulse" />)}
+    <div className="flex flex-col gap-3">
+      {[1,2,3,4].map(i => <div key={i} className="h-12 bg-[#F0EBE1] animate-pulse border border-[#E8E4DC]" />)}
     </div>
   );
 
   return (
     <div className="max-w-2xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display font-normal text-ink text-2xl">Configurações</h1>
-        <div className="flex items-center gap-2">
-          {saved && <span className="text-xs text-clay font-semibold">✓ Salvo</span>}
+      <div className="flex items-center justify-between mb-7">
+        <div>
+          <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Loja</p>
+          <h1 className="font-display font-normal text-[#0F0E0C] text-2xl">Configurações</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          {saved && <span className="text-[11px] text-[#C4714A] font-semibold">✓ Salvo</span>}
           <button
             onClick={handleSave} disabled={saving}
-            className="bg-ink text-paper text-xs font-semibold px-4 py-2.5 disabled:opacity-50 active:bg-ink/80 transition-colors"
+            className="bg-[#0F0E0C] text-[#FAFAF8] text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2.5 disabled:opacity-50 hover:bg-[#0F0E0C]/80 transition-colors"
           >
             {saving ? 'Salvando…' : 'Salvar'}
           </button>
         </div>
       </div>
 
-      {/* Tabs — scroll horizontal, sem overflow no mobile */}
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-none">
+      {/* Tabs */}
+      <div className="flex gap-1.5 mb-6 overflow-x-auto pb-0.5 scrollbar-none">
         {SECTIONS.map(s => (
           <button
             key={s.id}
             onClick={() => setActive(s.id)}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${
-              active === s.id ? 'bg-ink text-paper' : 'text-mid hover:bg-warm border border-mist'
+            className={`shrink-0 flex items-center gap-2 px-3.5 py-2 text-[11px] font-semibold tracking-wide transition-colors border ${
+              active === s.id
+                ? 'bg-[#0F0E0C] text-[#FAFAF8] border-[#0F0E0C]'
+                : 'text-[#6B6660] border-[#E8E4DC] bg-[#FAFAF8] hover:bg-[#F0EBE1]'
             }`}
           >
             <span>{s.icon}</span>
@@ -99,14 +104,14 @@ export default function ConfiguracoesPage() {
           <Field label="Tag do hero" value={settings.heroTag} onChange={v => set('heroTag', v)} hint="Ex: Blumenau, SC — Coleção" />
           <Textarea label="Título do hero" value={settings.heroTitle} onChange={v => set('heroTitle', v)} hint="Use quebra de linha para controlar o layout" rows={3} />
           <Field label="Subtítulo do hero" value={settings.heroSubtitle} onChange={v => set('heroSubtitle', v)} />
-          <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint pt-1">Tags flutuantes (desktop)</p>
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] pt-2">Tags flutuantes (desktop)</p>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tag 1 — label" value={settings.heroFloatTag1Label} onChange={v => set('heroFloatTag1Label', v)} placeholder="400 fios" />
             <Field label="Tag 1 — valor" value={settings.heroFloatTag1Value} onChange={v => set('heroFloatTag1Value', v)} placeholder="100% Algodão" />
             <Field label="Tag 2 — label" value={settings.heroFloatTag2Label} onChange={v => set('heroFloatTag2Label', v)} placeholder="Entrega" />
             <Field label="Tag 2 — valor" value={settings.heroFloatTag2Value} onChange={v => set('heroFloatTag2Value', v)} placeholder="Em 1h" />
           </div>
-          <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint pt-1">Diferenciais</p>
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] pt-2">Diferenciais</p>
           {([1,2,3] as const).map(n => {
             const s = settings as unknown as Record<string,string>;
             return (
@@ -125,7 +130,7 @@ export default function ConfiguracoesPage() {
         </>}
 
         {active === 'logistica' && <>
-          <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint">Origem das entregas</p>
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] pt-2">Origem das entregas</p>
           <div className="grid grid-cols-2 gap-3">
             <NumField label="Latitude" value={settings.originLat} onChange={v => set('originLat', v)} step={0.0001} />
             <NumField label="Longitude" value={settings.originLng} onChange={v => set('originLng', v)} step={0.0001} />
@@ -134,7 +139,7 @@ export default function ConfiguracoesPage() {
           <NumField label="Raio entrega local — Uber Direct (km)" value={settings.localDeliveryRadiusKm} onChange={v => set('localDeliveryRadiusKm', v)} hint={`Pedidos dentro de ${settings.localDeliveryRadiusKm} km → Uber Direct`} min={1} max={100} />
           <NumField label="Peso padrão por unidade (kg)" value={settings.defaultItemWeightKg} onChange={v => set('defaultItemWeightKg', v)} step={0.1} hint="Usado para cotação Melhor Envio" />
           <Field label="Horário de corte (HH:MM)" value={settings.dispatchCutoffTime} onChange={v => set('dispatchCutoffTime', v)} type="time" hint={`Após ${settings.dispatchCutoffTime} → despacho no próximo dia útil`} />
-          <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint pt-1">Frete grátis</p>
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] pt-2">Frete grátis</p>
           <NumField
             label="Frete grátis a partir de (R$) — 0 desativa"
             value={settings.freeShippingThresholdCents / 100}
@@ -142,16 +147,16 @@ export default function ConfiguracoesPage() {
             hint={settings.freeShippingThresholdCents === 0 ? 'Desativado' : `Grátis acima de R$ ${(settings.freeShippingThresholdCents / 100).toFixed(2)}`}
             min={0}
           />
-          <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint pt-1">Estoque</p>
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] pt-2">Estoque</p>
           <NumField label="Alerta de estoque baixo (unidades)" value={settings.lowStockThreshold} onChange={v => set('lowStockThreshold', v)} min={0} />
         </>}
       </div>
 
-      {/* Botão salvar no rodapé — fácil de alcançar no mobile */}
+      {/* Bottom save button */}
       <div className="mt-8 pb-6">
         <button
           onClick={handleSave} disabled={saving}
-          className="w-full bg-ink text-paper text-sm font-semibold py-4 disabled:opacity-50 active:bg-ink/80 transition-colors"
+          className="w-full bg-[#0F0E0C] text-[#FAFAF8] text-sm font-semibold py-4 disabled:opacity-50 hover:bg-[#0F0E0C]/80 transition-colors"
         >
           {saving ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar configurações'}
         </button>
@@ -166,11 +171,11 @@ function Field({ label, value, onChange, hint, placeholder, maxLength, type = 't
 }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-mid mb-1">{label}</label>
+      <label className="block text-[10px] font-bold tracking-[0.15em] uppercase text-[#B8B2AA] mb-1.5">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)}
         placeholder={placeholder} maxLength={maxLength}
-        className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20" />
-      {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
+        className="w-full border border-[#E8E4DC] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />
+      {hint && <p className="mt-1.5 text-[11px] text-[#B8B2AA]">{hint}</p>}
     </div>
   );
 }
@@ -180,10 +185,10 @@ function Textarea({ label, value, onChange, hint, rows = 3 }: {
 }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-mid mb-1">{label}</label>
+      <label className="block text-[10px] font-bold tracking-[0.15em] uppercase text-[#B8B2AA] mb-1.5">{label}</label>
       <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows}
-        className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 resize-y" />
-      {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
+        className="w-full border border-[#E8E4DC] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40 resize-y" />
+      {hint && <p className="mt-1.5 text-[11px] text-[#B8B2AA]">{hint}</p>}
     </div>
   );
 }
@@ -194,11 +199,11 @@ function NumField({ label, value, onChange, hint, min, max, step = 1 }: {
 }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-mid mb-1">{label}</label>
+      <label className="block text-[10px] font-bold tracking-[0.15em] uppercase text-[#B8B2AA] mb-1.5">{label}</label>
       <input type="number" value={value} onChange={e => onChange(parseFloat(e.target.value) || 0)}
         min={min} max={max} step={step} inputMode="decimal"
-        className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20" />
-      {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
+        className="w-full border border-[#E8E4DC] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />
+      {hint && <p className="mt-1.5 text-[11px] text-[#B8B2AA]">{hint}</p>}
     </div>
   );
 }
