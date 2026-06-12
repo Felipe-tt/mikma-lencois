@@ -108,21 +108,22 @@ export default function CheckoutPage() {
 
   return (
     <div>
-      {/* Steps */}
-      <div className="border-b border-mist bg-paper">
-        <div className="container-shop py-3.5">
-          <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm overflow-x-auto">
+      {/* ── Steps bar — more polished ── */}
+      <div className="border-b border-mist bg-paper sticky top-0 z-20">
+        <div className="container-shop py-4">
+          <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
             <StepDone label="Carrinho" />
-            <span className="text-faint shrink-0">—</span>
-            <StepActive label="Dados & Endereço" num={2} />
-            <span className="text-faint shrink-0">—</span>
-            <StepPending label="Pagamento PIX" num={3} />
+            <StepConnector done />
+            <StepActive label="Dados & Entrega" num={2} />
+            <StepConnector />
+            <StepPending label="Pagamento" num={3} />
           </div>
         </div>
       </div>
 
-      <div className="page-header">
-        <div className="container-shop">
+      {/* ── Page title — integrated ── */}
+      <div className="border-b border-mist">
+        <div className="container-shop py-10">
           <span className="eyebrow mb-3 block">Compra</span>
           <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Finalizar pedido</h1>
         </div>
@@ -273,18 +274,29 @@ export default function CheckoutPage() {
                   : `Gerar PIX — ${formatCurrency(total)}`
                 }
               </button>
-              <p className="text-xs text-faint text-center -mt-3">🔒 Dados criptografados · Pagamento 100% seguro via PIX</p>
+
+              {/* Security seals — right below submit */}
+              <div className="flex items-center justify-center gap-4 -mt-1">
+                <span className="flex items-center gap-1.5 text-[10px] text-faint">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  Dados criptografados
+                </span>
+                <span className="text-mist">·</span>
+                <span className="flex items-center gap-1.5 text-[10px] text-faint">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  PIX aprovado na hora
+                </span>
+              </div>
             </form>
 
             {/* ── Resumo ── */}
-            <div className="w-full border border-mist p-5 flex flex-col gap-4 lg:sticky lg:top-24" style={{borderRadius:'2px'}}>
-              <h2 className="font-display font-normal text-ink text-xl">Resumo do pedido</h2>
+            <div className="w-full border border-mist p-5 flex flex-col gap-5 lg:sticky lg:top-24" style={{borderRadius:'2px'}}>
+              <h2 className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Resumo do pedido</h2>
 
-              {/* Items with thumbnails */}
-              <ul className="flex flex-col gap-3">
+              <ul className="flex flex-col gap-4">
                 {items.map(item => (
                   <li key={item.sku} className="flex items-center gap-3">
-                    <div className="relative w-10 h-12 shrink-0 overflow-hidden bg-warm border border-mist/60">
+                    <div className="relative w-12 h-[60px] shrink-0 overflow-hidden bg-warm border border-mist/60">
                       {item.image
                         ? <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center"><span className="font-display text-faint text-xs">M</span></div>
@@ -294,30 +306,36 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-medium text-ink leading-snug line-clamp-1">{item.productName}</p>
-                      <p className="text-[10px] text-faint">{item.variant?.size}</p>
+                      <p className="text-[12px] font-medium text-ink leading-snug line-clamp-2">{item.productName}</p>
+                      <p className="text-[11px] text-faint mt-0.5">{item.variant?.size}</p>
                     </div>
-                    <span className="shrink-0 text-[13px] font-medium text-ink">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                    <span className="shrink-0 text-[13px] font-semibold text-ink">{formatCurrency(item.unitPrice * item.quantity)}</span>
                   </li>
                 ))}
               </ul>
 
-              <div className="border-t border-mist pt-3 text-[11px] text-faint flex justify-between">
-                <span>Frete</span><span>calculado após o PIX</span>
+              <div className="border-t border-mist pt-4 flex flex-col gap-2">
+                <div className="flex justify-between text-[13px] text-mid">
+                  <span>Subtotal</span><span>{formatCurrency(total)}</span>
+                </div>
+                <div className="flex justify-between text-[12px] text-faint">
+                  <span>Frete</span><span>calculado após o PIX</span>
+                </div>
               </div>
-              <div className="flex justify-between items-baseline">
+
+              <div className="border-t border-mist pt-4 flex justify-between items-baseline">
                 <span className="text-[13px] font-semibold text-ink">Total</span>
                 <span className="font-display text-[1.5rem] text-ink">{formatCurrency(total)}</span>
               </div>
 
-              <div className="border-t border-mist pt-3 flex flex-col gap-2">
+              <div className="border-t border-mist pt-4 flex flex-col gap-2">
                 {[
                   'Pagamento via PIX — aprovação imediata',
                   'SSL 256-bit · dados protegidos',
                   'Nota fiscal emitida automaticamente',
                 ].map(text => (
                   <div key={text} className="flex items-center gap-2 text-[11px] text-faint">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     {text}
                   </div>
                 ))}
@@ -330,25 +348,32 @@ export default function CheckoutPage() {
   );
 }
 
+function StepConnector({ done }: { done?: boolean }) {
+  return (
+    <div className={`h-px w-8 sm:w-12 shrink-0 mx-1 ${done ? 'bg-ink/30' : 'bg-mist'}`} />
+  );
+}
 function StepDone({ label }: { label: string }) {
   return (
-    <span className="flex items-center gap-1.5 text-faint shrink-0">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      <span className="hidden sm:inline text-[12px]">{label}</span>
+    <span className="flex items-center gap-2 text-faint shrink-0">
+      <span className="w-5 h-5 bg-ink/10 flex items-center justify-center shrink-0">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>
+      <span className="hidden sm:inline text-[12px] font-medium">{label}</span>
     </span>
   );
 }
 function StepActive({ label, num }: { label: string; num: number }) {
   return (
-    <span className="flex items-center gap-1.5 text-ink font-semibold shrink-0">
+    <span className="flex items-center gap-2 text-ink shrink-0">
       <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0">{num}</span>
-      <span className="text-[12px]">{label}</span>
+      <span className="text-[12px] font-semibold">{label}</span>
     </span>
   );
 }
 function StepPending({ label, num }: { label: string; num: number }) {
   return (
-    <span className="flex items-center gap-1.5 text-faint shrink-0">
+    <span className="flex items-center gap-2 text-faint shrink-0">
       <span className="w-5 h-5 border border-mist flex items-center justify-center text-[10px] shrink-0">{num}</span>
       <span className="hidden sm:inline text-[12px]">{label}</span>
     </span>

@@ -192,32 +192,43 @@ export default function LoginPage() {
         />
       )}
 
-      <div className="min-h-screen bg-warm flex">
-        {/* Painel esquerdo */}
-        <div className="hidden lg:flex w-1/2 bg-ink flex-col justify-between p-16">
-          <Link href="/"><Image src="/logo-white.png" alt="Mikma" width={160} height={80} className="h-14 w-auto object-contain" /></Link>
-          <div>
-            <p className="font-display text-paper font-normal leading-[1.02] mb-6 text-[clamp(2.8rem,4.5vw,4.5rem)]">
+      <div className="min-h-screen bg-paper flex">
+        {/* Painel esquerdo — imagem editorial */}
+        <div className="hidden lg:flex w-[45%] xl:w-1/2 relative flex-col justify-between p-12 xl:p-16 overflow-hidden">
+          {/* Background overlay */}
+          <div className="absolute inset-0 bg-ink" />
+          {/* Subtle texture via large text watermark */}
+          <div className="absolute inset-0 flex items-end justify-start pointer-events-none overflow-hidden pb-8 pl-8">
+            <p className="font-display text-[22rem] leading-none text-paper/[0.03] font-normal select-none tracking-[-0.05em]">M</p>
+          </div>
+
+          <Link href="/" className="relative z-10">
+            <Image src="/logo-white.png" alt="Mikma" width={120} height={48} className="h-8 w-auto object-contain" />
+          </Link>
+
+          <div className="relative z-10">
+            <p className="font-display text-paper font-normal leading-[1.05] mb-5 text-[clamp(2.4rem,3.5vw,3.8rem)]">
               Bem-vindo<br />de <em className="text-clay not-italic">volta.</em>
             </p>
-            <p className="text-base text-paper/40 leading-relaxed max-w-xs">
-              Entre na sua conta para acompanhar pedidos e continuar comprando.
+            <p className="text-[14px] text-paper/40 leading-relaxed max-w-[28ch]">
+              Lençóis de qualidade direto de fábrica — para quem entende a diferença.
             </p>
           </div>
-          <p className="text-xs text-paper/20 tracking-widest uppercase">Blumenau · SC · Brasil</p>
+
+          <p className="relative z-10 text-[10px] text-paper/20 tracking-[0.2em] uppercase">Blumenau · SC · Brasil</p>
         </div>
 
         {/* Formulário */}
-        <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
-          <div className="w-full max-w-md">
+        <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-paper">
+          <div className="w-full max-w-[400px]">
             <Link href="/" className="flex mb-10 lg:hidden">
-              <Image src="/logo-dark.png" alt="Mikma" width={120} height={60} className="h-10 w-auto object-contain" />
+              <Image src="/logo-dark.png" alt="Mikma" width={120} height={60} className="h-9 w-auto object-contain" />
             </Link>
 
-            <h1 className="font-display font-normal text-ink text-3xl mb-2">Entrar</h1>
-            <p className="text-sm text-mid mb-8">
+            <h1 className="font-display font-normal text-ink text-[2.2rem] mb-2 leading-tight">Entrar</h1>
+            <p className="text-[14px] text-mid mb-8">
               Não tem conta?{' '}
-              <Link href="/cadastro" className="text-clay font-medium hover:text-clay-d transition-colors">Cadastrar</Link>
+              <Link href="/cadastro" className="text-clay font-medium hover:text-clay-d transition-colors">Criar conta grátis</Link>
             </p>
 
             {error && (
@@ -257,8 +268,8 @@ export default function LoginPage() {
               </div>
 
               <button type="submit" disabled={loading}
-                className="btn-primary w-full mt-1 py-3.5 text-sm font-semibold tracking-wide flex items-center justify-center gap-2">
-                {loading ? <><span className="spinner" /><span>Entrando...</span></> : 'Entrar'}
+                className="btn-primary w-full h-12 text-[13px] font-semibold tracking-wide flex items-center justify-center gap-2">
+                {loading ? <><span className="spinner" /><span>Entrando...</span></> : 'Entrar na minha conta'}
               </button>
             </form>
 

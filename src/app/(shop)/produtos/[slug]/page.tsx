@@ -5,6 +5,7 @@ import type { Product, InventoryItem } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { VariantSelector } from '@/components/product/VariantSelector';
 import { ProductGallery } from '@/components/product/ProductGallery';
+import { ProductCard } from '@/components/product/ProductCard';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 
@@ -19,6 +20,18 @@ async function getProduct(id: string): Promise<Product | null> {
 async function getInventory(id: string): Promise<InventoryItem[]> {
   const snap = await adminDb.collection('inventory').where('productId','==',id).get();
   return snap.docs.map(d => serialize<InventoryItem>({ sku: d.id, ...d.data() }));
+}
+async function getRelated(product: Product): Promise<Product[]> {
+  try {
+    const snap = await adminDb.collection('products')
+      .where('active','==',true)
+      .where('category','==',product.category)
+      .limit(6).get();
+    return snap.docs
+      .map(d => serialize<Product>({ id: d.id, ...d.data() }))
+      .filter(p => p.id !== product.id)
+      .slice(0, 4);
+  } catch { return []; }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -36,6 +49,7 @@ export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const [product, inventory] = await Promise.all([getProduct(slug), getInventory(slug)]);
   if (!product) notFound();
+  const related = await getRelated(product);
 
   // Extract specs from tags (thread count, fabric composition, etc.)
   const specTags = product.tags?.filter(t =>
@@ -125,6 +139,30 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* ── Produtos relacionados ── */}
+      {related.length > 0 && (
+        <section className="border-t border-mist section-md">
+          <div className="container-shop">
+            <div className="flex items-end justify-between mb-10">
+              <div>
+                <span className="eyebrow mb-3 block">Você também pode gostar</span>
+                <h2 className="font-display font-normal text-ink text-3xl">Mais em {product.category}</h2>
+              </div>
+              <Link
+                href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
+                className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-mid hover:text-ink transition-colors group pb-0.5"
+              >
+                Ver tudo
+                <svg className="transition-transform duration-150 group-hover:translate-x-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-mist border border-mist">
+              {related.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

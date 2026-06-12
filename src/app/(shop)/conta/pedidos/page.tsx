@@ -114,12 +114,25 @@ export default function PedidosPage() {
               <div key={order.id} className="border border-mist bg-paper">
                 {/* Header do pedido */}
                 <div className="flex items-start justify-between gap-4 px-5 sm:px-6 pt-5 sm:pt-6 pb-4">
-                  <div>
-                    <p className="text-xs text-faint font-mono mb-1">#{order.id.slice(-10).toUpperCase()}</p>
-                    <p className="font-display text-xl sm:text-2xl text-ink">{formatCurrency(order.totalCents)}</p>
-                    <p className="text-xs text-faint mt-1">
-                      {order.createdAt ? formatTsDateTime(order.createdAt) : '—'}
-                    </p>
+                  <div className="flex items-start gap-4">
+                    {/* Thumbnail do primeiro item */}
+                    {order.items[0]?.image && (
+                      <div className="relative w-12 h-[60px] shrink-0 overflow-hidden bg-warm border border-mist/60">
+                        <img src={order.items[0].image} alt={order.items[0].productName} className="w-full h-full object-cover" />
+                        {order.items.length > 1 && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-ink/80 text-paper text-[9px] font-bold flex items-center justify-center" style={{borderRadius:'1px'}}>
+                            +{order.items.length - 1}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[11px] text-faint font-mono mb-1">#{order.id.slice(-10).toUpperCase()}</p>
+                      <p className="font-display text-xl sm:text-2xl text-ink">{formatCurrency(order.totalCents)}</p>
+                      <p className="text-[11px] text-faint mt-1">
+                        {order.createdAt ? formatTsDateTime(order.createdAt) : '—'}
+                      </p>
+                    </div>
                   </div>
                   <span className={BADGES[order.status] ?? 'badge'}>
                     {LABELS[order.status] ?? order.status}
@@ -136,11 +149,20 @@ export default function PedidosPage() {
                   ))}
                 </div>
 
-                {/* Rastreio */}
+                {/* Rastreio inline com copiar */}
                 {order.delivery?.trackingCode && (
-                  <div className="border-t border-mist px-5 sm:px-6 py-3 flex items-center gap-2 text-xs text-mid">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8zM5.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM18.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
-                    Rastreio: <strong className="text-ink font-mono">{order.delivery.trackingCode}</strong> · {order.delivery.carrier}
+                  <div className="border-t border-mist px-5 sm:px-6 py-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-[12px] text-mid min-w-0">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-faint"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8zM5.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM18.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
+                      <span className="text-faint shrink-0">{order.delivery.carrier} ·</span>
+                      <span className="font-mono font-semibold text-ink truncate">{order.delivery.trackingCode}</span>
+                    </div>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(order.delivery!.trackingCode!)}
+                      className="shrink-0 text-[10px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.08em]"
+                    >
+                      Copiar
+                    </button>
                   </div>
                 )}
 
