@@ -87,7 +87,7 @@ export default function PedidosPage() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="border-b border-mist">
         <div className="container-shop flex items-end justify-between">
           <div>
             <span className="eyebrow mb-3 block">Conta</span>

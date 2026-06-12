@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 export default function SobreLoading() {
   return (
     <div>
-      <div className="page-header">
+      <div className="border-b border-mist">
         <div className="container-shop">
           <Skeleton className="h-2.5 w-24 mb-3" />
           <Skeleton className="h-12 w-56 mb-2" />

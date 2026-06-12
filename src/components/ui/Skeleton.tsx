@@ -107,7 +107,7 @@ export function CartSkeleton() {
           ))}
         </div>
         {/* Summary */}
-        <div className="bg-warm border border-mist p-7 flex flex-col gap-5">
+        <div className="border border-mist p-7 flex flex-col gap-5">
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-3.5 w-full" />
           <Skeleton className="h-3.5 w-2/3" />
@@ -212,7 +212,7 @@ export function CheckoutSkeleton() {
           </div>
           <Skeleton className="h-14 w-full mt-2" />
         </div>
-        <div className="bg-warm border border-mist p-7 flex flex-col gap-4">
+        <div className="border border-mist p-7 flex flex-col gap-4">
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-3.5 w-full" />
           <Skeleton className="h-3.5 w-3/4" />
@@ -230,7 +230,7 @@ export function ProdutosPageSkeleton() {
   return (
     <div>
       {/* Page header */}
-      <div className="page-header">
+      <div className="border-b border-mist">
         <div className="container-shop">
           <Skeleton className="h-2.5 w-14 mb-3" />
           <Skeleton className="h-10 w-64" />
@@ -276,7 +276,7 @@ export function PerfilSkeleton() {
 export function AccountSkeleton() {
   return (
     <div>
-      <div className="page-header">
+      <div className="border-b border-mist">
         <div className="container-shop">
           <Skeleton className="h-2.5 w-24 mb-3" />
           <Skeleton className="h-10 w-56" />
@@ -284,7 +284,7 @@ export function AccountSkeleton() {
         </div>
       </div>
       <div className="container-shop py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-mist max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 max-w-2xl border border-mist">
           {[1, 2].map(i => (
             <div key={i} className="bg-paper px-6 py-7 flex items-start gap-5">
               <Skeleton className="w-6 h-6 shrink-0 mt-0.5" />
@@ -305,7 +305,7 @@ export function AccountSkeleton() {
 export function OrderDetailSkeleton() {
   return (
     <div>
-      <div className="page-header">
+      <div className="border-b border-mist">
         <div className="container-shop">
           <Skeleton className="h-2.5 w-16 mb-3" />
           <Skeleton className="h-9 w-48" />

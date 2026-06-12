@@ -190,7 +190,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
             {/* Search mobile */}
             <div className="px-4 py-3 border-b border-mist">
-              <form onSubmit={handleSearch} className="flex items-center gap-2 px-3 py-2 bg-warm border border-mist" style={{borderRadius: '2px'}}>
+              <form onSubmit={handleSearch} className="flex items-center gap-2 px-3 py-2 border border-mist bg-paper/80" style={{borderRadius: '2px'}}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>

@@ -64,7 +64,7 @@ export default function PerfilPage() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="border-b border-mist">
         <div className="container-shop">
           <span className="eyebrow mb-3 block">Conta</span>
           <h1 className="font-display font-normal text-ink" >

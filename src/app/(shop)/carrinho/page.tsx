@@ -100,17 +100,17 @@ export default function CartPage() {
 
           {/* Free shipping bar */}
           {FREE_SHIPPING_THRESHOLD > 0 && (
-            <div className="mb-6 p-4 bg-warm border border-mist">
-              <div className="flex items-center justify-between mb-2">
+            <div className="mb-6 py-3 border-b border-mist">
+              <div className="flex items-center justify-between mb-2.5">
                 <span className="text-[12px] font-medium text-mid">
                   {freeShip
-                    ? <span className="text-clay font-semibold">✓ Frete grátis desbloqueado!</span>
+                    ? <span className="text-clay font-semibold flex items-center gap-1.5"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Frete grátis desbloqueado!</span>
                     : <>Faltam <strong className="text-ink">{formatCurrency(remaining)}</strong> para frete grátis</>
                   }
                 </span>
-                <span className="text-[11px] text-faint">{Math.round(progress)}%</span>
+                <span className="text-[11px] text-faint tabular-nums">{Math.round(progress)}%</span>
               </div>
-              <div className="h-1.5 bg-mist overflow-hidden" style={{borderRadius: '2px'}}>
+              <div className="h-0.5 bg-mist overflow-hidden">
                 <div className="h-full bg-clay transition-all duration-500" style={{width: `${progress}%`}} />
               </div>
             </div>

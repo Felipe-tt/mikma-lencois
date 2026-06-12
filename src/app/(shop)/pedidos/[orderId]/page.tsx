@@ -57,7 +57,7 @@ export default function OrderDetailPage() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="border-b border-mist">
         <div className="container-shop">
           <span className="eyebrow mb-3 block">Pedido</span>
           <h1 className="font-display font-normal text-ink" >
@@ -100,7 +100,7 @@ export default function OrderDetailPage() {
 
         {/* PIX pending payment */}
         {order.status === 'pending_payment' && order.payment.pixCopyPaste && (
-          <div className="mb-8 border border-mist bg-warm p-6 flex flex-col items-center gap-4">
+          <div className="mb-8 border border-amber-200/80 bg-amber-50/50 p-6 flex flex-col items-center gap-4">
             <p className="text-sm font-semibold text-ink">Pague para confirmar o pedido</p>
             <p className="text-xs text-mid">
               Total: <span className="font-bold text-ink">{formatCurrency(order.totalCents)}</span>
