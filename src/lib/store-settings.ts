@@ -35,6 +35,7 @@ export type StoreSettings = {
   dispatchCutoffTime: string;
   freeShippingThresholdCents: number;
   lowStockThreshold: number;
+  foundedYear: string;
 };
 
 export const STORE_DEFAULTS: StoreSettings = {
@@ -71,4 +72,5 @@ export const STORE_DEFAULTS: StoreSettings = {
   dispatchCutoffTime: '17:00',
   freeShippingThresholdCents: 0,
   lowStockThreshold: 3,
+  foundedYear: '2018',
 };

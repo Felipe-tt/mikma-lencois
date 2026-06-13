@@ -127,6 +127,7 @@ export default function ConfiguracoesPage() {
           <Textarea label="Parágrafo 1" value={settings.aboutPara1} onChange={v => set('aboutPara1', v)} rows={4} />
           <Textarea label="Parágrafo 2" value={settings.aboutPara2} onChange={v => set('aboutPara2', v)} rows={4} />
           <Textarea label="Parágrafo 3" value={settings.aboutPara3} onChange={v => set('aboutPara3', v)} rows={4} />
+          <Field label="Ano de fundação" value={settings.foundedYear} onChange={v => set('foundedYear', v)} placeholder="2018" hint="Exibido na timeline da página Sobre" />
         </>}
 
         {active === 'logistica' && <>
