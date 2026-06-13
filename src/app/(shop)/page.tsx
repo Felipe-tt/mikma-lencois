@@ -78,9 +78,6 @@ export default async function HomePage() {
 
             {/* Right: logo + float tags */}
             <div className="hidden lg:flex items-center justify-center relative overflow-hidden pl-16">
-              {/* Watermark */}
-              <p className="font-display text-[18rem] leading-none text-ink/[0.03] font-normal select-none absolute pointer-events-none tracking-[-0.04em]">M</p>
-
               {/* Logo */}
               <div className="relative z-10 flex flex-col items-center gap-3">
                 <Image
@@ -191,13 +188,6 @@ export default async function HomePage() {
 
       {/* ══ CTA BANNER ══════════════════════════════════════════════ */}
       <section className="bg-ink py-20 sm:py-28 relative overflow-hidden">
-        {/* Watermark */}
-        <div className="absolute inset-0 flex items-center justify-end pointer-events-none overflow-hidden pr-4 sm:pr-16">
-          <p className="font-display text-[16rem] sm:text-[22rem] leading-none text-paper/[0.022] font-normal select-none tracking-[-0.05em]">
-            M
-          </p>
-        </div>
-
         <div className="container-shop relative z-10">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10">
             <div className="max-w-xl">

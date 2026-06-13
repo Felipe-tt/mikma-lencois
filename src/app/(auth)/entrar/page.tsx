@@ -197,11 +197,6 @@ export default function LoginPage() {
         <div className="hidden lg:flex w-[45%] xl:w-1/2 relative flex-col justify-between p-12 xl:p-16 overflow-hidden">
           {/* Background overlay */}
           <div className="absolute inset-0 bg-ink" />
-          {/* Subtle texture via large text watermark */}
-          <div className="absolute inset-0 flex items-end justify-start pointer-events-none overflow-hidden pb-8 pl-8">
-            <p className="font-display text-[22rem] leading-none text-paper/[0.03] font-normal select-none tracking-[-0.05em]">M</p>
-          </div>
-
           <Link href="/" className="relative z-10">
             <Image src="/logo-white.png" alt="Mikma" width={120} height={48} className="h-8 w-auto object-contain" />
           </Link>
