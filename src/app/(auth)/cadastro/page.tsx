@@ -30,7 +30,7 @@ function PasswordStrength({ password }: { password: string }) {
     <div className="mt-2 space-y-1.5">
       <div className="flex gap-1">
         {[0, 1, 2].map(i => (
-          <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i < score ? colors[score - 1] : 'bg-mist/30'}`} />
+          <div key={i} className={`h-0.5 flex-1 transition-colors ${i < score ? colors[score - 1] : 'bg-mist/30'}`} />
         ))}
       </div>
       <div className="flex items-center justify-between">
@@ -155,7 +155,7 @@ export default function RegisterPage() {
     return (
       <div className="min-h-screen bg-warm flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
+          <div className="w-14 h-14 bg-green-500/10 flex items-center justify-center mx-auto">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
               <polyline points="20 6 9 17 4 12"/>
             </svg>

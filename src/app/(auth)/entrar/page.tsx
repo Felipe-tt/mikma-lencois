@@ -73,7 +73,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
         {step === 'form' ? (
           <>
             <div className="mb-6">
-              <div className="w-10 h-10 rounded-full bg-clay/10 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 bg-clay/10 flex items-center justify-center mb-4">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                   <rect x="2" y="4" width="20" height="16" rx="2"/>
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
@@ -107,7 +107,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
         ) : (
           <>
             <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-5">
+              <div className="w-14 h-14 bg-green-500/10 flex items-center justify-center mx-auto mb-5">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
                   <rect x="2" y="4" width="20" height="16" rx="2"/>
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>

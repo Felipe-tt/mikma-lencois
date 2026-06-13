@@ -281,6 +281,11 @@ export default function ProductForm({ initial }: Props) {
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0]);
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
+  // Fabric specs
+  const [threadCount, setThreadCount] = useState(initial?.threadCount ? String(initial.threadCount) : '');
+  const [composition, setComposition] = useState(initial?.composition ?? '');
+  const [weightGsm, setWeightGsm] = useState(initial?.weightGsm ? String(initial.weightGsm) : '');
+  const [certifications, setCertifications] = useState(initial?.certifications?.join(', ') ?? '');
 
   type ImgEntry = { dataUrl: string; blob?: Blob; url?: string; hex: string };
   const [images, setImages] = useState<ImgEntry[]>(
@@ -357,6 +362,11 @@ export default function ProductForm({ initial }: Props) {
         active,
         variants: builtVariants,
         updatedAt: serverTimestamp(),
+        // Fabric specs — only save if filled
+        ...(threadCount ? { threadCount: parseInt(threadCount) } : {}),
+        ...(composition ? { composition } : {}),
+        ...(weightGsm ? { weightGsm: parseInt(weightGsm) } : {}),
+        ...(certifications ? { certifications: certifications.split(',').map(s => s.trim()).filter(Boolean) } : {}),
       };
 
       if (isEdit) {
@@ -495,6 +505,47 @@ export default function ProductForm({ initial }: Props) {
               placeholder="algodão, casal, branco"
               className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
             />
+          </div>
+
+          {/* ── Specs do tecido ── */}
+          <div className="border border-mist">
+            <div className="px-4 py-2.5 bg-warm/50 border-b border-mist">
+              <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-faint">Especificações do tecido <span className="font-normal normal-case opacity-60">(opcional)</span></p>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Fio count</label>
+                <input
+                  type="number" min={0} placeholder="400"
+                  value={threadCount} onChange={e => setThreadCount(e.target.value)}
+                  className="w-full border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
+                />
+              </div>
+              <div>
+                <label className="label">Gramatura (g/m²)</label>
+                <input
+                  type="number" min={0} placeholder="180"
+                  value={weightGsm} onChange={e => setWeightGsm(e.target.value)}
+                  className="w-full border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="label">Composição</label>
+                <input
+                  placeholder="100% Algodão"
+                  value={composition} onChange={e => setComposition(e.target.value)}
+                  className="w-full border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="label">Certificações <span className="font-normal normal-case opacity-60">(vírgula)</span></label>
+                <input
+                  placeholder="OEKO-TEX, Fair Trade"
+                  value={certifications} onChange={e => setCertifications(e.target.value)}
+                  className="w-full border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
+                />
+              </div>
+            </div>
           </div>
 
           {/* ── Variações ── */}

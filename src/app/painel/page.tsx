@@ -82,7 +82,7 @@ export default function PainelDashboard() {
         {kpis.map(k => (
           <div
             key={k.label}
-            className={`bg-[#FAFAF8] border rounded-sm px-4 py-4 flex flex-col gap-3 ${
+            className={`bg-[#FAFAF8] border px-4 py-4 flex flex-col gap-3 ${
               k.alert && k.value > 0
                 ? 'border-amber-200 bg-amber-50'
                 : 'border-[#E8E4DC]'

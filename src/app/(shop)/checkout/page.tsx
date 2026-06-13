@@ -150,7 +150,7 @@ export default function CheckoutPage() {
               {/* ── Seção 1: Dados pessoais ── */}
               <section className="flex flex-col gap-5">
                 <div className="flex items-center gap-3 pb-3 border-b border-mist">
-                  <span className="w-6 h-6 rounded-full bg-ink text-paper flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                  <span className="w-6 h-6 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
                   <h2 className="font-display font-normal text-ink text-xl">Seus dados</h2>
                 </div>
 
@@ -192,7 +192,7 @@ export default function CheckoutPage() {
               {/* ── Seção 2: Endereço ── */}
               <section className="flex flex-col gap-5">
                 <div className="flex items-center gap-3 pb-3 border-b border-mist">
-                  <span className="w-6 h-6 rounded-full bg-ink text-paper flex items-center justify-center text-xs font-bold shrink-0">2</span>
+                  <span className="w-6 h-6 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
                   <h2 className="font-display font-normal text-ink text-xl">Endereço de entrega</h2>
                 </div>
 
