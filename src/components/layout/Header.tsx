@@ -77,8 +77,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             <Image src="/logo-dark.png" alt="Mikma Lençóis" width={160} height={160} className="h-[42px] w-auto object-contain" priority />
           </NavLink>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-9 mx-auto">
+          {/* Desktop nav — collapses when search opens */}
+          <nav className={`hidden md:flex items-center gap-9 mx-auto transition-all duration-200 ${searchOpen ? 'opacity-0 pointer-events-none absolute' : 'opacity-100'}`}>
             {NAV_LINKS.map(({ href, label }) => (
               <NavLink key={href} href={href}
                 className={`text-[13px] font-medium tracking-[0.01em] transition-colors duration-150
@@ -88,6 +88,28 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               </NavLink>
             ))}
           </nav>
+
+          {/* Search inline — expands in the nav area */}
+          <div className={`hidden md:flex items-center flex-1 mx-8 transition-all duration-200 ${searchOpen ? 'opacity-100' : 'opacity-0 pointer-events-none w-0 overflow-hidden mx-0'}`}>
+            <form onSubmit={handleSearch} className="flex items-center gap-2.5 flex-1 border-b-2 border-ink/20 pb-1 focus-within:border-clay/50 transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                ref={searchRef}
+                type="search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Buscar produtos, categorias…"
+                className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-faint outline-none"
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery('')} className="text-faint hover:text-ink transition-colors p-0.5">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              )}
+            </form>
+          </div>
 
           {/* Actions */}
           <div className="flex items-center gap-0.5 ml-auto md:ml-0">
@@ -153,23 +175,6 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           </div>
         )}
 
-        {/* Search bar */}
-        <div className={`overflow-hidden transition-all duration-250 ease-out ${searchOpen ? 'max-h-14 border-t border-mist' : 'max-h-0'}`}>
-          <form onSubmit={handleSearch} className="container-shop py-2.5 flex items-center gap-3">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input ref={searchRef} type="search" value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar produtos, categorias…"
-              className="flex-1 bg-transparent text-sm text-ink placeholder:text-faint outline-none py-0.5"
-            />
-            {query && (
-              <button type="submit" className="text-[10px] font-bold text-clay tracking-[0.12em] uppercase hover:text-clay-d transition-colors">
-                Buscar
-              </button>
-            )}
-          </form>
-        </div>
       </header>
 
       {/* ── Mobile drawer ──────────────────────────────────────────── */}

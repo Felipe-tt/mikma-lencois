@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ProductCard } from '@/components/product/ProductCard';
 import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
 import { SortSelect } from '@/components/product/SortSelect';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { Product } from '@/types';
 import { serialize } from '@/lib/utils/serialize';
 
@@ -101,12 +102,14 @@ export default async function ProdutosPage({ searchParams }: Props) {
             </div>
 
             {products.length === 0 ? (
-              <div className="py-24 text-center border border-mist">
-                <p className="font-display text-2xl text-faint font-normal mb-4">Nenhum produto encontrado.</p>
-                <Link href="/produtos" className="text-[13px] text-mid hover:text-clay transition-colors font-medium">
-                  Limpar filtros →
-                </Link>
-              </div>
+              <EmptyState
+                icon={<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>}
+                title="Nenhum produto encontrado"
+                description={categoria ? `Não há produtos em "${categoria}". Tente outra categoria.` : 'Ainda não há produtos cadastrados.'}
+                actions={categoria ? [
+                  { label: 'Ver todos os produtos', href: '/produtos' },
+                ] : []}
+              />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-px bg-mist border border-mist">
                 {products.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}

@@ -43,6 +43,11 @@ export interface Product {
   variants: ProductVariant[]
   active: boolean
   createdAt: string
+  // Fabric specs (optional, shown in product detail)
+  threadCount?: number       // e.g. 400
+  composition?: string       // e.g. "100% Algodão"
+  weightGsm?: number         // e.g. 180 g/m²
+  certifications?: string[]  // e.g. ["OEKO-TEX", "Fair Trade"]
 }
 
 // ─── Inventory ───────────────────────────────────────────────────────────────

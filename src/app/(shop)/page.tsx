@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { getSettings } from '@/lib/settings';
 import { ProductCard } from '@/components/product/ProductCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import type { Product } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -165,21 +166,12 @@ export default async function HomePage() {
       {/* ══ PRODUTOS DESTAQUE ═══════════════════════════════════════ */}
       <section className="section-md bg-paper border-t border-mist">
         <div className="container-shop">
-          <div className="flex items-end justify-between mb-10 sm:mb-14">
-            <div>
-              <span className="eyebrow mb-4 block">Destaques</span>
-              <h2 className="font-display font-normal text-ink text-balance text-4xl sm:text-[2.8rem] leading-tight">
-                Escolhas da semana
-              </h2>
-            </div>
-            <Link
-              href="/produtos"
-              className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-mid hover:text-ink transition-colors duration-150 group pb-0.5"
-            >
-              Ver tudo
-              <svg className="transition-transform duration-150 group-hover:translate-x-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </Link>
-          </div>
+          <SectionHeader
+            eyebrow="Destaques"
+            title="Escolhas da semana"
+            cta={{ label: 'Ver tudo', href: '/produtos' }}
+            className="mb-10 sm:mb-14"
+          />
 
           {products.length === 0 ? (
             <div className="py-20 text-center border border-mist">

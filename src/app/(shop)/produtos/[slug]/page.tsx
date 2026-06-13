@@ -6,6 +6,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { VariantSelector } from '@/components/product/VariantSelector';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCard } from '@/components/product/ProductCard';
+import { SizeGuideModal } from '@/components/product/SizeGuideModal';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 
@@ -104,16 +105,54 @@ export default async function ProductPage({ params }: Props) {
               </p>
             )}
 
-            {/* Specs from tags */}
-            {specTags.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {specTags.map(tag => (
-                  <span key={tag} className="text-[11px] font-medium text-mid bg-warm border border-mist px-3 py-1.5 uppercase tracking-[0.08em]">
-                    {tag}
-                  </span>
-                ))}
+            {/* ── Specs table ── */}
+            {(product.threadCount || product.composition || product.weightGsm || specTags.length > 0) && (
+              <div className="border border-mist">
+                <div className="px-4 py-3 bg-warm/50 border-b border-mist">
+                  <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Especificações do tecido</p>
+                </div>
+                <div className="divide-y divide-mist">
+                  {product.threadCount && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Fio count</span>
+                      <span className="text-[13px] font-semibold text-ink">{product.threadCount} fios</span>
+                    </div>
+                  )}
+                  {product.composition && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Composição</span>
+                      <span className="text-[13px] font-semibold text-ink">{product.composition}</span>
+                    </div>
+                  )}
+                  {product.weightGsm && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Gramatura</span>
+                      <span className="text-[13px] font-semibold text-ink">{product.weightGsm} g/m²</span>
+                    </div>
+                  )}
+                  {specTags.map(tag => (
+                    <div key={tag} className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Tipo</span>
+                      <span className="text-[13px] font-semibold text-ink capitalize">{tag}</span>
+                    </div>
+                  ))}
+                  {product.certifications?.map(cert => (
+                    <div key={cert} className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Certificação</span>
+                      <span className="text-[13px] font-semibold text-clay">{cert}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* ── Size guide link ── */}
+            <div className="flex items-center justify-between">
+              <SizeGuideModal />
+              {product.category && (
+                <span className="text-[11px] text-faint">{product.category}</span>
+              )}
+            </div>
 
             {/* Variant selector */}
             <div className="border-t border-mist pt-5">

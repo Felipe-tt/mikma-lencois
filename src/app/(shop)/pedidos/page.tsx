@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase/client';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { Order } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { OrdersListSkeleton } from '@/components/ui/Skeleton';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -65,16 +66,12 @@ export default function MyOrdersPage() {
         {loading || ordersLoading ? (
           <OrdersListSkeleton />
         ) : orders.length === 0 ? (
-          <div className="py-24 flex flex-col items-center gap-5 text-center">
-            <div className="w-16 h-16 bg-warm flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-faint">
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-              </svg>
-            </div>
-            <p className="font-display text-2xl text-ink font-normal">Nenhum pedido ainda</p>
-            <p className="text-sm text-mid">Explore nossos produtos e faça seu primeiro pedido.</p>
-            <Link href="/produtos" className="btn-primary mt-2">Ver produtos</Link>
-          </div>
+          <EmptyState
+            icon={<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>}
+            title="Nenhum pedido ainda"
+            description="Explore nossos produtos e faça seu primeiro pedido."
+            actions={[{ label: 'Ver produtos', href: '/produtos' }]}
+          />
         ) : (
           <div className="flex flex-col gap-2">
             {orders.map((order) => (
