@@ -4,6 +4,7 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
