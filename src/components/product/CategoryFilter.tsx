@@ -17,7 +17,7 @@ function Filter({ categories, active, onClose }: Props) {
 
   return (
     <div>
-      <p className="text-2xs font-bold tracking-[0.2em] uppercase text-faint mb-4">Categoria</p>
+      <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-faint mb-4">Categoria</p>
       <ul className="flex flex-col gap-0.5">
         {[{ label: 'Todos', value: undefined }, ...categories.map(c => ({ label: c, value: c }))].map(({ label, value }) => {
           const isActive = active === value;

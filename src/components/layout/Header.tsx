@@ -163,7 +163,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           <div className="border-t border-mist/60 bg-warm/50">
             <div className="container-shop py-1.5 flex items-center gap-3">
               <div className="flex-1 h-[3px] bg-mist overflow-hidden" style={{borderRadius: '2px'}}>
-                <div className="h-full bg-clay transition-all duration-500 ease-smooth" style={{width: `${progress}%`}} />
+                <div className="h-full bg-clay transition-all duration-500 ease-out" style={{width: `${progress}%`}} />
               </div>
               <span className="text-[10px] font-medium text-mid shrink-0">
                 {freeShippingUnlocked

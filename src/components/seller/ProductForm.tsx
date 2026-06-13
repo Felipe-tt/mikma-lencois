@@ -243,7 +243,7 @@ function CameraModal({
             </p>
 
             {/* Cor selecionada */}
-            <div className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-2.5 w-full">
+            <div className="flex items-center gap-3 bg-white/10 px-4 py-2.5 w-full">
               <div className="w-6 h-6 rounded-full border border-white/30 shrink-0" style={{ background: pickedHex }} />
               <span className="text-sm text-white font-mono flex-1">{pickedHex}</span>
             </div>
@@ -392,7 +392,7 @@ export default function ProductForm({ initial }: Props) {
 
       <div className="max-w-lg mx-auto">
         {error && (
-          <div className="mb-4 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 rounded-xl">
+          <div className="mb-4 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {error}
           </div>
         )}
@@ -408,7 +408,7 @@ export default function ProductForm({ initial }: Props) {
                   <img
                     src={img.dataUrl}
                     alt=""
-                    className="h-20 w-20 rounded-xl border border-mist object-cover"
+                    className="h-20 w-20 border border-mist object-cover"
                   />
                   <div
                     className="absolute bottom-1.5 left-1.5 w-4 h-4 rounded-full border-2 border-white shadow"
@@ -426,7 +426,7 @@ export default function ProductForm({ initial }: Props) {
 
               <button
                 onClick={() => setShowCamera(true)}
-                className="h-20 w-20 rounded-xl border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 active:border-clay active:text-clay transition-colors"
+                className="h-20 w-20 border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 hover:border-clay hover:text-clay transition-colors"
               >
                 <span className="text-2xl">📷</span>
                 <span className="text-xs font-medium">Foto</span>
@@ -446,7 +446,7 @@ export default function ProductForm({ initial }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jogo de cama queen algodão"
-              className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+              className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
             />
           </div>
 
@@ -458,7 +458,7 @@ export default function ProductForm({ initial }: Props) {
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Material, medidas, cuidados com lavagem..."
-              className="w-full resize-none border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+              className="w-full resize-none border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
             />
           </div>
 
@@ -471,7 +471,7 @@ export default function ProductForm({ initial }: Props) {
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="49,90"
                 inputMode="decimal"
-                className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+                className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
               />
             </div>
             <div>
@@ -479,7 +479,7 @@ export default function ProductForm({ initial }: Props) {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+                className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
               >
                 {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
               </select>
@@ -493,14 +493,14 @@ export default function ProductForm({ initial }: Props) {
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="algodão, casal, branco"
-              className="w-full border border-mist rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20"
+              className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
             />
           </div>
 
           {/* ── Variações ── */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="block text-sm font-medium text-mid">Variações</label>
+              <label className="label">Variações</label>
               <button onClick={addVariant} className="text-xs font-semibold text-clay active:text-clay-d">
                 + Adicionar
               </button>
@@ -514,24 +514,24 @@ export default function ProductForm({ initial }: Props) {
 
             <div className="flex flex-col gap-2">
               {variants.map((v, i) => (
-                <div key={i} className="rounded-xl border border-mist bg-warm p-3 flex flex-col gap-2">
+                <div key={i} className="border border-mist bg-warm/50 p-3 flex flex-col gap-2">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-2xs text-faint mb-0.5 block">Tamanho</label>
+                      <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Tamanho</label>
                       <select
                         value={v.size}
                         onChange={(e) => updateVariant(i, 'size', e.target.value)}
-                        className="w-full rounded-lg border border-mist bg-paper px-2 py-2 text-sm"
+                        className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
                       >
                         {SIZES.map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="text-2xs text-faint mb-0.5 block">Tecido</label>
+                      <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Tecido</label>
                       <select
                         value={v.fabric}
                         onChange={(e) => updateVariant(i, 'fabric', e.target.value)}
-                        className="w-full rounded-lg border border-mist bg-paper px-2 py-2 text-sm"
+                        className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
                       >
                         {FABRICS.map((f) => <option key={f}>{f}</option>)}
                       </select>
@@ -540,34 +540,34 @@ export default function ProductForm({ initial }: Props) {
 
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
-                      <label className="text-2xs text-faint mb-0.5 block">Cor (hex)</label>
+                      <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Cor (hex)</label>
                       <div className="flex items-center gap-2">
                         <input
                           type="color"
                           value={v.color.startsWith('#') ? v.color : '#cccccc'}
                           onChange={(e) => updateVariant(i, 'color', e.target.value)}
-                          className="w-10 h-9 rounded-lg border border-mist cursor-pointer p-0.5 shrink-0"
+                          className="w-10 h-9 border border-mist cursor-pointer p-0.5 shrink-0"
                         />
                         <input
                           type="text"
                           value={v.color}
                           onChange={(e) => updateVariant(i, 'color', e.target.value)}
                           placeholder="#ffffff"
-                          className="flex-1 rounded-lg border border-mist px-2 py-2 text-sm font-mono"
+                          className="flex-1 border border-mist px-2 py-2 text-sm font-mono focus:outline-none"
                         />
                       </div>
                     </div>
 
                     {!isEdit && (
                       <div className="w-20">
-                        <label className="text-2xs text-faint mb-0.5 block">Qtd</label>
+                        <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Qtd</label>
                         <input
                           type="number"
                           min={0}
                           value={v.qty}
                           onChange={(e) => updateVariant(i, 'qty', Number(e.target.value))}
                           inputMode="numeric"
-                          className="w-full rounded-lg border border-mist px-2 py-2 text-sm text-center"
+                          className="w-full border border-mist px-2 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-clay/20"
                         />
                       </div>
                     )}
@@ -600,13 +600,13 @@ export default function ProductForm({ initial }: Props) {
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="btn-primary flex-1 py-3.5 text-base rounded-xl"
+              className="btn-primary flex-1 py-3.5 text-base"
             >
               {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
             </button>
             <button
               onClick={() => router.push('/painel/produtos')}
-              className="border border-mist px-5 py-3.5 text-sm font-medium text-mid rounded-xl active:bg-warm transition-colors"
+              className="border border-mist px-5 py-3.5 text-sm font-medium text-mid hover:bg-warm transition-colors"
             >
               Cancelar
             </button>

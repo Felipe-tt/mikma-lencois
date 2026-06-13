@@ -123,7 +123,7 @@ export default async function HomePage() {
               { n: '02', title: s.feat2Title ?? 'Frete nacional', sub: s.feat2Sub ?? 'PAC, SEDEX e transportadoras com rastreio em tempo real.' },
               { n: '03', title: s.feat3Title ?? 'Pague com PIX',  sub: s.feat3Sub ?? 'Confirmação automática e instantânea.' },
             ].map((b, idx) => (
-              <div key={b.n} className={`px-8 py-10 flex gap-5 items-start hover:bg-warm transition-colors duration-250 relative ${idx > 0 ? 'border-t sm:border-t-0 sm:border-l border-mist' : ''}`}>
+              <div key={b.n} className={`px-8 py-10 flex gap-5 items-start hover:bg-warm transition-colors duration-150 relative ${idx > 0 ? 'border-t sm:border-t-0 sm:border-l border-mist' : ''}`}>
                 <span className="font-display text-[2.8rem] text-clay/12 leading-none font-normal shrink-0 select-none mt-0.5">
                   {b.n}
                 </span>
