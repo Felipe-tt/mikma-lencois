@@ -76,18 +76,25 @@ export default function MyOrdersPage() {
             <Link href="/produtos" className="btn-primary mt-2">Ver produtos</Link>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {orders.map((order) => (
               <Link
                 key={order.id}
                 href={`/pedidos/${order.id}`}
-                className="border border-mist bg-paper hover:border-clay/40 hover:shadow-md hover:shadow-ink/5 transition-all duration-250 p-5 sm:p-6 flex flex-col gap-4"
+                className="border border-mist bg-paper hover:border-ink/20 hover:bg-warm/40 transition-all duration-150 p-5 sm:p-6 flex flex-col gap-4"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <p className="text-2xs font-semibold tracking-[0.18em] uppercase text-faint">Pedido</p>
-                    <p className="font-mono text-sm font-semibold text-ink">#{order.id.slice(-8).toUpperCase()}</p>
-                    <p className="text-xs text-faint mt-0.5">{formatDate(order.createdAt)}</p>
+                  <div className="flex items-start gap-4">
+                    {order.items[0]?.image && (
+                      <div className="w-10 h-[52px] shrink-0 overflow-hidden bg-warm border border-mist/60">
+                        <img src={order.items[0].image} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Pedido</p>
+                      <p className="font-mono text-[13px] font-semibold text-ink">#{order.id.slice(-8).toUpperCase()}</p>
+                      <p className="text-[11px] text-faint mt-0.5">{formatDate(order.createdAt)}</p>
+                    </div>
                   </div>
                   <span className={STATUS_BADGE[order.status] ?? 'badge badge-pending'}>
                     {STATUS_LABEL[order.status] ?? order.status}
@@ -95,10 +102,10 @@ export default function MyOrdersPage() {
                 </div>
 
                 <div className="border-t border-mist pt-3 flex items-end justify-between gap-3">
-                  <p className="text-sm text-mid line-clamp-2 flex-1">
+                  <p className="text-[13px] text-mid line-clamp-2 flex-1">
                     {order.items.map((item) => `${item.productName} ×${item.quantity}`).join(', ')}
                   </p>
-                  <p className="font-display text-xl text-ink shrink-0">{formatCurrency(order.totalCents)}</p>
+                  <p className="font-display text-[1.3rem] text-ink shrink-0 leading-none">{formatCurrency(order.totalCents)}</p>
                 </div>
               </Link>
             ))}

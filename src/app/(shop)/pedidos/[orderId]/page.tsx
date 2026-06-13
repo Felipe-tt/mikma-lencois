@@ -77,12 +77,15 @@ export default function OrderDetailPage() {
                 {i > 0 && (
                   <div className={`absolute top-3 right-1/2 w-full h-px ${i <= currentStep ? 'bg-clay' : 'bg-mist'}`} />
                 )}
-                <div className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
+                <div className={`relative z-10 w-6 h-6 flex items-center justify-center text-[10px] font-bold border-2 transition-colors ${
                   i < currentStep ? 'bg-clay border-clay text-paper'
                   : i === currentStep ? 'bg-paper border-clay text-clay'
                   : 'bg-paper border-mist text-faint'
                 }`}>
-                  {i < currentStep ? '✓' : i + 1}
+                  {i < currentStep
+                    ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    : i + 1
+                  }
                 </div>
                 <span className={`mt-2 text-xs text-center leading-tight ${i <= currentStep ? 'text-ink font-medium' : 'text-faint'}`}>
                   {step.label}

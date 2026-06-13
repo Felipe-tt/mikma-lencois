@@ -75,8 +75,8 @@ export default function PerfilPage() {
 
       <div className="container-shop py-12 max-w-lg">
         {/* Dados pessoais */}
-        <div className="border border-mist bg-paper p-6 mb-5">
-          <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-5">Dados pessoais</h2>
+        <div className="border border-mist p-6 mb-4">
+          <h2 className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-5">Dados pessoais</h2>
           <div className="flex flex-col gap-4">
             <div>
               <label className="label">Nome</label>
@@ -84,30 +84,35 @@ export default function PerfilPage() {
             </div>
             <div>
               <label className="label">E-mail</label>
-              <input value={user.email ?? ''} disabled className="input opacity-50 cursor-not-allowed" />
+              <input value={user.email ?? ''} disabled className="input opacity-40 cursor-not-allowed bg-warm" />
             </div>
             <div className="flex items-center gap-3 pt-1">
               <button onClick={handleSave} disabled={saving} className="btn-primary">
-                {saving ? 'Salvando…' : 'Salvar'}
+                {saving ? 'Salvando…' : 'Salvar alterações'}
               </button>
-              {saved && <span className="text-sm text-green-600 font-medium">✓ Salvo!</span>}
+              {saved && (
+                <span className="text-[12px] text-green-600 font-semibold flex items-center gap-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Salvo!
+                </span>
+              )}
             </div>
           </div>
         </div>
 
         {/* LGPD */}
-        <div className="border border-mist bg-paper p-6 mb-5">
-          <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-2">Privacidade e dados (LGPD)</h2>
-          <p className="text-xs text-mid mb-5 leading-relaxed">
+        <div className="border border-mist p-6 mb-4">
+          <h2 className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-2">Privacidade e dados (LGPD)</h2>
+          <p className="text-[13px] text-mid mb-5 leading-relaxed">
             Você tem direito de exportar todos os seus dados ou solicitar a exclusão completa da sua conta.
           </p>
           <div className="flex gap-3 flex-wrap">
-            <button onClick={handleExport} className="btn-outline text-sm">
+            <button onClick={handleExport} className="btn-outline text-[13px]">
               Exportar meus dados
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
-              className="border border-red-200 text-red-600 px-4 py-2 text-sm font-medium hover:bg-red-50 transition-colors"
+              className="border border-red-200 text-red-600 px-4 py-2 text-[13px] font-medium hover:bg-red-50 transition-colors"
             >
               Excluir conta
             </button>
@@ -116,22 +121,22 @@ export default function PerfilPage() {
 
         {/* Confirmação de exclusão */}
         {confirmDelete && (
-          <div className="border border-red-200 bg-red-50 p-5 mb-5">
-            <p className="text-sm font-semibold text-red-800 mb-1">Tem certeza?</p>
-            <p className="text-xs text-red-600 mb-4 leading-relaxed">
+          <div className="border border-red-200 bg-red-50 p-5 mb-4">
+            <p className="text-[13px] font-semibold text-red-800 mb-1">Tem certeza?</p>
+            <p className="text-[12px] text-red-600 mb-4 leading-relaxed">
               Esta ação é irreversível. Todos os seus dados serão removidos permanentemente.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="bg-red-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="bg-red-600 text-white px-4 py-2.5 text-[13px] font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
                 {deleting ? 'Excluindo…' : 'Sim, excluir minha conta'}
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="btn-outline text-sm"
+                className="btn-outline text-[13px]"
               >
                 Cancelar
               </button>
@@ -139,7 +144,8 @@ export default function PerfilPage() {
           </div>
         )}
 
-        <button onClick={logout} className="text-sm text-faint hover:text-clay transition-colors font-medium">
+        <button onClick={logout} className="text-[13px] text-faint hover:text-clay transition-colors font-medium flex items-center gap-2">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Sair da conta
         </button>
       </div>

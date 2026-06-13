@@ -80,6 +80,7 @@ export interface OrderItem {
   variant: ProductVariant
   quantity: number
   unitPrice: number // centavos
+  image?: string
 }
 
 export interface OrderTimelineEvent {

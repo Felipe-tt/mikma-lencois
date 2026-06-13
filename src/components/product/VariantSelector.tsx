@@ -65,15 +65,22 @@ export function VariantSelector({ product, inventory }: Props) {
   }
 
   if (product.variants.length === 0) {
-    return <p className="text-sm text-faint">Nenhuma variação cadastrada para este produto.</p>;
+    return <p className="text-[13px] text-faint">Nenhuma variação cadastrada para este produto.</p>;
   }
 
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Variant selector */}
+      {/* ── Variant selector ── */}
       <div>
-        <p className="label mb-3">Tamanho / Variação</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="label">Tamanho / Variação</p>
+          {selectedVariant && (
+            <span className="text-[11px] text-faint font-medium">
+              {availableStock > 0 ? `${availableStock} disponíve${availableStock !== 1 ? 'is' : 'l'}` : ''}
+            </span>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           {product.variants.map(variant => {
             const stock = getStock(variant);
@@ -85,15 +92,22 @@ export function VariantSelector({ product, inventory }: Props) {
                 key={variant.id}
                 onClick={() => { if (!unavailable) { setSelectedVariantId(variant.id); setQty(1); } }}
                 disabled={unavailable}
+                title={unavailable ? 'Fora de estoque' : undefined}
                 className={[
-                  'border px-4 py-2 text-sm font-medium transition-all duration-200',
+                  'relative border px-4 py-2.5 text-[13px] font-medium transition-all duration-150',
                   isSelected
                     ? 'border-ink bg-ink text-paper'
                     : unavailable
-                    ? 'cursor-not-allowed border-mist bg-warm text-faint line-through'
-                    : 'border-mist text-mid hover:border-ink hover:text-ink',
+                    ? 'cursor-not-allowed border-mist text-faint'
+                    : 'border-mist text-mid hover:border-ink/50 hover:text-ink',
                 ].join(' ')}
               >
+                {/* Diagonal strike for out-of-stock — more refined than text line-through */}
+                {unavailable && (
+                  <span className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <span className="absolute top-[calc(50%-0.5px)] left-0 w-[141%] h-px bg-mist origin-left rotate-[-27deg] translate-x-[-10%]" />
+                  </span>
+                )}
                 {variant.size}{variant.color ? ` — ${variant.color}` : ''}
               </button>
             );
@@ -101,7 +115,7 @@ export function VariantSelector({ product, inventory }: Props) {
         </div>
       </div>
 
-      {/* Quantity */}
+      {/* ── Quantity ── */}
       {!outOfStock && (
         <div>
           <p className="label mb-3">Quantidade</p>
@@ -113,7 +127,7 @@ export function VariantSelector({ product, inventory }: Props) {
               >
                 −
               </button>
-              <span className="w-10 text-center text-sm font-medium text-ink">{qty}</span>
+              <span className="w-10 text-center text-[13px] font-semibold text-ink tabular-nums">{qty}</span>
               <button
                 onClick={() => setQty(q => Math.min(availableStock, q + 1))}
                 className="w-10 h-10 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
@@ -121,34 +135,53 @@ export function VariantSelector({ product, inventory }: Props) {
                 +
               </button>
             </div>
-            <span className="text-xs text-faint">{availableStock} disponíve{availableStock !== 1 ? 'is' : 'l'}</span>
+            {availableStock <= 5 && availableStock > 0 && (
+              <span className="text-[11px] text-amber-600 font-semibold">
+                Apenas {availableStock} {availableStock === 1 ? 'unidade' : 'unidades'}
+              </span>
+            )}
           </div>
         </div>
       )}
 
-      {/* CTA */}
+      {/* ── CTA ── */}
       <button
         onClick={addToCart}
         disabled={outOfStock || adding || !selectedVariant || loading}
         className={[
-          'w-full py-4 text-sm font-semibold tracking-wide transition-all duration-200 border',
+          'w-full h-14 text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
           outOfStock || !selectedVariant
             ? 'cursor-not-allowed bg-warm text-faint border-mist'
             : loading
             ? 'cursor-wait bg-warm text-faint border-mist'
             : adding
             ? 'cursor-wait bg-clay/80 text-paper border-clay/80'
-            : 'btn-primary',
+            : 'bg-ink text-paper border-ink hover:bg-clay hover:border-clay active:scale-[0.98]',
         ].join(' ')}
       >
         {outOfStock
-          ? 'Sem estoque'
+          ? 'Fora de estoque'
           : loading
           ? 'Carregando…'
           : adding
-          ? <span className="flex items-center justify-center gap-2"><span className="spinner" /> Adicionando…</span>
-          : 'Adicionar ao carrinho'}
+          ? <><span className="spinner" />Adicionando ao carrinho…</>
+          : 'Adicionar ao carrinho'
+        }
       </button>
+
+      {/* Micro trust below CTA */}
+      {!outOfStock && (
+        <p className="text-[11px] text-faint text-center flex items-center justify-center gap-4">
+          <span className="inline-flex items-center gap-1">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Frete com rastreio
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            PIX confirmado na hora
+          </span>
+        </p>
+      )}
     </div>
   );
 }
