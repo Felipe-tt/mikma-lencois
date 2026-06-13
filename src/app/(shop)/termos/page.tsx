@@ -1,73 +1,71 @@
 import { getSettings } from '@/lib/settings';
 
+export const metadata = { title: 'Termos de Uso' };
+
 export default async function TermosPage() {
-  const settings = await getSettings();
+  const s = await getSettings();
+  const name = s.storeName || 'Mikma Lençóis';
+  const city = s.storeCity || 'Blumenau, SC';
+
   return (
-    <div className="min-h-screen bg-paper py-12">
-      <div className="max-w-2xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-ink mb-2">Termos de Uso</h1>
-        <p className="text-sm text-faint mb-8">Última atualização: junho de 2025</p>
+    <div>
+      <div className="border-b border-mist">
+        <div className="container-shop py-12 sm:py-16">
+          <span className="eyebrow mb-3 block">Legal</span>
+          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">
+            Termos de Uso
+          </h1>
+        </div>
+      </div>
 
-        <div className="prose prose-sm text-mid flex flex-col gap-6">
+      <div className="container-shop py-12 pb-20">
+        <div className="max-w-2xl flex flex-col gap-8">
+
           <section>
-            <h2 className="text-lg font-semibold text-ink mb-2">1. Aceitação dos termos</h2>
-            <p>
-              Ao criar uma conta ou realizar uma compra na Mikma Lençóis, você concorda com estes Termos de Uso. Se
-              não concordar, não utilize nossos serviços.
+            <h2 className="font-display font-normal text-ink text-2xl mb-4">1. Aceitação</h2>
+            <p className="text-[15px] text-mid leading-relaxed">
+              Ao utilizar este site ou realizar uma compra, você concorda com estes Termos de Uso. O site é operado por {name}, com sede em {city}.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-ink mb-2">2. Cadastro</h2>
-            <p>
-              Você é responsável pelas informações fornecidas no cadastro. É proibido criar contas com dados falsos ou
-              de terceiros. Cada pessoa pode ter apenas uma conta.
+            <h2 className="font-display font-normal text-ink text-2xl mb-4">2. Produtos e preços</h2>
+            <p className="text-[15px] text-mid leading-relaxed">
+              Todos os preços são em Reais (BRL) e incluem impostos. Nos reservamos o direito de alterar preços a qualquer momento, sem aviso prévio. O preço válido é o exibido no momento da finalização do pedido.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-ink mb-2">3. Pedidos e pagamentos</h2>
-            <ul className="list-disc pl-5 flex flex-col gap-1">
-              <li>Pagamentos são processados exclusivamente via PIX (AbacatePay)</li>
-              <li>O pedido só é confirmado após a confirmação do pagamento</li>
-              <li>Preços podem ser alterados sem aviso prévio, mas o valor cobrado é o exibido no momento da compra</li>
-              <li>Em caso de indisponibilidade de estoque após o pagamento, reembolso integral em até 2 dias úteis</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-ink mb-2">4. Entrega</h2>
-            <p>
-              Prazos de entrega são estimados e dependem da transportadora escolhida. A Mikma Lençóis não é
-              responsável por atrasos causados por greves, problemas nos Correios ou eventos fora de nosso controle.
+            <h2 className="font-display font-normal text-ink text-2xl mb-4">3. Pagamento</h2>
+            <p className="text-[15px] text-mid leading-relaxed">
+              Aceitamos pagamento via PIX. O pedido é confirmado somente após a confirmação do pagamento pelo sistema bancário, de forma automática e instantânea. PIX não pagos dentro do prazo são automaticamente cancelados.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-ink mb-2">5. Trocas e devoluções</h2>
-            <p>
-              Conforme o Código de Defesa do Consumidor (art. 49), você tem 7 dias corridos após o recebimento para
-              desistir da compra, sem custo. Produtos com defeito podem ser trocados em até 30 dias.
+            <h2 className="font-display font-normal text-ink text-2xl mb-4">4. Entrega</h2>
+            <p className="text-[15px] text-mid leading-relaxed">
+              O prazo de entrega começa a contar após a confirmação do pagamento. Para entregas locais em {city}, o prazo é de até 1 hora. Para outras regiões, o prazo varia conforme a transportadora selecionada e o CEP de destino.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-ink mb-2">6. Uso aceitável</h2>
-            <p>
-              É proibido usar a plataforma para fraudes, falsificação de pagamentos ou qualquer atividade ilegal.
-              Contas suspeitas podem ser suspensas sem aviso.
+            <h2 className="font-display font-normal text-ink text-2xl mb-4">5. Trocas e devoluções</h2>
+            <p className="text-[15px] text-mid leading-relaxed">
+              Conforme o Código de Defesa do Consumidor (Lei nº 8.078/1990), você tem direito de desistir da compra em até 7 dias após o recebimento do produto, desde que o produto esteja sem uso e na embalagem original. Para iniciar uma troca ou devolução, entre em contato conosco.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-ink mb-2">7. Contato</h2>
-            <p>
-              Dúvidas:{' '}
-              <a href={`mailto:${settings.storeEmail}`} className="text-clay hover:underline">
-                {settings.storeEmail}
-              </a>
+            <h2 className="font-display font-normal text-ink text-2xl mb-4">6. Limitação de responsabilidade</h2>
+            <p className="text-[15px] text-mid leading-relaxed">
+              Não nos responsabilizamos por atrasos causados por transportadoras, eventos de força maior, greves, ou endereços incorretos fornecidos pelo comprador. Em caso de produto com defeito de fabricação, providenciaremos a troca sem custo adicional.
             </p>
           </section>
+
+          <p className="text-[12px] text-faint border-t border-mist pt-6">
+            Última atualização: {new Date().getFullYear()}. {city}.
+          </p>
         </div>
       </div>
     </div>

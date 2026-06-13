@@ -62,6 +62,25 @@ export default function PainelPedidos() {
   }
 
   const filtered = filter === 'todos' ? orders : orders.filter(o => o.status === filter);
+  const [deletingCancelled, setDeletingCancelled] = useState(false);
+
+  async function handleDeleteCancelled() {
+    const cancelled = orders.filter(o => o.status === 'cancelled');
+    if (!cancelled.length) return;
+    if (!confirm(`Excluir ${cancelled.length} pedido(s) cancelado(s) permanentemente?`)) return;
+    setDeletingCancelled(true);
+    try {
+      const batch = writeBatch(db);
+      cancelled.forEach(o => batch.delete(doc(db, 'orders', o.id)));
+      await batch.commit();
+    } catch (err) {
+      console.error('Erro ao excluir cancelados:', err);
+      alert('Erro ao excluir pedidos. Verifique suas permissões.');
+    } finally {
+      setDeletingCancelled(false);
+    }
+  }
+
   const cancelledCount = orders.filter(o => o.status === 'cancelled').length;
 
   if (loading) return <DashboardSkeleton />;
@@ -97,16 +116,14 @@ export default function PainelPedidos() {
         </div>
         {cancelledCount > 0 && (
           <button
-            onClick={async () => {
-              const cancelled = orders.filter(o => o.status === 'cancelled');
-              if (!confirm(`Excluir ${cancelled.length} pedido(s) cancelado(s)?`)) return;
-              const batch = writeBatch(db);
-              cancelled.forEach(o => batch.delete(doc(db, 'orders', o.id)));
-              await batch.commit();
-            }}
-            className="shrink-0 text-[11px] font-semibold text-red-500 border border-red-200 bg-red-50 px-3 py-1.5 hover:bg-red-100 transition-colors"
+            onClick={handleDeleteCancelled}
+            disabled={deletingCancelled}
+            className="shrink-0 text-[11px] font-semibold text-red-500 border border-red-200 bg-red-50 px-3 py-1.5 hover:bg-red-100 disabled:opacity-50 transition-colors flex items-center gap-1.5"
           >
-            Excluir cancelados ({cancelledCount})
+            {deletingCancelled
+              ? <><span className="spinner-sm border-red-400/30 border-t-red-500" />Excluindo…</>
+              : `Excluir cancelados (${cancelledCount})`
+            }
           </button>
         )}
       </div>
