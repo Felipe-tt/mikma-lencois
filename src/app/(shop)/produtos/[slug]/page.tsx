@@ -89,10 +89,10 @@ export default async function ProductPage({ params }: Props) {
           <div className="lg:sticky lg:top-24 flex flex-col gap-5">
 
             <div>
-              <h1 className="font-display font-normal text-ink leading-[1.08] text-[2rem] sm:text-[2.4rem] lg:text-[2.6rem] mb-3">
+              <h1 className="font-display font-normal text-ink leading-[1.06] text-[2rem] sm:text-[2.4rem] lg:text-[2.8rem] mb-4">
                 {product.name}
               </h1>
-              <p className="font-display text-[1.75rem] text-clay font-normal">
+              <p className="font-display text-[2rem] text-clay font-normal tracking-[-0.02em]">
                 {formatCurrency(product.price)}
               </p>
             </div>

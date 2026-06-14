@@ -38,12 +38,16 @@ export default async function ProdutosPage({ searchParams }: Props) {
     <div>
       {/* ── Header ── */}
       <div className="border-b border-mist">
-        <div className="container-shop py-10 md:py-12">
-          <p className="page-label mb-4">Catálogo</p>
+        <div className="container-shop py-8 sm:py-12">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">{heading}</h1>
-              <p className="text-[13px] text-faint mt-2">
+              <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-faint mb-3">
+                {categoria ? `Catálogo / ${categoria}` : 'Catálogo'}
+              </p>
+              <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">
+                {heading}
+              </h1>
+              <p className="text-[12px] text-faint mt-2 font-mono">
                 {products.length} produto{products.length !== 1 ? 's' : ''}
               </p>
             </div>

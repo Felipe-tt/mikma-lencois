@@ -51,7 +51,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
   const showFreeShippingBar = hasFreeShipping && count > 0;
 
   const isHome = pathname === '/';
-  const isDark = isHome && !scrolled;
+  const isDark = false; // hero is now light, header stays light always
 
   return (
     <>
@@ -63,13 +63,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
       )}
 
       {/* ── Main header ─────────────────────────────────────────── */}
-      <header className={`sticky top-0 z-40 transition-all duration-300 ${
-        isHome && !scrolled
-          ? 'bg-ink/90 backdrop-blur-sm'
-          : scrolled
-          ? 'bg-paper shadow-[0_1px_0_0_#E4DED5]'
-          : 'bg-paper/98 backdrop-blur-sm'
-      }`}>
+      <header className={`sticky top-0 z-40 bg-paper transition-shadow duration-200 ${scrolled ? 'shadow-[0_1px_0_0_#E4DED5]' : 'border-b border-mist'}`}>
         <div className="container-shop h-[60px] flex items-center gap-3">
 
           {/* Mobile hamburger */}
@@ -84,13 +78,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Logo */}
           <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <Image
-              src={isDark ? '/logo-white.png' : '/logo-dark.png'}
-              alt="Mikma Lençóis"
-              width={160} height={160}
-              className="h-[42px] w-auto object-contain transition-opacity duration-200"
-              priority
-            />
+            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={160} height={160} className="h-[42px] w-auto object-contain" priority />
           </NavLink>
 
           {/* Desktop nav — collapses when search opens */}

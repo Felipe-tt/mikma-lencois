@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -12,17 +12,20 @@
   }
   body {
     @apply bg-paper text-ink font-sans antialiased;
+    font-weight: 300;
     line-height: 1.65;
     font-size: 16px;
   }
-  h1, h2, h3, h4 { @apply font-display leading-tight; }
+  /* Headings always normal weight with DM Serif */
+  h1, h2, h3, h4 { @apply font-display leading-tight font-normal; }
+  /* Strong elements use 500 weight */
+  strong, b { font-weight: 500; }
   a { @apply no-underline; }
   button { @apply cursor-pointer; }
   img, video { @apply block max-w-full; }
   *:focus-visible {
     outline: 2px solid #B8622F;
     outline-offset: 2px;
-    border-radius: 1px;
   }
 }
 

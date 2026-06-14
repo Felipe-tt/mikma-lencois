@@ -3,7 +3,6 @@ import { getSettings } from '@/lib/settings';
 import { ProductCard } from '@/components/product/ProductCard';
 import type { Product } from '@/types';
 import Link from 'next/link';
-import Image from 'next/image';
 import { serialize } from '@/lib/utils/serialize';
 import { FadeIn } from '@/components/ui/FadeIn';
 
@@ -29,122 +28,98 @@ export default async function HomePage() {
   return (
     <>
       {/* ══ HERO ═══════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-ink">
+      <section className="relative overflow-hidden bg-paper border-b border-mist">
+        {/* Grade de fundo — textura de tecido abstrata */}
+        <div className="absolute inset-0 pointer-events-none select-none overflow-hidden opacity-[0.028]" aria-hidden>
+          {Array.from({ length: 18 }).map((_, i) => (
+            <div key={i} className="absolute top-0 bottom-0 w-px bg-ink" style={{ left: `${(i + 1) * 5.55}%` }} />
+          ))}
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="absolute left-0 right-0 h-px bg-ink" style={{ top: `${(i + 1) * 8.33}%` }} />
+          ))}
+        </div>
+
         <div className="container-shop">
-          <div className="grid lg:grid-cols-2 min-h-[580px] lg:min-h-[720px] gap-0">
-
-            {/* Left — copy */}
-            <div className="flex flex-col justify-center py-20 lg:py-36 lg:pr-16 relative z-10">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-6 h-px bg-clay" />
-                <span className="text-[10px] font-bold tracking-[0.28em] uppercase text-clay/80">
-                  {s.heroTag ?? 'Blumenau, SC'} · {new Date().getFullYear()}
+          {/* Headline — rompe a grade, vai de borda a borda */}
+          <div className="pt-14 sm:pt-20 pb-0">
+            <h1
+              className="font-display font-normal text-ink leading-[0.92] tracking-[-0.03em] select-none"
+              style={{ fontSize: 'clamp(4.5rem, 15vw, 13rem)' }}
+            >
+              {(s.heroTitle ?? 'Lençóis\nfeitos pra\ndurar.').split('\n').map((line, i) => (
+                <span key={i} className={`block ${i === 1 ? 'italic text-clay' : ''}`}>
+                  {line}
                 </span>
-              </div>
+              ))}
+            </h1>
+          </div>
 
-              <h1 className="font-display font-normal text-paper leading-[1.02] text-[clamp(2.8rem,7vw,5.8rem)]">
-                {heroLines.map((line, i) => (
-                  <span key={i} className="block">
-                    {i === 1 ? <em className="text-clay not-italic">{line}</em> : line}
-                  </span>
-                ))}
-              </h1>
-
-              <p className="mt-6 text-[15px] text-paper/40 max-w-[320px] leading-relaxed">
-                {s.heroSubtitle ?? 'Da fábrica para a sua cama. Qualidade real, sem intermediários.'}
+          {/* Linha divisória com dados técnicos — ficha de fábrica */}
+          <div className="mt-10 pt-5 border-t border-mist flex flex-wrap items-start justify-between gap-6">
+            {/* Copy + CTA */}
+            <div className="flex flex-col gap-6 max-w-xs">
+              <p className="text-[14px] text-mid leading-relaxed font-light">
+                {s.heroSubtitle ?? 'Da nossa fábrica em Blumenau direto para a sua cama.'}
               </p>
-
-              <div className="mt-10 flex items-center gap-6 flex-wrap">
-                <Link href="/produtos" className="btn-clay-lg">
+              <div className="flex items-center gap-5">
+                <Link href="/produtos" className="btn-primary-lg">
                   Ver produtos
                 </Link>
-                <Link href="/sobre" className="text-[13px] font-medium text-paper/40 hover:text-paper/80 transition-colors flex items-center gap-2 group">
-                  Nossa história
-                  <svg className="transition-transform duration-200 group-hover:translate-x-0.5" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                <Link href="/sobre" className="text-[12px] font-medium text-faint hover:text-ink transition-colors tracking-wide">
+                  Sobre nós →
                 </Link>
-              </div>
-
-              {/* Trust — linha fina embaixo */}
-              <div className="mt-12 pt-8 border-t border-paper/[0.08] flex flex-wrap gap-x-7 gap-y-2">
-                {[
-                  'Entrega em 1h em Blumenau',
-                  'Frete para todo Brasil',
-                  'PIX confirmado na hora',
-                ].map(t => (
-                  <span key={t} className="text-[11px] text-paper/30 font-medium flex items-center gap-2">
-                    <span className="w-1 h-1 bg-clay shrink-0" />
-                    {t}
-                  </span>
-                ))}
               </div>
             </div>
 
-            {/* Right — visual com logo e float tags */}
-            <div className="hidden lg:flex items-center justify-center relative">
-              {/* Linha vertical divisória */}
-              <div className="absolute left-0 top-20 bottom-20 w-px bg-paper/[0.07]" />
-
-              <div className="flex flex-col items-center gap-5 relative">
-                <Image
-                  src="/logo-white.png"
-                  alt={s.storeName ?? 'Mikma Lençóis'}
-                  width={160}
-                  height={80}
-                  className="h-14 w-auto object-contain opacity-90"
-                  priority
-                />
-                <p className="text-[8px] font-bold tracking-[0.4em] uppercase text-paper/20">
-                  {s.storeCity?.toUpperCase() ?? 'BLUMENAU · SC'}
-                </p>
-              </div>
-
-              {/* Float tags */}
-              {s.heroFloatTag1Label && (
-                <div className="absolute top-20 right-12 border border-paper/10 bg-paper/5 backdrop-blur-sm px-5 py-4">
-                  <p className="text-[9px] text-paper/30 uppercase tracking-[0.18em] mb-1">{s.heroFloatTag1Label}</p>
-                  <p className="text-[15px] font-semibold text-paper leading-none">{s.heroFloatTag1Value}</p>
+            {/* Ficha técnica — dados reais como elemento visual */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-mist border border-mist">
+              {[
+                { value: s.heroFloatTag1Value ?? '400', unit: 'fios', label: s.heroFloatTag1Label ?? 'Thread count' },
+                { value: '100%', unit: '', label: 'Algodão' },
+                { value: '< 1h', unit: '', label: 'Entrega local' },
+                { value: 'PIX', unit: '', label: 'Pagamento' },
+              ].map(item => (
+                <div key={item.label} className="bg-paper px-5 py-4 flex flex-col gap-1.5">
+                  <span className="font-mono text-[10px] tracking-[0.16em] uppercase text-faint">{item.label}</span>
+                  <span className="font-display text-[1.6rem] text-ink leading-none">
+                    {item.value}<span className="text-[0.9rem] text-mid ml-0.5">{item.unit}</span>
+                  </span>
                 </div>
-              )}
-              {s.heroFloatTag2Label && (
-                <div className="absolute bottom-24 right-12 border border-clay/30 bg-clay/10 px-5 py-4">
-                  <p className="text-[9px] text-clay/70 uppercase tracking-[0.18em] mb-1">{s.heroFloatTag2Label}</p>
-                  <p className="text-[15px] font-semibold text-paper leading-none">{s.heroFloatTag2Value}</p>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
+
+        {/* Barra de acento inferior */}
+        <div className="mt-10 h-1 bg-clay w-full" />
       </section>
 
-      {/* ══ DIFERENCIAIS — sem números decorativos ════════════════ */}
-      <section className="bg-paper border-b border-mist">
+      {/* ══ DIFERENCIAIS ════════════════════════════════════════════ */}
+      <section className="bg-paper">
         <div className="container-shop">
-          <div className="grid grid-cols-1 sm:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-mist">
             {[
               {
                 title: s.feat1Title ?? 'Entrega em 1h',
                 sub: s.feat1Sub ?? 'Para endereços em Blumenau via Uber Direct.',
-                icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
               },
               {
                 title: s.feat2Title ?? 'Frete nacional',
-                sub: s.feat2Sub ?? 'PAC, SEDEX e transportadoras com rastreio em tempo real.',
-                icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+                sub: s.feat2Sub ?? 'PAC, SEDEX e transportadoras com rastreio.',
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
               },
               {
                 title: s.feat3Title ?? 'Pague com PIX',
                 sub: s.feat3Sub ?? 'Confirmação automática e instantânea.',
-                icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>,
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>,
               },
             ].map((b, idx) => (
-              <div
-                key={b.title}
-                className={`px-8 py-10 flex gap-5 items-start hover:bg-warm transition-colors duration-200 ${idx > 0 ? 'border-t sm:border-t-0 sm:border-l border-mist' : ''}`}
-              >
-                <span className="text-clay mt-0.5 shrink-0 opacity-80">{b.icon}</span>
+              <div key={b.title} className="px-8 py-10 flex flex-col gap-4">
+                <span className="text-clay">{b.icon}</span>
                 <div>
-                  <p className="text-[14px] font-semibold text-ink mb-1.5 leading-snug">{b.title}</p>
-                  <p className="text-[13px] text-mid leading-relaxed">{b.sub}</p>
+                  <p className="font-display text-xl text-ink mb-1.5">{b.title}</p>
+                  <p className="text-[13px] text-mid leading-relaxed font-light">{b.sub}</p>
                 </div>
               </div>
             ))}
@@ -208,32 +183,34 @@ export default async function HomePage() {
       </section>
 
       {/* ══ CTA BANNER ══════════════════════════════════════════════ */}
-      <section className="bg-warm border-t border-mist py-20 sm:py-28">
+      <section className="bg-ink py-20 sm:py-28">
         <div className="container-shop">
           <FadeIn className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-12">
-            <div className="max-w-lg">
-              <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-faint mb-5">Direto da fábrica</p>
-              <h2 className="font-display font-normal text-ink leading-[1.04] text-4xl sm:text-5xl lg:text-[3.2rem] text-balance">
+            <div className="max-w-xl">
+              <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-paper/25 mb-5">
+                {s.storeCity ?? 'Blumenau, SC'} · Est. {s.foundedYear ?? '2018'}
+              </p>
+              <h2 className="font-display text-paper font-normal leading-[1.04] text-4xl sm:text-5xl lg:text-[3.4rem] text-balance">
                 {s.storeSlogan ?? 'Qualidade que você sente na primeira noite.'}
               </h2>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-              <Link href="/produtos" className="btn-primary-lg">Comprar agora</Link>
-              <Link href="/sobre" className="btn-outline-lg">Nossa história</Link>
+              <Link href="/produtos" className="btn-clay-lg">Comprar agora</Link>
+              <Link href="/sobre" className="btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em] border border-paper/15 text-paper/60 hover:text-paper hover:border-paper/30 transition-all duration-150">Nossa história</Link>
             </div>
           </FadeIn>
 
-          {/* Stats row */}
-          <div className="mt-16 pt-12 border-t border-mist grid grid-cols-2 sm:grid-cols-4 gap-8">
+          {/* Stats */}
+          <div className="mt-16 pt-10 border-t border-paper/[0.07] grid grid-cols-2 sm:grid-cols-4 gap-8">
             {[
               { value: s.statOrders ?? '1.200+', label: 'Pedidos entregues' },
-              { value: s.statRating ?? '4.9',    label: 'Avaliação média' },
-              { value: s.statDelivery ?? '< 1h', label: 'Entrega local' },
-              { value: s.statYears ?? '6 anos',  label: 'No mercado' },
+              { value: s.statRating ?? '4.9★',   label: 'Avaliação média' },
+              { value: s.statDelivery ?? '< 1h',  label: 'Entrega local' },
+              { value: s.statYears ?? '6 anos',   label: 'No mercado' },
             ].map(stat => (
               <div key={stat.label}>
-                <p className="font-display text-3xl sm:text-4xl text-ink font-normal leading-none mb-2">{stat.value}</p>
-                <p className="text-[12px] text-mid">{stat.label}</p>
+                <p className="font-display text-3xl sm:text-[2.6rem] text-paper font-normal leading-none tracking-[-0.02em] mb-2">{stat.value}</p>
+                <p className="text-[11px] text-paper/30 font-mono tracking-[0.12em] uppercase">{stat.label}</p>
               </div>
             ))}
           </div>
