@@ -75,25 +75,26 @@ export default function CartPage() {
   return (
     <div>
       {/* Page header — inline, no bg-warm */}
-      <div className="container-shop pt-8 pb-6">
-        <span className="eyebrow mb-2 block">Compra</span>
-        <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-[2.6rem]">Carrinho</h1>
+      <div className="border-b border-mist">
+        <div className="container-shop py-10">
+          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Carrinho</h1>
+        </div>
       </div>
 
       {loading || cartLoading ? (
         <CartSkeleton />
       ) : items.length === 0 ? (
-        <div className="container-shop py-20 sm:py-28 flex flex-col items-center gap-5 text-center px-6 max-w-sm mx-auto">
-          <div className="w-14 h-14 bg-warm border border-mist flex items-center justify-center">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-faint">
-              <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
-            </svg>
-          </div>
-          <div>
-            <p className="font-display text-[1.6rem] text-ink font-normal mb-2">Carrinho vazio</p>
-            <p className="text-[13px] text-mid">Explore nossos produtos e adicione itens ao carrinho.</p>
-          </div>
-          <Link href="/produtos" className="btn-primary mt-1">Ver produtos</Link>
+        <div className="container-shop py-24 sm:py-32 max-w-md mx-auto text-center">
+          <svg className="mx-auto mb-6 text-faint" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+            <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+          <h2 className="font-display font-normal text-ink text-3xl mb-3">Carrinho vazio</h2>
+          <p className="text-[14px] text-mid mb-8 leading-relaxed">
+            Explore nossos lençóis e adicione itens ao carrinho.
+          </p>
+          <Link href="/produtos" className="btn-primary">Ver produtos</Link>
         </div>
       ) : (
         <div className="container-shop pb-24">

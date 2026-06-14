@@ -66,7 +66,6 @@ export default function PerfilPage() {
     <div>
       <div className="border-b border-mist">
         <div className="container-shop">
-          <span className="eyebrow mb-3 block">Conta</span>
           <h1 className="font-display font-normal text-ink" >
             Minha conta
           </h1>

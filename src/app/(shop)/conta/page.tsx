@@ -43,7 +43,6 @@ export default function ContaPage() {
       {/* Header — clean, sem bg separado */}
       <div className="border-b border-mist">
         <div className="container-shop py-12 sm:py-16">
-          <span className="eyebrow mb-3 block">Área do cliente</span>
           <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">
             Olá, {user.displayName?.split(' ')[0] ?? 'cliente'}
           </h1>

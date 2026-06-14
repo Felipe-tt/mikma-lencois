@@ -5,6 +5,7 @@ import type { Product } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { serialize } from '@/lib/utils/serialize';
+import { FadeIn } from '@/components/ui/FadeIn';
 
 export const dynamic = 'force-dynamic';
 
@@ -174,7 +175,7 @@ export default async function HomePage() {
       {/* ══ PRODUTOS DESTAQUE ═══════════════════════════════════════ */}
       <section className="section-md bg-paper border-t border-mist">
         <div className="container-shop">
-          <div className="flex items-end justify-between mb-10 sm:mb-14">
+          <FadeIn className="flex items-end justify-between mb-10 sm:mb-14">
             <div>
               <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-faint mb-4">Destaques</p>
               <h2 className="font-display font-normal text-ink text-balance text-4xl sm:text-[2.8rem] leading-tight">
@@ -188,7 +189,7 @@ export default async function HomePage() {
               Ver tudo
               <svg className="transition-transform duration-150 group-hover:translate-x-0.5" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
-          </div>
+          </FadeIn>
 
           {products.length === 0 ? (
             <div className="py-20 text-center border border-mist">
@@ -209,7 +210,7 @@ export default async function HomePage() {
       {/* ══ CTA BANNER ══════════════════════════════════════════════ */}
       <section className="bg-warm border-t border-mist py-20 sm:py-28">
         <div className="container-shop">
-          <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-12">
+          <FadeIn className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-12">
             <div className="max-w-lg">
               <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-faint mb-5">Direto da fábrica</p>
               <h2 className="font-display font-normal text-ink leading-[1.04] text-4xl sm:text-5xl lg:text-[3.2rem] text-balance">
@@ -220,7 +221,7 @@ export default async function HomePage() {
               <Link href="/produtos" className="btn-primary-lg">Comprar agora</Link>
               <Link href="/sobre" className="btn-outline-lg">Nossa história</Link>
             </div>
-          </div>
+          </FadeIn>
 
           {/* Stats row */}
           <div className="mt-16 pt-12 border-t border-mist grid grid-cols-2 sm:grid-cols-4 gap-8">

@@ -124,7 +124,7 @@ export default function CheckoutPage() {
       {/* ── Page title — integrated ── */}
       <div className="border-b border-mist">
         <div className="container-shop py-10">
-          <span className="eyebrow mb-3 block">Compra</span>
+          <p className="page-label mb-4">Compra</p>
           <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Finalizar pedido</h1>
         </div>
       </div>

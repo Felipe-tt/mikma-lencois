@@ -57,7 +57,6 @@ export default function MyOrdersPage() {
     <div>
       <div className="border-b border-mist">
         <div className="container-shop">
-          <span className="eyebrow mb-3 block">Histórico</span>
           <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Meus pedidos</h1>
         </div>
       </div>

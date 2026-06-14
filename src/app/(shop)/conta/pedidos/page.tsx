@@ -91,7 +91,6 @@ export default function PedidosPage() {
       <div className="border-b border-mist">
         <div className="container-shop flex items-end justify-between">
           <div>
-            <span className="eyebrow mb-3 block">Conta</span>
             <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Meus pedidos</h1>
           </div>
           <Link href="/perfil" className="text-sm text-mid hover:text-clay transition-colors font-medium hidden sm:block">

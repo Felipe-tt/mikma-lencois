@@ -15,9 +15,10 @@ export default async function SobrePage() {
       {/* ── Header ── */}
       <div className="border-b border-mist">
         <div className="container-shop py-16 sm:py-24">
-          <span className="eyebrow mb-5 block">Nossa história</span>
           <h1 className="font-display font-normal text-ink text-5xl sm:text-6xl lg:text-[5.5rem] leading-[1.02] max-w-2xl">
-            Sobre a<br/><em className="text-clay not-italic">{s.storeName}</em>
+            <em className="text-clay not-italic">{s.storeName}</em><br/>
+            <span className="text-ink/40">em Blumenau,</span><br/>
+            <span className="text-ink/40">SC.</span>
           </h1>
         </div>
       </div>
@@ -39,7 +40,7 @@ export default async function SobrePage() {
             {/* ── Timeline ── */}
             {timeline.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-faint mb-8">Nossa trajetória</p>
+                <p className="page-label mb-8">Nossa trajetória</p>
                 <div className="relative">
                   {/* Vertical line */}
                   <div className="absolute left-[52px] top-2 bottom-2 w-px bg-mist" />

@@ -50,6 +50,9 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
   const freeShippingUnlocked = cartTotal >= threshold && threshold > 0;
   const showFreeShippingBar = hasFreeShipping && count > 0;
 
+  const isHome = pathname === '/';
+  const isDark = isHome && !scrolled;
+
   return (
     <>
       {/* ── Topbar ──────────────────────────────────────────────── */}
@@ -60,13 +63,20 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
       )}
 
       {/* ── Main header ─────────────────────────────────────────── */}
-      <header className={`sticky top-0 z-40 transition-all duration-200 ${
-        scrolled ? 'bg-paper shadow-[0_1px_0_0_#E4DED5]' : 'bg-paper/98 backdrop-blur-sm'
+      <header className={`sticky top-0 z-40 transition-all duration-300 ${
+        isHome && !scrolled
+          ? 'bg-ink/90 backdrop-blur-sm'
+          : scrolled
+          ? 'bg-paper shadow-[0_1px_0_0_#E4DED5]'
+          : 'bg-paper/98 backdrop-blur-sm'
       }`}>
         <div className="container-shop h-[60px] flex items-center gap-3">
 
           {/* Mobile hamburger */}
-          <button className="btn-ghost p-2 -ml-2 md:hidden" onClick={() => setMenuOpen(true)} aria-label="Abrir menu">
+          <button
+            className={`p-2 -ml-2 md:hidden transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}
+            onClick={() => setMenuOpen(true)} aria-label="Abrir menu"
+          >
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M3 7h18M3 12h18M3 17h18"/>
             </svg>
@@ -74,7 +84,13 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Logo */}
           <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={160} height={160} className="h-[42px] w-auto object-contain" priority />
+            <Image
+              src={isDark ? '/logo-white.png' : '/logo-dark.png'}
+              alt="Mikma Lençóis"
+              width={160} height={160}
+              className="h-[42px] w-auto object-contain transition-opacity duration-200"
+              priority
+            />
           </NavLink>
 
           {/* Desktop nav — collapses when search opens */}
@@ -84,8 +100,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                 className={`text-[13px] font-medium tracking-[0.01em] transition-colors duration-150 relative pb-0.5
                   after:absolute after:bottom-0 after:left-0 after:h-px after:bg-clay after:transition-all after:duration-200
                   ${pathname.startsWith(href)
-                    ? 'text-ink after:w-full'
-                    : 'text-mid hover:text-ink after:w-0 hover:after:w-full'
+                    ? `${isDark ? 'text-paper' : 'text-ink'} after:w-full`
+                    : `${isDark ? 'text-paper/50 hover:text-paper' : 'text-mid hover:text-ink'} after:w-0 hover:after:w-full`
                   }`}
               >
                 {label}
@@ -119,7 +135,10 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           <div className="flex items-center gap-0.5 ml-auto md:ml-0">
 
             {/* Search */}
-            <button className="btn-ghost p-2" onClick={() => setSearchOpen(v => !v)} aria-label="Buscar">
+            <button
+              className={`p-2 transition-colors duration-150 ${isDark ? 'text-paper/50 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`}
+              onClick={() => setSearchOpen(v => !v)} aria-label="Buscar"
+            >
               {searchOpen
                 ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -130,24 +149,24 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             {user ? (
               <>
                 {(user.role === 'seller' || user.role === 'admin') && (
-                  <NavLink href="/painel" className="hidden md:flex btn-ghost text-[10px] font-bold tracking-[0.14em] uppercase">Painel</NavLink>
+                  <NavLink href="/painel" className={`hidden md:flex text-[10px] font-bold tracking-[0.14em] uppercase px-2 py-1.5 transition-colors ${isDark ? 'text-paper/40 hover:text-paper' : 'text-mid hover:text-ink'}`}>Painel</NavLink>
                 )}
-                <NavLink href="/conta" className="hidden md:block btn-ghost text-[13px]">
+                <NavLink href="/conta" className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>
                   {user.displayName?.split(' ')[0] ?? 'Conta'}
                 </NavLink>
-                <button onClick={logout} className="hidden md:block btn-ghost text-[13px] text-faint">Sair</button>
+                <button onClick={logout} className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/30 hover:text-paper/60' : 'text-faint hover:text-mid'}`}>Sair</button>
               </>
             ) : (
               <>
-                <NavLink href="/entrar" className="hidden md:block btn-ghost text-[13px]">Entrar</NavLink>
-                <NavLink href="/cadastro" className="hidden md:flex btn-clay text-[10px] font-bold tracking-[0.1em] uppercase px-4 py-2 ml-1">
+                <NavLink href="/entrar" className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>Entrar</NavLink>
+                <NavLink href="/cadastro" className={`hidden md:flex text-[10px] font-bold tracking-[0.1em] uppercase px-4 py-2 ml-1 border transition-all ${isDark ? 'border-paper/20 text-paper hover:bg-paper/10' : 'border-mist text-ink hover:bg-warm'}`}>
                   Cadastrar
                 </NavLink>
               </>
             )}
 
             {/* Cart */}
-            <NavLink href="/carrinho" className="btn-ghost relative p-2 ml-0.5" aria-label="Carrinho">
+            <NavLink href="/carrinho" className={`relative p-2 ml-0.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`} aria-label="Carrinho">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>

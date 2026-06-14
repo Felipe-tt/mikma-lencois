@@ -88,13 +88,11 @@ export default async function ProductPage({ params }: Props) {
           {/* ── Info ── */}
           <div className="lg:sticky lg:top-24 flex flex-col gap-5">
 
-            {product.category && <span className="eyebrow">{product.category}</span>}
-
             <div>
-              <h1 className="font-display font-normal text-ink leading-[1.08] text-[2rem] sm:text-[2.4rem] lg:text-[2.6rem] mb-4">
+              <h1 className="font-display font-normal text-ink leading-[1.08] text-[2rem] sm:text-[2.4rem] lg:text-[2.6rem] mb-3">
                 {product.name}
               </h1>
-              <p className="font-display text-[1.75rem] text-ink font-normal">
+              <p className="font-display text-[1.75rem] text-clay font-normal">
                 {formatCurrency(product.price)}
               </p>
             </div>
@@ -147,11 +145,8 @@ export default async function ProductPage({ params }: Props) {
             )}
 
             {/* ── Size guide link ── */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <SizeGuideModal />
-              {product.category && (
-                <span className="text-[11px] text-faint">{product.category}</span>
-              )}
             </div>
 
             {/* Variant selector */}

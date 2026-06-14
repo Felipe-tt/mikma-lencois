@@ -39,7 +39,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
       {/* ── Header ── */}
       <div className="border-b border-mist">
         <div className="container-shop py-10 md:py-12">
-          <span className="eyebrow mb-3 block">Catálogo</span>
+          <p className="page-label mb-4">Catálogo</p>
           <div className="flex items-end justify-between gap-4">
             <div>
               <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">{heading}</h1>
