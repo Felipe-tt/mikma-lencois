@@ -24,52 +24,53 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   return (
     <NavLink
       href={`/produtos/${product.id}`}
-      className="product-card group"
+      className="product-card group bg-paper"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {/* ── Image ── */}
-      <div className="relative aspect-[3/4] overflow-hidden bg-warm">
-        {/* Primary image */}
+      <div className="relative aspect-[3/4] overflow-hidden bg-[#F2EDE6]">
         {img0 && !imgError ? (
-          <Image
-            src={img0}
-            alt={product.name}
-            fill
-            priority={priority}
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover product-card-image absolute inset-0 transition-opacity duration-400 ${hovered && img1 ? 'opacity-0' : 'opacity-100'}`}
-            onError={() => setImgError(true)}
-          />
+          <>
+            <Image
+              src={img0}
+              alt={product.name}
+              fill
+              priority={priority}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className={`object-cover absolute inset-0 transition-opacity duration-500 ${hovered && img1 ? 'opacity-0' : 'opacity-100'}`}
+              onError={() => setImgError(true)}
+            />
+            {img1 && (
+              <Image
+                src={img1}
+                alt={`${product.name} — detalhe`}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                className={`object-cover absolute inset-0 transition-opacity duration-500 ${hovered ? 'opacity-100' : 'opacity-0'}`}
+              />
+            )}
+            {/* Subtle overlay on hover */}
+            <div className={`absolute inset-0 bg-ink transition-opacity duration-300 ${hovered ? 'opacity-[0.03]' : 'opacity-0'}`} />
+          </>
         ) : (
-          <div className="flex h-full items-center justify-center bg-warm">
+          <div className="flex h-full items-center justify-center bg-[#F2EDE6]">
             <Image src="/logo-dark.png" alt="Mikma" width={60} height={30} className="w-10 h-auto opacity-10" />
           </div>
         )}
 
-        {/* Second image — cross-fade on hover */}
-        {img1 && (
-          <Image
-            src={img1}
-            alt={`${product.name} — detalhe`}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover absolute inset-0 transition-opacity duration-400 ${hovered ? 'opacity-100' : 'opacity-0'}`}
-          />
-        )}
-
-        {/* Badges — top left stack */}
+        {/* Badges */}
         {(badgeLabel || lowStock) && (
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {badgeLabel && (
-              <span className={`text-[9px] font-bold tracking-[0.16em] uppercase px-2.5 py-[5px] leading-none ${
+              <span className={`text-[9px] font-bold tracking-[0.14em] uppercase px-2.5 py-1 leading-none ${
                 isNew ? 'bg-clay text-paper' : 'bg-ink text-paper'
               }`}>
                 {badgeLabel}
               </span>
             )}
             {lowStock && (
-              <span className="bg-amber-50 text-amber-700 border border-amber-200/70 text-[9px] font-bold tracking-[0.12em] uppercase px-2.5 py-[5px] leading-none">
+              <span className="bg-amber-50 text-amber-700 border border-amber-200/70 text-[9px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 leading-none">
                 Últimas unidades
               </span>
             )}
@@ -78,17 +79,17 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
       </div>
 
       {/* ── Info ── */}
-      <div className="px-4 py-3.5 flex flex-col gap-1.5 border-t border-mist/50">
-        <p className="text-[12px] font-medium text-ink leading-snug line-clamp-2 min-h-[2.6em]">
+      <div className="px-4 pt-3.5 pb-4 flex flex-col gap-2.5">
+        <p className="text-[12px] font-medium text-ink leading-snug line-clamp-2 min-h-[2.6em] group-hover:text-clay transition-colors duration-200">
           {product.name}
         </p>
-        <div className="flex items-center justify-between gap-2">
-          <p className="font-display text-[18px] text-ink font-normal leading-none">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="font-display text-[19px] text-ink font-normal leading-none tracking-[-0.01em]">
             {formatCurrency(product.price)}
           </p>
           {product.variants && product.variants.length > 1 && (
-            <p className="text-[10px] text-faint tabular-nums">
-              {product.variants.length} opções
+            <p className="text-[10px] text-faint">
+              {product.variants.length} tamanhos
             </p>
           )}
         </div>

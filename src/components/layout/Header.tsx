@@ -60,8 +60,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
       )}
 
       {/* ── Main header ─────────────────────────────────────────── */}
-      <header className={`sticky top-0 z-40 bg-paper/97 backdrop-blur-md transition-shadow duration-200 ${
-        scrolled ? 'shadow-[0_1px_0_0_#E4DED5]' : ''
+      <header className={`sticky top-0 z-40 transition-all duration-200 ${
+        scrolled ? 'bg-paper shadow-[0_1px_0_0_#E4DED5]' : 'bg-paper/98 backdrop-blur-sm'
       }`}>
         <div className="container-shop h-[60px] flex items-center gap-3">
 
@@ -81,8 +81,12 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           <nav className={`hidden md:flex items-center gap-9 mx-auto transition-all duration-200 ${searchOpen ? 'opacity-0 pointer-events-none absolute' : 'opacity-100'}`}>
             {NAV_LINKS.map(({ href, label }) => (
               <NavLink key={href} href={href}
-                className={`text-[13px] font-medium tracking-[0.01em] transition-colors duration-150
-                  ${pathname.startsWith(href) ? 'text-ink' : 'text-mid hover:text-ink'}`}
+                className={`text-[13px] font-medium tracking-[0.01em] transition-colors duration-150 relative pb-0.5
+                  after:absolute after:bottom-0 after:left-0 after:h-px after:bg-clay after:transition-all after:duration-200
+                  ${pathname.startsWith(href)
+                    ? 'text-ink after:w-full'
+                    : 'text-mid hover:text-ink after:w-0 hover:after:w-full'
+                  }`}
               >
                 {label}
               </NavLink>

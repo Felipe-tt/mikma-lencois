@@ -127,6 +127,14 @@ export default function ConfiguracoesPage() {
           <Textarea label="Parágrafo 1" value={settings.aboutPara1} onChange={v => set('aboutPara1', v)} rows={4} />
           <Textarea label="Parágrafo 2" value={settings.aboutPara2} onChange={v => set('aboutPara2', v)} rows={4} />
           <Textarea label="Parágrafo 3" value={settings.aboutPara3} onChange={v => set('aboutPara3', v)} rows={4} />
+          <Field label="Título da seção de destaques" value={settings.featuredTitle} onChange={v => set('featuredTitle', v)} placeholder="Escolhas da semana" />
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] pt-2">Estatísticas (CTA banner)</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Pedidos entregues" value={settings.statOrders} onChange={v => set('statOrders', v)} placeholder="1.200+" />
+            <Field label="Avaliação média" value={settings.statRating} onChange={v => set('statRating', v)} placeholder="4.9" />
+            <Field label="Entrega local" value={settings.statDelivery} onChange={v => set('statDelivery', v)} placeholder="< 1h" />
+            <Field label="Anos no mercado" value={settings.statYears} onChange={v => set('statYears', v)} placeholder="6 anos" />
+          </div>
           <Field label="Ano de fundação" value={settings.foundedYear} onChange={v => set('foundedYear', v)} placeholder="2018" hint="Exibido na timeline da página Sobre" />
         </>}
 

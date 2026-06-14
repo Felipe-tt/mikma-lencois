@@ -29,9 +29,9 @@ export function Footer({
 
       {/* ── Frase editorial ── */}
       <div className="container-shop pt-16 pb-12 border-b border-paper/[0.07]">
-        <p className="font-display font-normal text-paper/[0.13] text-[clamp(2.2rem,7vw,5.5rem)] leading-[1.06] tracking-tight select-none pointer-events-none">
+        <p className="font-display font-normal text-paper/[0.18] text-[clamp(2.4rem,7vw,5.5rem)] leading-[1.06] tracking-tight select-none pointer-events-none">
           Feito em {city}.<br />
-          <em className="text-paper/[0.22] not-italic">Dorme bem.</em>
+          <em className="text-paper/[0.28] not-italic">Dorme bem.</em>
         </p>
       </div>
 
