@@ -75,7 +75,7 @@ export default function CartPage() {
   return (
     <div>
       {/* Page header — inline, no bg-warm */}
-      <div className="border-b border-mist">
+      <div className="border-b border-mist bg-warm/60">
         <div className="container-shop py-10">
           <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Carrinho</h1>
         </div>

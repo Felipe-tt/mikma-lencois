@@ -7,6 +7,7 @@ import { VariantSelector } from '@/components/product/VariantSelector';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCard } from '@/components/product/ProductCard';
 import { SizeGuideModal } from '@/components/product/SizeGuideModal';
+import { FadeIn } from '@/components/ui/FadeIn';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 
@@ -88,7 +89,7 @@ export default async function ProductPage({ params }: Props) {
           <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} />
 
           {/* ── Info ── */}
-          <div className="lg:sticky lg:top-24 flex flex-col gap-5">
+          <FadeIn className="lg:sticky lg:top-24 flex flex-col gap-5" delay={100}>
 
             <div>
               <h1 className="font-display font-normal text-ink leading-[1.06] text-[2rem] sm:text-[2.4rem] lg:text-[2.8rem] mb-4">
@@ -172,7 +173,7 @@ export default async function ProductPage({ params }: Props) {
 
             {/* Size guide */}
             <SizeGuide />
-          </div>
+          </FadeIn>
         </div>
       </div>
 

@@ -40,13 +40,14 @@ export default function ContaPage() {
 
   return (
     <div>
-      {/* Header — clean, sem bg separado */}
-      <div className="border-b border-mist">
+      {/* Header com logo */}
+      <div className="border-b border-mist bg-warm">
         <div className="container-shop py-12 sm:py-16">
+          <p className="font-mono text-[10px] tracking-[0.22em] uppercase text-faint mb-4">Área do cliente</p>
           <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">
             Olá, {user.displayName?.split(' ')[0] ?? 'cliente'}
           </h1>
-          <p className="text-[14px] text-faint mt-2">{user.email}</p>
+          <p className="text-[13px] text-faint mt-2">{user.email}</p>
         </div>
       </div>
 

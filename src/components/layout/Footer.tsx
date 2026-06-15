@@ -57,7 +57,7 @@ export function Footer({
               height={56}
               className="h-10 w-auto object-contain"
             />
-            <p className="text-[13px] text-paper/30 leading-relaxed max-w-[20ch]">
+            <p className="text-[13px] text-paper/45 leading-relaxed max-w-[20ch]">
               Lençóis de qualidade,<br />direto de fábrica.
             </p>
 
@@ -66,13 +66,13 @@ export function Footer({
               <div className="flex items-center gap-4 mt-1">
                 {instagramUrl && (
                   <a href={instagramUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors duration-150">
+                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/40 hover:text-paper transition-colors duration-150">
                     Instagram
                   </a>
                 )}
                 {wa && (
                   <a href={wa} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/25 hover:text-paper/70 transition-colors duration-150">
+                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/40 hover:text-paper transition-colors duration-150">
                     WhatsApp
                   </a>
                 )}
@@ -82,14 +82,14 @@ export function Footer({
 
           {/* Col 2 — Loja */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/20 mb-5">Loja</p>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Loja</p>
             <ul className="flex flex-col gap-3.5">
               {[
                 { href: '/produtos', label: 'Produtos' },
                 { href: '/sobre', label: 'Sobre nós' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
+                  <Link href={href} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
@@ -99,14 +99,14 @@ export function Footer({
 
           {/* Col 3 — Conta */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/20 mb-5">Conta</p>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Conta</p>
             <ul className="flex flex-col gap-3.5">
               {[
                 { href: '/conta/pedidos', label: 'Meus pedidos' },
                 { href: '/conta', label: 'Minha conta' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
+                  <Link href={href} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
@@ -116,11 +116,11 @@ export function Footer({
 
           {/* Col 4 — Legal + contato */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/20 mb-5">Contato</p>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Contato</p>
             <ul className="flex flex-col gap-3.5">
               {storeEmail && (
                 <li>
-                  <a href={`mailto:${storeEmail}`} className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
+                  <a href={`mailto:${storeEmail}`} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
                     {storeEmail}
                   </a>
                 </li>
@@ -130,7 +130,7 @@ export function Footer({
                 { href: '/termos', label: 'Termos de uso' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
+                  <Link href={href} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
@@ -138,7 +138,7 @@ export function Footer({
               {reclameAquiUrl && (
                 <li>
                   <a href={reclameAquiUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-[13px] text-paper/35 hover:text-paper/80 transition-colors duration-150">
+                    className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
                     ReclameAqui
                   </a>
                 </li>
@@ -149,16 +149,16 @@ export function Footer({
 
         {/* ── Rodapé legal ── */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-7">
-          <p className="text-[11px] text-paper/20">
+          <p className="text-[11px] text-paper/35">
             © {year} {storeName} · Todos os direitos reservados
           </p>
           <div className="flex items-center gap-4">
             {/* Trust seals */}
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/15 uppercase">Pagamento seguro</span>
+            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/25 uppercase">Pagamento seguro</span>
             <span className="text-paper/10">·</span>
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/15 uppercase">PIX</span>
+            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/25 uppercase">PIX</span>
             <span className="text-paper/10">·</span>
-            <span className="text-[10px] text-paper/15 tracking-[0.16em] uppercase">{storeCity.toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
+            <span className="text-[10px] text-paper/25 tracking-[0.16em] uppercase">{storeCity.toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
           </div>
         </div>
       </div>

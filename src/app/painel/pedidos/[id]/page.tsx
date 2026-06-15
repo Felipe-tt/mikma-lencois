@@ -134,7 +134,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   if (loading) return (
     <div className="max-w-2xl flex flex-col gap-3">
-      {[1,2,3,4].map(i => <div key={i} className="h-20 bg-[#F0EBE1] animate-pulse border border-[#E8E4DC]" />)}
+      {[1,2,3,4].map(i => <div key={i} className="h-20 bg-[#F0EBE1] animate-pulse border border-[#E6DFD5]" />)}
     </div>
   );
 
@@ -227,67 +227,67 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         )}
 
         {/* ── Itens ── */}
-        <div className="bg-[#FAFAF8] border border-[#E8E4DC]">
-          <div className="px-5 py-3 border-b border-[#E8E4DC] bg-[#F5F3EF]">
-            <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]">Itens do pedido</p>
+        <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
+          <div className="px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
+            <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Itens do pedido</p>
           </div>
-          <div className="divide-y divide-[#E8E4DC]">
+          <div className="divide-y divide-[#E6DFD5]">
             {order.items.map((item, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-3.5">
                 {/* Thumbnail */}
                 {item.image && (
-                  <div className="w-10 h-[52px] shrink-0 overflow-hidden bg-[#F0EBE1] border border-[#E8E4DC]">
+                  <div className="w-10 h-[52px] shrink-0 overflow-hidden bg-[#F0EBE1] border border-[#E6DFD5]">
                     <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-[#0F0E0C] leading-snug">{item.productName}</p>
-                  <p className="text-[11px] text-[#B8B2AA] mt-0.5">
+                  <p className="text-[13px] font-medium text-[#1E1208] leading-snug">{item.productName}</p>
+                  <p className="text-[11px] text-[#B09C8C] mt-0.5">
                     {item.variant.size}{item.variant.color ? ` · ${item.variant.color}` : ''}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''} · ×{item.quantity}
                   </p>
                 </div>
-                <span className="text-[13px] font-semibold text-[#0F0E0C] shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                <span className="text-[13px] font-semibold text-[#1E1208] shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
               </div>
             ))}
           </div>
-          <div className="flex justify-between px-5 py-4 border-t border-[#E8E4DC] bg-[#F5F3EF]">
-            <span className="text-[13px] font-semibold text-[#0F0E0C]">Total</span>
-            <span className="font-display text-xl text-[#0F0E0C]">{formatCurrency(order.totalCents)}</span>
+          <div className="flex justify-between px-5 py-4 border-t border-[#E6DFD5] bg-[#F0EAE1]">
+            <span className="text-[13px] font-semibold text-[#1E1208]">Total</span>
+            <span className="font-display text-xl text-[#1E1208]">{formatCurrency(order.totalCents)}</span>
           </div>
         </div>
 
         {/* ── Pagamento + Endereço — side by side on desktop ── */}
         <div className="grid sm:grid-cols-2 gap-3">
-          <div className="bg-[#FAFAF8] border border-[#E8E4DC]">
-            <div className="px-5 py-3 border-b border-[#E8E4DC] bg-[#F5F3EF]">
-              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]">Pagamento</p>
+          <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
+            <div className="px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
+              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Pagamento</p>
             </div>
             <div className="px-5 py-4 flex flex-col gap-2">
               <div className="flex justify-between text-[13px]">
-                <span className="text-[#B8B2AA]">Método</span>
-                <span className="font-semibold text-[#0F0E0C] uppercase">{order.payment.method}</span>
+                <span className="text-[#B09C8C]">Método</span>
+                <span className="font-semibold text-[#1E1208] uppercase">{order.payment.method}</span>
               </div>
               {order.payment.txId && (
                 <div className="flex justify-between text-[12px] gap-4">
-                  <span className="text-[#B8B2AA] shrink-0">ID</span>
-                  <span className="font-mono text-[#0F0E0C] truncate">{order.payment.txId}</span>
+                  <span className="text-[#B09C8C] shrink-0">ID</span>
+                  <span className="font-mono text-[#1E1208] truncate">{order.payment.txId}</span>
                 </div>
               )}
               {order.payment.paidAt && (
                 <div className="flex justify-between text-[13px]">
-                  <span className="text-[#B8B2AA]">Pago em</span>
-                  <span className="text-[#0F0E0C] tabular-nums">{formatDateTime(order.payment.paidAt)}</span>
+                  <span className="text-[#B09C8C]">Pago em</span>
+                  <span className="text-[#1E1208] tabular-nums">{formatDateTime(order.payment.paidAt)}</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="bg-[#FAFAF8] border border-[#E8E4DC]">
-            <div className="px-5 py-3 border-b border-[#E8E4DC] bg-[#F5F3EF]">
-              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]">Endereço de entrega</p>
+          <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
+            <div className="px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
+              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Endereço de entrega</p>
             </div>
             <div className="px-5 py-4">
-              <address className="text-[13px] text-[#6B6660] not-italic leading-relaxed">
+              <address className="text-[13px] text-[#705A48] not-italic leading-relaxed">
                 {order.address.street}, {order.address.number}
                 {order.address.complement ? ` — ${order.address.complement}` : ''}<br />
                 {order.address.neighborhood} · {order.address.city} — {order.address.state}<br />
@@ -299,15 +299,15 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {/* ── Rastreio ── */}
         {order.delivery?.carrier && (
-          <div className="bg-[#FAFAF8] border border-[#E8E4DC]">
-            <div className="px-5 py-3 border-b border-[#E8E4DC] bg-[#F5F3EF]">
-              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]">Entrega</p>
+          <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
+            <div className="px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
+              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Entrega</p>
             </div>
             <div className="px-5 py-4 flex items-center justify-between gap-4">
               <div>
-                <p className="text-[13px] font-semibold text-[#0F0E0C]">{order.delivery.carrier}</p>
+                <p className="text-[13px] font-semibold text-[#1E1208]">{order.delivery.carrier}</p>
                 {order.delivery.trackingCode && (
-                  <p className="text-[12px] text-[#B8B2AA] mt-0.5 font-mono">{order.delivery.trackingCode}</p>
+                  <p className="text-[12px] text-[#B09C8C] mt-0.5 font-mono">{order.delivery.trackingCode}</p>
                 )}
               </div>
               {order.delivery.trackingCode && (

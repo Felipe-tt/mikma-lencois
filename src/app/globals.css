@@ -34,7 +34,7 @@
   /* ─── Buttons ────────────────────────────────────────────────── */
   .btn {
     @apply inline-flex items-center justify-center gap-2
-           font-sans text-sm font-medium
+           font-sans text-[13px] font-medium tracking-[0.03em]
            border transition-all duration-150
            disabled:opacity-40 disabled:pointer-events-none
            whitespace-nowrap select-none;
@@ -45,19 +45,19 @@
            active:scale-[0.98];
   }
   .btn-primary-lg {
-    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em]
+    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.08em]
            bg-ink text-paper border-ink
            hover:bg-clay hover:border-clay
            active:scale-[0.98];
   }
   .btn-outline {
-    @apply btn px-6 py-3 bg-transparent text-ink border-ink/20
+    @apply btn px-6 py-3 bg-transparent text-ink border-ink/25
            hover:bg-ink hover:text-paper hover:border-ink
            active:scale-[0.98];
   }
   .btn-outline-lg {
-    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em]
-           bg-transparent text-ink border-ink/20
+    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.08em]
+           bg-transparent text-ink border-ink/25
            hover:bg-ink hover:text-paper hover:border-ink
            active:scale-[0.98];
   }
@@ -103,7 +103,7 @@
     border-radius: 2px;
   }
   .label {
-    @apply block text-[10px] font-semibold tracking-[0.12em] uppercase text-mid mb-1.5;
+    @apply block text-[10px] font-semibold tracking-[0.14em] uppercase text-ink/60 mb-1.5;
   }
   .select {
     @apply w-full px-4 py-3 text-sm bg-white text-ink
@@ -159,9 +159,9 @@
   .badge-delivered { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80; }
   .badge-cancelled { @apply badge text-faint; }
 
-  .chip        { @apply inline-flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer; }
+  .chip        { @apply inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer; }
   .chip-active { @apply chip bg-ink text-paper border-ink; }
-  .chip-idle   { @apply chip bg-paper text-mid border-mist hover:border-ink/30 hover:text-ink hover:bg-warm; }
+  .chip-idle   { @apply chip bg-paper text-mid border-mist hover:border-ink/40 hover:text-ink hover:bg-warm; }
 
   /* ─── Layout ──────────────────────────────────────────────────── */
   .container-shop  { @apply mx-auto max-w-7xl px-5 sm:px-8 lg:px-12; }

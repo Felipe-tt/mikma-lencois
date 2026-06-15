@@ -9,7 +9,7 @@ export default async function TermosPage() {
 
   return (
     <div>
-      <div className="border-b border-mist">
+      <div className="border-b border-mist bg-warm/60">
         <div className="container-shop py-12 sm:py-16">
           <span className="eyebrow mb-3 block">Legal</span>
           <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">
