@@ -78,7 +78,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Logo */}
           <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={160} height={160} className="h-[42px] w-auto object-contain" priority />
+            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={200} height={100} className="h-[48px] w-auto object-contain" priority />
           </NavLink>
 
           {/* Desktop nav — collapses when search opens */}

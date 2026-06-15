@@ -1,4 +1,5 @@
 import { getSettings } from '@/lib/settings';
+import Image from 'next/image';
 
 export default async function SobrePage() {
   const s = await getSettings();
@@ -13,13 +14,23 @@ export default async function SobrePage() {
   return (
     <div>
       {/* ── Header ── */}
-      <div className="border-b border-mist">
+      <div className="border-b border-mist bg-warm">
         <div className="container-shop py-16 sm:py-24">
-          <h1 className="font-display font-normal text-ink text-5xl sm:text-6xl lg:text-[5.5rem] leading-[1.02] max-w-2xl">
-            <em className="text-clay not-italic">{s.storeName}</em><br/>
-            <span className="text-ink/40">em Blumenau,</span><br/>
-            <span className="text-ink/40">SC.</span>
-          </h1>
+          <div className="grid lg:grid-cols-2 gap-12 items-end">
+            <h1 className="font-display font-normal text-ink text-5xl sm:text-6xl lg:text-[5rem] leading-[1.02]">
+              <em className="text-clay not-italic">{s.storeName}</em><br/>
+              <span className="text-ink/40 text-4xl sm:text-5xl lg:text-[3.8rem]">em Blumenau, SC.</span>
+            </h1>
+            <div className="flex justify-start lg:justify-end">
+              <Image
+                src="/logo-dark.png"
+                alt={s.storeName ?? 'Mikma Lençóis'}
+                width={320}
+                height={160}
+                className="h-24 w-auto object-contain opacity-80"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
