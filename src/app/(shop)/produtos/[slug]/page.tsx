@@ -59,27 +59,29 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div>
-      <div className="container-shop pt-5 pb-0">
-        {/* Breadcrumb — integrated, no bg */}
-        <nav className="flex items-center gap-1.5 text-[11px] text-faint overflow-x-auto whitespace-nowrap scrollbar-none mb-8">
-          <Link href="/" className="hover:text-clay transition-colors shrink-0">Início</Link>
-          <span className="text-mist">/</span>
-          <Link href="/produtos" className="hover:text-clay transition-colors shrink-0">Produtos</Link>
-          {product.category && (
-            <>
-              <span className="text-mist">/</span>
-              <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
-                className="hover:text-clay transition-colors shrink-0">
-                {product.category}
-              </Link>
-            </>
-          )}
-          <span className="text-mist">/</span>
-          <span className="text-mid truncate max-w-[180px]">{product.name}</span>
-        </nav>
+      <div className="border-b border-mist bg-warm/40">
+        <div className="container-shop py-4">
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.06em] text-faint overflow-x-auto whitespace-nowrap scrollbar-none">
+            <Link href="/" className="hover:text-clay transition-colors shrink-0">Início</Link>
+            <span className="text-mist mx-1">/</span>
+            <Link href="/produtos" className="hover:text-clay transition-colors shrink-0">Produtos</Link>
+            {product.category && (
+              <>
+                <span className="text-mist mx-1">/</span>
+                <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
+                  className="hover:text-clay transition-colors shrink-0 capitalize">
+                  {product.category}
+                </Link>
+              </>
+            )}
+            <span className="text-mist mx-1">/</span>
+            <span className="text-mid truncate max-w-[200px]">{product.name}</span>
+          </nav>
+        </div>
       </div>
 
-      <div className="container-shop pb-24">
+      <div className="container-shop py-10 pb-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 xl:gap-24 items-start">
 
           {/* ── Gallery ── */}

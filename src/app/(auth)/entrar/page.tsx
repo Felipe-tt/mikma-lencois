@@ -193,24 +193,30 @@ export default function LoginPage() {
       )}
 
       <div className="min-h-screen bg-paper flex">
-        {/* Painel esquerdo — imagem editorial */}
-        <div className="hidden lg:flex w-[45%] xl:w-1/2 relative flex-col justify-between p-12 xl:p-16 overflow-hidden">
-          {/* Background overlay */}
-          <div className="absolute inset-0 bg-ink" />
-          <Link href="/" className="relative z-10">
-            <Image src="/logo-white.png" alt="Mikma" width={120} height={48} className="h-8 w-auto object-contain" />
+        {/* Painel esquerdo — logo em destaque */}
+        <div className="hidden lg:flex w-[45%] xl:w-1/2 flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist">
+          <Link href="/">
+            <Image src="/logo-dark.png" alt="Mikma" width={160} height={80} className="h-10 w-auto object-contain" />
           </Link>
 
-          <div className="relative z-10">
-            <p className="font-display text-paper font-normal leading-[1.05] mb-5 text-[clamp(2.4rem,3.5vw,3.8rem)]">
-              Bem-vindo<br />de <em className="text-clay not-italic">volta.</em>
-            </p>
-            <p className="text-[14px] text-paper/40 leading-relaxed max-w-[28ch]">
-              Lençóis de qualidade direto de fábrica — para quem entende a diferença.
-            </p>
+          <div className="flex-1 flex items-center justify-center py-8">
+            <Image
+              src="/logo-dark.png"
+              alt="Mikma Lençóis"
+              width={400}
+              height={200}
+              className="w-full max-w-[260px] h-auto object-contain opacity-[0.10]"
+            />
           </div>
 
-          <p className="relative z-10 text-[10px] text-paper/20 tracking-[0.2em] uppercase">Blumenau · SC · Brasil</p>
+          <div>
+            <p className="font-display text-ink font-normal leading-[1.08] mb-4 text-[clamp(1.8rem,2.5vw,2.6rem)]">
+              Bem-vindo<br />de <em className="text-clay not-italic">volta.</em>
+            </p>
+            <p className="text-[13px] text-mid leading-relaxed max-w-[26ch]">
+              Lençóis de qualidade direto de fábrica.
+            </p>
+          </div>
         </div>
 
         {/* Formulário */}

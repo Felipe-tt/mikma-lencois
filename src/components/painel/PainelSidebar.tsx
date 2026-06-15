@@ -35,11 +35,11 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
   return (
     <aside className="w-60 shrink-0 flex flex-col border-r border-[#E8E4DC] bg-[#FAFAF8] min-h-screen">
       {/* Brand */}
-      <div className="h-[60px] flex items-center px-5 border-b border-[#E8E4DC]">
+      <div className="h-[64px] flex items-center px-5 border-b border-[#E8E4DC]">
         <Link href="/" className="flex items-center gap-3" onClick={onClose}>
-          <Image src="/logo-dark.png" alt="Mikma" width={80} height={40} className="h-6 w-auto object-contain" />
+          <Image src="/logo-dark.png" alt="Mikma" width={120} height={60} className="h-8 w-auto object-contain" />
           <div className="w-px h-4 bg-[#E8E4DC]" />
-          <span className="text-[10px] text-[#C4714A] font-bold tracking-[0.2em] uppercase">Painel</span>
+          <span className="font-mono text-[9px] text-[#C4714A] tracking-[0.22em] uppercase">Painel</span>
         </Link>
       </div>
 

@@ -29,7 +29,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
       onMouseLeave={() => setHovered(false)}
     >
       {/* ── Image ── */}
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#F2EDE6]">
+      <div className="relative aspect-[3/4] overflow-hidden bg-warm">
         {img0 && !imgError ? (
           <>
             <Image
@@ -50,12 +50,17 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
                 className={`object-cover absolute inset-0 transition-opacity duration-500 ${hovered ? 'opacity-100' : 'opacity-0'}`}
               />
             )}
-            {/* Subtle overlay on hover */}
-            <div className={`absolute inset-0 bg-ink transition-opacity duration-300 ${hovered ? 'opacity-[0.03]' : 'opacity-0'}`} />
           </>
         ) : (
-          <div className="flex h-full items-center justify-center bg-[#F2EDE6]">
-            <Image src="/logo-dark.png" alt="Mikma" width={60} height={30} className="w-10 h-auto opacity-10" />
+          /* Fallback — logo da marca */
+          <div className="flex h-full items-center justify-center bg-warm">
+            <Image
+              src="/logo-dark.png"
+              alt="Mikma Lençóis"
+              width={120}
+              height={60}
+              className="w-24 h-auto opacity-[0.15]"
+            />
           </div>
         )}
 
@@ -65,9 +70,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
             {badgeLabel && (
               <span className={`text-[9px] font-bold tracking-[0.14em] uppercase px-2.5 py-1 leading-none ${
                 isNew ? 'bg-clay text-paper' : 'bg-ink text-paper'
-              }`}>
-                {badgeLabel}
-              </span>
+              }`}>{badgeLabel}</span>
             )}
             {lowStock && (
               <span className="bg-amber-50 text-amber-700 border border-amber-200/70 text-[9px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 leading-none">
@@ -79,17 +82,17 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
       </div>
 
       {/* ── Info ── */}
-      <div className="px-4 pt-3.5 pb-4 flex flex-col gap-2.5">
-        <p className="text-[12px] font-medium text-ink leading-snug line-clamp-2 min-h-[2.6em] group-hover:text-clay transition-colors duration-200">
+      <div className="px-4 pt-4 pb-5 flex flex-col gap-3">
+        <p className="text-[12px] font-medium text-ink leading-snug line-clamp-2 group-hover:text-clay transition-colors duration-200">
           {product.name}
         </p>
         <div className="flex items-baseline justify-between gap-2">
-          <p className="font-display text-[19px] text-ink font-normal leading-none tracking-[-0.01em]">
+          <p className="font-display text-[1.25rem] text-ink font-normal leading-none tracking-[-0.01em]">
             {formatCurrency(product.price)}
           </p>
           {product.variants && product.variants.length > 1 && (
-            <p className="text-[10px] text-faint">
-              {product.variants.length} tamanhos
+            <p className="font-mono text-[10px] text-faint">
+              {product.variants.length}×
             </p>
           )}
         </div>
