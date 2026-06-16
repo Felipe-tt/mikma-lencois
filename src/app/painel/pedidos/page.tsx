@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
@@ -70,12 +70,18 @@ export default function PainelPedidos() {
     if (!confirm(`Excluir ${cancelled.length} pedido(s) cancelado(s) permanentemente?`)) return;
     setDeletingCancelled(true);
     try {
-      const batch = writeBatch(db);
-      cancelled.forEach(o => batch.delete(doc(db, 'orders', o.id)));
-      await batch.commit();
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/orders/delete-cancelled', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? res.statusText);
+      }
     } catch (err) {
       console.error('Erro ao excluir cancelados:', err);
-      alert('Erro ao excluir pedidos. Verifique suas permissões.');
+      alert('Erro ao excluir pedidos. Tente novamente.');
     } finally {
       setDeletingCancelled(false);
     }
