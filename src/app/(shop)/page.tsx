@@ -3,7 +3,6 @@ import { getSettings } from '@/lib/settings';
 import { ProductCard } from '@/components/product/ProductCard';
 import type { Product } from '@/types';
 import Link from 'next/link';
-import Image from 'next/image';
 import { serialize } from '@/lib/utils/serialize';
 import { FadeIn } from '@/components/ui/FadeIn';
 
@@ -71,33 +70,19 @@ export default async function HomePage() {
             {/* Divisória vertical */}
             <div className="hidden lg:block bg-mist self-stretch my-16" />
 
-            {/* Direita — logo em destaque + dados */}
-            <div className="hidden lg:flex flex-col justify-between py-16 lg:py-24 lg:pl-16">
-              {/* Logo grande — protagonista */}
-              <div className="flex-1 flex items-center justify-center">
-                <div className="relative w-full max-w-[340px]">
-                  <Image
-                    src="/logo-dark.png"
-                    alt={s.storeName ?? 'Mikma Lençóis'}
-                    width={800}
-                    height={242}
-                    className="w-full h-auto object-contain"
-                    priority
-                  />
-                </div>
-              </div>
-
-              {/* Float tags como ficha de produto */}
-              <div className="grid grid-cols-2 gap-px bg-mist border border-mist mt-8">
+            {/* Direita — ficha técnica do produto, sem logo */}
+            <div className="hidden lg:flex flex-col justify-center py-16 lg:py-24 lg:pl-16">
+              <p className="font-mono text-[9px] tracking-[0.28em] uppercase text-faint mb-6">Especificações</p>
+              <div className="grid grid-cols-2 gap-px bg-mist border border-mist">
                 {[
                   { label: s.heroFloatTag1Label ?? 'Thread count', value: s.heroFloatTag1Value ?? '400 fios' },
                   { label: s.heroFloatTag2Label ?? 'Entrega local', value: s.heroFloatTag2Value ?? 'Em 1h' },
                   { label: 'Composição', value: '100% Algodão' },
                   { label: 'Pagamento', value: 'PIX' },
                 ].map(item => (
-                  <div key={item.label} className="bg-warm px-4 py-3">
-                    <p className="font-mono text-[9px] tracking-[0.2em] uppercase text-faint mb-1">{item.label}</p>
-                    <p className="font-display text-[1.1rem] text-ink leading-tight">{item.value}</p>
+                  <div key={item.label} className="bg-warm px-5 py-5">
+                    <p className="font-mono text-[9px] tracking-[0.2em] uppercase text-faint mb-2">{item.label}</p>
+                    <p className="font-display text-[1.25rem] text-ink leading-tight">{item.value}</p>
                   </div>
                 ))}
               </div>
@@ -182,47 +167,37 @@ export default async function HomePage() {
       {/* ══ CTA — logo + copy editorial ═════════════════════════════ */}
       <section className="bg-ink py-20 sm:py-28 overflow-hidden">
         <div className="container-shop">
-          <div className="grid lg:grid-cols-[1fr_1fr] gap-12 lg:gap-20 items-center">
-            {/* Logo branca grande */}
-            <FadeIn>
-              <Image
-                src="/logo-white.png"
-                alt={s.storeName ?? 'Mikma Lençóis'}
-                width={800}
-                height={242}
-                className="w-full max-w-sm h-auto object-contain opacity-90"
-              />
-            </FadeIn>
-
-            {/* Copy + stats */}
-            <FadeIn delay={100}>
-              <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-paper/25 mb-6">
-                {s.storeCity ?? 'Blumenau'} · Est. {s.foundedYear ?? '2018'}
-              </p>
-              <h2 className="font-display text-paper font-normal leading-[1.06] text-3xl sm:text-4xl lg:text-[2.8rem] mb-8 text-balance">
-                {s.storeSlogan ?? 'Qualidade que você sente na primeira noite.'}
-              </h2>
-              <div className="flex gap-3 flex-wrap mb-10">
-                <Link href="/produtos" className="btn-clay-lg">Comprar agora</Link>
-                <Link href="/sobre" className="btn h-14 px-8 text-[13px] font-semibold border border-paper/15 text-paper/60 hover:text-paper hover:border-paper/30 transition-all duration-150">Nossa história</Link>
+          <FadeIn>
+            <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-12">
+              <div className="max-w-lg">
+                <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-paper/25 mb-6">
+                  {s.storeCity ?? 'Blumenau'} · Est. {s.foundedYear ?? '2018'}
+                </p>
+                <h2 className="font-display text-paper font-normal leading-[1.04] text-4xl sm:text-5xl lg:text-[3.2rem] mb-8 text-balance">
+                  {s.storeSlogan ?? 'Qualidade que você sente na primeira noite.'}
+                </h2>
+                <div className="flex gap-3 flex-wrap">
+                  <Link href="/produtos" className="btn-clay-lg">Comprar agora</Link>
+                  <Link href="/sobre" className="btn h-14 px-8 text-[13px] font-semibold border border-paper/15 text-paper/60 hover:text-paper hover:border-paper/30 transition-all duration-150">Nossa história</Link>
+                </div>
               </div>
 
-              {/* Stats em grade */}
-              <div className="grid grid-cols-2 gap-px bg-paper/[0.06] border border-paper/[0.06]">
+              {/* Stats — coluna direita */}
+              <div className="grid grid-cols-2 gap-px bg-paper/[0.06] border border-paper/[0.06] shrink-0">
                 {[
                   { value: s.statOrders ?? '1.200+', label: 'Pedidos' },
-                  { value: s.statRating ?? '4.9',   label: 'Avaliação' },
+                  { value: s.statRating ?? '4.9',    label: 'Avaliação' },
                   { value: s.statDelivery ?? '< 1h', label: 'Entrega local' },
                   { value: s.statYears ?? '6 anos',  label: 'No mercado' },
                 ].map(stat => (
-                  <div key={stat.label} className="bg-ink px-5 py-4">
-                    <p className="font-display text-2xl text-paper font-normal leading-none tracking-[-0.02em] mb-1">{stat.value}</p>
+                  <div key={stat.label} className="bg-ink px-6 py-5">
+                    <p className="font-display text-2xl text-paper font-normal leading-none tracking-[-0.02em] mb-1.5">{stat.value}</p>
                     <p className="font-mono text-[10px] text-paper/30 tracking-[0.14em] uppercase">{stat.label}</p>
                   </div>
                 ))}
               </div>
-            </FadeIn>
-          </div>
+            </div>
+          </FadeIn>
         </div>
       </section>
     </>

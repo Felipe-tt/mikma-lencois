@@ -21,13 +21,13 @@ export default async function SobrePage() {
               <em className="text-clay not-italic">{s.storeName}</em><br/>
               <span className="text-ink/40 text-4xl sm:text-5xl lg:text-[3.8rem]">em Blumenau, SC.</span>
             </h1>
-            <div className="flex justify-start lg:justify-end">
+            <div className="flex justify-start lg:justify-end items-end">
               <Image
                 src="/logo-dark.png"
                 alt={s.storeName ?? 'Mikma Lençóis'}
                 width={800}
                 height={242}
-                className="h-24 w-auto object-contain opacity-80"
+                className="h-14 w-auto object-contain opacity-30"
               />
             </div>
           </div>

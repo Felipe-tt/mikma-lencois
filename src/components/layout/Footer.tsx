@@ -27,21 +27,12 @@ export function Footer({
   return (
     <footer className="bg-ink text-paper mt-auto overflow-hidden">
 
-      {/* ── Logo + frase editorial ── */}
+      {/* ── Frase editorial ── */}
       <div className="container-shop pt-16 pb-12 border-b border-paper/[0.07]">
-        <div className="flex flex-col gap-8">
-          <Image
-            src="/logo-white.png"
-            alt={storeName}
-            width={800}
-            height={242}
-            className="h-16 w-auto object-contain opacity-60"
-          />
-          <p className="font-display font-normal text-paper/[0.18] text-[clamp(2.4rem,7vw,5.5rem)] leading-[1.06] tracking-tight select-none pointer-events-none">
-            Feito em {city}.<br />
-            <em className="text-paper/[0.28] not-italic">Dorme bem.</em>
-          </p>
-        </div>
+        <p className="font-display font-normal text-paper/[0.18] text-[clamp(2.4rem,7vw,5.5rem)] leading-[1.06] tracking-tight select-none pointer-events-none">
+          Feito em {city}.<br />
+          <em className="text-paper/[0.28] not-italic">Dorme bem.</em>
+        </p>
       </div>
 
       {/* ── Corpo ── */}
@@ -55,7 +46,7 @@ export function Footer({
               alt={storeName}
               width={800}
               height={242}
-              className="h-10 w-auto object-contain"
+              className="h-7 w-auto object-contain opacity-80"
             />
             <p className="text-[13px] text-paper/45 leading-relaxed max-w-[20ch]">
               Lençóis de qualidade,<br />direto de fábrica.
