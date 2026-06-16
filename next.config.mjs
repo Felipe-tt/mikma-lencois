@@ -6,11 +6,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' }
     ],
-    // Qualidade reduzida de 75→65: imagens servidas pelo Next.js Image
-    // Optimization consomem menos bandwidth do Cloud Run
-    quality: 65,
-    // WebP é suportado por >95% dos browsers e resulta em arquivos menores
-    formats: ['image/webp'],
+    // Serve WebP e AVIF: arquivos menores, menos bandwidth no Cloud Run
+    formats: ['image/avif', 'image/webp'],
   },
   async headers() {
     return [
