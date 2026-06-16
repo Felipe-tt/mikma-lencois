@@ -33,8 +33,8 @@ export function Footer({
           <Image
             src="/logo-white.png"
             alt={storeName}
-            width={280}
-            height={140}
+            width={800}
+            height={242}
             className="h-16 w-auto object-contain opacity-60"
           />
           <p className="font-display font-normal text-paper/[0.18] text-[clamp(2.4rem,7vw,5.5rem)] leading-[1.06] tracking-tight select-none pointer-events-none">
@@ -53,8 +53,8 @@ export function Footer({
             <Image
               src="/logo-white.png"
               alt={storeName}
-              width={140}
-              height={56}
+              width={800}
+              height={242}
               className="h-10 w-auto object-contain"
             />
             <p className="text-[13px] text-paper/45 leading-relaxed max-w-[20ch]">

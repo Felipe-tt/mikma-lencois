@@ -57,9 +57,9 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
             <Image
               src="/logo-dark.png"
               alt="Mikma Lençóis"
-              width={120}
-              height={60}
-              className="w-24 h-auto opacity-[0.15]"
+              width={800}
+              height={242}
+              className="w-32 h-auto opacity-[0.15]"
             />
           </div>
         )}

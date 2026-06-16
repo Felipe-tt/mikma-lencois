@@ -105,7 +105,7 @@ function ResetForm() {
     <div className="min-h-screen bg-warm flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <Link href="/" className="flex mb-10 justify-center">
-          <Image src="/logo-dark.png" alt="Mikma" width={120} height={60} className="h-10 w-auto object-contain" />
+          <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" />
         </Link>
         {children}
       </div>

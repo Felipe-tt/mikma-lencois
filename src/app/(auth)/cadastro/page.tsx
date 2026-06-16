@@ -172,16 +172,16 @@ export default function RegisterPage() {
       {/* Painel esquerdo — logo em destaque */}
       <div className="hidden lg:flex w-[45%] xl:w-1/2 flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist">
         <Link href="/">
-          <Image src="/logo-dark.png" alt="Mikma" width={160} height={80} className="h-10 w-auto object-contain" />
+          <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" />
         </Link>
 
         <div className="flex-1 flex items-center justify-center py-8">
           <Image
             src="/logo-dark.png"
             alt="Mikma Lençóis"
-            width={400}
-            height={200}
-            className="w-full max-w-[260px] h-auto object-contain opacity-[0.10]"
+            width={800}
+            height={242}
+            className="w-full max-w-[280px] h-auto object-contain opacity-[0.10]"
           />
         </div>
 
@@ -199,7 +199,7 @@ export default function RegisterPage() {
       <div className="flex-1 flex flex-col justify-center p-6 sm:p-12 min-h-screen overflow-y-auto bg-paper">
         <div className="w-full max-w-[400px] mx-auto py-10">
           <Link href="/" className="flex mb-10 lg:hidden">
-            <Image src="/logo-dark.png" alt="Mikma" width={120} height={60} className="h-9 w-auto object-contain" />
+            <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-8 w-auto object-contain" />
           </Link>
 
           <h1 className="font-display font-normal text-ink text-[2.2rem] mb-2 leading-tight">Criar conta</h1>

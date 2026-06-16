@@ -76,8 +76,8 @@ export default async function HomePage() {
                   <Image
                     src="/logo-dark.png"
                     alt={s.storeName ?? 'Mikma Lençóis'}
-                    width={500}
-                    height={250}
+                    width={800}
+                    height={242}
                     className="w-full h-auto object-contain"
                     priority
                   />
@@ -185,8 +185,8 @@ export default async function HomePage() {
               <Image
                 src="/logo-white.png"
                 alt={s.storeName ?? 'Mikma Lençóis'}
-                width={500}
-                height={250}
+                width={800}
+                height={242}
                 className="w-full max-w-sm h-auto object-contain opacity-90"
               />
             </FadeIn>

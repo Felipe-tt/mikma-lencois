@@ -25,8 +25,8 @@ export default async function SobrePage() {
               <Image
                 src="/logo-dark.png"
                 alt={s.storeName ?? 'Mikma Lençóis'}
-                width={320}
-                height={160}
+                width={800}
+                height={242}
                 className="h-24 w-auto object-contain opacity-80"
               />
             </div>
