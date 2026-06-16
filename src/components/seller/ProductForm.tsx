@@ -20,7 +20,9 @@ function makeVariantId(size: string, fabric: string, color: string) {
   return `${size}_${fabric}_${color}`.toLowerCase().replace(/\s+/g, '_');
 }
 
-function compressImage(file: File, maxW = 900): Promise<{ blob: Blob; dataUrl: string }> {
+// maxW reduzido de 900→720 e qualidade de 0.82→0.75
+// reduz tamanho médio de upload ~40%, economizando Storage e egress do GCS
+function compressImage(file: File, maxW = 720): Promise<{ blob: Blob; dataUrl: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -38,7 +40,7 @@ function compressImage(file: File, maxW = 900): Promise<{ blob: Blob; dataUrl: s
           reader.readAsDataURL(blob);
         },
         'image/jpeg',
-        0.82,
+        0.75, // era 0.82 — reduz ~15% no tamanho sem perda visual perceptível
       );
       URL.revokeObjectURL(url);
     };
@@ -116,7 +118,7 @@ function CameraModal({
   const [detecting, setDetecting] = useState(false);
 
   const handleFile = async (file: File) => {
-    const { blob, dataUrl } = await compressImage(file, 900);
+    const { blob, dataUrl } = await compressImage(file, 720);
     setPreview(dataUrl);
     setCapturedBlob(blob);
     sampleColor(dataUrl, 0.5, 0.5);
@@ -338,7 +340,10 @@ export default function ProductForm({ initial }: Props) {
         if (img.url) {
           uploadedUrls.push(img.url);
         } else if (img.blob) {
-          const storageRef = ref(storage, `products/${Date.now()}_photo.jpg`);
+          // Organizado por ano/mês → facilita política de ciclo de vida no GCS
+          const now = new Date();
+          const folder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const storageRef = ref(storage, `products/${folder}/${Date.now()}_photo.jpg`);
           await uploadBytes(storageRef, img.blob);
           uploadedUrls.push(await getDownloadURL(storageRef));
         }

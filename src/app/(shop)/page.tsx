@@ -7,7 +7,10 @@ import Image from 'next/image';
 import { serialize } from '@/lib/utils/serialize';
 import { FadeIn } from '@/components/ui/FadeIn';
 
-export const dynamic = 'force-dynamic';
+// Revalida a cada 5 minutos — reduz chamadas ao Firestore/Cloud Functions
+// sem perder frescor nos produtos. Troque para 'force-dynamic' se precisar
+// de dados 100% em tempo real nesta página.
+export const revalidate = 300;
 
 async function getFeatured(): Promise<Product[]> {
   try {

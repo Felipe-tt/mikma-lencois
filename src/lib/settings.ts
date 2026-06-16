@@ -3,7 +3,9 @@ import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 
 let cached: StoreSettings | null = null;
 let cachedAt = 0;
-const TTL = 60_000; // 1 min
+// Aumentado de 1min → 10min: settings raramente mudam e cada leitura
+// consome uma leitura de documento no Firestore (cobra por operação).
+const TTL = 600_000; // 10 minutos
 
 export async function getSettings(): Promise<StoreSettings> {
   if (cached && Date.now() - cachedAt < TTL) return cached;

@@ -7,15 +7,25 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import type { Product } from '@/types';
 import { serialize } from '@/lib/utils/serialize';
 
-export const dynamic = 'force-dynamic';
+// ISR: revalida a cada 5 minutos — reduz invocações de Cloud Functions e leituras Firestore
+export const revalidate = 300;
 
 interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string }> }
 
+// Cache em memória para categorias: evita query full-scan a cada request dentro do mesmo container
+let _categoriesCache: { data: { name: string; count: number }[]; at: number } | null = null;
+const CATEGORIES_TTL = 5 * 60 * 1000; // 5 min
+
 async function getCategories(): Promise<{ name: string; count: number }[]> {
+  if (_categoriesCache && Date.now() - _categoriesCache.at < CATEGORIES_TTL) {
+    return _categoriesCache.data;
+  }
   const snap = await adminDb.collection('products').where('active','==',true).select('category').get();
   const map: Record<string, number> = {};
   snap.docs.forEach(d => { const c = d.data().category as string; if (c) map[c] = (map[c] ?? 0) + 1; });
-  return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
+  const data = Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
+  _categoriesCache = { data, at: Date.now() };
+  return data;
 }
 
 async function getProducts(cat?: string, ordem?: string): Promise<Product[]> {

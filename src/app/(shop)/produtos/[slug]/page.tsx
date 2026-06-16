@@ -11,24 +11,41 @@ import { FadeIn } from '@/components/ui/FadeIn';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 
-export const dynamic = 'force-dynamic';
+// ISR: revalida a cada 5 minutos — reduz leituras no Firestore por visita ao produto
+export const revalidate = 300;
 interface Props { params: Promise<{ slug: string }> }
 
+// Cache de produto individual: evita leitura Firestore em requets quentes dentro do mesmo container
+const _productCache = new Map<string, { data: Product | null; at: number }>();
+const PRODUCT_TTL = 5 * 60 * 1000; // 5 min
+
 async function getProduct(id: string): Promise<Product | null> {
+  const hit = _productCache.get(id);
+  if (hit && Date.now() - hit.at < PRODUCT_TTL) return hit.data;
   const snap = await adminDb.collection('products').doc(id).get();
-  if (!snap.exists || !snap.data()?.active) return null;
-  return serialize<Product>({ id: snap.id, ...snap.data() });
+  if (!snap.exists || !snap.data()?.active) {
+    _productCache.set(id, { data: null, at: Date.now() });
+    return null;
+  }
+  const data = serialize<Product>({ id: snap.id, ...snap.data() });
+  _productCache.set(id, { data, at: Date.now() });
+  return data;
 }
 async function getInventory(id: string): Promise<InventoryItem[]> {
-  const snap = await adminDb.collection('inventory').where('productId','==',id).get();
+  // select() reduz o payload: só campos necessários para exibir disponibilidade
+  const snap = await adminDb.collection('inventory')
+    .where('productId','==',id)
+    .select('variant','quantity','reserved','lowStockThreshold')
+    .get();
   return snap.docs.map(d => serialize<InventoryItem>({ sku: d.id, ...d.data() }));
 }
 async function getRelated(product: Product): Promise<Product[]> {
   try {
+    // limit(5) em vez de 6 já que filtramos o próprio produto: economiza 1 leitura
     const snap = await adminDb.collection('products')
       .where('active','==',true)
       .where('category','==',product.category)
-      .limit(6).get();
+      .limit(5).get();
     return snap.docs
       .map(d => serialize<Product>({ id: d.id, ...d.data() }))
       .filter(p => p.id !== product.id)
