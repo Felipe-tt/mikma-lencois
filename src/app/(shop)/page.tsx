@@ -29,6 +29,10 @@ export default async function HomePage() {
     <>
       {/* ══ HERO ════════════════════════════════════════════════════ */}
       <section className="bg-warm overflow-hidden relative">
+        {/* Hero background image */}
+        <div className="absolute inset-0 pointer-events-none select-none">
+          <img src="/hero-bg.jpg" alt="" className="w-full h-full object-cover object-center opacity-[0.13]" aria-hidden="true" />
+        </div>
         <div className="container-shop">
           <div className="grid lg:grid-cols-[1fr_1px_1fr] min-h-[540px] lg:min-h-[680px]">
 
