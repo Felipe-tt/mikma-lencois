@@ -266,3 +266,24 @@
     100% { width: 100%; opacity: 0; }
   }
 }
+/* ── Scrollbar customizada ───────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #C8B8A8;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9C8878;
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #C8B8A8 transparent;
+}
+
