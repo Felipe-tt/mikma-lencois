@@ -122,7 +122,7 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
           <div className="border-t border-mist pt-4 mt-1">
-            <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Seção CTA (fundo escuro)</p>
+            <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Seção CTA (fundo escuro) — também usado como frase grande do footer</p>
             <Field label="Linha 1 do slogan" value={settings.ctaSloganLine1 ?? ''} onChange={v => set('ctaSloganLine1', v)} placeholder="Feito em Blumenau." />
             <Field label="Linha 2 do slogan (itálico)" value={settings.ctaSloganLine2 ?? ''} onChange={v => set('ctaSloganLine2', v)} placeholder="Dorme bem." />
             <div className="grid grid-cols-2 gap-2 mt-2">

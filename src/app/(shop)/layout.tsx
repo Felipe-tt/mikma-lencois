@@ -19,6 +19,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         instagramUrl={s.instagramUrl}
         whatsappUrl={s.whatsappUrl}
         tagline={s.storeSlogan}
+        sloganLine1={s.ctaSloganLine1 || `Feito em ${s.storeCity?.split(',')[0] || 'Blumenau'}.`}
+        sloganLine2={s.ctaSloganLine2 || 'Dorme bem.'}
       />
     </div>
   );

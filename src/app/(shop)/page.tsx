@@ -171,12 +171,12 @@ export default async function HomePage() {
           Fundo escuro como ponto final da página.
       ═══════════════════════════════════════════════════════════ */}
       <section className="bg-[#1E1208]">
-        <div className="container-shop py-20 sm:py-28">
+        <div className="container-shop py-14 sm:py-20">
           <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-[#6B5444] mb-8">
             {city} · Est. {s.foundedYear || ''}
           </p>
           <h2
-            className="font-display font-normal text-[#F9F6F1] leading-[1.04] tracking-[-0.02em] mb-10 sm:mb-14 max-w-2xl"
+            className="font-display font-normal text-[#F9F6F1] leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl"
             style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)' }}
           >
             {ctaLine1}<br /><em className="text-[#A07850] not-italic">{ctaLine2}</em>

@@ -10,6 +10,8 @@ interface Props {
   whatsappUrl?: string;
   reclameAquiUrl?: string;
   tagline?: string;
+  sloganLine1?: string;
+  sloganLine2?: string;
 }
 
 export function Footer({
@@ -21,24 +23,27 @@ export function Footer({
   whatsappUrl,
   reclameAquiUrl,
   tagline = '',
+  sloganLine1,
+  sloganLine2,
 }: Props) {
   const year = new Date().getFullYear();
   const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
-  const city = storeCity.split(',')[0];
 
   return (
     <footer className="bg-ink text-paper mt-auto overflow-hidden">
 
       {/* ── Frase editorial ── */}
-      <div className="container-shop pt-16 pb-12 border-b border-paper/[0.07]">
-        <p className="font-display font-normal text-paper/[0.18] text-[clamp(2.4rem,7vw,5.5rem)] leading-[1.06] tracking-tight select-none pointer-events-none">
-          Feito em {city}.<br />
-          <em className="text-paper/[0.28] not-italic">Dorme bem.</em>
-        </p>
-      </div>
+      {(sloganLine1 || sloganLine2) && (
+        <div className="container-shop pt-10 pb-12 border-b border-paper/[0.07]">
+          <p className="font-display font-normal text-paper/[0.18] text-[clamp(2.4rem,7vw,5.5rem)] leading-[1.06] tracking-tight select-none pointer-events-none">
+            {sloganLine1}<br />
+            <em className="text-paper/[0.28] not-italic">{sloganLine2}</em>
+          </p>
+        </div>
+      )}
 
       {/* ── Corpo ── */}
-      <div className="container-shop py-14">
+      <div className={`container-shop py-14 ${!(sloganLine1 || sloganLine2) ? 'border-t border-paper/[0.07]' : ''}`}>
         <div className="grid grid-cols-2 md:grid-cols-[1.6fr_1fr_1fr_1fr] gap-10 md:gap-8 lg:gap-12 pb-12 border-b border-paper/[0.07]">
 
           {/* Col 1 — Marca */}
