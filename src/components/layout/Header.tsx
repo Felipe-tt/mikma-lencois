@@ -81,8 +81,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             <Image src="/logo-dark.png" alt="Mikma Lençóis" width={800} height={242} className="h-8 w-auto object-contain" priority />
           </NavLink>
 
-          {/* Desktop nav — centered absolutely */}
-          <nav className={`hidden md:flex items-center gap-9 absolute left-1/2 -translate-x-1/2 transition-all duration-200 ${searchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          {/* Desktop nav — right next to the logo */}
+          <nav className={`hidden md:flex items-center gap-9 ml-8 transition-all duration-200 ${searchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             {NAV_LINKS.map(({ href, label }) => (
               <NavLink key={href} href={href}
                 className={`text-[13px] font-medium tracking-[0.01em] transition-colors duration-150 relative pb-0.5
