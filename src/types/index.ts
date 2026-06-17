@@ -29,6 +29,7 @@ export interface ProductVariant {
   id: string
   size: 'solteiro' | 'casal' | 'queen' | 'king'
   color: string
+  colorName?: string
   fabric: string
 }
 

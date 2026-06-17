@@ -6,6 +6,7 @@ import { doc, updateDoc, serverTimestamp, setDoc, collection } from 'firebase/fi
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase/client';
 import type { Product } from '@/types';
+import { hexToColorName } from '@/lib/colorNames';
 
 type Props = {
   initial?: Partial<Product> & { id?: string };
@@ -16,8 +17,9 @@ const SIZES = ['solteiro', 'casal', 'queen', 'king'] as const;
 const SIZE_LABEL: Record<string, string> = { solteiro: 'Solteiro', casal: 'Casal', queen: 'Queen', king: 'King' };
 const FABRICS = ['Algodão', 'Malha', 'Percal 200 fios', 'Percal 300 fios', 'Cetim'];
 
-function makeVariantId(size: string, fabric: string, color: string) {
-  return `${size}_${fabric}_${color}`.toLowerCase().replace(/\s+/g, '_');
+function makeVariantId(size: string, fabric: string, _color?: string) {
+  // SKU usa apenas size+fabric — cor não inclusa para evitar quebrar inventário ao trocar foto
+  return `${size}_${fabric}`.toLowerCase().replace(/\s+/g, '_');
 }
 
 // maxW reduzido de 900→720 e qualidade de 0.82→0.75
@@ -273,6 +275,68 @@ function CameraModal({
 }
 
 // ── Main Form ─────────────────────────────────────────────────────────────────
+
+// Quick color swatches for textile products
+const QUICK_COLORS = [
+  '#ffffff','#f5f5f0','#faf0e6','#d4b896','#c4714a',
+  '#e75480','#ff0000','#8b0000','#4b0082','#000080',
+  '#1e90ff','#add8e6','#40e0d0','#228b22','#ffd700',
+  '#808080','#2f2f2f','#000000',
+];
+
+function ColorPicker({ value, colorName, onChange }: {
+  value: string;
+  colorName: string;
+  onChange: (hex: string, name: string) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const pick = async (hex: string) => {
+    setLoading(true);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      const name = await hexToColorName(hex);
+      setLoading(false);
+      onChange(hex, name);
+    }, 350);
+  };
+
+  const displayName = colorName || value;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value.length === 7 && value.startsWith('#') ? value : '#cccccc'}
+          onChange={e => pick(e.target.value)}
+          className="w-10 h-9 border border-mist cursor-pointer p-0.5 shrink-0 bg-paper"
+        />
+        <div className="flex-1 border border-mist px-3 h-9 flex items-center gap-2 bg-paper">
+          {loading
+            ? <span className="spinner-dark" />
+            : <span className="text-sm font-medium text-ink">{displayName}</span>
+          }
+        </div>
+        <span className="text-xs font-mono text-faint shrink-0 w-[5.5rem] text-right">{value}</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {QUICK_COLORS.map(col => (
+          <button
+            key={col}
+            type="button"
+            onClick={() => pick(col)}
+            title={col}
+            className={`w-6 h-6 border-2 transition-all ${value === col ? 'border-clay scale-110' : 'border-transparent hover:border-mist'}`}
+            style={{ background: col, outline: col === '#ffffff' ? '1px solid #e8e4dc' : undefined }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ProductForm({ initial }: Props) {
   const router = useRouter();
   const isEdit = !!initial?.id;
@@ -294,8 +358,8 @@ export default function ProductForm({ initial }: Props) {
     (initial?.images ?? []).map((url) => ({ dataUrl: url, url, hex: '#cccccc' })),
   );
 
-  const [variants, setVariants] = useState<{ size: string; fabric: string; color: string; qty: number }[]>(
-    initial?.variants?.map((v) => ({ size: v.size, fabric: v.fabric ?? '', color: v.color ?? '', qty: 0 })) ?? [],
+  const [variants, setVariants] = useState<{ size: string; fabric: string; color: string; colorName: string; qty: number }[]>(
+    initial?.variants?.map((v) => ({ size: v.size, fabric: v.fabric ?? '', color: v.color ?? '', colorName: v.colorName ?? '', qty: 0 })) ?? [],
   );
 
   const [showCamera, setShowCamera] = useState(false);
@@ -314,18 +378,18 @@ export default function ProductForm({ initial }: Props) {
     const autoSize = detected.size ?? SIZES[0];
     const autoFabric = detected.fabric ?? FABRICS[0];
     if (variants.length === 0) {
-      setVariants([{ size: autoSize, fabric: autoFabric, color: hex, qty: 1 }]);
+      setVariants([{ size: autoSize, fabric: autoFabric, color: hex, colorName: '', qty: 1 }]);
     }
   };
 
   const removeImage = (i: number) => setImages((prev) => prev.filter((_, idx) => idx !== i));
 
   const addVariant = () =>
-    setVariants((v) => [...v, { size: SIZES[0], fabric: FABRICS[0], color: images[0]?.hex ?? '#ffffff', qty: 1 }]);
+    setVariants((v) => [...v, { size: SIZES[0], fabric: FABRICS[0], color: images[0]?.hex ?? '#ffffff', colorName: '', qty: 1 }]);
 
   const removeVariant = (i: number) => setVariants((v) => v.filter((_, idx) => idx !== i));
 
-  const updateVariant = (i: number, field: string, value: string | number) =>
+  const updateVariant = (i: number, field: string, value: string | number | boolean) =>
     setVariants((v) => v.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
 
   const handleSubmit = async () => {
@@ -351,11 +415,12 @@ export default function ProductForm({ initial }: Props) {
 
       const priceCents = Math.round(parseFloat(price.replace(',', '.')) * 100);
       const tagArr = tags.split(',').map((t) => t.trim()).filter(Boolean);
-      const builtVariants = variants.map(({ size, fabric, color }) => ({
-        id: makeVariantId(size, fabric, color),
+      const builtVariants = variants.map(({ size, fabric, color, colorName }) => ({
+        id: makeVariantId(size, fabric),
         size: size as 'solteiro' | 'casal' | 'queen' | 'king',
         fabric,
         color,
+        colorName: colorName || color,
       }));
 
       const data = {
@@ -596,22 +661,15 @@ export default function ProductForm({ initial }: Props) {
 
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
-                      <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Cor (hex)</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={v.color.startsWith('#') ? v.color : '#cccccc'}
-                          onChange={(e) => updateVariant(i, 'color', e.target.value)}
-                          className="w-10 h-9 border border-mist cursor-pointer p-0.5 shrink-0"
-                        />
-                        <input
-                          type="text"
-                          value={v.color}
-                          onChange={(e) => updateVariant(i, 'color', e.target.value)}
-                          placeholder="#ffffff"
-                          className="flex-1 border border-mist px-2 py-2 text-sm font-mono focus:outline-none"
-                        />
-                      </div>
+                      <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Cor</label>
+                      <ColorPicker
+                        value={v.color}
+                        colorName={v.colorName}
+                        onChange={(hex, name) => {
+                          updateVariant(i, 'color', hex);
+                          updateVariant(i, 'colorName', name);
+                        }}
+                      />
                     </div>
 
                     {!isEdit && (
