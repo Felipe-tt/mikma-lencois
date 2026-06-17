@@ -46,7 +46,10 @@ export default async function HomePage() {
           HERO — tipografia como protagonista
           Branco absoluto. Headline enorme. Nada mais.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="bg-[#F9F6F1] border-b border-[#E0D8CE]">
+      <section className="bg-[#F9F6F1] border-b border-[#E0D8CE] relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none select-none">
+          <img src="/hero-bg.jpg" alt="" className="w-full h-full object-cover object-center opacity-[0.12]" aria-hidden="true" />
+        </div>
         <div className="container-shop pt-16 sm:pt-24 pb-14 sm:pb-20">
 
           {/* Origem — linha de contexto, não eyebrow decorativo */}
