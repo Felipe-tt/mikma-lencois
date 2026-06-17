@@ -36,6 +36,19 @@ export type StoreSettings = {
   freeShippingThresholdCents: number;
   lowStockThreshold: number;
   foundedYear: string;
+  // Hero
+  heroLine1: string;
+  heroLine2: string;
+  heroLine3: string;
+  heroTrust1: string;
+  heroTrust2: string;
+  heroTrust3: string;
+  heroTrust4: string;
+  // Seção escura (CTA final)
+  ctaSloganLine1: string;
+  ctaSloganLine2: string;
+  ctaBtn1: string;
+  ctaBtn2: string;
   // Homepage stats
   featuredTitle: string;
   statOrders: string;
@@ -79,6 +92,17 @@ export const STORE_DEFAULTS: StoreSettings = {
   freeShippingThresholdCents: 0,
   lowStockThreshold: 3,
   foundedYear: '2018',
+  heroLine1: '',
+  heroLine2: '',
+  heroLine3: '',
+  heroTrust1: '',
+  heroTrust2: '',
+  heroTrust3: '',
+  heroTrust4: '',
+  ctaSloganLine1: '',
+  ctaSloganLine2: '',
+  ctaBtn1: '',
+  ctaBtn2: '',
   featuredTitle: 'Escolhas da semana',
   statOrders: '1.200+',
   statRating: '4.9',

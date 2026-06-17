@@ -40,6 +40,22 @@ export default async function HomePage() {
   const storeName = s.storeName || 'Mikma Lençóis';
   const city      = s.storeCity?.split(',')[0] || 'Blumenau';
 
+  // Hero lines — fallback vazio para forçar admin a preencher nas configs
+  const heroLine1 = s.heroLine1 || 'O conforto';
+  const heroLine2 = s.heroLine2 || 'que acompanha';
+  const heroLine3 = s.heroLine3 || 'seus sonhos.';
+  const heroSubtitle = s.heroSubtitle || `Direto da nossa fábrica em ${city} para a sua cama — sem intermediários, sem markup desnecessário.`;
+  const trustItems = [
+    s.heroTrust1 || `Entrega em 1h em ${city}`,
+    s.heroTrust2 || 'Frete para todo o Brasil',
+    s.heroTrust3 || 'Pague com PIX',
+    s.heroTrust4 || 'Qualidade direto de fábrica',
+  ].filter(Boolean);
+  const ctaLine1 = s.ctaSloganLine1 || `Feito em ${city}.`;
+  const ctaLine2 = s.ctaSloganLine2 || 'Dorme bem.';
+  const ctaBtn1  = s.ctaBtn1 || 'Comprar agora';
+  const ctaBtn2  = s.ctaBtn2 || 'Nossa história';
+
   return (
     <>
       {/* ═══════════════════════════════════════════════════════════
@@ -62,15 +78,15 @@ export default async function HomePage() {
             className="font-display font-normal text-[#1E1208] leading-[0.96] tracking-[-0.025em]"
             style={{ fontSize: 'clamp(3.8rem, 9.5vw, 9rem)' }}
           >
-            <span className="block">O conforto</span>
-            <span className="block italic text-[#7C5C3E]">que acompanha</span>
-            <span className="block">seus sonhos.</span>
+            <span className="block">{heroLine1}</span>
+            <span className="block italic text-[#7C5C3E]">{heroLine2}</span>
+            <span className="block">{heroLine3}</span>
           </h1>
 
           {/* Copy + CTA — linha única embaixo do headline */}
           <div className="mt-10 sm:mt-14 flex flex-col sm:flex-row sm:items-end justify-between gap-8">
             <p className="text-[15px] text-[#705A48] leading-relaxed max-w-[38ch] font-light">
-              {s.heroSubtitle || `Direto da nossa fábrica em ${city} para a sua cama — sem intermediários, sem markup desnecessário.`}
+              {heroSubtitle}
             </p>
             <div className="flex items-center gap-5 shrink-0">
               <Link href="/produtos"
@@ -85,18 +101,15 @@ export default async function HomePage() {
           </div>
 
           {/* Trust — sem ícones, sem boxes, texto simples */}
-          <div className="mt-10 pt-8 border-t border-[#E0D8CE] flex flex-wrap gap-x-8 gap-y-1.5">
-            {[
-              `Entrega em 1h em ${city}`,
-              'Frete para todo o Brasil',
-              'Pague com PIX',
-              'Qualidade direto de fábrica',
-            ].map(t => (
-              <span key={t} className="font-mono text-[11px] text-[#B09C8C] tracking-[0.08em]">
-                {t}
-              </span>
-            ))}
-          </div>
+          {trustItems.length > 0 && (
+            <div className="mt-10 pt-8 border-t border-[#E0D8CE] flex flex-wrap gap-x-8 gap-y-1.5">
+              {trustItems.map(t => (
+                <span key={t} className="font-mono text-[11px] text-[#B09C8C] tracking-[0.08em]">
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -160,22 +173,22 @@ export default async function HomePage() {
       <section className="bg-[#1E1208]">
         <div className="container-shop py-20 sm:py-28">
           <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-[#6B5444] mb-8">
-            {city} · Est. {s.foundedYear || '2018'}
+            {city} · Est. {s.foundedYear || ''}
           </p>
           <h2
             className="font-display font-normal text-[#F9F6F1] leading-[1.04] tracking-[-0.02em] mb-10 sm:mb-14 max-w-2xl"
             style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)' }}
           >
-            {s.storeSlogan || <>Feito em {city}.<br /><em className="text-[#A07850] not-italic">Dorme bem.</em></>}
+            {ctaLine1}<br /><em className="text-[#A07850] not-italic">{ctaLine2}</em>
           </h2>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/produtos"
               className="inline-flex items-center justify-center h-12 px-7 bg-[#7C5C3E] text-[#F9F6F1] text-[13px] font-medium tracking-[0.05em] hover:bg-[#A07850] transition-colors duration-200">
-              Comprar agora
+              {ctaBtn1}
             </Link>
             <Link href="/sobre"
               className="inline-flex items-center justify-center h-12 px-7 border border-[#F9F6F1]/15 text-[#F9F6F1]/50 text-[13px] font-medium hover:text-[#F9F6F1] hover:border-[#F9F6F1]/30 transition-colors duration-200">
-              Nossa história
+              {ctaBtn2}
             </Link>
           </div>
         </div>

@@ -103,7 +103,33 @@ export default function ConfiguracoesPage() {
           <Field label="Barra superior (topbar)" value={settings.topbarText} onChange={v => set('topbarText', v)} hint="Aparece no topo de todas as páginas" />
           <Field label="Tag do hero" value={settings.heroTag} onChange={v => set('heroTag', v)} hint="Ex: Blumenau, SC — Coleção" />
           <Textarea label="Título do hero" value={settings.heroTitle} onChange={v => set('heroTitle', v)} hint="Use quebra de linha para controlar o layout" rows={3} />
-          <Field label="Subtítulo do hero" value={settings.heroSubtitle} onChange={v => set('heroSubtitle', v)} />
+          <Field label="Subtítulo do hero" value={settings.heroSubtitle} onChange={v => set('heroSubtitle', v)} hint="Frase abaixo do título principal" />
+          <div className="border-t border-mist pt-4 mt-1">
+            <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Título do hero (3 linhas)</p>
+            <div className="flex flex-col gap-2">
+              <Field label="Linha 1" value={settings.heroLine1 ?? ''} onChange={v => set('heroLine1', v)} placeholder="O conforto" />
+              <Field label="Linha 2 (itálico colorido)" value={settings.heroLine2 ?? ''} onChange={v => set('heroLine2', v)} placeholder="que acompanha" />
+              <Field label="Linha 3" value={settings.heroLine3 ?? ''} onChange={v => set('heroLine3', v)} placeholder="seus sonhos." />
+            </div>
+          </div>
+          <div className="border-t border-mist pt-4 mt-1">
+            <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Trust signals (rodapé do hero)</p>
+            <div className="flex flex-col gap-2">
+              <Field label="Trust 1" value={settings.heroTrust1 ?? ''} onChange={v => set('heroTrust1', v)} placeholder="Entrega em 1h em Blumenau" />
+              <Field label="Trust 2" value={settings.heroTrust2 ?? ''} onChange={v => set('heroTrust2', v)} placeholder="Frete para todo o Brasil" />
+              <Field label="Trust 3" value={settings.heroTrust3 ?? ''} onChange={v => set('heroTrust3', v)} placeholder="Pague com PIX" />
+              <Field label="Trust 4" value={settings.heroTrust4 ?? ''} onChange={v => set('heroTrust4', v)} placeholder="Qualidade direto de fábrica" />
+            </div>
+          </div>
+          <div className="border-t border-mist pt-4 mt-1">
+            <p className="text-2xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Seção CTA (fundo escuro)</p>
+            <Field label="Linha 1 do slogan" value={settings.ctaSloganLine1 ?? ''} onChange={v => set('ctaSloganLine1', v)} placeholder="Feito em Blumenau." />
+            <Field label="Linha 2 do slogan (itálico)" value={settings.ctaSloganLine2 ?? ''} onChange={v => set('ctaSloganLine2', v)} placeholder="Dorme bem." />
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <Field label="Botão principal" value={settings.ctaBtn1 ?? ''} onChange={v => set('ctaBtn1', v)} placeholder="Comprar agora" />
+              <Field label="Botão secundário" value={settings.ctaBtn2 ?? ''} onChange={v => set('ctaBtn2', v)} placeholder="Nossa história" />
+            </div>
+          </div>
           <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Tags flutuantes (desktop)</p>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tag 1 — label" value={settings.heroFloatTag1Label} onChange={v => set('heroFloatTag1Label', v)} placeholder="400 fios" />
