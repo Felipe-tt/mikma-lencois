@@ -6,9 +6,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/painel/', '/checkout/', '/conta/', '/perfil/', '/api/'],
+        disallow: ['/painel', '/checkout', '/api/', '/conta/', '/perfil/'],
       },
     ],
-    sitemap: 'https://mikmalencois.com.br/sitemap.xml',
+    sitemap: 'https://mikma.com.br/sitemap.xml',
   };
 }

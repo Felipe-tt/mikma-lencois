@@ -1,41 +1,37 @@
 import { MetadataRoute } from 'next';
+import { adminDb } from '@/lib/firebase/admin';
+
+const BASE = 'https://mikma.com.br';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = 'https://mikmalencois.com.br';
+  const now = new Date();
 
-  const staticPages: MetadataRoute.Sitemap = [
-    { url: base, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
-    { url: `${base}/produtos`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
-    { url: `${base}/sobre`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${base}/privacidade`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
-    { url: `${base}/termos`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
+  // Static pages
+  const statics: MetadataRoute.Sitemap = [
+    { url: BASE, lastModified: now, changeFrequency: 'daily', priority: 1 },
+    { url: `${BASE}/produtos`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { url: `${BASE}/sobre`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${BASE}/entrar`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${BASE}/cadastro`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
   ];
 
-  // Só tenta buscar produtos se as credenciais estiverem disponíveis
-  const hasCredentials =
-    process.env.FIREBASE_PROJECT_ID &&
-    process.env.FIREBASE_CLIENT_EMAIL &&
-    process.env.FIREBASE_PRIVATE_KEY;
-
-  if (!hasCredentials) return staticPages;
-
+  // Product pages
   try {
-    const { adminDb } = await import('@/lib/firebase/admin');
     const snap = await adminDb
       .collection('products')
       .where('active', '==', true)
-      .select('createdAt')
+      .select('updatedAt')
       .get();
 
-    const productPages: MetadataRoute.Sitemap = snap.docs.map((doc) => ({
-      url: `${base}/produtos/${doc.id}`,
-      lastModified: doc.data().createdAt?.toDate() ?? new Date(),
+    const products: MetadataRoute.Sitemap = snap.docs.map(d => ({
+      url: `${BASE}/produtos/${d.id}`,
+      lastModified: d.data().updatedAt?.toDate?.() ?? now,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));
 
-    return [...staticPages, ...productPages];
+    return [...statics, ...products];
   } catch {
-    return staticPages;
+    return statics;
   }
 }

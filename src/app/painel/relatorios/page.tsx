@@ -29,7 +29,7 @@ export default function RelatoriosPage() {
       since.setDate(since.getDate() - days);
       const snap = await getDocs(query(
         collection(db, 'orders'),
-        where('status', '==', 'delivered'),
+        where('status', 'in', ['paid', 'preparing', 'shipped', 'delivered']),
         where('createdAt', '>=', Timestamp.fromDate(since)),
         orderBy('createdAt', 'desc'),
       ));

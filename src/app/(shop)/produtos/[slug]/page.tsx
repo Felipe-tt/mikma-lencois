@@ -60,7 +60,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: p.name,
     description: p.description?.slice(0, 160),
-    openGraph: { images: p.images[0] ? [{ url: p.images[0] }] : [] },
+    openGraph: {
+      title: p.name,
+      description: p.description?.slice(0, 160),
+      images: p.images[0] ? [{ url: p.images[0], width: 1200, height: 630, alt: p.name }] : [],
+      type: 'product',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      images: p.images[0] ? [p.images[0]] : [],
+    },
   };
 }
 

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -134,6 +134,15 @@ export default function RegisterPage() {
         throw new Error(d.error);
       }
       await signInWithEmailAndPassword(auth, email, password);
+      // Envia e-mail de verificação silenciosamente — não bloqueia o fluxo
+      try {
+        if (auth.currentUser && !auth.currentUser.emailVerified) {
+          await sendEmailVerification(auth.currentUser, {
+            url: `${window.location.origin}/entrar`,
+            handleCodeInApp: false,
+          });
+        }
+      } catch { /* ignora falha no envio — não impede o cadastro */ }
       setStep('success');
       setTimeout(() => router.push('/'), 1800);
     } catch (err: unknown) {
