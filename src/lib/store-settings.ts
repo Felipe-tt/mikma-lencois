@@ -39,20 +39,9 @@ export type StoreSettings = {
   aboutStat3Value: string;
   // Página Sobre — botão WhatsApp
   aboutWhatsappLabel: string;
-  // Página Sobre — timeline
+  // Página Sobre — timeline (array JSON serializado)
   aboutTimelineTitle: string;
-  aboutTimeline1Year: string;
-  aboutTimeline1Label: string;
-  aboutTimeline1Desc: string;
-  aboutTimeline2Year: string;
-  aboutTimeline2Label: string;
-  aboutTimeline2Desc: string;
-  aboutTimeline3Year: string;
-  aboutTimeline3Label: string;
-  aboutTimeline3Desc: string;
-  aboutTimeline4Year: string;
-  aboutTimeline4Label: string;
-  aboutTimeline4Desc: string;
+  aboutTimeline: string; // JSON: [{year, label, desc}]
   originLat: number;
   originLng: number;
   originCep: string;
@@ -119,18 +108,12 @@ export const STORE_DEFAULTS: StoreSettings = {
   aboutStat3Value: 'Todo o Brasil',
   aboutWhatsappLabel: 'Falar no WhatsApp',
   aboutTimelineTitle: 'Nossa trajetória',
-  aboutTimeline1Year: '2018',
-  aboutTimeline1Label: 'Fundação',
-  aboutTimeline1Desc: 'A Mikma nasce em Blumenau com o objetivo de levar qualidade têxtil direto da fábrica para as casas.',
-  aboutTimeline2Year: '2020',
-  aboutTimeline2Label: 'Entrega local',
-  aboutTimeline2Desc: 'Lançamos entrega em até 1h para toda Blumenau, sem custo adicional.',
-  aboutTimeline3Year: '2022',
-  aboutTimeline3Label: 'Brasil todo',
-  aboutTimeline3Desc: 'Expandimos com frete nacional via PAC, SEDEX e transportadoras com rastreio em tempo real.',
-  aboutTimeline4Year: '2024',
-  aboutTimeline4Label: 'Loja online',
-  aboutTimeline4Desc: 'Inauguramos nossa loja virtual. Compra fácil, pagamento via PIX, confirmação automática.',
+  aboutTimeline: JSON.stringify([
+    { year: '2018', label: 'Fundação', desc: 'A Mikma nasce em Blumenau com o objetivo de levar qualidade têxtil direto da fábrica para as casas.' },
+    { year: '2020', label: 'Entrega local', desc: 'Lançamos entrega em até 1h para toda Blumenau, sem custo adicional.' },
+    { year: '2022', label: 'Brasil todo', desc: 'Expandimos com frete nacional via PAC, SEDEX e transportadoras com rastreio em tempo real.' },
+    { year: '2024', label: 'Loja online', desc: 'Inauguramos nossa loja virtual. Compra fácil, pagamento via PIX, confirmação automática.' },
+  ]),
   originLat: 0,
   originLng: 0,
   originCep: '',

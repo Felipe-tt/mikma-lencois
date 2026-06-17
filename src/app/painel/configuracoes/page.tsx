@@ -161,16 +161,7 @@ export default function ConfiguracoesPage() {
           <Field label="Texto do botão WhatsApp" value={settings.aboutWhatsappLabel} onChange={v => set('aboutWhatsappLabel', v)} placeholder="Falar no WhatsApp" />
           <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Timeline</p>
           <Field label="Título" value={settings.aboutTimelineTitle} onChange={v => set('aboutTimelineTitle', v)} placeholder="Nossa trajetória" />
-          {([1,2,3,4] as const).map(n => (
-            <div key={n} className="flex flex-col gap-2 border border-[#2E2217] p-3">
-              <p className="text-[10px] font-bold tracking-[0.14em] uppercase text-[#B09C8C]">Marco {n}</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="Ano" value={(settings as any)[`aboutTimeline${n}Year`]} onChange={v => set(`aboutTimeline${n}Year` as any, v)} placeholder="2018" />
-                <Field label="Rótulo" value={(settings as any)[`aboutTimeline${n}Label`]} onChange={v => set(`aboutTimeline${n}Label` as any, v)} placeholder="Fundação" />
-              </div>
-              <Textarea label="Descrição" value={(settings as any)[`aboutTimeline${n}Desc`]} onChange={v => set(`aboutTimeline${n}Desc` as any, v)} rows={2} />
-            </div>
-          ))}
+          <TimelineEditor value={settings.aboutTimeline} onChange={v => set('aboutTimeline', v)} />
           <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Homepage</p>
           <Field label="Título da seção de destaques" value={settings.featuredTitle} onChange={v => set('featuredTitle', v)} placeholder="Escolhas da semana" />
           <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Estatísticas (CTA banner)</p>
@@ -259,6 +250,68 @@ function NumField({ label, value, onChange, hint, min, max, step = 1 }: {
         min={min} max={max} step={step} inputMode="decimal"
         className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />
       {hint && <p className="mt-1.5 text-[11px] text-[#B09C8C]">{hint}</p>}
+    </div>
+  );
+}
+
+type TimelineItem = { year: string; label: string; desc: string };
+
+function TimelineEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parse = (v: string): TimelineItem[] => {
+    try { return JSON.parse(v) || []; } catch { return []; }
+  };
+
+  const items = parse(value);
+
+  const update = (next: TimelineItem[]) => onChange(JSON.stringify(next));
+
+  const setItem = (i: number, field: keyof TimelineItem, val: string) => {
+    const next = items.map((item, idx) => idx === i ? { ...item, [field]: val } : item);
+    update(next);
+  };
+
+  const add = () => update([...items, { year: '', label: '', desc: '' }]);
+
+  const remove = (i: number) => update(items.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item, i) => (
+        <div key={i} className="flex flex-col gap-2 border border-[#2E2217] p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold tracking-[0.14em] uppercase text-[#B09C8C]">Marco {i + 1}</p>
+            <button
+              onClick={() => remove(i)}
+              className="text-[11px] text-[#B09C8C] hover:text-red-500 transition-colors px-1"
+            >
+              Remover
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[10px] font-bold tracking-[0.15em] uppercase text-[#B09C8C] mb-1.5">Ano</label>
+              <input value={item.year} onChange={e => setItem(i, 'year', e.target.value)} placeholder="2018"
+                className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold tracking-[0.15em] uppercase text-[#B09C8C] mb-1.5">Rótulo</label>
+              <input value={item.label} onChange={e => setItem(i, 'label', e.target.value)} placeholder="Fundação"
+                className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold tracking-[0.15em] uppercase text-[#B09C8C] mb-1.5">Descrição</label>
+            <textarea value={item.desc} onChange={e => setItem(i, 'desc', e.target.value)} rows={2}
+              className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40 resize-y" />
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={add}
+        className="w-full border border-dashed border-[#C4714A]/40 text-[#C4714A] text-[12px] font-semibold py-2.5 hover:bg-[#C4714A]/5 transition-colors"
+      >
+        + Adicionar marco
+      </button>
     </div>
   );
 }
