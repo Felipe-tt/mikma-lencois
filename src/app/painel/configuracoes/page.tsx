@@ -51,15 +51,7 @@ export default function ConfiguracoesPage() {
           <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Loja</p>
           <h1 className="font-display font-normal text-[#1E1208] text-2xl">Configurações</h1>
         </div>
-        <div className="flex items-center gap-3">
-          {saved && <span className="text-[11px] text-[#C4714A] font-semibold">✓ Salvo</span>}
-          <button
-            onClick={handleSave} disabled={saving}
-            className="bg-[#1E1208] text-[#FAF8F5] text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2.5 disabled:opacity-50 hover:bg-[#1E1208]/80 transition-colors"
-          >
-            {saving ? 'Salvando…' : 'Salvar'}
-          </button>
-        </div>
+
       </div>
 
       {/* Tabs */}
@@ -212,6 +204,16 @@ export default function ConfiguracoesPage() {
           <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Estoque</p>
           <NumField label="Alerta de estoque baixo (unidades)" value={settings.lowStockThreshold} onChange={v => set('lowStockThreshold', v)} min={0} />
         </>}
+      </div>
+
+      {/* Bottom save button */}
+      <div className="mt-8 pb-6">
+        <button
+          onClick={handleSave} disabled={saving}
+          className="w-full bg-[#1E1208] text-[#FAF8F5] text-sm font-semibold py-4 disabled:opacity-50 hover:bg-[#1E1208]/80 transition-colors"
+        >
+          {saving ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar configurações'}
+        </button>
       </div>
 
     </div>
