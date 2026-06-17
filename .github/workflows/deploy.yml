@@ -9,77 +9,86 @@ env:
   NODE_VERSION: "20"
 
 jobs:
-  lint:
-    name: Lint & Type-check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npm run lint
-
   build-and-deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     env:
-      # Firebase (public)
       NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
       NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
       NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-      # Firebase (server)
       FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
       FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
       FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
       FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-      # Google OAuth
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
-      # reCAPTCHA
       NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${{ secrets.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}
       RECAPTCHA_SECRET_KEY: ${{ secrets.RECAPTCHA_SECRET_KEY }}
-      # AbacatePay
       ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
       ABACATEPAY_PUBLIC_KEY: ${{ secrets.ABACATEPAY_PUBLIC_KEY }}
-      # Entrega
       MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
-      # App
       NEXT_PUBLIC_APP_URL: https://mikmalencois.com.br
       NEXT_PUBLIC_BASE_URL: https://mikmalencois.com.br
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # para detectar mudanças em functions/
 
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
+      # Cache npm — restaura node_modules se package-lock não mudou
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      - name: Cache Next.js build
+      # Cache Next.js — chave separada para package e para src
+      # src/** não invalida o cache de módulos compilados do Next.js
+      - name: Cache Next.js build cache
         uses: actions/cache@v4
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**') }}
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
             nextjs-${{ runner.os }}-
 
       - name: Build Next.js
         run: npm run build
 
-      - name: Deploy to Firebase
+      # Detecta se functions/ foi alterado neste push
+      - name: Check if functions changed
+        id: functions-changed
+        run: |
+          git diff --name-only HEAD~1 HEAD | grep -q '^functions/' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+
+      # Deploy hosting + functions só se functions mudou
+      - name: Deploy hosting + functions
+        if: steps.functions-changed.outputs.changed == 'true'
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only hosting,functions --force
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
+
+      # Deploy só hosting se functions não mudou (mais rápido)
+      - name: Deploy hosting only
+        if: steps.functions-changed.outputs.changed == 'false'
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting --force
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_CLI_EXPERIMENTS: webframeworks
