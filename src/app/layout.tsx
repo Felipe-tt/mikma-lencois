@@ -19,7 +19,15 @@ export const metadata: Metadata = {
     locale: 'pt_BR',
     url: 'https://mikmalencois.com.br',
     siteName: 'Mikma Lençóis',
-    images: [{ url: '/logo.png', width: 400, height: 400, alt: 'Mikma Lençóis' }],
+    title: 'Mikma Lençóis · Blumenau SC',
+    description: 'Lençóis, jogos de cama e toalhas direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
+    images: [{ url: '/og-image.jpg', width: 1200, height: 630, alt: 'Mikma Lençóis · Lençóis e jogos de cama' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Mikma Lençóis · Blumenau SC',
+    description: 'Lençóis, jogos de cama e toalhas direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
+    images: ['/og-image.jpg'],
   },
 };
 
