@@ -108,7 +108,7 @@ export function VariantSelector({ product, inventory }: Props) {
                     <span className="absolute top-[calc(50%-0.5px)] left-0 w-[141%] h-px bg-mist origin-left rotate-[-27deg] translate-x-[-10%]" />
                   </span>
                 )}
-                {variant.size}{variant.color ? ` — ${variant.color}` : ''}
+                {variant.size}{variant.color ? ` · ${variant.color}` : ''}
               </button>
             );
           })}

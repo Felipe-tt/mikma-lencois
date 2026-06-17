@@ -271,7 +271,7 @@ export default function CheckoutPage() {
               <button type="submit" disabled={submitting} className="btn-primary-lg w-full">
                 {submitting
                   ? <><span className="spinner" /> Gerando PIX…</>
-                  : `Gerar PIX — ${formatCurrency(total)}`
+                  : `Gerar PIX · ${formatCurrency(total)}`
                 }
               </button>
 
@@ -330,7 +330,7 @@ export default function CheckoutPage() {
 
               <div className="border-t border-mist pt-4 flex flex-col gap-2">
                 {[
-                  'Pagamento via PIX — aprovação imediata',
+                  'Pagamento via PIX, aprovação imediata',
                   'SSL 256-bit · dados protegidos',
                   'Nota fiscal emitida automaticamente',
                 ].map(text => (

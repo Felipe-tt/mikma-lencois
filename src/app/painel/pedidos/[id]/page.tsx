@@ -289,8 +289,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <div className="px-5 py-4">
               <address className="text-[13px] text-[#705A48] not-italic leading-relaxed">
                 {order.address.street}, {order.address.number}
-                {order.address.complement ? ` — ${order.address.complement}` : ''}<br />
-                {order.address.neighborhood} · {order.address.city} — {order.address.state}<br />
+                {order.address.complement ? ` · ${order.address.complement}` : ''}<br />
+                {order.address.neighborhood} · {order.address.city} · {order.address.state}<br />
                 CEP {order.address.cep}
               </address>
             </div>

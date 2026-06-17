@@ -8,7 +8,7 @@ export default async function SobrePage() {
     { year: s.foundedYear ?? '2018', label: 'Fundação', desc: 'A Mikma nasce em Blumenau com o objetivo de levar qualidade têxtil direto da fábrica para as casas.' },
     { year: '2020', label: 'Entrega local', desc: 'Lançamos entrega em até 1h para toda Blumenau, sem custo adicional.' },
     { year: '2022', label: 'Brasil todo', desc: 'Expandimos com frete nacional via PAC, SEDEX e transportadoras com rastreio em tempo real.' },
-    { year: '2024', label: 'Loja online', desc: 'Inauguramos nossa loja virtual — compra fácil, pagamento via PIX, confirmação automática.' },
+    { year: '2024', label: 'Loja online', desc: 'Inauguramos nossa loja virtual. Compra fácil, pagamento via PIX, confirmação automática.' },
   ].filter(t => t.year && t.desc);
 
   return (

@@ -44,7 +44,7 @@ export default async function HomePage() {
   const heroLine1 = s.heroLine1 || 'O conforto';
   const heroLine2 = s.heroLine2 || 'que acompanha';
   const heroLine3 = s.heroLine3 || 'seus sonhos.';
-  const heroSubtitle = s.heroSubtitle || `Direto da nossa fábrica em ${city} para a sua cama — sem intermediários, sem markup desnecessário.`;
+  const heroSubtitle = s.heroSubtitle || `Direto da nossa fábrica em ${city} para a sua cama, sem intermediários.`;
   const trustItems = [
     s.heroTrust1 || `Entrega em 1h em ${city}`,
     s.heroTrust2 || 'Frete para todo o Brasil',

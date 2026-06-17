@@ -160,8 +160,8 @@ export default function OrderDetailPage() {
               <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Endereço</h2>
               <address className="text-sm text-mid not-italic leading-relaxed">
                 {order.address.street}, {order.address.number}
-                {order.address.complement && ` — ${order.address.complement}`}<br />
-                {order.address.neighborhood}, {order.address.city} — {order.address.state}<br />
+                {order.address.complement && ` · ${order.address.complement}`}<br />
+                {order.address.neighborhood}, {order.address.city} · {order.address.state}<br />
                 CEP {order.address.cep}
               </address>
             </section>

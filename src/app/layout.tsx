@@ -4,7 +4,7 @@ import { Providers } from '@/components/Providers';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma-lencois.web.app'),
-  title: { default: 'Mikma Lençóis — Blumenau SC', template: '%s | Mikma Lençóis' },
+  title: { default: 'Mikma Lençóis · Blumenau SC', template: '%s | Mikma Lençóis' },
   description: 'Lençóis, jogos de cama e toalhas direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
   keywords: ['lençóis', 'jogos de cama', 'cama mesa banho', 'blumenau', 'mikma'],
   icons: {
