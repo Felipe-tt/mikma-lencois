@@ -150,9 +150,36 @@ export default function ConfiguracoesPage() {
         </>}
 
         {active === 'sobre' && <>
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Hero</p>
+          <Field label="Linha 1 do título" value={settings.aboutHeroLine1} onChange={v => set('aboutHeroLine1', v)} placeholder={settings.storeName || 'Mikma Lençóis'} />
+          <Field label="Linha 2 do título" value={settings.aboutHeroLine2} onChange={v => set('aboutHeroLine2', v)} placeholder={`em ${settings.storeCity || 'Blumenau'}, SC.`} />
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Texto</p>
           <Textarea label="Parágrafo 1" value={settings.aboutPara1} onChange={v => set('aboutPara1', v)} rows={4} />
           <Textarea label="Parágrafo 2" value={settings.aboutPara2} onChange={v => set('aboutPara2', v)} rows={4} />
           <Textarea label="Parágrafo 3" value={settings.aboutPara3} onChange={v => set('aboutPara3', v)} rows={4} />
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Sidebar — stats</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Stat 1 — rótulo" value={settings.aboutStat1Label} onChange={v => set('aboutStat1Label', v)} placeholder="Localização" />
+            <Field label="Stat 1 — valor" value={settings.aboutStat1Value} onChange={v => set('aboutStat1Value', v)} placeholder={settings.storeCity || 'Blumenau'} />
+            <Field label="Stat 2 — rótulo" value={settings.aboutStat2Label} onChange={v => set('aboutStat2Label', v)} placeholder="Entrega local" />
+            <Field label="Stat 2 — valor" value={settings.aboutStat2Value} onChange={v => set('aboutStat2Value', v)} placeholder="Até 1 hora" />
+            <Field label="Stat 3 — rótulo" value={settings.aboutStat3Label} onChange={v => set('aboutStat3Label', v)} placeholder="Cobertura" />
+            <Field label="Stat 3 — valor" value={settings.aboutStat3Value} onChange={v => set('aboutStat3Value', v)} placeholder="Todo o Brasil" />
+          </div>
+          <Field label="Texto do botão WhatsApp" value={settings.aboutWhatsappLabel} onChange={v => set('aboutWhatsappLabel', v)} placeholder="Falar no WhatsApp" />
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Timeline</p>
+          <Field label="Título" value={settings.aboutTimelineTitle} onChange={v => set('aboutTimelineTitle', v)} placeholder="Nossa trajetória" />
+          {([1,2,3,4] as const).map(n => (
+            <div key={n} className="flex flex-col gap-2 border border-[#2E2217] p-3">
+              <p className="text-[10px] font-bold tracking-[0.14em] uppercase text-[#B09C8C]">Marco {n}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Ano" value={(settings as any)[`aboutTimeline${n}Year`]} onChange={v => set(`aboutTimeline${n}Year` as any, v)} placeholder="2018" />
+                <Field label="Rótulo" value={(settings as any)[`aboutTimeline${n}Label`]} onChange={v => set(`aboutTimeline${n}Label` as any, v)} placeholder="Fundação" />
+              </div>
+              <Textarea label="Descrição" value={(settings as any)[`aboutTimeline${n}Desc`]} onChange={v => set(`aboutTimeline${n}Desc` as any, v)} rows={2} />
+            </div>
+          ))}
+          <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Homepage</p>
           <Field label="Título da seção de destaques" value={settings.featuredTitle} onChange={v => set('featuredTitle', v)} placeholder="Escolhas da semana" />
           <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] pt-2">Estatísticas (CTA banner)</p>
           <div className="grid grid-cols-2 gap-3">
@@ -161,7 +188,7 @@ export default function ConfiguracoesPage() {
             <Field label="Entrega local" value={settings.statDelivery} onChange={v => set('statDelivery', v)} placeholder="< 1h" />
             <Field label="Anos no mercado" value={settings.statYears} onChange={v => set('statYears', v)} placeholder="6 anos" />
           </div>
-          <Field label="Ano de fundação" value={settings.foundedYear} onChange={v => set('foundedYear', v)} placeholder="2018" hint="Exibido na timeline da página Sobre" />
+          <Field label="Ano de fundação" value={settings.foundedYear} onChange={v => set('foundedYear', v)} placeholder="2018" hint="Usado no rodapé" />
         </>}
 
         {active === 'logistica' && <>
@@ -187,15 +214,6 @@ export default function ConfiguracoesPage() {
         </>}
       </div>
 
-      {/* Bottom save button */}
-      <div className="mt-8 pb-6">
-        <button
-          onClick={handleSave} disabled={saving}
-          className="w-full bg-[#1E1208] text-[#FAF8F5] text-sm font-semibold py-4 disabled:opacity-50 hover:bg-[#1E1208]/80 transition-colors"
-        >
-          {saving ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar configurações'}
-        </button>
-      </div>
     </div>
   );
 }

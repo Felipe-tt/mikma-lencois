@@ -1,78 +1,97 @@
-export const revalidate = 600; // ISR: revalida a cada 10 minutos
+export const revalidate = 600;
 import { getSettings } from '@/lib/settings';
 import Image from 'next/image';
 
 export default async function SobrePage() {
   const s = await getSettings();
 
+  const heroLine1 = s.aboutHeroLine1 || s.storeName || 'Mikma Lençóis';
+  const heroLine2 = s.aboutHeroLine2 || `em ${s.storeCity || 'Blumenau'}, SC.`;
+
+  const stats = [
+    { label: s.aboutStat1Label || 'Localização',   value: s.aboutStat1Value || s.storeCity || 'Blumenau, SC' },
+    { label: s.aboutStat2Label || 'Entrega local', value: s.aboutStat2Value || 'Até 1 hora' },
+    { label: s.aboutStat3Label || 'Cobertura',     value: s.aboutStat3Value || 'Todo o Brasil' },
+  ];
+
+  const timelineTitle = s.aboutTimelineTitle || 'Nossa trajetória';
+
   const timeline = [
-    { year: s.foundedYear ?? '2018', label: 'Fundação', desc: 'A Mikma nasce em Blumenau com o objetivo de levar qualidade têxtil direto da fábrica para as casas.' },
-    { year: '2020', label: 'Entrega local', desc: 'Lançamos entrega em até 1h para toda Blumenau, sem custo adicional.' },
-    { year: '2022', label: 'Brasil todo', desc: 'Expandimos com frete nacional via PAC, SEDEX e transportadoras com rastreio em tempo real.' },
-    { year: '2024', label: 'Loja online', desc: 'Inauguramos nossa loja virtual. Compra fácil, pagamento via PIX, confirmação automática.' },
+    { year: s.aboutTimeline1Year, label: s.aboutTimeline1Label, desc: s.aboutTimeline1Desc },
+    { year: s.aboutTimeline2Year, label: s.aboutTimeline2Label, desc: s.aboutTimeline2Desc },
+    { year: s.aboutTimeline3Year, label: s.aboutTimeline3Label, desc: s.aboutTimeline3Desc },
+    { year: s.aboutTimeline4Year, label: s.aboutTimeline4Label, desc: s.aboutTimeline4Desc },
   ].filter(t => t.year && t.desc);
+
+  const whatsappLabel = s.aboutWhatsappLabel || 'Falar no WhatsApp';
+  const whatsappHref = s.whatsappUrl || `https://wa.me/${(s.storePhone ?? '').replace(/\D/g,'')}`;
 
   return (
     <div>
-      {/* ── Header ── */}
-      <div className="border-b border-mist bg-warm relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none select-none" style={{ zIndex: 0 }}>
-          <img src="/sobre-bg.jpg" alt="" className="w-full h-full object-cover object-center" style={{ opacity: 0.22 }} aria-hidden="true" />
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden bg-warm border-b border-mist">
+        {/* Imagem de fundo */}
+        <div className="absolute inset-0 pointer-events-none select-none">
+          <img
+            src="/sobre-bg.jpg"
+            alt=""
+            aria-hidden="true"
+            className="w-full h-full object-cover object-center"
+            style={{ opacity: 0.18 }}
+          />
+          {/* gradiente para escurecer nas bordas */}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, var(--color-warm) 0%, transparent 50%, var(--color-warm) 100%)' }} />
         </div>
-        <div className="container-shop py-16 sm:py-24 relative" style={{ zIndex: 2 }}>
-          <div className="grid lg:grid-cols-2 gap-12 items-end">
-            <h1 className="font-display font-normal text-ink text-5xl sm:text-6xl lg:text-[5rem] leading-[1.02]">
-              <em className="text-clay not-italic">{s.storeName}</em><br/>
-              <span className="text-ink/40 text-4xl sm:text-5xl lg:text-[3.8rem]">em Blumenau, SC.</span>
+
+        <div className="container-shop py-20 sm:py-28 relative z-10">
+          <div className="flex flex-col gap-6 max-w-2xl">
+            <p className="page-label">Sobre nós</p>
+            <h1 className="font-display font-normal leading-[1.02]">
+              <em className="text-clay not-italic text-5xl sm:text-6xl lg:text-[5.5rem] block">{heroLine1}</em>
+              <span className="text-ink/35 text-3xl sm:text-4xl lg:text-[3.6rem] block mt-1">{heroLine2}</span>
             </h1>
-            <div className="flex justify-start lg:justify-end items-end">
-              <Image
-                src="/logo-dark.png"
-                alt={s.storeName ?? 'Mikma Lençóis'}
-                width={800}
-                height={242}
-                className="h-14 w-auto object-contain opacity-30"
-              />
-            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Main content ── */}
+      {/* ── Corpo ── */}
       <div className="container-shop section-md">
-        <div className="grid lg:grid-cols-[1fr_360px] gap-16 lg:gap-28 items-start">
+        <div className="grid lg:grid-cols-[1fr_340px] gap-16 lg:gap-24 items-start">
 
-          {/* Editorial text */}
-          <div className="flex flex-col gap-10">
-            <div className="flex flex-col gap-6">
-              {[s.aboutPara1, s.aboutPara2, s.aboutPara3].filter(Boolean).map((para, i) => (
-                <p key={i} className={`leading-relaxed text-mid ${i === 0 ? 'text-xl' : 'text-[15px]'}`}>
-                  {para}
-                </p>
-              ))}
-            </div>
+          {/* Texto + Timeline */}
+          <div className="flex flex-col gap-12">
 
-            {/* ── Timeline ── */}
+            {/* Parágrafos */}
+            {[s.aboutPara1, s.aboutPara2, s.aboutPara3].filter(Boolean).length > 0 && (
+              <div className="flex flex-col gap-5">
+                {[s.aboutPara1, s.aboutPara2, s.aboutPara3].filter(Boolean).map((para, i) => (
+                  <p
+                    key={i}
+                    className={`leading-relaxed text-mid ${i === 0 ? 'text-[1.15rem]' : 'text-[15px]'}`}
+                  >
+                    {para}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {/* Timeline */}
             {timeline.length > 0 && (
               <div>
-                <p className="page-label mb-8">Nossa trajetória</p>
+                <p className="page-label mb-8">{timelineTitle}</p>
                 <div className="relative">
-                  {/* Vertical line */}
-                  <div className="absolute left-[52px] top-2 bottom-2 w-px bg-mist" />
-
-                  <div className="flex flex-col gap-8">
+                  <div className="absolute left-[50px] top-3 bottom-3 w-px bg-mist" />
+                  <div className="flex flex-col gap-9">
                     {timeline.map((item, i) => (
-                      <div key={i} className="flex gap-6 items-start">
-                        {/* Year bubble */}
-                        <div className="shrink-0 w-[52px] flex flex-col items-center">
-                          <div className="w-2 h-2 bg-clay shrink-0 relative z-10" />
-                          <span className="font-display text-[1.1rem] text-clay/70 leading-none mt-2 font-normal">
+                      <div key={i} className="flex gap-7 items-start">
+                        <div className="shrink-0 w-[50px] flex flex-col items-center pt-0.5">
+                          <div className="w-2.5 h-2.5 bg-clay shrink-0 relative z-10 rotate-45" />
+                          <span className="font-display text-[1rem] text-clay/60 leading-none mt-2.5 font-normal tabular-nums">
                             {item.year}
                           </span>
                         </div>
-                        {/* Content */}
-                        <div className="pb-2 pt-0.5">
-                          <p className="text-[12px] font-bold tracking-[0.1em] uppercase text-ink mb-1.5">{item.label}</p>
+                        <div className="pb-2 border-b border-mist/60 flex-1">
+                          <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-ink mb-1.5">{item.label}</p>
                           <p className="text-[14px] text-mid leading-relaxed">{item.desc}</p>
                         </div>
                       </div>
@@ -83,40 +102,54 @@ export default async function SobrePage() {
             )}
           </div>
 
-          {/* Sidebar — stats + address + CTA */}
-          <div className="flex flex-col gap-5 lg:sticky lg:top-24">
+          {/* Sidebar */}
+          <div className="flex flex-col gap-4 lg:sticky lg:top-24">
+
+            {/* Stats */}
             <div className="border border-mist divide-y divide-mist">
-              {[
-                { label: 'Localização',   value: s.storeCity ?? 'Blumenau, SC' },
-                { label: 'Entrega local', value: 'Até 1 hora' },
-                { label: 'Cobertura',     value: 'Todo o Brasil' },
-              ].map(({ label, value }) => (
-                <div key={label} className="px-6 py-5 flex flex-col gap-1.5 group hover:bg-warm transition-colors duration-150">
+              {stats.map(({ label, value }) => (
+                <div key={label} className="px-6 py-5 flex flex-col gap-1.5 hover:bg-warm transition-colors duration-150">
                   <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint">{label}</p>
-                  <p className="font-display text-[1.6rem] text-ink font-normal leading-tight">{value}</p>
+                  <p className="font-display text-[1.65rem] text-ink font-normal leading-tight">{value}</p>
                 </div>
               ))}
             </div>
 
+            {/* Endereço */}
             {s.storeAddress && (
               <div className="border border-mist px-6 py-5">
                 <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint mb-3">Endereço</p>
                 <address className="text-[14px] text-mid leading-relaxed not-italic">
-                  {s.storeAddress}<br/>
-                  {s.storeNeighborhood && <>{s.storeNeighborhood} · </>}{s.storeCity}<br/>
+                  {s.storeAddress}<br />
+                  {s.storeNeighborhood && <>{s.storeNeighborhood} · </>}{s.storeCity}<br />
                   {s.storeCep && <>CEP {s.storeCep}</>}
                 </address>
               </div>
             )}
 
+            {/* WhatsApp CTA */}
             <a
-              href={s.whatsappUrl || `https://wa.me/${(s.storePhone ?? '').replace(/\D/g,'')}`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-between px-6 py-4 bg-ink text-paper group hover:bg-clay transition-colors duration-150"
+              href={whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between px-6 py-4 bg-ink text-paper hover:bg-clay transition-colors duration-200 group"
             >
-              <span className="text-[13px] font-semibold">Falar no WhatsApp</span>
-              
+              <span className="text-[13px] font-semibold">{whatsappLabel}</span>
+              <svg className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
             </a>
+
+            {/* Logo decorativa */}
+            <div className="flex justify-center pt-2 pb-1">
+              <Image
+                src="/logo-dark.png"
+                alt={s.storeName ?? ''}
+                width={600}
+                height={180}
+                className="h-9 w-auto object-contain opacity-15"
+              />
+            </div>
           </div>
         </div>
       </div>
