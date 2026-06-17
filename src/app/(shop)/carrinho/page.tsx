@@ -10,9 +10,14 @@ import { useRouter } from 'next/navigation';
 import type { Cart, CartItem } from '@/types';
 import { CartSkeleton } from '@/components/ui/Skeleton';
 
-const FREE_SHIPPING_THRESHOLD = 25000; // R$250 — fallback; ideally from settings
-
 export default function CartPage() {
+  const [freeShippingThreshold, setFST] = useState(25000);
+
+  useEffect(() => {
+    fetch('/api/settings/public').then(r => r.json()).then(d => {
+      if (d.freeShippingThresholdCents > 0) setFST(d.freeShippingThresholdCents);
+    }).catch(() => {});
+  }, []);
   const { user, loading } = useAuth();
   const router = useRouter();
   const [cart, setCart]           = useState<Cart | null>(null);
@@ -68,9 +73,9 @@ export default function CartPage() {
   const discount = couponApplied?.discount ?? 0;
   const total = Math.max(0, subtotal - discount);
 
-  const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
-  const progress  = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
-  const freeShip  = subtotal >= FREE_SHIPPING_THRESHOLD;
+  const remaining = Math.max(0, freeShippingThreshold - subtotal);
+  const progress  = Math.min(100, (subtotal / freeShippingThreshold) * 100);
+  const freeShip  = subtotal >= freeShippingThreshold;
 
   return (
     <div>
@@ -100,7 +105,7 @@ export default function CartPage() {
         <div className="container-shop pb-24">
 
           {/* Free shipping bar */}
-          {FREE_SHIPPING_THRESHOLD > 0 && (
+          {freeShippingThreshold > 0 && (
             <div className="mb-6 py-3 border-b border-mist">
               <div className="flex items-center justify-between mb-2.5">
                 <span className="text-[12px] font-medium text-mid">

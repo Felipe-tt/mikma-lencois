@@ -54,6 +54,25 @@ export async function POST(req: NextRequest) {
       if (snap.exists) priceMap[snap.id] = snap.data()!.price as number;
     }
 
+    // ── Check inventory before creating order ────────────────────────────────
+    const inventoryChecks = await Promise.all(
+      cartItems.map(ci =>
+        adminDb.collection('inventory').where('sku', '==', ci.sku).limit(1).get()
+      )
+    );
+    for (let i = 0; i < cartItems.length; i++) {
+      const inv = inventoryChecks[i].docs[0]?.data();
+      if (!inv) continue; // item sem controle de estoque passa
+      const available = (inv.quantity ?? 0) - (inv.reserved ?? 0);
+      if (available < cartItems[i].quantity) {
+        const name = cartItems[i].productName ?? cartItems[i].sku;
+        return NextResponse.json(
+          { error: `"${name}" não tem estoque suficiente. Disponível: ${available}` },
+          { status: 409 }
+        );
+      }
+    }
+
     // ── Build verified order items ────────────────────────────────────────────
     const verifiedItems = cartItems.map(ci => {
       const price = priceMap[ci.productId];
