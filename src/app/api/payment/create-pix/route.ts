@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       if (!inv) continue; // item sem controle de estoque passa
       const available = (inv.quantity ?? 0) - (inv.reserved ?? 0);
       if (available < cartItems[i].quantity) {
-        const name = cartItems[i].productName ?? cartItems[i].sku;
+        const name = cartItems[i].sku;
         return NextResponse.json(
           { error: `"${name}" não tem estoque suficiente. Disponível: ${available}` },
           { status: 409 }
