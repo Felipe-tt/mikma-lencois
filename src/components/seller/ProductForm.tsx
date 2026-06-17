@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc, serverTimestamp, setDoc, collection } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase/client';
 import type { Product } from '@/types';
-import { hexToColorName } from '@/lib/colorNames';
+import { hexToColorName, searchColorsByName, resolveColorName } from '@/lib/colorNames';
 
 type Props = {
   initial?: Partial<Product> & { id?: string };
@@ -276,66 +276,148 @@ function CameraModal({
 
 // ── Main Form ─────────────────────────────────────────────────────────────────
 
-// Quick color swatches for textile products
-const QUICK_COLORS = [
-  '#ffffff','#f5f5f0','#faf0e6','#d4b896','#c4714a',
-  '#e75480','#ff0000','#8b0000','#4b0082','#000080',
-  '#1e90ff','#add8e6','#40e0d0','#228b22','#ffd700',
-  '#808080','#2f2f2f','#000000',
-];
-
+// ── ColorPicker com nome via API, campo editável e autocomplete ───────────────
 function ColorPicker({ value, colorName, onChange }: {
   value: string;
   colorName: string;
   onChange: (hex: string, name: string) => void;
 }) {
-  const [loading, setLoading] = useState(false);
+  const [inputName, setInputName] = useState(colorName || '');
+  const [loading, setLoading]     = useState(false);
+  const [suggestions, setSuggestions] = useState<Array<{ name: string; hex: string }>>([]);
+  const [showSugg, setShowSugg]   = useState(false);
+  const [error, setError]         = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const inputRef    = useRef<HTMLInputElement>(null);
 
-  const pick = async (hex: string) => {
-    setLoading(true);
+  // Sync quando valor externo muda (ex: foto tirada)
+  useEffect(() => {
+    if (colorName && colorName !== inputName) setInputName(colorName);
+  }, [colorName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resolve hex → nome ao montar ou quando hex muda
+  useEffect(() => {
+    if (value && !colorName) {
+      setLoading(true);
+      hexToColorName(value).then(name => {
+        setInputName(name);
+        onChange(value, name);
+        setLoading(false);
+      });
+    }
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Busca sugestões enquanto usuário digita
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const q = e.target.value;
+    setInputName(q);
+    setError('');
     clearTimeout(debounceRef.current);
+    if (q.length < 2) { setSuggestions([]); setShowSugg(false); return; }
     debounceRef.current = setTimeout(async () => {
-      const name = await hexToColorName(hex);
-      setLoading(false);
-      onChange(hex, name);
+      const results = await searchColorsByName(q, 6);
+      setSuggestions(results);
+      setShowSugg(results.length > 0);
     }, 350);
-  };
+  }
 
-  const displayName = colorName || value;
+  // Usuário seleciona sugestão
+  function pickSuggestion(s: { name: string; hex: string }) {
+    setInputName(s.name);
+    setSuggestions([]);
+    setShowSugg(false);
+    onChange(s.hex, s.name);
+  }
+
+  // Usuário confirma o que digitou (Enter ou blur)
+  async function confirmName() {
+    setShowSugg(false);
+    if (!inputName.trim() || inputName === colorName) return;
+    setLoading(true); setError('');
+    const found = await resolveColorName(inputName);
+    setLoading(false);
+    if (found) {
+      setInputName(found.name);
+      onChange(found.hex, found.name);
+    } else {
+      setError('Cor não encontrada. Escolha uma sugestão ou use o seletor.');
+      setInputName(colorName || '');
+    }
+  }
+
+  // Color picker nativo → traduz hex
+  async function pickHex(hex: string) {
+    setLoading(true); setError('');
+    const name = await hexToColorName(hex);
+    setInputName(name);
+    setLoading(false);
+    onChange(hex, name);
+  }
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
+        {/* Seletor nativo de cor */}
         <input
           type="color"
           value={value.length === 7 && value.startsWith('#') ? value : '#cccccc'}
-          onChange={e => pick(e.target.value)}
+          onChange={e => pickHex(e.target.value)}
           className="w-10 h-9 border border-mist cursor-pointer p-0.5 shrink-0 bg-paper"
+          title="Escolher cor"
         />
-        <div className="flex-1 border border-mist px-3 h-9 flex items-center gap-2 bg-paper">
-          {loading
-            ? <span className="spinner-dark" />
-            : <span className="text-sm font-medium text-ink">{displayName}</span>
-          }
-        </div>
-        <span className="text-xs font-mono text-faint shrink-0 w-[5.5rem] text-right">{value}</span>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {QUICK_COLORS.map(col => (
-          <button
-            key={col}
-            type="button"
-            onClick={() => pick(col)}
-            title={col}
-            className={`w-6 h-6 border-2 transition-all ${value === col ? 'border-clay scale-110' : 'border-transparent hover:border-mist'}`}
-            style={{ background: col, outline: col === '#ffffff' ? '1px solid #e8e4dc' : undefined }}
+
+        {/* Campo de nome editável */}
+        <div className="relative flex-1">
+          <input
+            ref={inputRef}
+            type="text"
+            value={loading ? '' : inputName}
+            onChange={handleInput}
+            onBlur={confirmName}
+            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), confirmName())}
+            placeholder={loading ? 'Identificando…' : 'Nome da cor'}
+            className={`input h-9 text-sm ${error ? 'border-red-400' : ''}`}
+            autoComplete="off"
           />
-        ))}
+          {loading && (
+            <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <span className="spinner-dark" />
+            </span>
+          )}
+
+          {/* Autocomplete dropdown */}
+          {showSugg && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 z-30 bg-paper border border-mist shadow-card-hover mt-0.5 max-h-48 overflow-y-auto">
+              {suggestions.map(s => (
+                <button
+                  key={s.hex}
+                  type="button"
+                  onMouseDown={() => pickSuggestion(s)}
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-warm text-left transition-colors"
+                >
+                  <span className="w-5 h-5 rounded-full border border-mist shrink-0" style={{ background: s.hex }} />
+                  <span className="text-sm text-ink">{s.name}</span>
+                  <span className="text-xs text-faint font-mono ml-auto">{s.hex}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Hex visível mas menor */}
+        <span className="text-xs font-mono text-faint w-[5.5rem] text-right shrink-0">{value}</span>
       </div>
+
+      {error && (
+        <p className="text-xs text-red-500 flex items-center gap-1">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
+
 
 export default function ProductForm({ initial }: Props) {
   const router = useRouter();
