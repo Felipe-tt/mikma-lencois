@@ -3,18 +3,29 @@ import Link from 'next/link';
 import { ProductCard } from '@/components/product/ProductCard';
 import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
 import { SortSelect } from '@/components/product/SortSelect';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { Product } from '@/types';
 import { serialize } from '@/lib/utils/serialize';
 
-export const dynamic = 'force-dynamic';
+// ISR: revalida a cada 5 minutos — reduz invocações de Cloud Functions e leituras Firestore
+export const revalidate = 300;
 
 interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string }> }
 
+// Cache em memória para categorias: evita query full-scan a cada request dentro do mesmo container
+let _categoriesCache: { data: { name: string; count: number }[]; at: number } | null = null;
+const CATEGORIES_TTL = 5 * 60 * 1000; // 5 min
+
 async function getCategories(): Promise<{ name: string; count: number }[]> {
+  if (_categoriesCache && Date.now() - _categoriesCache.at < CATEGORIES_TTL) {
+    return _categoriesCache.data;
+  }
   const snap = await adminDb.collection('products').where('active','==',true).select('category').get();
   const map: Record<string, number> = {};
   snap.docs.forEach(d => { const c = d.data().category as string; if (c) map[c] = (map[c] ?? 0) + 1; });
-  return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
+  const data = Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
+  _categoriesCache = { data, at: Date.now() };
+  return data;
 }
 
 async function getProducts(cat?: string, ordem?: string): Promise<Product[]> {
@@ -37,12 +48,16 @@ export default async function ProdutosPage({ searchParams }: Props) {
     <div>
       {/* ── Header ── */}
       <div className="border-b border-mist">
-        <div className="container-shop py-10 md:py-12">
-          <span className="eyebrow mb-3 block">Catálogo</span>
+        <div className="container-shop py-8 sm:py-12">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">{heading}</h1>
-              <p className="text-[13px] text-faint mt-2">
+              <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-faint mb-3">
+                {categoria ? `Catálogo / ${categoria}` : 'Catálogo'}
+              </p>
+              <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">
+                {heading}
+              </h1>
+              <p className="text-[12px] text-faint mt-2 font-mono">
                 {products.length} produto{products.length !== 1 ? 's' : ''}
               </p>
             </div>
@@ -101,12 +116,14 @@ export default async function ProdutosPage({ searchParams }: Props) {
             </div>
 
             {products.length === 0 ? (
-              <div className="py-24 text-center border border-mist">
-                <p className="font-display text-2xl text-faint font-normal mb-4">Nenhum produto encontrado.</p>
-                <Link href="/produtos" className="text-[13px] text-mid hover:text-clay transition-colors font-medium">
-                  Limpar filtros →
-                </Link>
-              </div>
+              <EmptyState
+                icon={<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>}
+                title="Nenhum produto encontrado"
+                description={categoria ? `Não há produtos em "${categoria}". Tente outra categoria.` : 'Ainda não há produtos cadastrados.'}
+                actions={categoria ? [
+                  { label: 'Ver todos os produtos', href: '/produtos' },
+                ] : []}
+              />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-px bg-mist border border-mist">
                 {products.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}

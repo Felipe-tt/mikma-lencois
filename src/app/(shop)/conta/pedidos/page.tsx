@@ -4,9 +4,10 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
-import Link from 'next/link';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { OrdersListSkeleton } from '@/components/ui/Skeleton';
 import { PIXModal } from '@/components/checkout/PIXModal';
 
@@ -90,7 +91,6 @@ export default function PedidosPage() {
       <div className="border-b border-mist">
         <div className="container-shop flex items-end justify-between">
           <div>
-            <span className="eyebrow mb-3 block">Conta</span>
             <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Meus pedidos</h1>
           </div>
           <Link href="/perfil" className="text-sm text-mid hover:text-clay transition-colors font-medium hidden sm:block">
@@ -103,11 +103,12 @@ export default function PedidosPage() {
         {loading || ordersLoading ? (
           <OrdersListSkeleton />
         ) : orders.length === 0 ? (
-          <div className="py-24 flex flex-col items-center gap-5 text-center">
-            <p className="font-display text-2xl text-ink font-normal">Nenhum pedido ainda</p>
-            <p className="text-sm text-mid">Você ainda não fez nenhum pedido.</p>
-            <Link href="/produtos" className="btn-primary mt-2">Ver produtos</Link>
-          </div>
+          <EmptyState
+            icon={<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
+            title="Nenhum pedido ainda"
+            description="Quando você fizer uma compra, ela vai aparecer aqui."
+            actions={[{ label: 'Ver produtos', href: '/produtos' }]}
+          />
         ) : (
           <div className="flex flex-col gap-4">
             {orders.map(order => (

@@ -30,7 +30,7 @@ function PasswordStrength({ password }: { password: string }) {
     <div className="mt-2 space-y-1.5">
       <div className="flex gap-1">
         {[0, 1, 2].map(i => (
-          <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i < score ? colors[score - 1] : 'bg-mist/30'}`} />
+          <div key={i} className={`h-0.5 flex-1 transition-colors ${i < score ? colors[score - 1] : 'bg-mist/30'}`} />
         ))}
       </div>
       <div className="flex items-center justify-between">
@@ -155,7 +155,7 @@ export default function RegisterPage() {
     return (
       <div className="min-h-screen bg-warm flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
+          <div className="w-14 h-14 bg-green-500/10 flex items-center justify-center mx-auto">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
@@ -169,34 +169,37 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-paper flex">
-      {/* Painel esquerdo — editorial */}
-      <div className="hidden lg:flex w-[45%] xl:w-1/2 relative flex-col justify-between p-12 xl:p-16 overflow-hidden">
-        <div className="absolute inset-0 bg-ink" />
-        <div className="absolute inset-0 flex items-end justify-start pointer-events-none overflow-hidden pb-8 pl-8">
-          <p className="font-display text-[22rem] leading-none text-paper/[0.03] font-normal select-none tracking-[-0.05em]">M</p>
-        </div>
-
-        <Link href="/" className="relative z-10">
-          <Image src="/logo-white.png" alt="Mikma" width={120} height={48} className="h-8 w-auto object-contain" />
+      {/* Painel esquerdo — logo em destaque */}
+      <div className="hidden lg:flex w-[45%] xl:w-1/2 flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist">
+        <Link href="/">
+          <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" />
         </Link>
 
-        <div className="relative z-10">
-          <p className="font-display text-paper font-normal leading-[1.05] mb-5 text-[clamp(2.4rem,3.5vw,3.8rem)]">
-            Crie sua<br /><em className="text-clay not-italic">conta.</em>
-          </p>
-          <p className="text-[14px] text-paper/40 leading-relaxed max-w-[28ch]">
-            Cadastre-se e receba seus lençóis em até 1h em Blumenau ou onde estiver no Brasil.
-          </p>
+        <div className="flex-1 flex items-center justify-center py-8">
+          <Image
+            src="/logo-dark.png"
+            alt="Mikma Lençóis"
+            width={800}
+            height={242}
+            className="w-full max-w-[280px] h-auto object-contain opacity-[0.10]"
+          />
         </div>
 
-        <p className="relative z-10 text-[10px] text-paper/20 tracking-[0.2em] uppercase">Blumenau · SC · Brasil</p>
+        <div>
+          <p className="font-display text-ink font-normal leading-[1.08] mb-4 text-[clamp(1.8rem,2.5vw,2.6rem)]">
+            Crie sua<br /><em className="text-clay not-italic">conta.</em>
+          </p>
+          <p className="text-[13px] text-mid leading-relaxed max-w-[26ch]">
+            Receba seus lençóis em até 1h em Blumenau.
+          </p>
+        </div>
       </div>
 
       {/* Formulário */}
       <div className="flex-1 flex flex-col justify-center p-6 sm:p-12 min-h-screen overflow-y-auto bg-paper">
         <div className="w-full max-w-[400px] mx-auto py-10">
           <Link href="/" className="flex mb-10 lg:hidden">
-            <Image src="/logo-dark.png" alt="Mikma" width={120} height={60} className="h-9 w-auto object-contain" />
+            <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-8 w-auto object-contain" />
           </Link>
 
           <h1 className="font-display font-normal text-ink text-[2.2rem] mb-2 leading-tight">Criar conta</h1>

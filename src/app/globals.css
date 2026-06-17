@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -12,17 +12,20 @@
   }
   body {
     @apply bg-paper text-ink font-sans antialiased;
+    font-weight: 300;
     line-height: 1.65;
     font-size: 16px;
   }
-  h1, h2, h3, h4 { @apply font-display leading-tight; }
+  /* Headings always normal weight with DM Serif */
+  h1, h2, h3, h4 { @apply font-display leading-tight font-normal; }
+  /* Strong elements use 500 weight */
+  strong, b { font-weight: 500; }
   a { @apply no-underline; }
   button { @apply cursor-pointer; }
   img, video { @apply block max-w-full; }
   *:focus-visible {
     outline: 2px solid #B8622F;
     outline-offset: 2px;
-    border-radius: 1px;
   }
 }
 
@@ -31,7 +34,7 @@
   /* ─── Buttons ────────────────────────────────────────────────── */
   .btn {
     @apply inline-flex items-center justify-center gap-2
-           font-sans text-sm font-medium
+           font-sans text-[13px] font-medium tracking-[0.03em]
            border transition-all duration-150
            disabled:opacity-40 disabled:pointer-events-none
            whitespace-nowrap select-none;
@@ -42,19 +45,19 @@
            active:scale-[0.98];
   }
   .btn-primary-lg {
-    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em]
+    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.08em]
            bg-ink text-paper border-ink
            hover:bg-clay hover:border-clay
            active:scale-[0.98];
   }
   .btn-outline {
-    @apply btn px-6 py-3 bg-transparent text-ink border-ink/20
+    @apply btn px-6 py-3 bg-transparent text-ink border-ink/25
            hover:bg-ink hover:text-paper hover:border-ink
            active:scale-[0.98];
   }
   .btn-outline-lg {
-    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em]
-           bg-transparent text-ink border-ink/20
+    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.08em]
+           bg-transparent text-ink border-ink/25
            hover:bg-ink hover:text-paper hover:border-ink
            active:scale-[0.98];
   }
@@ -85,26 +88,29 @@
     @apply w-full px-4 py-3 text-sm bg-white text-ink
            border border-mist outline-none
            placeholder:text-faint
-           focus:border-clay/50 focus:ring-2 focus:ring-clay/10
-           transition-colors duration-150;
+           focus:border-clay/60 focus:ring-2 focus:ring-clay/[0.12]
+           hover:border-ink/20
+           transition-all duration-150;
     border-radius: 2px;
   }
   .input-sm {
     @apply w-full px-3 py-2.5 text-sm bg-white text-ink
            border border-mist outline-none
            placeholder:text-faint
-           focus:border-clay/50 focus:ring-1 focus:ring-clay/10
-           transition-colors duration-150;
+           focus:border-clay/60 focus:ring-1 focus:ring-clay/[0.12]
+           hover:border-ink/20
+           transition-all duration-150;
     border-radius: 2px;
   }
   .label {
-    @apply block text-[10px] font-semibold tracking-[0.12em] uppercase text-mid mb-1.5;
+    @apply block text-[10px] font-semibold tracking-[0.14em] uppercase text-ink/60 mb-1.5;
   }
   .select {
     @apply w-full px-4 py-3 text-sm bg-white text-ink
            border border-mist outline-none appearance-none
-           focus:border-clay/50 focus:ring-2 focus:ring-clay/10
-           transition-colors duration-150 cursor-pointer;
+           focus:border-clay/60 focus:ring-2 focus:ring-clay/[0.12]
+           hover:border-ink/20
+           transition-all duration-150 cursor-pointer;
     border-radius: 2px;
   }
 
@@ -123,13 +129,25 @@
 
   /* ─── Typography ──────────────────────────────────────────────── */
   .eyebrow {
-    @apply block text-[10px] font-semibold tracking-[0.18em] uppercase text-clay;
+    @apply block text-[10px] font-semibold tracking-[0.2em] uppercase text-clay;
+  }
+  /* Alternative to eyebrow — for inner pages where clay is too prominent */
+  .page-label {
+    @apply flex items-center gap-3 text-[10px] font-bold tracking-[0.22em] uppercase text-faint;
+  }
+  .page-label::before {
+    content: '';
+    @apply block w-5 h-px bg-mist flex-shrink-0;
   }
   .section-title {
     @apply font-display font-normal text-ink leading-tight;
   }
   .lead {
-    @apply text-lg text-mid leading-relaxed;
+    @apply text-[17px] text-mid leading-relaxed;
+  }
+  /* Price in product detail */
+  .price-display {
+    @apply font-display font-normal text-clay;
   }
 
   /* ─── Badges ──────────────────────────────────────────────────── */
@@ -141,9 +159,9 @@
   .badge-delivered { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80; }
   .badge-cancelled { @apply badge text-faint; }
 
-  .chip        { @apply inline-flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer; }
+  .chip        { @apply inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer; }
   .chip-active { @apply chip bg-ink text-paper border-ink; }
-  .chip-idle   { @apply chip bg-paper text-mid border-mist hover:border-ink/30 hover:text-ink hover:bg-warm; }
+  .chip-idle   { @apply chip bg-paper text-mid border-mist hover:border-ink/40 hover:text-ink hover:bg-warm; }
 
   /* ─── Layout ──────────────────────────────────────────────────── */
   .container-shop  { @apply mx-auto max-w-7xl px-5 sm:px-8 lg:px-12; }

@@ -6,27 +6,46 @@ import { formatCurrency } from '@/lib/utils/format';
 import { VariantSelector } from '@/components/product/VariantSelector';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCard } from '@/components/product/ProductCard';
+import { SizeGuideModal } from '@/components/product/SizeGuideModal';
+import { FadeIn } from '@/components/ui/FadeIn';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 
-export const dynamic = 'force-dynamic';
+// ISR: revalida a cada 5 minutos — reduz leituras no Firestore por visita ao produto
+export const revalidate = 300;
 interface Props { params: Promise<{ slug: string }> }
 
+// Cache de produto individual: evita leitura Firestore em requets quentes dentro do mesmo container
+const _productCache = new Map<string, { data: Product | null; at: number }>();
+const PRODUCT_TTL = 5 * 60 * 1000; // 5 min
+
 async function getProduct(id: string): Promise<Product | null> {
+  const hit = _productCache.get(id);
+  if (hit && Date.now() - hit.at < PRODUCT_TTL) return hit.data;
   const snap = await adminDb.collection('products').doc(id).get();
-  if (!snap.exists || !snap.data()?.active) return null;
-  return serialize<Product>({ id: snap.id, ...snap.data() });
+  if (!snap.exists || !snap.data()?.active) {
+    _productCache.set(id, { data: null, at: Date.now() });
+    return null;
+  }
+  const data = serialize<Product>({ id: snap.id, ...snap.data() });
+  _productCache.set(id, { data, at: Date.now() });
+  return data;
 }
 async function getInventory(id: string): Promise<InventoryItem[]> {
-  const snap = await adminDb.collection('inventory').where('productId','==',id).get();
+  // select() reduz o payload: só campos necessários para exibir disponibilidade
+  const snap = await adminDb.collection('inventory')
+    .where('productId','==',id)
+    .select('variant','quantity','reserved','lowStockThreshold')
+    .get();
   return snap.docs.map(d => serialize<InventoryItem>({ sku: d.id, ...d.data() }));
 }
 async function getRelated(product: Product): Promise<Product[]> {
   try {
+    // limit(5) em vez de 6 já que filtramos o próprio produto: economiza 1 leitura
     const snap = await adminDb.collection('products')
       .where('active','==',true)
       .where('category','==',product.category)
-      .limit(6).get();
+      .limit(5).get();
     return snap.docs
       .map(d => serialize<Product>({ id: d.id, ...d.data() }))
       .filter(p => p.id !== product.id)
@@ -58,42 +77,42 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div>
-      <div className="container-shop pt-5 pb-0">
-        {/* Breadcrumb — integrated, no bg */}
-        <nav className="flex items-center gap-1.5 text-[11px] text-faint overflow-x-auto whitespace-nowrap scrollbar-none mb-8">
-          <Link href="/" className="hover:text-clay transition-colors shrink-0">Início</Link>
-          <span className="text-mist">/</span>
-          <Link href="/produtos" className="hover:text-clay transition-colors shrink-0">Produtos</Link>
-          {product.category && (
-            <>
-              <span className="text-mist">/</span>
-              <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
-                className="hover:text-clay transition-colors shrink-0">
-                {product.category}
-              </Link>
-            </>
-          )}
-          <span className="text-mist">/</span>
-          <span className="text-mid truncate max-w-[180px]">{product.name}</span>
-        </nav>
+      <div className="border-b border-mist bg-warm/40">
+        <div className="container-shop py-4">
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.06em] text-faint overflow-x-auto whitespace-nowrap scrollbar-none">
+            <Link href="/" className="hover:text-clay transition-colors shrink-0">Início</Link>
+            <span className="text-mist mx-1">/</span>
+            <Link href="/produtos" className="hover:text-clay transition-colors shrink-0">Produtos</Link>
+            {product.category && (
+              <>
+                <span className="text-mist mx-1">/</span>
+                <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
+                  className="hover:text-clay transition-colors shrink-0 capitalize">
+                  {product.category}
+                </Link>
+              </>
+            )}
+            <span className="text-mist mx-1">/</span>
+            <span className="text-mid truncate max-w-[200px]">{product.name}</span>
+          </nav>
+        </div>
       </div>
 
-      <div className="container-shop pb-24">
+      <div className="container-shop py-10 pb-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 xl:gap-24 items-start">
 
           {/* ── Gallery ── */}
           <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} />
 
           {/* ── Info ── */}
-          <div className="lg:sticky lg:top-24 flex flex-col gap-5">
-
-            {product.category && <span className="eyebrow">{product.category}</span>}
+          <FadeIn className="lg:sticky lg:top-24 flex flex-col gap-5" delay={100}>
 
             <div>
-              <h1 className="font-display font-normal text-ink leading-[1.08] text-[2rem] sm:text-[2.4rem] lg:text-[2.6rem] mb-4">
+              <h1 className="font-display font-normal text-ink leading-[1.06] text-[2rem] sm:text-[2.4rem] lg:text-[2.8rem] mb-4">
                 {product.name}
               </h1>
-              <p className="font-display text-[1.75rem] text-ink font-normal">
+              <p className="font-display text-[2rem] text-clay font-normal tracking-[-0.02em]">
                 {formatCurrency(product.price)}
               </p>
             </div>
@@ -104,16 +123,51 @@ export default async function ProductPage({ params }: Props) {
               </p>
             )}
 
-            {/* Specs from tags */}
-            {specTags.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {specTags.map(tag => (
-                  <span key={tag} className="text-[11px] font-medium text-mid bg-warm border border-mist px-3 py-1.5 uppercase tracking-[0.08em]">
-                    {tag}
-                  </span>
-                ))}
+            {/* ── Specs table ── */}
+            {(product.threadCount || product.composition || product.weightGsm || specTags.length > 0) && (
+              <div className="border border-mist">
+                <div className="px-4 py-3 bg-warm/50 border-b border-mist">
+                  <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Especificações do tecido</p>
+                </div>
+                <div className="divide-y divide-mist">
+                  {product.threadCount && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Fio count</span>
+                      <span className="text-[13px] font-semibold text-ink">{product.threadCount} fios</span>
+                    </div>
+                  )}
+                  {product.composition && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Composição</span>
+                      <span className="text-[13px] font-semibold text-ink">{product.composition}</span>
+                    </div>
+                  )}
+                  {product.weightGsm && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Gramatura</span>
+                      <span className="text-[13px] font-semibold text-ink">{product.weightGsm} g/m²</span>
+                    </div>
+                  )}
+                  {specTags.map(tag => (
+                    <div key={tag} className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Tipo</span>
+                      <span className="text-[13px] font-semibold text-ink capitalize">{tag}</span>
+                    </div>
+                  ))}
+                  {product.certifications?.map(cert => (
+                    <div key={cert} className="flex items-center justify-between px-4 py-3">
+                      <span className="text-[12px] text-mid">Certificação</span>
+                      <span className="text-[13px] font-semibold text-clay">{cert}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* ── Size guide link ── */}
+            <div className="flex items-center gap-4">
+              <SizeGuideModal />
+            </div>
 
             {/* Variant selector */}
             <div className="border-t border-mist pt-5">
@@ -136,7 +190,7 @@ export default async function ProductPage({ params }: Props) {
 
             {/* Size guide */}
             <SizeGuide />
-          </div>
+          </FadeIn>
         </div>
       </div>
 

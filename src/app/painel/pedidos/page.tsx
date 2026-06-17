@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
@@ -62,6 +62,31 @@ export default function PainelPedidos() {
   }
 
   const filtered = filter === 'todos' ? orders : orders.filter(o => o.status === filter);
+  const [deletingCancelled, setDeletingCancelled] = useState(false);
+
+  async function handleDeleteCancelled() {
+    const cancelled = orders.filter(o => o.status === 'cancelled');
+    if (!cancelled.length) return;
+    if (!confirm(`Excluir ${cancelled.length} pedido(s) cancelado(s) permanentemente?`)) return;
+    setDeletingCancelled(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/orders/delete-cancelled', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? res.statusText);
+      }
+    } catch (err) {
+      console.error('Erro ao excluir cancelados:', err);
+      alert('Erro ao excluir pedidos. Tente novamente.');
+    } finally {
+      setDeletingCancelled(false);
+    }
+  }
+
   const cancelledCount = orders.filter(o => o.status === 'cancelled').length;
 
   if (loading) return <DashboardSkeleton />;
@@ -71,7 +96,7 @@ export default function PainelPedidos() {
       {/* Header */}
       <div className="mb-7">
         <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Gestão</p>
-        <h1 className="font-display font-normal text-[#0F0E0C] text-2xl">Pedidos</h1>
+        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Pedidos</h1>
       </div>
 
       {/* Filters */}
@@ -85,8 +110,8 @@ export default function PainelPedidos() {
                 onClick={() => setFilter(f)}
                 className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold tracking-wide uppercase border transition-colors ${
                   filter === f
-                    ? 'bg-[#0F0E0C] text-[#FAFAF8] border-[#0F0E0C]'
-                    : 'bg-[#FAFAF8] text-[#6B6660] border-[#E8E4DC] hover:bg-[#F0EBE1]'
+                    ? 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208]'
+                    : 'bg-[#FAF8F5] text-[#705A48] border-[#E6DFD5] hover:bg-[#F0EBE1]'
                 }`}
               >
                 {FILTER_LABEL[f]}
@@ -97,43 +122,41 @@ export default function PainelPedidos() {
         </div>
         {cancelledCount > 0 && (
           <button
-            onClick={async () => {
-              const cancelled = orders.filter(o => o.status === 'cancelled');
-              if (!confirm(`Excluir ${cancelled.length} pedido(s) cancelado(s)?`)) return;
-              const batch = writeBatch(db);
-              cancelled.forEach(o => batch.delete(doc(db, 'orders', o.id)));
-              await batch.commit();
-            }}
-            className="shrink-0 text-[11px] font-semibold text-red-500 border border-red-200 bg-red-50 px-3 py-1.5 hover:bg-red-100 transition-colors"
+            onClick={handleDeleteCancelled}
+            disabled={deletingCancelled}
+            className="shrink-0 text-[11px] font-semibold text-red-500 border border-red-200 bg-red-50 px-3 py-1.5 hover:bg-red-100 disabled:opacity-50 transition-colors flex items-center gap-1.5"
           >
-            Excluir cancelados ({cancelledCount})
+            {deletingCancelled
+              ? <><span className="spinner-sm border-red-400/30 border-t-red-500" />Excluindo…</>
+              : `Excluir cancelados (${cancelledCount})`
+            }
           </button>
         )}
       </div>
 
       {/* Desktop table */}
-      <div className="hidden sm:block bg-[#FAFAF8] border border-[#E8E4DC] overflow-hidden">
-        <div className="grid grid-cols-[1fr_150px_120px_120px_60px] px-5 py-3 border-b border-[#E8E4DC] bg-[#F5F3EF]">
+      <div className="hidden sm:block bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
+        <div className="grid grid-cols-[1fr_150px_120px_120px_60px] px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
           {['Pedido / Status', 'Data', 'Total', 'Ação', ''].map((h, i) => (
-            <span key={i} className={`text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] ${i >= 1 ? 'text-right' : ''} ${i === 4 ? 'sr-only' : ''}`}>{h}</span>
+            <span key={i} className={`text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] ${i >= 1 ? 'text-right' : ''} ${i === 4 ? 'sr-only' : ''}`}>{h}</span>
           ))}
         </div>
 
         {filtered.length === 0 ? (
-          <p className="px-5 py-14 text-center text-sm text-[#B8B2AA]">Nenhum pedido.</p>
+          <p className="px-5 py-14 text-center text-sm text-[#B09C8C]">Nenhum pedido.</p>
         ) : filtered.map((order, idx) => (
           <div
             key={order.id}
-            className={`grid grid-cols-[1fr_150px_120px_120px_60px] px-5 py-3.5 items-center hover:bg-[#F5F3EF] transition-colors ${
-              idx < filtered.length - 1 ? 'border-b border-[#E8E4DC]' : ''
+            className={`grid grid-cols-[1fr_150px_120px_120px_60px] px-5 py-3.5 items-center hover:bg-[#F0EAE1] transition-colors ${
+              idx < filtered.length - 1 ? 'border-b border-[#E6DFD5]' : ''
             }`}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <span className="text-[11px] font-mono text-[#B8B2AA] shrink-0">#{order.id.slice(-8).toUpperCase()}</span>
+              <span className="text-[11px] font-mono text-[#B09C8C] shrink-0">#{order.id.slice(-8).toUpperCase()}</span>
               <span className={BADGE[order.status] ?? 'badge'}>{STATUS_LABEL[order.status] ?? order.status}</span>
             </div>
-            <span className="text-[11px] text-[#B8B2AA] text-right">{formatTsDateTime(order.createdAt)}</span>
-            <span className="font-display text-sm text-[#0F0E0C] text-right">{formatCurrency(order.totalCents)}</span>
+            <span className="text-[11px] text-[#B09C8C] text-right">{formatTsDateTime(order.createdAt)}</span>
+            <span className="font-display text-sm text-[#1E1208] text-right">{formatCurrency(order.totalCents)}</span>
             <div className="text-right">
               {order.status === 'paid' && (
                 <button
@@ -147,7 +170,7 @@ export default function PainelPedidos() {
                 <button
                   onClick={() => dispatch(order.id)}
                   disabled={dispatching === order.id}
-                  className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1.5 bg-[#0F0E0C] text-white hover:bg-[#0F0E0C]/80 transition-colors disabled:opacity-50"
+                  className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1.5 bg-[#1E1208] text-white hover:bg-[#1E1208]/80 transition-colors disabled:opacity-50"
                 >
                   {dispatching === order.id ? 'Enviando…' : 'Despachar'}
                 </button>
@@ -165,17 +188,17 @@ export default function PainelPedidos() {
       {/* Mobile cards */}
       <div className="flex flex-col gap-2 sm:hidden">
         {filtered.length === 0 ? (
-          <p className="py-14 text-center text-sm text-[#B8B2AA] border border-[#E8E4DC]">Nenhum pedido.</p>
+          <p className="py-14 text-center text-sm text-[#B09C8C] border border-[#E6DFD5]">Nenhum pedido.</p>
         ) : filtered.map(order => (
-          <div key={order.id} className="border border-[#E8E4DC] bg-[#FAFAF8] p-4">
+          <div key={order.id} className="border border-[#E6DFD5] bg-[#FAF8F5] p-4">
             <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-mono text-[#B8B2AA]">#{order.id.slice(-8).toUpperCase()}</span>
+              <span className="text-[11px] font-mono text-[#B09C8C]">#{order.id.slice(-8).toUpperCase()}</span>
               <span className={BADGE[order.status] ?? 'badge'}>{STATUS_LABEL[order.status] ?? order.status}</span>
             </div>
             <div className="flex items-end justify-between mb-3">
               <div>
-                <p className="text-[11px] text-[#B8B2AA] mb-0.5">{formatTsDateTime(order.createdAt)}</p>
-                <p className="font-display text-lg text-[#0F0E0C]">{formatCurrency(order.totalCents)}</p>
+                <p className="text-[11px] text-[#B09C8C] mb-0.5">{formatTsDateTime(order.createdAt)}</p>
+                <p className="font-display text-lg text-[#1E1208]">{formatCurrency(order.totalCents)}</p>
               </div>
               <Link href={`/painel/pedidos/${order.id}`} className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
                 Ver detalhes
@@ -193,7 +216,7 @@ export default function PainelPedidos() {
               <button
                 onClick={() => dispatch(order.id)}
                 disabled={dispatching === order.id}
-                className="w-full bg-[#0F0E0C] text-white text-[11px] font-bold uppercase tracking-wide py-2.5 disabled:opacity-50 hover:bg-[#0F0E0C]/80 transition-colors"
+                className="w-full bg-[#1E1208] text-white text-[11px] font-bold uppercase tracking-wide py-2.5 disabled:opacity-50 hover:bg-[#1E1208]/80 transition-colors"
               >
                 {dispatching === order.id ? 'Enviando…' : 'Despachar pedido'}
               </button>

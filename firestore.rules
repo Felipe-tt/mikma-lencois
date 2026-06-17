@@ -51,7 +51,10 @@ service cloud.firestore {
       allow create: if false;
       // Atualização de status só por vendedor/admin (via Admin SDK de preferência)
       allow update: if isSellerOrAdmin();
-      allow delete: if hasRole('admin');
+      // Delete: admin sempre; seller só pode deletar pedidos cancelados
+      allow delete: if hasRole('admin') || (
+        hasRole('seller') && resource.data.status == 'cancelled'
+      );
     }
 
     // ── Coupons ──────────────────────────────────────────────────────────────

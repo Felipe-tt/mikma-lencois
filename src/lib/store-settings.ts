@@ -35,6 +35,13 @@ export type StoreSettings = {
   dispatchCutoffTime: string;
   freeShippingThresholdCents: number;
   lowStockThreshold: number;
+  foundedYear: string;
+  // Homepage stats
+  featuredTitle: string;
+  statOrders: string;
+  statRating: string;
+  statDelivery: string;
+  statYears: string;
 };
 
 export const STORE_DEFAULTS: StoreSettings = {
@@ -71,4 +78,10 @@ export const STORE_DEFAULTS: StoreSettings = {
   dispatchCutoffTime: '17:00',
   freeShippingThresholdCents: 0,
   lowStockThreshold: 3,
+  foundedYear: '2018',
+  featuredTitle: 'Escolhas da semana',
+  statOrders: '1.200+',
+  statRating: '4.9',
+  statDelivery: '< 1h',
+  statYears: '6 anos',
 };

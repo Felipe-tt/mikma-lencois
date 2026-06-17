@@ -61,7 +61,7 @@ export default function EstoquePage() {
 
   if (loading) return (
     <div className="flex flex-col gap-2">
-      {[1,2,3,4].map(i => <div key={i} className="h-[72px] animate-pulse bg-[#F0EBE1] border border-[#E8E4DC]" />)}
+      {[1,2,3,4].map(i => <div key={i} className="h-[72px] animate-pulse bg-[#F0EBE1] border border-[#E6DFD5]" />)}
     </div>
   );
 
@@ -71,7 +71,7 @@ export default function EstoquePage() {
       <div className="flex items-start justify-between mb-7">
         <div>
           <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Inventário</p>
-          <h1 className="font-display font-normal text-[#0F0E0C] text-2xl">Estoque</h1>
+          <h1 className="font-display font-normal text-[#1E1208] text-2xl">Estoque</h1>
           {lowCount > 0 && (
             <p className="text-[11px] text-amber-600 font-semibold mt-1 flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -81,7 +81,7 @@ export default function EstoquePage() {
         </div>
         <Link
           href="/painel/produtos/novo"
-          className="shrink-0 bg-[#0F0E0C] text-[#FAFAF8] text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-[#0F0E0C]/80 transition-colors"
+          className="shrink-0 bg-[#1E1208] text-[#FAF8F5] text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-[#1E1208]/80 transition-colors"
         >
           + Produto
         </Link>
@@ -89,20 +89,20 @@ export default function EstoquePage() {
 
       {items.length > 3 && (
         <div className="relative mb-4">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B8B2AA]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B09C8C]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
             type="search"
             placeholder="Buscar produto..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full border border-[#E8E4DC] bg-[#FAFAF8] pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40"
+            className="w-full border border-[#E6DFD5] bg-[#FAF8F5] pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40"
           />
         </div>
       )}
 
       {filtered.length === 0 ? (
-        <div className="border border-[#E8E4DC] bg-[#FAFAF8] py-16 text-center">
-          <p className="text-sm text-[#B8B2AA]">
+        <div className="border border-[#E6DFD5] bg-[#FAF8F5] py-16 text-center">
+          <p className="text-sm text-[#B09C8C]">
             {search ? 'Nenhum resultado.' : 'Nenhum item no estoque.'}
           </p>
           {!search && (
@@ -112,14 +112,14 @@ export default function EstoquePage() {
           )}
         </div>
       ) : (
-        <div className="bg-[#FAFAF8] border border-[#E8E4DC] overflow-hidden">
+        <div className="bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
           {/* Table header */}
-          <div className="hidden sm:grid grid-cols-[1fr_80px_80px_80px_160px] gap-4 px-5 py-3 border-b border-[#E8E4DC] bg-[#F5F3EF]">
-            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]">Produto / Variante</span>
-            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] text-center">Disponível</span>
-            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] text-center">Reservado</span>
-            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] text-center">Alerta</span>
-            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]"></span>
+          <div className="hidden sm:grid grid-cols-[1fr_80px_80px_80px_160px] gap-4 px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
+            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Produto / Variante</span>
+            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] text-center">Disponível</span>
+            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] text-center">Reservado</span>
+            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] text-center">Alerta</span>
+            <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]"></span>
           </div>
 
           {filtered.map((item, idx) => {
@@ -130,14 +130,14 @@ export default function EstoquePage() {
             return (
               <div
                 key={item.id}
-                className={`px-4 sm:px-5 py-4 transition-colors ${low ? 'bg-amber-50' : 'hover:bg-[#F5F3EF]'} ${idx < filtered.length - 1 ? 'border-b border-[#E8E4DC]' : ''}`}
+                className={`px-4 sm:px-5 py-4 transition-colors ${low ? 'bg-amber-50' : 'hover:bg-[#F0EAE1]'} ${idx < filtered.length - 1 ? 'border-b border-[#E6DFD5]' : ''}`}
               >
                 {/* Mobile layout */}
                 <div className="sm:hidden">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="text-sm font-semibold text-[#0F0E0C] leading-tight">{item.productName}</p>
-                      <p className="text-[11px] text-[#B8B2AA] mt-0.5">
+                      <p className="text-sm font-semibold text-[#1E1208] leading-tight">{item.productName}</p>
+                      <p className="text-[11px] text-[#B09C8C] mt-0.5">
                         {item.variant.size}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}
                         {item.sku && <span className="ml-1 font-mono opacity-50">#{item.sku.slice(-6)}</span>}
                       </p>
@@ -146,8 +146,8 @@ export default function EstoquePage() {
                   </div>
                   <div className="grid grid-cols-3 gap-3 mb-3">
                     {['Disponível', 'Reservado', 'Alerta'].map((label, i) => (
-                      <div key={label} className="text-center bg-[#F5F3EF] py-2">
-                        <p className="text-[9px] font-bold tracking-[0.12em] uppercase text-[#B8B2AA] mb-1">{label}</p>
+                      <div key={label} className="text-center bg-[#F0EAE1] py-2">
+                        <p className="text-[9px] font-bold tracking-[0.12em] uppercase text-[#B09C8C] mb-1">{label}</p>
                         {e && i === 0 ? (
                           <input type="number" min={0} value={e.qty}
                             onChange={ev => setEditing(ed => ({ ...ed, [item.id]: { ...ed[item.id], qty: Number(ev.target.value) } }))}
@@ -155,9 +155,9 @@ export default function EstoquePage() {
                         ) : e && i === 2 ? (
                           <input type="number" min={0} value={e.threshold}
                             onChange={ev => setEditing(ed => ({ ...ed, [item.id]: { ...ed[item.id], threshold: Number(ev.target.value) } }))}
-                            className="w-full border border-[#E8E4DC] bg-white px-1 py-0.5 text-center text-sm focus:outline-none" />
+                            className="w-full border border-[#E6DFD5] bg-white px-1 py-0.5 text-center text-sm focus:outline-none" />
                         ) : (
-                          <p className={`text-base font-bold ${i === 0 && low ? 'text-amber-600' : 'text-[#0F0E0C]'}`}>
+                          <p className={`text-base font-bold ${i === 0 && low ? 'text-amber-600' : 'text-[#1E1208]'}`}>
                             {i === 0 ? avail : i === 1 ? item.reserved : item.lowStockThreshold}
                           </p>
                         )}
@@ -166,12 +166,12 @@ export default function EstoquePage() {
                   </div>
                   {e ? (
                     <div className="flex gap-2">
-                      <button onClick={() => saveItem(item.id)} className="flex-1 bg-[#0F0E0C] text-white text-[11px] font-bold uppercase tracking-wide py-2.5 hover:bg-[#0F0E0C]/80 transition-colors">Salvar</button>
-                      <button onClick={() => cancelEdit(item.id)} className="flex-1 border border-[#E8E4DC] text-[#6B6660] text-[11px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors">Cancelar</button>
+                      <button onClick={() => saveItem(item.id)} className="flex-1 bg-[#1E1208] text-white text-[11px] font-bold uppercase tracking-wide py-2.5 hover:bg-[#1E1208]/80 transition-colors">Salvar</button>
+                      <button onClick={() => cancelEdit(item.id)} className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[11px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors">Cancelar</button>
                     </div>
                   ) : (
                     <button onClick={() => setEditing(ed => ({ ...ed, [item.id]: { qty: avail, threshold: item.lowStockThreshold } }))}
-                      className="w-full border border-[#E8E4DC] text-[#6B6660] text-[11px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors">
+                      className="w-full border border-[#E6DFD5] text-[#705A48] text-[11px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors">
                       Ajustar estoque
                     </button>
                   )}
@@ -180,8 +180,8 @@ export default function EstoquePage() {
                 {/* Desktop layout */}
                 <div className="hidden sm:grid grid-cols-[1fr_80px_80px_80px_160px] gap-4 items-center">
                   <div>
-                    <p className="text-sm font-medium text-[#0F0E0C] leading-tight">{item.productName}</p>
-                    <p className="text-[11px] text-[#B8B2AA] mt-0.5">
+                    <p className="text-sm font-medium text-[#1E1208] leading-tight">{item.productName}</p>
+                    <p className="text-[11px] text-[#B09C8C] mt-0.5">
                       {item.variant.size}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}
                       {item.sku && <span className="ml-1 font-mono opacity-40">#{item.sku.slice(-6)}</span>}
                     </p>
@@ -192,30 +192,30 @@ export default function EstoquePage() {
                         onChange={ev => setEditing(ed => ({ ...ed, [item.id]: { ...ed[item.id], qty: Number(ev.target.value) } }))}
                         className="w-full border border-[#C4714A]/40 bg-white px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20" />
                     ) : (
-                      <span className={`font-display text-base ${low ? 'text-amber-600 font-bold' : 'text-[#0F0E0C]'}`}>{avail}{low && ' ⚠'}</span>
+                      <span className={`font-display text-base ${low ? 'text-amber-600 font-bold' : 'text-[#1E1208]'}`}>{avail}{low && ' ⚠'}</span>
                     )}
                   </div>
                   <div className="text-center">
-                    <span className="font-display text-base text-[#6B6660]">{item.reserved}</span>
+                    <span className="font-display text-base text-[#705A48]">{item.reserved}</span>
                   </div>
                   <div className="text-center">
                     {e ? (
                       <input type="number" min={0} value={e.threshold}
                         onChange={ev => setEditing(ed => ({ ...ed, [item.id]: { ...ed[item.id], threshold: Number(ev.target.value) } }))}
-                        className="w-full border border-[#E8E4DC] bg-white px-2 py-1 text-center text-sm focus:outline-none" />
+                        className="w-full border border-[#E6DFD5] bg-white px-2 py-1 text-center text-sm focus:outline-none" />
                     ) : (
-                      <span className="font-display text-base text-[#6B6660]">{item.lowStockThreshold}</span>
+                      <span className="font-display text-base text-[#705A48]">{item.lowStockThreshold}</span>
                     )}
                   </div>
                   <div className="flex gap-2 justify-end">
                     {e ? (
                       <>
-                        <button onClick={() => saveItem(item.id)} className="bg-[#0F0E0C] text-white text-[10px] font-bold uppercase tracking-wide px-3 py-2 hover:bg-[#0F0E0C]/80 transition-colors">Salvar</button>
-                        <button onClick={() => cancelEdit(item.id)} className="border border-[#E8E4DC] text-[#6B6660] text-[10px] font-semibold px-3 py-2 hover:bg-[#F0EBE1] transition-colors">Cancelar</button>
+                        <button onClick={() => saveItem(item.id)} className="bg-[#1E1208] text-white text-[10px] font-bold uppercase tracking-wide px-3 py-2 hover:bg-[#1E1208]/80 transition-colors">Salvar</button>
+                        <button onClick={() => cancelEdit(item.id)} className="border border-[#E6DFD5] text-[#705A48] text-[10px] font-semibold px-3 py-2 hover:bg-[#F0EBE1] transition-colors">Cancelar</button>
                       </>
                     ) : (
                       <button onClick={() => setEditing(ed => ({ ...ed, [item.id]: { qty: avail, threshold: item.lowStockThreshold } }))}
-                        className="border border-[#E8E4DC] text-[#6B6660] text-[10px] font-semibold px-3 py-2 hover:bg-[#F0EBE1] transition-colors">
+                        className="border border-[#E6DFD5] text-[#705A48] text-[10px] font-semibold px-3 py-2 hover:bg-[#F0EBE1] transition-colors">
                         Ajustar
                       </button>
                     )}

@@ -74,7 +74,7 @@ export default function PainelDashboard() {
       {/* Page header */}
       <div className="mb-8">
         <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Visão geral</p>
-        <h1 className="font-display font-normal text-[#0F0E0C] text-2xl">Dashboard</h1>
+        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Dashboard</h1>
       </div>
 
       {/* KPI grid */}
@@ -82,21 +82,21 @@ export default function PainelDashboard() {
         {kpis.map(k => (
           <div
             key={k.label}
-            className={`bg-[#FAFAF8] border rounded-sm px-4 py-4 flex flex-col gap-3 ${
+            className={`bg-[#FAF8F5] border px-4 py-4 flex flex-col gap-3 ${
               k.alert && k.value > 0
                 ? 'border-amber-200 bg-amber-50'
-                : 'border-[#E8E4DC]'
+                : 'border-[#E6DFD5]'
             }`}
           >
-            <span className={k.alert && k.value > 0 ? 'text-amber-500' : 'text-[#B8B2AA]'}>{k.icon}</span>
+            <span className={k.alert && k.value > 0 ? 'text-amber-500' : 'text-[#B09C8C]'}>{k.icon}</span>
             <div>
               <p className={`text-[10px] font-semibold tracking-[0.15em] uppercase mb-1 ${
-                k.alert && k.value > 0 ? 'text-amber-600' : 'text-[#B8B2AA]'
+                k.alert && k.value > 0 ? 'text-amber-600' : 'text-[#B09C8C]'
               }`}>
                 {k.label}
               </p>
               <p className={`font-display text-xl leading-none ${
-                k.alert && k.value > 0 ? 'text-amber-700' : 'text-[#0F0E0C]'
+                k.alert && k.value > 0 ? 'text-amber-700' : 'text-[#1E1208]'
               }`}>
                 {k.fmt === 'c' ? formatCurrency(k.value) : k.value}
               </p>
@@ -107,37 +107,37 @@ export default function PainelDashboard() {
 
       {/* Recent orders */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-display font-normal text-[#0F0E0C] text-lg">Pedidos recentes</h2>
+        <h2 className="font-display font-normal text-[#1E1208] text-lg">Pedidos recentes</h2>
         <Link href="/painel/pedidos" className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors tracking-wide uppercase">
           Ver todos →
         </Link>
       </div>
 
       {/* Table */}
-      <div className="bg-[#FAFAF8] border border-[#E8E4DC] overflow-hidden">
+      <div className="bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-[1fr_140px_120px_48px] px-5 py-3 border-b border-[#E8E4DC] bg-[#F5F3EF]">
-          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]">Pedido / Status</span>
-          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] text-right">Data</span>
-          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] text-right">Total</span>
-          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA]"></span>
+        <div className="grid grid-cols-[1fr_140px_120px_48px] px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
+          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Pedido / Status</span>
+          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] text-right">Data</span>
+          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] text-right">Total</span>
+          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]"></span>
         </div>
 
         {orders.length === 0 ? (
-          <p className="px-5 py-14 text-center text-sm text-[#B8B2AA]">Nenhum pedido ainda.</p>
+          <p className="px-5 py-14 text-center text-sm text-[#B09C8C]">Nenhum pedido ainda.</p>
         ) : orders.map((o, idx) => (
           <div
             key={o.id}
-            className={`grid grid-cols-[1fr_140px_120px_48px] px-5 py-3.5 items-center hover:bg-[#F5F3EF] transition-colors ${
-              idx < orders.length - 1 ? 'border-b border-[#E8E4DC]' : ''
+            className={`grid grid-cols-[1fr_140px_120px_48px] px-5 py-3.5 items-center hover:bg-[#F0EAE1] transition-colors ${
+              idx < orders.length - 1 ? 'border-b border-[#E6DFD5]' : ''
             }`}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <span className="text-[11px] font-mono text-[#B8B2AA] shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
+              <span className="text-[11px] font-mono text-[#B09C8C] shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
               <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
             </div>
-            <span className="text-[11px] text-[#B8B2AA] text-right">{formatTsDateTime(o.createdAt)}</span>
-            <span className="font-display text-sm text-[#0F0E0C] text-right">{formatCurrency(o.totalCents)}</span>
+            <span className="text-[11px] text-[#B09C8C] text-right">{formatTsDateTime(o.createdAt)}</span>
+            <span className="font-display text-sm text-[#1E1208] text-right">{formatCurrency(o.totalCents)}</span>
             <div className="flex justify-end">
               <Link
                 href={`/painel/pedidos/${o.id}`}
@@ -153,20 +153,20 @@ export default function PainelDashboard() {
       {/* Mobile cards */}
       <div className="flex flex-col gap-2 sm:hidden mt-2">
         {orders.length === 0 ? (
-          <p className="py-10 text-center text-sm text-[#B8B2AA]">Nenhum pedido ainda.</p>
+          <p className="py-10 text-center text-sm text-[#B09C8C]">Nenhum pedido ainda.</p>
         ) : orders.map(o => (
           <Link
             key={o.id}
             href={`/painel/pedidos/${o.id}`}
-            className="block border border-[#E8E4DC] bg-[#FAFAF8] p-4 hover:bg-[#F5F3EF] transition-colors"
+            className="block border border-[#E6DFD5] bg-[#FAF8F5] p-4 hover:bg-[#F0EAE1] transition-colors"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-mono text-[#B8B2AA]">#{o.id.slice(-8).toUpperCase()}</span>
+              <span className="text-[11px] font-mono text-[#B09C8C]">#{o.id.slice(-8).toUpperCase()}</span>
               <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
             </div>
             <div className="flex items-end justify-between">
-              <span className="text-[11px] text-[#B8B2AA]">{formatTsDateTime(o.createdAt)}</span>
-              <span className="font-display text-base text-[#0F0E0C]">{formatCurrency(o.totalCents)}</span>
+              <span className="text-[11px] text-[#B09C8C]">{formatTsDateTime(o.createdAt)}</span>
+              <span className="font-display text-base text-[#1E1208]">{formatCurrency(o.totalCents)}</span>
             </div>
           </Link>
         ))}

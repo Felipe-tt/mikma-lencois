@@ -50,6 +50,9 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
   const freeShippingUnlocked = cartTotal >= threshold && threshold > 0;
   const showFreeShippingBar = hasFreeShipping && count > 0;
 
+  const isHome = pathname === '/';
+  const isDark = false; // hero is now light, header stays light always
+
   return (
     <>
       {/* ── Topbar ──────────────────────────────────────────────── */}
@@ -60,13 +63,14 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
       )}
 
       {/* ── Main header ─────────────────────────────────────────── */}
-      <header className={`sticky top-0 z-40 bg-paper/97 backdrop-blur-md transition-shadow duration-200 ${
-        scrolled ? 'shadow-[0_1px_0_0_#E4DED5]' : ''
-      }`}>
+      <header className={`sticky top-0 z-40 bg-paper transition-shadow duration-200 ${scrolled ? 'shadow-[0_1px_0_0_#E4DED5]' : 'border-b border-mist'}`}>
         <div className="container-shop h-[60px] flex items-center gap-3">
 
           {/* Mobile hamburger */}
-          <button className="btn-ghost p-2 -ml-2 md:hidden" onClick={() => setMenuOpen(true)} aria-label="Abrir menu">
+          <button
+            className={`p-2 -ml-2 md:hidden transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}
+            onClick={() => setMenuOpen(true)} aria-label="Abrir menu"
+          >
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M3 7h18M3 12h18M3 17h18"/>
             </svg>
@@ -74,26 +78,55 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Logo */}
           <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={160} height={160} className="h-[42px] w-auto object-contain" priority />
+            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={800} height={242} className="h-8 w-auto object-contain" priority />
           </NavLink>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-9 mx-auto">
+          {/* Desktop nav — collapses when search opens */}
+          <nav className={`hidden md:flex items-center gap-9 mx-auto transition-all duration-200 ${searchOpen ? 'opacity-0 pointer-events-none absolute' : 'opacity-100'}`}>
             {NAV_LINKS.map(({ href, label }) => (
               <NavLink key={href} href={href}
-                className={`text-[13px] font-medium tracking-[0.01em] transition-colors duration-150
-                  ${pathname.startsWith(href) ? 'text-ink' : 'text-mid hover:text-ink'}`}
+                className={`text-[13px] font-medium tracking-[0.01em] transition-colors duration-150 relative pb-0.5
+                  after:absolute after:bottom-0 after:left-0 after:h-px after:bg-clay after:transition-all after:duration-200
+                  ${pathname.startsWith(href)
+                    ? `${isDark ? 'text-paper' : 'text-ink'} after:w-full`
+                    : `${isDark ? 'text-paper/50 hover:text-paper' : 'text-mid hover:text-ink'} after:w-0 hover:after:w-full`
+                  }`}
               >
                 {label}
               </NavLink>
             ))}
           </nav>
 
+          {/* Search inline — expands in the nav area */}
+          <div className={`hidden md:flex items-center flex-1 mx-8 transition-all duration-200 ${searchOpen ? 'opacity-100' : 'opacity-0 pointer-events-none w-0 overflow-hidden mx-0'}`}>
+            <form onSubmit={handleSearch} className="flex items-center gap-2.5 flex-1 border-b-2 border-ink/20 pb-1 focus-within:border-clay/50 transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                ref={searchRef}
+                type="search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Buscar produtos, categorias…"
+                className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-faint outline-none"
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery('')} className="text-faint hover:text-ink transition-colors p-0.5">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              )}
+            </form>
+          </div>
+
           {/* Actions */}
           <div className="flex items-center gap-0.5 ml-auto md:ml-0">
 
             {/* Search */}
-            <button className="btn-ghost p-2" onClick={() => setSearchOpen(v => !v)} aria-label="Buscar">
+            <button
+              className={`p-2 transition-colors duration-150 ${isDark ? 'text-paper/50 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`}
+              onClick={() => setSearchOpen(v => !v)} aria-label="Buscar"
+            >
               {searchOpen
                 ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -104,24 +137,24 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             {user ? (
               <>
                 {(user.role === 'seller' || user.role === 'admin') && (
-                  <NavLink href="/painel" className="hidden md:flex btn-ghost text-[10px] font-bold tracking-[0.14em] uppercase">Painel</NavLink>
+                  <NavLink href="/painel" className={`hidden md:flex text-[10px] font-bold tracking-[0.14em] uppercase px-2 py-1.5 transition-colors ${isDark ? 'text-paper/40 hover:text-paper' : 'text-mid hover:text-ink'}`}>Painel</NavLink>
                 )}
-                <NavLink href="/conta" className="hidden md:block btn-ghost text-[13px]">
+                <NavLink href="/conta" className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>
                   {user.displayName?.split(' ')[0] ?? 'Conta'}
                 </NavLink>
-                <button onClick={logout} className="hidden md:block btn-ghost text-[13px] text-faint">Sair</button>
+                <button onClick={logout} className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/30 hover:text-paper/60' : 'text-faint hover:text-mid'}`}>Sair</button>
               </>
             ) : (
               <>
-                <NavLink href="/entrar" className="hidden md:block btn-ghost text-[13px]">Entrar</NavLink>
-                <NavLink href="/cadastro" className="hidden md:flex btn-clay text-[10px] font-bold tracking-[0.1em] uppercase px-4 py-2 ml-1">
+                <NavLink href="/entrar" className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>Entrar</NavLink>
+                <NavLink href="/cadastro" className={`hidden md:flex text-[10px] font-bold tracking-[0.1em] uppercase px-4 py-2 ml-1 border transition-all ${isDark ? 'border-paper/20 text-paper hover:bg-paper/10' : 'border-mist text-ink hover:bg-warm'}`}>
                   Cadastrar
                 </NavLink>
               </>
             )}
 
             {/* Cart */}
-            <NavLink href="/carrinho" className="btn-ghost relative p-2 ml-0.5" aria-label="Carrinho">
+            <NavLink href="/carrinho" className={`relative p-2 ml-0.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`} aria-label="Carrinho">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
@@ -141,7 +174,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           <div className="border-t border-mist/60 bg-warm/50">
             <div className="container-shop py-1.5 flex items-center gap-3">
               <div className="flex-1 h-[3px] bg-mist overflow-hidden" style={{borderRadius: '2px'}}>
-                <div className="h-full bg-clay transition-all duration-500 ease-smooth" style={{width: `${progress}%`}} />
+                <div className="h-full bg-clay transition-all duration-500 ease-out" style={{width: `${progress}%`}} />
               </div>
               <span className="text-[10px] font-medium text-mid shrink-0">
                 {freeShippingUnlocked
@@ -153,23 +186,6 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           </div>
         )}
 
-        {/* Search bar */}
-        <div className={`overflow-hidden transition-all duration-250 ease-out ${searchOpen ? 'max-h-14 border-t border-mist' : 'max-h-0'}`}>
-          <form onSubmit={handleSearch} className="container-shop py-2.5 flex items-center gap-3">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input ref={searchRef} type="search" value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar produtos, categorias…"
-              className="flex-1 bg-transparent text-sm text-ink placeholder:text-faint outline-none py-0.5"
-            />
-            {query && (
-              <button type="submit" className="text-[10px] font-bold text-clay tracking-[0.12em] uppercase hover:text-clay-d transition-colors">
-                Buscar
-              </button>
-            )}
-          </form>
-        </div>
       </header>
 
       {/* ── Mobile drawer ──────────────────────────────────────────── */}
@@ -179,7 +195,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           <div className="fixed top-0 left-0 z-50 w-[300px] h-full bg-paper shadow-modal animate-slide-in flex flex-col">
             <div className="flex items-center justify-between px-5 h-[60px] border-b border-mist">
               <NavLink href="/" onClick={() => setMenuOpen(false)}>
-                <Image src="/logo-dark.png" alt="Logo" width={140} height={140} className="h-10 w-auto object-contain" />
+                <Image src="/logo-dark.png" alt="Logo" width={800} height={242} className="h-9 w-auto object-contain" />
               </NavLink>
               <button className="btn-ghost p-2" onClick={() => setMenuOpen(false)} aria-label="Fechar">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">

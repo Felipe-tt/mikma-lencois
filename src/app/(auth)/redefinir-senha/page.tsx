@@ -31,7 +31,7 @@ function PasswordStrength({ password }: { password: string }) {
     <div className="mt-2 space-y-1.5">
       <div className="flex gap-1">
         {[0,1,2].map(i => (
-          <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i < score ? colors[score-1] : 'bg-mist/30'}`} />
+          <div key={i} className={`h-0.5 flex-1 transition-colors ${i < score ? colors[score-1] : 'bg-mist/30'}`} />
         ))}
       </div>
       <div className="flex gap-3">
@@ -105,7 +105,7 @@ function ResetForm() {
     <div className="min-h-screen bg-warm flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <Link href="/" className="flex mb-10 justify-center">
-          <Image src="/logo-dark.png" alt="Mikma" width={120} height={60} className="h-10 w-auto object-contain" />
+          <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" />
         </Link>
         {children}
       </div>
@@ -124,7 +124,7 @@ function ResetForm() {
   if (step === 'invalid') return (
     <Layout>
       <div className="text-center py-8 space-y-4">
-        <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
+        <div className="w-14 h-14 bg-red-500/10 flex items-center justify-center mx-auto">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
@@ -141,7 +141,7 @@ function ResetForm() {
   if (step === 'success') return (
     <Layout>
       <div className="text-center py-8 space-y-4">
-        <div className="w-14 h-14 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
+        <div className="w-14 h-14 bg-green-500/10 flex items-center justify-center mx-auto">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
             <polyline points="20 6 9 17 4 12"/>
           </svg>

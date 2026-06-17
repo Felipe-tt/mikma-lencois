@@ -20,13 +20,13 @@ type FormState = { code: string; type: 'percent' | 'fixed'; value: number; minOr
 const EMPTY: FormState = { code: '', type: 'percent', value: 10, minOrderCents: 0, maxUses: 100, expiresAt: '' };
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <label className="block text-[10px] font-bold tracking-[0.15em] uppercase text-[#B8B2AA] mb-1">{children}</label>;
+  return <label className="block text-[10px] font-bold tracking-[0.15em] uppercase text-[#B09C8C] mb-1">{children}</label>;
 }
 function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`w-full border border-[#E8E4DC] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40 ${props.className ?? ''}`} />;
+  return <input {...props} className={`w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40 ${props.className ?? ''}`} />;
 }
 function Select({ ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className="w-full border border-[#E8E4DC] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />;
+  return <select {...props} className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />;
 }
 
 export default function CuponsPage() {
@@ -68,14 +68,14 @@ export default function CuponsPage() {
       <div className="flex items-center justify-between mb-7">
         <div>
           <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Promoções</p>
-          <h1 className="font-display font-normal text-[#0F0E0C] text-2xl">Cupons</h1>
+          <h1 className="font-display font-normal text-[#1E1208] text-2xl">Cupons</h1>
         </div>
         <button
           onClick={() => { setShowForm(s => !s); setError(''); }}
           className={`text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2.5 border transition-colors ${
             showForm
-              ? 'border-[#E8E4DC] text-[#6B6660] hover:bg-[#F0EBE1]'
-              : 'bg-[#0F0E0C] text-[#FAFAF8] border-[#0F0E0C] hover:bg-[#0F0E0C]/80'
+              ? 'border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1]'
+              : 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208] hover:bg-[#1E1208]/80'
           }`}
         >
           {showForm ? 'Cancelar' : '+ Novo cupom'}
@@ -84,8 +84,8 @@ export default function CuponsPage() {
 
       {/* Form */}
       {showForm && (
-        <div className="bg-[#FAFAF8] border border-[#E8E4DC] p-5 mb-5">
-          <h2 className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] mb-4">Novo cupom</h2>
+        <div className="bg-[#FAF8F5] border border-[#E6DFD5] p-5 mb-5">
+          <h2 className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] mb-4">Novo cupom</h2>
           {error && <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
@@ -109,7 +109,7 @@ export default function CuponsPage() {
           </div>
           <button
             onClick={handleCreate} disabled={saving}
-            className="mt-5 w-full bg-[#0F0E0C] text-[#FAFAF8] text-sm font-semibold py-3 disabled:opacity-50 hover:bg-[#0F0E0C]/80 transition-colors"
+            className="mt-5 w-full bg-[#1E1208] text-[#FAF8F5] text-sm font-semibold py-3 disabled:opacity-50 hover:bg-[#1E1208]/80 transition-colors"
           >
             {saving ? 'Criando…' : 'Criar cupom'}
           </button>
@@ -118,39 +118,39 @@ export default function CuponsPage() {
 
       {/* List */}
       {coupons.length === 0 ? (
-        <div className="border border-[#E8E4DC] bg-[#FAFAF8] py-16 text-center">
+        <div className="border border-[#E6DFD5] bg-[#FAF8F5] py-16 text-center">
           <p className="text-2xl mb-3">🎟</p>
-          <p className="text-sm text-[#B8B2AA]">Nenhum cupom criado ainda.</p>
+          <p className="text-sm text-[#B09C8C]">Nenhum cupom criado ainda.</p>
         </div>
       ) : (
-        <div className="bg-[#FAFAF8] border border-[#E8E4DC] overflow-hidden">
+        <div className="bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
           {/* Table header */}
-          <div className="hidden sm:grid grid-cols-[1fr_80px_80px_100px_80px_64px] gap-4 px-5 py-3 border-b border-[#E8E4DC] bg-[#F5F3EF]">
+          <div className="hidden sm:grid grid-cols-[1fr_80px_80px_100px_80px_64px] gap-4 px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
             {['Código', 'Desconto', 'Mín.', 'Usos', 'Validade', ''].map((h, i) => (
-              <span key={i} className={`text-[10px] font-bold tracking-[0.18em] uppercase text-[#B8B2AA] ${i >= 1 && i < 5 ? 'text-center' : ''}`}>{h}</span>
+              <span key={i} className={`text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] ${i >= 1 && i < 5 ? 'text-center' : ''}`}>{h}</span>
             ))}
           </div>
 
           {coupons.map((c, idx) => (
-            <div key={c.id} className={`px-5 py-4 ${idx < coupons.length - 1 ? 'border-b border-[#E8E4DC]' : ''} hover:bg-[#F5F3EF] transition-colors`}>
+            <div key={c.id} className={`px-5 py-4 ${idx < coupons.length - 1 ? 'border-b border-[#E6DFD5]' : ''} hover:bg-[#F0EAE1] transition-colors`}>
               {/* Mobile */}
               <div className="sm:hidden">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <span className="font-mono font-bold text-[#0F0E0C] text-base tracking-wider">{c.code}</span>
-                    <p className="text-[12px] text-[#6B6660] mt-0.5">
+                    <span className="font-mono font-bold text-[#1E1208] text-base tracking-wider">{c.code}</span>
+                    <p className="text-[12px] text-[#705A48] mt-0.5">
                       {c.type === 'percent' ? `${c.value}% off` : `R$ ${c.value.toFixed(2)} off`}
-                      {c.minOrderCents > 0 && <span className="text-[#B8B2AA] ml-1.5">· mín. R${(c.minOrderCents / 100).toFixed(0)}</span>}
+                      {c.minOrderCents > 0 && <span className="text-[#B09C8C] ml-1.5">· mín. R${(c.minOrderCents / 100).toFixed(0)}</span>}
                     </p>
                   </div>
                   <button onClick={() => toggleActive(c.id, c.active)}
                     className={`text-[10px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 border shrink-0 transition-colors ${
-                      c.active ? 'border-[#C4714A] text-[#C4714A]' : 'border-[#E8E4DC] text-[#B8B2AA]'
+                      c.active ? 'border-[#C4714A] text-[#C4714A]' : 'border-[#E6DFD5] text-[#B09C8C]'
                     }`}>
                     {c.active ? 'Ativo' : 'Inativo'}
                   </button>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-[#B8B2AA] pt-3 border-t border-[#E8E4DC]">
+                <div className="flex items-center justify-between text-[11px] text-[#B09C8C] pt-3 border-t border-[#E6DFD5]">
                   <span>{c.uses} / {c.maxUses} usos · {c.expiresAt ? `exp. ${c.expiresAt}` : 'sem validade'}</span>
                   <button onClick={() => remove(c.id)} className="text-red-400 hover:text-red-600 font-semibold transition-colors">Excluir</button>
                 </div>
@@ -159,28 +159,28 @@ export default function CuponsPage() {
               {/* Desktop */}
               <div className="hidden sm:grid grid-cols-[1fr_80px_80px_100px_80px_64px] gap-4 items-center">
                 <div>
-                  <span className="font-mono font-bold text-[#0F0E0C] tracking-wider">{c.code}</span>
+                  <span className="font-mono font-bold text-[#1E1208] tracking-wider">{c.code}</span>
                 </div>
                 <div className="text-center">
-                  <span className="text-sm text-[#0F0E0C]">
+                  <span className="text-sm text-[#1E1208]">
                     {c.type === 'percent' ? `${c.value}%` : `R$${c.value}`}
                   </span>
                 </div>
                 <div className="text-center">
-                  <span className="text-sm text-[#6B6660]">
+                  <span className="text-sm text-[#705A48]">
                     {c.minOrderCents > 0 ? `R$${(c.minOrderCents / 100).toFixed(0)}` : '—'}
                   </span>
                 </div>
                 <div className="text-center">
-                  <span className="text-[12px] text-[#6B6660]">{c.uses} / {c.maxUses}</span>
+                  <span className="text-[12px] text-[#705A48]">{c.uses} / {c.maxUses}</span>
                 </div>
                 <div className="text-center">
-                  <span className="text-[11px] text-[#B8B2AA]">{c.expiresAt || '—'}</span>
+                  <span className="text-[11px] text-[#B09C8C]">{c.expiresAt || '—'}</span>
                 </div>
                 <div className="flex items-center justify-end gap-3">
                   <button onClick={() => toggleActive(c.id, c.active)}
                     className={`text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-1 border transition-colors ${
-                      c.active ? 'border-[#C4714A] text-[#C4714A] hover:bg-[#C4714A] hover:text-white' : 'border-[#E8E4DC] text-[#B8B2AA] hover:bg-[#F0EBE1]'
+                      c.active ? 'border-[#C4714A] text-[#C4714A] hover:bg-[#C4714A] hover:text-white' : 'border-[#E6DFD5] text-[#B09C8C] hover:bg-[#F0EBE1]'
                     }`}>
                     {c.active ? '●' : '○'}
                   </button>

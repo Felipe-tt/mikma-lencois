@@ -73,7 +73,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
         {step === 'form' ? (
           <>
             <div className="mb-6">
-              <div className="w-10 h-10 rounded-full bg-clay/10 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 bg-clay/10 flex items-center justify-center mb-4">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                   <rect x="2" y="4" width="20" height="16" rx="2"/>
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
@@ -107,7 +107,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
         ) : (
           <>
             <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-5">
+              <div className="w-14 h-14 bg-green-500/10 flex items-center justify-center mx-auto mb-5">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
                   <rect x="2" y="4" width="20" height="16" rx="2"/>
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
@@ -193,36 +193,37 @@ export default function LoginPage() {
       )}
 
       <div className="min-h-screen bg-paper flex">
-        {/* Painel esquerdo — imagem editorial */}
-        <div className="hidden lg:flex w-[45%] xl:w-1/2 relative flex-col justify-between p-12 xl:p-16 overflow-hidden">
-          {/* Background overlay */}
-          <div className="absolute inset-0 bg-ink" />
-          {/* Subtle texture via large text watermark */}
-          <div className="absolute inset-0 flex items-end justify-start pointer-events-none overflow-hidden pb-8 pl-8">
-            <p className="font-display text-[22rem] leading-none text-paper/[0.03] font-normal select-none tracking-[-0.05em]">M</p>
-          </div>
-
-          <Link href="/" className="relative z-10">
-            <Image src="/logo-white.png" alt="Mikma" width={120} height={48} className="h-8 w-auto object-contain" />
+        {/* Painel esquerdo — logo em destaque */}
+        <div className="hidden lg:flex w-[45%] xl:w-1/2 flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist">
+          <Link href="/">
+            <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" />
           </Link>
 
-          <div className="relative z-10">
-            <p className="font-display text-paper font-normal leading-[1.05] mb-5 text-[clamp(2.4rem,3.5vw,3.8rem)]">
-              Bem-vindo<br />de <em className="text-clay not-italic">volta.</em>
-            </p>
-            <p className="text-[14px] text-paper/40 leading-relaxed max-w-[28ch]">
-              Lençóis de qualidade direto de fábrica — para quem entende a diferença.
-            </p>
+          <div className="flex-1 flex items-center justify-center py-8">
+            <Image
+              src="/logo-dark.png"
+              alt="Mikma Lençóis"
+              width={400}
+              height={200}
+              className="w-full max-w-[260px] h-auto object-contain opacity-[0.10]"
+            />
           </div>
 
-          <p className="relative z-10 text-[10px] text-paper/20 tracking-[0.2em] uppercase">Blumenau · SC · Brasil</p>
+          <div>
+            <p className="font-display text-ink font-normal leading-[1.08] mb-4 text-[clamp(1.8rem,2.5vw,2.6rem)]">
+              Bem-vindo<br />de <em className="text-clay not-italic">volta.</em>
+            </p>
+            <p className="text-[13px] text-mid leading-relaxed max-w-[26ch]">
+              Lençóis de qualidade direto de fábrica.
+            </p>
+          </div>
         </div>
 
         {/* Formulário */}
         <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-paper">
           <div className="w-full max-w-[400px]">
             <Link href="/" className="flex mb-10 lg:hidden">
-              <Image src="/logo-dark.png" alt="Mikma" width={120} height={60} className="h-9 w-auto object-contain" />
+              <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-8 w-auto object-contain" />
             </Link>
 
             <h1 className="font-display font-normal text-ink text-[2.2rem] mb-2 leading-tight">Entrar</h1>
