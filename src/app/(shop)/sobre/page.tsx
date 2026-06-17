@@ -15,8 +15,11 @@ export default async function SobrePage() {
   return (
     <div>
       {/* ── Header ── */}
-      <div className="border-b border-mist bg-warm">
-        <div className="container-shop py-16 sm:py-24">
+      <div className="border-b border-mist bg-warm relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none select-none" style={{ zIndex: 0 }}>
+          <img src="/sobre-bg.jpg" alt="" className="w-full h-full object-cover object-center" style={{ opacity: 0.22 }} aria-hidden="true" />
+        </div>
+        <div className="container-shop py-16 sm:py-24 relative" style={{ zIndex: 2 }}>
           <div className="grid lg:grid-cols-2 gap-12 items-end">
             <h1 className="font-display font-normal text-ink text-5xl sm:text-6xl lg:text-[5rem] leading-[1.02]">
               <em className="text-clay not-italic">{s.storeName}</em><br/>
