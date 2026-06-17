@@ -59,9 +59,9 @@ export default async function HomePage() {
             className="font-display font-normal text-[#1E1208] leading-[0.96] tracking-[-0.025em]"
             style={{ fontSize: 'clamp(3.8rem, 9.5vw, 9rem)' }}
           >
-            <span className="block">Lençóis que</span>
-            <span className="block italic text-[#7C5C3E]">você sente</span>
-            <span className="block">na primeira noite.</span>
+            <span className="block">O conforto</span>
+            <span className="block italic text-[#7C5C3E]">que acompanha</span>
+            <span className="block">seus sonhos.</span>
           </h1>
 
           {/* Copy + CTA — linha única embaixo do headline */}
