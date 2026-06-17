@@ -72,14 +72,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    const now = new Date().toISOString();
+    const newTimelineEvent = {
+      status: 'paid',
+      at: now,
+      note: `PIX confirmado · txId: ${txId.slice(-8)}`,
+    };
+
     const batch = adminDb.batch();
 
-    // 1. Mark order as paid
+    // 1. Mark order as paid + append timeline event
     batch.update(orderRef, {
       status: 'paid',
       'payment.paidAt': FieldValue.serverTimestamp(),
       'payment.txId': txId,
       updatedAt: FieldValue.serverTimestamp(),
+      timeline: FieldValue.arrayUnion(newTimelineEvent),
     });
 
     // 2. Confirm inventory deduction (reserved -> sold)

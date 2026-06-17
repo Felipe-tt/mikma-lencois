@@ -87,8 +87,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Create order ─────────────────────────────────────────────────────────
-    const orderId = `ord_${randomBytes(8).toString('hex')}`; // não expõe uid nem timestamp
+    const orderId = `ord_${randomBytes(8).toString('hex')}`;
     const orderRef = adminDb.collection('orders').doc(orderId);
+    const now = new Date().toISOString();
     await orderRef.set({
       userId: uid,
       items: verifiedItems,
@@ -97,6 +98,10 @@ export async function POST(req: NextRequest) {
       totalCents: amountCents,
       payment: { method: 'pix' },
       delivery: {},
+      timeline: [
+        { status: 'created', at: now, note: 'Pedido criado' },
+        { status: 'payment_initiated', at: now, note: 'PIX gerado' },
+      ],
       createdAt: new Date(),
       updatedAt: new Date(),
     });
