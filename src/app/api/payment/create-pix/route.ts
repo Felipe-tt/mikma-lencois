@@ -9,10 +9,10 @@ const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
 
 export async function POST(req: NextRequest) {
-  // Rate limit: 10 PIX requests per user per hour
+  // Rate limit duplo: por IP e por usuário (aplicado após auth)
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
-  if (!rateLimit(`pix:${ip}`, 10, 60 * 60 * 1000)) {
-    return tooManyRequests(rateLimitRetryAfter(`pix:${ip}`));
+  if (!rateLimit(`pix:ip:${ip}`, 20, 60 * 60 * 1000)) {
+    return tooManyRequests(rateLimitRetryAfter(`pix:ip:${ip}`));
   }
 
   try {
@@ -23,6 +23,11 @@ export async function POST(req: NextRequest) {
 
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true); // checkRevoked
     const uid = decoded.uid;
+
+    // Rate limit por usuário (mais restrito — 5 PIX por hora)
+    if (!rateLimit(`pix:uid:${uid}`, 5, 60 * 60 * 1000)) {
+      return tooManyRequests(rateLimitRetryAfter(`pix:uid:${uid}`));
+    }
 
     const { items, address } = await req.json();
     // NOTE: amountCents is NOT trusted from client — calculated server-side from Firestore prices

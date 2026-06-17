@@ -87,7 +87,9 @@ export async function POST(req: NextRequest) {
     }
 
     const totalCents = Math.max(0, subtotalCents - discountCents);
-    const orderRef = adminDb.collection('orders').doc();
+    const { randomBytes } = await import('crypto');
+    const orderId = `ord_${randomBytes(8).toString('hex')}`;
+    const orderRef = adminDb.collection('orders').doc(orderId);
     const order: Omit<Order, 'id'> = {
       userId: uid,
       items: verifiedItems,
@@ -101,7 +103,17 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     };
     await orderRef.set(order);
-    await adminDb.collection('users').doc(uid).update({ address });
+    // Salva só campos validados no perfil — evita sobrescrever campos arbitrários
+    const safeAddress = {
+      cep: address.cep,
+      street: address.street,
+      number: address.number,
+      complement: address.complement ?? '',
+      neighborhood: address.neighborhood,
+      city: address.city,
+      state: address.state,
+    };
+    await adminDb.collection('users').doc(uid).update({ address: safeAddress });
 
     return NextResponse.json({ orderId: orderRef.id, totalCents, discountCents });
   } catch (err) {

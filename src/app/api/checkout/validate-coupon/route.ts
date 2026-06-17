@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
   try {
-    await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1]);
+    await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true); // checkRevoked
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }

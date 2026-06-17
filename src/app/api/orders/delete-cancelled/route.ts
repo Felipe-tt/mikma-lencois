@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer } from '@/lib/security';
+import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 
 export async function DELETE(req: NextRequest) {
   // Verificar autenticação
@@ -19,6 +20,13 @@ export async function DELETE(req: NextRequest) {
   // Somente seller ou admin podem excluir pedidos
   if (role !== 'seller' && role !== 'admin') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+  }
+
+  // Rate limit: 10 chamadas por hora por usuário
+  const key = `delete-cancelled:${bearer.token.slice(-8)}`;
+  if (!rateLimit(key, 10, 60 * 60 * 1000)) {
+    const retryAfter = Math.ceil(rateLimitRetryAfter(key) / 1000);
+    return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429, headers: { 'Retry-After': String(retryAfter) } });
   }
 
   // Buscar todos os pedidos cancelados

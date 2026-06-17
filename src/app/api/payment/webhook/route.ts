@@ -30,6 +30,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
+  // Rejeita payloads muito grandes (webhook legítimo não passa de 8KB)
+  if (rawBody.length > 8192) {
+    return NextResponse.json({ error: 'Payload muito grande' }, { status: 413 });
+  }
+
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(rawBody);
@@ -69,6 +74,12 @@ export async function POST(req: NextRequest) {
     // Idempotent — skip if already processed
     if (order.status !== 'pending_payment') {
       console.log('Order already processed:', orderId, '— status:', order.status);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Replay attack protection — verifica se txId já foi processado
+    if (order.payment?.txId && order.payment.txId === txId && order.status === 'paid') {
+      console.log('Replay attack detected — txId already processed:', txId);
       return NextResponse.json({ ok: true });
     }
 

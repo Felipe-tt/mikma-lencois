@@ -115,8 +115,11 @@ export async function POST(req: NextRequest) {
     const rlKey = `delivery:${ip}`;
     if (!rateLimit(rlKey, 30, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(rlKey));
 
-    const { orderId } = await req.json();
-    if (!orderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 });
+    const body = await req.json();
+    const orderId = body?.orderId;
+    if (!orderId || typeof orderId !== 'string' || !/^ord_[0-9a-f]{16}$|^[a-zA-Z0-9]{20}$/.test(orderId)) {
+      return NextResponse.json({ error: 'orderId inválido' }, { status: 400 });
+    }
 
     const [orderSnap, settings] = await Promise.all([
       adminDb.collection('orders').doc(orderId).get(),

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { adminAuth } from '@/lib/firebase/admin';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 
 /** Extrai o IP real do cliente, respeitando proxies confiáveis (Cloud Run / Vercel). */
 export function getClientIp(req: NextRequest): string {
@@ -62,8 +64,7 @@ export function tooManyRequests(retryAfterMs: number): NextResponse {
   );
 }
 
-import { adminAuth } from '@/lib/firebase/admin';
-import type { DecodedIdToken } from 'firebase-admin/auth';
+
 
 export type AuthResult =
   | { ok: true; decoded: DecodedIdToken }
