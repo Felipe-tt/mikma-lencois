@@ -5,7 +5,7 @@ import type { Product } from '@/types';
 import Link from 'next/link';
 import { serialize } from '@/lib/utils/serialize';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300; // ISR: revalida a cada 5 minutos
 
 async function getFeatured(): Promise<Product[]> {
   try {

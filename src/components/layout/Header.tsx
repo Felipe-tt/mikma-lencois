@@ -64,25 +64,25 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
       {/* ── Main header ─────────────────────────────────────────── */}
       <header className={`sticky top-0 z-40 bg-paper transition-shadow duration-200 ${scrolled ? 'shadow-[0_1px_0_0_#E4DED5]' : 'border-b border-mist'}`}>
-        <div className="container-shop h-[60px] flex items-center gap-3">
+        <div className="container-shop h-[60px] grid grid-cols-[1fr_auto_1fr] items-center md:grid-cols-[1fr_auto_1fr]">
 
-          {/* Mobile hamburger */}
-          <button
-            className={`p-2 -ml-2 md:hidden transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}
-            onClick={() => setMenuOpen(true)} aria-label="Abrir menu"
-          >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M3 7h18M3 12h18M3 17h18"/>
-            </svg>
-          </button>
+          {/* Left: Logo + mobile hamburger */}
+          <div className="flex items-center gap-2">
+            <button
+              className={`p-2 -ml-2 md:hidden transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}
+              onClick={() => setMenuOpen(true)} aria-label="Abrir menu"
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M3 7h18M3 12h18M3 17h18"/>
+              </svg>
+            </button>
+            <NavLink href="/" className="shrink-0">
+              <Image src="/logo-dark.png" alt="Mikma Lençóis" width={800} height={242} className="h-8 w-auto object-contain" priority />
+            </NavLink>
+          </div>
 
-          {/* Logo */}
-          <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={800} height={242} className="h-8 w-auto object-contain" priority />
-          </NavLink>
-
-          {/* Desktop nav — collapses when search opens */}
-          <nav className={`hidden md:flex items-center gap-9 mx-auto transition-all duration-200 ${searchOpen ? 'opacity-0 pointer-events-none absolute' : 'opacity-100'}`}>
+          {/* Center: Nav (truly centered) */}
+          <nav className={`hidden md:flex items-center gap-9 transition-all duration-200 ${searchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             {NAV_LINKS.map(({ href, label }) => (
               <NavLink key={href} href={href}
                 className={`text-[13px] font-medium tracking-[0.01em] transition-colors duration-150 relative pb-0.5
@@ -97,8 +97,11 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             ))}
           </nav>
 
-          {/* Search inline — expands in the nav area */}
-          <div className={`hidden md:flex items-center flex-1 mx-8 transition-all duration-200 ${searchOpen ? 'opacity-100' : 'opacity-0 pointer-events-none w-0 overflow-hidden mx-0'}`}>
+          {/* Right: Search + Actions */}
+          <div className="flex items-center gap-0.5 justify-end">
+
+          {/* Search inline */}
+          <div className={`hidden md:flex items-center mx-2 transition-all duration-200 ${searchOpen ? 'opacity-100 w-48' : 'opacity-0 pointer-events-none w-0 overflow-hidden'}`}>
             <form onSubmit={handleSearch} className="flex items-center gap-2.5 flex-1 border-b-2 border-ink/20 pb-1 focus-within:border-clay/50 transition-colors">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -120,7 +123,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-0.5 ml-auto md:ml-0">
+          <div className="flex items-center gap-0.5">
 
             {/* Search */}
             <button
@@ -166,6 +169,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                 </span>
               )}
             </NavLink>
+          </div>
           </div>
         </div>
 

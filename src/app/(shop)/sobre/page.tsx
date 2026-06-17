@@ -1,3 +1,4 @@
+export const revalidate = 600; // ISR: revalida a cada 10 minutos
 import { getSettings } from '@/lib/settings';
 import Image from 'next/image';
 
