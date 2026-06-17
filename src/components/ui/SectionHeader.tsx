@@ -30,7 +30,7 @@ export function SectionHeader({ eyebrow, title, subtitle, cta, align = 'left', c
           className="hidden sm:inline-flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-mid hover:text-ink transition-colors group pb-0.5"
         >
           {cta.label}
-          <svg className="transition-transform duration-150 group-hover:translate-x-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          
         </Link>
       )}
     </div>

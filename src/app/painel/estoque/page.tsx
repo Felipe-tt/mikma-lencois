@@ -107,7 +107,7 @@ export default function EstoquePage() {
           </p>
           {!search && (
             <Link href="/painel/produtos/novo" className="mt-3 inline-block text-[12px] text-[#C4714A] font-semibold hover:text-[#A05432] transition-colors">
-              Adicionar produto →
+              Adicionar produto
             </Link>
           )}
         </div>

@@ -111,7 +111,7 @@ export default async function SobrePage() {
               className="flex items-center justify-between px-6 py-4 bg-ink text-paper group hover:bg-clay transition-colors duration-150"
             >
               <span className="text-[13px] font-semibold">Falar no WhatsApp</span>
-              <svg className="transition-transform duration-150 group-hover:translate-x-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              
             </a>
           </div>
         </div>

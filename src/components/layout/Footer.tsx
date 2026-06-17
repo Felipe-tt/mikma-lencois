@@ -9,6 +9,7 @@ interface Props {
   instagramUrl?: string;
   whatsappUrl?: string;
   reclameAquiUrl?: string;
+  tagline?: string;
 }
 
 export function Footer({
@@ -19,6 +20,7 @@ export function Footer({
   instagramUrl,
   whatsappUrl,
   reclameAquiUrl,
+  tagline = '',
 }: Props) {
   const year = new Date().getFullYear();
   const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
@@ -46,10 +48,10 @@ export function Footer({
               alt={storeName}
               width={800}
               height={242}
-              className="h-7 w-auto object-contain opacity-80"
+              className="h-7 w-auto object-contain object-left opacity-80 self-start"
             />
             <p className="text-[13px] text-paper/45 leading-relaxed max-w-[20ch]">
-              Lençóis de qualidade,<br />direto de fábrica.
+              {tagline}
             </p>
 
             {/* Social */}

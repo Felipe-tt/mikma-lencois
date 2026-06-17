@@ -109,7 +109,7 @@ export default function PainelDashboard() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-display font-normal text-[#1E1208] text-lg">Pedidos recentes</h2>
         <Link href="/painel/pedidos" className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors tracking-wide uppercase">
-          Ver todos →
+          Ver todos
         </Link>
       </div>
 

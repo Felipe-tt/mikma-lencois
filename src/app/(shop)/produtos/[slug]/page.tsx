@@ -208,7 +208,7 @@ export default async function ProductPage({ params }: Props) {
                 className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-mid hover:text-ink transition-colors group pb-0.5"
               >
                 Ver tudo
-                <svg className="transition-transform duration-150 group-hover:translate-x-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-mist border border-mist">

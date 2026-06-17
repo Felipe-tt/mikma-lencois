@@ -223,7 +223,7 @@ export default function CartPage() {
 
               <div className="flex flex-col items-center gap-2">
                 <Link href="/produtos" className="text-center text-[11px] text-faint hover:text-clay transition-colors font-medium">
-                  ← Continuar comprando
+                  Continuar comprando
                 </Link>
                 <p className="text-[10px] text-faint/70 text-center">Pagamento seguro via PIX</p>
               </div>
