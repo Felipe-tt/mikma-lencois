@@ -287,3 +287,76 @@
   scrollbar-color: #C8B8A8 transparent;
 }
 
+
+/* ── Dark mode ───────────────────────────────────────────────────── */
+/* Forçado via classe .dark no <html> — ignora preferência do SO     */
+html.dark {
+  color-scheme: dark;
+}
+html.dark body {
+  background-color: #141008;
+  color: #F0EAE0;
+}
+
+/* Tokens remapeados no dark */
+html.dark {
+  --color-paper:  #141008;
+  --color-warm:   #1C160D;
+  --color-warm-d: #231B12;
+  --color-ink:    #F0EAE0;
+  --color-mid:    #C4AD98;
+  --color-faint:  #7A6A5C;
+  --color-mist:   #2C2318;
+  --color-mist-d: #38301E;
+}
+
+/* Aplica as variáveis nas classes Tailwind customizadas */
+html.dark .bg-paper    { background-color: #141008; }
+html.dark .bg-warm     { background-color: #1C160D; }
+html.dark .bg-warm-d   { background-color: #231B12; }
+html.dark .text-ink    { color: #F0EAE0; }
+html.dark .text-mid    { color: #C4AD98; }
+html.dark .text-faint  { color: #7A6A5C; }
+html.dark .border-mist { border-color: #2C2318; }
+html.dark .divide-mist > * + * { border-color: #2C2318; }
+
+/* Header */
+html.dark header { background-color: #141008; border-color: #2C2318; }
+html.dark .shadow-\[0_1px_0_0_\#E4DED5\] { box-shadow: 0 1px 0 0 #2C2318; }
+
+/* Cards / borders gerais */
+html.dark .border-\[#E0D8CE\] { border-color: #2C2318; }
+html.dark .bg-\[\#F9F6F1\]   { background-color: #141008; }
+html.dark .bg-\[\#F0EAE1\]   { background-color: #1C160D; }
+
+/* Mobile drawer */
+html.dark .bg-paper.shadow-modal { background-color: #1C160D; }
+
+/* Inputs */
+html.dark .input,
+html.dark .input-sm,
+html.dark .select {
+  background-color: #1C160D;
+  color: #F0EAE0;
+  border-color: #2C2318;
+}
+html.dark .input::placeholder,
+html.dark .input-sm::placeholder { color: #7A6A5C; }
+
+/* Skeleton shimmer ajustado */
+html.dark .skeleton { background-color: #1C160D; }
+html.dark .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.04) 45%,
+    rgba(255,255,255,0.07) 50%,
+    rgba(255,255,255,0.04) 55%,
+    transparent 100%
+  );
+}
+
+/* Scrollbar dark */
+html.dark ::-webkit-scrollbar-thumb { background: #3C3028; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #5A4838; }
+html.dark * { scrollbar-color: #3C3028 transparent; }

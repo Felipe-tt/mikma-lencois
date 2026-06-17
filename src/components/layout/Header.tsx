@@ -7,6 +7,7 @@ import { useCartTotal } from '@/lib/hooks/useCartTotal';
 import { usePathname, useRouter } from 'next/navigation';
 import { NavLink } from '@/components/ui/NavLink';
 import { formatCurrency } from '@/lib/utils/format';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface Props { topbarText?: string; freeShippingThresholdCents?: number }
 
@@ -153,6 +154,9 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               </>
             )}
 
+            {/* Theme toggle */}
+            <ThemeToggle />
+
             {/* Cart */}
             <NavLink href="/carrinho" className={`relative p-2 ml-0.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`} aria-label="Carrinho">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -244,8 +248,9 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               )}
             </nav>
 
-            <div className="px-5 py-4 border-t border-mist">
+            <div className="px-5 py-4 border-t border-mist flex items-center justify-between">
               <p className="text-[10px] text-faint tracking-[0.18em] uppercase">Blumenau · SC · Brasil</p>
+              <ThemeToggle />
             </div>
           </div>
         </>
