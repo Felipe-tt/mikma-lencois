@@ -12,8 +12,8 @@ const BADGE: Record<string, string> = {
   shipped: 'badge-shipped', delivered: 'badge-delivered', cancelled: 'badge-cancelled',
 };
 const LABEL: Record<string, string> = {
-  pending_payment: 'Aguardando', paid: 'Pago', preparing: 'Em preparo',
-  shipped: 'Em rota', delivered: 'Entregue', cancelled: 'Cancelado',
+  pending_payment: 'Aguardando pagamento', paid: 'Pago ✓', preparing: 'Separando',
+  shipped: 'A caminho', delivered: 'Entregue ✓', cancelled: 'Cancelado',
 };
 
 export default function PainelDashboard() {
@@ -34,70 +34,60 @@ export default function PainelDashboard() {
   const todayStr = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
   const monthStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const waiting = orders.filter(o => o.status === 'pending_payment').length;
+  const needAction = orders.filter(o => o.status === 'paid').length;
 
   const kpis = [
-    {
-      label: 'Pedidos hoje',
-      value: paid.filter(o => o.createdAt >= todayStr).length,
-      fmt: 'n' as const,
-      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
-    },
-    {
-      label: 'Receita hoje',
-      value: paid.filter(o => o.createdAt >= todayStr).reduce((s, o) => s + o.totalCents, 0),
-      fmt: 'c' as const,
-      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
-    },
-    {
-      label: 'Pedidos no mês',
-      value: paid.filter(o => o.createdAt >= monthStr).length,
-      fmt: 'n' as const,
-      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-    },
-    {
-      label: 'Receita no mês',
-      value: paid.filter(o => o.createdAt >= monthStr).reduce((s, o) => s + o.totalCents, 0),
-      fmt: 'c' as const,
-      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-    },
-    {
-      label: 'Aguardando pag.',
-      value: waiting,
-      fmt: 'n' as const,
-      alert: true,
-      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-    },
+    { label: 'Pedidos hoje', value: paid.filter(o => o.createdAt >= todayStr).length, fmt: 'n' as const, desc: 'pedidos pagos', icon: '📦' },
+    { label: 'Dinheiro hoje', value: paid.filter(o => o.createdAt >= todayStr).reduce((s, o) => s + o.totalCents, 0), fmt: 'c' as const, desc: 'receita do dia', icon: '💰' },
+    { label: 'Pedidos no mês', value: paid.filter(o => o.createdAt >= monthStr).length, fmt: 'n' as const, desc: 'pedidos pagos', icon: '📅' },
+    { label: 'Dinheiro no mês', value: paid.filter(o => o.createdAt >= monthStr).reduce((s, o) => s + o.totalCents, 0), fmt: 'c' as const, desc: 'receita do mês', icon: '📈' },
   ];
 
   return (
     <div className="max-w-5xl">
-      {/* Page header */}
       <div className="mb-8">
-        <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Visão geral</p>
-        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Dashboard</h1>
+        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Olá! 👋</h1>
+        <p className="text-[13px] text-[#B09C8C] mt-1">Aqui está um resumo do que está acontecendo na sua loja.</p>
       </div>
 
-      {/* KPI grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+      {/* Alertas */}
+      {(waiting > 0 || needAction > 0) && (
+        <div className="flex flex-col gap-2 mb-6">
+          {needAction > 0 && (
+            <Link href="/painel/pedidos" className="flex items-center justify-between bg-[#C4714A] text-white px-5 py-3.5 hover:bg-[#A05432] transition-colors">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">📦</span>
+                <div>
+                  <p className="text-[13px] font-bold">{needAction} {needAction === 1 ? 'pedido precisa' : 'pedidos precisam'} ser separado{needAction !== 1 ? 's' : ''}</p>
+                  <p className="text-[11px] opacity-80">Clique aqui para ver e começar a separar</p>
+                </div>
+              </div>
+              <span className="text-white/60 text-lg">→</span>
+            </Link>
+          )}
+          {waiting > 0 && (
+            <Link href="/painel/pedidos" className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 px-5 py-3.5 hover:bg-amber-100 transition-colors">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">⏳</span>
+                <div>
+                  <p className="text-[13px] font-bold">{waiting} {waiting === 1 ? 'pedido aguardando' : 'pedidos aguardando'} pagamento</p>
+                  <p className="text-[11px] opacity-70">O cliente ainda não pagou — pode ser normal levar alguns minutos</p>
+                </div>
+              </div>
+              <span className="opacity-40 text-lg">→</span>
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {kpis.map(k => (
-          <div
-            key={k.label}
-            className={`bg-[#FAF8F5] border px-4 py-4 flex flex-col gap-3 ${
-              k.alert && k.value > 0
-                ? 'border-amber-200 bg-amber-50'
-                : 'border-[#E6DFD5]'
-            }`}
-          >
-            <span className={k.alert && k.value > 0 ? 'text-amber-500' : 'text-[#B09C8C]'}>{k.icon}</span>
+          <div key={k.label} className="bg-[#FAF8F5] border border-[#E6DFD5] px-4 py-4 flex flex-col gap-2">
+            <span className="text-2xl">{k.icon}</span>
             <div>
-              <p className={`text-[10px] font-semibold tracking-[0.15em] uppercase mb-1 ${
-                k.alert && k.value > 0 ? 'text-amber-600' : 'text-[#B09C8C]'
-              }`}>
-                {k.label}
-              </p>
-              <p className={`font-display text-xl leading-none ${
-                k.alert && k.value > 0 ? 'text-amber-700' : 'text-[#1E1208]'
-              }`}>
+              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#B09C8C] mb-0.5">{k.label}</p>
+              <p className="font-display text-xl text-[#1E1208] leading-none">
                 {k.fmt === 'c' ? formatCurrency(k.value) : k.value}
               </p>
             </div>
@@ -105,70 +95,32 @@ export default function PainelDashboard() {
         ))}
       </div>
 
-      {/* Recent orders */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-display font-normal text-[#1E1208] text-lg">Pedidos recentes</h2>
-        <Link href="/painel/pedidos" className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors tracking-wide uppercase">
-          Ver todos
+      {/* Pedidos recentes */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-display font-normal text-[#1E1208] text-lg">Últimos pedidos</h2>
+        <Link href="/painel/pedidos" className="text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+          Ver todos →
         </Link>
       </div>
 
-      {/* Table */}
       <div className="bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
-        {/* Table header */}
-        <div className="grid grid-cols-[1fr_140px_120px_48px] px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Pedido / Status</span>
-          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] text-right">Data</span>
-          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] text-right">Total</span>
-          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]"></span>
-        </div>
-
         {orders.length === 0 ? (
-          <p className="px-5 py-14 text-center text-sm text-[#B09C8C]">Nenhum pedido ainda.</p>
+          <div className="py-16 text-center">
+            <p className="text-4xl mb-3">🛍</p>
+            <p className="text-sm text-[#B09C8C]">Nenhum pedido ainda.<br />Quando alguém comprar, vai aparecer aqui.</p>
+          </div>
         ) : orders.map((o, idx) => (
-          <div
-            key={o.id}
-            className={`grid grid-cols-[1fr_140px_120px_48px] px-5 py-3.5 items-center hover:bg-[#F0EAE1] transition-colors ${
-              idx < orders.length - 1 ? 'border-b border-[#E6DFD5]' : ''
-            }`}
-          >
+          <div key={o.id} className={`flex items-center justify-between px-5 py-3.5 hover:bg-[#F0EAE1] transition-colors ${idx < orders.length - 1 ? 'border-b border-[#E6DFD5]' : ''}`}>
             <div className="flex items-center gap-3 min-w-0">
-              <span className="text-[11px] font-mono text-[#B09C8C] shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
+              <span className="text-[11px] font-mono text-[#B09C8C] shrink-0">#{o.id.slice(-6).toUpperCase()}</span>
               <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
             </div>
-            <span className="text-[11px] text-[#B09C8C] text-right">{formatTsDateTime(o.createdAt)}</span>
-            <span className="font-display text-sm text-[#1E1208] text-right">{formatCurrency(o.totalCents)}</span>
-            <div className="flex justify-end">
-              <Link
-                href={`/painel/pedidos/${o.id}`}
-                className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors"
-              >
-                Ver
-              </Link>
+            <div className="flex items-center gap-4">
+              <span className="text-[11px] text-[#B09C8C] hidden sm:block">{formatTsDateTime(o.createdAt)}</span>
+              <span className="font-display text-sm text-[#1E1208]">{formatCurrency(o.totalCents)}</span>
+              <Link href={`/painel/pedidos/${o.id}`} className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors shrink-0">Ver →</Link>
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* Mobile cards */}
-      <div className="flex flex-col gap-2 sm:hidden mt-2">
-        {orders.length === 0 ? (
-          <p className="py-10 text-center text-sm text-[#B09C8C]">Nenhum pedido ainda.</p>
-        ) : orders.map(o => (
-          <Link
-            key={o.id}
-            href={`/painel/pedidos/${o.id}`}
-            className="block border border-[#E6DFD5] bg-[#FAF8F5] p-4 hover:bg-[#F0EAE1] transition-colors"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-mono text-[#B09C8C]">#{o.id.slice(-8).toUpperCase()}</span>
-              <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
-            </div>
-            <div className="flex items-end justify-between">
-              <span className="text-[11px] text-[#B09C8C]">{formatTsDateTime(o.createdAt)}</span>
-              <span className="font-display text-base text-[#1E1208]">{formatCurrency(o.totalCents)}</span>
-            </div>
-          </Link>
         ))}
       </div>
     </div>

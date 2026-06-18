@@ -5,29 +5,11 @@ import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimest
 import { db } from '@/lib/firebase/client';
 
 type Coupon = {
-  id: string;
-  code: string;
-  type: 'percent' | 'fixed';
-  value: number;
-  minOrderCents: number;
-  maxUses: number;
-  uses: number;
-  active: boolean;
-  expiresAt: string;
+  id: string; code: string; type: 'percent' | 'fixed'; value: number;
+  minOrderCents: number; maxUses: number; uses: number; active: boolean; expiresAt: string;
 };
-
-type FormState = { code: string; type: 'percent' | 'fixed'; value: number; minOrderCents: number; maxUses: number; expiresAt: string };
+type FormState = { code: string; type: 'percent' | 'fixed'; value: number; minOrderCents: number; maxUses: number; expiresAt: string; };
 const EMPTY: FormState = { code: '', type: 'percent', value: 10, minOrderCents: 0, maxUses: 100, expiresAt: '' };
-
-function Label({ children }: { children: React.ReactNode }) {
-  return <label className="block text-[10px] font-bold tracking-[0.15em] uppercase text-[#B09C8C] mb-1">{children}</label>;
-}
-function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40 ${props.className ?? ''}`} />;
-}
-function Select({ ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />;
-}
 
 export default function CuponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -43,149 +25,142 @@ export default function CuponsPage() {
   }, []);
 
   const handleCreate = async () => {
-    if (!form.code || !form.value) { setError('Preencha código e valor.'); return; }
+    if (!form.code) { setError('Digite o código do cupom.'); return; }
+    if (!form.value) { setError('Digite o valor do desconto.'); return; }
     setSaving(true); setError('');
     try {
       await addDoc(collection(db, 'coupons'), {
-        code: form.code.toUpperCase().trim(),
-        type: form.type, value: form.value,
+        code: form.code.toUpperCase().trim(), type: form.type, value: form.value,
         minOrderCents: Math.round(form.minOrderCents * 100),
         maxUses: form.maxUses, uses: 0, active: true,
-        expiresAt: form.expiresAt || null,
-        createdAt: serverTimestamp(),
+        expiresAt: form.expiresAt || null, createdAt: serverTimestamp(),
       });
       setForm(EMPTY); setShowForm(false);
-    } catch { setError('Erro ao criar cupom.'); }
+    } catch { setError('Erro ao criar cupom. Tente novamente.'); }
     finally { setSaving(false); }
   };
 
   const toggleActive = (id: string, active: boolean) => updateDoc(doc(db, 'coupons', id), { active: !active });
-  const remove = (id: string) => { if (confirm('Excluir cupom?')) deleteDoc(doc(db, 'coupons', id)); };
+  const remove = (id: string) => { if (confirm('Tem certeza que quer apagar este cupom? Os clientes não poderão mais usá-lo.')) deleteDoc(doc(db, 'coupons', id)); };
+
+  const desconto = (c: Coupon) => c.type === 'percent' ? `${c.value}% de desconto` : `R$ ${c.value.toFixed(2)} de desconto`;
 
   return (
     <div className="max-w-3xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-7">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Promoções</p>
-          <h1 className="font-display font-normal text-[#1E1208] text-2xl">Cupons</h1>
+          <h1 className="font-display font-normal text-[#1E1208] text-2xl">Cupons de desconto</h1>
+          <p className="text-[13px] text-[#B09C8C] mt-1">Crie códigos para seus clientes usarem na hora de comprar.</p>
         </div>
-        <button
-          onClick={() => { setShowForm(s => !s); setError(''); }}
+        <button onClick={() => { setShowForm(s => !s); setError(''); }}
           className={`text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2.5 border transition-colors ${
-            showForm
-              ? 'border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1]'
-              : 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208] hover:bg-[#1E1208]/80'
-          }`}
-        >
-          {showForm ? 'Cancelar' : '+ Novo cupom'}
+            showForm ? 'border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1]' : 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208] hover:bg-[#1E1208]/80'
+          }`}>
+          {showForm ? 'Cancelar' : '+ Criar cupom'}
         </button>
       </div>
 
-      {/* Form */}
       {showForm && (
-        <div className="bg-[#FAF8F5] border border-[#E6DFD5] p-5 mb-5">
-          <h2 className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] mb-4">Novo cupom</h2>
-          {error && <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
+        <div className="bg-[#FAF8F5] border border-[#E6DFD5] p-5 mb-6">
+          <h2 className="text-[14px] font-bold text-[#1E1208] mb-4">Novo cupom</h2>
+          {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold">⚠️ {error}</div>}
+
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Código</Label><Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="VERAO20" className="uppercase" /></div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">Código do cupom</label>
+              <input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                placeholder="Ex: VERAO20, BEMVINDO10"
+                className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 placeholder:normal-case placeholder:font-sans" />
+              <p className="text-[11px] text-[#B09C8C] mt-1">Este é o código que o cliente vai digitar na hora de comprar.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Tipo</Label>
-                <Select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as 'percent' | 'fixed' }))}>
-                  <option value="percent">Porcentagem (%)</option>
-                  <option value="fixed">Valor fixo (R$)</option>
-                </Select>
+                <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">Tipo de desconto</label>
+                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as 'percent' | 'fixed' }))}
+                  className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20">
+                  <option value="percent">Porcentagem (ex: 10% off)</option>
+                  <option value="fixed">Valor fixo (ex: R$ 20 off)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">
+                  {form.type === 'percent' ? 'Quantos % de desconto?' : 'Quantos R$ de desconto?'}
+                </label>
+                <input type="number" min={0} value={form.value} onChange={e => setForm(f => ({ ...f, value: Number(e.target.value) }))}
+                  className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Valor ({form.type === 'percent' ? '%' : 'R$'})</Label><Input type="number" min={0} value={form.value} onChange={e => setForm(f => ({ ...f, value: Number(e.target.value) }))} inputMode="decimal" /></div>
-              <div><Label>Pedido mín. (R$)</Label><Input type="number" min={0} value={form.minOrderCents} onChange={e => setForm(f => ({ ...f, minOrderCents: Number(e.target.value) }))} inputMode="decimal" /></div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">Valor mínimo do pedido (R$)</label>
+                <input type="number" min={0} value={form.minOrderCents} onChange={e => setForm(f => ({ ...f, minOrderCents: Number(e.target.value) }))}
+                  placeholder="0 = sem mínimo"
+                  className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 placeholder:text-[#C8BAB0]" />
+                <p className="text-[11px] text-[#B09C8C] mt-1">Coloque 0 se não quiser exigir valor mínimo.</p>
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">Quantas vezes pode ser usado?</label>
+                <input type="number" min={1} value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: Number(e.target.value) }))}
+                  className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20" />
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Máx. de usos</Label><Input type="number" min={1} value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: Number(e.target.value) }))} inputMode="numeric" /></div>
-              <div><Label>Expira em</Label><Input type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} /></div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">Data de validade (opcional)</label>
+              <input type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
+                className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20" />
+              <p className="text-[11px] text-[#B09C8C] mt-1">Deixe em branco para o cupom nunca expirar.</p>
             </div>
+
+            {form.code && form.value > 0 && (
+              <div className="bg-[#C4714A]/5 border border-[#C4714A]/20 px-4 py-3">
+                <p className="text-[12px] text-[#1E1208]">
+                  💡 <strong>Resumo:</strong> O cupom <strong className="font-mono">{form.code || '...'}</strong> vai dar{' '}
+                  <strong>{form.type === 'percent' ? `${form.value}%` : `R$ ${form.value.toFixed(2)}`} de desconto</strong>
+                  {form.minOrderCents > 0 && ` em pedidos acima de R$ ${form.minOrderCents.toFixed(2)}`}
+                  {` e pode ser usado ${form.maxUses} vez${form.maxUses !== 1 ? 'es' : ''}`}
+                  {form.expiresAt && ` até ${new Date(form.expiresAt + 'T00:00:00').toLocaleDateString('pt-BR')}`}.
+                </p>
+              </div>
+            )}
           </div>
-          <button
-            onClick={handleCreate} disabled={saving}
-            className="mt-5 w-full bg-[#1E1208] text-[#FAF8F5] text-sm font-semibold py-3 disabled:opacity-50 hover:bg-[#1E1208]/80 transition-colors"
-          >
+
+          <button onClick={handleCreate} disabled={saving}
+            className="mt-5 w-full bg-[#1E1208] text-[#FAF8F5] text-sm font-semibold py-3.5 disabled:opacity-50 hover:bg-[#1E1208]/80 transition-colors">
             {saving ? 'Criando…' : 'Criar cupom'}
           </button>
         </div>
       )}
 
-      {/* List */}
       {coupons.length === 0 ? (
         <div className="border border-[#E6DFD5] bg-[#FAF8F5] py-16 text-center">
-          <p className="text-2xl mb-3">🎟</p>
-          <p className="text-sm text-[#B09C8C]">Nenhum cupom criado ainda.</p>
+          <p className="text-4xl mb-3">🎟</p>
+          <p className="text-sm text-[#B09C8C]">Nenhum cupom criado ainda.<br />Crie seu primeiro cupom clicando no botão acima!</p>
         </div>
       ) : (
-        <div className="bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
-          {/* Table header */}
-          <div className="hidden sm:grid grid-cols-[1fr_80px_80px_100px_80px_64px] gap-4 px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-            {['Código', 'Desconto', 'Mín.', 'Usos', 'Validade', ''].map((h, i) => (
-              <span key={i} className={`text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C] ${i >= 1 && i < 5 ? 'text-center' : ''}`}>{h}</span>
-            ))}
-          </div>
-
-          {coupons.map((c, idx) => (
-            <div key={c.id} className={`px-5 py-4 ${idx < coupons.length - 1 ? 'border-b border-[#E6DFD5]' : ''} hover:bg-[#F0EAE1] transition-colors`}>
-              {/* Mobile */}
-              <div className="sm:hidden">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div>
-                    <span className="font-mono font-bold text-[#1E1208] text-base tracking-wider">{c.code}</span>
-                    <p className="text-[12px] text-[#705A48] mt-0.5">
-                      {c.type === 'percent' ? `${c.value}% off` : `R$ ${c.value.toFixed(2)} off`}
-                      {c.minOrderCents > 0 && <span className="text-[#B09C8C] ml-1.5">· mín. R${(c.minOrderCents / 100).toFixed(0)}</span>}
-                    </p>
-                  </div>
-                  <button onClick={() => toggleActive(c.id, c.active)}
-                    className={`text-[10px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 border shrink-0 transition-colors ${
-                      c.active ? 'border-[#C4714A] text-[#C4714A]' : 'border-[#E6DFD5] text-[#B09C8C]'
-                    }`}>
-                    {c.active ? 'Ativo' : 'Inativo'}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-[#B09C8C] pt-3 border-t border-[#E6DFD5]">
-                  <span>{c.uses} / {c.maxUses} usos · {c.expiresAt ? `exp. ${c.expiresAt}` : 'sem validade'}</span>
-                  <button onClick={() => remove(c.id)} className="text-red-400 hover:text-red-600 font-semibold transition-colors">Excluir</button>
-                </div>
-              </div>
-
-              {/* Desktop */}
-              <div className="hidden sm:grid grid-cols-[1fr_80px_80px_100px_80px_64px] gap-4 items-center">
+        <div className="flex flex-col gap-3">
+          {coupons.map(c => (
+            <div key={c.id} className={`border bg-[#FAF8F5] px-5 py-4 ${!c.active ? 'opacity-50' : 'border-[#E6DFD5]'}`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
-                  <span className="font-mono font-bold text-[#1E1208] tracking-wider">{c.code}</span>
+                  <span className="font-mono font-bold text-[#1E1208] text-lg tracking-wider">{c.code}</span>
+                  <p className="text-[13px] text-[#705A48] mt-0.5">{desconto(c)}{c.minOrderCents > 0 && ` em pedidos acima de R$ ${(c.minOrderCents/100).toFixed(2)}`}</p>
                 </div>
-                <div className="text-center">
-                  <span className="text-sm text-[#1E1208]">
-                    {c.type === 'percent' ? `${c.value}%` : `R$${c.value}`}
-                  </span>
-                </div>
-                <div className="text-center">
-                  <span className="text-sm text-[#705A48]">
-                    {c.minOrderCents > 0 ? `R$${(c.minOrderCents / 100).toFixed(0)}` : '—'}
-                  </span>
-                </div>
-                <div className="text-center">
-                  <span className="text-[12px] text-[#705A48]">{c.uses} / {c.maxUses}</span>
-                </div>
-                <div className="text-center">
-                  <span className="text-[11px] text-[#B09C8C]">{c.expiresAt || '—'}</span>
-                </div>
-                <div className="flex items-center justify-end gap-3">
-                  <button onClick={() => toggleActive(c.id, c.active)}
-                    className={`text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-1 border transition-colors ${
-                      c.active ? 'border-[#C4714A] text-[#C4714A] hover:bg-[#C4714A] hover:text-white' : 'border-[#E6DFD5] text-[#B09C8C] hover:bg-[#F0EBE1]'
-                    }`}>
-                    {c.active ? '●' : '○'}
-                  </button>
-                  <button onClick={() => remove(c.id)} className="text-[11px] text-red-400 hover:text-red-600 font-semibold transition-colors">✕</button>
-                </div>
+                <button onClick={() => toggleActive(c.id, c.active)}
+                  className={`shrink-0 text-[11px] font-bold px-3 py-1.5 border transition-colors ${
+                    c.active ? 'border-[#C4714A] text-[#C4714A] hover:bg-[#C4714A] hover:text-white' : 'border-[#E6DFD5] text-[#B09C8C] hover:bg-[#F0EBE1]'
+                  }`}>
+                  {c.active ? '✓ Ativo' : 'Pausado'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-[#B09C8C] pt-3 border-t border-[#E6DFD5]">
+                <span>
+                  Usado <strong>{c.uses}</strong> de <strong>{c.maxUses}</strong> vezes
+                  {c.expiresAt && ` · Válido até ${new Date(c.expiresAt + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+                </span>
+                <button onClick={() => remove(c.id)} className="text-red-400 hover:text-red-600 font-semibold transition-colors">Apagar</button>
               </div>
             </div>
           ))}

@@ -42,9 +42,9 @@ export default function PainelProdutosPage() {
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-7">
-        <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Catálogo</p>
+      <div className="mb-6">
         <h1 className="font-display font-normal text-[#1E1208] text-2xl">Produtos</h1>
+        <p className="text-[13px] text-[#B09C8C] mt-1">Gerencie os produtos da sua loja. Produtos visíveis aparecem no site para os clientes.</p>
       </div>
 
       <div className="flex gap-3 mb-5">
@@ -52,7 +52,7 @@ export default function PainelProdutosPage() {
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B09C8C]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
             value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar produto…"
+            placeholder="Digite o nome do produto..."
             className="w-full border border-[#E6DFD5] bg-[#FAF8F5] pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40"
           />
         </div>
@@ -66,7 +66,9 @@ export default function PainelProdutosPage() {
 
       {filtered.length === 0 ? (
         <div className="border border-[#E6DFD5] py-16 text-center bg-[#FAF8F5]">
-          <p className="text-sm text-[#B09C8C]">{search ? 'Nenhum resultado.' : 'Nenhum produto cadastrado.'}</p>
+          <p className="text-4xl mb-3">{search ? '🔍' : '🛍'}</p>
+          <p className="text-sm text-[#B09C8C]">{search ? 'Nenhum produto encontrado com esse nome.' : 'Você ainda não cadastrou nenhum produto.'}</p>
+          {!search && <p className="text-[12px] text-[#C4714A] mt-2 font-semibold">Clique em "+ Novo produto" para começar!</p>}
         </div>
       ) : (
         <div className="bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
@@ -117,7 +119,7 @@ export default function PainelProdutosPage() {
                       : 'border-[#E6DFD5] text-[#B09C8C] hover:bg-[#F0EBE1]'
                   }`}
                 >
-                  {p.active ? 'Ativo' : 'Inativo'}
+                  {p.active ? '✓ Visível' : 'Oculto'}
                 </button>
               </div>
 
@@ -131,7 +133,7 @@ export default function PainelProdutosPage() {
                       : 'border-[#E6DFD5] text-[#B09C8C]'
                   }`}
                 >
-                  {p.active ? 'Ativo' : 'Inativo'}
+                  {p.active ? '✓ Visível' : 'Oculto'}
                 </button>
                 <Link
                   href={`/painel/produtos/${p.id}`}
