@@ -136,7 +136,7 @@ export default function PainelPedidos() {
                 <span className="text-[13px]">👉</span>
                 <div className="flex-1">
                   <p className="text-[12px] font-semibold text-[#1E1208]">Este pedido foi pago e está esperando você!</p>
-                  <p className="text-[11px] text-[#B09C8C]">Clique em "Comecei a separar" quando estiver preparando o pedido.</p>
+                  <p className="text-[11px] text-[#B09C8C]">Clique em &quot;Comecei a separar&quot; quando estiver preparando o pedido.</p>
                 </div>
                 <button onClick={() => markPreparing(order.id)}
                   className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-[#C4714A] text-white hover:bg-[#A05432] transition-colors">
@@ -150,7 +150,7 @@ export default function PainelPedidos() {
                 <span className="text-[13px]">📦</span>
                 <div className="flex-1">
                   <p className="text-[12px] font-semibold text-[#1E1208]">Pedido sendo separado</p>
-                  <p className="text-[11px] text-[#B09C8C]">Quando estiver embalado e pronto para sair, clique em "Despachar".</p>
+                  <p className="text-[11px] text-[#B09C8C]">Quando estiver embalado e pronto para sair, clique em &quot;Despachar&quot;.</p>
                 </div>
                 <button onClick={() => dispatch(order.id)} disabled={dispatching === order.id}
                   className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-[#1E1208] text-white hover:bg-[#1E1208]/80 transition-colors disabled:opacity-50">

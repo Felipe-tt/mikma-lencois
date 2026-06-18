@@ -369,7 +369,7 @@ function TimelineEditor({ value, onChange }: { value: string; onChange: (v: stri
     <div className="flex flex-col gap-3">
       {items.length === 0 && (
         <p className="text-[12px] text-[#B09C8C] text-center py-4 border border-dashed border-[#E6DFD5]">
-          Nenhum marco adicionado ainda. Clique em "Adicionar marco" para começar.
+          Nenhum marco adicionado ainda. Clique em &quot;Adicionar marco&quot; para começar.
         </p>
       )}
       {items.map((item, i) => (

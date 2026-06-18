@@ -68,7 +68,7 @@ export default function PainelProdutosPage() {
         <div className="border border-[#E6DFD5] py-16 text-center bg-[#FAF8F5]">
           <p className="text-4xl mb-3">{search ? '🔍' : '🛍'}</p>
           <p className="text-sm text-[#B09C8C]">{search ? 'Nenhum produto encontrado com esse nome.' : 'Você ainda não cadastrou nenhum produto.'}</p>
-          {!search && <p className="text-[12px] text-[#C4714A] mt-2 font-semibold">Clique em "+ Novo produto" para começar!</p>}
+          {!search && <p className="text-[12px] text-[#C4714A] mt-2 font-semibold">Clique em &quot;+ Novo produto&quot; para começar!</p>}
         </div>
       ) : (
         <div className="bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
