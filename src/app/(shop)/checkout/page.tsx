@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
@@ -9,21 +9,30 @@ import type { Cart, Address } from '@/types';
 import { PIXModal } from '@/components/checkout/PIXModal';
 import { CheckoutSkeleton } from '@/components/ui/Skeleton';
 import { maskCep, maskCpf, maskPhone, onlyDigits, isValidCpf, isValidPhone, isValidCep, BR_STATES } from '@/lib/masks';
+import type { ShippingOption } from '@/app/api/shipping/quote/route';
 
 interface CustomerData { name: string; cpf: string; phone: string }
 
 export default function CheckoutPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [cart, setCart]       = useState<Cart | null>(null);
-  const [cartLoading, setCL]  = useState(true);
-  const [addr, setAddr]       = useState<Address>({ cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' });
-  const [customer, setCustomer] = useState<CustomerData>({ name: '', cpf: '', phone: '' });
-  const [cepLoading, setCepL] = useState(false);
-  const [submitting, setSub]  = useState(false);
-  const [errors, setErrors]   = useState<Record<string, string>>({});
-  const [apiError, setApiErr] = useState('');
-  const [pixData, setPixData] = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string } | null>(null);
+
+  const [cart, setCart]           = useState<Cart | null>(null);
+  const [cartLoading, setCL]      = useState(true);
+  const [addr, setAddr]           = useState<Address>({ cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' });
+  const [customer, setCustomer]   = useState<CustomerData>({ name: '', cpf: '', phone: '' });
+  const [cepLoading, setCepL]     = useState(false);
+  const [errors, setErrors]       = useState<Record<string, string>>({});
+  const [apiError, setApiErr]     = useState('');
+  const [submitting, setSub]      = useState(false);
+  const [pixData, setPixData]     = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string } | null>(null);
+
+  // Shipping
+  const [shippingOptions, setShipOpts]  = useState<ShippingOption[]>([]);
+  const [selectedShipping, setSelShip]  = useState<ShippingOption | null>(null);
+  const [shippingLoading, setShipLoad]  = useState(false);
+  const [shippingError, setShipErr]     = useState('');
+  const [quotedCep, setQuotedCep]       = useState('');
 
   useEffect(() => {
     if (loading) return;
@@ -48,14 +57,47 @@ export default function CheckoutPage() {
     return unsub;
   }, [user, loading, router]);
 
+  // Quote shipping whenever CEP is complete
+  const quoteShipping = useCallback(async (cep: string) => {
+    const clean = onlyDigits(cep);
+    if (clean.length !== 8 || clean === quotedCep) return;
+    setShipLoad(true);
+    setShipErr('');
+    setShipOpts([]);
+    setSelShip(null);
+    try {
+      const token = await auth.currentUser!.getIdToken();
+      const res = await fetch('/api/shipping/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ destCep: clean }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        setShipErr(e.error ?? 'Erro ao calcular frete');
+        return;
+      }
+      const data: { options: ShippingOption[] } = await res.json();
+      setShipOpts(data.options);
+      setSelShip(data.options[0] ?? null); // default = cheapest
+      setQuotedCep(clean);
+    } catch {
+      setShipErr('Erro ao calcular frete. Tente novamente.');
+    } finally {
+      setShipLoad(false);
+    }
+  }, [quotedCep]);
+
   async function lookupCep(raw: string) {
     const c = onlyDigits(raw);
     if (c.length !== 8) return;
     setCepL(true);
     try {
       const d = await (await fetch(`https://viacep.com.br/ws/${c}/json/`)).json();
-      if (!d.erro) setAddr(a => ({ ...a, street: d.logradouro, neighborhood: d.bairro, city: d.localidade, state: d.uf }));
+      if (!d.erro) setAddr(a => ({ ...a, street: d.logradouro ?? a.street, neighborhood: d.bairro ?? a.neighborhood, city: d.localidade ?? a.city, state: d.uf ?? a.state }));
     } finally { setCepL(false); }
+    // Trigger quote after address lookup
+    quoteShipping(raw);
   }
 
   function validate(): boolean {
@@ -69,17 +111,17 @@ export default function CheckoutPage() {
     if (!addr.neighborhood.trim())     e.neighborhood = 'Bairro é obrigatório';
     if (!addr.city.trim())             e.city  = 'Cidade é obrigatória';
     if (!addr.state)                   e.state = 'Estado é obrigatório';
+    if (!selectedShipping)             e.shipping = 'Selecione uma opção de frete';
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate() || !user || !cart) return;
+    if (!validate() || !user || !cart || !selectedShipping) return;
     setSub(true); setApiErr('');
     try {
       const token = await auth.currentUser!.getIdToken();
-      // Salva dados do usuário para uso no PIX
       await setDoc(doc(db, 'users', user.uid), {
         address: addr,
         name:    customer.name,
@@ -90,7 +132,15 @@ export default function CheckoutPage() {
       const res = await fetch('/api/payment/create-pix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ address: addr }),
+        body: JSON.stringify({
+          address: addr,
+          shipping: {
+            carrier:      selectedShipping.carrier,
+            label:        selectedShipping.label,
+            priceCents:   selectedShipping.priceCents,
+            estimatedDays: selectedShipping.estimatedDays,
+          },
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar PIX');
       setPixData(await res.json());
@@ -99,8 +149,10 @@ export default function CheckoutPage() {
     } finally { setSub(false); }
   }
 
-  const items = cart?.items ?? [];
-  const total = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const items      = cart?.items ?? [];
+  const subtotal   = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const shippingCents = selectedShipping?.priceCents ?? 0;
+  const total      = subtotal + shippingCents;
 
   function field(key: string) {
     return errors[key] ? 'input border-red-400 focus:border-red-400 focus:ring-red-100' : 'input';
@@ -108,7 +160,7 @@ export default function CheckoutPage() {
 
   return (
     <div>
-      {/* ── Steps bar — more polished ── */}
+      {/* ── Steps bar ── */}
       <div className="border-b border-mist bg-paper sticky top-0 z-20">
         <div className="container-shop py-4">
           <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
@@ -121,7 +173,6 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* ── Page title — integrated ── */}
       <div className="border-b border-mist bg-warm/60">
         <div className="container-shop py-10">
           <p className="page-label mb-3">Compra</p>
@@ -149,88 +200,73 @@ export default function CheckoutPage() {
 
               {/* ── Seção 1: Dados pessoais ── */}
               <section className="flex flex-col gap-5">
-                <div className="flex items-center gap-3 pb-3 border-b border-mist">
-                  <span className="w-6 h-6 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
-                  <h2 className="font-display font-normal text-ink text-xl">Seus dados</h2>
-                </div>
+                <SectionHeader num={1} label="Seus dados" />
 
                 <div>
                   <label className="label">Nome completo</label>
-                  <input
-                    type="text" value={customer.name} required
+                  <input type="text" value={customer.name} required
                     onChange={e => setCustomer(c => ({ ...c, name: e.target.value }))}
-                    className={field('name')} placeholder="Como está no CPF"
-                  />
+                    className={field('name')} placeholder="Como no documento" />
                   {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="label">CPF</label>
-                    <input
-                      type="text" inputMode="numeric" value={customer.cpf} required
+                    <input type="text" value={customer.cpf} required inputMode="numeric"
                       onChange={e => setCustomer(c => ({ ...c, cpf: maskCpf(e.target.value) }))}
-                      className={field('cpf')} placeholder="000.000.000-00" maxLength={14}
-                    />
-                    {errors.cpf
-                      ? <p className="text-[11px] text-red-500 mt-1">{errors.cpf}</p>
-                      : <p className="text-[10px] text-faint mt-1">Para emissão de nota fiscal</p>
-                    }
+                      className={field('cpf')} placeholder="000.000.000-00" maxLength={14} />
+                    {errors.cpf && <p className="text-xs text-red-500 mt-1">{errors.cpf}</p>}
                   </div>
                   <div>
-                    <label className="label">Celular / WhatsApp</label>
-                    <input
-                      type="text" inputMode="tel" value={customer.phone} required
+                    <label className="label">WhatsApp / Celular</label>
+                    <input type="tel" value={customer.phone} required
                       onChange={e => setCustomer(c => ({ ...c, phone: maskPhone(e.target.value) }))}
-                      className={field('phone')} placeholder="(48) 99999-9999" maxLength={15}
-                    />
+                      className={field('phone')} placeholder="(47) 99999-0000" maxLength={15} />
                     {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
                   </div>
                 </div>
               </section>
 
-              {/* ── Seção 2: Endereço ── */}
+              {/* ── Seção 2: Endereço de entrega ── */}
               <section className="flex flex-col gap-5">
-                <div className="flex items-center gap-3 pb-3 border-b border-mist">
-                  <span className="w-6 h-6 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
-                  <h2 className="font-display font-normal text-ink text-xl">Endereço de entrega</h2>
+                <SectionHeader num={2} label="Endereço de entrega" />
+
+                <div>
+                  <label className="label">CEP</label>
+                  <div className="relative">
+                    <input
+                      type="text" value={addr.cep} required inputMode="numeric"
+                      onChange={e => {
+                        const v = maskCep(e.target.value);
+                        setAddr(a => ({ ...a, cep: v }));
+                        if (onlyDigits(v).length === 8) lookupCep(v);
+                      }}
+                      className={field('cep')} placeholder="00000-000" maxLength={9}
+                    />
+                    {(cepLoading || shippingLoading) && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <span className="spinner" />
+                      </span>
+                    )}
+                  </div>
+                  {errors.cep && <p className="text-xs text-red-500 mt-1">{errors.cep}</p>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-[1fr_auto] gap-3">
                   <div>
-                    <label className="label">CEP</label>
-                    <div className="relative">
-                      <input
-                        type="text" inputMode="numeric" required
-                        value={addr.cep}
-                        onChange={e => {
-                          const masked = maskCep(e.target.value);
-                          setAddr(a => ({ ...a, cep: masked }));
-                          lookupCep(masked);
-                        }}
-                        className={field('cep')} placeholder="00000-000" maxLength={9}
-                      />
-                      {cepLoading && (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <span className="spinner-dark" />
-                        </span>
-                      )}
-                    </div>
-                    {errors.cep && <p className="text-xs text-red-500 mt-1">{errors.cep}</p>}
+                    <label className="label">Cidade</label>
+                    <input type="text" required value={addr.city} onChange={e => setAddr(a => ({ ...a, city: e.target.value }))} className={field('city')} />
+                    {errors.city && <p className="text-xs text-red-500 mt-1">{errors.city}</p>}
                   </div>
-
-                  <div>
+                  <div className="w-24">
                     <label className="label">Estado (UF)</label>
                     <div className="relative">
-                      <select
-                        value={addr.state} required
-                        onChange={e => setAddr(a => ({ ...a, state: e.target.value }))}
-                        className={`select ${errors.state ? 'border-red-400' : ''}`}
-                      >
-                        <option value="">Selecione</option>
+                      <select value={addr.state} required onChange={e => setAddr(a => ({ ...a, state: e.target.value }))} className={`select ${errors.state ? 'border-red-400' : ''}`}>
+                        <option value="">—</option>
                         {BR_STATES.map(uf => <option key={uf} value={uf}>{uf}</option>)}
                       </select>
-                      <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                      <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-faint" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
                     </div>
                     {errors.state && <p className="text-xs text-red-500 mt-1">{errors.state}</p>}
                   </div>
@@ -254,28 +290,93 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Bairro</label>
-                    <input type="text" required value={addr.neighborhood} onChange={e => setAddr(a => ({ ...a, neighborhood: e.target.value }))} className={field('neighborhood')} />
-                    {errors.neighborhood && <p className="text-xs text-red-500 mt-1">{errors.neighborhood}</p>}
-                  </div>
-                  <div>
-                    <label className="label">Cidade</label>
-                    <input type="text" required value={addr.city} onChange={e => setAddr(a => ({ ...a, city: e.target.value }))} className={field('city')} />
-                    {errors.city && <p className="text-xs text-red-500 mt-1">{errors.city}</p>}
-                  </div>
+                <div>
+                  <label className="label">Bairro</label>
+                  <input type="text" required value={addr.neighborhood} onChange={e => setAddr(a => ({ ...a, neighborhood: e.target.value }))} className={field('neighborhood')} />
+                  {errors.neighborhood && <p className="text-xs text-red-500 mt-1">{errors.neighborhood}</p>}
                 </div>
               </section>
 
-              <button type="submit" disabled={submitting} className="btn-primary-lg w-full">
+              {/* ── Seção 3: Frete ── */}
+              <section className="flex flex-col gap-4">
+                <SectionHeader num={3} label="Frete" />
+
+                {!isValidCep(addr.cep) && (
+                  <p className="text-sm text-faint">Preencha o CEP acima para ver as opções de entrega.</p>
+                )}
+
+                {shippingLoading && (
+                  <div className="flex items-center gap-3 text-sm text-mid">
+                    <span className="spinner" />
+                    Calculando opções de entrega…
+                  </div>
+                )}
+
+                {shippingError && (
+                  <p className="text-sm text-red-600">{shippingError}</p>
+                )}
+
+                {shippingOptions.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {shippingOptions.map(opt => (
+                      <button
+                        key={opt.carrier}
+                        type="button"
+                        onClick={() => setSelShip(opt)}
+                        className={`flex items-center justify-between w-full px-4 py-3.5 border text-left transition-colors ${
+                          selectedShipping?.carrier === opt.carrier
+                            ? 'border-ink bg-ink/5'
+                            : 'border-mist bg-white hover:border-ink/30 hover:bg-warm/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Radio indicator */}
+                          <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                            selectedShipping?.carrier === opt.carrier ? 'border-ink' : 'border-mist'
+                          }`}>
+                            {selectedShipping?.carrier === opt.carrier && (
+                              <span className="w-2 h-2 rounded-full bg-ink" />
+                            )}
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[13px] font-medium text-ink">{opt.label}</span>
+                              {opt.tag === 'local' && (
+                                <span className="text-[10px] font-bold tracking-wide bg-green-100 text-green-700 px-1.5 py-0.5">LOCAL</span>
+                              )}
+                              {opt.tag === 'rapido' && (
+                                <span className="text-[10px] font-bold tracking-wide bg-amber-100 text-amber-700 px-1.5 py-0.5">RÁPIDO</span>
+                              )}
+                              {opt.tag === 'economico' && (
+                                <span className="text-[10px] font-bold tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5">ECONÔMICO</span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-faint mt-0.5">
+                              {opt.estimatedDays === 0 ? 'Entrega hoje' : opt.estimatedDays === 1 ? 'Entrega em 1 dia útil' : `Entrega em até ${opt.estimatedDays} dias úteis`}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`text-[13px] font-semibold shrink-0 ml-4 ${opt.priceCents === 0 ? 'text-green-600' : 'text-ink'}`}>
+                          {opt.priceCents === 0 ? 'Grátis' : formatCurrency(opt.priceCents)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {errors.shipping && <p className="text-xs text-red-500">{errors.shipping}</p>}
+              </section>
+
+              {/* ── Submit ── */}
+              <button type="submit" disabled={submitting || !selectedShipping} className="btn-primary-lg w-full">
                 {submitting
                   ? <><span className="spinner" /> Gerando PIX…</>
-                  : `Gerar PIX · ${formatCurrency(total)}`
+                  : selectedShipping
+                    ? `Gerar PIX · ${formatCurrency(total)}`
+                    : 'Selecione o frete para continuar'
                 }
               </button>
 
-              {/* Security seals — right below submit */}
               <div className="flex items-center justify-center gap-4 -mt-1">
                 <span className="flex items-center gap-1.5 text-[10px] text-faint">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -316,11 +417,25 @@ export default function CheckoutPage() {
 
               <div className="border-t border-mist pt-4 flex flex-col gap-2">
                 <div className="flex justify-between text-[13px] text-mid">
-                  <span>Subtotal</span><span>{formatCurrency(total)}</span>
+                  <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-[12px] text-faint">
-                  <span>Frete</span><span>calculado após o PIX</span>
+                <div className="flex justify-between text-[12px]">
+                  <span className="text-faint">Frete</span>
+                  <span className={selectedShipping ? (selectedShipping.priceCents === 0 ? 'text-green-600 font-medium' : 'text-ink') : 'text-faint'}>
+                    {shippingLoading
+                      ? 'calculando…'
+                      : selectedShipping
+                        ? selectedShipping.priceCents === 0 ? 'Grátis' : formatCurrency(selectedShipping.priceCents)
+                        : isValidCep(addr.cep) ? 'selecione acima' : 'informe o CEP'
+                    }
+                  </span>
                 </div>
+                {selectedShipping && (
+                  <div className="flex justify-between text-[11px] text-faint">
+                    <span>{selectedShipping.label}</span>
+                    <span>{selectedShipping.estimatedDays === 0 ? 'hoje' : `${selectedShipping.estimatedDays} d.u.`}</span>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-mist pt-4 flex justify-between items-baseline">
@@ -348,10 +463,16 @@ export default function CheckoutPage() {
   );
 }
 
-function StepConnector({ done }: { done?: boolean }) {
+function SectionHeader({ num, label }: { num: number; label: string }) {
   return (
-    <div className={`h-px w-8 sm:w-12 shrink-0 mx-1 ${done ? 'bg-ink/30' : 'bg-mist'}`} />
+    <div className="flex items-center gap-3 pb-3 border-b border-mist">
+      <span className="w-6 h-6 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0">{num}</span>
+      <h2 className="font-display font-normal text-ink text-xl">{label}</h2>
+    </div>
   );
+}
+function StepConnector({ done }: { done?: boolean }) {
+  return <div className={`h-px w-8 sm:w-12 shrink-0 mx-1 ${done ? 'bg-ink/30' : 'bg-mist'}`} />;
 }
 function StepDone({ label }: { label: string }) {
   return (

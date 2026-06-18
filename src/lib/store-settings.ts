@@ -50,6 +50,8 @@ export type StoreSettings = {
   dispatchCutoffTime: string;
   freeShippingThresholdCents: number;
   lowStockThreshold: number;
+  // Payment
+  creditMinOrderCents: number; // 0 = desabilitado; >0 = valor mínimo para habilitar cartão
   foundedYear: string;
   // Hero
   heroLine1: string;
@@ -122,6 +124,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   dispatchCutoffTime: '17:00',
   freeShippingThresholdCents: 0,
   lowStockThreshold: 3,
+  creditMinOrderCents: 0,
   foundedYear: '2018',
   heroLine1: '',
   heroLine2: '',

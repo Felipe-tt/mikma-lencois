@@ -50,58 +50,34 @@ export async function POST(req: NextRequest) {
 
   console.log('Webhook received:', eventType);
 
-  if (eventType === 'transparent.completed') {
-    const transparent = data.transparent;
-    const txId = transparent.id as string;
-    // externalId was set to orderId when creating the transparent
-    const orderId = transparent.externalId as string | undefined;
-
-    if (!orderId) {
-      console.error('transparent.completed missing externalId — txId:', txId);
-      return NextResponse.json({ ok: true });
-    }
-
+  // ── Helper: confirm an order as paid ─────────────────────────────────────
+  async function confirmOrder(orderId: string, txId: string, note: string) {
     const orderRef = adminDb.collection('orders').doc(orderId);
     const orderSnap = await orderRef.get();
 
     if (!orderSnap.exists) {
       console.error('Order not found:', orderId);
-      return NextResponse.json({ ok: true });
+      return;
     }
 
     const order = orderSnap.data()!;
 
-    // Idempotent — skip if already processed
     if (order.status !== 'pending_payment') {
       console.log('Order already processed:', orderId, '— status:', order.status);
-      return NextResponse.json({ ok: true });
-    }
-
-    // Replay attack protection — verifica se txId já foi processado
-    if (order.payment?.txId && order.payment.txId === txId && order.status === 'paid') {
-      console.log('Replay attack detected — txId already processed:', txId);
-      return NextResponse.json({ ok: true });
+      return;
     }
 
     const now = new Date().toISOString();
-    const newTimelineEvent = {
-      status: 'paid',
-      at: now,
-      note: `PIX confirmado · txId: ${txId.slice(-8)}`,
-    };
-
     const batch = adminDb.batch();
 
-    // 1. Mark order as paid + append timeline event
     batch.update(orderRef, {
       status: 'paid',
       'payment.paidAt': FieldValue.serverTimestamp(),
       'payment.txId': txId,
       updatedAt: FieldValue.serverTimestamp(),
-      timeline: FieldValue.arrayUnion(newTimelineEvent),
+      timeline: FieldValue.arrayUnion({ status: 'paid', at: now, note }),
     });
 
-    // 2. Confirm inventory deduction (reserved -> sold)
     for (const item of order.items as Array<{ sku: string; quantity: number }>) {
       const invRef = adminDb.collection('inventory').doc(item.sku);
       batch.update(invRef, {
@@ -111,7 +87,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 3. Seller notification
     const notifRef = adminDb
       .collection('notifications')
       .doc('seller')
@@ -126,9 +101,36 @@ export async function POST(req: NextRequest) {
     });
 
     await batch.commit();
-    console.log(`Order ${orderId} confirmed — transparent.completed`);
+    console.log(`Order ${orderId} confirmed — ${note}`);
   }
 
-  // Always 200 for other event types (transparent.refunded, etc.)
+  if (eventType === 'transparent.completed') {
+    const transparent = data.transparent;
+    const txId = transparent.id as string;
+    const orderId = transparent.externalId as string | undefined;
+
+    if (!orderId) {
+      console.error('transparent.completed missing externalId — txId:', txId);
+      return NextResponse.json({ ok: true });
+    }
+
+    await confirmOrder(orderId, txId, `PIX confirmado · txId: ${txId.slice(-8)}`);
+  }
+
+  if (eventType === 'checkout.completed') {
+    // Card checkout — data envelope has { checkout: { id, externalId, ... } }
+    const checkoutData = (data as Record<string, unknown>).checkout as Record<string, unknown> | undefined;
+    const txId = (checkoutData?.id ?? '') as string;
+    const orderId = checkoutData?.externalId as string | undefined;
+
+    if (!orderId) {
+      console.error('checkout.completed missing externalId — txId:', txId);
+      return NextResponse.json({ ok: true });
+    }
+
+    await confirmOrder(orderId, txId, `Cartão confirmado · checkoutId: ${txId.slice(-8)}`);
+  }
+
+  // Always 200 for other event types (transparent.refunded, subscription.*, etc.)
   return NextResponse.json({ ok: true });
 }

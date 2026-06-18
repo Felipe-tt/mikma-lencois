@@ -8,6 +8,7 @@ export async function GET() {
     const s = await getSettings();
     return NextResponse.json({
       freeShippingThresholdCents: s.freeShippingThresholdCents ?? 0,
+      creditMinOrderCents: s.creditMinOrderCents ?? 0,
       storeName: s.storeName,
       storeCity: s.storeCity,
       storePhone: s.storePhone,

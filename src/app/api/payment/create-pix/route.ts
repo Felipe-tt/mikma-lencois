@@ -29,12 +29,22 @@ export async function POST(req: NextRequest) {
       return tooManyRequests(rateLimitRetryAfter(`pix:uid:${uid}`));
     }
 
-    const { items, address } = await req.json();
-    // NOTE: amountCents is NOT trusted from client — calculated server-side from Firestore prices
+    const { address, shipping } = await req.json();
+    // NOTE: product prices are NOT trusted from client — calculated server-side from Firestore prices
+    // Shipping cost comes from client but carrier is validated against allowed list
 
     if (!address) {
       return NextResponse.json({ error: 'Endereço obrigatório' }, { status: 400 });
     }
+
+    // Validate shipping carrier
+    const VALID_CARRIERS = ['uber_direct', 'disk_tenha', 'correios_pac', 'correios_sedex', 'melhor_envio_1', 'melhor_envio_2'];
+    if (!shipping || typeof shipping.carrier !== 'string' || !VALID_CARRIERS.includes(shipping.carrier)) {
+      return NextResponse.json({ error: 'Opção de frete inválida' }, { status: 400 });
+    }
+    const shippingCents: number = typeof shipping.priceCents === 'number' && shipping.priceCents >= 0
+      ? Math.round(shipping.priceCents)
+      : 0;
 
     if (!ABACATEPAY_KEY) {
       console.error('ABACATEPAY_API_KEY not set');
@@ -85,7 +95,8 @@ export async function POST(req: NextRequest) {
       return { ...ci, unitPrice: price };
     });
 
-    const amountCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const productsCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const amountCents = productsCents + shippingCents;
 
     if (amountCents <= 0) {
       return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
@@ -100,9 +111,16 @@ export async function POST(req: NextRequest) {
       items: verifiedItems,
       address,
       status: 'pending_payment',
+      productsCents,
+      shippingCents,
       totalCents: amountCents,
       payment: { method: 'pix' },
-      delivery: {},
+      delivery: {
+        carrier: shipping.carrier,
+        label: shipping.label ?? '',
+        priceCents: shippingCents,
+        estimatedDays: shipping.estimatedDays ?? null,
+      },
       timeline: [
         { status: 'created', at: now, note: 'Pedido criado' },
         { status: 'payment_initiated', at: now, note: 'PIX gerado' },
@@ -130,10 +148,9 @@ export async function POST(req: NextRequest) {
     } : undefined;
 
     const pixPayload: Record<string, unknown> = {
-      method: 'PIX',
       data: {
         amount: amountCents,
-        description: `Pedido #${orderId.slice(-8).toUpperCase()}`,
+        description: `Pedido #${orderId.slice(-8).toUpperCase()} · frete ${shipping.carrier}`,
         expiresIn: 900,
         externalId: orderId,
         ...(customerData ? { customer: customerData } : {}),

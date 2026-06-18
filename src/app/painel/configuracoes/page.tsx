@@ -272,6 +272,18 @@ export default function ConfiguracoesPage() {
               hint={`O produto vai aparecer como "Últimas unidades" quando restar ${settings.lowStockThreshold} ou menos`}
             />
           </Section>
+
+          <Section title="Pagamento por Cartão" desc="Habilite o cartão de crédito a partir de um valor mínimo de pedido">
+            <NumField
+              label="Valor mínimo para cartão de crédito (R$) — 0 desativa"
+              value={settings.creditMinOrderCents / 100}
+              onChange={v => set('creditMinOrderCents', Math.round(v * 100))}
+              min={0}
+              hint={settings.creditMinOrderCents === 0
+                ? 'Cartão desativado — apenas PIX disponível no checkout'
+                : `Cartão habilitado para pedidos acima de R$ ${(settings.creditMinOrderCents / 100).toFixed(2)}`}
+            />
+          </Section>
         </>}
       </div>
 
