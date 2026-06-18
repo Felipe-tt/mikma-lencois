@@ -14,9 +14,7 @@ let _list: ColorEntry[] | null = null;
 
 function getDatabase(): { find: typeof _find; list: ColorEntry[] } {
   if (!_find || !_list) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const list = require('color-name-list') as ColorEntry[];
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const nc = require('nearest-color') as {
       from: (m: Record<string, string>) => (h: string) => { name: string; distance: number };
     };
