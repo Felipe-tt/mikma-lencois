@@ -2,59 +2,50 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, onSnapshot, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, deleteDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
-import type { Order, OrderTimelineEvent } from '@/types';
+import type { Order, OrderTimelineEvent, User } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending_payment: 'Aguardando Pagamento',
   paid: 'Pago',
-  preparing: 'Em Preparo',
-  shipped: 'Despachado',
+  preparing: 'Separando',
+  shipped: 'A caminho',
   delivered: 'Entregue',
   cancelled: 'Cancelado',
 };
 const STATUS_BADGE: Record<Order['status'], string> = {
-  pending_payment: 'badge-pending',
-  paid: 'badge-paid',
-  preparing: 'badge-preparing',
-  shipped: 'badge-shipped',
-  delivered: 'badge-delivered',
-  cancelled: 'badge-cancelled',
+  pending_payment: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
+  shipped: 'badge-shipped', delivered: 'badge-delivered', cancelled: 'badge-cancelled',
 };
 const STATUS_NEXT: Partial<Record<Order['status'], Order['status']>> = {
-  paid: 'preparing',
-  preparing: 'shipped',
-  shipped: 'delivered',
+  paid: 'preparing', preparing: 'shipped', shipped: 'delivered',
 };
-
 const TIMELINE_LABEL: Record<string, string> = {
   created: 'Pedido criado',
-  payment_initiated: 'PIX gerado',
+  payment_initiated: 'PIX gerado — cliente viu o QR code',
   payment_confirmed: 'Pagamento confirmado',
-  payment_expired: 'PIX expirado',
+  payment_expired: 'PIX expirou sem pagamento',
   payment_failed: 'Pagamento recusado',
   pending_payment: 'Aguardando pagamento',
-  paid: 'Pago',
-  preparing: 'Em preparo',
-  shipped: 'Despachado',
-  delivered: 'Entregue',
-  cancelled: 'Cancelado',
+  paid: 'Pagamento recebido',
+  preparing: 'Começou a separar o pedido',
+  shipped: 'Pedido despachado',
+  delivered: 'Pedido entregue ao cliente',
+  cancelled: 'Pedido cancelado',
+};
+const TIMELINE_ICON: Record<string, string> = {
+  created: '🛍', payment_initiated: '⏳', payment_confirmed: '✅',
+  payment_expired: '⌛', payment_failed: '❌', pending_payment: '⏳',
+  paid: '💰', preparing: '📦', shipped: '🚚', delivered: '🎉', cancelled: '✕',
 };
 const TIMELINE_COLOR: Record<string, string> = {
-  created: 'bg-faint/40',
-  payment_initiated: 'bg-blue-400',
-  payment_confirmed: 'bg-emerald-400',
-  payment_expired: 'bg-orange-400',
-  payment_failed: 'bg-red-400',
-  pending_payment: 'bg-yellow-400',
-  paid: 'bg-emerald-400',
-  preparing: 'bg-blue-400',
-  shipped: 'bg-purple-400',
-  delivered: 'bg-emerald-500',
-  cancelled: 'bg-red-400',
+  created: 'bg-[#E6DFD5]', payment_initiated: 'bg-blue-300', payment_confirmed: 'bg-emerald-400',
+  payment_expired: 'bg-orange-400', payment_failed: 'bg-red-400', pending_payment: 'bg-yellow-300',
+  paid: 'bg-emerald-400', preparing: 'bg-blue-400', shipped: 'bg-purple-400',
+  delivered: 'bg-emerald-500', cancelled: 'bg-red-400',
 };
 
 function formatDateTime(iso: string) {
@@ -66,25 +57,63 @@ function formatDateTime(iso: string) {
   } catch { return iso; }
 }
 
+function Row({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between items-start gap-4 py-2.5 border-b border-[#F0EBE1] last:border-0">
+      <span className="text-[12px] text-[#B09C8C] shrink-0">{label}</span>
+      <span className={`text-[13px] text-[#1E1208] text-right ${mono ? 'font-mono text-[11px] break-all' : 'font-medium'}`}>{value}</span>
+    </div>
+  );
+}
+
+function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
+        <span>{icon}</span>
+        <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">{title}</p>
+      </div>
+      <div className="px-5 py-1">{children}</div>
+    </div>
+  );
+}
+
 export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
+  const [customer, setCustomer] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
+  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
       router.push('/entrar'); return;
     }
-    return onSnapshot(doc(db, 'orders', id), snap => {
-      if (snap.exists()) setOrder({ id: snap.id, ...snap.data() } as Order);
+    return onSnapshot(doc(db, 'orders', id), async snap => {
+      if (snap.exists()) {
+        const o = { id: snap.id, ...snap.data() } as Order;
+        setOrder(o);
+        // load customer
+        if (o.userId) {
+          const uSnap = await getDoc(doc(db, 'users', o.userId));
+          if (uSnap.exists()) setCustomer({ uid: uSnap.id, ...uSnap.data() } as User);
+        }
+      }
       setLoading(false);
     });
   }, [id, user, router]);
+
+  function copy(text: string, key: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  }
 
   async function advanceStatus() {
     if (!order) return;
@@ -95,8 +124,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       const now = new Date().toISOString();
       const newEvent: OrderTimelineEvent = { status: next, at: now };
       const update: Record<string, unknown> = {
-        status: next,
-        updatedAt: serverTimestamp(),
+        status: next, updatedAt: serverTimestamp(),
         timeline: [...(order.timeline ?? []), newEvent],
       };
       if (next === 'shipped' && trackingCode) {
@@ -124,12 +152,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   async function handleDelete() {
     if (!order || order.status !== 'cancelled') return;
-    if (!confirm('Excluir permanentemente este pedido cancelado?')) return;
+    if (!confirm('Apagar permanentemente este pedido? Não tem como desfazer.')) return;
     setDeleting(true);
-    try {
-      await deleteDoc(doc(db, 'orders', id));
-      router.push('/painel/pedidos');
-    } catch { setDeleting(false); }
+    try { await deleteDoc(doc(db, 'orders', id)); router.push('/painel/pedidos'); }
+    catch { setDeleting(false); }
   }
 
   if (loading) return (
@@ -138,103 +164,101 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     </div>
   );
 
-  if (!order) return <p className="text-sm text-faint py-8 text-center">Pedido não encontrado.</p>;
+  if (!order) return <p className="text-sm text-[#B09C8C] py-8 text-center">Pedido não encontrado.</p>;
 
   const nextStatus = STATUS_NEXT[order.status];
-  const timeline = order.timeline ?? [];
+  const timeline = [...(order.timeline ?? [])].reverse();
+  const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
 
   return (
     <div className="max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-faint active:text-ink transition-colors p-1 -ml-1">
+        <button onClick={() => router.back()} className="text-[#B09C8C] hover:text-[#1E1208] transition-colors p-1 -ml-1">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
         </button>
-        <h1 className="font-display font-normal text-ink text-xl flex-1">
-          #{order.id.slice(-8).toUpperCase()}
-        </h1>
-        <span className={STATUS_BADGE[order.status] ?? 'badge badge-pending'}>
+        <div className="flex-1">
+          <h1 className="font-display font-normal text-[#1E1208] text-xl">Pedido #{order.id.slice(-8).toUpperCase()}</h1>
+          <p className="text-[11px] text-[#B09C8C]">Criado em {formatDateTime(order.createdAt)}</p>
+        </div>
+        <span className={STATUS_BADGE[order.status] ?? 'badge'}>
           {STATUS_LABELS[order.status]}
         </span>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
 
-        {/* ── Timeline de pagamento ── */}
-        {timeline.length > 0 && (
-          <div className="bg-paper border border-mist p-4">
-            <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-4">Timeline</p>
-            <div className="relative">
-              {/* linha vertical */}
-              <div className="absolute left-[7px] top-2 bottom-2 w-px bg-mist" />
-              <div className="flex flex-col gap-3.5">
-                {timeline.map((ev, i) => (
-                  <div key={i} className="flex items-start gap-3 relative">
-                    <div className={`w-3 h-3 shrink-0 mt-1 ${TIMELINE_COLOR[ev.status] ?? 'bg-faint/40'}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-ink leading-snug">
-                        {TIMELINE_LABEL[ev.status] ?? ev.status}
-                      </p>
-                      {ev.note && <p className="text-xs text-mid mt-0.5">{ev.note}</p>}
-                      <p className="text-xs text-faint mt-0.5 tabular-nums">{formatDateTime(ev.at)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* ── Alerta de ação necessária ── */}
+        {order.status === 'paid' && (
+          <div className="border-2 border-[#C4714A] bg-[#C4714A]/5 px-5 py-4">
+            <p className="text-[14px] font-bold text-[#1E1208] mb-1">Este pedido foi pago e está esperando você!</p>
+            <p className="text-[12px] text-[#705A48] mb-3">Comece a separar os itens e clique no botão abaixo quando terminar.</p>
+            <button onClick={advanceStatus} disabled={updating}
+              className="w-full bg-[#C4714A] text-white text-[13px] font-bold py-3 hover:bg-[#A05432] disabled:opacity-50 transition-colors">
+              {updating ? 'Salvando…' : 'Comecei a separar o pedido'}
+            </button>
+          </div>
+        )}
+
+        {order.status === 'preparing' && (
+          <div className="border border-[#1E1208]/20 bg-[#1E1208]/5 px-5 py-4 flex flex-col gap-3">
+            <p className="text-[13px] font-bold text-[#1E1208]">Pedido sendo separado</p>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">
+                Código de rastreio (opcional — preencha se tiver)
+              </label>
+              <input className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20"
+                placeholder="BR123456789BR" value={trackingCode} onChange={e => setTrackingCode(e.target.value)} />
             </div>
+            <button onClick={dispatchDelivery} disabled={updating}
+              className="w-full border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] disabled:opacity-50 transition-colors">
+              {updating ? 'Processando…' : 'Acionar entrega automática (Uber Direct)'}
+            </button>
+            <button onClick={advanceStatus} disabled={updating}
+              className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors">
+              {updating ? 'Salvando…' : 'Pedido embalado — despachar agora'}
+            </button>
           </div>
         )}
 
-        {/* ── Ações ── */}
-        {(nextStatus || order.status === 'preparing') && (
-          <div className="bg-paper border border-mist p-4 flex flex-col gap-3">
-            <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Gestão do pedido</p>
-            {order.status === 'preparing' && (
-              <div className="flex flex-col gap-2">
-                <label className="label">Código de rastreio</label>
-                <input
-                  className="input font-mono"
-                  placeholder="BR123456789BR"
-                  value={trackingCode}
-                  onChange={e => setTrackingCode(e.target.value)}
-                />
-                <button onClick={dispatchDelivery} disabled={updating}
-                  className="w-full border border-mist text-sm font-medium text-mid py-3 active:bg-warm disabled:opacity-50 transition-colors">
-                  {updating ? 'Processando…' : 'Acionar entrega automática'}
-                </button>
-              </div>
-            )}
-            {nextStatus && (
-              <button onClick={advanceStatus} disabled={updating}
-                className="w-full bg-ink text-paper text-sm font-semibold py-3.5 disabled:opacity-50 active:bg-ink/80 transition-colors">
-                {updating ? 'Salvando…' : `Avançar para: ${STATUS_LABELS[nextStatus]}`}
-              </button>
-            )}
+        {order.status === 'shipped' && (
+          <div className="border border-[#E6DFD5] px-5 py-4">
+            <p className="text-[13px] font-bold text-[#1E1208] mb-3">Pedido a caminho do cliente</p>
+            <button onClick={advanceStatus} disabled={updating}
+              className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors">
+              {updating ? 'Salvando…' : 'Confirmar entrega ao cliente'}
+            </button>
           </div>
         )}
 
-        {/* ── Deletar se cancelado ── */}
-        {order.status === 'cancelled' && (
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="w-full border border-red-200 bg-red-50 text-red-700 text-sm font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors"
-          >
-            {deleting ? 'Excluindo…' : 'Excluir pedido cancelado'}
-          </button>
-        )}
+        {/* ── Cliente ── */}
+        <Card title="Cliente" icon="👤">
+          {customer ? (
+            <>
+              <Row label="Nome" value={customer.name} />
+              <Row label="E-mail" value={customer.email} />
+              <Row label="CPF" value={customer.cpf ? '••••••••••• (criptografado)' : 'Não informado'} />
+              <Row label="Cliente desde" value={formatDateTime(customer.createdAt)} />
+              {customer.address && (
+                <Row label="Endereço cadastrado" value={`${customer.address.street}, ${customer.address.number} — ${customer.address.city}/${customer.address.state}`} />
+              )}
+            </>
+          ) : (
+            <Row label="ID do cliente" value={order.userId} mono />
+          )}
+        </Card>
 
         {/* ── Itens ── */}
         <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
-          <div className="px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-            <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Itens do pedido</p>
+          <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
+            <span>🛍</span>
+            <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Itens do pedido</p>
           </div>
           <div className="divide-y divide-[#E6DFD5]">
             {order.items.map((item, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-                {/* Thumbnail */}
                 {item.image && (
                   <div className="w-10 h-[52px] shrink-0 overflow-hidden bg-[#F0EBE1] border border-[#E6DFD5]">
                     <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
@@ -243,83 +267,135 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-medium text-[#1E1208] leading-snug">{item.productName}</p>
                   <p className="text-[11px] text-[#B09C8C] mt-0.5">
-                    {item.variant.size}{item.variant.color ? ` · ${item.variant.color}` : ''}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''} · ×{item.quantity}
+                    {item.variant.size}{item.variant.color ? ` · ${item.variant.color}` : ''}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}{' '}
+                    · {item.quantity} {item.quantity === 1 ? 'unidade' : 'unidades'} · {formatCurrency(item.unitPrice)} cada
                   </p>
+                  <p className="text-[10px] font-mono text-[#B09C8C]/60 mt-0.5">SKU: {item.sku}</p>
                 </div>
                 <span className="text-[13px] font-semibold text-[#1E1208] shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
               </div>
             ))}
           </div>
-          <div className="flex justify-between px-5 py-4 border-t border-[#E6DFD5] bg-[#F0EAE1]">
-            <span className="text-[13px] font-semibold text-[#1E1208]">Total</span>
-            <span className="font-display text-xl text-[#1E1208]">{formatCurrency(order.totalCents)}</span>
-          </div>
-        </div>
-
-        {/* ── Pagamento + Endereço — side by side on desktop ── */}
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
-            <div className="px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Pagamento</p>
+          <div className="px-5 py-3 border-t border-[#E6DFD5] flex flex-col gap-1.5">
+            <div className="flex justify-between text-[12px] text-[#B09C8C]">
+              <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
             </div>
-            <div className="px-5 py-4 flex flex-col gap-2">
-              <div className="flex justify-between text-[13px]">
-                <span className="text-[#B09C8C]">Método</span>
-                <span className="font-semibold text-[#1E1208] uppercase">{order.payment.method}</span>
+            {order.discountCents ? (
+              <div className="flex justify-between text-[12px] text-emerald-600">
+                <span>Desconto {order.couponCode ? `(cupom ${order.couponCode})` : ''}</span>
+                <span>- {formatCurrency(order.discountCents)}</span>
               </div>
-              {order.payment.txId && (
-                <div className="flex justify-between text-[12px] gap-4">
-                  <span className="text-[#B09C8C] shrink-0">ID</span>
-                  <span className="font-mono text-[#1E1208] truncate">{order.payment.txId}</span>
-                </div>
-              )}
-              {order.payment.paidAt && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-[#B09C8C]">Pago em</span>
-                  <span className="text-[#1E1208] tabular-nums">{formatDateTime(order.payment.paidAt)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
-            <div className="px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Endereço de entrega</p>
-            </div>
-            <div className="px-5 py-4">
-              <address className="text-[13px] text-[#705A48] not-italic leading-relaxed">
-                {order.address.street}, {order.address.number}
-                {order.address.complement ? ` · ${order.address.complement}` : ''}<br />
-                {order.address.neighborhood} · {order.address.city} · {order.address.state}<br />
-                CEP {order.address.cep}
-              </address>
+            ) : null}
+            <div className="flex justify-between pt-2 border-t border-[#E6DFD5]">
+              <span className="text-[13px] font-bold text-[#1E1208]">Total pago</span>
+              <span className="font-display text-xl text-[#1E1208]">{formatCurrency(order.totalCents)}</span>
             </div>
           </div>
         </div>
 
-        {/* ── Rastreio ── */}
-        {order.delivery?.carrier && (
-          <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
-            <div className="px-5 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">Entrega</p>
-            </div>
-            <div className="px-5 py-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[13px] font-semibold text-[#1E1208]">{order.delivery.carrier}</p>
-                {order.delivery.trackingCode && (
-                  <p className="text-[12px] text-[#B09C8C] mt-0.5 font-mono">{order.delivery.trackingCode}</p>
-                )}
-              </div>
-              {order.delivery.trackingCode && (
-                <button
-                  onClick={() => navigator.clipboard.writeText(order.delivery!.trackingCode!)}
-                  className="text-[11px] font-semibold text-[#C4714A] hover:text-[#96501E] transition-colors shrink-0"
-                >
-                  Copiar rastreio
+        {/* ── Pagamento ── */}
+        <Card title="Pagamento" icon="💳">
+          <Row label="Método" value={order.payment.method.toUpperCase()} />
+          <Row label="Status" value={STATUS_LABELS[order.status]} />
+          <Row label="Pago em" value={order.payment.paidAt ? formatDateTime(order.payment.paidAt) : null} />
+          <Row label="ID da transação" value={order.payment.txId} mono />
+          {order.payment.pixCopyPaste && (
+            <div className="py-2.5 border-b border-[#F0EBE1]">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[12px] text-[#B09C8C]">PIX Copia e Cola</span>
+                <button onClick={() => copy(order.payment.pixCopyPaste!, 'pix')}
+                  className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+                  {copied === 'pix' ? '✓ Copiado!' : 'Copiar'}
                 </button>
-              )}
+              </div>
+              <p className="text-[10px] font-mono text-[#B09C8C] break-all bg-[#F0EBE1] px-2 py-1.5 leading-relaxed">
+                {order.payment.pixCopyPaste.slice(0, 80)}…
+              </p>
             </div>
+          )}
+        </Card>
+
+        {/* ── Endereço de entrega ── */}
+        <Card title="Endereço de entrega" icon="📍">
+          <Row label="Rua" value={`${order.address.street}, ${order.address.number}${order.address.complement ? ` — ${order.address.complement}` : ''}`} />
+          <Row label="Bairro" value={order.address.neighborhood} />
+          <Row label="Cidade" value={`${order.address.city} — ${order.address.state}`} />
+          <Row label="CEP" value={order.address.cep} />
+          <div className="py-2.5">
+            <button
+              onClick={() => copy(`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP ${order.address.cep}`, 'address')}
+              className="w-full border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2 hover:bg-[#F0EBE1] transition-colors">
+              {copied === 'address' ? '✓ Endereço copiado!' : 'Copiar endereço completo'}
+            </button>
           </div>
+        </Card>
+
+        {/* ── Entrega / Rastreio ── */}
+        {order.delivery && (
+          <Card title="Entrega" icon="🚚">
+            <Row label="Transportadora" value={order.delivery.carrier ?? 'Não definida'} />
+            <Row label="Despachado em" value={order.delivery.dispatchedAt ? formatDateTime(order.delivery.dispatchedAt) : null} />
+            <Row label="Previsão" value={order.delivery.estimatedDelivery ? formatDateTime(order.delivery.estimatedDelivery) : null} />
+            {order.delivery.trackingCode && (
+              <div className="py-2.5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[12px] text-[#B09C8C]">Código de rastreio</span>
+                  <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
+                    className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+                    {copied === 'tracking' ? '✓ Copiado!' : 'Copiar'}
+                  </button>
+                </div>
+                <p className="font-mono text-[13px] text-[#1E1208] font-bold">{order.delivery.trackingCode}</p>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* ── Histórico do pedido ── */}
+        <Card title="Histórico do pedido" icon="🕐">
+          <div className="py-3">
+            {timeline.length === 0 ? (
+              <p className="text-[12px] text-[#B09C8C] text-center py-3">Sem histórico registrado.</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {timeline.map((ev, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className={`w-2.5 h-2.5 shrink-0 mt-1.5 ${TIMELINE_COLOR[ev.status] ?? 'bg-[#E6DFD5]'}`} />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{TIMELINE_ICON[ev.status] ?? '•'}</span>
+                        <p className="text-[13px] font-semibold text-[#1E1208]">{TIMELINE_LABEL[ev.status] ?? ev.status}</p>
+                      </div>
+                      {ev.note && <p className="text-[12px] text-[#705A48] mt-0.5 ml-7">{ev.note}</p>}
+                      <p className="text-[11px] text-[#B09C8C] mt-0.5 ml-7 tabular-nums">{formatDateTime(ev.at)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* ── Info técnica ── */}
+        <details className="bg-[#FAF8F5] border border-[#E6DFD5]">
+          <summary className="flex items-center gap-2 px-5 py-3.5 cursor-pointer select-none bg-[#F0EAE1] border-b border-[#E6DFD5]">
+            <span>🔧</span>
+            <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Informações técnicas</p>
+          </summary>
+          <div className="px-5 py-1">
+            <Row label="ID do pedido" value={order.id} mono />
+            <Row label="ID do cliente" value={order.userId} mono />
+            <Row label="Criado em" value={formatDateTime(order.createdAt)} />
+            <Row label="Última atualização" value={order.updatedAt ? formatDateTime(order.updatedAt) : null} />
+          </div>
+        </details>
+
+        {/* ── Apagar se cancelado ── */}
+        {order.status === 'cancelled' && (
+          <button onClick={handleDelete} disabled={deleting}
+            className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors">
+            {deleting ? 'Apagando…' : 'Apagar este pedido cancelado'}
+          </button>
         )}
       </div>
     </div>
