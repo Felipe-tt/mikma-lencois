@@ -5,7 +5,7 @@ let cached: StoreSettings | null = null;
 let cachedAt = 0;
 // Aumentado de 1min → 10min: settings raramente mudam e cada leitura
 // consome uma leitura de documento no Firestore (cobra por operação).
-const TTL = 600_000; // 10 minutos
+const TTL = 3_600_000; // 1 hora — settings mudam raramente
 
 export async function getSettings(): Promise<StoreSettings> {
   if (cached && Date.now() - cachedAt < TTL) return cached;

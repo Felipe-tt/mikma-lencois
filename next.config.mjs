@@ -1,25 +1,36 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ['@node-rs/argon2', 'firebase-admin'],
+
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
-      { protocol: 'https', hostname: 'lh3.googleusercontent.com' }
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
-    // Serve WebP e AVIF: arquivos menores, menos bandwidth no Cloud Run
     formats: ['image/avif', 'image/webp'],
+    // Tamanhos usados no app — evita gerar versões desnecessárias
+    deviceSizes: [375, 640, 828, 1080, 1280],
+    imageSizes: [64, 128, 256, 384],
+    // Cache de imagens otimizadas por 7 dias no CDN
+    minimumCacheTTL: 604800,
   },
+
   async headers() {
     return [
       {
-        // Assets estáticos com hash: cache longo → menos requests ao Cloud Run
+        // Assets estáticos com hash: cache de 1 ano (imutáveis)
         source: '/_next/static/(.*)',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
-        // Logos e favicons: cache de 1 dia com revalidação em background
-        source: '/(logo.*|favicon.*|apple-touch-icon.*)',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
+        // Logos e favicons: 7 dias
+        source: '/(logo.*|favicon.*|apple-touch-icon.*|hero-bg.*)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=2592000' }],
+      },
+      {
+        // Fontes: 1 ano
+        source: '/_next/static/media/(.*)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
         source: '/(.*)',
@@ -27,5 +38,5 @@ const nextConfig = {
       },
     ];
   },
-}
-export default nextConfig
+};
+export default nextConfig;

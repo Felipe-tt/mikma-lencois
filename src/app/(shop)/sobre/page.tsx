@@ -1,4 +1,4 @@
-export const revalidate = 600;
+export const revalidate = 86400;
 import { getSettings } from '@/lib/settings';
 import Image from 'next/image';
 

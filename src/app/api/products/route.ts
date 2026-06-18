@@ -35,9 +35,14 @@ async function getSeller(req: NextRequest) {
 }
 
 export async function GET() {
-  const snap = await adminDb.collection('products').orderBy('createdAt', 'desc').get();
+  const snap = await adminDb.collection('products').where('active', '==', true).orderBy('createdAt', 'desc').get();
   const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  return NextResponse.json({ products });
+  return NextResponse.json({ products }, {
+    headers: {
+      // CDN e browser cacheiam 5min; pode revalidar em bg por até 1h
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {

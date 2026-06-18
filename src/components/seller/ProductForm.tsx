@@ -24,27 +24,28 @@ function makeVariantId(size: string, fabric: string, _color?: string) {
 
 // maxW reduzido de 900→720 e qualidade de 0.82→0.75
 // reduz tamanho médio de upload ~40%, economizando Storage e egress do GCS
-function compressImage(file: File, maxW = 720): Promise<{ blob: Blob; dataUrl: string }> {
+function compressImage(file: File, maxW = 600): Promise<{ blob: Blob; dataUrl: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       const scale = Math.min(1, maxW / img.width);
       const canvas = document.createElement('canvas');
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
       canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return reject(new Error('compress failed'));
-          const reader = new FileReader();
-          reader.onload = () => resolve({ blob, dataUrl: reader.result as string });
-          reader.readAsDataURL(blob);
-        },
-        'image/jpeg',
-        0.75, // era 0.82 — reduz ~15% no tamanho sem perda visual perceptível
-      );
-      URL.revokeObjectURL(url);
+      const tryFmt = (fmt: string, q: number) =>
+        new Promise<Blob | null>(res => canvas.toBlob(b => res(b), fmt, q));
+      (async () => {
+        // WebP é 30-60% menor que JPEG
+        let blob = await tryFmt('image/webp', 0.78);
+        if (!blob || blob.size < 100) blob = await tryFmt('image/jpeg', 0.72);
+        if (!blob) return reject(new Error('compress failed'));
+        const r = new FileReader();
+        r.onload = () => resolve({ blob, dataUrl: r.result as string });
+        r.readAsDataURL(blob);
+        URL.revokeObjectURL(url);
+      })();
     };
     img.onerror = reject;
     img.src = url;
@@ -489,7 +490,8 @@ export default function ProductForm({ initial }: Props) {
           // Organizado por ano/mês → facilita política de ciclo de vida no GCS
           const now = new Date();
           const folder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-          const storageRef = ref(storage, `products/${folder}/${Date.now()}_photo.jpg`);
+          const ext = img.blob.type === 'image/webp' ? 'webp' : 'jpg';
+          const storageRef = ref(storage, `products/${folder}/${Date.now()}_photo.${ext}`);
           await uploadBytes(storageRef, img.blob);
           uploadedUrls.push(await getDownloadURL(storageRef));
         }

@@ -5,7 +5,7 @@ import type { Product } from '@/types';
 import Link from 'next/link';
 import { serialize } from '@/lib/utils/serialize';
 
-export const revalidate = 300; // ISR: revalida a cada 5 minutos
+export const revalidate = 900; // ISR: revalida a cada 5 minutos
 
 async function getFeatured(): Promise<Product[]> {
   try {
