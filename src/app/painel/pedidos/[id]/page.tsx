@@ -209,7 +209,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             {nextStatus && (
               <button onClick={advanceStatus} disabled={updating}
                 className="w-full bg-ink text-paper text-sm font-semibold py-3.5 disabled:opacity-50 active:bg-ink/80 transition-colors">
-                {updating ? 'Salvando…' : `Avançar → ${STATUS_LABELS[nextStatus]}`}
+                {updating ? 'Salvando…' : `Avançar para: ${STATUS_LABELS[nextStatus]}`}
               </button>
             )}
           </div>

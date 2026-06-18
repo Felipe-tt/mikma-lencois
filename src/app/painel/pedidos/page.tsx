@@ -126,7 +126,7 @@ export default function PainelPedidos() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-[11px] text-[#B09C8C]">{formatTsDateTime(order.createdAt)}</span>
-                <Link href={`/painel/pedidos/${order.id}`} className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">Ver detalhes →</Link>
+                <Link href={`/painel/pedidos/${order.id}`} className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">Ver detalhes</Link>
               </div>
             </div>
 

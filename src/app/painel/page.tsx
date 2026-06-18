@@ -62,7 +62,7 @@ export default function PainelDashboard() {
                   <p className="text-[11px] opacity-80">Clique aqui para ver e começar a separar</p>
                 </div>
               </div>
-              <span className="text-white/60 text-lg">→</span>
+              
             </Link>
           )}
           {waiting > 0 && (
@@ -74,7 +74,7 @@ export default function PainelDashboard() {
                   <p className="text-[11px] opacity-70">O cliente ainda não pagou — pode ser normal levar alguns minutos</p>
                 </div>
               </div>
-              <span className="opacity-40 text-lg">→</span>
+              
             </Link>
           )}
         </div>
@@ -99,7 +99,7 @@ export default function PainelDashboard() {
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-display font-normal text-[#1E1208] text-lg">Últimos pedidos</h2>
         <Link href="/painel/pedidos" className="text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
-          Ver todos →
+          Ver todos
         </Link>
       </div>
 
@@ -118,7 +118,7 @@ export default function PainelDashboard() {
             <div className="flex items-center gap-4">
               <span className="text-[11px] text-[#B09C8C] hidden sm:block">{formatTsDateTime(o.createdAt)}</span>
               <span className="font-display text-sm text-[#1E1208]">{formatCurrency(o.totalCents)}</span>
-              <Link href={`/painel/pedidos/${o.id}`} className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors shrink-0">Ver →</Link>
+              <Link href={`/painel/pedidos/${o.id}`} className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors shrink-0">Ver</Link>
             </div>
           </div>
         ))}
