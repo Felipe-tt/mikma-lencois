@@ -31,7 +31,6 @@ jobs:
       MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
       NEXT_PUBLIC_APP_URL: https://mikma.com.br
       NEXT_PUBLIC_BASE_URL: https://mikma.com.br
-      GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -64,10 +63,8 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
-      - name: Setup Firebase credentials
-        run: |
-          echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > /tmp/firebase-key.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-key.json" >> $GITHUB_ENV
+      - name: Write service account key
+        run: echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > /tmp/sa.json
 
       - name: Check if functions changed
         id: functions-changed
@@ -80,6 +77,7 @@ jobs:
         with:
           args: deploy --only hosting,functions --force
         env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
       - name: Deploy hosting only
@@ -88,4 +86,5 @@ jobs:
         with:
           args: deploy --only hosting --force
         env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
           FIREBASE_CLI_EXPERIMENTS: webframeworks
