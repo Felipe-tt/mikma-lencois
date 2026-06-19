@@ -65,9 +65,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   const { id } = await params;
-  await adminDb.collection('products').doc(id).update({
-    active: false,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
+
+  const productRef = adminDb.collection('products').doc(id);
+  const snap = await productRef.get();
+  if (!snap.exists) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
+
+  // Apaga o estoque vinculado a este produto (cada variante é um doc em inventory)
+  const invSnap = await adminDb.collection('inventory').where('productId', '==', id).get();
+  const batch = adminDb.batch();
+  invSnap.docs.forEach(d => batch.delete(d.ref));
+  batch.delete(productRef);
+  await batch.commit();
+
   return NextResponse.json({ ok: true });
 }
