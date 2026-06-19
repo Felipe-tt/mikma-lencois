@@ -5,10 +5,10 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { getClientIp, extractBearer } from '@/lib/security';
 
 async function verifySeller(req: NextRequest) {
-  const token = extractBearer(req);
-  if (!token) return null;
+  const result = extractBearer(req);
+  if ('response' in result) return null;
   try {
-    const decoded = await adminAuth.verifyIdToken(token, true);
+    const decoded = await adminAuth.verifyIdToken(result.token, true);
     if (decoded.role !== 'seller' && decoded.role !== 'admin') return null;
     return decoded;
   } catch { return null; }
