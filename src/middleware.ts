@@ -1,10 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Lê o status de manutenção via Firestore REST API
+// (middleware roda no Edge Runtime — não pode usar Firebase Admin SDK)
+async function getMaintenanceStatus(projectId: string) {
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    if (!res.ok) return { active: false };
+    const data = await res.json();
+    const active = data?.fields?.active?.booleanValue ?? false;
+    return { active };
+  } catch {
+    return { active: false };
+  }
+}
+
+async function isIpReleased(projectId: string, docId: string) {
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data?.fields?.released?.booleanValue ?? false;
+  } catch {
+    return false;
+  }
+}
+
+async function registerInQueue(projectId: string, docId: string, ip: string, uid?: string, email?: string, displayName?: string) {
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
+  const fields: Record<string, unknown> = {
+    ip: { stringValue: ip },
+    released: { booleanValue: false },
+    enteredAt: { stringValue: new Date().toISOString() },
+  };
+  if (uid) fields.uid = { stringValue: uid };
+  if (email) fields.email = { stringValue: email };
+  if (displayName) fields.displayName = { stringValue: displayName };
+
+  try {
+    await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+      signal: AbortSignal.timeout(2000),
+    });
+  } catch { /* silencioso */ }
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ── Manutenção ───────────────────────────────────────────────────────────
-  // Não bloqueia: painel, APIs, arquivos estáticos, página de manutenção
+  // ── Manutenção ────────────────────────────────────────────────────────────
   const isExempt =
     pathname.startsWith('/painel') ||
     pathname.startsWith('/api/') ||
@@ -21,36 +68,29 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/sitemap');
 
   if (!isExempt) {
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'mikma-lencois';
     const ip =
       req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       req.headers.get('x-real-ip') ||
       '0.0.0.0';
 
-    const authHeader = req.headers.get('authorization') ?? '';
-    const cookieToken = req.cookies.get('__session')?.value ?? '';
-    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : cookieToken;
+    const { active } = await getMaintenanceStatus(projectId);
 
-    try {
-      const checkUrl = new URL('/api/maintenance/check', req.nextUrl.origin);
-      checkUrl.searchParams.set('ip', ip);
-      if (idToken) checkUrl.searchParams.set('token', idToken);
-      const check = await fetch(checkUrl.toString(), {
-        signal: AbortSignal.timeout(2000),
-      });
-      if (check.ok) {
-        const data = await check.json();
-        if (data.active && !data.allowed) {
-          return NextResponse.redirect(new URL('/manutencao', req.url));
-        }
+    if (active) {
+      const docId = ip.replace(/[.:]/g, '_');
+      const released = await isIpReleased(projectId, docId);
+
+      if (!released) {
+        // registra IP na queue (fire-and-forget)
+        registerInQueue(projectId, docId, ip);
+        return NextResponse.redirect(new URL('/manutencao', req.url));
       }
-    } catch {
-      // falha silenciosa — se der erro, deixa passar
     }
   }
 
   const res = NextResponse.next();
 
-  // ── Security headers ─────────────────────────────────────────────────────
+  // ── Security headers ──────────────────────────────────────────────────────
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
