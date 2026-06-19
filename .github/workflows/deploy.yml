@@ -31,6 +31,7 @@ jobs:
       MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
       NEXT_PUBLIC_APP_URL: https://mikma.com.br
       NEXT_PUBLIC_BASE_URL: https://mikma.com.br
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,8 +64,11 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
       - name: Write service account key
-        run: echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > /tmp/sa.json
+        run: echo "$GOOGLE_APPLICATION_CREDENTIALS" > $HOME/sa.json
 
       - name: Check if functions changed
         id: functions-changed
@@ -73,18 +77,12 @@ jobs:
 
       - name: Deploy hosting + functions
         if: steps.functions-changed.outputs.changed == 'true'
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only hosting,functions --force
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting,functions --force --project mikma-lencois
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
       - name: Deploy hosting only
         if: steps.functions-changed.outputs.changed == 'false'
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only hosting --force
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting --force --project mikma-lencois
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
           FIREBASE_CLI_EXPERIMENTS: webframeworks
