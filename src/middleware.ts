@@ -26,9 +26,14 @@ export async function middleware(req: NextRequest) {
       req.headers.get('x-real-ip') ||
       '0.0.0.0';
 
+    const authHeader = req.headers.get('authorization') ?? '';
+    const cookieToken = req.cookies.get('__session')?.value ?? '';
+    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : cookieToken;
+
     try {
       const checkUrl = new URL('/api/maintenance/check', req.nextUrl.origin);
       checkUrl.searchParams.set('ip', ip);
+      if (idToken) checkUrl.searchParams.set('token', idToken);
       const check = await fetch(checkUrl.toString(), {
         signal: AbortSignal.timeout(2000),
       });

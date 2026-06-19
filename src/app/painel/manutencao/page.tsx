@@ -6,6 +6,9 @@ import { useAuth } from '@/lib/auth/AuthContext';
 type QueueEntry = {
   id: string;
   ip: string;
+  uid?: string;
+  email?: string;
+  displayName?: string;
   released: boolean;
   enteredAt: string;
   releasedAt?: string;
@@ -25,14 +28,15 @@ export default function ManutencaoPage() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [releasing, setReleasing] = useState<string | null>(null);
+  const [tab, setTab] = useState<'ips' | 'users'>('ips');
 
-  const headers = useCallback(async () => {
+  const getHeaders = useCallback(async () => {
     const token = await user?.getIdToken();
     return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   }, [user]);
 
   const load = useCallback(async () => {
-    const h = await headers();
+    const h = await getHeaders();
     const res = await fetch('/api/maintenance', { headers: h });
     if (res.ok) {
       const data = await res.json();
@@ -40,16 +44,15 @@ export default function ManutencaoPage() {
       setQueue(data.queue);
     }
     setLoading(false);
-  }, [headers]);
+  }, [getHeaders]);
 
   useEffect(() => { load(); }, [load]);
 
   const toggle = async () => {
     setToggling(true);
-    const h = await headers();
+    const h = await getHeaders();
     const res = await fetch('/api/maintenance', {
-      method: 'POST',
-      headers: h,
+      method: 'POST', headers: h,
       body: JSON.stringify({ action: 'toggle' }),
     });
     if (res.ok) {
@@ -59,41 +62,40 @@ export default function ManutencaoPage() {
     setToggling(false);
   };
 
-  const releaseIp = async (ip: string) => {
-    setReleasing(ip);
-    const h = await headers();
+  const releaseEntry = async (entry: QueueEntry) => {
+    const key = entry.uid ?? entry.ip;
+    setReleasing(key);
+    const h = await getHeaders();
     await fetch('/api/maintenance', {
-      method: 'POST',
-      headers: h,
-      body: JSON.stringify({ action: 'release', ip }),
+      method: 'POST', headers: h,
+      body: JSON.stringify({ action: 'release', ip: entry.ip, uid: entry.uid }),
     });
-    setQueue(q => q.map(e => e.ip === ip ? { ...e, released: true } : e));
+    setQueue(q => q.map(e => (e.id === entry.id ? { ...e, released: true } : e)));
     setReleasing(null);
   };
 
   const releaseAll = async () => {
-    const h = await headers();
+    const h = await getHeaders();
     await fetch('/api/maintenance', {
-      method: 'POST',
-      headers: h,
+      method: 'POST', headers: h,
       body: JSON.stringify({ action: 'release_all' }),
     });
     setQueue(q => q.map(e => ({ ...e, released: true })));
   };
 
   const clearQueue = async () => {
-    if (!confirm('Limpar toda a fila? Visitantes bloqueados serão removidos.')) return;
-    const h = await headers();
+    if (!confirm('Limpar toda a fila?')) return;
+    const h = await getHeaders();
     await fetch('/api/maintenance', {
-      method: 'POST',
-      headers: h,
+      method: 'POST', headers: h,
       body: JSON.stringify({ action: 'clear_queue' }),
     });
     setQueue([]);
   };
 
+  const ipEntries = queue.filter(e => !e.uid);
+  const userEntries = queue.filter(e => !!e.uid);
   const waiting = queue.filter(e => !e.released);
-  const released = queue.filter(e => e.released);
 
   if (loading) return (
     <div className="flex flex-col gap-3">
@@ -101,15 +103,16 @@ export default function ManutencaoPage() {
     </div>
   );
 
+  const currentList = tab === 'ips' ? ipEntries : userEntries;
+
   return (
     <div className="max-w-2xl">
-      {/* Header */}
       <div className="mb-7">
         <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Painel</p>
         <h1 className="font-display font-normal text-[#1E1208] text-2xl">Manutenção</h1>
       </div>
 
-      {/* Toggle card */}
+      {/* Toggle */}
       <div className={`border p-6 mb-6 ${status.active ? 'border-amber-300 bg-amber-50' : 'border-[#E6DFD5] bg-white'}`}>
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -118,12 +121,13 @@ export default function ManutencaoPage() {
             </p>
             <p className="text-[12px] text-[#B09C8C]">
               {status.active
-                ? 'Visitantes são redirecionados para a página de manutenção e entram na fila.'
-                : 'O site está acessível normalmente para todos os visitantes.'}
+                ? 'Visitantes são redirecionados para a página de manutenção.'
+                : 'O site está acessível normalmente para todos.'}
             </p>
             {status.updatedBy && (
               <p className="text-[11px] text-[#C8BAB0] mt-1">
-                Alterado por {status.updatedBy} · {status.updatedAt ? new Date(status.updatedAt).toLocaleString('pt-BR') : ''}
+                Alterado por {status.updatedBy}
+                {status.updatedAt ? ` · ${new Date(status.updatedAt).toLocaleString('pt-BR')}` : ''}
               </p>
             )}
           </div>
@@ -145,55 +149,84 @@ export default function ManutencaoPage() {
       <div className="border border-[#E6DFD5] bg-[#FAF8F5] px-5 py-4 mb-6">
         <p className="text-[11px] font-bold text-[#705A48] mb-2 tracking-[0.1em] uppercase">Pelo Firebase CLI</p>
         <div className="flex flex-col gap-1.5">
-          <code className="text-[11px] bg-[#1E1208] text-[#FAF8F5] px-3 py-2 block">
-            firebase firestore:set --project mikma-lencois maintenance/status '{JSON.stringify({ active: true })}'
+          <code className="text-[11px] bg-[#1E1208] text-[#FAF8F5] px-3 py-2 block font-mono">
+            node scripts/maintenance.js on
           </code>
-          <p className="text-[10px] text-[#B09C8C]">Para reativar, troque <code>true</code> por <code>false</code></p>
+          <code className="text-[11px] bg-[#1E1208] text-[#FAF8F5] px-3 py-2 block font-mono">
+            node scripts/maintenance.js allow
+          </code>
+          <p className="text-[10px] text-[#B09C8C]">
+            Rode dentro da pasta do projeto. O comando <strong>allow</strong> detecta e libera seu IP automaticamente.
+          </p>
         </div>
       </div>
 
       {/* Queue */}
       <div className="border border-[#E6DFD5] bg-white">
-        <div className="px-5 py-4 border-b border-[#E6DFD5] bg-[#FAF8F5] flex items-center justify-between">
-          <div>
-            <p className="text-[13px] font-bold text-[#1E1208]">Fila de visitantes</p>
-            <p className="text-[11px] text-[#B09C8C] mt-0.5">
-              {waiting.length} aguardando · {released.length} liberados
-            </p>
+        <div className="px-5 py-4 border-b border-[#E6DFD5] bg-[#FAF8F5]">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[13px] font-bold text-[#1E1208]">Fila de visitantes</p>
+              <p className="text-[11px] text-[#B09C8C] mt-0.5">
+                {waiting.length} aguardando · {queue.length - waiting.length} liberados
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {waiting.length > 0 && (
+                <button onClick={releaseAll}
+                  className="px-3 py-1.5 text-[11px] font-semibold bg-[#1E1208] text-[#FAF8F5] hover:bg-[#1E1208]/80 transition-colors">
+                  Liberar todos
+                </button>
+              )}
+              {queue.length > 0 && (
+                <button onClick={clearQueue}
+                  className="px-3 py-1.5 text-[11px] font-semibold border border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1] transition-colors">
+                  Limpar fila
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Tabs */}
           <div className="flex gap-2">
-            {waiting.length > 0 && (
-              <button
-                onClick={releaseAll}
-                className="px-3 py-1.5 text-[11px] font-semibold bg-[#1E1208] text-[#FAF8F5] hover:bg-[#1E1208]/80 transition-colors"
-              >
-                Liberar todos
+            {(['ips', 'users'] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                  tab === t ? 'bg-[#1E1208] text-[#FAF8F5]' : 'border border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1]'
+                }`}>
+                {t === 'ips' ? `IPs (${ipEntries.length})` : `Usuários (${userEntries.length})`}
               </button>
-            )}
-            {queue.length > 0 && (
-              <button
-                onClick={clearQueue}
-                className="px-3 py-1.5 text-[11px] font-semibold border border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1] transition-colors"
-              >
-                Limpar fila
-              </button>
-            )}
+            ))}
           </div>
         </div>
 
-        {queue.length === 0 ? (
+        {currentList.length === 0 ? (
           <div className="px-5 py-10 text-center">
-            <p className="text-[13px] text-[#B09C8C]">Nenhum visitante na fila ainda.</p>
-            <p className="text-[11px] text-[#C8BAB0] mt-1">Quando o site estiver em manutenção, os IPs aparecerão aqui.</p>
+            <p className="text-[13px] text-[#B09C8C]">
+              {tab === 'ips' ? 'Nenhum IP na fila.' : 'Nenhum usuário logado na fila.'}
+            </p>
+            <p className="text-[11px] text-[#C8BAB0] mt-1">
+              Quando o site estiver em manutenção, os visitantes aparecerão aqui.
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-[#E6DFD5]">
-            {queue.map(entry => (
+            {currentList.map(entry => (
               <div key={entry.id} className="flex items-center justify-between px-5 py-3 gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className={`shrink-0 w-2 h-2 rounded-full ${entry.released ? 'bg-green-400' : 'bg-amber-400'}`} />
                   <div className="min-w-0">
-                    <p className="text-[13px] font-mono text-[#1E1208] truncate">{entry.ip}</p>
+                    {entry.uid ? (
+                      <>
+                        <p className="text-[13px] font-semibold text-[#1E1208] truncate">
+                          {entry.displayName || 'Usuário sem nome'}
+                        </p>
+                        <p className="text-[11px] text-[#B09C8C] truncate">{entry.email}</p>
+                        <p className="text-[10px] text-[#C8BAB0] font-mono truncate">{entry.ip}</p>
+                      </>
+                    ) : (
+                      <p className="text-[13px] font-mono text-[#1E1208] truncate">{entry.ip}</p>
+                    )}
                     <p className="text-[10px] text-[#B09C8C]">
                       Entrou: {new Date(entry.enteredAt).toLocaleString('pt-BR')}
                       {entry.released && entry.releasedAt && (
@@ -202,16 +235,14 @@ export default function ManutencaoPage() {
                     </p>
                   </div>
                 </div>
-                {!entry.released && (
+                {!entry.released ? (
                   <button
-                    onClick={() => releaseIp(entry.ip)}
-                    disabled={releasing === entry.ip}
-                    className="shrink-0 px-3 py-1 text-[11px] font-semibold bg-[#1E1208] text-[#FAF8F5] hover:bg-[#1E1208]/80 transition-colors disabled:opacity-50"
-                  >
-                    {releasing === entry.ip ? '…' : 'Liberar'}
+                    onClick={() => releaseEntry(entry)}
+                    disabled={releasing === (entry.uid ?? entry.ip)}
+                    className="shrink-0 px-3 py-1 text-[11px] font-semibold bg-[#1E1208] text-[#FAF8F5] hover:bg-[#1E1208]/80 transition-colors disabled:opacity-50">
+                    {releasing === (entry.uid ?? entry.ip) ? '…' : 'Liberar'}
                   </button>
-                )}
-                {entry.released && (
+                ) : (
                   <span className="shrink-0 text-[11px] text-green-600 font-semibold">✓ Liberado</span>
                 )}
               </div>
