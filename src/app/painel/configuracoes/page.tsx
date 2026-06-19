@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
+import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
+import { HeroPreview, FeaturedPreview, CtaPreview } from '@/components/painel/preview/HomePreview';
+import { FooterPreview } from '@/components/painel/preview/FooterPreview';
+import { SobrePreview } from '@/components/painel/preview/SobrePreview';
 
 type Section = 'loja' | 'homepage' | 'sobre' | 'entrega';
 const SECTIONS: { id: Section; label: string; icon: string; desc: string }[] = [
@@ -19,6 +23,7 @@ export default function ConfiguracoesPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [active, setActive] = useState<Section>('loja');
+  const [preview, setPreview] = useState<null | 'hero' | 'featured' | 'cta' | 'footer' | 'sobre'>(null);
 
   useEffect(() => {
     getDoc(doc(db, 'settings', 'store')).then(snap => {
@@ -91,7 +96,7 @@ export default function ConfiguracoesPage() {
             </div>
           </Section>
 
-          <Section title="Contato" desc="Como os clientes falam com você">
+          <Section title="Contato" desc="Como os clientes falam com você" onPreview={() => setPreview('footer')}>
             <Field label="WhatsApp" value={settings.storePhone} onChange={v => set('storePhone', v)} placeholder="(47) 99999-0000" hint="Número que os clientes vão usar para te chamar" />
             <Field label="E-mail" value={settings.storeEmail} onChange={v => set('storeEmail', v)} placeholder="contato@minhaloja.com.br" />
             <Field
@@ -113,7 +118,7 @@ export default function ConfiguracoesPage() {
 
         {/* ── HOMEPAGE ── */}
         {active === 'homepage' && <>
-          <Section title="Barra de aviso (topo)" desc="Faixa que aparece no topo de todas as páginas">
+          <Section title="Barra de aviso (topo)" desc="Faixa que aparece no topo de todas as páginas" onPreview={() => setPreview('hero')}>
             <Field
               label="Texto do aviso"
               value={settings.topbarText}
@@ -123,7 +128,7 @@ export default function ConfiguracoesPage() {
             />
           </Section>
 
-          <Section title="Banner principal (hero)" desc="A primeira coisa que o cliente vê ao entrar no site">
+          <Section title="Banner principal (hero)" desc="A primeira coisa que o cliente vê ao entrar no site" onPreview={() => setPreview('hero')}>
             <Field label="Pequena tag acima do título" value={settings.heroTag} onChange={v => set('heroTag', v)} placeholder="Blumenau, SC — Coleção 2025" hint='Ex: "Novidades" ou "Coleção Verão"' />
             <Field label="Título — linha 1" value={settings.heroLine1 ?? ''} onChange={v => set('heroLine1', v)} placeholder="O conforto" />
             <Field label="Título — linha 2 (aparece em laranja)" value={settings.heroLine2 ?? ''} onChange={v => set('heroLine2', v)} placeholder="que acompanha" />
@@ -136,14 +141,14 @@ export default function ConfiguracoesPage() {
             </div>
           </Section>
 
-          <Section title="Selos de confiança" desc="Aparecem logo abaixo do banner principal — mostre seus diferenciais">
+          <Section title="Selos de confiança" desc="Aparecem logo abaixo do banner principal — mostre seus diferenciais" onPreview={() => setPreview('hero')}>
             <Field label="Selo 1" value={settings.heroTrust1 ?? ''} onChange={v => set('heroTrust1', v)} placeholder="Entrega em 1h em Blumenau" />
             <Field label="Selo 2" value={settings.heroTrust2 ?? ''} onChange={v => set('heroTrust2', v)} placeholder="Frete para todo o Brasil" />
             <Field label="Selo 3" value={settings.heroTrust3 ?? ''} onChange={v => set('heroTrust3', v)} placeholder="Pague com PIX" />
             <Field label="Selo 4" value={settings.heroTrust4 ?? ''} onChange={v => set('heroTrust4', v)} placeholder="Qualidade direto de fábrica" />
           </Section>
 
-          <Section title="Diferenciais" desc="3 cards de destaque que aparecem na homepage">
+          <Section title="Diferenciais" desc="⚠️ Estes campos não estão sendo exibidos no site atualmente — preenchimento sem efeito até serem reativados no código">
             {([1,2,3] as const).map(n => {
               const s = settings as unknown as Record<string,string>;
               return (
@@ -155,7 +160,7 @@ export default function ConfiguracoesPage() {
             })}
           </Section>
 
-          <Section title="Seção de estatísticas" desc="Números que aparecem no banner escuro da homepage">
+          <Section title="Seção de estatísticas" desc="Números que aparecem no banner escuro da homepage" onPreview={() => setPreview('featured')}>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Pedidos entregues" value={settings.statOrders} onChange={v => set('statOrders', v)} placeholder="1.200+" />
               <Field label="Avaliação dos clientes" value={settings.statRating} onChange={v => set('statRating', v)} placeholder="4.9 ⭐" />
@@ -165,7 +170,7 @@ export default function ConfiguracoesPage() {
             <Field label="Título da grade de produtos" value={settings.featuredTitle} onChange={v => set('featuredTitle', v)} placeholder="Escolhas da semana" hint='Aparece acima dos produtos em destaque' />
           </Section>
 
-          <Section title="Frase de chamada (seção escura)" desc="Aparece no final da homepage com dois botões">
+          <Section title="Frase de chamada (seção escura)" desc="Aparece no final da homepage com dois botões" onPreview={() => setPreview('cta')}>
             <Field label="Linha 1 da frase" value={settings.ctaSloganLine1 ?? ''} onChange={v => set('ctaSloganLine1', v)} placeholder="Feito em Blumenau." />
             <Field label="Linha 2 da frase (em laranja)" value={settings.ctaSloganLine2 ?? ''} onChange={v => set('ctaSloganLine2', v)} placeholder="Dorme bem." />
             <div className="grid grid-cols-2 gap-3">
@@ -177,18 +182,18 @@ export default function ConfiguracoesPage() {
 
         {/* ── SOBRE NÓS ── */}
         {active === 'sobre' && <>
-          <Section title="Cabeçalho da página" desc="O título grande que aparece no topo da página Sobre nós">
+          <Section title="Cabeçalho da página" desc="O título grande que aparece no topo da página Sobre nós" onPreview={() => setPreview('sobre')}>
             <Field label="Linha principal (em laranja)" value={settings.aboutHeroLine1} onChange={v => set('aboutHeroLine1', v)} placeholder={settings.storeName || 'Mikma Lençóis'} />
             <Field label="Linha secundária (em cinza)" value={settings.aboutHeroLine2} onChange={v => set('aboutHeroLine2', v)} placeholder={`em ${settings.storeCity || 'Blumenau'}, SC.`} />
           </Section>
 
-          <Section title="Texto da página" desc="Conte sua história para os clientes — até 3 parágrafos">
+          <Section title="Texto da página" desc="Conte sua história para os clientes — até 3 parágrafos" onPreview={() => setPreview('sobre')}>
             <Textarea label="Parágrafo 1" value={settings.aboutPara1} onChange={v => set('aboutPara1', v)} rows={4} placeholder="A Mikma nasceu em Blumenau com o objetivo de..." />
             <Textarea label="Parágrafo 2 (opcional)" value={settings.aboutPara2} onChange={v => set('aboutPara2', v)} rows={3} />
             <Textarea label="Parágrafo 3 (opcional)" value={settings.aboutPara3} onChange={v => set('aboutPara3', v)} rows={3} />
           </Section>
 
-          <Section title="Informações em destaque" desc="Os 3 cards que aparecem na lateral direita da página">
+          <Section title="Informações em destaque" desc="Os 3 cards que aparecem na lateral direita da página" onPreview={() => setPreview('sobre')}>
             <div className="flex flex-col gap-4">
               {([
                 { labelF: 'aboutStat1Label', valueF: 'aboutStat1Value', placeholderL: 'Localização', placeholderV: 'Blumenau, SC' },
@@ -203,11 +208,11 @@ export default function ConfiguracoesPage() {
             </div>
           </Section>
 
-          <Section title="Botão de contato" desc="O botão de WhatsApp que aparece na lateral">
+          <Section title="Botão de contato" desc="O botão de WhatsApp que aparece na lateral" onPreview={() => setPreview('sobre')}>
             <Field label="Texto do botão" value={settings.aboutWhatsappLabel} onChange={v => set('aboutWhatsappLabel', v)} placeholder="Falar no WhatsApp" />
           </Section>
 
-          <Section title="Linha do tempo" desc="Mostre os marcos da história da sua empresa — adicione quantos quiser">
+          <Section title="Linha do tempo" desc="Mostre os marcos da história da sua empresa — adicione quantos quiser" onPreview={() => setPreview('sobre')}>
             <Field label="Título da seção" value={settings.aboutTimelineTitle} onChange={v => set('aboutTimelineTitle', v)} placeholder="Nossa trajetória" />
             <TimelineEditor value={settings.aboutTimeline} onChange={v => set('aboutTimeline', v)} />
           </Section>
@@ -297,18 +302,46 @@ export default function ConfiguracoesPage() {
         </button>
         {saved && <p className="text-center text-[12px] text-[#B09C8C] mt-2">As mudanças podem levar até 10 minutos para aparecer no site.</p>}
       </div>
+
+      {/* ── Previews ── */}
+      <PreviewModal open={preview === 'hero'} onClose={() => setPreview(null)} title="Banner principal" routeLabel="/">
+        <HeroPreview s={settings} />
+      </PreviewModal>
+
+      <PreviewModal open={preview === 'featured'} onClose={() => setPreview(null)} title="Produtos em destaque" routeLabel="/">
+        <FeaturedPreview s={settings} />
+      </PreviewModal>
+
+      <PreviewModal open={preview === 'cta'} onClose={() => setPreview(null)} title="Frase de chamada" routeLabel="/">
+        <CtaPreview s={settings} />
+      </PreviewModal>
+
+      <PreviewModal open={preview === 'footer'} onClose={() => setPreview(null)} title="Rodapé do site" routeLabel="/">
+        <FooterPreview s={settings} />
+      </PreviewModal>
+
+      <PreviewModal open={preview === 'sobre'} onClose={() => setPreview(null)} title="Página Sobre nós" routeLabel="/sobre">
+        <SobrePreview s={settings} />
+      </PreviewModal>
     </div>
   );
 }
 
 /* ── Componentes de layout ── */
 
-function Section({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
+function Section({ title, desc, children, onPreview }: { title: string; desc: string; children: React.ReactNode; onPreview?: () => void }) {
   return (
     <div className="border border-[#E6DFD5] bg-white">
-      <div className="px-5 py-4 border-b border-[#E6DFD5] bg-[#FAF8F5]">
-        <p className="text-[13px] font-bold text-[#1E1208]">{title}</p>
-        <p className="text-[11px] text-[#B09C8C] mt-0.5">{desc}</p>
+      <div className="px-5 py-4 border-b border-[#E6DFD5] bg-[#FAF8F5] flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[13px] font-bold text-[#1E1208]">{title}</p>
+          <p className="text-[11px] text-[#B09C8C] mt-0.5">{desc}</p>
+        </div>
+        {onPreview && (
+          <div className="shrink-0 pt-0.5">
+            <PreviewButton onClick={onPreview} />
+          </div>
+        )}
       </div>
       <div className="px-5 py-4 flex flex-col gap-4">
         {children}

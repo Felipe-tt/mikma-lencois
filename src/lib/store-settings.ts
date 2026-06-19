@@ -1,6 +1,8 @@
 // Shared between server (settings.ts) and client (configuracoes/page.tsx)
 // Must NOT be 'use client'
 
+import { DEFAULT_BUSINESS_HOURS } from './business-hours';
+
 export type StoreSettings = {
   storeName: string;
   storeSlogan: string;
@@ -11,6 +13,7 @@ export type StoreSettings = {
   storeCep: string;
   storePhone: string;
   storeEmail: string;
+  storeCnpj: string;
   instagramUrl: string;
   whatsappUrl: string;
   topbarText: string;
@@ -50,6 +53,9 @@ export type StoreSettings = {
   dispatchCutoffTime: string;
   freeShippingThresholdCents: number;
   lowStockThreshold: number;
+  // Horário de funcionamento (JSON serializado — ver src/lib/business-hours.ts)
+  businessHours: string;
+  businessHoursTimezone: string; // IANA, ex: "America/Sao_Paulo"
   // Payment
   creditMinOrderCents: number; // 0 = desabilitado; >0 = valor mínimo para habilitar cartão
   foundedYear: string;
@@ -84,6 +90,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   storeCep: '',
   storePhone: '',
   storeEmail: '',
+  storeCnpj: '',
   instagramUrl: '',
   whatsappUrl: '',
   topbarText: '',
@@ -124,6 +131,8 @@ export const STORE_DEFAULTS: StoreSettings = {
   dispatchCutoffTime: '17:00',
   freeShippingThresholdCents: 0,
   lowStockThreshold: 3,
+  businessHours: JSON.stringify(DEFAULT_BUSINESS_HOURS),
+  businessHoursTimezone: 'America/Sao_Paulo',
   creditMinOrderCents: 0,
   foundedYear: '2018',
   heroLine1: '',
