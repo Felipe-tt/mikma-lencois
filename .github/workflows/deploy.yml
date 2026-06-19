@@ -23,26 +23,25 @@ jobs:
       FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
       FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
       FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
-      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
       NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${{ secrets.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}
       RECAPTCHA_SECRET_KEY: ${{ secrets.RECAPTCHA_SECRET_KEY }}
       ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
       ABACATEPAY_PUBLIC_KEY: ${{ secrets.ABACATEPAY_PUBLIC_KEY }}
       MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
-      NEXT_PUBLIC_APP_URL: https://mikmalencois.com.br
-      NEXT_PUBLIC_BASE_URL: https://mikmalencois.com.br
+      NEXT_PUBLIC_APP_URL: https://mikma.com.br
+      NEXT_PUBLIC_BASE_URL: https://mikma.com.br
+      GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # para detectar mudanças em functions/
+          fetch-depth: 2
 
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      # Cache npm — restaura node_modules se package-lock não mudou
       - name: Cache node_modules
         uses: actions/cache@v4
         id: npm-cache
@@ -54,8 +53,6 @@ jobs:
         if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      # Cache Next.js — chave separada para package e para src
-      # src/** não invalida o cache de módulos compilados do Next.js
       - name: Cache Next.js build cache
         uses: actions/cache@v4
         with:
@@ -67,28 +64,28 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
-      # Detecta se functions/ foi alterado neste push
+      - name: Setup Firebase credentials
+        run: |
+          echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > /tmp/firebase-key.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-key.json" >> $GITHUB_ENV
+
       - name: Check if functions changed
         id: functions-changed
         run: |
           git diff --name-only HEAD~1 HEAD | grep -q '^functions/' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
 
-      # Deploy hosting + functions só se functions mudou
       - name: Deploy hosting + functions
         if: steps.functions-changed.outputs.changed == 'true'
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only hosting,functions --force
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
-      # Deploy só hosting se functions não mudou (mais rápido)
       - name: Deploy hosting only
         if: steps.functions-changed.outputs.changed == 'false'
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only hosting --force
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_CLI_EXPERIMENTS: webframeworks
