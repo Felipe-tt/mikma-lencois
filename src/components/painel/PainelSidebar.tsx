@@ -12,6 +12,7 @@ const NAV = [
   { href: '/painel/relatorios', label: 'Relatórios', desc: 'Vendas e faturamento', icon: '📊' },
   { href: '/painel/cupons', label: 'Cupons', desc: 'Descontos para clientes', icon: '🎟' },
   { href: '/painel/configuracoes', label: 'Configurações', desc: 'Textos e informações', icon: '⚙️' },
+  { href: '/painel/manutencao', label: 'Manutenção', desc: 'Controle de acesso ao site', icon: '🔧' },
 ];
 
 export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {

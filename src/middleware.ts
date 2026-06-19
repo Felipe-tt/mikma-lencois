@@ -1,10 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ── Security headers ────────────────────────────────────────────────────────
+  // ── Manutenção ───────────────────────────────────────────────────────────
+  // Não bloqueia: painel, APIs, arquivos estáticos, página de manutenção
+  const isExempt =
+    pathname.startsWith('/painel') ||
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/manutencao') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/logo') ||
+    pathname.startsWith('/og-') ||
+    pathname.startsWith('/hero-') ||
+    pathname.startsWith('/sobre-') ||
+    pathname.startsWith('/apple-') ||
+    pathname.startsWith('/google') ||
+    pathname.startsWith('/robots') ||
+    pathname.startsWith('/sitemap');
+
+  if (!isExempt) {
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      req.headers.get('x-real-ip') ||
+      '0.0.0.0';
+
+    try {
+      const checkUrl = new URL('/api/maintenance/check', req.nextUrl.origin);
+      checkUrl.searchParams.set('ip', ip);
+      const check = await fetch(checkUrl.toString(), {
+        signal: AbortSignal.timeout(2000),
+      });
+      if (check.ok) {
+        const data = await check.json();
+        if (data.active && !data.allowed) {
+          return NextResponse.redirect(new URL('/manutencao', req.url));
+        }
+      }
+    } catch {
+      // falha silenciosa — se der erro, deixa passar
+    }
+  }
+
+  const res = NextResponse.next();
+
+  // ── Security headers ─────────────────────────────────────────────────────
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -13,12 +54,9 @@ export function middleware(req: NextRequest) {
   res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()');
   res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
 
-  // ── Content Security Policy ─────────────────────────────────────────────────
-  // unsafe-eval removido. unsafe-inline mantido só para estilos (Next.js injeta CSS-in-JS).
+  // ── Content Security Policy ───────────────────────────────────────────────
   const csp = [
     "default-src 'self'",
-    // Next.js precisa de 'self' + nonce idealmente, mas unsafe-inline é aceitável para scripts pequenos.
-    // unsafe-eval foi removido — não é necessário para Next.js em produção.
     "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://accounts.google.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
     "font-src 'self' data: https://fonts.gstatic.com",
@@ -33,14 +71,6 @@ export function middleware(req: NextRequest) {
   ].join('; ');
 
   res.headers.set('Content-Security-Policy', csp);
-
-  // ── Bloqueia acesso direto a rotas de admin sem header de autenticação ──────
-  // (proteção extra — a verificação real é feita nas API routes)
-  if (pathname.startsWith('/painel') && !pathname.startsWith('/painel/')) {
-    // deixa passar — a verificação real está no PainelGuard (client)
-  }
-
-  // ── Remove headers que vazam informações do servidor ───────────────────────
   res.headers.delete('Server');
   res.headers.delete('X-Powered-By');
 

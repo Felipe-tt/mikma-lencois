@@ -80,6 +80,17 @@ service cloud.firestore {
       allow write: if isSellerOrAdmin();
     }
 
+    // ── Maintenance — leitura pública (status), escrita só admin/seller ───────
+    match /maintenance/{doc} {
+      allow read: if true;
+      allow write: if isSellerOrAdmin();
+    }
+
+    match /maintenance_queue/{doc} {
+      allow read: if true;        // middleware precisa checar
+      allow write: if isSellerOrAdmin();
+    }
+
     // ── Tudo mais: negar por padrão ──────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
