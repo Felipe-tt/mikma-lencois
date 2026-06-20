@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc, serverTimestamp, setDoc, collection } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase/client';
 import type { Product } from '@/types';
-import { hexToColorName, searchColorsByName, resolveColorName } from '@/lib/colorNames';
+import { hexToColorName } from '@/lib/colorNames';
+import { ColorPicker } from './ColorPicker';
+import { PhotoCaptureModal } from './PhotoCaptureModal';
+import { PhotoColorPicker } from './PhotoColorPicker';
 
 type Props = {
   initial?: Partial<Product> & { id?: string };
@@ -17,408 +20,30 @@ const SIZES = ['solteiro', 'casal', 'queen', 'king'] as const;
 const SIZE_LABEL: Record<string, string> = { solteiro: 'Solteiro', casal: 'Casal', queen: 'Queen', king: 'King' };
 const FABRICS = ['Algodão', 'Malha', 'Percal 200 fios', 'Percal 300 fios', 'Cetim'];
 
-function makeVariantId(size: string, fabric: string, _color?: string) {
+function makeVariantId(size: string, fabric: string) {
   // SKU usa apenas size+fabric — cor não inclusa para evitar quebrar inventário ao trocar foto
   return `${size}_${fabric}`.toLowerCase().replace(/\s+/g, '_');
 }
 
-// maxW reduzido de 900→720 e qualidade de 0.82→0.75
-// reduz tamanho médio de upload ~40%, economizando Storage e egress do GCS
-function compressImage(file: File, maxW = 600): Promise<{ blob: Blob; dataUrl: string }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const scale = Math.min(1, maxW / img.width);
-      const canvas = document.createElement('canvas');
-      canvas.width  = Math.round(img.width  * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const tryFmt = (fmt: string, q: number) =>
-        new Promise<Blob | null>(res => canvas.toBlob(b => res(b), fmt, q));
-      (async () => {
-        // WebP é 30-60% menor que JPEG
-        let blob = await tryFmt('image/webp', 0.78);
-        if (!blob || blob.size < 100) blob = await tryFmt('image/jpeg', 0.72);
-        if (!blob) return reject(new Error('compress failed'));
-        const r = new FileReader();
-        r.onload = () => resolve({ blob, dataUrl: r.result as string });
-        r.readAsDataURL(blob);
-        URL.revokeObjectURL(url);
-      })();
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
+type ImgEntry = { dataUrl: string; blob?: Blob; url?: string };
+type VariantEntry = { size: string; fabric: string; color: string; colorName: string; qty: number };
 
-function rgbToHex(r: number, g: number, b: number) {
-  return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
-}
+/* ───────────────────────────── Seção wrapper ───────────────────────────── */
 
-// ── Detecção local por OCR (Tesseract.js — roda no browser, zero custo) ──────
-type Detected = { size?: string; fabric?: string; category?: string; name?: string };
-
-async function detectFromLabel(dataUrl: string): Promise<Detected> {
-  try {
-    // Lazy-import: só carrega Tesseract quando a câmera for usada
-    const Tesseract = await import('tesseract.js');
-    const { data: { text } } = await Tesseract.recognize(dataUrl, 'por', {
-      logger: () => {},
-    });
-
-    const t = text.toLowerCase();
-    const result: Detected = {};
-
-    // Tamanho — detecta pelo checkbox marcado no rótulo Mikma
-    // O rótulo tem "Jogo Box Solteiro", "Jogo Box Casal", "Jogo Box Queen", "Jogo Box King"
-    // O marcado tem um "x" ou "v" ou bolinha ao lado
-    if (/casal/.test(t)) result.size = 'casal';
-    else if (/queen/.test(t)) result.size = 'queen';
-    else if (/king/.test(t)) result.size = 'king';
-    else if (/solteiro/.test(t)) result.size = 'solteiro';
-
-    // Tecido
-    if (/percal\s*300/.test(t)) result.fabric = 'Percal 300 fios';
-    else if (/percal\s*200/.test(t)) result.fabric = 'Percal 200 fios';
-    else if (/percal/.test(t)) result.fabric = 'Percal 200 fios';
-    else if (/cetim/.test(t)) result.fabric = 'Cetim';
-    else if (/malha/.test(t)) result.fabric = 'Malha';
-    else if (/algod/.test(t)) result.fabric = 'Algodão';
-
-    // Categoria
-    if (/fronha/.test(t)) result.category = 'Fronhas';
-    else if (/jogo\s*(de\s*cama|box)/.test(t)) result.category = 'Jogos de cama';
-    else if (/len[cç]ol/.test(t)) result.category = 'Lençóis';
-    else if (/edredom|edredon/.test(t)) result.category = 'Edredons';
-
-    // Nome sugerido
-    const sizeName = result.size ? SIZE_LABEL[result.size] : '';
-    const fabricName = result.fabric ?? '';
-    if (sizeName || fabricName) {
-      result.name = ['Jogo de cama', sizeName, fabricName].filter(Boolean).join(' ');
-    }
-
-    return result;
-  } catch {
-    return {};
-  }
-}
-
-// ── Camera Modal ─────────────────────────────────────────────────────────────
-function CameraModal({
-  onCapture,
-  onClose,
-}: {
-  onCapture: (dataUrl: string, hex: string, blob: Blob, detected: Detected) => void;
-  onClose: () => void;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
-  const [crosshair, setCrosshair] = useState({ x: 0.5, y: 0.5 });
-  const [pickedHex, setPickedHex] = useState<string>('#cccccc');
-  const [detecting, setDetecting] = useState(false);
-
-  const handleFile = async (file: File) => {
-    const { blob, dataUrl } = await compressImage(file, 720);
-    setPreview(dataUrl);
-    setCapturedBlob(blob);
-    sampleColor(dataUrl, 0.5, 0.5);
-  };
-
-  const sampleColor = useCallback((src: string, fx: number, fy: number) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
-      const px = Math.round(fx * (img.width - 1));
-      const py = Math.round(fy * (img.height - 1));
-      const [r, g, b] = ctx.getImageData(px, py, 1, 1).data;
-      setPickedHex(rgbToHex(r, g, b));
-    };
-    img.src = src;
-  }, []);
-
-  // Toque/clique único já move o crosshair
-  const handleImgPointer = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!preview) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const fx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      const fy = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-      setCrosshair({ x: fx, y: fy });
-      sampleColor(preview, fx, fy);
-    },
-    [preview, sampleColor],
-  );
-
-  const confirm = async () => {
-    if (!preview || !capturedBlob) return;
-    setDetecting(true);
-    const detected = await detectFromLabel(preview);
-    setDetecting(false);
-    onCapture(preview, pickedHex, capturedBlob, detected);
-  };
-
+function FormSection({ step, title, hint, children }: { step: number; title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
-        <span className="text-sm font-semibold">Foto do produto</span>
-        <button
-          onClick={onClose}
-          className="text-white/60 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"
-        >
-          ✕
-        </button>
+    <section className="flex flex-col gap-4">
+      <div className="flex items-baseline gap-2.5">
+        <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">{step}</span>
+        <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">{title}</h2>
       </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4 overflow-y-auto pb-6">
-        {!preview ? (
-          <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-            {/* Câmera traseira direto no mobile */}
-            <label className="w-full cursor-pointer">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-              />
-              <div className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/30 rounded-2xl py-14 px-6 text-white/80 active:border-white/60">
-                <span className="text-6xl">📷</span>
-                <span className="text-base font-semibold text-center">Tirar foto</span>
-                <span className="text-xs text-white/50 text-center">
-                  Aponte para o produto ou rótulo da embalagem
-                </span>
-              </div>
-            </label>
-
-            {/* Galeria */}
-            <label className="cursor-pointer text-xs text-white/40 hover:text-white/70 underline underline-offset-2">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-              />
-              Escolher da galeria
-            </label>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-            {/* Preview — toque para selecionar a cor */}
-            <div
-              className="relative w-full rounded-2xl overflow-hidden border border-white/20 cursor-crosshair"
-              style={{ aspectRatio: '1/1' }}
-              onPointerDown={handleImgPointer}
-              onPointerMove={(e) => e.buttons > 0 && handleImgPointer(e)}
-            >
-              <img
-                src={preview}
-                alt="preview"
-                className="w-full h-full object-cover select-none pointer-events-none"
-                draggable={false}
-              />
-              {/* Crosshair */}
-              <div
-                className="absolute pointer-events-none"
-                style={{
-                  left: `${crosshair.x * 100}%`,
-                  top: `${crosshair.y * 100}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-              >
-                <div className="absolute top-1/2 -translate-y-px bg-white/80 h-px" style={{ width: 40, left: -20 }} />
-                <div className="absolute left-1/2 -translate-x-px bg-white/80 w-px" style={{ height: 40, top: -20 }} />
-                <div
-                  className="w-9 h-9 rounded-full border-[3px] border-white shadow-lg -translate-x-1/2 -translate-y-1/2 absolute top-0 left-0"
-                  style={{ background: pickedHex }}
-                />
-              </div>
-            </div>
-
-            <p className="text-xs text-white/60 text-center -mt-1">
-              Toque na imagem para selecionar a cor do produto
-            </p>
-
-            {/* Cor selecionada */}
-            <div className="flex items-center gap-3 bg-white/10 px-4 py-2.5 w-full">
-              <div className="w-6 h-6 rounded-full border border-white/30 shrink-0" style={{ background: pickedHex }} />
-              <span className="text-sm text-white font-mono flex-1">{pickedHex}</span>
-            </div>
-
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={() => { setPreview(null); setCapturedBlob(null); }}
-                className="flex-1 border border-white/30 text-white/70 text-sm font-medium py-3.5 rounded-2xl active:bg-white/10"
-              >
-                Tirar outra
-              </button>
-              <button
-                onClick={confirm}
-                disabled={detecting}
-                className="flex-1 bg-white text-black text-sm font-semibold py-3.5 rounded-2xl active:bg-white/90 disabled:opacity-60"
-              >
-                {detecting ? 'Lendo rótulo…' : 'Usar esta foto'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      {hint && <p className="text-[12px] text-faint -mt-2 ml-[30px]">{hint}</p>}
+      <div className="ml-[30px] flex flex-col gap-4">{children}</div>
+    </section>
   );
 }
 
-// ── Main Form ─────────────────────────────────────────────────────────────────
-
-// ── ColorPicker com nome via API, campo editável e autocomplete ───────────────
-function ColorPicker({ value, colorName, onChange }: {
-  value: string;
-  colorName: string;
-  onChange: (hex: string, name: string) => void;
-}) {
-  const [inputName, setInputName] = useState(colorName || '');
-  const [loading, setLoading]     = useState(false);
-  const [suggestions, setSuggestions] = useState<Array<{ name: string; hex: string }>>([]);
-  const [showSugg, setShowSugg]   = useState(false);
-  const [error, setError]         = useState('');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const inputRef    = useRef<HTMLInputElement>(null);
-
-  // Sync quando valor externo muda (ex: foto tirada)
-  useEffect(() => {
-    if (colorName && colorName !== inputName) setInputName(colorName);
-  }, [colorName]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Resolve hex → nome ao montar ou quando hex muda
-  useEffect(() => {
-    if (value && !colorName) {
-      setLoading(true);
-      hexToColorName(value).then(name => {
-        setInputName(name);
-        onChange(value, name);
-        setLoading(false);
-      });
-    }
-  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Busca sugestões enquanto usuário digita
-  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const q = e.target.value;
-    setInputName(q);
-    setError('');
-    clearTimeout(debounceRef.current);
-    if (q.length < 2) { setSuggestions([]); setShowSugg(false); return; }
-    debounceRef.current = setTimeout(async () => {
-      const results = await searchColorsByName(q, 6);
-      setSuggestions(results);
-      setShowSugg(results.length > 0);
-    }, 350);
-  }
-
-  // Usuário seleciona sugestão
-  function pickSuggestion(s: { name: string; hex: string }) {
-    setInputName(s.name);
-    setSuggestions([]);
-    setShowSugg(false);
-    onChange(s.hex, s.name);
-  }
-
-  // Usuário confirma o que digitou (Enter ou blur)
-  async function confirmName() {
-    setShowSugg(false);
-    if (!inputName.trim() || inputName === colorName) return;
-    setLoading(true); setError('');
-    const found = await resolveColorName(inputName);
-    setLoading(false);
-    if (found) {
-      setInputName(found.name);
-      onChange(found.hex, found.name);
-    } else {
-      setError('Cor não encontrada. Escolha uma sugestão ou use o seletor.');
-      setInputName(colorName || '');
-    }
-  }
-
-  // Color picker nativo → traduz hex
-  async function pickHex(hex: string) {
-    setLoading(true); setError('');
-    const name = await hexToColorName(hex);
-    setInputName(name);
-    setLoading(false);
-    onChange(hex, name);
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        {/* Seletor nativo de cor */}
-        <input
-          type="color"
-          value={value.length === 7 && value.startsWith('#') ? value : '#cccccc'}
-          onChange={e => pickHex(e.target.value)}
-          className="w-10 h-9 border border-mist cursor-pointer p-0.5 shrink-0 bg-paper"
-          title="Escolher cor"
-        />
-
-        {/* Campo de nome editável */}
-        <div className="relative flex-1">
-          <input
-            ref={inputRef}
-            type="text"
-            value={loading ? '' : inputName}
-            onChange={handleInput}
-            onBlur={confirmName}
-            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), confirmName())}
-            placeholder={loading ? 'Identificando…' : 'Nome da cor'}
-            className={`input h-9 text-sm ${error ? 'border-red-400' : ''}`}
-            autoComplete="off"
-          />
-          {loading && (
-            <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
-              <span className="spinner-dark" />
-            </span>
-          )}
-
-          {/* Autocomplete dropdown */}
-          {showSugg && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-30 bg-paper border border-mist shadow-card-hover mt-0.5 max-h-48 overflow-y-auto">
-              {suggestions.map(s => (
-                <button
-                  key={s.hex}
-                  type="button"
-                  onMouseDown={() => pickSuggestion(s)}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-warm text-left transition-colors"
-                >
-                  <span className="w-5 h-5 rounded-full border border-mist shrink-0" style={{ background: s.hex }} />
-                  <span className="text-sm text-ink">{s.name}</span>
-                  <span className="text-xs text-faint font-mono ml-auto">{s.hex}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Hex visível mas menor */}
-        <span className="text-xs font-mono text-faint w-[5.5rem] text-right shrink-0">{value}</span>
-      </div>
-
-      {error && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
+/* ───────────────────────────── Form principal ──────────────────────────── */
 
 export default function ProductForm({ initial }: Props) {
   const router = useRouter();
@@ -430,55 +55,72 @@ export default function ProductForm({ initial }: Props) {
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0]);
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
-  // Fabric specs
+
   const [threadCount, setThreadCount] = useState(initial?.threadCount ? String(initial.threadCount) : '');
   const [composition, setComposition] = useState(initial?.composition ?? '');
   const [weightGsm, setWeightGsm] = useState(initial?.weightGsm ? String(initial.weightGsm) : '');
   const [certifications, setCertifications] = useState(initial?.certifications?.join(', ') ?? '');
+  const [specsOpen, setSpecsOpen] = useState(!!(initial?.threadCount || initial?.composition || initial?.weightGsm || initial?.certifications?.length));
 
-  type ImgEntry = { dataUrl: string; blob?: Blob; url?: string; hex: string };
   const [images, setImages] = useState<ImgEntry[]>(
-    (initial?.images ?? []).map((url) => ({ dataUrl: url, url, hex: '#cccccc' })),
+    (initial?.images ?? []).map(url => ({ dataUrl: url, url }))
   );
 
-  const [variants, setVariants] = useState<{ size: string; fabric: string; color: string; colorName: string; qty: number }[]>(
-    initial?.variants?.map((v) => ({ size: v.size, fabric: v.fabric ?? '', color: v.color ?? '', colorName: v.colorName ?? '', qty: 0 })) ?? [],
+  const [variants, setVariants] = useState<VariantEntry[]>(
+    initial?.variants?.map(v => ({ size: v.size, fabric: v.fabric ?? '', color: v.color ?? '', colorName: v.colorName ?? '', qty: 0 })) ?? []
   );
 
   const [showCamera, setShowCamera] = useState(false);
+  const [colorPickerForImage, setColorPickerForImage] = useState<string | null>(null); // dataUrl da imagem sendo usada pra extrair cor
+  const [pendingVariantColorTarget, setPendingVariantColorTarget] = useState<number | null>(null); // índice da variação que vai receber a cor extraída
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const handleCapture = (dataUrl: string, hex: string, blob: Blob, detected: Detected) => {
+  function handlePhotoTaken(dataUrl: string, blob: Blob) {
     setShowCamera(false);
-    setImages((prev) => [...prev, { dataUrl, blob, hex }]);
+    setImages(prev => [...prev, { dataUrl, blob }]);
+  }
 
-    // Preenche automaticamente com o que foi detectado no rótulo
-    if (detected.name && !name) setName(detected.name);
-    if (detected.category) setCategory(detected.category);
+  function removeImage(i: number) {
+    setImages(prev => prev.filter((_, idx) => idx !== i));
+  }
 
-    // Cria variação automática com os dados detectados
-    const autoSize = detected.size ?? SIZES[0];
-    const autoFabric = detected.fabric ?? FABRICS[0];
-    if (variants.length === 0) {
-      setVariants([{ size: autoSize, fabric: autoFabric, color: hex, colorName: '', qty: 1 }]);
+  function addVariant() {
+    const fallbackHex = '#E8DCC8';
+    setVariants(v => [...v, { size: SIZES[0], fabric: FABRICS[0], color: fallbackHex, colorName: hexToColorName(fallbackHex), qty: 1 }]);
+  }
+
+  function removeVariant(i: number) {
+    setVariants(v => v.filter((_, idx) => idx !== i));
+  }
+
+  function updateVariant(i: number, field: keyof VariantEntry, value: string | number) {
+    setVariants(v => v.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
+  }
+
+  function openColorFromPhoto(variantIdx: number) {
+    if (images.length === 0) return;
+    setPendingVariantColorTarget(variantIdx);
+    setColorPickerForImage(images[0].dataUrl);
+  }
+
+  function handlePickedFromPhoto(hex: string, colorName: string) {
+    if (pendingVariantColorTarget !== null) {
+      updateVariant(pendingVariantColorTarget, 'color', hex);
+      updateVariant(pendingVariantColorTarget, 'colorName', colorName);
     }
-  };
+    setColorPickerForImage(null);
+    setPendingVariantColorTarget(null);
+  }
 
-  const removeImage = (i: number) => setImages((prev) => prev.filter((_, idx) => idx !== i));
+  const priceValid = !!price && !isNaN(parseFloat(price.replace(',', '.')));
 
-  const addVariant = () =>
-    setVariants((v) => [...v, { size: SIZES[0], fabric: FABRICS[0], color: images[0]?.hex ?? '#ffffff', colorName: '', qty: 1 }]);
-
-  const removeVariant = (i: number) => setVariants((v) => v.filter((_, idx) => idx !== i));
-
-  const updateVariant = (i: number, field: string, value: string | number | boolean) =>
-    setVariants((v) => v.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
-
-  const handleSubmit = async () => {
-    if (!name || !price || !category) { setError('Preencha nome, preço e categoria.'); return; }
-    if (variants.length === 0) { setError('Adicione pelo menos uma variação.'); return; }
+  async function handleSubmit() {
+    if (!name.trim()) { setError('Dê um nome para o produto.'); return; }
+    if (!priceValid) { setError('Informe um preço válido.'); return; }
     if (images.length === 0) { setError('Adicione pelo menos uma foto.'); return; }
+    if (variants.length === 0) { setError('Adicione pelo menos uma variação (tamanho/tecido/cor).'); return; }
+
     setSaving(true);
     setError('');
     try {
@@ -487,7 +129,6 @@ export default function ProductForm({ initial }: Props) {
         if (img.url) {
           uploadedUrls.push(img.url);
         } else if (img.blob) {
-          // Organizado por ano/mês → facilita política de ciclo de vida no GCS
           const now = new Date();
           const folder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
           const ext = img.blob.type === 'image/webp' ? 'webp' : 'jpg';
@@ -498,7 +139,7 @@ export default function ProductForm({ initial }: Props) {
       }
 
       const priceCents = Math.round(parseFloat(price.replace(',', '.')) * 100);
-      const tagArr = tags.split(',').map((t) => t.trim()).filter(Boolean);
+      const tagArr = tags.split(',').map(t => t.trim()).filter(Boolean);
       const builtVariants = variants.map(({ size, fabric, color, colorName }) => ({
         id: makeVariantId(size, fabric),
         size: size as 'solteiro' | 'casal' | 'queen' | 'king',
@@ -508,7 +149,8 @@ export default function ProductForm({ initial }: Props) {
       }));
 
       const data = {
-        name, description,
+        name: name.trim(),
+        description,
         price: priceCents,
         category,
         tags: tagArr,
@@ -516,7 +158,6 @@ export default function ProductForm({ initial }: Props) {
         active,
         variants: builtVariants,
         updatedAt: serverTimestamp(),
-        // Fabric specs — only save if filled
         ...(threadCount ? { threadCount: parseInt(threadCount) } : {}),
         ...(composition ? { composition } : {}),
         ...(weightGsm ? { weightGsm: parseInt(weightGsm) } : {}),
@@ -529,7 +170,7 @@ export default function ProductForm({ initial }: Props) {
         const newRef = doc(collection(db, 'products'));
         await setDoc(newRef, { ...data, createdAt: serverTimestamp() });
         for (const v of variants) {
-          const variantId = makeVariantId(v.size, v.fabric, v.color);
+          const variantId = makeVariantId(v.size, v.fabric);
           const sku = `${newRef.id}_${variantId}`;
           await setDoc(doc(db, 'inventory', sku), {
             productId: newRef.id, sku,
@@ -546,42 +187,44 @@ export default function ProductForm({ initial }: Props) {
     } finally {
       setSaving(false);
     }
-  };
+  }
 
   return (
     <>
       {showCamera && (
-        <CameraModal onCapture={handleCapture} onClose={() => setShowCamera(false)} />
+        <PhotoCaptureModal onCapture={handlePhotoTaken} onClose={() => setShowCamera(false)} />
+      )}
+      {colorPickerForImage && (
+        <PhotoColorPicker
+          imageDataUrl={colorPickerForImage}
+          onPick={handlePickedFromPhoto}
+          onClose={() => { setColorPickerForImage(null); setPendingVariantColorTarget(null); }}
+        />
       )}
 
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-xl mx-auto">
         {error && (
-          <div className="mb-4 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="mb-5 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 flex items-center gap-2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             {error}
           </div>
         )}
 
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-8">
 
-          {/* ── Fotos ── */}
-          <div>
-            <label className="label mb-2 block">Fotos do produto</label>
-            <div className="flex flex-wrap gap-2 mb-1">
+          {/* ── 1. Fotos ── */}
+          <FormSection step={1} title="Fotos do produto" hint="A primeira foto é usada como capa e como referência de cor">
+            <div className="flex flex-wrap gap-2">
               {images.map((img, i) => (
                 <div key={i} className="relative group">
-                  <img
-                    src={img.dataUrl}
-                    alt=""
-                    className="h-20 w-20 border border-mist object-cover"
-                  />
-                  <div
-                    className="absolute bottom-1.5 left-1.5 w-4 h-4 rounded-full border-2 border-white shadow"
-                    style={{ background: img.hex }}
-                    title={img.hex}
-                  />
+                  <img src={img.dataUrl} alt="" className="h-20 w-20 border border-mist object-cover" style={{ borderRadius: '4px' }} />
+                  {i === 0 && (
+                    <span className="absolute bottom-1 left-1 bg-ink/80 text-paper text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm">Capa</span>
+                  )}
                   <button
                     onClick={() => removeImage(i)}
                     className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow"
+                    aria-label="Remover foto"
                   >
                     ✕
                   </button>
@@ -591,221 +234,225 @@ export default function ProductForm({ initial }: Props) {
               <button
                 onClick={() => setShowCamera(true)}
                 className="h-20 w-20 border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 hover:border-clay hover:text-clay transition-colors"
+                style={{ borderRadius: '4px' }}
               >
                 <span className="text-2xl">📷</span>
-                <span className="text-xs font-medium">Foto</span>
+                <span className="text-[10px] font-medium">Foto</span>
               </button>
             </div>
-            {images.length > 0 && (
-              <p className="text-xs text-faint">
-                Cor: <span className="font-mono">{images[0].hex}</span>
-              </p>
-            )}
-          </div>
+          </FormSection>
 
-          {/* ── Nome ── */}
-          <div>
-            <label className="label">Nome do produto</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Jogo de cama queen algodão"
-              className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
-            />
-          </div>
-
-          {/* ── Descrição ── */}
-          <div>
-            <label className="label">Descrição</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Material, medidas, cuidados com lavagem..."
-              className="w-full resize-none border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
-            />
-          </div>
-
-          {/* ── Preço + Categoria ── */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* ── 2. Informações básicas ── */}
+          <FormSection step={2} title="Informações básicas">
             <div>
-              <label className="label">Preço (R$)</label>
+              <label className="label">Nome do produto</label>
               <input
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="49,90"
-                inputMode="decimal"
-                className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Jogo de cama queen algodão"
+                className="input"
               />
             </div>
+
             <div>
-              <label className="label">Categoria</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
-              >
-                {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-              </select>
+              <label className="label">Descrição</label>
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={3}
+                placeholder="Material, medidas, cuidados com lavagem..."
+                className="input resize-none"
+              />
             </div>
-          </div>
 
-          {/* ── Tags ── */}
-          <div>
-            <label className="label">Tags <span className="font-normal text-faint">(vírgula)</span></label>
-            <input
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="algodão, casal, branco"
-              className="w-full border border-mist px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay/20 input"
-            />
-          </div>
-
-          {/* ── Specs do tecido ── */}
-          <div className="border border-mist">
-            <div className="px-4 py-2.5 bg-warm/50 border-b border-mist">
-              <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-faint">Especificações do tecido <span className="font-normal normal-case opacity-60">(opcional)</span></p>
-            </div>
-            <div className="p-4 grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Fio count</label>
+                <label className="label">Preço (R$)</label>
                 <input
-                  type="number" min={0} placeholder="400"
-                  value={threadCount} onChange={e => setThreadCount(e.target.value)}
-                  className="w-full border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
+                  value={price}
+                  onChange={e => setPrice(e.target.value)}
+                  placeholder="49,90"
+                  inputMode="decimal"
+                  className={`input ${price && !priceValid ? 'border-red-400' : ''}`}
                 />
               </div>
               <div>
-                <label className="label">Gramatura (g/m²)</label>
-                <input
-                  type="number" min={0} placeholder="180"
-                  value={weightGsm} onChange={e => setWeightGsm(e.target.value)}
-                  className="w-full border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="label">Composição</label>
-                <input
-                  placeholder="100% Algodão"
-                  value={composition} onChange={e => setComposition(e.target.value)}
-                  className="w-full border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="label">Certificações <span className="font-normal normal-case opacity-60">(vírgula)</span></label>
-                <input
-                  placeholder="OEKO-TEX, Fair Trade"
-                  value={certifications} onChange={e => setCertifications(e.target.value)}
-                  className="w-full border border-mist px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
-                />
+                <label className="label">Categoria</label>
+                <select value={category} onChange={e => setCategory(e.target.value)} className="select">
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
               </div>
             </div>
-          </div>
 
-          {/* ── Variações ── */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="label">Variações</label>
-              <button onClick={addVariant} className="text-xs font-semibold text-clay active:text-clay-d">
-                + Adicionar
-              </button>
+            <div>
+              <label className="label">Tags <span className="font-normal normal-case text-faint">(separadas por vírgula)</span></label>
+              <input
+                value={tags}
+                onChange={e => setTags(e.target.value)}
+                placeholder="algodão, casal, branco"
+                className="input"
+              />
             </div>
+          </FormSection>
 
+          {/* ── 3. Variações ── */}
+          <FormSection
+            step={3}
+            title="Variações"
+            hint="Cada combinação de tamanho, tecido e cor vira um item separado no estoque"
+          >
             {variants.length === 0 && (
-              <p className="text-xs text-faint py-2">
-                Tire uma foto do rótulo para preencher automaticamente, ou toque em + Adicionar.
-              </p>
+              <div className="border border-dashed border-mist px-4 py-6 text-center" style={{ borderRadius: '4px' }}>
+                <p className="text-[12px] text-faint mb-3">Nenhuma variação ainda</p>
+                <button onClick={addVariant} className="btn-outline text-[12px] px-4 py-2">
+                  + Adicionar variação
+                </button>
+              </div>
             )}
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               {variants.map((v, i) => (
-                <div key={i} className="border border-mist bg-warm/50 p-3 flex flex-col gap-2">
-                  <div className="grid grid-cols-2 gap-2">
+                <div key={i} className="border border-mist bg-warm/40 p-3.5 flex flex-col gap-3" style={{ borderRadius: '4px' }}>
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
                       <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Tamanho</label>
                       <select
                         value={v.size}
-                        onChange={(e) => updateVariant(i, 'size', e.target.value)}
+                        onChange={e => updateVariant(i, 'size', e.target.value)}
                         className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
+                        style={{ borderRadius: '4px' }}
                       >
-                        {SIZES.map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
+                        {SIZES.map(s => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Tecido</label>
                       <select
                         value={v.fabric}
-                        onChange={(e) => updateVariant(i, 'fabric', e.target.value)}
+                        onChange={e => updateVariant(i, 'fabric', e.target.value)}
                         className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
+                        style={{ borderRadius: '4px' }}
                       >
-                        {FABRICS.map((f) => <option key={f}>{f}</option>)}
+                        {FABRICS.map(f => <option key={f}>{f}</option>)}
                       </select>
                     </div>
                   </div>
 
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Cor</label>
-                      <ColorPicker
-                        value={v.color}
-                        colorName={v.colorName}
-                        onChange={(hex, name) => {
-                          updateVariant(i, 'color', hex);
-                          updateVariant(i, 'colorName', name);
-                        }}
-                      />
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] text-faint block font-semibold tracking-[0.1em] uppercase">Cor</label>
+                      {images.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => openColorFromPhoto(i)}
+                          className="text-[10px] font-semibold text-clay hover:text-clay-d flex items-center gap-1"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                          Pegar da foto
+                        </button>
+                      )}
                     </div>
+                    <ColorPicker
+                      value={v.color}
+                      colorName={v.colorName}
+                      onChange={(hex, colorName) => {
+                        updateVariant(i, 'color', hex);
+                        updateVariant(i, 'colorName', colorName);
+                      }}
+                    />
+                  </div>
 
+                  <div className="flex items-end gap-2 pt-1 border-t border-mist/60">
                     {!isEdit && (
-                      <div className="w-20">
-                        <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Qtd</label>
+                      <div className="flex-1 pt-2.5">
+                        <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Quantidade em estoque</label>
                         <input
                           type="number"
                           min={0}
                           value={v.qty}
-                          onChange={(e) => updateVariant(i, 'qty', Number(e.target.value))}
+                          onChange={e => updateVariant(i, 'qty', Number(e.target.value))}
                           inputMode="numeric"
-                          className="w-full border border-mist px-2 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-clay/20"
+                          className="w-full border border-mist px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
+                          style={{ borderRadius: '4px' }}
                         />
                       </div>
                     )}
-
+                    {isEdit && (
+                      <p className="flex-1 text-[11px] text-faint pt-2.5">Estoque é gerenciado na página Estoque</p>
+                    )}
                     <button
                       onClick={() => removeVariant(i)}
-                      className="text-red-400 active:text-red-600 text-xl leading-none pb-1"
+                      className="text-red-400 hover:text-red-600 transition-colors w-9 h-9 flex items-center justify-center shrink-0"
+                      aria-label="Remover variação"
                     >
-                      ✕
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
                     </button>
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
 
-          {/* ── Ativo ── */}
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={active}
-              onChange={(e) => setActive(e.target.checked)}
-              className="w-4 h-4 rounded border-mist accent-clay"
-            />
-            <span className="text-sm text-mid">Produto ativo (visível na loja)</span>
-          </label>
+              {variants.length > 0 && (
+                <button onClick={addVariant} className="self-start text-[12px] font-semibold text-clay hover:text-clay-d flex items-center gap-1.5">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+                  Adicionar outra variação
+                </button>
+              )}
+            </div>
+          </FormSection>
+
+          {/* ── 4. Especificações do tecido (colapsável) ── */}
+          <FormSection step={4} title="Especificações do tecido" hint="Opcional — aparece na página do produto">
+            <button
+              type="button"
+              onClick={() => setSpecsOpen(o => !o)}
+              className="self-start flex items-center gap-1.5 text-[12px] font-semibold text-mid hover:text-ink transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${specsOpen ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
+              {specsOpen ? 'Ocultar especificações' : 'Adicionar especificações'}
+            </button>
+
+            {specsOpen && (
+              <div className="border border-mist p-4 grid grid-cols-2 gap-3" style={{ borderRadius: '4px' }}>
+                <div>
+                  <label className="label">Fio count</label>
+                  <input type="number" min={0} placeholder="400" value={threadCount} onChange={e => setThreadCount(e.target.value)} className="input-sm" />
+                </div>
+                <div>
+                  <label className="label">Gramatura (g/m²)</label>
+                  <input type="number" min={0} placeholder="180" value={weightGsm} onChange={e => setWeightGsm(e.target.value)} className="input-sm" />
+                </div>
+                <div className="col-span-2">
+                  <label className="label">Composição</label>
+                  <input placeholder="100% Algodão" value={composition} onChange={e => setComposition(e.target.value)} className="input-sm" />
+                </div>
+                <div className="col-span-2">
+                  <label className="label">Certificações <span className="font-normal normal-case text-faint">(vírgula)</span></label>
+                  <input placeholder="OEKO-TEX, Fair Trade" value={certifications} onChange={e => setCertifications(e.target.value)} className="input-sm" />
+                </div>
+              </div>
+            )}
+          </FormSection>
+
+          {/* ── 5. Visibilidade ── */}
+          <FormSection step={5} title="Visibilidade">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={e => setActive(e.target.checked)}
+                className="w-4 h-4 accent-clay"
+                style={{ borderRadius: '3px' }}
+              />
+              <span className="text-sm text-mid">Produto ativo (visível na loja)</span>
+            </label>
+          </FormSection>
 
           {/* ── Ações ── */}
           <div className="flex gap-3 pt-2 pb-8">
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="btn-primary flex-1 py-3.5 text-base"
-            >
+            <button onClick={handleSubmit} disabled={saving} className="btn-primary flex-1 py-3.5 text-base">
               {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
             </button>
-            <button
-              onClick={() => router.push('/painel/produtos')}
-              className="border border-mist px-5 py-3.5 text-sm font-medium text-mid hover:bg-warm transition-colors"
-            >
+            <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-5 py-3.5 text-sm font-medium text-mid hover:bg-warm transition-colors">
               Cancelar
             </button>
           </div>
