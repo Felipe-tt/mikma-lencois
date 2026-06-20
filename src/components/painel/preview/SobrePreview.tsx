@@ -1,6 +1,7 @@
 'use client';
 
 import type { StoreSettings } from '@/lib/store-settings';
+import { parseBusinessHours, getOpenStatus, groupConsecutiveDays } from '@/lib/business-hours';
 
 interface TimelineItem { year: string; label: string; desc: string }
 
@@ -95,6 +96,34 @@ export function SobrePreview({ s }: { s: StoreSettings }) {
                 </div>
               ))}
             </div>
+
+            {(() => {
+              const hours = parseBusinessHours(s.businessHours);
+              const status = getOpenStatus(hours, s.businessHoursTimezone);
+              const groups = groupConsecutiveDays(hours);
+              return (
+                <div className="border border-[#E4DED5] px-4 py-3.5">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <p className="text-[8px] font-bold tracking-[0.22em] uppercase text-[#B09C8C]">Horário de funcionamento</p>
+                    <span className={`flex items-center gap-1 text-[9px] font-bold tracking-wide uppercase px-1.5 py-0.5 shrink-0 ${
+                      status.isOpen ? 'bg-green-100 text-green-700' : 'bg-[#F9F6F1] text-[#B09C8C]'
+                    }`}>
+                      <span className={`w-1 h-1 rounded-full ${status.isOpen ? 'bg-green-500' : 'bg-[#B09C8C]'}`} />
+                      {status.isOpen ? 'Aberto' : 'Fechado'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#705A48] mb-2.5">{status.nextChangeLabel}</p>
+                  <dl className="flex flex-col gap-1">
+                    {groups.map(g => (
+                      <div key={g.label} className="flex items-baseline justify-between gap-3 text-[11px]">
+                        <dt className="text-[#B09C8C] shrink-0">{g.label}</dt>
+                        <dd className={`text-right tabular-nums ${g.text === 'Fechado' ? 'text-[#C8BAB0]' : 'text-[#1E1208]'}`}>{g.text}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              );
+            })()}
 
             {s.storeAddress && (
               <div className="border border-[#E4DED5] px-4 py-3.5">

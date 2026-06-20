@@ -1,12 +1,14 @@
 'use client';
 
 import type { StoreSettings } from '@/lib/store-settings';
+import { parseBusinessHours, getOpenStatus } from '@/lib/business-hours';
 
 /** Espelha src/components/layout/Footer.tsx */
 export function FooterPreview({ s }: { s: StoreSettings }) {
   const year = new Date().getFullYear();
   const storeName = s.storeName || 'Mikma Lençóis';
   const wa = s.whatsappUrl || (s.storePhone ? `https://wa.me/${s.storePhone.replace(/\D/g, '')}` : null);
+  const status = s.businessHours ? getOpenStatus(parseBusinessHours(s.businessHours), s.businessHoursTimezone) : null;
 
   return (
     <footer className="bg-[#1E1208] text-[#FAF8F5]">
@@ -45,6 +47,14 @@ export function FooterPreview({ s }: { s: StoreSettings }) {
           <div>
             <p className="text-[8px] font-bold tracking-[0.24em] uppercase text-[#FAF8F5]/30 mb-4">Contato</p>
             <ul className="flex flex-col gap-2.5">
+              {status && (
+                <li className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.isOpen ? 'bg-green-400' : 'bg-[#FAF8F5]/25'}`} />
+                  <span className={`text-[12px] ${status.isOpen ? 'text-green-400/90' : 'text-[#FAF8F5]/50'}`}>
+                    {status.isOpen ? 'Aberto agora' : 'Fechado agora'}
+                  </span>
+                </li>
+              )}
               {s.storeEmail && <li className="text-[12px] text-[#FAF8F5]/50">{s.storeEmail}</li>}
               <li className="text-[12px] text-[#FAF8F5]/50">Privacidade</li>
               <li className="text-[12px] text-[#FAF8F5]/50">Termos de uso</li>

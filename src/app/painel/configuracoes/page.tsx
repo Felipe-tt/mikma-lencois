@@ -8,6 +8,9 @@ import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
 import { HeroPreview, FeaturedPreview, CtaPreview } from '@/components/painel/preview/HomePreview';
 import { FooterPreview } from '@/components/painel/preview/FooterPreview';
 import { SobrePreview } from '@/components/painel/preview/SobrePreview';
+import { BusinessHoursEditor } from '@/components/painel/BusinessHoursEditor';
+import { parseBusinessHours, serializeBusinessHours } from '@/lib/business-hours';
+import { maskCnpj, isValidCnpj } from '@/lib/masks';
 
 type Section = 'loja' | 'homepage' | 'sobre' | 'entrega';
 const SECTIONS: { id: Section; label: string; icon: string; desc: string }[] = [
@@ -82,6 +85,20 @@ export default function ConfiguracoesPage() {
           <Section title="Identidade" desc="Como sua loja aparece para os clientes">
             <Field label="Nome da loja" value={settings.storeName} onChange={v => set('storeName', v)} placeholder="Mikma Lençóis" hint="Aparece no topo do site e no rodapé" />
             <Field label="Slogan" value={settings.storeSlogan} onChange={v => set('storeSlogan', v)} placeholder="Conforto direto da fábrica" hint="Frase curta que resume sua loja" />
+            <Field
+              label="CNPJ"
+              value={settings.storeCnpj ?? ''}
+              onChange={v => set('storeCnpj', maskCnpj(v))}
+              placeholder="00.000.000/0000-00"
+              maxLength={18}
+              hint={
+                !settings.storeCnpj
+                  ? 'Opcional, mas recomendado — usado em notas fiscais e rodapé do site'
+                  : isValidCnpj(settings.storeCnpj)
+                    ? '✅ CNPJ válido'
+                    : '⚠️ CNPJ incompleto ou inválido'
+              }
+            />
           </Section>
 
           <Section title="Endereço" desc="Onde sua loja fica fisicamente">
@@ -93,6 +110,29 @@ export default function ConfiguracoesPage() {
             <div className="grid grid-cols-2 gap-3">
               <Field label="Cidade" value={settings.storeCity} onChange={v => set('storeCity', v)} placeholder="Blumenau" />
               <Field label="Estado" value={settings.storeState} onChange={v => set('storeState', v)} placeholder="SC" maxLength={2} />
+            </div>
+          </Section>
+
+          <Section title="Horário de funcionamento" desc="Configure os dias e horários em que sua loja atende — pode ter mais de um intervalo por dia" onPreview={() => setPreview('sobre')}>
+            <BusinessHoursEditor
+              value={parseBusinessHours(settings.businessHours)}
+              onChange={next => set('businessHours', serializeBusinessHours(next))}
+            />
+            <div className="pt-1">
+              <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">Fuso horário</label>
+              <select
+                value={settings.businessHoursTimezone || 'America/Sao_Paulo'}
+                onChange={e => set('businessHoursTimezone', e.target.value)}
+                className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/60"
+              >
+                <option value="America/Sao_Paulo">Brasília (GMT-3) — a maior parte do Brasil</option>
+                <option value="America/Manaus">Manaus (GMT-4)</option>
+                <option value="America/Rio_Branco">Rio Branco / Acre (GMT-5)</option>
+                <option value="America/Noronha">Fernando de Noronha (GMT-2)</option>
+              </select>
+              <p className="mt-1.5 text-[11px] text-[#B09C8C] leading-relaxed">
+                Usado para calcular corretamente se a loja está &quot;aberta agora&quot; no site
+              </p>
             </div>
           </Section>
 

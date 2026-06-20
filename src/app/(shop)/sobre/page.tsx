@@ -1,6 +1,7 @@
 export const revalidate = 86400;
 import { getSettings } from '@/lib/settings';
 import Image from 'next/image';
+import { BusinessHoursCard } from '@/components/storefront/BusinessHoursCard';
 
 export default async function SobrePage() {
   const s = await getSettings();
@@ -90,6 +91,8 @@ export default async function SobrePage() {
                 </div>
               ))}
             </div>
+
+            <BusinessHoursCard businessHours={s.businessHours} timezone={s.businessHoursTimezone} />
 
             {s.storeAddress && (
               <div className="border border-mist px-6 py-5">

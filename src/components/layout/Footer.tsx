@@ -1,5 +1,7 @@
+'use client';
 import Link from 'next/link';
 import Image from 'next/image';
+import { parseBusinessHours, getOpenStatus } from '@/lib/business-hours';
 
 interface Props {
   storeName?: string;
@@ -10,6 +12,8 @@ interface Props {
   whatsappUrl?: string;
   reclameAquiUrl?: string;
   tagline?: string;
+  businessHours?: string;
+  businessHoursTimezone?: string;
 }
 
 export function Footer({
@@ -21,9 +25,12 @@ export function Footer({
   whatsappUrl,
   reclameAquiUrl,
   tagline = '',
+  businessHours,
+  businessHoursTimezone,
 }: Props) {
   const year = new Date().getFullYear();
   const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
+  const status = businessHours ? getOpenStatus(parseBusinessHours(businessHours), businessHoursTimezone) : null;
 
   return (
     <footer className="bg-ink text-paper mt-auto overflow-hidden">
@@ -102,6 +109,14 @@ export function Footer({
           <div>
             <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Contato</p>
             <ul className="flex flex-col gap-3.5">
+              {status && (
+                <li className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.isOpen ? 'bg-green-400' : 'bg-paper/25'}`} />
+                  <span className={`text-[13px] ${status.isOpen ? 'text-green-400/90' : 'text-paper/50'}`}>
+                    {status.isOpen ? 'Aberto agora' : 'Fechado agora'}
+                  </span>
+                </li>
+              )}
               {storeEmail && (
                 <li>
                   <a href={`mailto:${storeEmail}`} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">

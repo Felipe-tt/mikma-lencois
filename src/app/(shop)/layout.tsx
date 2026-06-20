@@ -19,6 +19,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         instagramUrl={s.instagramUrl}
         whatsappUrl={s.whatsappUrl}
         tagline={s.storeSlogan}
+        businessHours={s.businessHours}
+        businessHoursTimezone={s.businessHoursTimezone}
       />
     </div>
   );

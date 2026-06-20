@@ -13,8 +13,11 @@ export async function GET() {
       storeCity: s.storeCity,
       storePhone: s.storePhone,
       storeEmail: s.storeEmail,
+      storeCnpj: s.storeCnpj ?? '',
       instagramUrl: s.instagramUrl,
       whatsappUrl: s.whatsappUrl,
+      businessHours: s.businessHours,
+      businessHoursTimezone: s.businessHoursTimezone,
     }, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
     });
