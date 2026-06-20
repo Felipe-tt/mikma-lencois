@@ -31,9 +31,37 @@ export function PhotoColorPicker({ imageDataUrl, onPick, onClose }: Props) {
       canvas.height = img.height;
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(img, 0, 0);
-      const px = Math.round(fx * (img.width - 1));
-      const py = Math.round(fy * (img.height - 1));
-      const [r, g, b] = ctx.getImageData(px, py, 1, 1).data;
+
+      // A <img> na tela usa object-fit: cover dentro de um quadro quadrado,
+      // o que recorta a imagem original pra preencher o espaço (corta as
+      // bordas mais longas). fx/fy chegam aqui como frações (0–1) da área
+      // VISÍVEL na tela — então é preciso replicar exatamente a mesma
+      // matemática do object-cover pra saber qual pixel da imagem ORIGINAL
+      // corresponde ao ponto que o usuário realmente vê e toca.
+      const imgAspect = img.width / img.height;
+      const frameAspect = 1; // o quadro de preview é sempre 1:1 (aspectRatio: '1/1')
+
+      let visibleW = img.width;
+      let visibleH = img.height;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (imgAspect > frameAspect) {
+        // Imagem mais larga que o quadro — sobra é cortada nas laterais
+        visibleW = img.height * frameAspect;
+        offsetX = (img.width - visibleW) / 2;
+      } else if (imgAspect < frameAspect) {
+        // Imagem mais alta que o quadro — sobra é cortada em cima/embaixo
+        visibleH = img.width / frameAspect;
+        offsetY = (img.height - visibleH) / 2;
+      }
+
+      const px = Math.round(offsetX + fx * (visibleW - 1));
+      const py = Math.round(offsetY + fy * (visibleH - 1));
+      const clampedPx = Math.max(0, Math.min(img.width - 1, px));
+      const clampedPy = Math.max(0, Math.min(img.height - 1, py));
+
+      const [r, g, b] = ctx.getImageData(clampedPx, clampedPy, 1, 1).data;
       const hex = rgbToHex(r, g, b);
       setPickedHex(hex);
       setPickedName(hexToColorName(hex));

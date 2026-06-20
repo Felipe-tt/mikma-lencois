@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, serverTimestamp, setDoc, collection } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase/client';
 import type { Product } from '@/types';
@@ -76,6 +76,23 @@ export default function ProductForm({ initial }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Em modo edição: carrega os SKUs de inventário que já existem pra esse produto,
+  // pra poder detectar variações novas/removidas/renomeadas ao salvar e manter
+  // o estoque sincronizado em vez de deixar SKUs órfãos no Firestore.
+  const [existingSkus, setExistingSkus] = useState<Record<string, { quantity: number; reserved: number }>>({});
+  useEffect(() => {
+    if (!isEdit || !initial?.id) return;
+    const productId = initial.id;
+    getDocs(query(collection(db, 'inventory'), where('productId', '==', productId))).then(snap => {
+      const map: Record<string, { quantity: number; reserved: number }> = {};
+      snap.forEach(d => {
+        const data = d.data();
+        map[d.id] = { quantity: data.quantity ?? 0, reserved: data.reserved ?? 0 };
+      });
+      setExistingSkus(map);
+    }).catch(() => {});
+  }, [isEdit, initial?.id]);
+
   function handlePhotoTaken(dataUrl: string, blob: Blob) {
     setShowCamera(false);
     setImages(prev => [...prev, { dataUrl, blob }]);
@@ -83,6 +100,15 @@ export default function ProductForm({ initial }: Props) {
 
   function removeImage(i: number) {
     setImages(prev => prev.filter((_, idx) => idx !== i));
+  }
+
+  function makeCover(i: number) {
+    setImages(prev => {
+      const next = [...prev];
+      const [chosen] = next.splice(i, 1);
+      next.unshift(chosen);
+      return next;
+    });
   }
 
   function addVariant() {
@@ -115,11 +141,39 @@ export default function ProductForm({ initial }: Props) {
 
   const priceValid = !!price && !isNaN(parseFloat(price.replace(',', '.')));
 
+  // SKUs que o form atual vai gerar (com base nas variações de agora)
+  const currentSkuSet = new Set(variants.map(v => makeVariantId(v.size, v.fabric)));
+  // SKUs que existiam no inventário antes e não aparecem mais nas variações atuais
+  // (variação removida, ou tamanho/tecido mudou — o que gera um SKU diferente)
+  const orphanedSkus = isEdit
+    ? Object.keys(existingSkus).filter(sku => !currentSkuSet.has(sku.replace(`${initial?.id}_`, '')))
+    : [];
+  const orphanedWithStock = orphanedSkus.filter(sku => {
+    const s = existingSkus[sku];
+    return s && (s.quantity > 0 || s.reserved > 0);
+  });
+
+  // Duas variações com o mesmo tamanho+tecido geram o mesmo SKU e se sobrescrevem
+  // silenciosamente no inventário — detecta isso pra avisar antes de salvar.
+  const variantIdCounts = new Map<string, number>();
+  for (const v of variants) {
+    const id = makeVariantId(v.size, v.fabric);
+    variantIdCounts.set(id, (variantIdCounts.get(id) ?? 0) + 1);
+  }
+  const duplicateVariantIndexes = new Set(
+    variants
+      .map((v, i) => ({ i, id: makeVariantId(v.size, v.fabric) }))
+      .filter(({ id }) => (variantIdCounts.get(id) ?? 0) > 1)
+      .map(({ i }) => i)
+  );
+  const hasDuplicateVariants = duplicateVariantIndexes.size > 0;
+
   async function handleSubmit() {
     if (!name.trim()) { setError('Dê um nome para o produto.'); return; }
     if (!priceValid) { setError('Informe um preço válido.'); return; }
     if (images.length === 0) { setError('Adicione pelo menos uma foto.'); return; }
     if (variants.length === 0) { setError('Adicione pelo menos uma variação (tamanho/tecido/cor).'); return; }
+    if (hasDuplicateVariants) { setError('Há variações repetidas com o mesmo tamanho e tecido — ajuste antes de salvar.'); return; }
 
     setSaving(true);
     setError('');
@@ -165,7 +219,38 @@ export default function ProductForm({ initial }: Props) {
       };
 
       if (isEdit) {
-        await updateDoc(doc(db, 'products', initial!.id!), data);
+        const productId = initial!.id!;
+
+        // Bloqueia o salvamento se isso for apagar SKUs com estoque restante
+        // sem confirmação — evita perder quantidade rastreada por acidente.
+        if (orphanedWithStock.length > 0) {
+          const ok = window.confirm(
+            `${orphanedWithStock.length === 1 ? 'Uma variação removida ainda tem' : `${orphanedWithStock.length} variações removidas ainda têm`} estoque cadastrado. ` +
+            'Se continuar, esse estoque será apagado permanentemente. Deseja continuar?'
+          );
+          if (!ok) { setSaving(false); return; }
+        }
+
+        await updateDoc(doc(db, 'products', productId), data);
+
+        // Remove SKUs órfãos (variação removida ou tamanho/tecido alterado)
+        for (const sku of orphanedSkus) {
+          await deleteDoc(doc(db, 'inventory', sku)).catch(() => {});
+        }
+
+        // Cria SKUs novos que ainda não existem no inventário
+        for (const v of variants) {
+          const variantId = makeVariantId(v.size, v.fabric);
+          const sku = `${productId}_${variantId}`;
+          if (!existingSkus[sku]) {
+            await setDoc(doc(db, 'inventory', sku), {
+              productId, sku,
+              variant: { id: variantId, size: v.size, fabric: v.fabric, color: v.color },
+              quantity: 0, reserved: 0, lowStockThreshold: 3, history: [],
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
       } else {
         const newRef = doc(collection(db, 'products'));
         await setDoc(newRef, { ...data, createdAt: serverTimestamp() });
@@ -218,8 +303,16 @@ export default function ProductForm({ initial }: Props) {
               {images.map((img, i) => (
                 <div key={i} className="relative group">
                   <img src={img.dataUrl} alt="" className="h-20 w-20 border border-mist object-cover" style={{ borderRadius: '4px' }} />
-                  {i === 0 && (
+                  {i === 0 ? (
                     <span className="absolute bottom-1 left-1 bg-ink/80 text-paper text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm">Capa</span>
+                  ) : (
+                    <button
+                      onClick={() => makeCover(i)}
+                      className="absolute bottom-1 left-1 bg-white/90 text-ink text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm hover:bg-white transition-colors"
+                      title="Tornar capa"
+                    >
+                      Tornar capa
+                    </button>
                   )}
                   <button
                     onClick={() => removeImage(i)}
@@ -312,7 +405,13 @@ export default function ProductForm({ initial }: Props) {
 
             <div className="flex flex-col gap-2.5">
               {variants.map((v, i) => (
-                <div key={i} className="border border-mist bg-warm/40 p-3.5 flex flex-col gap-3" style={{ borderRadius: '4px' }}>
+                <div key={i} className={`border p-3.5 flex flex-col gap-3 ${duplicateVariantIndexes.has(i) ? 'border-red-300 bg-red-50/50' : 'border-mist bg-warm/40'}`} style={{ borderRadius: '4px' }}>
+                  {duplicateVariantIndexes.has(i) && (
+                    <p className="text-[11px] text-red-600 font-medium flex items-center gap-1.5 -mb-1">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      Mesma combinação de tamanho e tecido de outra variação
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
                       <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Tamanho</label>
@@ -447,10 +546,22 @@ export default function ProductForm({ initial }: Props) {
             </label>
           </FormSection>
 
+          {/* ── Aviso: variações removidas que ainda têm estoque ── */}
+          {isEdit && orphanedWithStock.length > 0 && (
+            <div className="border border-amber-300 bg-amber-50 px-4 py-3 -mt-2 flex items-start gap-2.5" style={{ borderRadius: '4px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600 shrink-0 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <p className="text-[12px] text-amber-800 leading-relaxed">
+                {orphanedWithStock.length === 1
+                  ? 'Uma variação removida ainda tem estoque cadastrado.'
+                  : `${orphanedWithStock.length} variações removidas ainda têm estoque cadastrado.`} Ao salvar, esse estoque será apagado.
+              </p>
+            </div>
+          )}
+
           {/* ── Ações ── */}
           <div className="flex gap-3 pt-2 pb-8">
-            <button onClick={handleSubmit} disabled={saving} className="btn-primary flex-1 py-3.5 text-base">
-              {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
+            <button onClick={handleSubmit} disabled={saving || hasDuplicateVariants} className="btn-primary flex-1 py-3.5 text-base">
+              {saving ? 'Salvando…' : hasDuplicateVariants ? 'Corrija as variações repetidas' : isEdit ? 'Salvar alterações' : 'Criar produto'}
             </button>
             <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-5 py-3.5 text-sm font-medium text-mid hover:bg-warm transition-colors">
               Cancelar
