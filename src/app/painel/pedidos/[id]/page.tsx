@@ -160,7 +160,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   if (loading) return (
     <div className="max-w-2xl flex flex-col gap-3">
-      {[1,2,3,4].map(i => <div key={i} className="h-20 bg-[#F0EBE1] animate-pulse border border-[#E6DFD5]" />)}
+      {[1,2,3,4].map(i => <div key={i} className="h-20 skeleton border border-mist" />)}
     </div>
   );
 

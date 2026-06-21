@@ -111,7 +111,7 @@ export default function ManutencaoPage() {
 
   if (loading) return (
     <div className="flex flex-col gap-3">
-      {[1, 2, 3].map(i => <div key={i} className="h-12 bg-[#F0EBE1] animate-pulse border border-[#E6DFD5]" />)}
+      {[1, 2, 3].map(i => <div key={i} className="h-12 skeleton border border-mist" />)}
     </div>
   );
 

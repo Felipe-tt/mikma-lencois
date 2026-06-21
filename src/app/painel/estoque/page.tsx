@@ -48,7 +48,7 @@ export default function EstoquePage() {
 
   if (loading) return (
     <div className="flex flex-col gap-2">
-      {[1,2,3,4].map(i => <div key={i} className="h-[72px] animate-pulse bg-[#F0EBE1] border border-[#E6DFD5]" />)}
+      {[1,2,3,4].map(i => <div key={i} className="h-[72px] skeleton border border-mist" />)}
     </div>
   );
 

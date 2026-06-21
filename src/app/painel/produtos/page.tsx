@@ -66,7 +66,7 @@ export default function PainelProdutosPage() {
 
   if (loading) return (
     <div className="flex flex-col gap-2">
-      {[1,2,3,4].map(i => <div key={i} className="h-[72px] bg-[#F0EBE1] animate-pulse border border-[#E6DFD5]" />)}
+      {[1,2,3,4].map(i => <div key={i} className="h-[72px] skeleton border border-mist" />)}
     </div>
   );
 
