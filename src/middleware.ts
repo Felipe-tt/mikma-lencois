@@ -27,27 +27,28 @@ async function isIpReleased(projectId: string, docId: string) {
   }
 }
 
-async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; country: string; isp: string }> {
+async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; country: string; isp: string; debugError: string }> {
   // IPs locais/privados não são geolocalizáveis
   if (ip === '0.0.0.0' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
-    return { city: '', region: '', country: '', isp: '' };
+    return { city: '', region: '', country: '', isp: '', debugError: 'ip_local' };
   }
   try {
     const res = await fetch(`https://ipapi.co/${ip}/json/`, {
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(5000),
       headers: { 'User-Agent': 'MikmaLencois/1.0' },
     });
-    if (!res.ok) return { city: '', region: '', country: '', isp: '' };
+    if (!res.ok) return { city: '', region: '', country: '', isp: '', debugError: `http_${res.status}` };
     const data = await res.json();
-    if (data.error) return { city: '', region: '', country: '', isp: '' };
+    if (data.error) return { city: '', region: '', country: '', isp: '', debugError: `api_error_${data.reason ?? 'unknown'}` };
     return {
       city: data.city ?? '',
       region: data.region ?? '',
       country: data.country_name ?? '',
       isp: data.org ?? '',
+      debugError: '',
     };
-  } catch {
-    return { city: '', region: '', country: '', isp: '' };
+  } catch (err) {
+    return { city: '', region: '', country: '', isp: '', debugError: `exception_${err instanceof Error ? err.message : String(err)}`.slice(0, 200) };
   }
 }
 
@@ -89,6 +90,7 @@ async function registerInQueue(
     geoRegion: { stringValue: geo.region },
     geoCountry: { stringValue: geo.country },
     isp: { stringValue: geo.isp },
+    geoDebug: { stringValue: geo.debugError },
     visitCount: { integerValue: '1' },
   };
   if (uid) fields.uid = { stringValue: uid };

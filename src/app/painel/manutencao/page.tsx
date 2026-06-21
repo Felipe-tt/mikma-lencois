@@ -24,6 +24,7 @@ type QueueEntry = {
   geoRegion?: string;
   geoCountry?: string;
   isp?: string;
+  geoDebug?: string;
 };
 
 type Status = {
@@ -256,6 +257,9 @@ export default function ManutencaoPage() {
                         )}
                         {entry.platform && (
                           <span className="text-[10px] text-[#B09C8C]">{entry.platform}</span>
+                        )}
+                        {entry.geoDebug && (
+                          <span className="text-[10px] text-red-400">⚠ geo: {entry.geoDebug}</span>
                         )}
                       </div>
 

@@ -208,13 +208,27 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255,255,255,0.6) 45%,
-      rgba(255,255,255,0.8) 50%,
-      rgba(255,255,255,0.6) 55%,
+      rgba(0,0,0,0.06) 45%,
+      rgba(0,0,0,0.1) 50%,
+      rgba(0,0,0,0.06) 55%,
       transparent 100%
     );
     background-size: 200% 100%;
     animation: shimmer 1.8s ease-in-out infinite;
+  }
+  /* No dark mode o filter:invert já escurece tudo — usamos branco aqui
+     para que, após o invert, o resultado visual continue sendo o
+     mesmo highlight sutil (e não vire um "buraco preto" no shimmer) */
+  html.dark .skeleton::after {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.06) 45%,
+      rgba(255,255,255,0.1) 50%,
+      rgba(255,255,255,0.06) 55%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
   }
 
   /* ─── Divider with text ───────────────────────────────────────── */
