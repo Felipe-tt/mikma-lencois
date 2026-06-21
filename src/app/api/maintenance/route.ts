@@ -62,7 +62,9 @@ export async function POST(req: NextRequest) {
 
   // liberar IP específico
   if (body.action === 'release' && body.ip) {
-    // Mesma regex do middleware — ponto e dois-pontos (IPv6 usa ':')
+    // Precisa bater EXATAMENTE com a regex usada em src/middleware.ts
+    // (substitui '.' E ':'  — IPv6 tem ':', então usar [./] aqui fazia o
+    // release nunca encontrar o documento certo pra IPs IPv6).
     await adminDb.collection('maintenance_queue').doc(body.ip.replace(/[.:]/g, '_')).set({
       ip: body.ip,
       released: true,

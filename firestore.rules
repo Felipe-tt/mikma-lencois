@@ -88,7 +88,14 @@ service cloud.firestore {
 
     match /maintenance_queue/{doc} {
       allow read: if true;        // middleware precisa checar
-      allow write: if isSellerOrAdmin();
+      // O middleware roda sem autenticação (Edge Runtime) e precisa
+      // conseguir registrar visitantes na fila — só permite CRIAR um
+      // documento novo com released=false (não dá pra um visitante
+      // anônimo se auto-liberar nem sobrescrever um registro existente).
+      allow create: if request.resource.data.released == false;
+      // Liberar (mudar released pra true) ou apagar continua exigindo
+      // seller/admin autenticado.
+      allow update, delete: if isSellerOrAdmin();
     }
 
     // ── Tudo mais: negar por padrão ──────────────────────────────────────────

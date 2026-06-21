@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 async function getMaintenanceStatus(projectId: string) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(2000), cache: 'no-store' });
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000), cache: 'no-store' });
     if (!res.ok) return { active: false };
     const data = await res.json();
     const active = data?.fields?.active?.booleanValue ?? false;
@@ -18,7 +18,7 @@ async function getMaintenanceStatus(projectId: string) {
 async function isIpReleased(projectId: string, docId: string) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(2000), cache: 'no-store' });
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000), cache: 'no-store' });
     if (!res.ok) return false;
     const data = await res.json();
     return data?.fields?.released?.booleanValue ?? false;
@@ -43,7 +43,7 @@ async function registerInQueue(projectId: string, docId: string, ip: string, uid
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields }),
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(4000),
     });
   } catch { /* silencioso */ }
 }
