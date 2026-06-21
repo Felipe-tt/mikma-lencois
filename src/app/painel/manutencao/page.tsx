@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { db } from '@/lib/firebase/client';
+import { collection, onSnapshot, orderBy, query, doc } from 'firebase/firestore';
 
 type QueueEntry = {
   id: string;
@@ -58,7 +60,32 @@ export default function ManutencaoPage() {
     setLoading(false);
   }, [getHeaders]);
 
+  // Carga inicial via API (já autenticada/verificada no backend)
   useEffect(() => { load(); }, [load]);
+
+  // A partir daí, escuta o Firestore em tempo real — assim que um
+  // visitante novo entra na fila ou o status muda, a tela atualiza
+  // sozinha, sem precisar de F5.
+  useEffect(() => {
+    const unsubStatus = onSnapshot(doc(db, 'maintenance', 'status'), snap => {
+      if (snap.exists()) {
+        setStatus(snap.data() as Status);
+      }
+    });
+
+    const unsubQueue = onSnapshot(
+      query(collection(db, 'maintenance_queue'), orderBy('enteredAt', 'desc')),
+      snap => {
+        const entries = snap.docs.map(d => ({ id: d.id, ...d.data() })) as QueueEntry[];
+        setQueue(entries);
+      }
+    );
+
+    return () => {
+      unsubStatus();
+      unsubQueue();
+    };
+  }, []);
 
   const toggle = async () => {
     setToggling(true);
