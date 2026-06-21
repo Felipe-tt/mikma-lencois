@@ -71,7 +71,7 @@ export default function ProductForm({ initial }: Props) {
   );
 
   const [showCamera, setShowCamera] = useState(false);
-  const [colorPickerForImage, setColorPickerForImage] = useState<string | null>(null); // dataUrl da imagem sendo usada pra extrair cor
+  const [colorPickerImageIndex, setColorPickerImageIndex] = useState<number | null>(null); // índice da imagem sendo usada pra extrair cor
   const [pendingVariantColorTarget, setPendingVariantColorTarget] = useState<number | null>(null); // índice da variação que vai receber a cor extraída
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -127,7 +127,7 @@ export default function ProductForm({ initial }: Props) {
   function openColorFromPhoto(variantIdx: number) {
     if (images.length === 0) return;
     setPendingVariantColorTarget(variantIdx);
-    setColorPickerForImage(images[0].dataUrl);
+    setColorPickerImageIndex(0);
   }
 
   function handlePickedFromPhoto(hex: string, colorName: string) {
@@ -135,7 +135,7 @@ export default function ProductForm({ initial }: Props) {
       updateVariant(pendingVariantColorTarget, 'color', hex);
       updateVariant(pendingVariantColorTarget, 'colorName', colorName);
     }
-    setColorPickerForImage(null);
+    setColorPickerImageIndex(null);
     setPendingVariantColorTarget(null);
   }
 
@@ -279,11 +279,13 @@ export default function ProductForm({ initial }: Props) {
       {showCamera && (
         <PhotoCaptureModal onCapture={handlePhotoTaken} onClose={() => setShowCamera(false)} />
       )}
-      {colorPickerForImage && (
+      {colorPickerImageIndex !== null && (
         <PhotoColorPicker
-          imageDataUrl={colorPickerForImage}
+          images={images.map(img => img.dataUrl)}
+          imageIndex={colorPickerImageIndex}
+          onChangeImage={setColorPickerImageIndex}
           onPick={handlePickedFromPhoto}
-          onClose={() => { setColorPickerForImage(null); setPendingVariantColorTarget(null); }}
+          onClose={() => { setColorPickerImageIndex(null); setPendingVariantColorTarget(null); }}
         />
       )}
 
