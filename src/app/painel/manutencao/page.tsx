@@ -13,6 +13,17 @@ type QueueEntry = {
   enteredAt: string;
   releasedAt?: string;
   releasedBy?: string;
+  userAgent?: string;
+  referer?: string;
+  acceptLanguage?: string;
+  requestedPath?: string;
+  method?: string;
+  platform?: string;
+  isMobile?: string;
+  geoCity?: string;
+  geoRegion?: string;
+  geoCountry?: string;
+  isp?: string;
 };
 
 type Status = {
@@ -211,42 +222,81 @@ export default function ManutencaoPage() {
           </div>
         ) : (
           <div className="divide-y divide-[#E6DFD5]">
-            {currentList.map(entry => (
-              <div key={entry.id} className="flex items-center justify-between px-5 py-3 gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className={`shrink-0 w-2 h-2 rounded-full ${entry.released ? 'bg-green-400' : 'bg-amber-400'}`} />
-                  <div className="min-w-0">
-                    {entry.uid ? (
-                      <>
-                        <p className="text-[13px] font-semibold text-[#1E1208] truncate">
-                          {entry.displayName || 'Usuário sem nome'}
-                        </p>
-                        <p className="text-[11px] text-[#B09C8C] truncate">{entry.email}</p>
-                        <p className="text-[10px] text-[#C8BAB0] font-mono truncate">{entry.ip}</p>
-                      </>
-                    ) : (
-                      <p className="text-[13px] font-mono text-[#1E1208] truncate">{entry.ip}</p>
-                    )}
-                    <p className="text-[10px] text-[#B09C8C]">
-                      Entrou: {new Date(entry.enteredAt).toLocaleString('pt-BR')}
-                      {entry.released && entry.releasedAt && (
-                        <span> · Liberado: {new Date(entry.releasedAt).toLocaleString('pt-BR')}</span>
+            {currentList.map(entry => {
+              const location = [entry.geoCity, entry.geoRegion, entry.geoCountry].filter(Boolean).join(', ');
+              const device = entry.isMobile === '?1' ? '📱 Celular' : entry.isMobile === '?0' ? '💻 Computador' : '';
+              return (
+                <div key={entry.id} className="px-5 py-3 flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <span className={`shrink-0 mt-1.5 w-2 h-2 rounded-full ${entry.released ? 'bg-green-400' : 'bg-amber-400'}`} />
+                    <div className="min-w-0 flex-1">
+                      {entry.uid ? (
+                        <>
+                          <p className="text-[13px] font-semibold text-[#1E1208] truncate">
+                            {entry.displayName || 'Usuário sem nome'}
+                          </p>
+                          <p className="text-[11px] text-[#B09C8C] truncate">{entry.email}</p>
+                        </>
+                      ) : (
+                        <p className="text-[13px] font-mono text-[#1E1208] truncate">{entry.ip}</p>
                       )}
-                    </p>
+
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                        {entry.uid && (
+                          <span className="text-[10px] text-[#C8BAB0] font-mono">{entry.ip}</span>
+                        )}
+                        {location && (
+                          <span className="text-[10px] text-[#B09C8C]">📍 {location}</span>
+                        )}
+                        {entry.isp && (
+                          <span className="text-[10px] text-[#B09C8C]">🌐 {entry.isp}</span>
+                        )}
+                        {device && (
+                          <span className="text-[10px] text-[#B09C8C]">{device}</span>
+                        )}
+                        {entry.platform && (
+                          <span className="text-[10px] text-[#B09C8C]">{entry.platform}</span>
+                        )}
+                      </div>
+
+                      {entry.requestedPath && (
+                        <p className="text-[10px] text-[#C8BAB0] mt-0.5 truncate">
+                          Tentou acessar: <span className="font-mono">{entry.requestedPath}</span>
+                        </p>
+                      )}
+
+                      <p className="text-[10px] text-[#B09C8C] mt-0.5">
+                        Entrou: {new Date(entry.enteredAt).toLocaleString('pt-BR')}
+                        {entry.released && entry.releasedAt && (
+                          <span> · Liberado: {new Date(entry.releasedAt).toLocaleString('pt-BR')}</span>
+                        )}
+                      </p>
+
+                      {entry.userAgent && (
+                        <details className="mt-1">
+                          <summary className="text-[10px] text-[#C8BAB0] cursor-pointer select-none">Mais detalhes</summary>
+                          <div className="mt-1 text-[10px] text-[#B09C8C] space-y-0.5 pl-2 border-l border-[#E6DFD5]">
+                            <p className="break-all"><strong>User-Agent:</strong> {entry.userAgent}</p>
+                            {entry.referer && <p className="break-all"><strong>Veio de:</strong> {entry.referer}</p>}
+                            {entry.acceptLanguage && <p><strong>Idioma:</strong> {entry.acceptLanguage}</p>}
+                          </div>
+                        </details>
+                      )}
+                    </div>
                   </div>
+                  {!entry.released ? (
+                    <button
+                      onClick={() => releaseEntry(entry)}
+                      disabled={releasing === (entry.uid ?? entry.ip)}
+                      className="shrink-0 px-3 py-1 text-[11px] font-semibold bg-[#1E1208] text-[#FAF8F5] hover:bg-[#1E1208]/80 transition-colors disabled:opacity-50">
+                      {releasing === (entry.uid ?? entry.ip) ? '…' : 'Liberar'}
+                    </button>
+                  ) : (
+                    <span className="shrink-0 text-[11px] text-green-600 font-semibold">✓ Liberado</span>
+                  )}
                 </div>
-                {!entry.released ? (
-                  <button
-                    onClick={() => releaseEntry(entry)}
-                    disabled={releasing === (entry.uid ?? entry.ip)}
-                    className="shrink-0 px-3 py-1 text-[11px] font-semibold bg-[#1E1208] text-[#FAF8F5] hover:bg-[#1E1208]/80 transition-colors disabled:opacity-50">
-                    {releasing === (entry.uid ?? entry.ip) ? '…' : 'Liberar'}
-                  </button>
-                ) : (
-                  <span className="shrink-0 text-[11px] text-green-600 font-semibold">✓ Liberado</span>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

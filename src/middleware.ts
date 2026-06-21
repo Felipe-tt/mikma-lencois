@@ -27,12 +27,69 @@ async function isIpReleased(projectId: string, docId: string) {
   }
 }
 
-async function registerInQueue(projectId: string, docId: string, ip: string, uid?: string, email?: string, displayName?: string) {
+async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; country: string; isp: string }> {
+  // IPs locais/privados não são geolocalizáveis
+  if (ip === '0.0.0.0' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+    return { city: '', region: '', country: '', isp: '' };
+  }
+  try {
+    const res = await fetch(
+      `http://ip-api.com/json/${ip}?fields=status,city,regionName,country,isp`,
+      { signal: AbortSignal.timeout(2500) }
+    );
+    if (!res.ok) return { city: '', region: '', country: '', isp: '' };
+    const data = await res.json();
+    if (data.status !== 'success') return { city: '', region: '', country: '', isp: '' };
+    return {
+      city: data.city ?? '',
+      region: data.regionName ?? '',
+      country: data.country ?? '',
+      isp: data.isp ?? '',
+    };
+  } catch {
+    return { city: '', region: '', country: '', isp: '' };
+  }
+}
+
+async function registerInQueue(
+  projectId: string,
+  docId: string,
+  ip: string,
+  req: NextRequest,
+  uid?: string,
+  email?: string,
+  displayName?: string
+) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
+
+  const userAgent = req.headers.get('user-agent') ?? '';
+  const referer = req.headers.get('referer') ?? '';
+  const acceptLanguage = req.headers.get('accept-language') ?? '';
+  const secChUa = req.headers.get('sec-ch-ua') ?? '';
+  const secChUaPlatform = req.headers.get('sec-ch-ua-platform') ?? '';
+  const secChUaMobile = req.headers.get('sec-ch-ua-mobile') ?? '';
+  const requestedPath = req.nextUrl.pathname + req.nextUrl.search;
+  const method = req.method;
+  // Geolocalização real do IP (cidade, região, país, provedor)
+  const geo = await lookupIpGeo(ip);
+
   const fields: Record<string, unknown> = {
     ip: { stringValue: ip },
     released: { booleanValue: false },
     enteredAt: { stringValue: new Date().toISOString() },
+    userAgent: { stringValue: userAgent },
+    referer: { stringValue: referer },
+    acceptLanguage: { stringValue: acceptLanguage },
+    requestedPath: { stringValue: requestedPath },
+    method: { stringValue: method },
+    secChUa: { stringValue: secChUa },
+    platform: { stringValue: secChUaPlatform.replace(/"/g, '') },
+    isMobile: { stringValue: secChUaMobile },
+    geoCity: { stringValue: geo.city },
+    geoRegion: { stringValue: geo.region },
+    geoCountry: { stringValue: geo.country },
+    isp: { stringValue: geo.isp },
+    visitCount: { integerValue: '1' },
   };
   if (uid) fields.uid = { stringValue: uid };
   if (email) fields.email = { stringValue: email };
@@ -81,8 +138,9 @@ export async function middleware(req: NextRequest) {
       const released = await isIpReleased(projectId, docId);
 
       if (!released) {
-        // registra IP na queue (fire-and-forget)
-        registerInQueue(projectId, docId, ip);
+        // registra IP na queue — aguarda para garantir que completa
+        // antes da função terminar (ambientes serverless matam fire-and-forget)
+        await registerInQueue(projectId, docId, ip, req);
         const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
         // Nunca cachear este redirect — senão ao desativar a manutenção,
         // visitantes continuariam travados na tela de manutenção pela CDN.
