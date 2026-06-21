@@ -26,6 +26,7 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
   const [pickedHex, setPickedHex] = useState('#cccccc');
   const [pickedName, setPickedName] = useState('');
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Canvas off-screen com a imagem já decodificada — criado UMA vez por foto,
   // não a cada toque. Antes, sample() criava um `new Image()` do zero em
@@ -74,22 +75,59 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     setReady(false);
-    const img = new window.Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-      ctx.drawImage(img, 0, 0);
-      ctxRef.current = ctx;
-      imgSizeRef.current = { w: img.width, h: img.height };
-      setReady(true);
-      // Amostra o centro assim que a foto termina de carregar
-      sampleAt(0.5, 0.5);
-    };
-    img.src = imageDataUrl;
+    setLoadError(false);
+
+    async function load() {
+      try {
+        // Imagens de produtos já salvos vêm do Firebase Storage (outro
+        // domínio). Carregar essa URL direto numa <img> e desenhar no
+        // canvas "contamina" o canvas (cross-origin) — getImageData()
+        // lança SecurityError, capturado em lugar nenhum no onload, então
+        // a UI ficava presa em "Carregando..." pra sempre sem nenhum erro
+        // visível. Fotos recém-tiradas (dataUrl base64) não tinham esse
+        // problema, por isso o bug só aparecia em produtos já salvos.
+        //
+        // Solução: buscar os bytes via fetch (sem essa restrição de canvas)
+        // e converter pra uma data: URL local antes de desenhar — o canvas
+        // nunca chega a carregar a imagem cross-origin diretamente.
+        let localDataUrl = imageDataUrl;
+        if (imageDataUrl.startsWith('http')) {
+          const res = await fetch(imageDataUrl);
+          if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+          const blob = await res.blob();
+          localDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+
+        const img = new window.Image();
+        img.onload = () => {
+          if (cancelled) return;
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+          ctx.drawImage(img, 0, 0);
+          ctxRef.current = ctx;
+          imgSizeRef.current = { w: img.width, h: img.height };
+          setReady(true);
+          sampleAt(0.5, 0.5);
+        };
+        img.onerror = () => { if (!cancelled) setLoadError(true); };
+        img.src = localDataUrl;
+      } catch {
+        if (!cancelled) setLoadError(true);
+      }
+    }
+
+    load();
     setCrosshair({ x: 0.5, y: 0.5 });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageDataUrl]);
 
@@ -133,13 +171,20 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
           >
             <img src={imageDataUrl} alt="" className="w-full h-full object-cover select-none pointer-events-none" draggable={false} />
 
-            {!ready && (
+            {!ready && !loadError && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                 <span className="spinner" />
               </div>
             )}
 
-            {ready && (
+            {loadError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70 px-6 text-center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/70"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <p className="text-xs text-white/70">Não foi possível carregar essa foto pra extrair a cor</p>
+              </div>
+            )}
+
+            {ready && !loadError && (
               <div
                 className="absolute pointer-events-none"
                 style={{ left: `${crosshair.x * 100}%`, top: `${crosshair.y * 100}%`, transform: 'translate(-50%, -50%)' }}
@@ -153,13 +198,15 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
 
           <div className="flex items-center gap-3 bg-white/10 px-4 py-2.5 w-full rounded-xl">
             <div className="w-7 h-7 rounded-full border border-white/30 shrink-0" style={{ background: pickedHex }} />
-            <span className="text-sm text-white flex-1">{pickedName || 'Carregando…'}</span>
-            <span className="text-xs text-white/40 font-mono">{ready ? pickedHex : ''}</span>
+            <span className="text-sm text-white flex-1">
+              {loadError ? 'Erro ao carregar a foto' : pickedName || 'Carregando…'}
+            </span>
+            <span className="text-xs text-white/40 font-mono">{ready && !loadError ? pickedHex : ''}</span>
           </div>
 
           <button
             onClick={() => onPick(pickedHex, pickedName)}
-            disabled={!ready}
+            disabled={!ready || loadError}
             className="w-full bg-white text-black text-sm font-semibold py-3.5 rounded-2xl active:bg-white/90 disabled:opacity-40"
           >
             Usar esta cor
