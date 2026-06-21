@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { getClientIp, extractBearer } from '@/lib/security';
 
@@ -46,12 +47,23 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date().toISOString(),
       updatedBy: user.email ?? user.uid,
     }, { merge: true });
+
+    // CRÍTICO: purga o cache ISR de todas as páginas.
+    // Sem isso, páginas já cacheadas pela CDN do Firebase Hosting
+    // (homepage 15min, produtos 10min, sobre/termos/privacidade 24h)
+    // continuam sendo servidas direto da CDN sem nunca invocar o
+    // Cloud Run — e é lá que este middleware checa a manutenção.
+    // Resultado sem isso: toggle fica "ativo" no Firestore mas o
+    // visitante continua vendo o site normal até o cache expirar.
+    revalidatePath('/', 'layout');
+
     return NextResponse.json({ active: !current });
   }
 
   // liberar IP específico
   if (body.action === 'release' && body.ip) {
-    await adminDb.collection('maintenance_queue').doc(body.ip.replace(/[./]/g, '_')).set({
+    // Mesma regex do middleware — ponto e dois-pontos (IPv6 usa ':')
+    await adminDb.collection('maintenance_queue').doc(body.ip.replace(/[.:]/g, '_')).set({
       ip: body.ip,
       released: true,
       releasedAt: new Date().toISOString(),

@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 async function getMaintenanceStatus(projectId: string) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(2000), cache: 'no-store' });
     if (!res.ok) return { active: false };
     const data = await res.json();
     const active = data?.fields?.active?.booleanValue ?? false;
@@ -18,7 +18,7 @@ async function getMaintenanceStatus(projectId: string) {
 async function isIpReleased(projectId: string, docId: string) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(2000), cache: 'no-store' });
     if (!res.ok) return false;
     const data = await res.json();
     return data?.fields?.released?.booleanValue ?? false;
@@ -83,7 +83,11 @@ export async function middleware(req: NextRequest) {
       if (!released) {
         // registra IP na queue (fire-and-forget)
         registerInQueue(projectId, docId, ip);
-        return NextResponse.redirect(new URL('/manutencao', req.url));
+        const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
+        // Nunca cachear este redirect — senão ao desativar a manutenção,
+        // visitantes continuariam travados na tela de manutenção pela CDN.
+        redirectRes.headers.set('Cache-Control', 'no-store, must-revalidate');
+        return redirectRes;
       }
     }
   }
