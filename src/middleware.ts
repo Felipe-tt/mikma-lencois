@@ -33,18 +33,18 @@ async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; 
     return { city: '', region: '', country: '', isp: '' };
   }
   try {
-    const res = await fetch(
-      `http://ip-api.com/json/${ip}?fields=status,city,regionName,country,isp`,
-      { signal: AbortSignal.timeout(2500) }
-    );
+    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
+      signal: AbortSignal.timeout(3000),
+      headers: { 'User-Agent': 'MikmaLencois/1.0' },
+    });
     if (!res.ok) return { city: '', region: '', country: '', isp: '' };
     const data = await res.json();
-    if (data.status !== 'success') return { city: '', region: '', country: '', isp: '' };
+    if (data.error) return { city: '', region: '', country: '', isp: '' };
     return {
       city: data.city ?? '',
-      region: data.regionName ?? '',
-      country: data.country ?? '',
-      isp: data.isp ?? '',
+      region: data.region ?? '',
+      country: data.country_name ?? '',
+      isp: data.org ?? '',
     };
   } catch {
     return { city: '', region: '', country: '', isp: '' };
