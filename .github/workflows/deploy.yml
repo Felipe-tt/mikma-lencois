@@ -76,14 +76,14 @@ jobs:
         run: |
           git diff --name-only HEAD~1 HEAD | grep -q '^functions/' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
 
-      - name: Deploy hosting + functions
+      - name: Deploy hosting + functions + firestore rules
         if: steps.functions-changed.outputs.changed == 'true'
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting --force --project mikma-lencois
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting,firestore:rules --force --project mikma-lencois
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
-      - name: Deploy hosting only
+      - name: Deploy hosting + firestore rules
         if: steps.functions-changed.outputs.changed == 'false'
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting --force --project mikma-lencois
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting,firestore:rules --force --project mikma-lencois
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
