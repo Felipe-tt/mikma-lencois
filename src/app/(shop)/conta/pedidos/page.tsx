@@ -28,7 +28,7 @@ const LABELS: Record<string, string> = {
   cancelled:       'Cancelado',
 };
 
-interface PixModalData { qrCode: string; copyPaste: string; orderId: string; totalCents: number }
+interface PixModalData { qrCode: string; copyPaste: string; orderId: string; totalCents: number; expiresAt?: string }
 
 export default function PedidosPage() {
   const { user, loading } = useAuth();
@@ -60,7 +60,7 @@ export default function PedidosPage() {
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar PIX');
       const data = await res.json();
-      setPixModal({ qrCode: data.qrCode, copyPaste: data.copyPaste, orderId: order.id, totalCents: order.totalCents });
+      setPixModal({ qrCode: data.qrCode, copyPaste: data.copyPaste, orderId: order.id, totalCents: order.totalCents, expiresAt: data.expiresAt });
     } catch (err) {
       setActionError(e => ({ ...e, [order.id]: err instanceof Error ? err.message : 'Erro' }));
     } finally {
@@ -226,6 +226,7 @@ export default function PedidosPage() {
           copyPaste={pixModal.copyPaste}
           orderId={pixModal.orderId}
           totalCents={pixModal.totalCents}
+          expiresAt={pixModal.expiresAt}
           onClose={() => setPixModal(null)}
         />
       )}

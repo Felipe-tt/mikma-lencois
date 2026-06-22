@@ -25,7 +25,7 @@ export default function CheckoutPage() {
   const [errors, setErrors]       = useState<Record<string, string>>({});
   const [apiError, setApiErr]     = useState('');
   const [submitting, setSub]      = useState(false);
-  const [pixData, setPixData]     = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string } | null>(null);
+  const [pixData, setPixData]     = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string; expiresAt?: string } | null>(null);
 
   // Shipping
   const [shippingOptions, setShipOpts]  = useState<ShippingOption[]>([]);
@@ -183,9 +183,14 @@ export default function CheckoutPage() {
       {loading || cartLoading ? (
         <CheckoutSkeleton />
       ) : pixData ? (
-        <div className="container-shop py-10 pb-20">
-          <PIXModal qrCode={pixData.qrCode} copyPaste={pixData.copyPaste} orderId={pixData.orderId} totalCents={total} onClose={() => router.push('/conta/pedidos')} />
-        </div>
+        <PIXModal
+          qrCode={pixData.qrCode}
+          copyPaste={pixData.copyPaste}
+          orderId={pixData.orderId}
+          totalCents={total}
+          expiresAt={pixData.expiresAt}
+          onClose={() => router.push('/conta/pedidos')}
+        />
       ) : (
         <div className="container-shop py-8 sm:py-10 pb-20">
           <div className="flex flex-col lg:grid lg:grid-cols-[1fr_340px] gap-8 lg:gap-12 items-start">
