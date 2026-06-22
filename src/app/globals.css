@@ -269,16 +269,20 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  @keyframes shimmer {
-    0%   { background-position: -200% 0; }
-    100% { background-position:  200% 0; }
-  }
-  @keyframes progress-bar {
-    0%   { width: 0%;   opacity: 1; }
-    60%  { width: 85%;  opacity: 1; }
-    90%  { width: 95%;  opacity: 0.6; }
-    100% { width: 100%; opacity: 0; }
-  }
+}
+
+/* @keyframes fora de @layer — dentro de @layer o Tailwind pode descartar
+   ou processar incorretamente as keyframes durante o build de produção,
+   mesmo funcionando normalmente em dev (causa do skeleton sem shimmer). */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+@keyframes progress-bar {
+  0%   { width: 0%;   opacity: 1; }
+  60%  { width: 85%;  opacity: 1; }
+  90%  { width: 95%;  opacity: 0.6; }
+  100% { width: 100%; opacity: 0; }
 }
 /* ── Scrollbar customizada ───────────────────────────────────────── */
 ::-webkit-scrollbar {
