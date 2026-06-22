@@ -50,41 +50,41 @@ export default function ManutencaoPage() {
   }, [user]);
 
   const load = useCallback(async () => {
-    const h = await getHeaders();
-    const res = await fetch('/api/maintenance', { headers: h });
-    if (res.ok) {
-      const data = await res.json();
-      setStatus(data.status);
-      setQueue(data.queue);
+    try {
+      const h = await getHeaders();
+      const res = await fetch('/api/maintenance', { headers: h });
+      if (res.ok) {
+        const data = await res.json();
+        setStatus(data.status);
+        setQueue(data.queue ?? []);
+      }
+    } catch {
+      // network error — show empty state instead of stuck skeleton
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [getHeaders]);
 
   // Carga inicial via API (já autenticada/verificada no backend)
   useEffect(() => { load(); }, [load]);
 
-  // A partir daí, escuta o Firestore em tempo real — assim que um
-  // visitante novo entra na fila ou o status muda, a tela atualiza
-  // sozinha, sem precisar de F5.
+  // Realtime listeners — only set up after initial load succeeds
   useEffect(() => {
-    const unsubStatus = onSnapshot(doc(db, 'maintenance', 'status'), snap => {
-      if (snap.exists()) {
-        setStatus(snap.data() as Status);
-      }
-    });
+    const unsubStatus = onSnapshot(
+      doc(db, 'maintenance', 'status'),
+      snap => { if (snap.exists()) setStatus(snap.data() as Status); },
+      err => console.warn('maintenance/status listener:', err.code)
+    );
 
     const unsubQueue = onSnapshot(
       query(collection(db, 'maintenance_queue'), orderBy('enteredAt', 'desc')),
       snap => {
-        const entries = snap.docs.map(d => ({ id: d.id, ...d.data() })) as QueueEntry[];
-        setQueue(entries);
-      }
+        setQueue(snap.docs.map(d => ({ id: d.id, ...d.data() })) as QueueEntry[]);
+      },
+      err => console.warn('maintenance_queue listener:', err.code)
     );
 
-    return () => {
-      unsubStatus();
-      unsubQueue();
-    };
+    return () => { unsubStatus(); unsubQueue(); };
   }, []);
 
   const toggle = async () => {
