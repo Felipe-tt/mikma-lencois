@@ -78,6 +78,12 @@ export type StoreSettings = {
   statRating: string;
   statDelivery: string;
   statYears: string;
+  sizeGuideRows: string;
+  sizeGuideColumns: string;
+  sizeGuideNote: string;
+  productTrust1: string;
+  productTrust2: string;
+  productTrust3: string;
 };
 
 export const STORE_DEFAULTS: StoreSettings = {
@@ -151,4 +157,15 @@ export const STORE_DEFAULTS: StoreSettings = {
   statRating: '4.9',
   statDelivery: '< 1h',
   statYears: '6 anos',
+  sizeGuideRows: JSON.stringify([
+    { Tamanho: 'Solteiro', 'Lençol': '150×220 cm', Fronha: '50×70 cm', 'Capa duvet': '150×200 cm' },
+    { Tamanho: 'Casal',   'Lençol': '180×220 cm', Fronha: '50×70 cm', 'Capa duvet': '180×200 cm' },
+    { Tamanho: 'Queen',   'Lençol': '200×230 cm', Fronha: '50×70 cm', 'Capa duvet': '200×200 cm' },
+    { Tamanho: 'King',    'Lençol': '220×240 cm', Fronha: '50×70 cm', 'Capa duvet': '220×200 cm' },
+  ]),
+  sizeGuideColumns: JSON.stringify(['Tamanho', 'Lençol', 'Fronha', 'Capa duvet']),
+  sizeGuideNote: 'Medidas podem variar ±2 cm após lavagem. Recomendamos lavar antes do primeiro uso.',
+  productTrust1: 'Entrega local em Blumenau em até 1h',
+  productTrust2: 'Frete para todo o Brasil com rastreio',
+  productTrust3: 'Pagamento PIX com confirmação imediata',
 };

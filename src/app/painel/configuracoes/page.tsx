@@ -12,12 +12,13 @@ import { BusinessHoursEditor } from '@/components/painel/BusinessHoursEditor';
 import { parseBusinessHours, serializeBusinessHours } from '@/lib/business-hours';
 import { maskCnpj, isValidCnpj } from '@/lib/masks';
 
-type Section = 'loja' | 'homepage' | 'sobre' | 'entrega';
+type Section = 'loja' | 'homepage' | 'sobre' | 'entrega' | 'produto';
 const SECTIONS: { id: Section; label: string; icon: string; desc: string }[] = [
   { id: 'loja',     label: 'Minha loja',  icon: '🏪', desc: 'Nome, endereço e contatos' },
   { id: 'homepage', label: 'Página inicial', icon: '🖥️', desc: 'Textos e banners' },
   { id: 'sobre',    label: 'Sobre nós',   icon: '📖', desc: 'História e informações' },
   { id: 'entrega',  label: 'Entregas',    icon: '🚚', desc: 'Frete e logística' },
+  { id: 'produto',  label: 'Produto',     icon: '📐', desc: 'Guia de medidas e trust signals' },
 ];
 
 export default function ConfiguracoesPage() {
@@ -328,6 +329,93 @@ export default function ConfiguracoesPage() {
                 ? 'Cartão desativado — apenas PIX disponível no checkout'
                 : `Cartão habilitado para pedidos acima de R$ ${(settings.creditMinOrderCents / 100).toFixed(2)}`}
             />
+          </Section>
+        </>}
+
+        {active === 'produto' && <>
+          <Section title="Trust signals do produto" desc="Aparecem na página de cada produto, abaixo do botão de comprar">
+            <Field label="Trust signal 1" value={settings.productTrust1 ?? ''} onChange={v => set('productTrust1', v)} placeholder="Entrega local em Blumenau em até 1h" />
+            <Field label="Trust signal 2" value={settings.productTrust2 ?? ''} onChange={v => set('productTrust2', v)} placeholder="Frete para todo o Brasil com rastreio" />
+            <Field label="Trust signal 3" value={settings.productTrust3 ?? ''} onChange={v => set('productTrust3', v)} placeholder="Pagamento PIX com confirmação imediata" />
+          </Section>
+
+          <Section title="Guia de medidas" desc="Tabela exibida no modal da página do produto — colunas e linhas totalmente personalizáveis">
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">Colunas (separadas por vírgula)</label>
+                <input
+                  value={(() => { try { return JSON.parse(settings.sizeGuideColumns || '[]').join(', '); } catch { return ''; } })()}
+                  onChange={e => {
+                    const cols = e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean);
+                    set('sizeGuideColumns', JSON.stringify(cols));
+                  }}
+                  placeholder="Tamanho, Lençol, Fronha, Capa duvet"
+                  className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20"
+                />
+                <p className="text-[11px] text-[#B09C8C] mt-1">Ex: Tamanho, Lençol, Fronha, Capa duvet</p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold text-[#705A48] mb-2">Linhas da tabela</p>
+                {(() => {
+                  let rows: Record<string, string>[] = [];
+                  let cols: string[] = [];
+                  try { rows = JSON.parse(settings.sizeGuideRows || '[]'); } catch { rows = []; }
+                  try { cols = JSON.parse(settings.sizeGuideColumns || '[]'); } catch { cols = []; }
+                  if (cols.length === 0) return <p className="text-[12px] text-[#B09C8C]">Defina as colunas primeiro.</p>;
+                  return (
+                    <div className="flex flex-col gap-2">
+                      {rows.map((row, i) => (
+                        <div key={i} className="border border-[#E6DFD5] p-3 flex flex-col gap-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            {cols.map((col: string) => (
+                              <div key={col}>
+                                <label className="block text-[10px] font-semibold text-[#B09C8C] mb-1 uppercase tracking-wider">{col}</label>
+                                <input
+                                  value={row[col] ?? ''}
+                                  onChange={e => {
+                                    const newRows = [...rows];
+                                    newRows[i] = { ...newRows[i], [col]: e.target.value };
+                                    set('sizeGuideRows', JSON.stringify(newRows));
+                                  }}
+                                  className="w-full border border-[#E6DFD5] bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C4714A]/30"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => {
+                              const newRows = rows.filter((_: Record<string, string>, idx: number) => idx !== i);
+                              set('sizeGuideRows', JSON.stringify(newRows));
+                            }}
+                            className="text-[11px] text-red-500 hover:text-red-700 text-left"
+                          >
+                            Remover linha
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const empty: Record<string, string> = {};
+                          cols.forEach((col: string) => { empty[col] = ''; });
+                          set('sizeGuideRows', JSON.stringify([...rows, empty]));
+                        }}
+                        className="border-2 border-dashed border-[#C4714A]/30 text-[#C4714A] text-[13px] font-semibold py-2.5 hover:bg-[#C4714A]/5 transition-colors"
+                      >
+                        + Adicionar linha
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <Field
+                label="Nota de rodapé do guia"
+                value={settings.sizeGuideNote ?? ''}
+                onChange={v => set('sizeGuideNote', v)}
+                placeholder="Medidas podem variar ±2 cm após lavagem..."
+              />
+            </div>
           </Section>
         </>}
       </div>

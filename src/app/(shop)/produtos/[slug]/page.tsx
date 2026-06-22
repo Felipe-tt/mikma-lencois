@@ -8,6 +8,7 @@ import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCard } from '@/components/product/ProductCard';
 import { SizeGuideModal } from '@/components/product/SizeGuideModal';
 import { FadeIn } from '@/components/ui/FadeIn';
+import { getSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 
@@ -75,11 +76,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const [product, inventory] = await Promise.all([getProduct(slug), getInventory(slug)]);
+  const [product, inventory, s] = await Promise.all([getProduct(slug), getInventory(slug), getSettings()]);
   if (!product) notFound();
   const related = await getRelated(product);
 
   // Extract specs from tags (thread count, fabric composition, etc.)
+  // Size guide data from settings
+  let sizeGuideColumns: string[] = [];
+  let sizeGuideRows: Record<string, string>[] = [];
+  try { sizeGuideColumns = JSON.parse(s.sizeGuideColumns || '[]'); } catch { sizeGuideColumns = []; }
+  try { sizeGuideRows = JSON.parse(s.sizeGuideRows || '[]'); } catch { sizeGuideRows = []; }
+  const sizeGuideNote = s.sizeGuideNote || '';
+  const productTrusts = [
+    s.productTrust1 || 'Entrega local em Blumenau em até 1h',
+    s.productTrust2 || 'Frete para todo o Brasil com rastreio',
+    s.productTrust3 || 'Pagamento PIX com confirmação imediata',
+  ].filter(Boolean);
+
   const specTags = product.tags?.filter(t =>
     /\d+\s*fios|percal|misto|microfibra|algodão|poliéster|bamboo|cetim/i.test(t)
   ) ?? [];
@@ -175,7 +188,12 @@ export default async function ProductPage({ params }: Props) {
 
             {/* ── Size guide link ── */}
             <div className="flex items-center gap-4">
-              <SizeGuideModal />
+              <SizeGuideModal
+                columns={sizeGuideColumns}
+                rows={sizeGuideRows}
+                note={sizeGuideNote}
+                whatsappUrl={s.whatsappUrl || undefined}
+              />
             </div>
 
             {/* Variant selector */}
@@ -183,19 +201,17 @@ export default async function ProductPage({ params }: Props) {
               <VariantSelector product={product} inventory={inventory} />
             </div>
 
-            {/* Trust signals — inline, no box */}
-            <div className="flex flex-col gap-2.5 border-t border-mist pt-4">
-              {[
-                { icon: <TruckIcon />, text: 'Entrega local em Blumenau em até 1h' },
-                { icon: <PackageIcon />, text: 'Frete para todo o Brasil com rastreio' },
-                { icon: <PixIcon />, text: 'Pagamento PIX com confirmação imediata' },
-              ].map(({ icon, text }) => (
-                <div key={text} className="flex items-center gap-3 text-[13px] text-mid">
-                  <span className="text-clay/80 shrink-0">{icon}</span>
-                  <span>{text}</span>
-                </div>
-              ))}
-            </div>
+            {/* Trust signals — vindos das configs */}
+            {productTrusts.length > 0 && (
+              <div className="flex flex-col gap-2.5 border-t border-mist pt-4">
+                {productTrusts.map((text, i) => (
+                  <div key={i} className="flex items-center gap-3 text-[13px] text-mid">
+                    <span className="text-clay/80 shrink-0">{i === 0 ? <TruckIcon /> : i === 1 ? <PackageIcon /> : <PixIcon />}</span>
+                    <span>{text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Size guide */}
             <SizeGuide />

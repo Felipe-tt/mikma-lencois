@@ -1,83 +1,115 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-const SIZES = [
-  { name: 'Solteiro',   lencol: '150×220 cm', fronha: '50×70 cm', capa: '150×200 cm' },
-  { name: 'Casal',      lencol: '180×220 cm', fronha: '50×70 cm', capa: '180×200 cm' },
-  { name: 'Queen',      lencol: '200×230 cm', fronha: '50×70 cm', capa: '200×200 cm' },
-  { name: 'King',       lencol: '220×240 cm', fronha: '50×70 cm', capa: '220×200 cm' },
-];
+interface Props {
+  columns: string[];
+  rows: Record<string, string>[];
+  note: string;
+  whatsappUrl?: string;
+}
 
-export function SizeGuideModal() {
+export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
   const [open, setOpen] = useState(false);
+
+  const close = useCallback(() => setOpen(false), []);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = 'hidden';
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', handler);
+    return () => { window.removeEventListener('keydown', handler); document.body.style.overflow = ''; };
+  }, [open, close]);
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.08em]"
+        className="inline-flex items-center gap-2 text-[11px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.1em]"
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M21 6H3M21 12H3M21 18H3"/><circle cx="9" cy="6" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="18" r="1" fill="currentColor"/>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M3 6h18M3 12h18M3 18h18"/>
+          <circle cx="8" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+          <circle cx="16" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+          <circle cx="8" cy="18" r="1.5" fill="currentColor" stroke="none"/>
         </svg>
         Guia de medidas
       </button>
 
+      {/* Backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6"
-          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-[80] bg-ink/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+          onClick={close}
         >
+          {/* Panel */}
           <div
-            className="w-full sm:max-w-lg bg-paper"
+            className="w-full sm:max-w-xl bg-paper sm:mx-4 sm:rounded-sm overflow-hidden shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-mist">
               <div>
-                <p className="eyebrow mb-1">Produto</p>
-                <h3 className="font-display font-normal text-ink text-xl">Guia de medidas</h3>
+                <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-faint mb-1">Produto</p>
+                <h3 className="font-display font-normal text-ink text-xl leading-none">Guia de medidas</h3>
               </div>
               <button
-                onClick={() => setOpen(false)}
-                className="text-faint hover:text-ink transition-colors p-1"
+                onClick={close}
+                className="w-9 h-9 flex items-center justify-center text-faint hover:text-ink transition-colors"
                 aria-label="Fechar"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="bg-warm">
-                    <th className="text-left px-6 py-3 text-[10px] font-bold tracking-[0.16em] uppercase text-faint">Tamanho</th>
-                    <th className="text-left px-4 py-3 text-[10px] font-bold tracking-[0.16em] uppercase text-faint">Lençol</th>
-                    <th className="text-left px-4 py-3 text-[10px] font-bold tracking-[0.16em] uppercase text-faint">Fronha</th>
-                    <th className="text-left px-4 py-3 text-[10px] font-bold tracking-[0.16em] uppercase text-faint">Capa duvet</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SIZES.map((s, i) => (
-                    <tr key={s.name} className={i < SIZES.length - 1 ? 'border-b border-mist' : ''}>
-                      <td className="px-6 py-3.5 font-semibold text-ink">{s.name}</td>
-                      <td className="px-4 py-3.5 text-mid font-mono text-[12px]">{s.lencol}</td>
-                      <td className="px-4 py-3.5 text-mid font-mono text-[12px]">{s.fronha}</td>
-                      <td className="px-4 py-3.5 text-mid font-mono text-[12px]">{s.capa}</td>
+            {rows.length > 0 && columns.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="bg-warm border-b border-mist">
+                      {columns.map(col => (
+                        <th key={col} className="text-left px-5 py-3 text-[10px] font-bold tracking-[0.16em] uppercase text-faint whitespace-nowrap">
+                          {col}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-mist">
+                    {rows.map((row, i) => (
+                      <tr key={i} className="hover:bg-warm/40 transition-colors">
+                        {columns.map((col, j) => (
+                          <td key={col} className={`px-5 py-3.5 whitespace-nowrap ${j === 0 ? 'font-semibold text-ink' : 'text-mid font-mono text-[12px]'}`}>
+                            {row[col] ?? ''}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="px-6 py-10 text-center text-sm text-faint">
+                Guia de medidas não configurado.
+              </div>
+            )}
 
-            {/* Footer note */}
-            <div className="px-6 py-4 border-t border-mist bg-warm/50">
-              <p className="text-[11px] text-faint leading-relaxed">
-                Medidas podem variar ±2 cm após lavagem. Recomendamos lavar antes do primeiro uso.
-                Dúvidas? <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" className="text-clay font-medium hover:text-clay-d transition-colors">Fale conosco no WhatsApp</a>.
-              </p>
-            </div>
+            {/* Note */}
+            {note && (
+              <div className="px-6 py-4 border-t border-mist bg-warm/50">
+                <p className="text-[11px] text-faint leading-relaxed">
+                  {note}
+                  {whatsappUrl && (
+                    <> Dúvidas?{' '}
+                      <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                        className="text-clay font-medium hover:text-clay-d transition-colors">
+                        Fale conosco no WhatsApp
+                      </a>.
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
