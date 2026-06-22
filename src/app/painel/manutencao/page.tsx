@@ -186,7 +186,7 @@ export default function ManutencaoPage() {
 
       {/* CLI hint */}
       <div className="border border-[#E6DFD5] bg-[#FAF8F5] px-5 py-4 mb-6">
-        <p className="text-[11px] font-bold text-[#705A48] mb-2 tracking-[0.1em] uppercase">Pelo Firebase CLI</p>
+        <p className="text-[11px] font-bold text-[#705A48] mb-2 tracking-[0.1em] uppercase">Pelo terminal</p>
         <div className="flex flex-col gap-1.5">
           <code className="text-[11px] bg-[#1E1208] text-[#FAF8F5] px-3 py-2 block font-mono">
             node scripts/maintenance.js on
@@ -195,7 +195,7 @@ export default function ManutencaoPage() {
             node scripts/maintenance.js allow
           </code>
           <p className="text-[10px] text-[#B09C8C]">
-            Rode dentro da pasta do projeto. O comando <strong>allow</strong> detecta e libera seu IP automaticamente.
+            Rode dentro da pasta do projeto. Vai pedir seu e-mail e senha de vendedor (os mesmos deste painel) — não precisa de Firebase CLI nem de nenhuma configuração extra. O comando <strong>allow</strong> detecta e libera seu IP automaticamente.
           </p>
         </div>
       </div>

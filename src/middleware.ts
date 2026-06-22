@@ -154,6 +154,15 @@ export async function middleware(req: NextRequest) {
 
   const res = NextResponse.next();
 
+  // Force the Firebase Hosting CDN to never cache full page responses.
+  // Without this, the CDN caches Next.js ISR responses (s-maxage=900) at
+  // the edge and serves them directly, bypassing Cloud Run entirely — which
+  // means this middleware never runs during the cache window, so maintenance
+  // mode is invisible to users until the CDN cache expires on its own.
+  // Next.js's internal data cache (ISR for Firestore reads etc.) is
+  // unaffected — only the CDN-level full-page HTML cache is disabled.
+  res.headers.set('Cache-Control', 'private, no-store');
+
   // ── Security headers ──────────────────────────────────────────────────────
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
