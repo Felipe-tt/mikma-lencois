@@ -321,6 +321,18 @@ export async function POST(req: NextRequest) {
       distKm: Math.round(distKm),
       isLocal,
       freeShipping: qualifiesFreeShipping,
+      _debug: {
+        originCep: settings.originCep || '(vazio)',
+        originLat: settings.originLat,
+        originLng: settings.originLng,
+        cartItemsCount: cartItems.length,
+        totalWeightKg: Math.round(totalWeightKg * 100) / 100,
+        productValueCents,
+        hasMelhorEnvioToken: !!process.env.MELHOR_ENVIO_TOKEN,
+        distKm: Math.round(distKm),
+        isLocal,
+        optionsCount: options.length,
+      },
     });
   } catch (err) {
     console.error('shipping/quote error:', err);
