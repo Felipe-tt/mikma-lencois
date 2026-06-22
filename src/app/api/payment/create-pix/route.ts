@@ -148,6 +148,7 @@ export async function POST(req: NextRequest) {
     } : undefined;
 
     const pixPayload: Record<string, unknown> = {
+      method: 'PIX',
       data: {
         amount: amountCents,
         description: `Pedido #${orderId.slice(-8).toUpperCase()} · frete ${shipping.carrier}`,
