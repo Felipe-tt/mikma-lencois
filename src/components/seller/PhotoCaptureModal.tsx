@@ -25,8 +25,8 @@ function drawAndExport(source: ImageBitmap | HTMLImageElement, maxW: number): Pr
 
     const tryFmt = (fmt: string, q: number) => new Promise<Blob | null>(res => canvas.toBlob(b => res(b), fmt, q));
     (async () => {
-      let blob = await tryFmt('image/webp', 0.8);
-      if (!blob || blob.size < 100) blob = await tryFmt('image/jpeg', 0.75);
+      let blob = await tryFmt('image/webp', 0.85);
+      if (!blob || blob.size < 100) blob = await tryFmt('image/jpeg', 0.82);
       if (!blob) return reject(new Error('compress failed'));
       const r = new FileReader();
       r.onload = () => resolve({ blob: blob!, dataUrl: r.result as string });
@@ -87,7 +87,7 @@ export function PhotoCaptureModal({ onCapture, onClose }: Props) {
     setBusy(true);
     setError('');
     try {
-      const { blob, dataUrl } = await compressImage(file, 900);
+      const { blob, dataUrl } = await compressImage(file, 1600);
       onCapture(dataUrl, blob);
     } catch {
       setError('Não foi possível processar essa foto. Tente outra.');

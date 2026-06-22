@@ -178,19 +178,28 @@ export default function ProductForm({ initial }: Props) {
     setSaving(true);
     setError('');
     try {
-      const uploadedUrls: string[] = [];
-      for (const img of images) {
-        if (img.url) {
-          uploadedUrls.push(img.url);
-        } else if (img.blob) {
-          const now = new Date();
-          const folder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-          const ext = img.blob.type === 'image/webp' ? 'webp' : 'jpg';
-          const storageRef = ref(storage, `products/${folder}/${Date.now()}_photo.${ext}`);
-          await uploadBytes(storageRef, img.blob);
-          uploadedUrls.push(await getDownloadURL(storageRef));
-        }
-      }
+      // Upload em paralelo — muito mais rápido que sequencial
+      const now = new Date();
+      const folder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const uploadedUrls: string[] = (
+        await Promise.all(
+          images.map(async (img, i) => {
+            if (img.url) return img.url;
+            if (!img.blob) return null;
+            const ext = img.blob.type === 'image/webp' ? 'webp'
+                      : img.blob.type === 'image/avif' ? 'avif'
+                      : 'jpg';
+            const fname = `${Date.now()}_${i}.${ext}`;
+            const storageRef = ref(storage, `products/${folder}/${fname}`);
+            await uploadBytes(storageRef, img.blob, {
+              contentType: img.blob.type || 'image/webp',
+              cacheControl: 'public, max-age=31536000, immutable',
+              customMetadata: { index: String(i) },
+            });
+            return getDownloadURL(storageRef);
+          })
+        )
+      ).filter((u): u is string => !!u);
 
       const priceCents = Math.round(parseFloat(price.replace(',', '.')) * 100);
       const tagArr = tags.split(',').map(t => t.trim()).filter(Boolean);
