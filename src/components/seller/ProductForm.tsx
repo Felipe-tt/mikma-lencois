@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase/client';
 import type { Product } from '@/types';
 import { hexToColorName } from '@/lib/colorNames';
@@ -65,6 +65,7 @@ export default function ProductForm({ initial }: Props) {
   const [images, setImages] = useState<ImgEntry[]>(
     (initial?.images ?? []).map(url => ({ dataUrl: url, url }))
   );
+  const [removedUrls, setRemovedUrls] = useState<string[]>([]);
 
   const [variants, setVariants] = useState<VariantEntry[]>(
     initial?.variants?.map(v => ({ size: v.size, fabric: v.fabric ?? '', color: v.color ?? '', colorName: v.colorName ?? '', qty: 0 })) ?? []
@@ -99,6 +100,8 @@ export default function ProductForm({ initial }: Props) {
   }
 
   function removeImage(i: number) {
+    const img = images[i];
+    if (img.url) setRemovedUrls(prev => [...prev, img.url!]);
     setImages(prev => prev.filter((_, idx) => idx !== i));
   }
 
@@ -178,6 +181,19 @@ export default function ProductForm({ initial }: Props) {
     setSaving(true);
     setError('');
     try {
+      // Deleta do Storage imagens que o admin removeu (evita acúmulo de arquivos)
+      if (removedUrls.length > 0) {
+        await Promise.allSettled(
+          removedUrls.map(url => {
+            try {
+              const m = url.match(/\/o\/(.+?)\?/);
+              if (!m) return Promise.resolve();
+              return deleteObject(ref(storage, decodeURIComponent(m[1])));
+            } catch { return Promise.resolve(); }
+          })
+        );
+      }
+
       // Upload em paralelo — muito mais rápido que sequencial
       const now = new Date();
       const folder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;

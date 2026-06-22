@@ -33,6 +33,12 @@ export function getAdminAuth(): Auth {
   return _auth
 }
 
+// Storage admin
+import { getStorage as getAdminStorage } from 'firebase-admin/storage';
+export const adminStorage = {
+  bucket: () => getAdminStorage(getAdminApp()).bucket(),
+};
+
 // Aliases para compatibilidade com código existente
 export const adminDb = new Proxy({} as Firestore, {
   get(_, prop) {

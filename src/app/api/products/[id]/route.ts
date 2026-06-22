@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { adminDb, adminAuth, adminStorage } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
@@ -69,6 +69,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const productRef = adminDb.collection('products').doc(id);
   const snap = await productRef.get();
   if (!snap.exists) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
+
+  const productData = snap.data();
+
+  // Apaga imagens do Storage (evita arquivos órfãos acumulando custo)
+  const images: string[] = productData?.images ?? [];
+  await Promise.allSettled(
+    images.map(url => {
+      try {
+        const m = url.match(/\/o\/(.+?)\?/);
+        if (!m) return Promise.resolve();
+        const storagePath = decodeURIComponent(m[1]);
+        return adminStorage.bucket().file(storagePath).delete({ ignoreNotFound: true });
+      } catch { return Promise.resolve(); }
+    })
+  );
 
   // Apaga o estoque vinculado a este produto (cada variante é um doc em inventory)
   const invSnap = await adminDb.collection('inventory').where('productId', '==', id).get();
