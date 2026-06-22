@@ -30,19 +30,57 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 async function geocodeCep(cep: string): Promise<{ lat: number; lng: number } | null> {
+  const clean = cep.replace(/\D/g, '');
+  if (clean.length !== 8) return null;
+
+  // ── Check Firestore cache first ──────────────────────────────────────────
+  // CEPs map to fixed locations — once geocoded, a CEP never needs to be
+  // looked up again. This is what makes the feature reliable: without it,
+  // every single shipping quote (for every customer, including the store's
+  // own origin CEP on every request) hit Nominatim's free public instance,
+  // which aggressively rate-limits non-cached, repeated traffic.
   try {
-    const clean = cep.replace(/\D/g, '');
+    const cacheRef = adminDb.collection('geocache').doc(clean);
+    const cacheSnap = await cacheRef.get();
+    if (cacheSnap.exists) {
+      const d = cacheSnap.data()!;
+      if (typeof d.lat === 'number' && typeof d.lng === 'number') {
+        return { lat: d.lat, lng: d.lng };
+      }
+    }
+  } catch {
+    // cache read failure shouldn't block geocoding — fall through
+  }
+
+  try {
     const v = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
     const d = await v.json();
     if (d.erro) return null;
+
     const q = encodeURIComponent(`${d.logradouro ?? ''}, ${d.localidade}, ${d.uf}, Brasil`);
     const g = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
-      { headers: { 'User-Agent': 'MikmaLencois/1.0' } }
+      {
+        // Nominatim's usage policy requires a descriptive User-Agent that
+        // identifies the application and provides a contact reference —
+        // a generic User-Agent gets silently rate-limited/blocked under load.
+        headers: { 'User-Agent': 'MikmaLencoisShipping/1.0 (+https://mikma-lencois.web.app)' },
+      }
     );
     const [hit] = await g.json();
     if (!hit) return null;
-    return { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) };
+
+    const coords = { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) };
+
+    // Cache for next time — fire-and-forget, never blocks the response
+    adminDb.collection('geocache').doc(clean).set({
+      lat: coords.lat,
+      lng: coords.lng,
+      cep: clean,
+      cachedAt: new Date().toISOString(),
+    }).catch(() => {});
+
+    return coords;
   } catch {
     return null;
   }

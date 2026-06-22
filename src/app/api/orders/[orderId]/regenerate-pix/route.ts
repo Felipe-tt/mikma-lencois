@@ -47,11 +47,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   } : undefined;
 
   const pixPayload: Record<string, unknown> = {
-    method: 'PIX',
     data: {
       amount: order.totalCents,
       description: `Pedido #${orderId.slice(-8).toUpperCase()}`,
       expiresIn: 900,
+      externalId: orderId,
       ...(customerData ? { customer: customerData } : {}),
     },
   };

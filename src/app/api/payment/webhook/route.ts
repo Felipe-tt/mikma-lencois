@@ -80,8 +80,15 @@ export async function POST(req: NextRequest) {
 
     for (const item of order.items as Array<{ sku: string; quantity: number }>) {
       const invRef = adminDb.collection('inventory').doc(item.sku);
+      // NOTE: only 'quantity' is decremented here, not 'reserved'.
+      // Nothing in this codebase currently increments 'reserved' when
+      // an order is created — decrementing it on every paid order with
+      // no matching increment anywhere drives it permanently negative,
+      // which inflates available stock (available = quantity - reserved)
+      // a little more with every single sale. If/when proper stock
+      // reservation is added at order-creation time, this should also
+      // decrement 'reserved' by item.quantity to match.
       batch.update(invRef, {
-        reserved: FieldValue.increment(-item.quantity),
         quantity: FieldValue.increment(-item.quantity),
         updatedAt: FieldValue.serverTimestamp(),
       });
