@@ -48,13 +48,28 @@ const TIMELINE_COLOR: Record<string, string> = {
   delivered: 'bg-emerald-500', cancelled: 'bg-red-400',
 };
 
-function formatDateTime(iso: string) {
+function toDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (typeof value === 'object' && value !== null && 'seconds' in value) {
+    return new Date((value as { seconds: number }).seconds * 1000);
+  }
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+function formatDateTime(value: unknown): string {
+  const d = toDate(value);
+  if (!d) return '—';
   try {
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit', second: '2-digit',
-    }).format(new Date(iso));
-  } catch { return iso; }
+    }).format(d);
+  } catch { return String(value); }
 }
 
 function Row({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
@@ -97,12 +112,49 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     }
     return onSnapshot(doc(db, 'orders', id), async snap => {
       if (snap.exists()) {
-        const o = { id: snap.id, ...snap.data() } as Order;
+        const raw = snap.data();
+
+        // Converte qualquer Firestore Timestamp para ISO string
+        function normalizeDate(v: unknown): string | undefined {
+          if (!v) return undefined;
+          if (typeof v === 'object' && v !== null && 'seconds' in v)
+            return new Date((v as { seconds: number }).seconds * 1000).toISOString();
+          if (typeof v === 'string') return v;
+          return undefined;
+        }
+
+        const o: Order = {
+          id: snap.id,
+          ...raw,
+          createdAt: normalizeDate(raw.createdAt) ?? '',
+          updatedAt: normalizeDate(raw.updatedAt),
+          payment: raw.payment ? {
+            ...raw.payment,
+            paidAt: normalizeDate(raw.payment.paidAt),
+          } : raw.payment,
+          delivery: raw.delivery ? {
+            ...raw.delivery,
+            dispatchedAt: normalizeDate(raw.delivery.dispatchedAt),
+            estimatedDelivery: normalizeDate(raw.delivery.estimatedDelivery),
+          } : raw.delivery,
+          timeline: (raw.timeline ?? []).map((ev: Record<string, unknown>) => ({
+            ...ev,
+            at: normalizeDate(ev.at) ?? '',
+          })),
+        } as Order;
+
         setOrder(o);
-        // load customer
         if (o.userId) {
           const uSnap = await getDoc(doc(db, 'users', o.userId));
-          if (uSnap.exists()) setCustomer({ uid: uSnap.id, ...uSnap.data() } as User);
+          if (uSnap.exists()) {
+            const ur = uSnap.data();
+            setCustomer({
+              uid: uSnap.id,
+              ...ur,
+              createdAt: normalizeDate(ur.createdAt) ?? '',
+              updatedAt: normalizeDate(ur.updatedAt),
+            } as User);
+          }
         }
       }
       setLoading(false);
