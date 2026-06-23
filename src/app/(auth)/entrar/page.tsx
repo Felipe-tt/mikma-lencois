@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { auth } from '@/lib/firebase/client';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import Link from 'next/link';
 import Image from 'next/image';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
@@ -22,105 +22,138 @@ function EyeIcon({ open }: { open: boolean }) {
 
 // ── Modal recuperação de senha ────────────────────────────────────────────────
 function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; onClose: () => void }) {
-  const [email, setEmail] = useState(defaultEmail);
-  const [step, setStep] = useState<'form' | 'sent'>('form');
+  const [email, setEmail]     = useState(defaultEmail);
+  const [step, setStep]       = useState<'email' | 'code' | 'done'>('email');
+  const [code, setCode]       = useState(['','','','','','']);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const codeRefs = useRef<(HTMLInputElement|null)[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
-
-  // Fecha com Escape
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
   }, [onClose]);
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function sendCode(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!email.trim()) return;
     setLoading(true); setError('');
     try {
-      await sendPasswordResetEmail(auth, email.trim().toLowerCase(), {
-        url: `${window.location.origin}/redefinir-senha`,
-        handleCodeInApp: false,
+      const res = await fetch('/api/auth/send-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
-      setStep('sent');
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setStep('code');
+      setResendCooldown(60);
+      setTimeout(() => codeRefs.current[0]?.focus(), 100);
     } catch (err: unknown) {
-      // Não revela se o email existe ou não — segurança
-      setStep('sent');
-      console.error('[forgot-password]', err);
+      // Sempre avança — não revela se e-mail existe
+      setStep('code');
+      setResendCooldown(60);
+      setTimeout(() => codeRefs.current[0]?.focus(), 100);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleDigit(i: number, val: string) {
+    const digit = val.replace(/\D/g,'').slice(-1);
+    const next = [...code]; next[i] = digit; setCode(next); setError('');
+    if (digit && i < 5) codeRefs.current[i+1]?.focus();
+    if (next.every(d => d) && next.join('').length === 6) verifyCode(next.join(''));
+  }
+
+  async function verifyCode(codeStr: string) {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`/api/auth/reset-password?email=${encodeURIComponent(email.toLowerCase())}&code=${codeStr}`);
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      // Código ok — redireciona para página de nova senha com os dados
+      onClose();
+      window.location.href = `/redefinir-senha?email=${encodeURIComponent(email.toLowerCase())}&code=${codeStr}`;
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Código incorreto.');
+      setCode(['','','','','','']);
+      setTimeout(() => codeRefs.current[0]?.focus(), 50);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    // Backdrop
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" />
-
-      <div className="relative w-full max-w-sm bg-paper rounded-sm shadow-2xl p-8 animate-in fade-in zoom-in-95 duration-150">
-        <button onClick={onClose}
-          className="absolute top-4 right-4 text-mist hover:text-mid transition-colors">
+      <div className="relative w-full max-w-sm bg-paper shadow-2xl p-8">
+        <button onClick={onClose} className="absolute top-4 right-4 text-mist hover:text-mid transition-colors">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
 
-        {step === 'form' ? (
+        {step === 'email' && (
           <>
-            <div className="mb-6">
-              <div className="w-10 h-10 bg-clay/10 flex items-center justify-center mb-4">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
-                  <rect x="2" y="4" width="20" height="16" rx="2"/>
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                </svg>
-              </div>
-              <h2 className="font-display text-xl text-ink mb-1">Recuperar senha</h2>
-              <p className="text-sm text-mid">Informe seu e-mail e enviaremos um link para redefinir sua senha.</p>
-            </div>
-
-            {error && (
-              <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 text-xs text-red-700 rounded-sm">{error}</div>
-            )}
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <p className="font-display text-xl text-ink mb-1">Esqueceu a senha?</p>
+            <p className="text-sm text-mid mb-6 leading-relaxed">
+              Informe seu e-mail e enviaremos um código para criar uma nova senha.
+            </p>
+            {error && <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
+            <form onSubmit={sendCode} className="flex flex-col gap-4">
               <div>
-                <label className="label">E-mail</label>
-                <input ref={inputRef} type="email" required value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="input" placeholder="seu@email.com" />
+                <label className="label">Seu e-mail</label>
+                <input ref={inputRef} type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  className="input text-base" placeholder="seuemail@exemplo.com" autoComplete="email" />
               </div>
               <button type="submit" disabled={loading}
-                className="btn-primary w-full py-3 text-sm font-semibold flex items-center justify-center gap-2">
-                {loading ? <><span className="spinner" /><span>Enviando...</span></> : 'Enviar link'}
-              </button>
-              <button type="button" onClick={onClose}
-                className="text-sm text-mid hover:text-ink transition-colors text-center">
-                Voltar ao login
+                className="btn-primary w-full h-12 text-sm font-semibold flex items-center justify-center gap-2">
+                {loading ? <><span className="spinner"/> Enviando…</> : 'Enviar código'}
               </button>
             </form>
           </>
-        ) : (
+        )}
+
+        {step === 'code' && (
           <>
-            <div className="text-center">
-              <div className="w-14 h-14 bg-green-500/10 flex items-center justify-center mx-auto mb-5">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
-                  <rect x="2" y="4" width="20" height="16" rx="2"/>
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                </svg>
-              </div>
-              <h2 className="font-display text-xl text-ink mb-2">E-mail enviado</h2>
-              <p className="text-sm text-mid mb-1">
-                Se esse endereço tiver uma conta, você receberá um link em instantes.
+            <p className="font-display text-xl text-ink mb-1">Digite o código</p>
+            <p className="text-sm text-mid mb-6 leading-relaxed">
+              Se este e-mail estiver cadastrado, enviamos um código de 6 dígitos para <strong className="text-ink">{email}</strong>.
+            </p>
+            {error && <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
+            <div className="flex gap-2 justify-center mb-6">
+              {code.map((digit, i) => (
+                <input key={i} ref={el => { codeRefs.current[i] = el; }}
+                  type="text" inputMode="numeric" maxLength={1} value={digit}
+                  onChange={e => handleDigit(i, e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Backspace' && !code[i] && i > 0) codeRefs.current[i-1]?.focus(); }}
+                  disabled={loading}
+                  className={`w-11 h-13 text-center text-xl font-bold border-2 outline-none transition-colors
+                    ${digit ? 'border-ink text-ink' : 'border-mist'}
+                    focus:border-clay focus:ring-2 focus:ring-clay/10 disabled:opacity-50`} />
+              ))}
+            </div>
+            {loading && (
+              <p className="text-center text-sm text-mid mb-4 flex items-center justify-center gap-2">
+                <span className="spinner-dark"/> Verificando…
               </p>
-              <p className="text-xs text-faint mb-6">Verifique também a caixa de spam.</p>
-              <button onClick={onClose}
-                className="btn-primary w-full py-3 text-sm font-semibold">
-                Voltar ao login
+            )}
+            <div className="text-center">
+              <p className="text-xs text-faint mb-1">Não recebeu? Verifique o spam.</p>
+              <button onClick={() => sendCode()} disabled={resendCooldown > 0 || loading}
+                className="text-sm text-clay font-medium hover:underline disabled:text-faint transition-colors">
+                {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Reenviar código'}
               </button>
             </div>
           </>
@@ -130,7 +163,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
   );
 }
 
-// ── Página de login ────────────────────────────────────────────────────────────
+
 export default function LoginPage() {
   const { user } = useAuth();
   const router = useRouter();
