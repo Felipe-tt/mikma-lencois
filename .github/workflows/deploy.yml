@@ -84,12 +84,9 @@ jobs:
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules --project mikma-lencois
 
       - name: Deploy Storage Rules
-        # A service account em uso ainda não tem a permissão de IAM
-        # firebasestorage.defaultBucket.get — sem ela esse deploy falha com
-        # 403. Não bloqueia o deploy do site enquanto isso não é resolvido
-        # no IAM do projeto (Firebase Console → Configurações → Contas de
-        # serviço, ou Google Cloud Console → IAM, adicionando o papel
-        # "Firebase Storage Admin" à conta usada no GOOGLE_APPLICATION_CREDENTIALS).
+        # continue-on-error mantido como rede de segurança: se faltar
+        # alguma permissão de IAM específica do Storage no futuro, isso
+        # não deve travar o deploy do site (que depende só do Firestore).
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only storage --project mikma-lencois
         continue-on-error: true
 
