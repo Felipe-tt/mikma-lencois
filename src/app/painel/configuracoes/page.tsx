@@ -178,7 +178,7 @@ export default function ConfiguracoesPage() {
             <Info>Frases objetivas que respondem: por que comprar aqui? Ex: entrega rápida, PIX, frete grátis.</Info>
             {[1,2,3,4].map(n => (
               <F key={n} label={`Selo ${n}`}
-                value={(settings as Record<string,string>)[`heroTrust${n}`] ?? ''}
+                value={(settings as unknown as Record<string,string>)[`heroTrust${n}`] ?? ''}
                 onChange={v => set(`heroTrust${n}` as keyof StoreSettings, v)}
                 placeholder={['Entrega em 1h em Blumenau','Frete para todo o Brasil','Pague com PIX','Qualidade direto de fábrica'][n-1]} />
             ))}
@@ -224,8 +224,8 @@ export default function ConfiguracoesPage() {
               { lf:'aboutStat3Label', vf:'aboutStat3Value', pl:'Cobertura', pv:'Todo o Brasil' },
             ] as const).map((r, i) => (
               <Row key={i}>
-                <F label={`Card ${i+1} — título`} value={(settings as Record<string,string>)[r.lf]} onChange={v => set(r.lf as keyof StoreSettings, v)} placeholder={r.pl} />
-                <F label={`Card ${i+1} — valor`} value={(settings as Record<string,string>)[r.vf]} onChange={v => set(r.vf as keyof StoreSettings, v)} placeholder={r.pv} />
+                <F label={`Card ${i+1} — título`} value={(settings as unknown as Record<string,string>)[r.lf]} onChange={v => set(r.lf as keyof StoreSettings, v)} placeholder={r.pl} />
+                <F label={`Card ${i+1} — valor`} value={(settings as unknown as Record<string,string>)[r.vf]} onChange={v => set(r.vf as keyof StoreSettings, v)} placeholder={r.pv} />
               </Row>
             ))}
             <F label="Texto do botão WhatsApp" value={settings.aboutWhatsappLabel} onChange={v => set('aboutWhatsappLabel', v)} placeholder="Falar no WhatsApp" />
