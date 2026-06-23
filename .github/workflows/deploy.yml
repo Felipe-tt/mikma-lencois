@@ -66,6 +66,22 @@ jobs:
           restore-keys: |
             nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
+      - name: Criar .env.production com variáveis server-side
+        run: |
+          cat > .env.production << EOF
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          RESEND_WEBHOOK_SECRET=${{ secrets.RESEND_WEBHOOK_SECRET }}
+          RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}
+          EMAIL_CONTATO_ADDRESS=${{ secrets.EMAIL_CONTATO_ADDRESS }}
+          FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}
+          RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
+          ABACATEPAY_API_KEY=${{ secrets.ABACATEPAY_API_KEY }}
+          ABACATEPAY_PUBLIC_KEY=${{ secrets.ABACATEPAY_PUBLIC_KEY }}
+          MELHOR_ENVIO_TOKEN=${{ secrets.MELHOR_ENVIO_TOKEN }}
+          EOF
+
       - name: Build Next.js
         run: npm run build
 
