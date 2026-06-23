@@ -325,3 +325,11 @@ html.dark [style*="background-image"] {
 html.dark ::-webkit-scrollbar-thumb { background: #3C3028; }
 html.dark ::-webkit-scrollbar-thumb:hover { background: #5A4838; }
 html.dark * { scrollbar-color: #3C3028 transparent; }
+
+/* ── Email HTML body (painel mensagens) ──────────────────────────── */
+.email-html-body img { max-width: 100%; height: auto; }
+.email-html-body a { color: #C4714A; text-decoration: underline; }
+.email-html-body p { margin: 0 0 0.5em; }
+.email-html-body br { display: block; margin: 0.2em 0; }
+.email-html-body table { border-collapse: collapse; max-width: 100%; }
+.email-html-body td, .email-html-body th { padding: 4px 8px; }

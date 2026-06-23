@@ -213,10 +213,9 @@ function MessageBubble({ msg }: { msg: EmailMessage & { html?: string; attachmen
       {/* Corpo da mensagem */}
       <div className={`text-[13px] leading-relaxed ${isOut ? 'bg-[#1E1208] text-[#FAF8F5] px-3.5 py-2.5' : 'bg-[#F0EBE1] text-[#1E1208] border border-[#E6DFD5] px-3.5 py-2.5'}`}>
         {msg.html ? (
-          // HTML renderizado (e-mails inbound com formatação)
           <div
-            className="prose prose-sm max-w-none"
-            style={{ fontSize: 13 }}
+            className="email-html-body"
+            style={{ fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word', maxWidth: '100%', overflowX: 'auto' }}
             dangerouslySetInnerHTML={{ __html: msg.html }}
           />
         ) : (

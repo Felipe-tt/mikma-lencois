@@ -12,14 +12,11 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 interface ResendInboundEvent {
   type: string;
   created_at: string;
-  data: {
-    email_id: string;
-    from: string;
-    to: string[];
-    subject?: string;
-    attachments?: { filename: string; content_type: string; download_url: string }[];
-  };
+  data: { email_id: string; from: string; to: string[]; subject?: string };
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyResend = any;
 
 function extractEmail(raw: string): string {
   const match = raw.match(/<([^>]+)>/);
@@ -36,35 +33,8 @@ function conversationIdFor(email: string): string {
   return email.toLowerCase().replace(/[^a-z0-9.@_-]/g, '_');
 }
 
-/** Baixa um attachment do Resend e salva no Firebase Storage. Retorna a URL pública. */
-async function uploadAttachmentToStorage(
-  downloadUrl: string,
-  filename: string,
-  contentType: string,
-  emailId: string,
-): Promise<string> {
-  const res = await fetch(downloadUrl);
-  if (!res.ok) throw new Error(`Falha ao baixar anexo: ${res.status}`);
-  const buffer = Buffer.from(await res.arrayBuffer());
-
-  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const path = `email-attachments/${emailId}/${Date.now()}_${safeName}`;
-  const file = adminStorage.bucket().file(path);
-
-  await file.save(buffer, { metadata: { contentType } });
-  await file.makePublic();
-
-  return `https://storage.googleapis.com/${adminStorage.bucket().name}/${path}`;
-}
-
-/** Substitui referências CID (imagens inline) no HTML pelos URLs do Storage. */
-function replaceCidReferences(html: string, cidMap: Record<string, string>): string {
-  return html.replace(/cid:([^"'\s>]+)/gi, (_, cid) => cidMap[cid] ?? `cid:${cid}`);
-}
-
-/** Sanitiza HTML mantendo apenas tags seguras — nada de scripts, iframes, etc. */
+/** Remove tags perigosas do HTML antes de salvar/exibir */
 function sanitizeHtml(html: string): string {
-  // Remove scripts, iframes, objetos, e on* handlers
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
@@ -72,6 +42,27 @@ function sanitizeHtml(html: string): string {
     .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
     .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
     .replace(/javascript:/gi, '');
+}
+
+/**
+ * Baixa um attachment via download_url do Resend e salva no Firebase Storage.
+ * Necessário porque as URLs do Resend expiram; o Storage é permanente.
+ */
+async function uploadToStorage(
+  downloadUrl: string,
+  filename: string,
+  contentType: string,
+  emailId: string,
+): Promise<string> {
+  const res = await fetch(downloadUrl);
+  if (!res.ok) throw new Error(`Falha ao baixar anexo ${filename}: ${res.status}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `email-attachments/${emailId}/${Date.now()}_${safeName}`;
+  const file = adminStorage.bucket().file(path);
+  await file.save(buffer, { metadata: { contentType } });
+  await file.makePublic();
+  return `https://storage.googleapis.com/${adminStorage.bucket().name}/${path}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -86,7 +77,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Webhook não configurado' }, { status: 500 });
   }
 
-  // Assinatura exige body BRUTO
+  // Assinatura exige body BRUTO — não pode usar req.json() antes disso
   const rawBody = await req.text();
   const svixHeaders = {
     'svix-id': req.headers.get('svix-id') ?? '',
@@ -106,14 +97,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const { from, subject, email_id } = event.data;
+  const { from, email_id } = event.data;
   if (!from || !email_id) {
     return NextResponse.json({ error: 'Payload incompleto' }, { status: 400 });
   }
 
-  // ── 1. Busca conteúdo completo via API (webhook só traz metadados) ──────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: fullEmail, error: fetchErr } = await (resend.emails as any).receiving.get(email_id);
+  // ── 1. Busca conteúdo completo (webhook só traz metadados) ─────────────────
+  // html_format=data_uri (padrão): imagens inline já vêm como base64 no HTML
+  // Não precisa substituir CIDs — Resend já faz isso por nós
+  const resendAny = resend as AnyResend;
+  const { data: fullEmail, error: fetchErr } = await resendAny.emails.receiving.get(email_id);
   if (fetchErr || !fullEmail) {
     console.error('Erro ao buscar e-mail completo:', fetchErr);
     return NextResponse.json({ error: 'Erro ao buscar conteúdo do e-mail' }, { status: 500 });
@@ -121,52 +114,58 @@ export async function POST(req: NextRequest) {
 
   const text: string = fullEmail.text ?? '';
   const rawHtml: string = fullEmail.html ?? '';
-  const attachmentsMeta: { filename: string; content_type: string; download_url?: string; id?: string }[] =
-    fullEmail.attachments ?? [];
+  const html = rawHtml ? sanitizeHtml(rawHtml) : '';
+  const subject: string = fullEmail.subject ?? event.data.subject ?? '(sem assunto)';
 
-  const customerEmail = extractEmail(from);
-  const customerName = extractName(from);
-  const now = new Date().toISOString();
+  // ── 2. Busca lista de attachments com download_url ─────────────────────────
+  // receiving.get() traz metadados dos attachments mas sem download_url.
+  // attachments.list() retorna download_url para cada um.
+  const attachmentsMeta: { id: string; filename: string; content_type: string; content_id?: string; download_url?: string }[] = [];
 
-  // ── 2. Salva anexos no Storage ──────────────────────────────────────────────
+  try {
+    const { data: attList } = await resendAny.emails.attachments.list({ emailId: email_id });
+    if (Array.isArray(attList?.data)) attachmentsMeta.push(...attList.data);
+  } catch (err) {
+    console.warn('Falha ao listar attachments:', err);
+  }
+
+  // ── 3. Upload de anexos para Firebase Storage (URLs permanentes) ───────────
   const savedAttachments: { filename: string; contentType: string; url: string; isImage: boolean }[] = [];
-  const cidMap: Record<string, string> = {};
+
+  // Filtra imagens inline — já estão embutidas no HTML como data URIs, não precisa salvar separado
+  const nonInlineAttachments = attachmentsMeta.filter(
+    att => !(att.content_id && rawHtml.includes(`data:${att.content_type}`))
+  );
 
   await Promise.all(
-    attachmentsMeta.map(async att => {
+    nonInlineAttachments.map(async att => {
+      if (!att.download_url) return;
       try {
-        const dlUrl = att.download_url;
-        if (!dlUrl) return;
-
-        const storageUrl = await uploadAttachmentToStorage(dlUrl, att.filename, att.content_type, email_id);
-        const isImage = att.content_type.startsWith('image/');
-
-        savedAttachments.push({ filename: att.filename, contentType: att.content_type, url: storageUrl, isImage });
-
-        // Mapeia CID para URLs do Storage (imagens inline no corpo HTML)
-        if (isImage && att.id) cidMap[att.id] = storageUrl;
+        const storageUrl = await uploadToStorage(att.download_url, att.filename, att.content_type, email_id);
+        savedAttachments.push({
+          filename: att.filename,
+          contentType: att.content_type,
+          url: storageUrl,
+          isImage: att.content_type.startsWith('image/'),
+        });
       } catch (err) {
         console.warn('Falha ao salvar anexo:', att.filename, err);
       }
     })
   );
 
-  // ── 3. Processa HTML: substitui CIDs e sanitiza ─────────────────────────────
-  const html = rawHtml
-    ? sanitizeHtml(replaceCidReferences(rawHtml, cidMap))
-    : '';
+  // ── 4. Salva no Firestore ──────────────────────────────────────────────────
+  const customerEmail = extractEmail(from);
+  const customerName = extractName(from);
+  const now = new Date().toISOString();
+  const preview = text.trim().slice(0, 140) || subject;
 
-  // Preview para a lista de conversas
-  const preview = text.trim().slice(0, 140) || subject || '(sem conteúdo)';
-
-  // ── 4. Salva no Firestore ───────────────────────────────────────────────────
   const convId = conversationIdFor(customerEmail);
   const convRef = adminDb.collection('conversations').doc(convId);
 
   try {
-    await adminDb.runTransaction(async tx => {
+    await adminDb.runTransaction(async (tx: AnyResend) => {
       const snap = await tx.get(convRef);
-
       tx.set(
         convRef,
         {
@@ -186,7 +185,7 @@ export async function POST(req: NextRequest) {
         direction: 'inbound',
         from: customerEmail,
         to: process.env.EMAIL_CONTATO_ADDRESS || 'contato@mikma.com.br',
-        subject: subject ?? '(sem assunto)',
+        subject,
         text,
         ...(html ? { html } : {}),
         attachments: savedAttachments,
