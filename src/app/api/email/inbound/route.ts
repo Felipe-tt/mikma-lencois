@@ -15,7 +15,6 @@ interface ResendInboundEvent {
   data: { email_id: string; from: string; to: string[]; subject?: string };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyResend = any;
 
 function extractEmail(raw: string): string {
