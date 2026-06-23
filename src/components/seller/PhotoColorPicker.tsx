@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { hexToColorName } from '@/lib/colorNames';
+import { auth } from '@/lib/firebase/client';
 
 interface Props {
   images: string[];
@@ -82,19 +83,21 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
     async function load() {
       try {
         // Imagens de produtos já salvos vêm do Firebase Storage (outro
-        // domínio). Carregar essa URL direto numa <img> e desenhar no
-        // canvas "contamina" o canvas (cross-origin) — getImageData()
-        // lança SecurityError, capturado em lugar nenhum no onload, então
-        // a UI ficava presa em "Carregando..." pra sempre sem nenhum erro
-        // visível. Fotos recém-tiradas (dataUrl base64) não tinham esse
-        // problema, por isso o bug só aparecia em produtos já salvos.
+        // domínio). O Storage não envia Access-Control-Allow-Origin por
+        // padrão — buscar a URL direto via fetch() no browser é bloqueado
+        // pela política de CORS, e desenhar a <img> cross-origin direto no
+        // canvas "contamina" o canvas (getImageData() lança SecurityError).
         //
-        // Solução: buscar os bytes via fetch (sem essa restrição de canvas)
-        // e converter pra uma data: URL local antes de desenhar — o canvas
-        // nunca chega a carregar a imagem cross-origin diretamente.
+        // Solução: pedir os bytes pra um proxy no nosso próprio servidor
+        // (/api/products/image-proxy) — fetch servidor-a-servidor não tem
+        // restrição de CORS — e converter a resposta numa data: URL local
+        // antes de desenhar. O canvas nunca chega a tocar a URL cross-origin.
         let localDataUrl = imageDataUrl;
         if (imageDataUrl.startsWith('http')) {
-          const res = await fetch(imageDataUrl);
+          const token = await auth.currentUser?.getIdToken();
+          if (!token) throw new Error('not authenticated');
+          const proxied = `/api/products/image-proxy?url=${encodeURIComponent(imageDataUrl)}`;
+          const res = await fetch(proxied, { headers: { Authorization: `Bearer ${token}` } });
           if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
           const blob = await res.blob();
           localDataUrl = await new Promise<string>((resolve, reject) => {
