@@ -164,3 +164,30 @@ export interface DeliveryQuote {
   estimatedDays: number
   available: boolean
 }
+
+// ─── Mensagens (caixa de e-mail no painel) ──────────────────────────────────
+export interface EmailMessage {
+  id: string
+  direction: 'inbound' | 'outbound'
+  from: string
+  to: string
+  subject: string
+  text: string
+  html?: string
+  createdAt: string
+  /** UID do seller/admin que enviou (só presente em direction: outbound) */
+  sentBy?: string
+}
+
+export interface Conversation {
+  id: string
+  /** E-mail do cliente — usado para agrupar a thread */
+  customerEmail: string
+  customerName?: string
+  lastMessagePreview: string
+  lastMessageAt: string
+  /** true se a última mensagem inbound ainda não foi lida no painel */
+  unread: boolean
+  messageCount: number
+}
+

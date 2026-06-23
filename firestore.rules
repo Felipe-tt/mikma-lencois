@@ -98,6 +98,23 @@ service cloud.firestore {
       allow update, delete: if isSellerOrAdmin();
     }
 
+    // ── Conversas de e-mail (caixa de mensagens do painel) ──────────────────
+    match /conversations/{convId} {
+      allow read: if isSellerOrAdmin();
+      // Criação/escrita normal só via Admin SDK (webhook inbound, rota de
+      // envio). O client só pode marcar como lida (unread: false) — não
+      // pode alterar nenhum outro campo nem criar/deletar a conversa.
+      allow create, delete: if false;
+      allow update: if isSellerOrAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unread']);
+
+      match /messages/{messageId} {
+        allow read: if isSellerOrAdmin();
+        // Escrita só via Admin SDK (webhook inbound, rota de envio).
+        allow write: if false;
+      }
+    }
+
     // ── Tudo mais: negar por padrão ──────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

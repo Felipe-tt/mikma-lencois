@@ -1,12 +1,16 @@
 'use client';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
 
 const NAV = [
   { href: '/painel', label: 'Início', desc: 'Resumo da loja', exact: true, icon: '🏠' },
   { href: '/painel/pedidos', label: 'Pedidos', desc: 'Ver e separar pedidos', icon: '📦' },
+  { href: '/painel/mensagens', label: 'Mensagens', desc: 'Conversas com clientes', icon: '✉️' },
   { href: '/painel/produtos', label: 'Produtos', desc: 'Cadastrar e editar', icon: '🛍' },
   { href: '/painel/estoque', label: 'Estoque', desc: 'Quantidades disponíveis', icon: '📋' },
   { href: '/painel/relatorios', label: 'Relatórios', desc: 'Vendas e faturamento', icon: '📊' },
@@ -18,6 +22,14 @@ const NAV = [
 export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
   const pathname = usePathname();
   const { logout, user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, 'conversations'), where('unread', '==', true)),
+      snap => setUnreadCount(snap.size)
+    );
+  }, []);
 
   return (
     <aside className="w-60 shrink-0 flex flex-col border-r border-[#E6DFD5] bg-[#FAF8F5] min-h-screen">
@@ -47,8 +59,15 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
                     }`}
                 >
                   <span className="text-base shrink-0">{icon}</span>
-                  <span className="flex flex-col">
-                    <span className="text-[13px] font-semibold leading-tight">{label}</span>
+                  <span className="flex flex-col flex-1">
+                    <span className="text-[13px] font-semibold leading-tight flex items-center gap-2">
+                      {label}
+                      {href === '/painel/mensagens' && unreadCount > 0 && (
+                        <span className="text-[10px] font-bold leading-none px-1.5 py-0.5 rounded-full bg-[#C4714A] text-white">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </span>
                     <span className={`text-[10px] leading-tight ${active ? 'text-[#FAF8F5]/50' : 'text-[#B09C8C]'}`}>{desc}</span>
                   </span>
                 </Link>
