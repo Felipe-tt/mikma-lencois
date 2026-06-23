@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   columns: string[];
@@ -36,8 +37,8 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
         Guia de medidas
       </button>
 
-      {/* Backdrop */}
-      {open && (
+      {/* Backdrop — portal pro body para evitar bug com transform de ancestral */}
+      {open && createPortal(
         <div
           className="fixed inset-0 z-[80] bg-ink/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
           onClick={close}
@@ -112,7 +113,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
             )}
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 }
