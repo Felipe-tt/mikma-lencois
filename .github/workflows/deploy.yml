@@ -30,6 +30,10 @@ jobs:
       ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
       ABACATEPAY_PUBLIC_KEY: ${{ secrets.ABACATEPAY_PUBLIC_KEY }}
       MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      EMAIL_CONTATO_ADDRESS: ${{ secrets.EMAIL_CONTATO_ADDRESS }}
       NEXT_PUBLIC_APP_URL: https://mikma.com.br
       NEXT_PUBLIC_BASE_URL: https://mikma.com.br
       GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
@@ -75,6 +79,9 @@ jobs:
         id: functions-changed
         run: |
           git diff --name-only HEAD~1 HEAD | grep -q '^functions/' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+
+      - name: Deploy Firestore + Storage Rules
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules,storage --project mikma-lencois
 
       - name: Deploy hosting + functions
         if: steps.functions-changed.outputs.changed == 'true'
