@@ -79,13 +79,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Logo */}
           <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <span className="flex items-center gap-2.5">
-              <Image src="/logo-dark.png" alt="Mikma Lençóis" width={40} height={40} className="h-9 w-9 object-contain rounded-full" priority />
-              <span className="hidden sm:flex flex-col leading-none">
-                <span className="text-[13px] font-semibold text-ink tracking-tight">Mikma</span>
-                <span className="text-[9px] text-mid tracking-[0.18em] uppercase">Lençóis</span>
-              </span>
-            </span>
+            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={800} height={242} className="h-8 w-auto object-contain" priority />
           </NavLink>
 
           {/* Desktop nav — right next to the logo */}
@@ -205,10 +199,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           <div className="fixed top-0 left-0 z-50 w-[300px] h-full bg-paper shadow-modal animate-slide-in flex flex-col">
             <div className="flex items-center justify-between px-5 h-[60px] border-b border-mist">
               <NavLink href="/" onClick={() => setMenuOpen(false)}>
-                <span className="flex items-center gap-2">
-                  <Image src="/logo-dark.png" alt="Mikma Lençóis" width={36} height={36} className="h-8 w-8 object-contain rounded-full" />
-                  <span className="text-sm font-semibold text-ink">Mikma Lençóis</span>
-                </span>
+                <Image src="/logo-dark.png" alt="Logo" width={800} height={242} className="h-9 w-auto object-contain" />
               </NavLink>
               <button className="btn-ghost p-2" onClick={() => setMenuOpen(false)} aria-label="Fechar">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
