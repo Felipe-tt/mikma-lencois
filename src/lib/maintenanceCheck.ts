@@ -47,16 +47,30 @@ async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; 
   }
 }
 
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>(resolve => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function checkMaintenance(): Promise<void> {
   noStore();
 
+  // This function runs on EVERY page load across the entire site. It must
+  // never be able to hang the request — if Firestore itself is ever slow
+  // or degraded, fail open (treat as not-in-maintenance) within a bounded
+  // time rather than blocking every single visitor indefinitely.
   let active = false;
   try {
-    const snap = await adminDb.doc('maintenance/status').get();
-    active = snap.exists ? (snap.data()?.active ?? false) : false;
+    const snap = await withTimeout(adminDb.doc('maintenance/status').get(), 3000, null);
+    active = snap?.exists ? (snap.data()?.active ?? false) : false;
   } catch {
-    // If Firestore is unreachable, fail open — never lock visitors out
-    // because of a transient infra error.
     return;
   }
 
@@ -98,9 +112,9 @@ export async function checkMaintenance(): Promise<void> {
   let released = false;
   let alreadyRegistered = false;
   try {
-    const qSnap = await adminDb.doc(`maintenance_queue/${docId}`).get();
-    released = qSnap.exists ? (qSnap.data()?.released ?? false) : false;
-    alreadyRegistered = qSnap.exists;
+    const qSnap = await withTimeout(adminDb.doc(`maintenance_queue/${docId}`).get(), 3000, null);
+    released = qSnap?.exists ? (qSnap.data()?.released ?? false) : false;
+    alreadyRegistered = qSnap?.exists ?? false;
   } catch {
     released = false;
   }
@@ -118,8 +132,6 @@ export async function checkMaintenance(): Promise<void> {
     const secChUaPlatform = (h.get('sec-ch-ua-platform') ?? '').replace(/"/g, '');
     const secChUaMobile = h.get('sec-ch-ua-mobile') ?? '';
 
-    const geo = await lookupIpGeo(ip);
-
     const doc: Record<string, unknown> = {
       ip,
       released: false,
@@ -130,18 +142,38 @@ export async function checkMaintenance(): Promise<void> {
       secChUa,
       platform: secChUaPlatform,
       isMobile: secChUaMobile,
-      geoCity: geo.city,
-      geoRegion: geo.region,
-      geoCountry: geo.country,
-      isp: geo.isp,
-      geoDebug: geo.debugError,
+      geoCity: '',
+      geoRegion: '',
+      geoCountry: '',
+      isp: '',
+      geoDebug: 'pending',
     };
     if (uid) doc.uid = uid;
     if (email) doc.email = email;
     if (displayName) doc.displayName = displayName;
 
-    // Fire-and-forget: registra o visitante na fila para o seller ver.
-    adminDb.doc(`maintenance_queue/${docId}`).set(doc, { merge: true }).catch(() => {});
+    const queueRef = adminDb.doc(`maintenance_queue/${docId}`);
+
+    // Write immediately, with no geo data — never blocks the redirect below.
+    queueRef.set(doc, { merge: true }).catch(() => {});
+
+    // Enrich with geo data fully in the background. CRITICAL: this is never
+    // awaited. ipapi.co (and most free geo-IP APIs) routinely rate-limit or
+    // outright block traffic from cloud provider IP ranges (GCP/AWS/Azure),
+    // which made this hang or eat its full timeout on every new visitor
+    // when this was awaited before the redirect — exactly what caused the
+    // whole site (and /painel, sharing the same Cloud Run service) to feel
+    // stuck. If this background call never completes, the only cost is a
+    // missing city/ISP label in the admin queue view — never a blocked
+    // visitor.
+    lookupIpGeo(ip)
+      .then(geo => {
+        queueRef.set(
+          { geoCity: geo.city, geoRegion: geo.region, geoCountry: geo.country, isp: geo.isp, geoDebug: geo.debugError },
+          { merge: true }
+        ).catch(() => {});
+      })
+      .catch(() => {});
   }
 
   redirect('/manutencao');
