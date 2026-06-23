@@ -42,36 +42,63 @@ async function getBuyerName(userId: string): Promise<string> {
   return snap.data()?.name ?? 'Cliente';
 }
 
+async function getUberToken(): Promise<string> {
+  const clientId     = process.env.UBER_DIRECT_CLIENT_ID;
+  const clientSecret = process.env.UBER_DIRECT_CLIENT_SECRET;
+  if (!clientId || !clientSecret) throw new Error('Uber Direct não configurado');
+
+  // Cache em Firestore para não refazer OAuth a cada despacho
+  try {
+    const cacheSnap = await adminDb.collection('_cache').doc('uber_token').get();
+    if (cacheSnap.exists) {
+      const d = cacheSnap.data()!;
+      if (d.token && d.expiresAt && Date.now() < d.expiresAt - 60_000) return d.token as string;
+    }
+  } catch { /* miss */ }
+
+  const res = await fetch('https://login.uber.com/oauth/v2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'client_credentials',
+      scope: 'eats.deliveries',
+    }),
+  });
+  if (!res.ok) throw new Error(`Uber OAuth: ${res.status}`);
+  const data = await res.json();
+  const token = data.access_token as string;
+  const expiresAt = Date.now() + (data.expires_in ?? 3600) * 1000;
+  adminDb.collection('_cache').doc('uber_token').set({ token, expiresAt }).catch(() => {});
+  return token;
+}
+
 async function dispatchUberDirect(
   orderId: string, address: Address, buyerName: string,
   items: OrderItem[], settings: StoreSettings
 ): Promise<{ id: string; trackingUrl?: string }> {
+  const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
+  if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
+
+  const token = await getUberToken();
   const manifest = items.map(i => `${i.quantity}x ${i.productName}`).join(', ');
   const destAddress = `${address.street}, ${address.number}, ${address.city}, ${address.state}, ${address.cep}`;
-  const pickupAddress = [
-    settings.storeAddress,
-    settings.storeNeighborhood,
-    settings.storeCity,
-    settings.storeCep,
-  ].filter(Boolean).join(', ');
+  const pickupAddress = [settings.storeAddress, settings.storeNeighborhood, settings.storeCity, settings.storeCep].filter(Boolean).join(', ');
 
   const res = await fetch(
-    `https://api.uber.com/v1/customers/${process.env.UBER_DIRECT_CUSTOMER_ID}/deliveries`,
+    `https://api.uber.com/v1/customers/${customerId}/deliveries`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.UBER_DIRECT_API_KEY}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        pickup: {
-          name: settings.storeName,
-          address: pickupAddress,
-          phone: settings.storePhone || process.env.STORE_PHONE,
-        },
-        dropoff: { name: buyerName, address: destAddress },
+        pickup: { name: settings.storeName, address: pickupAddress, phone: settings.storePhone },
+        dropoff: { name: buyerName, address: destAddress, phone: '' },
         manifest: { reference: orderId, description: manifest },
       }),
     }
   );
-  if (!res.ok) throw new Error(`Uber Direct: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Uber Direct dispatch: ${await res.text()}`);
   return res.json();
 }
 
