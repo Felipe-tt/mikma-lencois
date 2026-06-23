@@ -80,8 +80,18 @@ jobs:
         run: |
           git diff --name-only HEAD~1 HEAD | grep -q '^functions/' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
 
-      - name: Deploy Firestore + Storage Rules
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules,storage --project mikma-lencois
+      - name: Deploy Firestore Rules
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules --project mikma-lencois
+
+      - name: Deploy Storage Rules
+        # A service account em uso ainda não tem a permissão de IAM
+        # firebasestorage.defaultBucket.get — sem ela esse deploy falha com
+        # 403. Não bloqueia o deploy do site enquanto isso não é resolvido
+        # no IAM do projeto (Firebase Console → Configurações → Contas de
+        # serviço, ou Google Cloud Console → IAM, adicionando o papel
+        # "Firebase Storage Admin" à conta usada no GOOGLE_APPLICATION_CREDENTIALS).
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only storage --project mikma-lencois
+        continue-on-error: true
 
       - name: Deploy hosting + functions
         if: steps.functions-changed.outputs.changed == 'true'
