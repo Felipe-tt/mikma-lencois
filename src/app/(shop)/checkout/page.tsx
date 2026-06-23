@@ -34,29 +34,6 @@ export default function CheckoutPage() {
   const [shippingError, setShipErr]     = useState('');
   const [quotedCep, setQuotedCep]       = useState('');
 
-  useEffect(() => {
-    if (loading) return;
-    if (!user) { router.push('/entrar'); return; }
-
-    const unsub = onSnapshot(doc(db, 'carts', user.uid), snap => {
-      if (!snap.exists() || !snap.data()?.items?.length) { router.push('/carrinho'); return; }
-      setCart(snap.data() as Cart);
-      setCL(false);
-    });
-
-    getDoc(doc(db, 'users', user.uid)).then(s => {
-      const d = s.data();
-      if (d?.address) setAddr(d.address);
-      setCustomer({
-        name:  d?.name  ?? user.displayName ?? '',
-        cpf:   d?.cpf   ?? '',
-        phone: d?.phone ?? '',
-      });
-    });
-
-    return unsub;
-  }, [user, loading, router]);
-
   // Quote shipping whenever CEP is complete
   const quoteShipping = useCallback(async (cep: string) => {
     const clean = onlyDigits(cep);
@@ -87,6 +64,36 @@ export default function CheckoutPage() {
       setShipLoad(false);
     }
   }, [quotedCep]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) { router.push('/entrar'); return; }
+
+    const unsub = onSnapshot(doc(db, 'carts', user.uid), snap => {
+      if (!snap.exists() || !snap.data()?.items?.length) { router.push('/carrinho'); return; }
+      setCart(snap.data() as Cart);
+      setCL(false);
+    });
+
+    getDoc(doc(db, 'users', user.uid)).then(s => {
+      const d = s.data();
+      if (d?.address) setAddr(d.address);
+      setCustomer({
+        name:  d?.name  ?? user.displayName ?? '',
+        cpf:   d?.cpf   ?? '',
+        phone: d?.phone ?? '',
+      });
+    });
+
+    return unsub;
+  }, [user, loading, router]);
+
+  // Endereço já salvo do perfil: cota o frete automaticamente assim que
+  // o CEP fica disponível, em vez de esperar o usuário redigitar o campo
+  // (antes a cotação só disparava no onChange do input de CEP).
+  useEffect(() => {
+    if (isValidCep(addr.cep) && !quotedCep) quoteShipping(addr.cep);
+  }, [addr.cep, quotedCep, quoteShipping]);
 
   async function lookupCep(raw: string) {
     const c = onlyDigits(raw);
