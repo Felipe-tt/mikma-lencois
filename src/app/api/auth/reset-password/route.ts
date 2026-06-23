@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     // Atualiza senha no Firebase Auth
     await adminAuth.updateUser(user.uid, { password: newPassword });
 
-    // Revoga todos os tokens anteriores — força re-login
+    // Revoga todos os tokens anteriores — força logout em outras sessões
     await adminAuth.revokeRefreshTokens(user.uid);
 
     // Atualiza hash no Firestore
@@ -97,6 +97,11 @@ export async function POST(req: NextRequest) {
 
     await ref.delete();
 
+    // NÃO usar createCustomToken aqui — exige iam.serviceAccounts.signBlob
+    // na service account do Cloud Run, que não funciona de forma estável
+    // neste ambiente de Firebase Hosting com webframeworks (ver mesmo
+    // aviso em google-verify/route.ts). O login automático é feito pelo
+    // client, que já tem a senha nova em mãos (signInWithEmailAndPassword).
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[reset-password]', err);

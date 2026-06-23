@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signInWithCustomToken } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -83,9 +83,16 @@ function ResetForm() {
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
 
-      // Se voltou customToken, faz login automático
-      if (d.customToken) {
-        await signInWithCustomToken(auth, d.customToken);
+      // Login automático: a pessoa acabou de definir esta senha agora
+      // mesmo, então já temos tudo para autenticar direto no client,
+      // sem precisar pedir a senha de novo na tela de login.
+      try {
+        await signInWithEmailAndPassword(auth, emailParam, password);
+      } catch (loginErr) {
+        // Troca de senha já aconteceu com sucesso — se o login automático
+        // falhar por qualquer motivo, a pessoa ainda consegue entrar
+        // manualmente com a senha nova na tela de login.
+        console.error('[redefinir-senha] login automático falhou', loginErr);
       }
 
       setDone(true);
