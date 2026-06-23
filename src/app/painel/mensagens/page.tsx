@@ -163,20 +163,7 @@ function ConversationThread({ conversation, onBack }: { conversation: Conversati
         ) : messages.length === 0 ? (
           <p className="text-[12px] text-[#B09C8C] text-center mt-8">Nenhuma mensagem nesta conversa.</p>
         ) : (
-          messages.map(msg => (
-            <div key={msg.id} className={`max-w-[80%] flex flex-col gap-1 ${msg.direction === 'outbound' ? 'self-end items-end' : 'self-start items-start'}`}>
-              <div
-                className={`px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
-                  msg.direction === 'outbound'
-                    ? 'bg-[#1E1208] text-[#FAF8F5]'
-                    : 'bg-[#F0EBE1] text-[#1E1208] border border-[#E6DFD5]'
-                }`}
-              >
-                {msg.text}
-              </div>
-              <span className="text-[10px] text-[#B09C8C]">{formatTsDateTime(msg.createdAt)}</span>
-            </div>
-          ))
+          messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)
         )}
       </div>
 
@@ -202,6 +189,75 @@ function ConversationThread({ conversation, onBack }: { conversation: Conversati
         </div>
         <p className="text-[10px] text-[#B09C8C] mt-1.5">Ctrl+Enter (ou ⌘+Enter) para enviar rápido.</p>
       </div>
+    </div>
+  );
+}
+
+interface Attachment { filename: string; contentType: string; url: string; isImage: boolean }
+
+function MessageBubble({ msg }: { msg: EmailMessage & { html?: string; attachments?: Attachment[] } }) {
+  const isOut = msg.direction === 'outbound';
+  const attachments: Attachment[] = msg.attachments ?? [];
+  const imageAttachments = attachments.filter(a => a.isImage);
+  const fileAttachments = attachments.filter(a => !a.isImage);
+
+  return (
+    <div className={`max-w-[85%] flex flex-col gap-1.5 ${isOut ? 'self-end items-end' : 'self-start items-start'}`}>
+      {/* Assunto apenas para mensagens inbound */}
+      {!isOut && (msg as any).subject && (
+        <p className="text-[10px] font-semibold text-[#B09C8C] uppercase tracking-wide px-1">
+          {(msg as any).subject}
+        </p>
+      )}
+
+      {/* Corpo da mensagem */}
+      <div className={`text-[13px] leading-relaxed ${isOut ? 'bg-[#1E1208] text-[#FAF8F5] px-3.5 py-2.5' : 'bg-[#F0EBE1] text-[#1E1208] border border-[#E6DFD5] px-3.5 py-2.5'}`}>
+        {msg.html ? (
+          // HTML renderizado (e-mails inbound com formatação)
+          <div
+            className="prose prose-sm max-w-none"
+            style={{ fontSize: 13 }}
+            dangerouslySetInnerHTML={{ __html: msg.html }}
+          />
+        ) : (
+          <p className="whitespace-pre-wrap">{msg.text}</p>
+        )}
+      </div>
+
+      {/* Imagens inline */}
+      {imageAttachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-0.5">
+          {imageAttachments.map((att, i) => (
+            <a key={i} href={att.url} target="_blank" rel="noopener noreferrer">
+              <img
+                src={att.url}
+                alt={att.filename}
+                className="max-w-[220px] max-h-[180px] object-cover border border-[#E6DFD5] hover:opacity-90 transition-opacity"
+              />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* Outros anexos */}
+      {fileAttachments.length > 0 && (
+        <div className="flex flex-col gap-1 mt-0.5 w-full">
+          {fileAttachments.map((att, i) => (
+            <a
+              key={i}
+              href={att.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 border border-[#E6DFD5] bg-white hover:bg-[#F0EBE1] transition-colors text-[12px] text-[#705A48] font-medium"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              {att.filename}
+            </a>
+          ))}
+        </div>
+      )}
+
+      <span className="text-[10px] text-[#B09C8C]">{formatTsDateTime(msg.createdAt)}</span>
     </div>
   );
 }

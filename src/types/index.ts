@@ -166,6 +166,13 @@ export interface DeliveryQuote {
 }
 
 // ─── Mensagens (caixa de e-mail no painel) ──────────────────────────────────
+export interface EmailAttachment {
+  filename: string
+  contentType: string
+  url: string       // URL permanente no Firebase Storage
+  isImage: boolean
+}
+
 export interface EmailMessage {
   id: string
   direction: 'inbound' | 'outbound'
@@ -174,6 +181,7 @@ export interface EmailMessage {
   subject: string
   text: string
   html?: string
+  attachments?: EmailAttachment[]
   createdAt: string
   /** UID do seller/admin que enviou (só presente em direction: outbound) */
   sentBy?: string
