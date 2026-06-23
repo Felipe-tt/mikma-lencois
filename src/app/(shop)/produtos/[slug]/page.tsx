@@ -214,7 +214,10 @@ export default async function ProductPage({ params }: Props) {
             )}
 
             {/* Size guide */}
-            <SizeGuide />
+            <SizeGuide
+              columns={(() => { try { return JSON.parse(s.bedSizeColumns || '[]'); } catch { return ['Tamanho','Cama','Comprimento','Largura']; } })()}
+              rows={(() => { try { return JSON.parse(s.bedSizeRows || '[]'); } catch { return []; } })()}
+            />
           </FadeIn>
         </div>
       </div>
@@ -246,7 +249,8 @@ export default async function ProductPage({ params }: Props) {
   );
 }
 
-function SizeGuide() {
+function SizeGuide({ columns, rows }: { columns: string[]; rows: Record<string, string>[] }) {
+  if (!columns.length || !rows.length) return null;
   return (
     <details className="group border-t border-mist pt-4">
       <summary className="flex items-center justify-between cursor-pointer list-none text-[12px] font-semibold text-mid tracking-[0.08em] uppercase hover:text-ink transition-colors">
@@ -259,24 +263,19 @@ function SizeGuide() {
         <table className="w-full text-[12px] border-collapse">
           <thead>
             <tr className="border-b border-mist">
-              {['Tamanho', 'Cama', 'Comprimento', 'Largura'].map(h => (
+              {columns.map(h => (
                 <th key={h} className="text-left font-semibold text-[10px] tracking-[0.12em] uppercase text-faint pb-2 pr-4">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {[
-              ['Solteiro', '0,88m', '2,20m', '1,40m'],
-              ['Solteiro Plus', '1,00m', '2,20m', '1,50m'],
-              ['Casal', '1,38m', '2,28m', '1,80m'],
-              ['Queen', '1,58m', '2,28m', '2,10m'],
-              ['King', '1,93m', '2,28m', '2,40m'],
-            ].map(([size, bed, length, width]) => (
-              <tr key={size} className="border-b border-mist/50 last:border-0">
-                <td className="py-2 pr-4 font-medium text-ink">{size}</td>
-                <td className="py-2 pr-4 text-mid">{bed}</td>
-                <td className="py-2 pr-4 text-mid">{length}</td>
-                <td className="py-2 pr-4 text-mid">{width}</td>
+            {rows.map((row, i) => (
+              <tr key={i} className="border-b border-mist/50 last:border-0">
+                {columns.map((col, j) => (
+                  <td key={col} className={`py-2 pr-4 ${j === 0 ? 'font-medium text-ink' : 'text-mid'}`}>
+                    {row[col] ?? ''}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>

@@ -81,6 +81,8 @@ export type StoreSettings = {
   sizeGuideRows: string;
   sizeGuideColumns: string;
   sizeGuideNote: string;
+  bedSizeRows: string;
+  bedSizeColumns: string;
   productTrust1: string;
   productTrust2: string;
   productTrust3: string;
@@ -165,6 +167,14 @@ export const STORE_DEFAULTS: StoreSettings = {
   ]),
   sizeGuideColumns: JSON.stringify(['Tamanho', 'Lençol', 'Fronha', 'Capa duvet']),
   sizeGuideNote: 'Medidas podem variar ±2 cm após lavagem. Recomendamos lavar antes do primeiro uso.',
+  bedSizeColumns: JSON.stringify(['Tamanho', 'Cama', 'Comprimento', 'Largura']),
+  bedSizeRows: JSON.stringify([
+    { Tamanho: 'Solteiro',     Cama: '0,88m', Comprimento: '2,20m', Largura: '1,40m' },
+    { Tamanho: 'Solteiro Plus', Cama: '1,00m', Comprimento: '2,20m', Largura: '1,50m' },
+    { Tamanho: 'Casal',        Cama: '1,38m', Comprimento: '2,28m', Largura: '1,80m' },
+    { Tamanho: 'Queen',        Cama: '1,58m', Comprimento: '2,28m', Largura: '2,10m' },
+    { Tamanho: 'King',         Cama: '1,93m', Comprimento: '2,28m', Largura: '2,40m' },
+  ]),
   productTrust1: 'Entrega local em Blumenau em até 1h',
   productTrust2: 'Frete para todo o Brasil com rastreio',
   productTrust3: 'Pagamento PIX com confirmação imediata',

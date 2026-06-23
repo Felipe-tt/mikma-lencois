@@ -417,6 +417,71 @@ export default function ConfiguracoesPage() {
               />
             </div>
           </Section>
+
+          <Section title="Guia de tamanhos" desc="Tabela de dimensões de cama exibida na página do produto (acordeão abaixo do produto)">
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-[#B09C8C] uppercase tracking-wider mb-1.5">Colunas</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 bg-[#1A1008] border border-[#3A2A1A] text-[#FAF8F5] text-sm outline-none focus:border-[#C4714A]"
+                  value={(() => { try { return JSON.parse(settings.bedSizeColumns || '[]').join(', '); } catch { return ''; } })()}
+                  onChange={e => {
+                    const cols = e.target.value.split(',').map(c => c.trim()).filter(Boolean);
+                    set('bedSizeColumns', JSON.stringify(cols));
+                  }}
+                  placeholder="Tamanho, Cama, Comprimento, Largura"
+                />
+                <p className="text-[11px] text-[#B09C8C] mt-1">Separadas por vírgula. A 1ª coluna é o nome da linha.</p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-[#B09C8C] uppercase tracking-wider mb-1.5">Linhas</label>
+                {(() => {
+                  let rows: Record<string, string>[] = [];
+                  let cols: string[] = [];
+                  try { rows = JSON.parse(settings.bedSizeRows || '[]'); } catch { rows = []; }
+                  try { cols = JSON.parse(settings.bedSizeColumns || '[]'); } catch { cols = []; }
+                  return (
+                    <div className="flex flex-col gap-2">
+                      {rows.map((row, i) => (
+                        <div key={i} className="flex gap-2 items-center">
+                          {cols.map(col => (
+                            <input
+                              key={col}
+                              type="text"
+                              placeholder={col}
+                              value={row[col] ?? ''}
+                              onChange={e => {
+                                const newRows = [...rows];
+                                newRows[i] = { ...newRows[i], [col]: e.target.value };
+                                set('bedSizeRows', JSON.stringify(newRows));
+                              }}
+                              className="flex-1 min-w-0 px-2 py-1.5 bg-[#1A1008] border border-[#3A2A1A] text-[#FAF8F5] text-xs outline-none focus:border-[#C4714A]"
+                            />
+                          ))}
+                          <button
+                            onClick={() => {
+                              const newRows = rows.filter((_, idx) => idx !== i);
+                              set('bedSizeRows', JSON.stringify(newRows));
+                            }}
+                            className="text-[#B09C8C] hover:text-red-400 transition-colors text-xs px-1 shrink-0"
+                          >✕</button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const empty = Object.fromEntries(cols.map(c => [c, '']));
+                          set('bedSizeRows', JSON.stringify([...rows, empty]));
+                        }}
+                        className="text-xs text-[#C4714A] hover:text-[#E08050] transition-colors text-left mt-1"
+                      >+ Adicionar linha</button>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </Section>
         </>}
       </div>
 
