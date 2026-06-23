@@ -7,7 +7,11 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests } from '@/lib/security';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 interface ResendInboundEvent {
   type: string;
@@ -104,7 +108,7 @@ export async function POST(req: NextRequest) {
   // ── 1. Busca conteúdo completo (webhook só traz metadados) ─────────────────
   // html_format=data_uri (padrão): imagens inline já vêm como base64 no HTML
   // Não precisa substituir CIDs — Resend já faz isso por nós
-  const resendAny = resend as AnyResend;
+  const resendAny = getResend() as AnyResend;
   const { data: fullEmail, error: fetchErr } = await resendAny.emails.receiving.get(email_id);
   if (fetchErr || !fullEmail) {
     console.error('Erro ao buscar e-mail completo:', fetchErr);

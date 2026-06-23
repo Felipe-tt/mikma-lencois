@@ -23,12 +23,11 @@ function EyeIcon({ open }: { open: boolean }) {
 // ── Modal recuperação de senha ────────────────────────────────────────────────
 function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; onClose: () => void }) {
   const [email, setEmail]     = useState(defaultEmail);
-  const [step, setStep]       = useState<'email' | 'code' | 'done'>('email');
-  const [code, setCode]       = useState(['','','','','','']);
+  const [step, setStep]       = useState<'email' | 'sent'>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
-  const codeRefs = useRef<(HTMLInputElement|null)[]>([]);
+  const [resent, setResent]   = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -43,10 +42,10 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
-  async function sendCode(e?: React.FormEvent) {
+  async function sendLink(e?: React.FormEvent) {
     e?.preventDefault();
     if (!email.trim()) return;
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setResent(false);
     try {
       const res = await fetch('/api/auth/send-reset', {
         method: 'POST',
@@ -55,42 +54,23 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setStep('code');
+      setStep('sent');
       setResendCooldown(60);
-      setTimeout(() => codeRefs.current[0]?.focus(), 100);
-    } catch (err: unknown) {
+    } catch {
       // Sempre avança — não revela se e-mail existe
-      setStep('code');
+      setStep('sent');
       setResendCooldown(60);
-      setTimeout(() => codeRefs.current[0]?.focus(), 100);
     } finally {
       setLoading(false);
     }
   }
 
-  function handleDigit(i: number, val: string) {
-    const digit = val.replace(/\D/g,'').slice(-1);
-    const next = [...code]; next[i] = digit; setCode(next); setError('');
-    if (digit && i < 5) codeRefs.current[i+1]?.focus();
-    if (next.every(d => d) && next.join('').length === 6) verifyCode(next.join(''));
-  }
-
-  async function verifyCode(codeStr: string) {
-    setLoading(true); setError('');
-    try {
-      const res = await fetch(`/api/auth/reset-password?email=${encodeURIComponent(email.toLowerCase())}&code=${codeStr}`);
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error);
-      // Código ok — redireciona para página de nova senha com os dados
-      onClose();
-      window.location.href = `/redefinir-senha?email=${encodeURIComponent(email.toLowerCase())}&code=${codeStr}`;
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Código incorreto.');
-      setCode(['','','','','','']);
-      setTimeout(() => codeRefs.current[0]?.focus(), 50);
-    } finally {
-      setLoading(false);
-    }
+  async function handleResend() {
+    if (resendCooldown > 0) return;
+    setResent(false);
+    await sendLink();
+    setResent(true);
+    setTimeout(() => setResent(false), 4000);
   }
 
   return (
@@ -108,10 +88,10 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
           <>
             <p className="font-display text-xl text-ink mb-1">Esqueceu a senha?</p>
             <p className="text-sm text-mid mb-6 leading-relaxed">
-              Informe seu e-mail e enviaremos um código para criar uma nova senha.
+              Informe seu e-mail e enviaremos um link com um botão para criar uma nova senha.
             </p>
             {error && <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
-            <form onSubmit={sendCode} className="flex flex-col gap-4">
+            <form onSubmit={sendLink} className="flex flex-col gap-4">
               <div>
                 <label className="label">Seu e-mail</label>
                 <input ref={inputRef} type="email" value={email} onChange={e => setEmail(e.target.value)}
@@ -119,42 +99,31 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
               </div>
               <button type="submit" disabled={loading}
                 className="btn-primary w-full h-12 text-sm font-semibold flex items-center justify-center gap-2">
-                {loading ? <><span className="spinner"/> Enviando…</> : 'Enviar código'}
+                {loading ? <><span className="spinner"/> Enviando…</> : 'Enviar link'}
               </button>
             </form>
           </>
         )}
 
-        {step === 'code' && (
+        {step === 'sent' && (
           <>
-            <p className="font-display text-xl text-ink mb-1">Digite o código</p>
-            <p className="text-sm text-mid mb-6 leading-relaxed">
-              Se este e-mail estiver cadastrado, enviamos um código de 6 dígitos para <strong className="text-ink">{email}</strong>.
-            </p>
-            {error && <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
-            <div className="flex gap-2 justify-center mb-6">
-              {code.map((digit, i) => (
-                <input key={i} ref={el => { codeRefs.current[i] = el; }}
-                  type="text" inputMode="numeric" maxLength={1} value={digit}
-                  onChange={e => handleDigit(i, e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Backspace' && !code[i] && i > 0) codeRefs.current[i-1]?.focus(); }}
-                  disabled={loading}
-                  className={`w-11 h-13 text-center text-xl font-bold border-2 outline-none transition-colors
-                    ${digit ? 'border-ink text-ink' : 'border-mist'}
-                    focus:border-clay focus:ring-2 focus:ring-clay/10 disabled:opacity-50`} />
-              ))}
+            <div className="w-14 h-14 bg-clay/10 flex items-center justify-center mb-5">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
+                <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
+              </svg>
             </div>
-            {loading && (
-              <p className="text-center text-sm text-mid mb-4 flex items-center justify-center gap-2">
-                <span className="spinner-dark"/> Verificando…
-              </p>
-            )}
+            <p className="font-display text-xl text-ink mb-1">Veja seu e-mail</p>
+            <p className="text-sm text-mid mb-6 leading-relaxed">
+              Se este e-mail estiver cadastrado, enviamos um link para <strong className="text-ink">{email}</strong>. Clique no botão{' '}
+              <strong className="text-ink">&ldquo;Criar nova senha&rdquo;</strong> no e-mail para continuar.
+            </p>
             <div className="text-center">
               <p className="text-xs text-faint mb-1">Não recebeu? Verifique o spam.</p>
-              <button onClick={() => sendCode()} disabled={resendCooldown > 0 || loading}
+              <button onClick={handleResend} disabled={resendCooldown > 0 || loading}
                 className="text-sm text-clay font-medium hover:underline disabled:text-faint transition-colors">
-                {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Reenviar código'}
+                {loading ? 'Enviando…' : resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Reenviar link'}
               </button>
+              {resent && <p className="text-xs text-green-600 mt-2">✓ E-mail reenviado.</p>}
             </div>
           </>
         )}

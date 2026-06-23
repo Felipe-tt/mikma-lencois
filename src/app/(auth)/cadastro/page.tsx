@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
@@ -9,7 +9,7 @@ import Image from 'next/image';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { maskPhone, maskCpf, isValidCpf, isValidPhone } from '@/lib/masks';
 
-type Step = 'email' | 'code' | 'password' | 'done';
+type Step = 'email' | 'awaiting' | 'password' | 'done';
 
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
@@ -35,15 +35,30 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
-export default function RegisterPage() {
+function ErrorBox({ msg }: { msg: string }) {
+  return (
+    <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2.5">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>{msg}</span>
+    </div>
+  );
+}
+
+function RegisterContent() {
   const { user } = useAuth();
   const router = useRouter();
-  const codeInputsRef = useRef<(HTMLInputElement|null)[]>([]);
+  const params = useSearchParams();
 
-  const [step, setStep]         = useState<Step>('email');
+  // Se a pessoa chegou aqui pelo botão do e-mail de confirmação
+  // (/confirmar-email já validou o token), pula direto para a etapa de senha.
+  const resumeEmail = params.get('email');
+  const resumeStep = params.get('step');
+
+  const [step, setStep]         = useState<Step>(resumeStep === 'password' && resumeEmail ? 'password' : 'email');
   const [name, setName]         = useState('');
-  const [email, setEmail]       = useState('');
-  const [code, setCode]         = useState(['','','','','','']);
+  const [email, setEmail]       = useState(resumeEmail ?? '');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
   const [phone, setPhone]       = useState('');
@@ -53,6 +68,7 @@ export default function RegisterPage() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [resent, setResent]     = useState(false);
 
   useEffect(() => { if (user) router.push('/'); }, [user, router]);
 
@@ -63,8 +79,8 @@ export default function RegisterPage() {
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
-  // ── Step 1: envia código ─────────────────────────────────────────────────
-  async function handleSendCode(e: React.FormEvent) {
+  // ── Step 1: envia link de confirmação por e-mail ─────────────────────────
+  async function handleSendLink(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     if (name.trim().length < 2) return setError('Por favor, informe seu nome completo.');
@@ -79,52 +95,10 @@ export default function RegisterPage() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setStep('code');
+      setStep('awaiting');
       setResendCooldown(60);
-      setTimeout(() => codeInputsRef.current[0]?.focus(), 100);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao enviar. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // ── Step 2: verifica código ──────────────────────────────────────────────
-  function handleCodeInput(i: number, val: string) {
-    const digit = val.replace(/\D/g, '').slice(-1);
-    const next = [...code];
-    next[i] = digit;
-    setCode(next);
-    setError('');
-    if (digit && i < 5) codeInputsRef.current[i+1]?.focus();
-    // Auto-submit quando todos preenchidos
-    if (next.every(d => d !== '') && next.join('').length === 6) {
-      verifyCode(next.join(''));
-    }
-  }
-
-  function handleCodeKeyDown(i: number, e: React.KeyboardEvent) {
-    if (e.key === 'Backspace' && !code[i] && i > 0) {
-      codeInputsRef.current[i-1]?.focus();
-    }
-  }
-
-  async function verifyCode(codeStr: string) {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), code: codeStr }),
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error);
-      setStep('password');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Código incorreto.');
-      setCode(['','','','','','']);
-      setTimeout(() => codeInputsRef.current[0]?.focus(), 50);
     } finally {
       setLoading(false);
     }
@@ -134,6 +108,7 @@ export default function RegisterPage() {
     if (resendCooldown > 0) return;
     setLoading(true);
     setError('');
+    setResent(false);
     try {
       const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
@@ -142,9 +117,9 @@ export default function RegisterPage() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setCode(['','','','','','']);
       setResendCooldown(60);
-      setTimeout(() => codeInputsRef.current[0]?.focus(), 50);
+      setResent(true);
+      setTimeout(() => setResent(false), 4000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao reenviar.');
     } finally {
@@ -187,7 +162,7 @@ export default function RegisterPage() {
   }
 
   // ── Layout wrapper ───────────────────────────────────────────────────────
-  const stepNum = step === 'email' ? 1 : step === 'code' ? 2 : step === 'password' ? 3 : 3;
+  const stepNum = step === 'email' ? 1 : step === 'awaiting' ? 2 : step === 'password' ? 3 : 3;
 
   return (
     <div className="min-h-screen bg-paper flex">
@@ -246,7 +221,7 @@ export default function RegisterPage() {
 
               {error && <ErrorBox msg={error} />}
 
-              <form onSubmit={handleSendCode} className="flex flex-col gap-5">
+              <form onSubmit={handleSendLink} className="flex flex-col gap-5">
                 <div>
                   <label className="label">Seu nome completo</label>
                   <input type="text" value={name} onChange={e => setName(e.target.value)}
@@ -258,12 +233,12 @@ export default function RegisterPage() {
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                     className="input text-base" placeholder="seuemail@exemplo.com"
                     autoComplete="email" />
-                  <p className="mt-1.5 text-xs text-mid">Vamos enviar um código de confirmação para este e-mail.</p>
+                  <p className="mt-1.5 text-xs text-mid">Vamos te enviar um e-mail com um botão para confirmar.</p>
                 </div>
 
                 <button type="submit" disabled={loading}
                   className="btn-primary w-full h-13 text-[14px] font-semibold tracking-wide flex items-center justify-center gap-2 mt-1">
-                  {loading ? <><span className="spinner" /> Enviando código…</> : 'Continuar →'}
+                  {loading ? <><span className="spinner" /> Enviando…</> : 'Continuar →'}
                 </button>
               </form>
 
@@ -274,58 +249,43 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* ── ETAPA 2: código de confirmação ── */}
-          {step === 'code' && (
+          {/* ── ETAPA 2: aguardando clique no e-mail ── */}
+          {step === 'awaiting' && (
             <>
-              <h1 className="font-display font-normal text-ink text-[2rem] mb-2">Confirme seu e-mail</h1>
-              <p className="text-[14px] text-mid mb-8 leading-relaxed">
-                Enviamos um código de 6 dígitos para{' '}
-                <strong className="text-ink">{email}</strong>.{' '}
-                <button onClick={() => { setStep('email'); setError(''); setCode(['','','','','','']); }}
-                  className="text-clay hover:underline text-[14px]">Trocar e-mail</button>
+              <div className="w-16 h-16 bg-clay/10 flex items-center justify-center mx-auto mb-6">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
+                  <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
+                </svg>
+              </div>
+              <h1 className="font-display font-normal text-ink text-[2rem] mb-2 text-center">Veja seu e-mail</h1>
+              <p className="text-[14px] text-mid mb-8 leading-relaxed text-center">
+                Enviamos um link para <strong className="text-ink">{email}</strong>. Abra o e-mail e clique no botão{' '}
+                <strong className="text-ink">&ldquo;Confirmar meu e-mail&rdquo;</strong> para continuar — sem precisar digitar nada aqui.
               </p>
 
               {error && <ErrorBox msg={error} />}
 
-              <div className="mb-8">
-                <label className="label mb-4 block">Digite o código</label>
-                <div className="flex gap-3 justify-center">
-                  {code.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={el => { codeInputsRef.current[i] = el; }}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={e => handleCodeInput(i, e.target.value)}
-                      onKeyDown={e => handleCodeKeyDown(i, e)}
-                      disabled={loading}
-                      className={`w-12 h-14 text-center text-2xl font-bold border-2 outline-none transition-colors
-                        ${digit ? 'border-ink text-ink' : 'border-mist text-faint'}
-                        focus:border-clay focus:ring-2 focus:ring-clay/10
-                        disabled:opacity-50`}
-                    />
-                  ))}
-                </div>
-
-                {loading && (
-                  <div className="flex items-center justify-center gap-2 mt-4 text-sm text-mid">
-                    <span className="spinner-dark" /> Verificando…
-                  </div>
-                )}
+              <div className="bg-warm border border-mist px-4 py-3.5 mb-6">
+                <p className="text-xs text-mid leading-relaxed">
+                  Assim que você confirmar pelo e-mail, esta aba pode ser fechada — o link já leva direto para o próximo passo.
+                </p>
               </div>
 
               <div className="text-center">
-                <p className="text-sm text-mid mb-2">Não recebeu o código?</p>
+                <p className="text-sm text-mid mb-2">Não recebeu o e-mail?</p>
                 <button
                   onClick={handleResend}
                   disabled={resendCooldown > 0 || loading}
                   className="text-sm text-clay font-medium hover:underline disabled:text-faint disabled:no-underline transition-colors"
                 >
-                  {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Enviar novamente'}
+                  {loading ? 'Enviando…' : resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Enviar novamente'}
                 </button>
+                {resent && <p className="text-xs text-green-600 mt-2">✓ E-mail reenviado.</p>}
                 <p className="text-xs text-faint mt-2">Verifique também a caixa de spam.</p>
+                <button onClick={() => { setStep('email'); setError(''); }}
+                  className="block mx-auto mt-4 text-xs text-faint hover:text-mid underline underline-offset-2">
+                  Usar outro e-mail
+                </button>
               </div>
             </>
           )}
@@ -428,7 +388,7 @@ export default function RegisterPage() {
                 </svg>
               </div>
               <h2 className="font-display text-2xl text-ink mb-2">Conta criada!</h2>
-              <p className="text-mid text-[14px]">Bem-vinda, {name.split(' ')[0]}! Redirecionando…</p>
+              <p className="text-mid text-[14px]">Bem-vinda{name ? `, ${name.split(' ')[0]}` : ''}! Redirecionando…</p>
             </div>
           )}
 
@@ -438,13 +398,10 @@ export default function RegisterPage() {
   );
 }
 
-function ErrorBox({ msg }: { msg: string }) {
+export default function RegisterPage() {
   return (
-    <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2.5">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <span>{msg}</span>
-    </div>
+    <Suspense fallback={<div className="min-h-screen bg-paper flex items-center justify-center"><span className="spinner-dark" /></div>}>
+      <RegisterContent />
+    </Suspense>
   );
 }

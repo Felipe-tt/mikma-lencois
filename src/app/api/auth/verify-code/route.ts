@@ -7,15 +7,17 @@ import { getClientIp } from '@/lib/security';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
-  code: z.string().length(6).regex(/^\d{6}$/),
+  token: z.string().min(20).max(100),
 });
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
-  // Rate limit: 5 tentativas por IP por 15 min
+  // Rate limit: 10 tentativas por IP por 15 min (mais generoso que antes,
+  // já que não há mais digitação manual sujeita a erro de dedo — só
+  // protege contra tentativas de adivinhar/forçar o token).
   const ipKey = `verify-code:${ip}`;
-  if (!rateLimit(ipKey, 5, 15 * 60 * 1000)) {
+  if (!rateLimit(ipKey, 10, 15 * 60 * 1000)) {
     const wait = Math.ceil(rateLimitRetryAfter(ipKey) / 60000);
     return NextResponse.json(
       { error: `Muitas tentativas. Aguarde ${wait} minuto(s).` },
@@ -30,16 +32,16 @@ export async function POST(req: NextRequest) {
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Código inválido' }, { status: 400 });
+    return NextResponse.json({ error: 'Link inválido' }, { status: 400 });
   }
 
-  const { email, code } = parsed.data;
+  const { email, token } = parsed.data;
 
   const ref = adminDb.collection('email_verifications').doc(email);
   const snap = await ref.get();
 
   if (!snap.exists) {
-    return NextResponse.json({ error: 'Código expirado. Solicite um novo.' }, { status: 400 });
+    return NextResponse.json({ error: 'Link expirado. Solicite um novo.' }, { status: 400 });
   }
 
   const data = snap.data()!;
@@ -47,29 +49,26 @@ export async function POST(req: NextRequest) {
   // Expirado
   if (Date.now() > data.expiresAt) {
     await ref.delete();
-    return NextResponse.json({ error: 'Código expirado. Solicite um novo.' }, { status: 400 });
+    return NextResponse.json({ error: 'Link expirado. Solicite um novo.' }, { status: 400 });
   }
 
-  // Limite de tentativas por documento
-  if (data.attempts >= 5) {
+  // Limite de tentativas por documento (proteção contra força bruta —
+  // token tem 256 bits de entropia, então isso é só uma rede extra de segurança)
+  if (data.attempts >= 10) {
     await ref.delete();
     return NextResponse.json(
-      { error: 'Muitas tentativas incorretas. Solicite um novo código.' },
+      { error: 'Link inválido. Solicite um novo.' },
       { status: 429 }
     );
   }
 
-  // Código errado
-  if (data.code !== code) {
+  // Token errado
+  if (data.token !== token) {
     await ref.update({ attempts: (data.attempts ?? 0) + 1 });
-    const left = 5 - (data.attempts + 1);
-    return NextResponse.json(
-      { error: left > 0 ? `Código incorreto. ${left} tentativa(s) restante(s).` : 'Código incorreto.' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
   }
 
-  // ✅ Código correto — marca como verificado
+  // ✅ Token correto — marca como verificado
   await ref.update({ verified: true, verifiedAt: new Date().toISOString(), ip });
 
   return NextResponse.json({ ok: true, name: data.name });

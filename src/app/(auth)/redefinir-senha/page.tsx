@@ -34,7 +34,7 @@ function ResetForm() {
   const router    = useRouter();
   const params    = useSearchParams();
   const emailParam = params.get('email') ?? '';
-  const codeParam  = params.get('code') ?? '';
+  const tokenParam = params.get('token') ?? '';
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
@@ -42,11 +42,30 @@ function ResetForm() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [done, setDone]         = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [linkInvalid, setLinkInvalid] = useState('');
 
   // Se não veio com os params (acesso direto), redireciona
   useEffect(() => {
-    if (!emailParam || !codeParam) router.replace('/entrar');
-  }, [emailParam, codeParam, router]);
+    if (!emailParam || !tokenParam) { router.replace('/entrar'); return; }
+  }, [emailParam, tokenParam, router]);
+
+  // Valida o token assim que a página carrega — sem o usuário digitar nada,
+  // o próprio clique no botão do e-mail já trouxe tudo que é necessário.
+  useEffect(() => {
+    if (!emailParam || !tokenParam) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/auth/reset-password?email=${encodeURIComponent(emailParam)}&token=${tokenParam}`);
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error);
+        setChecking(false);
+      } catch (err: unknown) {
+        setLinkInvalid(err instanceof Error ? err.message : 'Link inválido ou expirado.');
+        setChecking(false);
+      }
+    })();
+  }, [emailParam, tokenParam]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +78,7 @@ function ResetForm() {
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailParam, code: codeParam, newPassword: password }),
+        body: JSON.stringify({ email: emailParam, token: tokenParam, newPassword: password }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -77,6 +96,28 @@ function ResetForm() {
       setLoading(false);
     }
   }
+
+  if (checking) return (
+    <div className="text-center py-10">
+      <span className="spinner-dark mx-auto" />
+      <p className="text-mid text-sm mt-4">Verificando link…</p>
+    </div>
+  );
+
+  if (linkInvalid) return (
+    <div className="text-center py-10">
+      <div className="w-20 h-20 bg-red-50 border border-red-100 flex items-center justify-center mx-auto mb-6">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-500">
+          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      </div>
+      <h2 className="font-display text-2xl text-ink mb-2">Link inválido</h2>
+      <p className="text-mid text-sm mb-6">{linkInvalid}</p>
+      <Link href="/entrar" className="btn-primary inline-flex h-12 px-8 items-center justify-center text-[13px] font-semibold">
+        Voltar para o login
+      </Link>
+    </div>
+  );
 
   if (done) return (
     <div className="text-center py-10">

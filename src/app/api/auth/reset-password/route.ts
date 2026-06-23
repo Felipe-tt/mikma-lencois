@@ -7,16 +7,16 @@ import { getClientIp } from '@/lib/security';
 
 const verifySchema = z.object({
   email: z.string().email().max(256).toLowerCase(),
-  code: z.string().length(6).regex(/^\d{6}$/),
+  token: z.string().min(20).max(100),
 });
 
 const resetSchema = z.object({
   email: z.string().email().max(256).toLowerCase(),
-  code: z.string().length(6).regex(/^\d{6}$/),
+  token: z.string().min(20).max(100),
   newPassword: z.string().min(8).max(128),
 });
 
-// Verifica código
+// Verifica token (chamado automaticamente pela página /redefinir-senha ao carregar)
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
   const ipKey = `reset-verify:${ip}`;
@@ -27,27 +27,26 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const parsed = verifySchema.safeParse({
     email: searchParams.get('email') ?? '',
-    code: searchParams.get('code') ?? '',
+    token: searchParams.get('token') ?? '',
   });
-  if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: 'Link inválido' }, { status: 400 });
 
-  const { email, code } = parsed.data;
+  const { email, token } = parsed.data;
   const snap = await adminDb.collection('password_resets').doc(email).get();
-  if (!snap.exists) return NextResponse.json({ error: 'Código expirado.' }, { status: 400 });
+  if (!snap.exists) return NextResponse.json({ error: 'Link expirado. Solicite um novo.' }, { status: 400 });
 
   const data = snap.data()!;
   if (Date.now() > data.expiresAt) {
     await snap.ref.delete();
-    return NextResponse.json({ error: 'Código expirado. Solicite um novo.' }, { status: 400 });
+    return NextResponse.json({ error: 'Link expirado. Solicite um novo.' }, { status: 400 });
   }
-  if (data.attempts >= 5) {
+  if (data.attempts >= 10) {
     await snap.ref.delete();
-    return NextResponse.json({ error: 'Muitas tentativas. Solicite um novo código.' }, { status: 429 });
+    return NextResponse.json({ error: 'Link inválido. Solicite um novo.' }, { status: 429 });
   }
-  if (data.code !== code) {
+  if (data.token !== token) {
     await snap.ref.update({ attempts: (data.attempts ?? 0) + 1 });
-    const left = 5 - (data.attempts + 1);
-    return NextResponse.json({ error: `Código incorreto. ${left > 0 ? `${left} tentativa(s) restante(s).` : ''}` }, { status: 400 });
+    return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
   }
 
   return NextResponse.json({ ok: true });
@@ -68,18 +67,18 @@ export async function POST(req: NextRequest) {
   const parsed = resetSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
 
-  const { email, code, newPassword } = parsed.data;
+  const { email, token, newPassword } = parsed.data;
   const ref = adminDb.collection('password_resets').doc(email);
   const snap = await ref.get();
 
-  if (!snap.exists) return NextResponse.json({ error: 'Código expirado. Solicite um novo.' }, { status: 400 });
+  if (!snap.exists) return NextResponse.json({ error: 'Link expirado. Solicite um novo.' }, { status: 400 });
 
   const data = snap.data()!;
-  if (Date.now() > data.expiresAt) { await ref.delete(); return NextResponse.json({ error: 'Código expirado.' }, { status: 400 }); }
-  if (data.attempts >= 5) { await ref.delete(); return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 }); }
-  if (data.code !== code) {
+  if (Date.now() > data.expiresAt) { await ref.delete(); return NextResponse.json({ error: 'Link expirado.' }, { status: 400 }); }
+  if (data.attempts >= 10) { await ref.delete(); return NextResponse.json({ error: 'Link inválido.' }, { status: 429 }); }
+  if (data.token !== token) {
     await ref.update({ attempts: (data.attempts ?? 0) + 1 });
-    return NextResponse.json({ error: 'Código incorreto.' }, { status: 400 });
+    return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
   }
 
   try {
