@@ -11,22 +11,23 @@ import type { Cart, CartItem } from '@/types';
 import { CartSkeleton } from '@/components/ui/Skeleton';
 
 export default function CartPage() {
-  const [freeShippingThreshold, setFST] = useState(25000);
+  const [threshold, setThreshold] = useState(25000);
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [cartLoading, setCartLoading] = useState(true);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
-      if (d.freeShippingThresholdCents > 0) setFST(d.freeShippingThresholdCents);
+      if (d.freeShippingThresholdCents > 0) setThreshold(d.freeShippingThresholdCents);
     }).catch(() => {});
   }, []);
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const [cart, setCart]           = useState<Cart | null>(null);
-  const [cartLoading, setCartLoading] = useState(true);
-  const [couponCode, setCouponCode]   = useState('');
-  const [couponOpen, setCouponOpen]   = useState(false);
-  const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
-  const [couponError, setCouponError]   = useState('');
-  const [couponLoading, setCouponLoading] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -39,12 +40,16 @@ export default function CartPage() {
 
   async function removeItem(sku: string) {
     if (!user || !cart) return;
+    setRemoving(sku);
     await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.filter(i => i.sku !== sku) });
+    setRemoving(null);
   }
   async function updateQty(sku: string, qty: number) {
     if (!user || !cart) return;
     if (qty < 1) { await removeItem(sku); return; }
-    await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.map(i => i.sku === sku ? {...i, quantity: qty} : i) });
+    await updateDoc(doc(db, 'carts', user.uid), {
+      items: cart.items.map(i => i.sku === sku ? { ...i, quantity: qty } : i),
+    });
   }
 
   async function applyCoupon() {
@@ -52,19 +57,17 @@ export default function CartPage() {
     setCouponLoading(true); setCouponError('');
     try {
       const snap = await getDocs(query(collection(db, 'coupons'),
-        where('code', '==', couponCode.toUpperCase().trim()),
-        where('active', '==', true)
-      ));
+        where('code', '==', couponCode.toUpperCase().trim()), where('active', '==', true)));
       if (snap.empty) { setCouponError('Cupom inválido ou expirado.'); return; }
       const c = snap.docs[0].data();
-      if (c.expiresAt && new Date(c.expiresAt) < new Date()) { setCouponError('Cupom expirado.'); return; }
+      if (c.expiresAt && new Date(c.expiresAt) < new Date()) { setCouponError('Este cupom expirou.'); return; }
       if (c.uses >= c.maxUses) { setCouponError('Cupom esgotado.'); return; }
       if (c.minOrderCents > 0 && subtotal < c.minOrderCents) {
-        setCouponError(`Pedido mínimo: ${formatCurrency(c.minOrderCents)}`); return;
+        setCouponError(`Pedido mínimo de ${formatCurrency(c.minOrderCents)} para este cupom.`); return;
       }
       const discount = c.type === 'percent' ? Math.round(subtotal * c.value / 100) : c.value * 100;
       setCouponApplied({ code: couponCode.toUpperCase().trim(), discount });
-    } catch { setCouponError('Erro ao verificar cupom.'); }
+    } catch { setCouponError('Erro ao verificar cupom. Tente novamente.'); }
     finally { setCouponLoading(false); }
   }
 
@@ -72,171 +75,244 @@ export default function CartPage() {
   const subtotal = items.reduce((a, i) => a + i.unitPrice * i.quantity, 0);
   const discount = couponApplied?.discount ?? 0;
   const total = Math.max(0, subtotal - discount);
+  const remaining = Math.max(0, threshold - subtotal);
+  const progress = Math.min(100, threshold > 0 ? (subtotal / threshold) * 100 : 0);
+  const freeShip = threshold > 0 && subtotal >= threshold;
+  const totalItems = items.reduce((a, i) => a + i.quantity, 0);
 
-  const remaining = Math.max(0, freeShippingThreshold - subtotal);
-  const progress  = Math.min(100, (subtotal / freeShippingThreshold) * 100);
-  const freeShip  = subtotal >= freeShippingThreshold;
+  if (loading || cartLoading) return <CartSkeleton />;
+
+  if (items.length === 0) return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center px-6 text-center">
+      <div className="w-16 h-16 border border-mist rounded-full flex items-center justify-center mb-6">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-faint">
+          <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 01-8 0"/>
+        </svg>
+      </div>
+      <h2 className="font-display font-normal text-ink text-3xl mb-3">Carrinho vazio</h2>
+      <p className="text-sm text-mid mb-8 max-w-[28ch] leading-relaxed">Explore nossos produtos e escolha os seus lençóis.</p>
+      <Link href="/produtos" className="btn-primary px-8 py-3.5 text-sm font-semibold tracking-wide">Ver produtos</Link>
+    </div>
+  );
 
   return (
-    <div>
-      {/* Page header — inline, no bg-warm */}
-      <div className="border-b border-mist bg-warm/60">
-        <div className="container-shop py-10">
-          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Carrinho</h1>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="border-b border-mist">
+        <div className="container-shop py-8 flex items-baseline justify-between gap-4">
+          <h1 className="font-display font-normal text-ink text-3xl sm:text-4xl">Carrinho</h1>
+          <span className="text-sm text-faint">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</span>
         </div>
       </div>
 
-      {loading || cartLoading ? (
-        <CartSkeleton />
-      ) : items.length === 0 ? (
-        <div className="container-shop py-24 sm:py-32 max-w-md mx-auto text-center">
-          <svg className="mx-auto mb-6 text-faint" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
-            <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 01-8 0"/>
-          </svg>
-          <h2 className="font-display font-normal text-ink text-3xl mb-3">Carrinho vazio</h2>
-          <p className="text-[14px] text-mid mb-8 leading-relaxed">
-            Explore nossos lençóis e adicione itens ao carrinho.
-          </p>
-          <Link href="/produtos" className="btn-primary">Ver produtos</Link>
-        </div>
-      ) : (
-        <div className="container-shop pb-24">
-
-          {/* Free shipping bar */}
-          {freeShippingThreshold > 0 && (
-            <div className="mb-6 py-3 border-b border-mist">
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[12px] font-medium text-mid">
-                  {freeShip
-                    ? <span className="text-clay font-semibold flex items-center gap-1.5"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Frete grátis desbloqueado!</span>
-                    : <>Faltam <strong className="text-ink">{formatCurrency(remaining)}</strong> para frete grátis</>
-                  }
-                </span>
-                <span className="text-[11px] text-faint tabular-nums">{Math.round(progress)}%</span>
-              </div>
-              <div className="h-0.5 bg-mist overflow-hidden">
-                <div className="h-full bg-clay transition-all duration-500" style={{width: `${progress}%`}} />
-              </div>
+      {/* Barra frete grátis */}
+      {threshold > 0 && (
+        <div className={`border-b transition-colors ${freeShip ? 'bg-emerald-50 border-emerald-100' : 'bg-warm border-mist'}`}>
+          <div className="container-shop py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-xs font-semibold ${freeShip ? 'text-emerald-700' : 'text-mid'}`}>
+                {freeShip
+                  ? '✓ Frete grátis desbloqueado para este pedido'
+                  : <><strong className="text-ink">{formatCurrency(remaining)}</strong> para frete grátis</>
+                }
+              </span>
+              <span className="text-xs text-faint tabular-nums font-medium">{Math.round(progress)}%</span>
             </div>
-          )}
+            <div className="h-[3px] bg-mist/60 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${freeShip ? 'bg-emerald-500' : 'bg-ink'}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
-          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_380px] gap-8 lg:gap-12 items-start">
+      <div className="container-shop py-8 pb-24">
+        <div className="flex flex-col lg:grid lg:grid-cols-[1fr_360px] gap-10 lg:gap-16 items-start">
 
-            {/* ── Items list ── */}
-            <div className="flex flex-col divide-y divide-mist">
+          {/* ── Itens ── */}
+          <div>
+            <div className="divide-y divide-mist/70">
               {items.map(item => (
-                <div key={item.sku} className="flex gap-4 sm:gap-5 py-5 sm:py-6">
-                  {/* Bigger image */}
-                  <div className="relative w-24 h-[120px] sm:w-28 sm:h-[140px] shrink-0 overflow-hidden bg-warm">
+                <div
+                  key={item.sku}
+                  className={`flex gap-4 sm:gap-5 py-6 transition-opacity ${removing === item.sku ? 'opacity-40 pointer-events-none' : ''}`}
+                >
+                  {/* Imagem */}
+                  <Link href={`/produtos/${item.productId}`} className="relative shrink-0 w-20 h-24 sm:w-24 sm:h-28 bg-warm overflow-hidden border border-mist/60 block">
                     {item.image
-                      ? <Image src={item.image} alt={item.productName} fill sizes="112px" className="object-cover" />
-                      : <div className="flex h-full items-center justify-center"><span className="font-display text-2xl text-faint/40">M</span></div>
+                      ? <Image src={item.image} alt={item.productName} fill sizes="96px" className="object-cover hover:scale-105 transition-transform duration-300" />
+                      : <div className="h-full flex items-center justify-center"><span className="font-display text-2xl text-faint/30">M</span></div>
                     }
+                  </Link>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                    <Link href={`/produtos/${item.productId}`} className="text-sm font-semibold text-ink leading-snug hover:text-clay transition-colors line-clamp-2">
+                      {item.productName}
+                    </Link>
+                    {(item.variant?.size || item.variant?.fabric || item.variant?.color) && (
+                      <p className="text-xs text-faint">
+                        {[item.variant.size, item.variant.fabric, item.variant.color].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                    <p className="text-base font-semibold text-ink mt-auto">{formatCurrency(item.unitPrice)}</p>
                   </div>
-                  <div className="flex-1 min-w-0 flex flex-col gap-1">
-                    <p className="text-[13px] font-semibold text-ink leading-snug">{item.productName}</p>
-                    <p className="text-[11px] text-faint">
-                      {item.variant?.size}{item.variant?.fabric ? ` · ${item.variant.fabric}` : ''}{item.variant?.color ? ` · ${item.variant.color}` : ''}
-                    </p>
-                    <p className="font-display text-[1.15rem] text-ink mt-auto">{formatCurrency(item.unitPrice)}</p>
-                  </div>
+
+                  {/* Qtd + remove */}
                   <div className="flex flex-col items-end justify-between shrink-0">
-                    <button onClick={() => removeItem(item.sku)} className="text-[11px] text-faint hover:text-red-500 transition-colors font-medium">
+                    <button
+                      onClick={() => removeItem(item.sku)}
+                      className="text-xs text-faint hover:text-red-500 transition-colors font-medium"
+                    >
                       Remover
                     </button>
-                    <div className="flex items-center border border-mist" style={{borderRadius:'2px'}}>
-                      <button onClick={() => updateQty(item.sku, item.quantity - 1)}
-                        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-base">
-                        −
+                    <div className="flex items-center border border-mist">
+                      <button
+                        onClick={() => updateQty(item.sku, item.quantity - 1)}
+                        className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
+                        aria-label="Diminuir"
+                      >
+                        <svg width="12" height="2" viewBox="0 0 12 2" fill="currentColor"><rect width="12" height="2" rx="1"/></svg>
                       </button>
-                      <span className="w-8 sm:w-9 text-center text-[13px] font-medium text-ink">{item.quantity}</span>
-                      <button onClick={() => updateQty(item.sku, item.quantity + 1)}
-                        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-base">
-                        +
+                      <span className="w-9 text-center text-sm font-semibold text-ink tabular-nums">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQty(item.sku, item.quantity + 1)}
+                        className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
+                        aria-label="Aumentar"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 0a1 1 0 011 1v4h4a1 1 0 110 2H7v4a1 1 0 11-2 0V7H1a1 1 0 010-2h4V1a1 1 0 011-1z"/></svg>
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
 
-              {/* Coupon */}
-              <div className="py-4">
-                {!couponOpen ? (
-                  <button onClick={() => setCouponOpen(true)} className="text-[12px] font-medium text-mid hover:text-clay transition-colors flex items-center gap-1.5">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                    Tem um cupom de desconto?
-                  </button>
-                ) : couponApplied ? (
-                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200/80 px-3 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold tracking-[0.12em] uppercase text-emerald-700">✓ {couponApplied.code}</span>
-                      <span className="text-[12px] text-emerald-600">— {formatCurrency(couponApplied.discount)} de desconto</span>
+            {/* Cupom */}
+            <div className="mt-4 pt-4 border-t border-mist/70">
+              {!couponOpen && !couponApplied ? (
+                <button
+                  onClick={() => setCouponOpen(true)}
+                  className="flex items-center gap-2 text-xs text-mid hover:text-clay transition-colors font-medium"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                    <circle cx="7" cy="7" r="1" fill="currentColor" stroke="none"/>
+                  </svg>
+                  Adicionar cupom de desconto
+                </button>
+              ) : couponApplied ? (
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-sm">
+                  <div className="flex items-center gap-2.5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                    <div>
+                      <span className="text-xs font-bold tracking-[0.1em] text-emerald-800">{couponApplied.code}</span>
+                      <span className="text-xs text-emerald-600 ml-2">{formatCurrency(couponApplied.discount)} de desconto</span>
                     </div>
-                    <button onClick={() => { setCouponApplied(null); setCouponCode(''); }} className="text-[11px] text-emerald-500 hover:text-emerald-700 font-semibold">Remover</button>
                   </div>
-                ) : (
+                  <button onClick={() => { setCouponApplied(null); setCouponCode(''); setCouponOpen(false); }} className="text-xs text-emerald-500 hover:text-emerald-700 font-semibold">Remover</button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
                   <div className="flex gap-2">
-                    <input value={couponCode} onChange={e => setCouponCode(e.target.value)}
+                    <input
+                      value={couponCode}
+                      onChange={e => setCouponCode(e.target.value)}
                       placeholder="Código do cupom"
-                      className="input input-sm flex-1 uppercase placeholder:normal-case placeholder:text-faint"
+                      className="input flex-1 text-sm uppercase placeholder:normal-case placeholder:text-faint"
                       onKeyDown={e => e.key === 'Enter' && applyCoupon()}
+                      autoFocus
                     />
-                    <button onClick={applyCoupon} disabled={couponLoading}
-                      className="btn-outline text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2">
+                    <button
+                      onClick={applyCoupon}
+                      disabled={couponLoading || !couponCode.trim()}
+                      className="px-4 py-2.5 bg-ink text-paper text-xs font-bold tracking-[0.08em] uppercase disabled:opacity-50 hover:bg-clay transition-colors"
+                    >
                       {couponLoading ? '...' : 'Aplicar'}
                     </button>
-                    <button onClick={() => setCouponOpen(false)} className="text-faint hover:text-mid transition-colors px-1">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    <button onClick={() => { setCouponOpen(false); setCouponError(''); }} className="text-faint hover:text-mid transition-colors px-1">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                   </div>
-                )}
-                {couponError && <p className="mt-2 text-[11px] text-red-600">{couponError}</p>}
-              </div>
-            </div>
-
-            {/* ── Summary ── */}
-            <div className="w-full border border-mist/80 p-5 sm:p-6 flex flex-col gap-4 lg:sticky lg:top-24" style={{borderRadius:'2px'}}>
-              <h2 className="font-display font-normal text-ink text-xl">Resumo</h2>
-
-              <div className="flex flex-col gap-2.5 text-[13px]">
-                <div className="flex justify-between text-mid">
-                  <span>Subtotal ({items.length} {items.length !== 1 ? 'itens' : 'item'})</span>
-                  <span>{formatCurrency(subtotal)}</span>
+                  {couponError && <p className="text-xs text-red-500">{couponError}</p>}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Resumo — sticky ── */}
+          <div className="w-full lg:sticky lg:top-6">
+            <div className="border border-mist bg-warm/30">
+              <div className="px-5 py-4 border-b border-mist">
+                <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-faint">Resumo do pedido</h2>
+              </div>
+
+              <div className="px-5 py-4 flex flex-col gap-3">
+                <div className="flex justify-between text-sm text-mid">
+                  <span>Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'itens'})</span>
+                  <span className="text-ink font-medium">{formatCurrency(subtotal)}</span>
+                </div>
+
                 {couponApplied && (
-                  <div className="flex justify-between text-emerald-600">
+                  <div className="flex justify-between text-sm text-emerald-600">
                     <span>Desconto ({couponApplied.code})</span>
-                    <span>−{formatCurrency(couponApplied.discount)}</span>
+                    <span className="font-semibold">{formatCurrency(couponApplied.discount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-faint text-[11px]">
-                  <span>Frete</span>
-                  <span>{freeShip ? <span className="text-clay font-medium">Grátis</span> : 'calculado no checkout'}</span>
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-faint">Frete</span>
+                  <span className={freeShip ? 'text-emerald-600 font-semibold text-xs' : 'text-faint text-xs'}>
+                    {freeShip ? 'Grátis' : 'Calculado no checkout'}
+                  </span>
                 </div>
               </div>
 
-              <div className="border-t border-mist pt-3 flex justify-between items-baseline">
-                <span className="text-[13px] font-semibold text-ink">Total</span>
-                <span className="font-display text-[1.6rem] text-ink">{formatCurrency(total)}</span>
+              <div className="px-5 pb-4 border-t border-mist pt-4 flex justify-between items-baseline">
+                <span className="text-sm font-semibold text-ink">Total estimado</span>
+                <span className="font-display text-2xl text-ink">{formatCurrency(total)}</span>
               </div>
 
-              <Link href="/checkout" className="btn h-14 w-full bg-ink text-paper border-ink hover:bg-clay hover:border-clay active:scale-[0.98] text-[13px] font-semibold tracking-[0.06em] transition-all duration-150">
-                Finalizar compra
-              </Link>
-
-              <div className="flex flex-col items-center gap-2">
-                <Link href="/produtos" className="text-center text-[11px] text-faint hover:text-clay transition-colors font-medium">
-                  Continuar comprando
+              <div className="px-5 pb-5">
+                <Link
+                  href="/checkout"
+                  className="flex items-center justify-center w-full h-14 bg-ink text-paper text-sm font-semibold tracking-[0.05em] hover:bg-clay transition-colors duration-200 active:scale-[0.99]"
+                >
+                  Finalizar compra
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-2 opacity-60">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
                 </Link>
-                <p className="text-[10px] text-faint/70 text-center">Pagamento seguro via PIX</p>
+                <p className="text-center text-xs text-faint mt-3">Pagamento seguro via PIX</p>
               </div>
             </div>
 
+            {/* Selos mini */}
+            <div className="mt-4 flex flex-col gap-2 px-1">
+              {[
+                { icon: '🔒', text: 'Dados criptografados com SSL 256-bit' },
+                { icon: '⚡', text: 'PIX aprovado automaticamente em segundos' },
+                { icon: '🔄', text: 'Troca em até 7 dias após o recebimento' },
+              ].map(({ icon, text }) => (
+                <div key={text} className="flex items-center gap-2.5 text-xs text-faint">
+                  <span>{icon}</span>
+                  <span>{text}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 text-center">
+              <Link href="/produtos" className="text-xs text-faint hover:text-clay transition-colors">
+                Continuar comprando
+              </Link>
+            </div>
           </div>
+
         </div>
-      )}
+      </div>
     </div>
   );
 }
