@@ -6,6 +6,7 @@ import { doc, onSnapshot, updateDoc, deleteDoc, getDoc, serverTimestamp } from '
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Order, OrderTimelineEvent, User } from '@/types';
+import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { formatCurrency } from '@/lib/utils/format';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
@@ -407,6 +408,20 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               </div>
             )}
           </Card>
+        )}
+
+        {/* ── Rastreamento Correios ── */}
+        {order.delivery?.trackingCode && (
+          <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
+            <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
+              <span>📦</span>
+              <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Rastreamento Correios</p>
+              <span className="ml-auto font-mono text-[11px] text-[#705A48]">{order.delivery.trackingCode}</span>
+            </div>
+            <div className="px-5 py-4">
+              <TrackingTimeline trackingCode={order.delivery.trackingCode} />
+            </div>
+          </div>
         )}
 
         {/* ── Histórico do pedido ── */}

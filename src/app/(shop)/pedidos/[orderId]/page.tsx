@@ -9,6 +9,7 @@ import type { Order, OrderStatus } from '@/types';
 import { formatCurrency, formatTs, formatTsDateTime } from '@/lib/utils/format';
 
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
+import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 
 const STATUS_STEPS: { status: OrderStatus; label: string }[] = [
   { status: 'pending_payment', label: 'Aguardando pagamento' },
@@ -170,12 +171,33 @@ export default function OrderDetailPage() {
               <section className="border border-mist p-5">
                 <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Entrega</h2>
                 <p className="text-sm text-ink capitalize">{order.delivery.carrier.replace(/_/g, ' ')}</p>
-                {order.delivery.trackingCode && (
-                  <p className="text-xs text-mid mt-1">Rastreio: <strong className="font-mono text-ink">{order.delivery.trackingCode}</strong></p>
-                )}
                 {order.delivery.dispatchedAt && (
                   <p className="text-xs text-faint mt-1">Despachado em {formatTs(order.delivery.dispatchedAt)}</p>
                 )}
+                {order.delivery.trackingCode && (
+                  <div className="mt-2 pt-2 border-t border-mist">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-bold tracking-[0.12em] uppercase text-faint">Código</p>
+                      <span className="font-mono text-[12px] font-bold text-ink">{order.delivery.trackingCode}</span>
+                    </div>
+                    <a
+                      href={`https://www.linkcorreios.com.br/${order.delivery.trackingCode}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-center text-[11px] font-semibold text-[#C4714A] border border-[#C4714A]/30 py-2 hover:bg-[#C4714A]/5 transition-colors mb-4"
+                    >
+                      Abrir no site dos Correios
+                    </a>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Rastreio completo */}
+            {order.delivery?.trackingCode && (
+              <section className="border border-mist p-5">
+                <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-4">Rastreamento</h2>
+                <TrackingTimeline trackingCode={order.delivery.trackingCode} />
               </section>
             )}
 
