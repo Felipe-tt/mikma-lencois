@@ -166,6 +166,9 @@ export default function CheckoutPage() {
   const [apiError, setApiErr] = useState('');
   const [submitting, setSub]  = useState(false);
   const [pixData, setPixData] = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string; expiresAt?: string } | null>(null);
+  const [payMethod, setPayMethod]     = useState<'pix' | 'credit'>('pix');
+  const [installments, setInstall]    = useState(1);
+  const [creditRedirect, setCreditRed] = useState<string | null>(null);
 
   const [shippingOptions, setShipOpts]  = useState<ShippingOption[]>([]);
   const [selectedShipping, setSelShip]  = useState<ShippingOption | null>(null);
@@ -273,23 +276,44 @@ export default function CheckoutPage() {
         address: addr, name: customer.name,
         cpf: onlyDigits(customer.cpf), phone: onlyDigits(customer.phone),
       }, { merge: true });
-      const res = await fetch('/api/payment/create-pix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ address: addr, shipping: selectedShipping }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar PIX');
-      setPixData(await res.json());
+
+      if (payMethod === 'pix') {
+        const res = await fetch('/api/payment/create-pix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ address: addr, shipping: selectedShipping, pixDiscount }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar PIX');
+        setPixData(await res.json());
+      } else {
+        const res = await fetch('/api/payment/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ address: addr, shipping: selectedShipping, installments }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar checkout');
+        const d = await res.json();
+        setCreditRed(d.checkoutUrl);
+        window.location.href = d.checkoutUrl;
+      }
     } catch (err: unknown) {
       setApiErr(err instanceof Error ? err.message : 'Erro ao finalizar pedido.');
     } finally { setSub(false); }
   }
 
-  const items      = cart?.items ?? [];
-  const subtotal   = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-  const shipCents  = selectedShipping?.priceCents ?? 0;
-  const total      = subtotal + shipCents;
-  const totalItems = items.reduce((s, i) => s + i.quantity, 0);
+  const items       = cart?.items ?? [];
+  const subtotal    = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const shipCents   = selectedShipping?.priceCents ?? 0;
+  const PIX_DISCOUNT_THRESHOLD = 180000; // R$ 1.800,00
+  const pixDiscount  = subtotal >= PIX_DISCOUNT_THRESHOLD ? Math.round(subtotal * 0.10) : 0;
+  const pixTotal     = subtotal - pixDiscount + shipCents;
+  // Crédito: sem desconto, com possibilidade de juros (embutidos no backend)
+  const creditTotal  = subtotal + shipCents;
+  const total        = payMethod === 'pix' ? pixTotal : creditTotal;
+  const totalItems   = items.reduce((s, i) => s + i.quantity, 0);
+  // Parcelamento: mín R$100/parcela, máx 8x
+  const maxInstall   = Math.min(8, Math.floor(creditTotal / 10000));
+  const installVal   = Math.round(creditTotal / installments);
 
   if (loading || cartLoading) return <CheckoutSkeleton />;
   if (pixData) return (
@@ -513,20 +537,81 @@ export default function CheckoutPage() {
                 {/* Pagamento */}
                 <div>
                   <p className="text-xs font-bold text-[#5A4535] tracking-[0.05em] uppercase mb-3">Forma de pagamento</p>
-                  <div className="border-2 border-[#1E1208]/15 bg-white p-4 flex items-center gap-4">
-                    {/* PIX logo SVG */}
-                    <div className="w-10 h-10 rounded-full bg-[#32BCAD]/10 flex items-center justify-center shrink-0">
-                      <svg viewBox="0 0 512 512" className="w-6 h-6 fill-[#32BCAD]">
-                        <path d="M112.57 391.19c20.056 0 38.928-7.808 53.12-21.996l74.122-74.122c5.27-5.27 14.636-5.266 19.9 0l74.455 74.455c14.192 14.188 33.064 21.996 53.12 21.996h14.638l-74.83 74.83-11.5 11.5c-14.192 14.188-33.064 21.996-53.12 21.996-20.056 0-38.928-7.808-53.12-21.996l-11.5-11.5-74.83-74.83h14.638zM112.57 120.81h-14.638l74.83 74.83 11.5 11.5c14.192 14.188 33.064 21.996 53.12 21.996 20.056 0 38.928-7.808 53.12-21.996l11.5-11.5 74.83-74.83H362.29c-20.056 0-38.928 7.808-53.12 21.996l-74.455 74.455c-5.264 5.266-14.63 5.27-19.9 0L140.69 142.806c-14.192-14.188-33.064-21.996-53.12-21.996z"/>
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-[#1E1208]">PIX</p>
-                      <p className="text-xs text-[#9C8878] mt-0.5">Aprovação instantânea, sem taxas adicionais</p>
-                    </div>
-                    <div className="w-5 h-5 rounded-full border-2 border-[#1E1208] flex items-center justify-center shrink-0">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#1E1208]" />
-                    </div>
+                  <div className="flex flex-col divide-y divide-[#E0D8CE] border border-[#E0D8CE] bg-white overflow-hidden">
+
+                    {/* PIX */}
+                    <button type="button" onClick={() => setPayMethod('pix')}
+                      className={`flex items-center gap-4 w-full px-4 py-4 text-left transition-all ${payMethod === 'pix' ? 'bg-[#F2ECE5]' : 'hover:bg-[#F9F6F1]'}`}>
+                      <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${payMethod === 'pix' ? 'border-[#1E1208]' : 'border-[#C8B8A8]'}`}>
+                        {payMethod === 'pix' && <span className="w-2.5 h-2.5 rounded-full bg-[#1E1208]" />}
+                      </span>
+                      <div className="w-8 h-8 rounded-full bg-[#32BCAD]/10 flex items-center justify-center shrink-0">
+                        <svg viewBox="0 0 512 512" className="w-5 h-5 fill-[#32BCAD]">
+                          <path d="M112.57 391.19c20.056 0 38.928-7.808 53.12-21.996l74.122-74.122c5.27-5.27 14.636-5.266 19.9 0l74.455 74.455c14.192 14.188 33.064 21.996 53.12 21.996h14.638l-74.83 74.83-11.5 11.5c-14.192 14.188-33.064 21.996-53.12 21.996-20.056 0-38.928-7.808-53.12-21.996l-11.5-11.5-74.83-74.83h14.638zM112.57 120.81h-14.638l74.83 74.83 11.5 11.5c14.192 14.188 33.064 21.996 53.12 21.996 20.056 0 38.928-7.808 53.12-21.996l11.5-11.5 74.83-74.83H362.29c-20.056 0-38.928 7.808-53.12 21.996l-74.455 74.455c-5.264 5.266-14.63 5.27-19.9 0L140.69 142.806c-14.192-14.188-33.064-21.996-53.12-21.996z"/>
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-bold text-[#1E1208]">PIX</p>
+                          {pixDiscount > 0 && (
+                            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                              10% de desconto
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[#9C8878] mt-0.5">
+                          {pixDiscount > 0
+                            ? `Economize ${formatCurrency(pixDiscount)} pagando com PIX`
+                            : 'Aprovação instantânea'}
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Crédito */}
+                    {creditTotal >= 10000 && (
+                      <button type="button" onClick={() => setPayMethod('credit')}
+                        className={`flex flex-col w-full px-4 py-4 text-left transition-all ${payMethod === 'credit' ? 'bg-[#F2ECE5]' : 'hover:bg-[#F9F6F1]'}`}>
+                        <div className="flex items-center gap-4 w-full">
+                          <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${payMethod === 'credit' ? 'border-[#1E1208]' : 'border-[#C8B8A8]'}`}>
+                            {payMethod === 'credit' && <span className="w-2.5 h-2.5 rounded-full bg-[#1E1208]" />}
+                          </span>
+                          <div className="w-8 h-8 rounded-full bg-[#E6DFD5] flex items-center justify-center shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#705A48" strokeWidth="1.8" strokeLinecap="round">
+                              <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-[#1E1208]">Cartão de crédito</p>
+                            <p className="text-xs text-[#9C8878] mt-0.5">Qualquer bandeira · até {Math.min(8, Math.floor(creditTotal / 10000))}x</p>
+                          </div>
+                        </div>
+
+                        {/* Seletor de parcelas */}
+                        {payMethod === 'credit' && maxInstall > 1 && (
+                          <div className="mt-3 ml-9 pl-4">
+                            <p className="text-[11px] font-semibold text-[#5A4535] mb-2">Em quantas vezes?</p>
+                            <div className="flex flex-wrap gap-2">
+                              {Array.from({ length: maxInstall }, (_, i) => i + 1).map(n => {
+                                const val = Math.round(creditTotal / n);
+                                return (
+                                  <button key={n} type="button"
+                                    onClick={e => { e.stopPropagation(); setInstall(n); }}
+                                    className={`px-3 py-2 border text-xs font-medium transition-all ${
+                                      installments === n
+                                        ? 'border-[#1E1208] bg-[#1E1208] text-white'
+                                        : 'border-[#E0D8CE] text-[#5A4535] hover:border-[#1E1208]/40'
+                                    }`}
+                                  >
+                                    {n}x {formatCurrency(val)}
+                                    {n === 1 && <span className="ml-1 text-[9px] opacity-60">à vista</span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -536,6 +621,11 @@ export default function CheckoutPage() {
                     <div className="flex justify-between text-[#705A48]">
                       <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
                     </div>
+                    {pixDiscount > 0 && payMethod === 'pix' && (
+                      <div className="flex justify-between text-emerald-600 font-medium">
+                        <span>Desconto PIX (10%)</span><span>-{formatCurrency(pixDiscount)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-[#705A48]">
                       <span>Frete</span>
                       <span className={selectedShipping?.priceCents === 0 ? 'text-emerald-600 font-semibold' : ''}>
@@ -545,6 +635,9 @@ export default function CheckoutPage() {
                     <div className="flex justify-between font-bold text-[#1E1208] pt-2 border-t border-[#E0D8CE] mt-1">
                       <span>Total</span><span>{formatCurrency(total)}</span>
                     </div>
+                    {payMethod === 'credit' && installments > 1 && (
+                      <p className="text-[11px] text-[#9C8878] text-right">{installments}x de {formatCurrency(installVal)}</p>
+                    )}
                   </div>
                 </div>
 
@@ -618,6 +711,11 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-sm text-[#705A48]">
                   <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
                 </div>
+                {pixDiscount > 0 && payMethod === 'pix' && (
+                  <div className="flex justify-between text-sm text-emerald-600 font-medium">
+                    <span>Desconto PIX (10%)</span><span>-{formatCurrency(pixDiscount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-[#B09C8C]">Frete</span>
                   {shippingLoading
@@ -642,7 +740,11 @@ export default function CheckoutPage() {
                 <span className="text-sm font-bold text-[#1E1208]">Total</span>
                 <div className="text-right">
                   <span className="font-display text-2xl text-[#1E1208]">{formatCurrency(total)}</span>
-                  <p className="text-[10px] text-[#B09C8C]">em 1x no PIX</p>
+                  <p className="text-[10px] text-[#B09C8C]">
+                    {payMethod === 'credit' && installments > 1
+                      ? `${installments}x de ${formatCurrency(installVal)}`
+                      : payMethod === 'pix' ? 'à vista no PIX' : 'em 1x no cartão'}
+                  </p>
                 </div>
               </div>
 
