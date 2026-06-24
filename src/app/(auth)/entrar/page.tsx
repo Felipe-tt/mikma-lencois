@@ -203,11 +203,11 @@ export default function LoginPage() {
 
           <div className="flex-1 flex items-center justify-center py-8">
             <Image
-              src="/logo-dark.png"
+              src="/logo-moon-transparent.png"
               alt="Mikma Lençóis"
               width={400}
-              height={200}
-              className="w-full max-w-[260px] h-auto object-contain opacity-[0.10]"
+              height={400}
+              className="w-full max-w-[260px] h-auto object-contain opacity-[0.14]"
             />
           </div>
 
