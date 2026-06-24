@@ -6,8 +6,9 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { formatTsDateTime } from '@/lib/utils/format';
-import type { Conversation, EmailMessage } from '@/types';
+import type { Conversation, EmailMessage, EmailAttachment } from '@/types';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import DOMPurify from 'dompurify';
 
 export default function PainelMensagens() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -193,30 +194,50 @@ function ConversationThread({ conversation, onBack }: { conversation: Conversati
   );
 }
 
-interface Attachment { filename: string; contentType: string; url: string; isImage: boolean }
+type FullEmailMessage = EmailMessage;
 
-function MessageBubble({ msg }: { msg: EmailMessage & { html?: string; attachments?: Attachment[] } }) {
+// Mesma allowlist usada no servidor (api/email/inbound) — sanitizar de novo
+// aqui é defesa em profundidade: protege mesmo que dados não sanitizados
+// cheguem ao Firestore por outro caminho no futuro (bug, migração, etc).
+// Esse HTML tem origem em e-mails de terceiros, então nunca é confiável.
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: [
+    'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'span', 'div',
+    'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'table', 'thead', 'tbody', 'tr', 'td', 'th',
+    'a', 'img',
+  ],
+  ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'src', 'alt', 'width', 'height', 'style'],
+  ALLOWED_URI_REGEXP: /^(?:https?|mailto|data):/i,
+};
+
+function MessageBubble({ msg }: { msg: FullEmailMessage }) {
   const isOut = msg.direction === 'outbound';
-  const attachments: Attachment[] = msg.attachments ?? [];
+  const attachments: EmailAttachment[] = msg.attachments ?? [];
   const imageAttachments = attachments.filter(a => a.isImage);
   const fileAttachments = attachments.filter(a => !a.isImage);
+  const safeHtml = useMemo(
+    () => (msg.html ? DOMPurify.sanitize(msg.html, SANITIZE_CONFIG) : ''),
+    [msg.html]
+  );
 
   return (
     <div className={`max-w-[85%] flex flex-col gap-1.5 ${isOut ? 'self-end items-end' : 'self-start items-start'}`}>
       {/* Assunto apenas para mensagens inbound */}
-      {!isOut && (msg as any).subject && (
+      {!isOut && msg.subject && (
         <p className="text-[10px] font-semibold text-[#B09C8C] uppercase tracking-wide px-1">
-          {(msg as any).subject}
+          {msg.subject}
         </p>
       )}
 
       {/* Corpo da mensagem */}
       <div className={`text-[13px] leading-relaxed ${isOut ? 'bg-[#1E1208] text-[#FAF8F5] px-3.5 py-2.5' : 'bg-[#F0EBE1] text-[#1E1208] border border-[#E6DFD5] px-3.5 py-2.5'}`}>
-        {msg.html ? (
+        {safeHtml ? (
           <div
             className="email-html-body"
             style={{ fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word', maxWidth: '100%', overflowX: 'auto' }}
-            dangerouslySetInnerHTML={{ __html: msg.html }}
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
           />
         ) : (
           <p className="whitespace-pre-wrap">{msg.text}</p>

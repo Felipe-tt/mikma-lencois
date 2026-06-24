@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
 
     if (!productRes.ok) {
       await orderRef.delete();
-      return NextResponse.json({ error: 'Erro ao criar produto no gateway', detail: productText }, { status: 502 });
+      return NextResponse.json({ error: 'Erro ao criar produto no gateway de pagamento' }, { status: 502 });
     }
 
     const abacateProduct = JSON.parse(productText).data;
@@ -246,7 +246,7 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ABACATEPAY_KEY}` },
         body: JSON.stringify({ id: abacateProduct.id }),
       }).catch(() => {});
-      return NextResponse.json({ error: 'Payment provider error', detail: checkText }, { status: 502 });
+      return NextResponse.json({ error: 'Erro no provedor de pagamento' }, { status: 502 });
     }
 
     const checkout = JSON.parse(checkText).data;

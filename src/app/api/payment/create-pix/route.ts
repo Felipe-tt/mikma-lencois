@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
 
     if (!pixRes.ok) {
       await orderRef.delete();
-      return NextResponse.json({ error: 'Payment provider error', detail: pixText }, { status: 502 });
+      return NextResponse.json({ error: 'Erro no provedor de pagamento' }, { status: 502 });
     }
 
     const pix = JSON.parse(pixText).data;

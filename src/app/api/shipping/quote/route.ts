@@ -498,17 +498,6 @@ export async function POST(req: NextRequest) {
       distKm: Math.round(distKm),
       isLocal,
       freeShipping,
-      _debug: {
-        originCep: fromCep || '(não configurado)',
-        hasMelhorEnvio: !!process.env.MELHOR_ENVIO_TOKEN,
-        hasCorreiosDireto: !!(process.env.CORREIOS_CARTAO_POSTAGEM && process.env.CORREIOS_CODIGO_ACESSO),
-        hasTotalExpress: !!(process.env.TOTAL_EXPRESS_TOKEN && process.env.TOTAL_EXPRESS_CLIENT_CODE),
-        hasUberDirect: !!(process.env.UBER_DIRECT_CLIENT_ID && process.env.UBER_DIRECT_CLIENT_SECRET),
-        optionsCount: deduped.length,
-        distKm: Math.round(distKm),
-        isLocal,
-        totalWeightKg: Math.round(totalWeightKg * 100) / 100,
-      },
     });
   } catch (err) {
     console.error('shipping/quote error:', err);

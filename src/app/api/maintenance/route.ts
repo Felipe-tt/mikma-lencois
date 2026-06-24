@@ -3,7 +3,19 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
-import { getClientIp, extractBearer } from '@/lib/security';
+import { extractBearer, tooManyRequests } from '@/lib/security';
+import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+
+// Validação simples de IPv4/IPv6 — evita que um valor arbitrário em
+// body.ip vire parte de um ID de documento no Firestore sem checagem
+// (o .replace(/[.:]/g,'_') sozinho não neutraliza "/", por exemplo).
+const IPV4_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
+const IPV6_RE = /^[0-9a-fA-F:]+$/;
+function isValidIp(ip: string): boolean {
+  if (typeof ip !== 'string' || ip.length === 0 || ip.length > 45) return false;
+  if (IPV4_RE.test(ip)) return ip.split('.').every(n => Number(n) <= 255);
+  return ip.includes(':') && IPV6_RE.test(ip);
+}
 
 async function verifySeller(req: NextRequest) {
   const result = extractBearer(req);
@@ -36,6 +48,10 @@ export async function POST(req: NextRequest) {
   const user = await verifySeller(req);
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
+  if (!rateLimit(`maintenance:${user.uid}`, 30, 60 * 1000)) {
+    return tooManyRequests(rateLimitRetryAfter(`maintenance:${user.uid}`));
+  }
+
   const body = await req.json();
 
   // toggle manutenção
@@ -62,6 +78,9 @@ export async function POST(req: NextRequest) {
 
   // liberar IP específico
   if (body.action === 'release' && body.ip) {
+    if (!isValidIp(body.ip)) {
+      return NextResponse.json({ error: 'IP inválido' }, { status: 400 });
+    }
     // Precisa bater EXATAMENTE com a regex usada em src/middleware.ts
     // (substitui '.' E ':'  — IPv6 tem ':', então usar [./] aqui fazia o
     // release nunca encontrar o documento certo pra IPs IPv6).

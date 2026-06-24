@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   if (!vData.verified) {
     return NextResponse.json(
-      { error: 'E-mail não confirmado. Volte e insira o código.' },
+      { error: 'E-mail não confirmado. Clique no link enviado por e-mail.' },
       { status: 403 }
     );
   }

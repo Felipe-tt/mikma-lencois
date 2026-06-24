@@ -74,8 +74,7 @@ export async function POST(req: NextRequest) {
     // Veja AuthContext.tsx > loginWithGoogleToken para o fluxo completo.
     return NextResponse.json({ uid, verified: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
     console.error('[google-verify]', err);
-    return NextResponse.json({ error: 'Erro interno', detail: msg }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }
