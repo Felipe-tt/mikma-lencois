@@ -18,7 +18,9 @@ service cloud.firestore {
 
     // ── Users ────────────────────────────────────────────────────────────────
     match /users/{uid} {
-      allow read: if isSelf(uid) || hasRole('admin');
+      // Seller/admin precisam ler dados do cliente (nome, telefone, endereço)
+      // ao visualizar o detalhe de um pedido no painel.
+      allow read: if isSelf(uid) || isSellerOrAdmin();
       allow create: if isSelf(uid);
       allow update: if isSelf(uid) || hasRole('admin');
       allow delete: if hasRole('admin');

@@ -145,15 +145,21 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         setOrder(o);
         if (o.userId) {
-          const uSnap = await getDoc(doc(db, 'users', o.userId));
-          if (uSnap.exists()) {
-            const ur = uSnap.data();
-            setCustomer({
-              uid: uSnap.id,
-              ...ur,
-              createdAt: normalizeDate(ur.createdAt) ?? '',
-              updatedAt: normalizeDate(ur.updatedAt),
-            } as User);
+          try {
+            const uSnap = await getDoc(doc(db, 'users', o.userId));
+            if (uSnap.exists()) {
+              const ur = uSnap.data();
+              setCustomer({
+                uid: uSnap.id,
+                ...ur,
+                createdAt: normalizeDate(ur.createdAt) ?? '',
+                updatedAt: normalizeDate(ur.updatedAt),
+              } as User);
+            }
+          } catch (err) {
+            // Não deixa uma falha ao buscar dados do cliente travar a tela
+            // inteira — o pedido em si já carregou e pode ser exibido.
+            console.error('Erro ao buscar dados do cliente:', err);
           }
         }
       }
