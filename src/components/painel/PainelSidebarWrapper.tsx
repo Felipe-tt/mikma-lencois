@@ -49,7 +49,7 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
           <span className="font-display text-base text-[#1E1208]">Painel</span>
         </div>
 
-        <main className="flex-1 p-5 sm:p-8 overflow-y-auto">
+        <main className="flex-1 p-5 sm:p-8 overflow-y-auto animate-fade-in">
           {children}
         </main>
       </div>
