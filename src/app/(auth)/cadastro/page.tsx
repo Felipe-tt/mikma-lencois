@@ -168,17 +168,25 @@ function RegisterContent() {
     <div className="min-h-screen bg-paper flex">
 
       {/* Painel esquerdo */}
-      <div className="hidden lg:flex w-[42%] flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist">
-        <Link href="/"><Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" /></Link>
-        <div>
-          <p className="font-display text-ink font-normal leading-[1.08] mb-4 text-[clamp(1.8rem,2.5vw,2.6rem)]">
+      <div className="hidden lg:flex w-[42%] flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist relative overflow-hidden">
+        <Image
+          src="/logo-moon-transparent.png"
+          alt=""
+          width={400}
+          height={400}
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[280px] h-auto object-contain opacity-[0.14]"
+        />
+        <Link href="/" className="relative z-10"><Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" /></Link>
+        <div className="relative z-10">
+          <p className="font-display font-normal text-ink leading-[1.08] mb-4 text-[clamp(1.8rem,2.5vw,2.6rem)]">
             Crie sua<br /><em className="text-clay not-italic">conta.</em>
           </p>
           <p className="text-[13px] text-mid leading-relaxed max-w-[26ch]">
             Receba seus lençóis em até 1h em Blumenau.
           </p>
         </div>
-        <p className="text-xs text-faint tracking-widest uppercase">Blumenau · SC · Brasil</p>
+        <p className="relative z-10 text-xs text-faint tracking-widest uppercase">Blumenau · SC · Brasil</p>
       </div>
 
       {/* Formulário */}
