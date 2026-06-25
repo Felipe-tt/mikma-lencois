@@ -285,17 +285,12 @@ export default function CartPage() {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-2 opacity-60">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
                   </svg>
-                </Link>
-                <p className="text-center text-xs text-faint mt-3">Pagamento seguro via PIX</p>
-              </div>
+                </Link>              </div>
             </div>
 
             {/* Selos mini */}
             <div className="mt-4 flex flex-col gap-2 px-1">
-              {[
-                { icon: '🔒', text: 'Dados criptografados com SSL 256-bit' },
-                { icon: '⚡', text: 'PIX aprovado automaticamente em segundos' },
-                { icon: '🔄', text: 'Troca em até 7 dias após o recebimento' },
+              {[                { icon: '🔄', text: 'Troca em até 7 dias após o recebimento' },
               ].map(({ icon, text }) => (
                 <div key={text} className="flex items-center gap-2.5 text-xs text-faint">
                   <span>{icon}</span>

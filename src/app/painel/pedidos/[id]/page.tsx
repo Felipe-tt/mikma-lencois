@@ -377,7 +377,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <>
               <Row label="Nome" value={customer.name} />
               <Row label="E-mail" value={customer.email} />
-              <Row label="CPF" value={customer.cpf ? '••••••••••• (criptografado)' : 'Não informado'} />
+              <Row label="CPF" value={customer.cpf ? customer.cpf : 'Não informado'} />
               <Row label="Cliente desde" value={formatDateTime(customer.createdAt)} />
               {customer.address && (
                 <Row label="Endereço cadastrado" value={`${customer.address.street}, ${customer.address.number} — ${customer.address.city}/${customer.address.state}`} />

@@ -66,9 +66,7 @@ export function FooterPreview({ s }: { s: StoreSettings }) {
           <p className="text-[10px] text-[#FAF8F5]/35">
             © {year} {storeName} · Todos os direitos reservados
           </p>
-          <div className="flex items-center gap-3">
-            <span className="text-[9px] font-semibold tracking-[0.1em] text-[#FAF8F5]/25 uppercase">Pagamento seguro</span>
-            <span className="text-[#FAF8F5]/10">·</span>
+          <div className="flex items-center gap-3">            <span className="text-[#FAF8F5]/10">·</span>
             <span className="text-[9px] font-semibold tracking-[0.1em] text-[#FAF8F5]/25 uppercase">PIX</span>
             <span className="text-[#FAF8F5]/10">·</span>
             <span className="text-[9px] text-[#FAF8F5]/25 tracking-[0.16em] uppercase">{(s.storeCity || '').toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>

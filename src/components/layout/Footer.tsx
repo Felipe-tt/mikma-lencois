@@ -152,9 +152,7 @@ export function Footer({
             © {year} {storeName} · Todos os direitos reservados
           </p>
           <div className="flex items-center gap-4">
-            {/* Trust seals */}
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/25 uppercase">Pagamento seguro</span>
-            <span className="text-paper/10">·</span>
+            {/* Trust seals */}            <span className="text-paper/10">·</span>
             <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/25 uppercase">PIX</span>
             <span className="text-paper/10">·</span>
             <span className="text-[10px] text-paper/25 tracking-[0.16em] uppercase">{storeCity.toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
