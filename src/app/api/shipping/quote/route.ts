@@ -562,11 +562,14 @@ export async function POST(req: NextRequest) {
     // Ordena: mais barato, depois mais rápido
     deduped.sort((a, b) => a.priceCents !== b.priceCents ? a.priceCents - b.priceCents : a.estimatedDays - b.estimatedDays);
 
-    // Fallback se nada retornou
-    if (deduped.length === 0) {
+    // Fallback se correios/jadlog não retornaram (sem credenciais configuradas)
+    // Mantém retirada na loja que sempre está
+    const hasCarrier = deduped.some(o => o.carrier !== 'pickup');
+    if (!hasCarrier) {
       deduped.push(
         { carrier: 'correios_pac',   label: 'Correios PAC',   priceCents: freeShipping ? 0 : 2500, estimatedDays: 10, available: true, tag: 'economico' },
-        { carrier: 'correios_sedex', label: 'Correios SEDEX', priceCents: freeShipping ? 0 : 4500, estimatedDays: 3,  available: true, tag: 'rapido'    }
+        { carrier: 'correios_sedex', label: 'Correios SEDEX', priceCents: freeShipping ? 0 : 4500, estimatedDays: 3,  available: true, tag: 'rapido'    },
+        { carrier: 'jadlog_package', label: 'Jadlog Package', priceCents: freeShipping ? 0 : 3200, estimatedDays: 5,  available: true, tag: 'economico' }
       );
     }
 

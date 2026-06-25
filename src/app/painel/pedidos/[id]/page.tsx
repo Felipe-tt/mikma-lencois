@@ -266,15 +266,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <p className="text-[13px] font-bold text-[#1E1208]">Pedido sendo separado</p>
             <div>
               <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">
-                Código de rastreio (opcional — preencha se tiver)
+                Código de rastreio — Correios ou Jadlog (opcional)
               </label>
               <input className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20"
-                placeholder="BR123456789BR" value={trackingCode} onChange={e => setTrackingCode(e.target.value)} />
+                placeholder="Correios: BR123456789BR · Jadlog: JD12345678" value={trackingCode} onChange={e => setTrackingCode(e.target.value)} />
+              <p className="mt-1.5 text-[11px] text-[#B09C8C]">O cliente receberá um e-mail com o código assim que você despachar.</p>
             </div>
-            <button onClick={dispatchDelivery} disabled={updating}
-              className="w-full border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] disabled:opacity-50 transition-colors">
-              {updating ? 'Processando…' : 'Acionar entrega automática (Uber Direct)'}
-            </button>
+
             <button onClick={advanceStatus} disabled={updating}
               className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors">
               {updating ? 'Salvando…' : 'Pedido embalado — despachar agora'}
