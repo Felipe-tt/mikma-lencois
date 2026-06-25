@@ -98,7 +98,7 @@ export default async function SobrePage() {
               <div className="border border-mist px-6 py-5">
                 <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint mb-3">Endereço</p>
                 <address className="text-[14px] text-mid leading-relaxed not-italic">
-                  {s.storeAddress}<br />
+                  {s.storeAddress}{s.storeNumber && `, ${s.storeNumber}`}{s.storeComplement && ` — ${s.storeComplement}`}<br />
                   {s.storeNeighborhood && <>{s.storeNeighborhood} · </>}{s.storeCity}<br />
                   {s.storeCep && <>CEP {s.storeCep}</>}
                 </address>

@@ -129,7 +129,7 @@ export function SobrePreview({ s }: { s: StoreSettings }) {
               <div className="border border-[#E4DED5] px-4 py-3.5">
                 <p className="text-[8px] font-bold tracking-[0.22em] uppercase text-[#B09C8C] mb-2">Endereço</p>
                 <address className="text-[12px] text-[#705A48] leading-relaxed not-italic">
-                  {s.storeAddress}<br />
+                  {s.storeAddress}{s.storeNumber && `, ${s.storeNumber}`}{s.storeComplement && ` — ${s.storeComplement}`}<br />
                   {s.storeNeighborhood && <>{s.storeNeighborhood} · </>}{s.storeCity}<br />
                   {s.storeCep && <>CEP {s.storeCep}</>}
                 </address>

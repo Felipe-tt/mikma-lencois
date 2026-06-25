@@ -99,8 +99,12 @@ export default function ConfiguracoesPage() {
               placeholder="00.000.000/0000-00" maxLength={18} />
           </Card>
 
-          <Card icon="📍" title="Onde você fica" desc="Endereço físico da sua loja">
-            <F label="Rua e número" value={settings.storeAddress} onChange={v => set('storeAddress', v)} placeholder="Rua das Flores, 123" />
+          <Card icon="📍" title="Onde você fica" desc="Endereço físico da sua loja — usado também para gerar etiquetas de envio">
+            <Row>
+              <F label="Rua" value={settings.storeAddress} onChange={v => set('storeAddress', v)} placeholder="Rua das Flores" />
+              <F label="Número" value={settings.storeNumber} onChange={v => set('storeNumber', v)} placeholder="123" />
+            </Row>
+            <F label="Complemento (opcional)" value={settings.storeComplement} onChange={v => set('storeComplement', v)} placeholder="Sala 2, fundos, etc." />
             <Row>
               <F label="Bairro" value={settings.storeNeighborhood} onChange={v => set('storeNeighborhood', v)} placeholder="Centro" />
               <F label="CEP" value={settings.storeCep} onChange={v => set('storeCep', v)} placeholder="89000-000" />
