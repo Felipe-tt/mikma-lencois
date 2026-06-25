@@ -203,10 +203,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     setDispatchError(null);
     try {
       const token = await user!.getIdToken();
+      const carrier = (order as unknown as { selectedShipping?: { carrier?: string } }).selectedShipping?.carrier ?? 'correios_pac';
       const res = await fetch('/api/delivery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        const carrier = (order as unknown as { selectedShipping?: { carrier?: string } }).selectedShipping?.carrier ?? 'correios_pac';
         body: JSON.stringify({ orderId: order.id, carrier }),
       });
       const data = await res.json();

@@ -69,7 +69,7 @@ export default function OrderDetailPage() {
   }, [user, orderId]);
 
   function copyPix() {
-    if (!order?.payment.pixCopyPaste) return;
+    if (!order || order.payment.method !== 'pix' || !order.payment.pixCopyPaste) return;
     navigator.clipboard.writeText(order.payment.pixCopyPaste);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -226,7 +226,7 @@ export default function OrderDetailPage() {
             )}
 
             {/* Rastreio Correios (só quando for Correios) */}
-            {carrier && carrier !== 'pickup' && carrier !== 'disk_tenha' && carrier !== 'manual' && (
+            {carrier && carrier !== 'pickup' && carrier !== 'manual' && (
               <section>
                 <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
                   Rastreamento
