@@ -64,7 +64,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Pedido não pode ser despachado no status "${order.status}"` }, { status: 409 });
     }
 
-    const carrier = order.delivery?.carrier ?? body?.carrier ?? 'correios_pac';
+    // Prioridade: body (painel) → selectedShipping (escolha do cliente) → delivery.carrier → fallback
+    const orderAny = order as unknown as { selectedShipping?: { carrier?: string } };
+    const carrier = body?.carrier
+      ?? orderAny.selectedShipping?.carrier
+      ?? order.delivery?.carrier
+      ?? 'correios_pac';
 
     // ── Retirada na loja: sem Melhor Envio ──────────────────────────────────
     if (carrier === 'pickup') {

@@ -106,7 +106,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [deleting, setDeleting] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
   const [copied, setCopied]       = useState<string | null>(null);
-  const [selectedCarrier, setCarrier] = useState<string>('correios_pac');
+  // carrier vem do selectedShipping do pedido — cliente já escolheu no checkout
   const [labelUrl, setLabelUrl]   = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
 
@@ -206,7 +206,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       const res = await fetch('/api/delivery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ orderId: order.id, carrier: selectedCarrier }),
+        const carrier = (order as unknown as { selectedShipping?: { carrier?: string } }).selectedShipping?.carrier ?? 'correios_pac';
+        body: JSON.stringify({ orderId: order.id, carrier }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -274,68 +275,70 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        {order.status === 'preparing' && (
-          <div className="border border-[#1E1208]/20 bg-[#1E1208]/5 px-5 py-4 flex flex-col gap-3">
-            <p className="text-[13px] font-bold text-[#1E1208]">Pedido sendo separado</p>
+        {order.status === 'preparing' && (() => {
+          const shipping = (order as unknown as { selectedShipping?: { carrier?: string; label?: string; priceCents?: number; estimatedDays?: number } }).selectedShipping;
+          const carrier = shipping?.carrier ?? 'correios_pac';
+          const isPickup = carrier === 'pickup';
+          const CARRIER_LABELS: Record<string, string> = {
+            correios_pac: '📮 Correios PAC',
+            correios_sedex: '⚡ Correios SEDEX',
+            jadlog_package: '🚚 Jadlog Package',
+            jadlog_expresso: '🚚 Jadlog Expresso',
+            pickup: '🏠 Retirada na loja',
+          };
+          return (
+            <div className="border border-[#1E1208]/20 bg-[#1E1208]/5 px-5 py-4 flex flex-col gap-3">
+              <p className="text-[13px] font-bold text-[#1E1208]">Pedido sendo separado</p>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">
-                Como esse pedido vai ser enviado?
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'correios_pac',    label: '📮 Correios PAC' },
-                  { id: 'correios_sedex',  label: '⚡ Correios SEDEX' },
-                  { id: 'jadlog_package',  label: '🚚 Jadlog Package' },
-                  { id: 'jadlog_expresso', label: '🚚 Jadlog Expresso' },
-                  { id: 'pickup',          label: '🏠 Retirada na loja' },
-                ].map(opt => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setCarrier(opt.id)}
-                    className={`text-left px-3 py-2.5 text-[12px] font-medium border transition-colors ${
-                      selectedCarrier === opt.id
-                        ? 'border-[#C4714A] bg-[#C4714A]/10 text-[#1E1208]'
-                        : 'border-[#E6DFD5] bg-white text-[#705A48] hover:border-[#C4714A]/40'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              {/* Forma de envio escolhida pelo cliente — não editável */}
+              <div className="flex items-center justify-between bg-white border border-[#E6DFD5] px-4 py-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#B09C8C] mb-0.5">
+                    Envio escolhido pelo cliente
+                  </p>
+                  <p className="text-[13px] font-semibold text-[#1E1208]">
+                    {CARRIER_LABELS[carrier] ?? shipping?.label ?? carrier}
+                  </p>
+                  {shipping?.estimatedDays !== undefined && !isPickup && (
+                    <p className="text-[11px] text-[#B09C8C] mt-0.5">
+                      Prazo: {shipping.estimatedDays === 0 ? 'hoje' : `${shipping.estimatedDays} dias úteis`}
+                    </p>
+                  )}
+                </div>
+                {shipping?.priceCents !== undefined && (
+                  <span className="text-[14px] font-bold text-[#1E1208]">
+                    {shipping.priceCents === 0 ? 'Grátis' : `R$ ${(shipping.priceCents / 100).toFixed(2).replace('.', ',')}`}
+                  </span>
+                )}
               </div>
+
+              {isPickup ? (
+                <p className="text-[12px] text-[#705A48]">
+                  O cliente vai retirar na loja. Quando ele buscar o pedido, clique em &quot;Confirmar retirada&quot;.
+                </p>
+              ) : (
+                <p className="text-[11px] text-[#B09C8C]">
+                  A etiqueta será gerada automaticamente via Melhor Envio e o saldo da sua conta será debitado.
+                  Imprima, cole na caixa e poste.
+                </p>
+              )}
+
+              {dispatchError && (
+                <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2">{dispatchError}</p>
+              )}
+
+              <button
+                onClick={dispatchDelivery}
+                disabled={updating}
+                className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors"
+              >
+                {updating
+                  ? (isPickup ? 'Salvando…' : 'Gerando etiqueta…')
+                  : (isPickup ? 'Confirmar retirada' : 'Gerar etiqueta e despachar')}
+              </button>
             </div>
-
-            {selectedCarrier !== 'pickup' ? (
-              <p className="text-[11px] text-[#B09C8C]">
-                Vamos gerar a etiqueta automaticamente pelo Melhor Envio e debitar o saldo da sua conta.
-                Depois, baixe e cole na caixa para postar.
-              </p>
-            ) : (
-              <div>
-                <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">
-                  Código de rastreio (opcional, se quiser registrar)
-                </label>
-                <input className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20"
-                  placeholder="Opcional" value={trackingCode} onChange={e => setTrackingCode(e.target.value)} />
-              </div>
-            )}
-
-            {dispatchError && (
-              <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2">{dispatchError}</p>
-            )}
-
-            <button
-              onClick={dispatchDelivery}
-              disabled={updating}
-              className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors"
-            >
-              {updating
-                ? (selectedCarrier === 'pickup' ? 'Salvando…' : 'Gerando etiqueta…')
-                : (selectedCarrier === 'pickup' ? 'Confirmar retirada' : 'Gerar etiqueta e despachar')}
-            </button>
-          </div>
-        )}
+          );
+        })()}
 
         {order.status === 'shipped' && (
           <div className="border border-[#E6DFD5] px-5 py-4 flex flex-col gap-3">
