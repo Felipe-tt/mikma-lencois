@@ -649,12 +649,17 @@ export default function CheckoutPage() {
                     className="flex items-center justify-center gap-2.5 w-full h-14 bg-[#1E1208] text-white text-[15px] font-bold tracking-[0.03em] hover:bg-[#7C5C3E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 active:scale-[0.99]"
                   >
                     {submitting
-                      ? <><span className="spinner mr-1" />Gerando PIX…</>
+                      ? <><span className="spinner mr-1" />{payMethod === 'credit' ? 'Redirecionando…' : 'Gerando PIX…'}</>
                       : selectedShipping
-                        ? <>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-80"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                            Pagar {formatCurrency(total)} com PIX
-                          </>
+                        ? payMethod === 'credit'
+                          ? <>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-80"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                              Pagar {formatCurrency(total)} com cartão
+                            </>
+                          : <>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-80"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                              Pagar {formatCurrency(total)} com PIX
+                            </>
                         : 'Selecione a entrega para continuar'
                     }
                   </button>

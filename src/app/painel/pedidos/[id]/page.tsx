@@ -2,10 +2,10 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, onSnapshot, updateDoc, deleteDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
-import type { Order, OrderTimelineEvent, User } from '@/types';
+import type { Order, User } from '@/types';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { formatCurrency } from '@/lib/utils/format';
 
@@ -183,17 +183,16 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     if (!next) return;
     setUpdating(true);
     try {
-      const now = new Date().toISOString();
-      const newEvent: OrderTimelineEvent = { status: next, at: now };
-      const update: Record<string, unknown> = {
-        status: next, updatedAt: serverTimestamp(),
-        timeline: [...(order.timeline ?? []), newEvent],
-      };
-      if (next === 'shipped' && trackingCode) {
-        update['delivery.trackingCode'] = trackingCode;
-        update['delivery.dispatchedAt'] = serverTimestamp();
+      const token = await user!.getIdToken();
+      const res = await fetch(`/api/orders/${id}/update-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(trackingCode ? { trackingCode } : {}),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error ?? 'Erro ao atualizar status');
       }
-      await updateDoc(doc(db, 'orders', id), update);
     } finally { setUpdating(false); }
   }
 
