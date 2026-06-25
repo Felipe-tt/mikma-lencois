@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { carrierName, trackingUrl as getTrackingUrl } from '@/lib/carriers';
 import { sendEmail } from '@/lib/email';
 import { formatCurrency } from '@/lib/utils/format';
 import { extractBearer } from '@/lib/security';
@@ -117,14 +118,14 @@ function buildShipped(order: Order, name: string) {
   const id = order.id.slice(-8).toUpperCase();
   const url = `${BASE_URL}/pedidos/${order.id}`;
   const code = order.delivery?.trackingCode;
+  const carrier = order.delivery?.carrier ?? null;
+  const rastreioUrl = carrier && code ? getTrackingUrl(carrier, code) : null;
+  const carrierLabel = carrier ? carrierName(carrier) : 'transportadora';
   const trackingBlock = code ? `
     <div style="background:#F5F0EB;padding:16px 20px;margin:20px 0;border-left:3px solid #C4714A;">
-      <p style="margin:0 0 4px;font-size:11px;color:#9C8B7C;text-transform:uppercase;letter-spacing:.08em;">Código de rastreio</p>
+      <p style="margin:0 0 4px;font-size:11px;color:#9C8B7C;text-transform:uppercase;letter-spacing:.08em;">Código de rastreio · ${carrierLabel}</p>
       <p style="margin:0;font-family:monospace;font-size:18px;font-weight:bold;color:#1E1208;letter-spacing:.12em;">${code}</p>
-      <p style="margin:8px 0 0;">
-        <a href="https://rastreamento.correios.com.br/app/index.php?objetos=${code}"
-           style="font-size:12px;color:#C4714A;text-decoration:none;">Rastrear nos Correios →</a>
-      </p>
+      ${rastreioUrl ? `<p style="margin:8px 0 0;"><a href="${rastreioUrl}" style="font-size:12px;color:#C4714A;text-decoration:none;">Rastrear na ${carrierLabel} →</a></p>` : ''}
     </div>` : '';
   const html = wrap(`
     <div style="padding:36px 36px 4px;">

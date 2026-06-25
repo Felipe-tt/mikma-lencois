@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Order, User } from '@/types';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
+import { carrierNameVendor, trackingUrl, isCorreios } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
@@ -478,7 +479,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {/* ── Entrega / Rastreio ── */}
         {order.delivery && (
           <Card title="Entrega" icon="🚚">
-            <Row label="Transportadora" value={order.delivery.carrier ?? 'Não definida'} />
+            <Row label="Transportadora" value={order.delivery.carrier ? carrierNameVendor(order.delivery.carrier) : 'Não definida'} />
             <Row label="Despachado em" value={order.delivery.dispatchedAt ? formatDateTime(order.delivery.dispatchedAt) : null} />
             <Row label="Previsão" value={order.delivery.estimatedDelivery ? formatDateTime(order.delivery.estimatedDelivery) : null} />
             {order.delivery.trackingCode && (
@@ -490,18 +491,29 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     {copied === 'tracking' ? '✓ Copiado!' : 'Copiar'}
                   </button>
                 </div>
-                <p className="font-mono text-[13px] text-[#1E1208] font-bold">{order.delivery.trackingCode}</p>
+                <p className="font-mono text-[13px] text-[#1E1208] font-bold mb-2">{order.delivery.trackingCode}</p>
+                {(() => {
+                  const url = order.delivery.carrier
+                    ? trackingUrl(order.delivery.carrier, order.delivery.trackingCode)
+                    : null;
+                  return url ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer"
+                      className="text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+                      Rastrear na transportadora →
+                    </a>
+                  ) : null;
+                })()}
               </div>
             )}
           </Card>
         )}
 
-        {/* ── Rastreamento Correios ── */}
-        {order.delivery?.trackingCode && (
+        {/* ── Rastreamento (só Correios usa a API Link&Track) ── */}
+        {order.delivery?.trackingCode && order.delivery.carrier && isCorreios(order.delivery.carrier) && (
           <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
               <span>📦</span>
-              <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Rastreamento Correios</p>
+              <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Rastreamento</p>
               <span className="ml-auto font-mono text-[11px] text-[#705A48]">{order.delivery.trackingCode}</span>
             </div>
             <div className="px-5 py-4">
