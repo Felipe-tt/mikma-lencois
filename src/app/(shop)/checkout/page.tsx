@@ -339,10 +339,7 @@ export default function CheckoutPage() {
             <CrumbDivider />
             <Crumb state={step >= 3 ? 'active' : 'pending'} label="Entrega e pagamento" />
           </div>
-          <div className="shrink-0 hidden sm:flex items-center gap-1.5 text-[11px] text-[#B09C8C]">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-            Compra segura
-          </div>
+
         </div>
       </div>
 
@@ -642,11 +639,8 @@ export default function CheckoutPage() {
                 <div className="flex flex-col gap-3">
                   {/* Trust inline — 18% higher completion rate (Baymard) */}
                   <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[11px] text-[#9C8878]">
-                    {[                      { icon: '⚡', text: 'PIX confirmado em segundos' },
-                      { icon: '🔄', text: 'Troca em até 7 dias' },
-                    ].map(({ icon, text }) => (
-                      <span key={text}>{icon} {text}</span>
-                    ))}
+                    <span>PIX confirmado em segundos</span>
+                    <span>Troca em até 7 dias</span>
                   </div>
 
                   <button
@@ -743,17 +737,16 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Trust */}
+              {/* Info objetiva — prazo e política */}
               <div className="px-5 pb-5 border-t border-[#E0D8CE] pt-4 flex flex-col gap-2">
-                {[
-                  'Pagamento 100% seguro via PIX',
-                  'Confirmação automática em segundos',                  'Troca e devolução em até 7 dias',
-                ].map(text => (
-                  <div key={text} className="flex items-center gap-2 text-[11px] text-[#B09C8C]">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-emerald-500 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
-                    {text}
-                  </div>
-                ))}
+                <div className="flex items-center gap-2 text-[11px] text-[#B09C8C]">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                  Troca e devolução em até 7 dias
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-[#B09C8C]">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                  PIX confirmado em segundos
+                </div>
               </div>
             </div>
           </div>
