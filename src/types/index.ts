@@ -108,10 +108,14 @@ export interface Order {
     paidAt?: string
   }
   delivery: {
-    carrier: 'uber_direct' | 'melhor_envio' | 'disk_tenha' | null
+    carrier: 'melhor_envio' | 'correios_pac' | 'correios_sedex' | 'jadlog_package' | 'jadlog_expresso' | 'pickup' | 'manual' | null
     trackingCode?: string
+    trackingUrl?: string
+    melhorEnvioOrderId?: string
+    labelUrl?: string
     dispatchedAt?: string
     estimatedDelivery?: string
+    estimatedDays?: number
   }
   address: Address
   totalCents: number

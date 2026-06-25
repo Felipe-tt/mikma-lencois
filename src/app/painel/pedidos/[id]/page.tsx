@@ -105,7 +105,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
-  const [copied, setCopied] = useState<string | null>(null);
+  const [copied, setCopied]       = useState<string | null>(null);
+  const [selectedCarrier, setCarrier] = useState<string>('correios_pac');
+  const [labelUrl, setLabelUrl]   = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
@@ -206,6 +208,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       });
       const data = await res.json();
       if (data.trackingCode) setTrackingCode(data.trackingCode);
+      if (data.labelUrl) setLabelUrl(data.labelUrl);
     } finally { setUpdating(false); }
   }
 
@@ -281,8 +284,32 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         )}
 
         {order.status === 'shipped' && (
-          <div className="border border-[#E6DFD5] px-5 py-4">
-            <p className="text-[13px] font-bold text-[#1E1208] mb-3">Pedido a caminho do cliente</p>
+          <div className="border border-[#E6DFD5] px-5 py-4 flex flex-col gap-3">
+            <p className="text-[13px] font-bold text-[#1E1208]">Pedido despachado 🚚</p>
+            {order.delivery?.trackingCode && (
+              <div className="flex items-center justify-between bg-[#F0EBE1] px-3 py-2.5">
+                <div>
+                  <p className="text-[10px] text-[#B09C8C] mb-0.5">Código de rastreio</p>
+                  <p className="text-[13px] font-mono font-bold text-[#1E1208]">{order.delivery.trackingCode}</p>
+                </div>
+                <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
+                  className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+                  {copied === 'tracking' ? '✓ Copiado!' : 'Copiar'}
+                </button>
+              </div>
+            )}
+            {order.delivery?.trackingUrl && (
+              <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
+                className="text-[12px] text-[#C4714A] font-semibold hover:underline">
+                🔍 Rastrear envio →
+              </a>
+            )}
+            {order.delivery?.labelUrl && (
+              <a href={order.delivery.labelUrl} target="_blank" rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors">
+                🖨️ Reimprimir etiqueta
+              </a>
+            )}
             <button onClick={advanceStatus} disabled={updating}
               className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors">
               {updating ? 'Salvando…' : 'Confirmar entrega ao cliente'}

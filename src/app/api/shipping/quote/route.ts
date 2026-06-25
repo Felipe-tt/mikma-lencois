@@ -201,7 +201,7 @@ async function quoteMelhorEnvio(
       own_hand: false,
       insurance_value: productValueCents / 100,
     },
-    services: '1,2', // 1=PAC, 2=SEDEX
+    services: '1,2,7,18', // 1=PAC, 2=SEDEX, 7=Jadlog Package, 18=Jadlog Expresso
   };
 
   const res = await fetch(`${base}/api/v2/me/shipment/calculate`, {
@@ -223,17 +223,20 @@ async function quoteMelhorEnvio(
   return data
     .filter(s => !s.error && parseFloat(s.custom_price ?? s.price ?? '0') > 0)
     .map(s => {
-      const price = parseFloat(s.custom_price ?? s.price);
-      const days  = s.custom_delivery_time ?? s.delivery_time ?? 7;
-      const isPac   = String(s.id) === '1';
-      const isSedex = String(s.id) === '2';
+      const price    = parseFloat(s.custom_price ?? s.price);
+      const days     = s.custom_delivery_time ?? s.delivery_time ?? 7;
+      const id       = String(s.id);
+      const isPac    = id === '1';
+      const isSedex  = id === '2';
+      const isJadPkg = id === '7';
+      const isJadExp = id === '18';
       return {
-        carrier:      isPac ? 'correios_pac' : isSedex ? 'correios_sedex' : `melhor_envio_${s.id}`,
-        label:        isPac ? 'Correios PAC' : isSedex ? 'Correios SEDEX' : s.name,
-        priceCents:   Math.round(price * 100),
+        carrier:       isPac ? 'correios_pac' : isSedex ? 'correios_sedex' : isJadPkg ? 'jadlog_package' : isJadExp ? 'jadlog_expresso' : `melhor_envio_${id}`,
+        label:         isPac ? 'Correios PAC' : isSedex ? 'Correios SEDEX' : isJadPkg ? 'Jadlog Package' : isJadExp ? 'Jadlog Expresso' : s.name,
+        priceCents:    Math.round(price * 100),
         estimatedDays: days,
-        available:    true,
-        tag:          isPac ? 'economico' : isSedex ? 'rapido' : undefined,
+        available:     true,
+        tag:           isPac || isJadPkg ? 'economico' : isSedex || isJadExp ? 'rapido' : undefined,
       } satisfies ShippingOption;
     });
 }
