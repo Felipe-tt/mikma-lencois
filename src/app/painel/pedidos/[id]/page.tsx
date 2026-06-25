@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Order, User } from '@/types';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
-import { carrierNameVendor, trackingUrl, isCorreios } from '@/lib/carriers';
+import { carrierNameVendor, trackingUrl } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
@@ -509,7 +509,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         )}
 
         {/* ── Rastreamento (só Correios usa a API Link&Track) ── */}
-        {order.delivery?.trackingCode && order.delivery.carrier && isCorreios(order.delivery.carrier) && (
+        {order.delivery?.carrier && order.delivery.carrier !== 'pickup' && order.delivery.carrier !== 'manual' && (
           <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
               <span>📦</span>
@@ -517,7 +517,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <span className="ml-auto font-mono text-[11px] text-[#705A48]">{order.delivery.trackingCode}</span>
             </div>
             <div className="px-5 py-4">
-              <TrackingTimeline trackingCode={order.delivery.trackingCode} />
+              <TrackingTimeline orderId={order.id} carrierName={carrierNameVendor(order.delivery.carrier!)} />
             </div>
           </div>
         )}

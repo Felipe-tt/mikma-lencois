@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase/client';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/types';
 import { formatCurrency, formatTs, formatTsDateTime } from '@/lib/utils/format';
-import { carrierName, trackingUrl, isCorreios } from '@/lib/carriers';
+import { carrierName, trackingUrl } from '@/lib/carriers';
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 
@@ -226,13 +226,13 @@ export default function OrderDetailPage() {
             )}
 
             {/* Rastreio Correios (só quando for Correios) */}
-            {trackCode && carrier && isCorreios(carrier) && (
+            {carrier && carrier !== 'pickup' && carrier !== 'disk_tenha' && carrier !== 'manual' && (
               <section>
                 <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
                   Rastreamento
                 </h2>
                 <div className="border border-mist p-5">
-                  <TrackingTimeline trackingCode={trackCode} />
+                  <TrackingTimeline orderId={orderId} carrierName={carrierName(carrier)} />
                 </div>
               </section>
             )}
