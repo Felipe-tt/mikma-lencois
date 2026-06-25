@@ -238,6 +238,92 @@ async function quoteMelhorEnvio(
     });
 }
 
+
+// ── Jadlog ────────────────────────────────────────────────────────────────────
+// API Jadlog: https://www.jadlog.com.br/jadlog/api
+// Necessita: JADLOG_TOKEN + JADLOG_ACCOUNT (número da conta)
+
+async function quoteJadlog(
+  fromCep: string,
+  toCep: string,
+  pkg: PackageDimensions,
+  productValueCents: number
+): Promise<ShippingOption[]> {
+  const token   = process.env.JADLOG_TOKEN;
+  const account = process.env.JADLOG_ACCOUNT;
+  if (!token || !account) {
+    // Fallback estimativa sem credencial
+    return [
+      {
+        carrier: 'jadlog_package',
+        label: 'Jadlog Package',
+        priceCents: 3200,
+        estimatedDays: 5,
+        available: true,
+        tag: 'economico' as const,
+      },
+    ];
+  }
+
+  const services = [
+    { modalidade: 3, label: 'Jadlog Package', tag: 'economico' as const },
+    { modalidade: 0, label: 'Jadlog Expresso', tag: 'rapido' as const },
+  ];
+
+  const results: ShippingOption[] = [];
+  for (const svc of services) {
+    try {
+      const res = await fetch('https://www.jadlog.com.br/embarcador/api/frete/valor', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          frete: {
+            modalidade: svc.modalidade,
+            tipoFrete: 'C',
+            cepOrigem: fromCep.replace(/\D/g, ''),
+            cepDestino: toCep.replace(/\D/g, ''),
+            valor: (productValueCents / 100).toFixed(2),
+            peso: Math.max(0.3, pkg.weightKg),
+            conta: account,
+            contaCorrente: account,
+            vlColeta: 0,
+          },
+        }),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const valor = parseFloat(data?.frete?.vlfrete ?? '0');
+      const prazo = parseInt(data?.frete?.prazo ?? '7', 10);
+      if (valor <= 0) continue;
+      results.push({
+        carrier: svc.modalidade === 3 ? 'jadlog_package' : 'jadlog_expresso',
+        label: svc.label,
+        priceCents: Math.round(valor * 100),
+        estimatedDays: prazo,
+        available: true,
+        tag: svc.tag,
+      });
+    } catch { /* serviço indisponível */ }
+  }
+
+  // Fallback se API não respondeu
+  if (results.length === 0) {
+    results.push({
+      carrier: 'jadlog_package',
+      label: 'Jadlog Package',
+      priceCents: 3200,
+      estimatedDays: 5,
+      available: true,
+      tag: 'economico',
+    });
+  }
+
+  return results;
+}
+
 // ── Correios API REST v2 (fallback sem Melhor Envio) ─────────────────────────
 // Autenticação: Basic Auth com cartão postagem + código de acesso
 // Documentação: https://cws.correios.com.br/apidoc
@@ -437,39 +523,30 @@ export async function POST(req: NextRequest) {
     const isLocal = distKm <= (settings.localDeliveryRadiusKm || 10);
     const fromCep = settings.originCep || '';
 
-    // Monta endereços para Uber
-    const fromAddress = [settings.storeAddress, settings.storeCity, settings.storeState, fromCep].filter(Boolean).join(', ');
-    const toAddress   = `CEP ${destCep}`;
-
-    // Roda tudo em paralelo
-    const [uberToken, meOptions, correiosOptions, teOptions] = await Promise.all([
-      isLocal ? getUberToken() : Promise.resolve(null),
-      process.env.MELHOR_ENVIO_TOKEN && fromCep
-        ? quoteMelhorEnvio(fromCep, destCep, pkg, productValueCents, process.env.MELHOR_ENVIO_TOKEN, process.env.MELHOR_ENVIO_SANDBOX === 'true')
-        : Promise.resolve([] as ShippingOption[]),
-      // Correios direto só se não tem Melhor Envio
-      !process.env.MELHOR_ENVIO_TOKEN && fromCep
-        ? quoteCorreiosDireto(fromCep, destCep, pkg, productValueCents)
-        : Promise.resolve([] as ShippingOption[]),
-      fromCep
-        ? quoteTotalExpress(fromCep, destCep, pkg, productValueCents)
-        : Promise.resolve([] as ShippingOption[]),
-    ]);
-
+    // ── Opções de frete: Retirada + Correios + Jadlog ───────────────────────
     const options: ShippingOption[] = [];
 
-    // Carriers locais (só dentro do raio)
-    if (isLocal) {
-      if (uberToken) {
-        options.push(await quoteUberDirect(distKm, fromAddress, toAddress, uberToken));
-      } else if (process.env.UBER_DIRECT_CLIENT_ID) {
-        // Token falhou — estimativa
-        options.push(quoteDiskTenha(distKm)); // usa Disk Tenha como fallback local
-      }
-      options.push(quoteDiskTenha(distKm));
+    // Retirada na loja (sempre disponível)
+    options.push({
+      carrier: 'pickup',
+      label: 'Retirar na loja',
+      priceCents: 0,
+      estimatedDays: 0,
+      available: true,
+      tag: 'local',
+    });
+
+    // Correios (PAC + SEDEX)
+    if (fromCep) {
+      const correiosOptions = await quoteCorreiosDireto(fromCep, destCep, pkg, productValueCents);
+      options.push(...correiosOptions);
     }
 
-    options.push(...meOptions, ...correiosOptions, ...teOptions);
+    // Jadlog
+    if (fromCep) {
+      const jadlogOptions = await quoteJadlog(fromCep, destCep, pkg, productValueCents);
+      options.push(...jadlogOptions);
+    }
 
     // Remove duplicatas (mesmo carrier) — mantém o mais barato
     const seen = new Map<string, ShippingOption>();

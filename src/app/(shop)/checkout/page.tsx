@@ -30,23 +30,20 @@ function estimatedDate(days: number): string {
 // ── Carrier icon ─────────────────────────────────────────────────────────────
 function CarrierIcon({ carrier }: { carrier: string }) {
   const cls = 'w-4 h-4 shrink-0';
-  if (carrier === 'uber_direct') return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={cls}><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14V8l6 4-6 4z"/></svg>
+  if (carrier === 'pickup') return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
   );
-  if (carrier === 'disk_tenha') return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>
+  if (carrier.startsWith('jadlog')) return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
   );
-  if (carrier === 'total_express') return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-  );
-  // correios_pac, correios_sedex, melhor_envio_*
+  // correios_pac, correios_sedex
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
   );
 }
 
 const TAG: Record<string, { label: string; cls: string }> = {
-  local:     { label: 'Entrega hoje',    cls: 'bg-emerald-100 text-emerald-800' },
+  local:     { label: 'Retirada grátis', cls: 'bg-emerald-100 text-emerald-800' },
   rapido:    { label: 'Mais rápido',     cls: 'bg-amber-100 text-amber-800' },
   economico: { label: 'Mais econômico',  cls: 'bg-sky-100 text-sky-800' },
 };

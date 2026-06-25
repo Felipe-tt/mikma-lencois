@@ -4,7 +4,6 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
-import { getSettings } from '@/lib/settings';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -58,13 +57,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
     }
 
-    // ── Verifica se crédito está habilitado nas configs ───────────────────────
-    const settings = await getSettings();
-    const creditMinCents = (settings as Record<string, unknown>).creditMinOrderCents as number | undefined;
-    // Se creditMinCents for undefined ou 0, crédito não está habilitado no painel
-    if (!creditMinCents || creditMinCents <= 0) {
-      return NextResponse.json({ error: 'Pagamento por cartão não está habilitado' }, { status: 403 });
-    }
+    // Mínimo fixo de R$100 para cartão
+    const creditMinCents = 10000;
 
     // ── Load cart from Firestore ──────────────────────────────────────────────
     const cartSnap = await adminDb.collection('carts').doc(uid).get();
