@@ -539,16 +539,20 @@ export async function POST(req: NextRequest) {
       tag: 'local',
     });
 
-    // Correios (PAC + SEDEX)
-    if (fromCep) {
-      const correiosOptions = await quoteCorreiosDireto(fromCep, destCep, pkg, productValueCents);
-      options.push(...correiosOptions);
-    }
+    const meToken = process.env.MELHOR_ENVIO_TOKEN;
+    const sandbox = process.env.MELHOR_ENVIO_SANDBOX === 'true';
 
-    // Jadlog
-    if (fromCep) {
-      const jadlogOptions = await quoteJadlog(fromCep, destCep, pkg, productValueCents);
-      options.push(...jadlogOptions);
+    if (fromCep && meToken) {
+      // Melhor Envio cobre PAC, SEDEX e Jadlog numa só chamada
+      const meOptions = await quoteMelhorEnvio(fromCep, destCep, pkg, productValueCents, meToken, sandbox);
+      options.push(...meOptions);
+    } else if (fromCep) {
+      // Fallback: APIs diretas
+      const [correiosOptions, jadlogOptions] = await Promise.all([
+        quoteCorreiosDireto(fromCep, destCep, pkg, productValueCents),
+        quoteJadlog(fromCep, destCep, pkg, productValueCents),
+      ]);
+      options.push(...correiosOptions, ...jadlogOptions);
     }
 
     // Remove duplicatas (mesmo carrier) — mantém o mais barato
