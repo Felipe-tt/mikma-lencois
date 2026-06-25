@@ -126,12 +126,12 @@ export async function POST(req: NextRequest) {
     // Busca dados do cliente
     const userSnap = await adminDb.collection('users').doc(order.userId).get();
     const userData = userSnap.data() ?? {};
-    const cpf = (userData.cpf ?? order.customer?.cpf ?? '').replace(/\D/g, '');
+    const cpf = (userData.cpf ?? '').replace(/\D/g, '');
 
     const to: MEAddress = {
-      name:        order.customer?.name || userData.name || 'Cliente',
-      phone:       (order.customer?.phone || userData.phone || '').replace(/\D/g, '').slice(0, 11) || '47999999999',
-      email:       order.customer?.email || userData.email || '',
+      name:        userData.name || 'Cliente',
+      phone:       (userData.phone || '').replace(/\D/g, '').slice(0, 11) || '47999999999',
+      email:       userData.email || '',
       document:    cpf || '00000000000', // CPF obrigatório no ME
       address:     addr.street,
       number:      addr.number || 'S/N',
@@ -194,8 +194,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ carrier, trackingCode, meOrderId, labelUrl });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Erro interno';
     console.error('[delivery/dispatch]', err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao despachar o pedido. Tente novamente.' }, { status: 500 });
   }
 }

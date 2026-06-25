@@ -43,7 +43,7 @@ export default function OrderDetailPage() {
   }, [user, orderId]);
 
   function copyPix() {
-    if (!order?.payment.pixCopyPaste) return;
+    if (order?.payment.method !== 'pix' || !order.payment.pixCopyPaste) return;
     navigator.clipboard.writeText(order.payment.pixCopyPaste);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -103,7 +103,7 @@ export default function OrderDetailPage() {
         )}
 
         {/* PIX pending payment */}
-        {order.status === 'pending_payment' && order.payment.pixCopyPaste && (
+        {order.status === 'pending_payment' && order.payment.method === 'pix' && order.payment.pixCopyPaste && (
           <div className="mb-8 border border-amber-200/80 bg-amber-50/50 p-6 flex flex-col items-center gap-4">
             <p className="text-sm font-semibold text-ink">Pague para confirmar o pedido</p>
             <p className="text-xs text-mid">

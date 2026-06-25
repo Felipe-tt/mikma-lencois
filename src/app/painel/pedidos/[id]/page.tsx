@@ -382,12 +382,17 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           <Row label="Método" value={order.payment.method.toUpperCase()} />
           <Row label="Status" value={STATUS_LABELS[order.status]} />
           <Row label="Pago em" value={order.payment.paidAt ? formatDateTime(order.payment.paidAt) : null} />
-          <Row label="ID da transação" value={order.payment.txId} mono />
-          {order.payment.pixCopyPaste && (
+          {order.payment.method === 'pix' && (
+            <Row label="ID da transação" value={order.payment.txId} mono />
+          )}
+          {order.payment.method === 'card' && (
+            <Row label="Parcelas" value={`${order.payment.installments}x`} />
+          )}
+          {order.payment.method === 'pix' && order.payment.pixCopyPaste && (
             <div className="py-2.5 border-b border-[#F0EBE1]">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[12px] text-[#B09C8C]">PIX Copia e Cola</span>
-                <button onClick={() => copy(order.payment.pixCopyPaste!, 'pix')}
+                <button onClick={() => copy(order.payment.method === 'pix' ? order.payment.pixCopyPaste! : '', 'pix')}
                   className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
                   {copied === 'pix' ? '✓ Copiado!' : 'Copiar'}
                 </button>

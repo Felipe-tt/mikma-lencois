@@ -9,6 +9,8 @@ export type StoreSettings = {
   storeCity: string;
   storeState: string;
   storeAddress: string;
+  storeNumber: string;
+  storeComplement: string;
   storeNeighborhood: string;
   storeCep: string;
   storePhone: string;
@@ -94,6 +96,8 @@ export const STORE_DEFAULTS: StoreSettings = {
   storeCity: '',
   storeState: '',
   storeAddress: '',
+  storeNumber: '',
+  storeComplement: '',
   storeNeighborhood: '',
   storeCep: '',
   storePhone: '',

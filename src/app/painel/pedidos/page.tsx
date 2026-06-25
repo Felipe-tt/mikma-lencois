@@ -56,6 +56,7 @@ function carrierLabel(carrier?: string) {
 
 export default function PainelPedidos() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Record<string, { name?: string; email?: string }>>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('todos');
   const [search, setSearch] = useState('');
@@ -68,6 +69,31 @@ export default function PainelPedidos() {
       snap => { setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); setLoading(false); }
     );
   }, []);
+
+  // Busca os dados de cliente (nome/e-mail) dos pedidos atuais — Order só
+  // guarda userId, então carrega em lote a cada mudança no conjunto de
+  // usuários referenciados, em vez de 1 leitura por pedido a cada render.
+  useEffect(() => {
+    const ids = Array.from(new Set(orders.map(o => o.userId).filter(Boolean)));
+    const missing = ids.filter(id => !(id in customers));
+    if (missing.length === 0) return;
+
+    (async () => {
+      const { doc: docRef, getDoc } = await import('firebase/firestore');
+      const entries = await Promise.all(
+        missing.map(async id => {
+          try {
+            const snap = await getDoc(docRef(db, 'users', id));
+            const d = snap.data();
+            return [id, { name: d?.name as string | undefined, email: d?.email as string | undefined }] as const;
+          } catch {
+            return [id, {}] as const;
+          }
+        })
+      );
+      setCustomers(prev => ({ ...prev, ...Object.fromEntries(entries) }));
+    })();
+  }, [orders, customers]);
 
   async function markPreparing(orderId: string) {
     setUpdating(orderId);
@@ -102,15 +128,18 @@ export default function PainelPedidos() {
     let list = filter === 'todos' ? orders : orders.filter(o => o.status === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      list = list.filter(o =>
-        o.id.toLowerCase().includes(q) ||
-        (o.customer?.name ?? '').toLowerCase().includes(q) ||
-        (o.customer?.email ?? '').toLowerCase().includes(q) ||
-        (o.address?.city ?? '').toLowerCase().includes(q)
-      );
+      list = list.filter(o => {
+        const c = customers[o.userId];
+        return (
+          o.id.toLowerCase().includes(q) ||
+          (c?.name ?? '').toLowerCase().includes(q) ||
+          (c?.email ?? '').toLowerCase().includes(q) ||
+          (o.address?.city ?? '').toLowerCase().includes(q)
+        );
+      });
     }
     return list;
-  }, [orders, filter, search]);
+  }, [orders, customers, filter, search]);
 
   const needActionCount  = orders.filter(o => o.status === 'paid').length;
   const cancelledCount   = orders.filter(o => o.status === 'cancelled').length;
@@ -214,8 +243,8 @@ export default function PainelPedidos() {
                   </span>
                 </div>
                 {/* Cliente */}
-                {order.customer?.name && (
-                  <p className="text-[13px] text-[#1E1208] font-medium">{order.customer.name}</p>
+                {customers[order.userId]?.name && (
+                  <p className="text-[13px] text-[#1E1208] font-medium">{customers[order.userId]!.name}</p>
                 )}
                 {/* Detalhes */}
                 <div className="flex items-center gap-3 flex-wrap">

@@ -106,6 +106,10 @@ export interface Order {
     pixQrCode?: string
     pixCopyPaste?: string
     paidAt?: string
+  } | {
+    method: 'card'
+    installments: number
+    paidAt?: string
   }
   delivery: {
     carrier: 'melhor_envio' | 'correios_pac' | 'correios_sedex' | 'jadlog_package' | 'jadlog_expresso' | 'pickup' | 'manual' | null
