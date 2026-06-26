@@ -9,6 +9,7 @@ import type { Order, User } from '@/types';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { carrierNameVendor, trackingUrl } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
+import { IconTruck, IconProducts, IconBox, IconMaintenance } from '@/components/ui/Icon';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending_payment: 'Aguardando Pagamento',

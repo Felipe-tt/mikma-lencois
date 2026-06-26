@@ -2,8 +2,8 @@ import { SVGProps } from 'react';
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
-const base = (paths: React.ReactNode, size = 16) =>
-  ({ size: s = size, ...props }: IconProps) => (
+const base = (paths: React.ReactNode, size = 16) => {
+  const Icon = ({ size: s = size, ...props }: IconProps) => (
     <svg
       width={s}
       height={s}
@@ -18,6 +18,9 @@ const base = (paths: React.ReactNode, size = 16) =>
       {paths}
     </svg>
   );
+  Icon.displayName = 'Icon';
+  return Icon;
+};
 
 // Navigation
 export const IconHome = base(<><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>);
