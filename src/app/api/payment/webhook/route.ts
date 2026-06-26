@@ -92,9 +92,10 @@ export async function POST(req: NextRequest) {
       // which inflates available stock (available = quantity - reserved)
       // a little more with every single sale. If/when proper stock
       // reservation is added at order-creation time, this should also
-      // decrement 'reserved' by item.quantity to match.
+      // Decrementa quantity (estoque real) e reserved (liberado pela confirmação do PIX)
       batch.update(invRef, {
         quantity: FieldValue.increment(-item.quantity),
+        reserved: FieldValue.increment(-item.quantity),
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -216,13 +217,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (eventType === 'transparent.expired') {
-    // PIX expirou — marca o pedido como payment_expired para o cliente saber
+    // PIX expirou — marca o pedido como payment_expired e libera reserva de estoque
     const transparent = data.transparent;
     const orderId = transparent.externalId as string | undefined;
     if (orderId) {
       const orderRef = adminDb.collection('orders').doc(orderId);
       const orderSnap = await orderRef.get();
       if (orderSnap.exists && orderSnap.data()!.status === 'pending_payment') {
+        const order = orderSnap.data()!;
         const now = new Date().toISOString();
         await orderRef.update({
           status: 'payment_expired',
@@ -233,7 +235,17 @@ export async function POST(req: NextRequest) {
             note: 'PIX expirou sem pagamento',
           }),
         });
-        console.log(`Order ${orderId} marked as payment_expired`);
+        // Liberar reserva de estoque para os itens do pedido expirado
+        for (const item of order.items as Array<{ sku: string; quantity: number }>) {
+          const invSnap = await adminDb.collection('inventory').where('sku', '==', item.sku).limit(1).get();
+          if (!invSnap.empty) {
+            adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
+              reserved: FieldValue.increment(-item.quantity),
+              updatedAt: FieldValue.serverTimestamp(),
+            }).catch(() => {});
+          }
+        }
+        console.log(`Order ${orderId} marked as payment_expired, stock reservation released`);
       }
     }
   }

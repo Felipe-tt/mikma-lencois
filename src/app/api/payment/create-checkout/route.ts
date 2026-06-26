@@ -206,6 +206,17 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
+    // ── Reservar estoque para evitar oversell ────────────────────────────────
+    const inventoryDocs = inventoryChecks.map(snap => snap.docs[0]);
+    for (let i = 0; i < cartItems.length; i++) {
+      const invDoc = inventoryDocs[i];
+      if (!invDoc) continue;
+      await adminDb.collection('inventory').doc(invDoc.id).update({
+        reserved: FieldValue.increment(cartItems[i].quantity),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
     // Incrementa usedCount do cupom atomicamente (best-effort)
     if (couponCode) {
       adminDb.collection('coupons').doc(couponCode).update({
@@ -236,6 +247,14 @@ export async function POST(req: NextRequest) {
 
     if (!productRes.ok) {
       await orderRef.delete();
+      for (let i = 0; i < cartItems.length; i++) {
+        const invDoc = inventoryDocs[i];
+        if (!invDoc) continue;
+        adminDb.collection('inventory').doc(invDoc.id).update({
+          reserved: FieldValue.increment(-cartItems[i].quantity),
+          updatedAt: FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      }
       return NextResponse.json({ error: 'Erro ao criar produto no gateway de pagamento' }, { status: 502 });
     }
 
@@ -297,6 +316,15 @@ export async function POST(req: NextRequest) {
 
     if (!checkRes.ok) {
       await orderRef.delete();
+      // Liberar reserva de estoque
+      for (let i = 0; i < cartItems.length; i++) {
+        const invDoc = inventoryDocs[i];
+        if (!invDoc) continue;
+        adminDb.collection('inventory').doc(invDoc.id).update({
+          reserved: FieldValue.increment(-cartItems[i].quantity),
+          updatedAt: FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      }
       // Clean up temp product (best-effort)
       fetch(`${ABACATEPAY_BASE}/products/delete`, {
         method: 'POST',
