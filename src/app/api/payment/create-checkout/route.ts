@@ -44,11 +44,19 @@ export async function POST(req: NextRequest) {
       return tooManyRequests(rateLimitRetryAfter(`checkout:uid:${uid}`));
     }
 
-    const { address, installments = 1 } = await req.json();
+    const { address, installments = 1, shipping } = await req.json();
 
     if (!address) {
       return NextResponse.json({ error: 'Endereço obrigatório' }, { status: 400 });
     }
+
+    const VALID_CARRIERS = ['correios_pac', 'correios_sedex', 'jadlog_package', 'jadlog_expresso', 'pickup'];
+    if (!shipping || typeof shipping.carrier !== 'string' || !VALID_CARRIERS.includes(shipping.carrier)) {
+      return NextResponse.json({ error: 'Forma de envio inválida' }, { status: 400 });
+    }
+    const shippingCents: number = typeof shipping.priceCents === 'number' && shipping.priceCents >= 0
+      ? Math.round(shipping.priceCents)
+      : 0;
 
     const parsedInstallments = Math.max(1, Math.min(12, parseInt(installments, 10) || 1));
 
@@ -109,6 +117,7 @@ export async function POST(req: NextRequest) {
     });
 
     const subtotalCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const productsCents = subtotalCents;
 
     if (subtotalCents < creditMinCents) {
       return NextResponse.json(
@@ -123,7 +132,7 @@ export async function POST(req: NextRequest) {
 
     // ── Aplica juros de parcelamento (se houver) ──────────────────────────────
     const feeRate = INSTALLMENT_FEES[parsedInstallments] ?? 0;
-    const totalCents = Math.round(subtotalCents * (1 + feeRate));
+    const totalCents = Math.round((productsCents + shippingCents) * (1 + feeRate));
     const installmentCents = Math.round(totalCents / parsedInstallments);
 
     // ── Create order ──────────────────────────────────────────────────────────
@@ -135,13 +144,26 @@ export async function POST(req: NextRequest) {
       items: verifiedItems,
       address,
       status: 'pending_payment',
+      productsCents,
+      shippingCents,
       totalCents,
       payment: {
         method: 'card',
         installments: parsedInstallments,
         installmentCents,
       },
-      delivery: {},
+      delivery: {
+        carrier: shipping.carrier,
+        label: shipping.label ?? '',
+        priceCents: shippingCents,
+        estimatedDays: shipping.estimatedDays ?? null,
+      },
+      selectedShipping: {
+        carrier: shipping.carrier,
+        label: shipping.label ?? '',
+        priceCents: shippingCents,
+        estimatedDays: shipping.estimatedDays ?? null,
+      },
       timeline: [
         { status: 'created', at: now, note: 'Pedido criado' },
         { status: 'payment_initiated', at: now, note: `Checkout cartão iniciado (${parsedInstallments}x)` },

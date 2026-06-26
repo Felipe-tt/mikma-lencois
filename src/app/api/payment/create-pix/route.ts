@@ -121,6 +121,15 @@ export async function POST(req: NextRequest) {
         priceCents: shippingCents,
         estimatedDays: shipping.estimatedDays ?? null,
       },
+      // Mantido separado para o painel ler sem ambiguidade — delivery.*
+      // é sobrescrito ao despachar; selectedShipping fica imutável como
+      // registro da escolha original do cliente.
+      selectedShipping: {
+        carrier: shipping.carrier,
+        label: shipping.label ?? '',
+        priceCents: shippingCents,
+        estimatedDays: shipping.estimatedDays ?? null,
+      },
       timeline: [
         { status: 'created', at: now, note: 'Pedido criado' },
         { status: 'payment_initiated', at: now, note: 'PIX gerado' },
