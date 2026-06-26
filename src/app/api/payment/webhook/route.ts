@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { sendEmail } from '@/lib/email';
 
 const ABACATEPAY_PUBLIC_KEY = process.env.ABACATEPAY_PUBLIC_KEY!;
 
@@ -19,6 +20,10 @@ function verifySignature(payload: string, signature: string): boolean {
   } catch {
     return false;
   }
+}
+
+function formatCurrency(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 export async function POST(req: NextRequest) {
@@ -94,6 +99,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // ── Limpa o carrinho do cliente ───────────────────────────────────────
+    const cartRef = adminDb.collection('carts').doc(order.userId as string);
+    batch.update(cartRef, { items: [], updatedAt: FieldValue.serverTimestamp() });
+
     const notifRef = adminDb
       .collection('notifications')
       .doc('seller')
@@ -109,6 +118,91 @@ export async function POST(req: NextRequest) {
 
     await batch.commit();
     console.log(`Order ${orderId} confirmed — ${note}`);
+
+    // ── Email de confirmação ao cliente ───────────────────────────────────
+    // Fora do batch (best-effort — falha de email não reverte o pedido)
+    try {
+      const userSnap = await adminDb.collection('users').doc(order.userId as string).get();
+      const userData = userSnap.data() ?? {};
+      const customerEmail = userData.email as string | undefined;
+      const customerName  = (userData.name ?? userData.displayName ?? 'Cliente') as string;
+
+      if (customerEmail) {
+        const orderUrl = `https://mikma.com.br/pedidos/${orderId}`;
+        const shortId  = orderId.slice(-8).toUpperCase();
+        const items    = order.items as Array<{ productName: string; quantity: number; unitPrice: number }>;
+        const itemLines = items
+          .map(i => `${i.quantity}x ${i.productName} — ${formatCurrency(i.unitPrice * i.quantity)}`)
+          .join('\n');
+
+        const payMethod = (order.payment as { method: string }).method === 'pix' ? 'PIX' : 'Cartão de crédito';
+        const total = formatCurrency(order.totalCents as number);
+
+        await sendEmail({
+          to: customerEmail,
+          subject: `Pedido #${shortId} confirmado — Mikma Lençóis`,
+          text: [
+            `Olá, ${customerName}!`,
+            '',
+            `Seu pedido #${shortId} foi confirmado. Obrigado pela compra!`,
+            '',
+            'ITENS:',
+            itemLines,
+            '',
+            `Total: ${total} via ${payMethod}`,
+            '',
+            `Acompanhe seu pedido: ${orderUrl}`,
+            '',
+            'Qualquer dúvida, responda este e-mail.',
+            '— Equipe Mikma Lençóis',
+          ].join('\n'),
+          html: `
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#FAF8F5;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF8F5;padding:40px 20px;">
+<tr><td align="center">
+<table width="100%" style="max-width:480px;background:#ffffff;border:1px solid #E6DFD5;">
+  <tr><td style="background:#1E1208;padding:28px 32px;">
+    <p style="margin:0;color:#FAF8F5;font-size:20px;font-style:italic;letter-spacing:1px;">Mikma Lençóis</p>
+  </td></tr>
+  <tr><td style="padding:36px;">
+    <p style="margin:0 0 6px;font-size:18px;color:#1E1208;font-weight:bold;">Pedido confirmado!</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#705A48;">Olá, ${customerName}. Recebemos seu pagamento e estamos preparando seu pedido.</p>
+
+    <p style="margin:0 0 8px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.1em;color:#B09C8C;">Pedido #${shortId}</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E6DFD5;margin-bottom:24px;">
+      ${items.map(i => `
+      <tr><td style="padding:10px 14px;border-bottom:1px solid #F0EAE1;font-size:13px;color:#1E1208;">
+        ${i.quantity}x ${i.productName}
+      </td><td style="padding:10px 14px;border-bottom:1px solid #F0EAE1;font-size:13px;color:#1E1208;text-align:right;white-space:nowrap;">
+        ${formatCurrency(i.unitPrice * i.quantity)}
+      </td></tr>`).join('')}
+      <tr><td style="padding:12px 14px;font-size:14px;font-weight:bold;color:#1E1208;">Total</td>
+          <td style="padding:12px 14px;font-size:14px;font-weight:bold;color:#1E1208;text-align:right;">${total}</td></tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-bottom:24px;">
+      <a href="${orderUrl}" style="display:inline-block;background:#C4714A;color:#ffffff;font-family:Georgia,serif;font-size:14px;font-weight:bold;text-decoration:none;padding:14px 36px;">
+        Acompanhar pedido
+      </a>
+    </td></tr></table>
+
+    <p style="margin:0;font-size:12px;color:#B09C8C;text-align:center;">
+      Dúvidas? Responda este e-mail ou acesse <a href="https://mikma.com.br" style="color:#C4714A;">mikma.com.br</a>
+    </p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`,
+          from: 'noreply',
+        });
+
+        console.log(`[webhook] email de confirmação enviado para ${customerEmail} — pedido ${orderId}`);
+      }
+    } catch (emailErr) {
+      // Falha de email não deve quebrar o webhook — pedido já foi confirmado
+      console.error('[webhook] falha ao enviar email de confirmação:', emailErr);
+    }
   }
 
   if (eventType === 'transparent.completed') {

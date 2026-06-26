@@ -38,7 +38,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate shipping carrier
-    const VALID_CARRIERS = ['uber_direct', 'disk_tenha', 'correios_pac', 'correios_sedex', 'melhor_envio_1', 'melhor_envio_2'];
+    const VALID_CARRIERS = [
+      'pickup',
+      'correios_pac', 'correios_sedex',
+      'jadlog_package', 'jadlog_expresso',
+      'uber_direct', 'disk_tenha',
+      'total_express',
+      'melhor_envio_1', 'melhor_envio_2',
+    ];
     if (!shipping || typeof shipping.carrier !== 'string' || !VALID_CARRIERS.includes(shipping.carrier)) {
       return NextResponse.json({ error: 'Opção de frete inválida' }, { status: 400 });
     }
@@ -64,9 +71,14 @@ export async function POST(req: NextRequest) {
     const productDocs = await Promise.all(
       productIds.map(id => adminDb.collection('products').doc(id).get())
     );
-    const priceMap: Record<string, number> = {};
+    const productMap: Record<string, { price: number; name: string }> = {};
     for (const snap of productDocs) {
-      if (snap.exists) priceMap[snap.id] = snap.data()!.price as number;
+      if (snap.exists) {
+        productMap[snap.id] = {
+          price: snap.data()!.price as number,
+          name: snap.data()!.name as string,
+        };
+      }
     }
 
     // ── Check inventory before creating order ────────────────────────────────
@@ -90,13 +102,21 @@ export async function POST(req: NextRequest) {
 
     // ── Build verified order items ────────────────────────────────────────────
     const verifiedItems = cartItems.map(ci => {
-      const price = priceMap[ci.productId];
-      if (!price) throw new Error(`Produto ${ci.productId} não encontrado`);
-      return { ...ci, unitPrice: price };
+      const prod = productMap[ci.productId];
+      if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
+      return { ...ci, unitPrice: prod.price, productName: prod.name };
     });
 
     const productsCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-    const amountCents = productsCents + shippingCents;
+
+    // ── Desconto PIX (calculado no servidor, não confiamos no valor do cliente) ──
+    // Threshold: R$1.800,00 — 10% de desconto
+    const PIX_DISCOUNT_THRESHOLD_CENTS = 180000;
+    const pixDiscountCents = productsCents >= PIX_DISCOUNT_THRESHOLD_CENTS
+      ? Math.round(productsCents * 0.10)
+      : 0;
+
+    const amountCents = productsCents - pixDiscountCents + shippingCents;
 
     if (amountCents <= 0) {
       return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
@@ -113,6 +133,7 @@ export async function POST(req: NextRequest) {
       status: 'pending_payment',
       productsCents,
       shippingCents,
+      discountCents: pixDiscountCents,
       totalCents: amountCents,
       payment: { method: 'pix' },
       delivery: {
