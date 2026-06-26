@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { extractBearer, tooManyRequests } from '@/lib/security';
 
@@ -30,6 +31,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     return NextResponse.json({ error: 'Só é possível cancelar pedidos aguardando pagamento' }, { status: 400 });
   }
 
-  await ref.update({ status: 'cancelled', cancelledAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+  const now = new Date().toISOString();
+  await ref.update({
+    status: 'cancelled',
+    cancelledAt: now,
+    updatedAt: now,
+    timeline: FieldValue.arrayUnion({ status: 'cancelled', at: now, note: 'Cancelado pelo cliente' }),
+  });
+
+  // Pedido pendente sempre tem estoque reservado (reservado na criação do PIX/checkout) — liberar agora
+  const items = (order.items ?? []) as Array<{ sku: string; quantity: number }>;
+  for (const item of items) {
+    const invSnap = await adminDb.collection('inventory').where('sku', '==', item.sku).limit(1).get();
+    if (!invSnap.empty) {
+      adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
+        reserved: FieldValue.increment(-item.quantity),
+        updatedAt: FieldValue.serverTimestamp(),
+      }).catch(() => {});
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

@@ -27,7 +27,7 @@ const STATUS_NEXT: Partial<Record<Order['status'], Order['status']>> = {
 };
 const TIMELINE_LABEL: Record<string, string> = {
   created: 'Pedido criado',
-  payment_initiated: 'PIX gerado — cliente viu o QR code',
+  payment_initiated: 'Pagamento iniciado',
   payment_confirmed: 'Pagamento confirmado',
   payment_expired: 'PIX expirou sem pagamento',
   payment_failed: 'Pagamento recusado',
@@ -52,6 +52,15 @@ const TIMELINE_COLOR: Record<string, string> = {
   delivery_cancelled: 'bg-orange-300',
   delivered: 'bg-emerald-500', cancelled: 'bg-red-400',
 };
+
+function timelineLabel(status: string, order: Order): string {
+  if (status === 'payment_initiated') {
+    return order.payment.method === 'card'
+      ? 'Checkout de cartão iniciado'
+      : 'PIX gerado — cliente viu o QR code';
+  }
+  return TIMELINE_LABEL[status] ?? status;
+}
 
 function toDate(value: unknown): Date | null {
   if (!value) return null;
@@ -578,7 +587,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-base">{TIMELINE_ICON[ev.status] ?? '•'}</span>
-                        <p className="text-[13px] font-semibold text-[#1E1208]">{TIMELINE_LABEL[ev.status] ?? ev.status}</p>
+                        <p className="text-[13px] font-semibold text-[#1E1208]">{timelineLabel(ev.status, order)}</p>
                       </div>
                       {ev.note && <p className="text-[12px] text-[#705A48] mt-0.5 ml-7">{ev.note}</p>}
                       <p className="text-[11px] text-[#B09C8C] mt-0.5 ml-7 tabular-nums">{formatDateTime(ev.at)}</p>
