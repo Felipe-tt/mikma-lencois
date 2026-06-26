@@ -118,6 +118,7 @@ export interface Order {
     melhorEnvioOrderId?: string
     labelUrl?: string
     dispatchedAt?: string
+    deliveredAt?: string
     estimatedDelivery?: string
     estimatedDays?: number
   }

@@ -1,28 +1,21 @@
 /**
  * POST /api/shipping/webhook
- * Webhook do Melhor Envio para atualização de rastreio.
+ * Webhook do Melhor Envio para atualização de rastreio automático.
  *
- * Configurado em: Melhor Envio → Integrações → Área Dev. → seu app → Novo Webhook
+ * Configurado em: Melhor Envio → Gerenciar → Webhooks → Novo Webhook
  * URL cadastrada: https://mikma.com.br/api/shipping/webhook
  *
- * IMPORTANTE: as etiquetas só disparam webhook se forem geradas pelo MESMO
- * aplicativo (mesmo Client ID/Secret) onde esse webhook está cadastrado —
- * etiquetas criadas direto no site do Melhor Envio ou por outro app, mesmo
- * na mesma conta, não chegam aqui. https://docs.melhorenvio.com.br/docs/webhooks
- *
  * Autenticidade: o Melhor Envio assina o corpo bruto da requisição com
- * HMAC-SHA256 usando o CLIENT SECRET DO APLICATIVO como chave (não existe
- * um "webhook secret" separado), e envia o resultado no header
- * X-ME-Signature. Validamos recalculando o mesmo hash e comparando.
+ * HMAC-SHA256 usando o MELHOR_ENVIO_TOKEN como chave e envia o resultado
+ * (em base64) no header X-ME-Signature.
  *
- * Eventos reais (prefixo "order."): created, pending, released, generated,
- * received, posted, delivered, cancelled, undelivered, paused, suspended.
+ * Eventos possíveis (prefixo "order."): created, pending, released,
+ * generated, received, posted, delivered, cancelled, undelivered,
+ * paused, suspended.
  *
- * O Melhor Envio também faz uma chamada de teste ao cadastrar/editar o
- * webhook para confirmar que a URL responde 2xx — essa chamada de teste
- * não necessariamente tem um payload de evento real assinável, então
- * respondemos 200 a qualquer requisição bem formada, mesmo sem reconhecer
- * o evento, e só agimos sobre os eventos que de fato conhecemos.
+ * O Melhor Envio faz uma requisição de teste ao cadastrar o webhook para
+ * confirmar que a URL responde 2xx. Esse ping pode chegar sem payload
+ * real ou sem assinatura — respondemos 200 sem processar nada.
  */
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
@@ -31,7 +24,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 interface MEOrderEventData {
-  id: string;               // ID do envio no ME (= delivery.melhorEnvioOrderId salvo)
+  id: string;               // ID do envio no ME (= delivery.melhorEnvioOrderId)
   protocol: string;
   status: string;
   tracking: string | null;
@@ -39,31 +32,48 @@ interface MEOrderEventData {
 }
 
 interface MEWebhookPayload {
-  event: string;             // ex: "order.posted"
+  event: string;            // ex: "order.posted"
   data: MEOrderEventData;
 }
 
-// Mapeia o status do evento (sem o prefixo "order.") para o status interno do pedido.
+// Mapeia o evento ME → status interno do pedido.
+// Eventos não listados (created, pending, paused, suspended) só registram
+// na timeline sem alterar o status do pedido.
 const STATUS_MAP: Record<string, string> = {
-  released:    'shipped',    // etiqueta paga, aguardando postagem
-  generated:   'shipped',    // etiqueta gerada
+  released:    'shipped',    // etiqueta comprada, aguardando postagem
+  generated:   'shipped',    // etiqueta gerada (PDF disponível)
   posted:      'shipped',    // postado na transportadora
-  received:    'shipped',    // recebido em ponto de distribuição
-  delivered:   'delivered',  // entregue
-  undelivered: 'shipped',    // tentativa sem sucesso — mantém shipped
+  received:    'shipped',    // recebido em centro de distribuição
+  delivered:   'delivered',  // entregue ao destinatário
+  undelivered: 'shipped',    // tentativa de entrega malsucedida
   cancelled:   'cancelled',
-  // created, pending, paused, suspended: não alteram o status do pedido,
-  // só registram na timeline.
+};
+
+// Legenda legível para exibir na timeline
+const EVENT_LABEL: Record<string, string> = {
+  created:     'Envio criado',
+  pending:     'Aguardando pagamento',
+  released:    'Etiqueta paga — aguardando postagem',
+  generated:   'Etiqueta gerada',
+  posted:      'Postado na transportadora',
+  received:    'Recebido em centro de distribuição',
+  delivered:   'Entregue',
+  undelivered: 'Tentativa de entrega sem sucesso',
+  cancelled:   'Envio cancelado',
+  paused:      'Envio pausado',
+  suspended:   'Envio suspenso',
 };
 
 function verifySignature(rawBody: string, signature: string | null): boolean {
-  const clientSecret = process.env.MELHOR_ENVIO_CLIENT_SECRET;
-  if (!clientSecret || !signature) return false;
+  // O Melhor Envio usa o token da conta (Bearer token) como chave HMAC.
+  const secret = process.env.MELHOR_ENVIO_TOKEN;
+  if (!secret || !signature) return false;
   try {
-    const expected = createHmac('sha256', clientSecret).update(rawBody, 'utf8').digest('base64');
+    const expected = createHmac('sha256', secret).update(rawBody, 'utf8').digest('base64');
     const a = Buffer.from(expected);
     const b = Buffer.from(signature);
-    return a.length === b.length && timingSafeEqual(a, b);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
   } catch {
     return false;
   }
@@ -73,30 +83,31 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const signature = req.headers.get('x-me-signature');
 
-  let payload: Partial<MEWebhookPayload>;
+  // Tenta parsear — ping de teste pode chegar vazio ou como "{}"
+  let payload: Partial<MEWebhookPayload> = {};
   try {
-    payload = JSON.parse(rawBody);
+    payload = rawBody ? JSON.parse(rawBody) : {};
   } catch {
-    // Corpo vazio/não-JSON: provavelmente o ping de teste do cadastro do
-    // webhook. Responde 200 para não falhar o cadastro (E-WBH-0002).
-    return NextResponse.json({ ok: true });
+    // JSON inválido: provavelmente ping de cadastro — responde 200
+    return NextResponse.json({ ok: true, note: 'invalid-json' });
   }
 
-  // Só processa eventos de etiqueta de verdade (event + data.id presentes).
-  // Qualquer outra coisa (ping de teste, payload vazio) recebe 200 sem ação.
+  // Ping de teste: sem event ou sem data.id — responde 200 sem processar
   if (!payload.event || !payload.data?.id) {
     return NextResponse.json({ ok: true, note: 'no-op' });
   }
 
-  // A partir daqui é um evento real — exige assinatura válida.
+  // Evento real — valida assinatura
   if (!verifySignature(rawBody, signature)) {
-    console.warn('[shipping/webhook] assinatura inválida ou ausente');
+    console.warn('[shipping/webhook] assinatura inválida ou ausente', { signature: signature?.slice(0, 20) });
     return NextResponse.json({ error: 'Assinatura inválida' }, { status: 401 });
   }
 
   const { event, data } = payload as MEWebhookPayload;
-  const status = event.startsWith('order.') ? event.slice('order.'.length) : event;
+  const meEvent = event.startsWith('order.') ? event.slice('order.'.length) : event;
   const { id: meOrderId, tracking, tracking_url: trackingUrl } = data;
+
+  console.info(`[shipping/webhook] evento=${meEvent} meOrderId=${meOrderId} tracking=${tracking ?? '-'}`);
 
   try {
     const snap = await adminDb
@@ -106,25 +117,30 @@ export async function POST(req: NextRequest) {
       .get();
 
     if (snap.empty) {
-      // Pedido não encontrado (pode ser etiqueta de teste/sandbox antiga) — ignora.
+      // Etiqueta gerada fora do sistema ou em sandbox — ignora silenciosamente
+      console.warn(`[shipping/webhook] meOrderId=${meOrderId} não encontrado nos pedidos`);
       return NextResponse.json({ ok: true, note: 'order not found' });
     }
 
     const orderDoc = snap.docs[0];
-    const newStatus = STATUS_MAP[status];
+    const newStatus = STATUS_MAP[meEvent];
 
     const update: Record<string, unknown> = {
       updatedAt: FieldValue.serverTimestamp(),
     };
-    if (newStatus) update.status = newStatus;
-    if (tracking) update['delivery.trackingCode'] = tracking;
-    if (trackingUrl) update['delivery.trackingUrl'] = trackingUrl;
-    if (status === 'delivered') update['delivery.deliveredAt'] = FieldValue.serverTimestamp();
+    if (newStatus)    update.status = newStatus;
+    if (tracking)     update['delivery.trackingCode'] = tracking;
+    if (trackingUrl)  update['delivery.trackingUrl'] = trackingUrl;
+    if (meEvent === 'delivered') {
+      update['delivery.deliveredAt'] = FieldValue.serverTimestamp();
+    }
 
+    // Timeline usa o mesmo formato que update-status/route.ts (campo "status")
+    const label = EVENT_LABEL[meEvent] ?? meEvent;
     const timelineEvent = {
-      event: status,
+      status: newStatus ?? 'shipped',   // status interno compatível com OrderStatus
       at: new Date().toISOString(),
-      note: `Melhor Envio: ${status}${tracking ? ` · ${tracking}` : ''}`,
+      note: `Melhor Envio: ${label}${tracking ? ` · ${tracking}` : ''}`,
     };
 
     await orderDoc.ref.update({
@@ -132,9 +148,10 @@ export async function POST(req: NextRequest) {
       timeline: FieldValue.arrayUnion(timelineEvent),
     });
 
+    console.info(`[shipping/webhook] pedido ${orderDoc.id} atualizado → status=${newStatus ?? '(sem mudança)'}`);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error('[shipping/webhook]', err);
+    console.error('[shipping/webhook] erro interno:', err);
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }
