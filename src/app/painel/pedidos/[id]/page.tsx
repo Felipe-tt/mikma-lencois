@@ -612,10 +612,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     <div className={`w-2.5 h-2.5 shrink-0 mt-1.5 ${TIMELINE_COLOR[ev.status] ?? 'bg-[#E6DFD5]'}`} />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        (() => {
-                        const TLIcon = TIMELINE_ICON_COMP[ev.status];
-                        return TLIcon ? <TLIcon size={13} /> : <span>•</span>;
-                      })()
+                        {(() => { const TLIcon = TIMELINE_ICON_COMP[ev.status]; return TLIcon ? <TLIcon size={13} /> : <span>•</span>; })()}
                         <p className="text-[13px] font-semibold text-[#1E1208]">{timelineLabel(ev.status, order)}</p>
                       </div>
                       {ev.note && <p className="text-[12px] text-[#705A48] mt-0.5 ml-7">{ev.note}</p>}
