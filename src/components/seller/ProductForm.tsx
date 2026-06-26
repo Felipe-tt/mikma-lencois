@@ -52,6 +52,7 @@ export default function ProductForm({ initial }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [price, setPrice] = useState(initial?.price ? (initial.price / 100).toFixed(2) : '');
+  const [weightKg, setWeightKg] = useState(initial?.weightKg ? String(initial.weightKg) : '');
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0]);
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
@@ -143,6 +144,7 @@ export default function ProductForm({ initial }: Props) {
   }
 
   const priceValid = !!price && !isNaN(parseFloat(price.replace(',', '.')));
+  const weightKgValid = !!weightKg && !isNaN(parseFloat(weightKg)) && parseFloat(weightKg) > 0;
 
   // SKUs que o form atual vai gerar (com base nas variações de agora)
   const currentSkuSet = new Set(variants.map(v => makeVariantId(v.size, v.fabric)));
@@ -174,6 +176,7 @@ export default function ProductForm({ initial }: Props) {
   async function handleSubmit() {
     if (!name.trim()) { setError('Dê um nome para o produto.'); return; }
     if (!priceValid) { setError('Informe um preço válido.'); return; }
+    if (!weightKgValid) { setError('Informe o peso do produto em kg (ex: 1.2).'); return; }
     if (images.length === 0) { setError('Adicione pelo menos uma foto.'); return; }
     if (variants.length === 0) { setError('Adicione pelo menos uma variação (tamanho/tecido/cor).'); return; }
     if (hasDuplicateVariants) { setError('Há variações repetidas com o mesmo tamanho e tecido — ajuste antes de salvar.'); return; }
@@ -231,6 +234,7 @@ export default function ProductForm({ initial }: Props) {
         name: name.trim(),
         description,
         price: priceCents,
+        weightKg: parseFloat(weightKg),
         category,
         tags: tagArr,
         images: uploadedUrls,
@@ -385,7 +389,7 @@ export default function ProductForm({ initial }: Props) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="label">Preço (R$)</label>
                 <input
@@ -394,6 +398,21 @@ export default function ProductForm({ initial }: Props) {
                   placeholder="49,90"
                   inputMode="decimal"
                   className={`input ${price && !priceValid ? 'border-red-400' : ''}`}
+                />
+              </div>
+              <div>
+                <label className="label">
+                  Peso por unidade (kg) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={weightKg}
+                  onChange={e => setWeightKg(e.target.value)}
+                  placeholder="1.20"
+                  inputMode="decimal"
+                  className={`input ${weightKg && !weightKgValid ? 'border-red-400' : ''}`}
                 />
               </div>
               <div>

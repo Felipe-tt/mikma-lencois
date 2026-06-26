@@ -38,6 +38,7 @@ export interface Product {
   name: string
   description: string
   price: number // centavos
+  weightKg: number          // peso por unidade (obrigatório para frete)
   images: string[]
   category: string
   tags: string[]

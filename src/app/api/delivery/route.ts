@@ -167,9 +167,19 @@ export async function POST(req: NextRequest) {
       unitary_value:  item.unitPrice / 100,
     }));
 
+    // Busca pesos individuais dos produtos no Firestore
+    const productIds = Array.from(new Set(order.items.map(i => i.productId)));
+    const productDocs = await Promise.all(productIds.map(id => adminDb.collection('products').doc(id).get()));
+    const productWeightMap: Record<string, number> = {};
+    for (const snap of productDocs) {
+      if (snap.exists) {
+        productWeightMap[snap.id] = (snap.data()!.weightKg as number | undefined) ?? (settings.defaultItemWeightKg || 0.8);
+      }
+    }
+
     // Monta pacote (peso e dimensões)
     const totalWeightKg = order.items.reduce(
-      (acc, i) => acc + (settings.defaultItemWeightKg || 0.8) * i.quantity,
+      (acc, i) => acc + (productWeightMap[i.productId] ?? settings.defaultItemWeightKg ?? 0.8) * i.quantity,
       0
     );
 

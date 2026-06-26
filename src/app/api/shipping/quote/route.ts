@@ -511,12 +511,16 @@ export async function POST(req: NextRequest) {
     const productIds = Array.from(new Set(cartItems.map(i => i.productId)));
     const productDocs = await Promise.all(productIds.map(id => adminDb.collection('products').doc(id).get()));
     const priceMap: Record<string, number> = {};
+    const weightMap: Record<string, number> = {};
     for (const snap of productDocs) {
-      if (snap.exists) priceMap[snap.id] = snap.data()!.price as number;
+      if (snap.exists) {
+        priceMap[snap.id] = snap.data()!.price as number;
+        weightMap[snap.id] = (snap.data()!.weightKg as number | undefined) ?? (settings.defaultItemWeightKg || 0.8);
+      }
     }
 
     const productValueCents = cartItems.reduce((s, i) => s + (priceMap[i.productId] ?? 0) * i.quantity, 0);
-    const totalWeightKg = cartItems.reduce((s, i) => s + (settings.defaultItemWeightKg || 0.8) * i.quantity, 0);
+    const totalWeightKg = cartItems.reduce((s, i) => s + (weightMap[i.productId] ?? settings.defaultItemWeightKg ?? 0.8) * i.quantity, 0);
     const pkg: PackageDimensions = { weightKg: totalWeightKg, heightCm: 20, widthCm: 40, lengthCm: 50 };
 
     const freeThreshold = settings.freeShippingThresholdCents ?? 0;
