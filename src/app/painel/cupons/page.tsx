@@ -64,7 +64,7 @@ export default function CuponsPage() {
       {showForm && (
         <div className="bg-[#FAF8F5] border border-[#E6DFD5] p-5 mb-6">
           <h2 className="text-[14px] font-bold text-[#1E1208] mb-4">Novo cupom</h2>
-          {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold" flex items-center gap-1"><IconAlert size={11} />{error}</div>}
+          {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-1"><IconAlert size={11} />{error}</div>}
 
           <div className="flex flex-col gap-4">
             <div>

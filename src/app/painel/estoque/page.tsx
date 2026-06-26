@@ -104,7 +104,7 @@ export default function EstoquePage() {
                       Tamanho: {item.variant.size}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}
                     </p>
                   </div>
-                  {low && <span className="shrink-0 text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2.5 py-1" flex items-center gap-1"><IconAlert size={10} />ACABANDO</span>}
+                  {low && <span className="shrink-0 text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2.5 py-1 flex items-center gap-1"><IconAlert size={10} />ACABANDO</span>}
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 mb-4">
