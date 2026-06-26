@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
   const actionUrl = `${APP_URL}/confirmar-email?email=${encodeURIComponent(email)}&token=${token}`;
 
   const html = actionButtonEmailHtml({
-    greetingName: `${firstName} 👋`,
+    greetingName: firstName,
     introText: `Você pediu para criar uma conta na <strong>Mikma Lençóis</strong>. Clique no botão abaixo para confirmar que este e-mail é seu:`,
     buttonLabel: 'Confirmar meu e-mail',
     actionUrl,

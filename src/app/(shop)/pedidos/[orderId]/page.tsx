@@ -13,12 +13,54 @@ import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 
 // ─── Status steps ─────────────────────────────────────────────────────────────
 
-const STATUS_STEPS: { status: OrderStatus; label: string; icon: string }[] = [
-  { status: 'pending_payment', label: 'Aguardando pagamento', icon: '⏳' },
-  { status: 'paid',            label: 'Pagamento confirmado', icon: '✓'  },
-  { status: 'preparing',       label: 'Em preparação',        icon: '📦' },
-  { status: 'shipped',         label: 'A caminho',            icon: '🚚' },
-  { status: 'delivered',       label: 'Entregue',             icon: '🎉' },
+// SVG ícones para cada step do progresso (sem emojis)
+function StepIcon({ status, active }: { status: OrderStatus; active: boolean }) {
+  const cls = `w-4 h-4 ${active ? 'stroke-[#C4714A]' : 'stroke-[#C8B8A8]'}`;
+  const base = { fill: 'none' as const, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  if (status === 'pending_payment')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+  if (status === 'paid')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
+  if (status === 'preparing')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>;
+  if (status === 'shipped')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
+  if (status === 'delivered')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><polyline points="20 6 9 17 4 12"/></svg>;
+  return null;
+}
+
+// SVG ícones para timeline interna
+function TimelineIcon({ status }: { status: string }) {
+  const base = { fill: 'none' as const, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const cls = 'w-4 h-4 stroke-[#C4714A]';
+  if (status === 'created')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>;
+  if (status === 'payment_initiated' || status === 'pending_payment')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+  if (status === 'payment_confirmed' || status === 'paid')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
+  if (status === 'payment_expired')
+    return <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-amber-500" {...base}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+  if (status === 'payment_failed')
+    return <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-red-500" {...base}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+  if (status === 'preparing')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>;
+  if (status === 'shipped')
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
+  if (status === 'delivered')
+    return <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-emerald-600" {...base}><polyline points="20 6 9 17 4 12"/></svg>;
+  if (status === 'cancelled')
+    return <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-red-500" {...base}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+  return <svg viewBox="0 0 24 24" className={cls} fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>;
+}
+
+const STATUS_STEPS: { status: OrderStatus; label: string }[] = [
+  { status: 'pending_payment', label: 'Aguardando pagamento' },
+  { status: 'paid',            label: 'Pagamento confirmado' },
+  { status: 'preparing',       label: 'Em preparação'        },
+  { status: 'shipped',         label: 'A caminho'            },
+  { status: 'delivered',       label: 'Entregue'             },
 ];
 
 function stepIndex(status: OrderStatus) {
@@ -40,12 +82,6 @@ const TIMELINE_LABEL: Record<string, string> = {
   shipped:           'Pedido despachado',
   delivered:         'Pedido entregue',
   cancelled:         'Pedido cancelado',
-};
-
-const TIMELINE_ICON: Record<string, string> = {
-  created: '🛍', payment_initiated: '⏳', payment_confirmed: '✅',
-  payment_expired: '⌛', payment_failed: '❌', pending_payment: '⏳',
-  paid: '✅', preparing: '📦', shipped: '🚚', delivered: '🎉', cancelled: '✕',
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -127,7 +163,7 @@ export default function OrderDetailPage() {
                   }`}>
                     {i < currentStep
                       ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      : <span className="text-[13px]">{step.icon}</span>
+                      : <StepIcon status={step.status} active={i === currentStep} />
                     }
                   </div>
                   {/* label */}
@@ -155,8 +191,11 @@ export default function OrderDetailPage() {
             <div className="w-full flex gap-2">
               <input readOnly value={order.payment.pixCopyPaste}
                 className="input flex-1 text-xs truncate" />
-              <button onClick={copyPix} className="btn-primary shrink-0 text-xs px-4">
-                {copied ? '✓ Copiado' : 'Copiar'}
+              <button onClick={copyPix} className="btn-primary shrink-0 text-xs px-4 flex items-center gap-1.5">
+                {copied
+                  ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado</>
+                  : 'Copiar'
+                }
               </button>
             </div>
           </div>
@@ -207,7 +246,9 @@ export default function OrderDetailPage() {
                 <div className="border border-mist divide-y divide-mist">
                   {timeline.map((ev, i) => (
                     <div key={i} className="flex items-start gap-4 px-5 py-4">
-                      <span className="text-lg shrink-0 mt-0.5">{TIMELINE_ICON[ev.status] ?? '•'}</span>
+                      <div className="w-8 h-8 shrink-0 flex items-center justify-center bg-[#FAF7F4] border border-mist mt-0.5">
+                        <TimelineIcon status={ev.status} />
+                      </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-ink">
                           {TIMELINE_LABEL[ev.status] ?? ev.status}
@@ -262,7 +303,8 @@ export default function OrderDetailPage() {
                         rel="noopener noreferrer"
                         className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors"
                       >
-                        Rastrear →
+                        Rastrear
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                       </a>
                     )}
                   </div>

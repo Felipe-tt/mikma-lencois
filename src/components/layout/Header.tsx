@@ -182,7 +182,10 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               </div>
               <span className="text-[10px] font-medium text-mid shrink-0">
                 {freeShippingUnlocked
-                  ? <span className="text-clay font-semibold">✓ Frete grátis desbloqueado!</span>
+                  ? <span className="text-clay font-semibold flex items-center gap-1">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      Frete grátis desbloqueado!
+                    </span>
                   : <span>Frete grátis faltam <strong className="text-ink">{formatCurrency(remaining)}</strong></span>
                 }
               </span>

@@ -246,7 +246,10 @@ function RegisterContent() {
 
                 <button type="submit" disabled={loading}
                   className="btn-primary w-full h-13 text-[14px] font-semibold tracking-wide flex items-center justify-center gap-2 mt-1">
-                  {loading ? <><span className="spinner" /> Enviando…</> : 'Continuar →'}
+                  {loading
+                    ? <><span className="spinner" /> Enviando…</>
+                    : <>Continuar <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></>
+                  }
                 </button>
               </form>
 
