@@ -9,7 +9,10 @@ import type { Order, User } from '@/types';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { carrierNameVendor, trackingUrl } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
-import { IconTruck, IconProducts, IconBox, IconMaintenance } from '@/components/ui/Icon';
+import {
+  IconTruck, IconProducts, IconBox, IconMaintenance, IconUser, IconCard, IconPin, IconClock,
+  IconHourglass, IconCheck, IconMoney, IconTrophy, IconAlert, IconX,
+} from '@/components/ui/Icon';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending_payment: 'Aguardando Pagamento',
@@ -39,6 +42,21 @@ const TIMELINE_LABEL: Record<string, string> = {
   delivery_cancelled: 'Entrega cancelada — remetente corrigiu',
   delivered: 'Pedido entregue ao cliente',
   cancelled: 'Pedido cancelado',
+};
+
+const TIMELINE_ICON_COMP: Record<string, React.FC<{ size?: number; className?: string }>> = {
+  created: IconProducts,
+  payment_initiated: IconHourglass,
+  payment_confirmed: IconCheck,
+  payment_expired: IconClock,
+  payment_failed: IconX,
+  pending_payment: IconHourglass,
+  paid: IconMoney,
+  preparing: IconBox,
+  shipped: IconTruck,
+  delivery_cancelled: IconAlert,
+  delivered: IconTrophy,
+  cancelled: IconX,
 };
 
 const TIMELINE_COLOR: Record<string, string> = {
