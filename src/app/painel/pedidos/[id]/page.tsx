@@ -412,7 +412,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {order.status === 'shipped' && (
           <div className="border border-[#E6DFD5] px-5 py-4 flex flex-col gap-3">
-            <p className="text-[13px] font-bold text-[#1E1208]" flex items-center gap-1.5"><IconTruck size={13} className="text-[#C4714A]" /> Pedido despachado</p>
+            <p className="text-[13px] font-bold text-[#1E1208] flex items-center gap-1.5"><IconTruck size={13} className="text-[#C4714A]" /> Pedido despachado</p>
             {order.delivery?.trackingCode && (
               <div className="flex items-center justify-between bg-[#F0EBE1] px-3 py-2.5">
                 <div>
