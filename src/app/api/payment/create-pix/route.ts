@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getSettings } from '@/lib/settings';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
@@ -62,8 +63,9 @@ export async function POST(req: NextRequest) {
     if (!cartSnap.exists || !cartSnap.data()?.items?.length) {
       return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
     }
-    const cartItems: Array<{ sku: string; productId: string; quantity: number }> =
-      cartSnap.data()!.items;
+    const cartData = cartSnap.data()!;
+    const cartItems: Array<{ sku: string; productId: string; quantity: number }> = cartData.items;
+    const cartCouponCode: string | null = cartData.couponCode ?? null;
 
     // ── Load product prices from Firestore (never trust client prices) ───────
     const productIds = Array.from(new Set(cartItems.map(i => i.productId)));
@@ -91,7 +93,8 @@ export async function POST(req: NextRequest) {
       if (!inv) continue; // item sem controle de estoque passa
       const available = (inv.quantity ?? 0) - (inv.reserved ?? 0);
       if (available < cartItems[i].quantity) {
-        const name = cartItems[i].sku;
+        const ci = cartItems[i];
+        const name = productMap[ci.productId]?.name ?? ci.sku;
         return NextResponse.json(
           { error: `"${name}" não tem estoque suficiente. Disponível: ${available}` },
           { status: 409 }
@@ -114,7 +117,29 @@ export async function POST(req: NextRequest) {
       ? Math.round(productsCents * (pixDiscountPct / 100))
       : 0;
 
-    const amountCents = productsCents - pixDiscountCents + shippingCents;
+    // ── Validar cupom server-side (lido do carrinho, nunca do cliente) ────────
+    let couponDiscountCents = 0;
+    let couponCode: string | null = null;
+    if (cartCouponCode) {
+      const couponSnap = await adminDb.collection('coupons').doc(cartCouponCode).get();
+      if (couponSnap.exists) {
+        const c = couponSnap.data()!;
+        const now = new Date();
+        const valid =
+          c.active &&
+          (!c.expiresAt || new Date(c.expiresAt) > now) &&
+          (!c.maxUses || (c.usedCount ?? 0) < c.maxUses) &&
+          (!c.minOrderCents || productsCents >= c.minOrderCents);
+        if (valid) {
+          couponDiscountCents = c.type === 'percent'
+            ? Math.round(productsCents * c.value / 100)
+            : c.value;
+          couponCode = cartCouponCode;
+        }
+      }
+    }
+
+    const amountCents = Math.max(0, productsCents - pixDiscountCents - couponDiscountCents + shippingCents);
 
     if (amountCents <= 0) {
       return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
@@ -131,7 +156,10 @@ export async function POST(req: NextRequest) {
       status: 'pending_payment',
       productsCents,
       shippingCents,
-      discountCents: pixDiscountCents,
+      discountCents: pixDiscountCents + couponDiscountCents,
+      pixDiscountCents,
+      couponDiscountCents,
+      ...(couponCode ? { couponCode } : {}),
       totalCents: amountCents,
       payment: { method: 'pix' },
       delivery: {
@@ -140,9 +168,6 @@ export async function POST(req: NextRequest) {
         priceCents: shippingCents,
         estimatedDays: shipping.estimatedDays ?? null,
       },
-      // Mantido separado para o painel ler sem ambiguidade — delivery.*
-      // é sobrescrito ao despachar; selectedShipping fica imutável como
-      // registro da escolha original do cliente.
       selectedShipping: {
         carrier: shipping.carrier,
         label: shipping.label ?? '',
@@ -156,6 +181,13 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    // Incrementa usedCount do cupom atomicamente (best-effort)
+    if (couponCode) {
+      adminDb.collection('coupons').doc(couponCode).update({
+        usedCount: FieldValue.increment(1),
+      }).catch(() => {});
+    }
 
     // ── Load user profile for customer data ──────────────────────────────────
     const userSnap = await adminDb.collection('users').doc(uid).get();

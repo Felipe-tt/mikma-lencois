@@ -71,22 +71,30 @@ export default function CartPage() {
   }
 
   async function applyCoupon() {
-    if (!couponCode.trim()) return;
+    if (!couponCode.trim() || !user) return;
     setCouponLoading(true); setCouponError('');
     try {
-      const snap = await getDocs(query(collection(db, 'coupons'),
-        where('code', '==', couponCode.toUpperCase().trim()), where('active', '==', true)));
-      if (snap.empty) { setCouponError('Cupom inválido ou expirado.'); return; }
-      const c = snap.docs[0].data();
-      if (c.expiresAt && new Date(c.expiresAt) < new Date()) { setCouponError('Este cupom expirou.'); return; }
-      if (c.uses >= c.maxUses) { setCouponError('Cupom esgotado.'); return; }
-      if (c.minOrderCents > 0 && subtotal < c.minOrderCents) {
-        setCouponError(`Pedido mínimo de ${formatCurrency(c.minOrderCents)} para este cupom.`); return;
-      }
-      const discount = c.type === 'percent' ? Math.round(subtotal * c.value / 100) : c.value * 100;
-      setCouponApplied({ code: couponCode.toUpperCase().trim(), discount });
+      const token = await user.getIdToken();
+      const res = await fetch('/api/checkout/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code: couponCode.trim(), orderCents: subtotal }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCouponError(data.error ?? 'Cupom inválido.'); return; }
+      const { discountCents } = data;
+      setCouponApplied({ code: couponCode.toUpperCase().trim(), discount: discountCents });
+      // Persiste no carrinho para o checkout e backend lerem
+      await updateDoc(doc(db, 'carts', user.uid), { couponCode: couponCode.toUpperCase().trim() });
     } catch { setCouponError('Erro ao verificar cupom. Tente novamente.'); }
     finally { setCouponLoading(false); }
+  }
+
+  async function removeCoupon() {
+    if (!user) return;
+    setCouponApplied(null);
+    setCouponCode('');
+    await updateDoc(doc(db, 'carts', user.uid), { couponCode: null });
   }
 
   const items: CartItem[] = cart?.items ?? [];
@@ -241,7 +249,7 @@ export default function CartPage() {
                       <span className="text-xs text-emerald-600 ml-2">{formatCurrency(couponApplied.discount)} de desconto</span>
                     </div>
                   </div>
-                  <button onClick={() => { setCouponApplied(null); setCouponCode(''); setCouponOpen(false); }} className="text-xs text-emerald-500 hover:text-emerald-700 font-semibold">Remover</button>
+                  <button onClick={() => { removeCoupon(); setCouponOpen(false); }} className="text-xs text-emerald-500 hover:text-emerald-700 font-semibold">Remover</button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5">

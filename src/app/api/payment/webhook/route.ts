@@ -124,8 +124,18 @@ export async function POST(req: NextRequest) {
     try {
       const userSnap = await adminDb.collection('users').doc(order.userId as string).get();
       const userData = userSnap.data() ?? {};
-      const customerEmail = userData.email as string | undefined;
       const customerName  = (userData.name ?? userData.displayName ?? 'Cliente') as string;
+
+      // Tenta email do Firestore primeiro; cai para Firebase Auth como fallback
+      let customerEmail = userData.email as string | undefined;
+      if (!customerEmail) {
+        try {
+          const authUser = await adminAuth.getUser(order.userId as string);
+          customerEmail = authUser.email;
+        } catch {
+          console.warn(`[webhook] não foi possível obter email do Auth para uid=${order.userId}`);
+        }
+      }
 
       if (customerEmail) {
         const orderUrl = `https://mikma.com.br/pedidos/${orderId}`;

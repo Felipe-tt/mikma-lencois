@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
@@ -78,8 +79,9 @@ export async function POST(req: NextRequest) {
     if (!cartSnap.exists || !cartSnap.data()?.items?.length) {
       return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
     }
-    const cartItems: Array<{ sku: string; productId: string; quantity: number }> =
-      cartSnap.data()!.items;
+    const cartData = cartSnap.data()!;
+    const cartItems: Array<{ sku: string; productId: string; quantity: number }> = cartData.items;
+    const cartCouponCode: string | null = cartData.couponCode ?? null;
 
     // ── Load product prices from Firestore (never trust client) ───────────────
     const productIds = Array.from(new Set(cartItems.map(i => i.productId)));
@@ -107,8 +109,10 @@ export async function POST(req: NextRequest) {
       if (!inv) continue;
       const available = (inv.quantity ?? 0) - (inv.reserved ?? 0);
       if (available < cartItems[i].quantity) {
+        const ci = cartItems[i];
+        const name = productMap[ci.productId]?.name ?? ci.sku;
         return NextResponse.json(
-          { error: `"${cartItems[i].sku}" não tem estoque suficiente. Disponível: ${available}` },
+          { error: `"${name}" não tem estoque suficiente. Disponível: ${available}` },
           { status: 409 }
         );
       }
@@ -135,9 +139,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
     }
 
+    // ── Validar cupom server-side ─────────────────────────────────────────────
+    let couponDiscountCents = 0;
+    let couponCode: string | null = null;
+    if (cartCouponCode) {
+      const couponSnap = await adminDb.collection('coupons').doc(cartCouponCode).get();
+      if (couponSnap.exists) {
+        const c = couponSnap.data()!;
+        const now2 = new Date();
+        const valid =
+          c.active &&
+          (!c.expiresAt || new Date(c.expiresAt) > now2) &&
+          (!c.maxUses || (c.usedCount ?? 0) < c.maxUses) &&
+          (!c.minOrderCents || productsCents >= c.minOrderCents);
+        if (valid) {
+          couponDiscountCents = c.type === 'percent'
+            ? Math.round(productsCents * c.value / 100)
+            : c.value;
+          couponCode = cartCouponCode;
+        }
+      }
+    }
+
     // ── Aplica juros de parcelamento (se houver) ──────────────────────────────
     const feeRate = INSTALLMENT_FEES[parsedInstallments] ?? 0;
-    const totalCents = Math.round((productsCents + shippingCents) * (1 + feeRate));
+    const totalCents = Math.max(0, Math.round((productsCents - couponDiscountCents + shippingCents) * (1 + feeRate)));
     const installmentCents = Math.round(totalCents / parsedInstallments);
 
     // ── Create order ──────────────────────────────────────────────────────────
@@ -151,6 +177,9 @@ export async function POST(req: NextRequest) {
       status: 'pending_payment',
       productsCents,
       shippingCents,
+      discountCents: couponDiscountCents,
+      couponDiscountCents,
+      ...(couponCode ? { couponCode } : {}),
       totalCents,
       payment: {
         method: 'card',
@@ -176,6 +205,13 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    // Incrementa usedCount do cupom atomicamente (best-effort)
+    if (couponCode) {
+      adminDb.collection('coupons').doc(couponCode).update({
+        usedCount: FieldValue.increment(1),
+      }).catch(() => {});
+    }
 
     // ── Upsert product on AbacatePay (one per order, single-use) ─────────────
     // AbacatePay /checkouts/create precisa de um produto existente.
