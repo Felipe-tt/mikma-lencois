@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, setDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
-import type { Product, InventoryItem, ProductVariant } from '@/types';
+import type { Product, InventoryItem, ProductVariant, CartItem } from '@/types';
 
 interface Props {
   product: Product;
@@ -39,23 +39,37 @@ export function VariantSelector({ product, inventory }: Props) {
     setAdding(true);
     try {
       const sku = `${product.id}_${selectedVariant.id}`;
-      await setDoc(
-        doc(db, 'carts', user.uid),
-        {
-          userId: user.uid,
-          items: arrayUnion({
-            productId: product.id,
-            productName: product.name,
-            sku,
-            variant: selectedVariant,
-            quantity: qty,
-            unitPrice: product.price,
-            image: product.images[0] ?? '',
-          }),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      const cartRef = doc(db, 'carts', user.uid);
+
+      // Lê carrinho atual para mesclar quantidade em vez de duplicar o item
+      const cartSnap = await getDoc(cartRef);
+      const existingItems: CartItem[] = cartSnap.exists()
+        ? (cartSnap.data().items ?? [])
+        : [];
+
+      const existing = existingItems.find(i => i.sku === sku);
+      const newQty = Math.min(availableStock, (existing?.quantity ?? 0) + qty);
+
+      const newItem: CartItem = {
+        productId: product.id,
+        productName: product.name,
+        sku,
+        variant: selectedVariant,
+        quantity: newQty,
+        unitPrice: product.price,
+        image: product.images[0] ?? '',
+      };
+
+      const updatedItems = existing
+        ? existingItems.map(i => i.sku === sku ? newItem : i)
+        : [...existingItems, newItem];
+
+      await setDoc(cartRef, {
+        userId: user.uid,
+        items: updatedItems,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
       router.push('/carrinho');
     } catch (err) {
       console.error('addToCart error:', err);

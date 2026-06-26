@@ -16,6 +16,7 @@ export default function CartPage() {
   const router = useRouter();
   const [cart, setCart] = useState<Cart | null>(null);
   const [cartLoading, setCartLoading] = useState(true);
+  const [stockMap, setStockMap] = useState<Record<string, number>>({}); // sku → disponível
   const [couponCode, setCouponCode] = useState('');
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
@@ -37,6 +38,23 @@ export default function CartPage() {
       setCartLoading(false);
     });
   }, [user, loading, router]);
+
+  // Busca estoque disponível para todos os SKUs do carrinho
+  useEffect(() => {
+    const items: CartItem[] = cart?.items ?? [];
+    if (items.length === 0) { setStockMap({}); return; }
+    const skus = items.map(i => i.sku);
+    Promise.all(
+      skus.map(sku =>
+        getDocs(query(collection(db, 'inventory'), where('sku', '==', sku))).then(snap => {
+          const inv = snap.docs[0]?.data();
+          return { sku, available: inv ? Math.max(0, (inv.quantity ?? 0) - (inv.reserved ?? 0)) : 99 };
+        })
+      )
+    ).then(results => {
+      setStockMap(Object.fromEntries(results.map(r => [r.sku, r.available])));
+    }).catch(() => {});
+  }, [cart]);
 
   async function removeItem(sku: string) {
     if (!user || !cart) return;
@@ -158,6 +176,12 @@ export default function CartPage() {
                         {[item.variant.size, item.variant.fabric, item.variant.color].filter(Boolean).join(' · ')}
                       </p>
                     )}
+                    {(() => {
+                      const avail = stockMap[item.sku];
+                      if (avail === 0) return <p className="text-xs text-red-500 font-semibold">Fora de estoque — remova do carrinho</p>;
+                      if (avail !== undefined && avail <= 5) return <p className="text-xs text-amber-600 font-semibold">Apenas {avail} {avail === 1 ? 'unidade disponível' : 'unidades disponíveis'}</p>;
+                      return null;
+                    })()}
                     <p className="text-base font-semibold text-ink mt-auto">{formatCurrency(item.unitPrice)}</p>
                   </div>
 
@@ -179,8 +203,9 @@ export default function CartPage() {
                       </button>
                       <span className="w-9 text-center text-sm font-semibold text-ink tabular-nums">{item.quantity}</span>
                       <button
-                        onClick={() => updateQty(item.sku, item.quantity + 1)}
-                        className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
+                        onClick={() => { const avail = stockMap[item.sku] ?? 99; if (item.quantity < avail) updateQty(item.sku, item.quantity + 1); }}
+                        disabled={(stockMap[item.sku] ?? 99) <= item.quantity}
+                        className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         aria-label="Aumentar"
                       >
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 0a1 1 0 011 1v4h4a1 1 0 110 2H7v4a1 1 0 11-2 0V7H1a1 1 0 010-2h4V1a1 1 0 011-1z"/></svg>
