@@ -124,6 +124,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [cancellingDelivery, setCancellingDelivery] = useState(false);
   const [cancelDeliveryError, setCancelDeliveryError] = useState<string | null>(null);
+  const [cancellingOrder, setCancellingOrder] = useState(false);
+  const [cancelOrderError, setCancelOrderError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
@@ -264,6 +266,30 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       setCancelDeliveryError('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setCancellingDelivery(false);
+    }
+  }
+
+  async function handleCancelOrder() {
+    if (!order || order.status === 'cancelled' || order.status === 'delivered') return;
+    const reason = prompt('Motivo do cancelamento (opcional):') ?? '';
+    if (reason === null) return; // pressionou ESC
+    if (!confirm(`Cancelar este pedido? ${order.status !== 'pending_payment' ? 'O estoque será devolvido.' : ''} Não tem como desfazer.`)) return;
+    setCancellingOrder(true);
+    setCancelOrderError(null);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch(`/api/orders/${order.id}/admin-cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reason: reason.trim() || 'Cancelado pelo lojista' }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCancelOrderError(data.error ?? 'Erro ao cancelar pedido'); return; }
+      setOrder(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+    } catch {
+      setCancelOrderError('Erro de conexão. Tente novamente.');
+    } finally {
+      setCancellingOrder(false);
     }
   }
 
@@ -612,6 +638,19 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <Row label="Última atualização" value={order.updatedAt ? formatDateTime(order.updatedAt) : null} />
           </div>
         </details>
+
+        {/* ── Cancelar pedido (lojista) ── */}
+        {order.status !== 'cancelled' && order.status !== 'delivered' && (
+          <div className="flex flex-col gap-2">
+            {cancelOrderError && (
+              <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2">{cancelOrderError}</p>
+            )}
+            <button onClick={handleCancelOrder} disabled={cancellingOrder}
+              className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors">
+              {cancellingOrder ? 'Cancelando…' : 'Cancelar este pedido'}
+            </button>
+          </div>
+        )}
 
         {/* ── Apagar se cancelado ── */}
         {order.status === 'cancelled' && (
