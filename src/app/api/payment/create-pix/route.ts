@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { getSettings } from '@/lib/settings';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
@@ -42,8 +43,6 @@ export async function POST(req: NextRequest) {
       'pickup',
       'correios_pac', 'correios_sedex',
       'jadlog_package', 'jadlog_expresso',
-      'uber_direct', 'disk_tenha',
-      'total_express',
       'melhor_envio_1', 'melhor_envio_2',
     ];
     if (!shipping || typeof shipping.carrier !== 'string' || !VALID_CARRIERS.includes(shipping.carrier)) {
@@ -109,11 +108,10 @@ export async function POST(req: NextRequest) {
 
     const productsCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
 
-    // ── Desconto PIX (calculado no servidor, não confiamos no valor do cliente) ──
-    // Threshold: R$1.800,00 — 10% de desconto
-    const PIX_DISCOUNT_THRESHOLD_CENTS = 180000;
-    const pixDiscountCents = productsCents >= PIX_DISCOUNT_THRESHOLD_CENTS
-      ? Math.round(productsCents * 0.10)
+    // ── Desconto PIX (calculado no servidor, lido das configurações) ──────────
+    const { pixDiscountThresholdCents, pixDiscountPct } = await getSettings();
+    const pixDiscountCents = pixDiscountThresholdCents > 0 && productsCents >= pixDiscountThresholdCents
+      ? Math.round(productsCents * (pixDiscountPct / 100))
       : 0;
 
     const amountCents = productsCents - pixDiscountCents + shippingCents;

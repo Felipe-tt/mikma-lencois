@@ -50,7 +50,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Endereço obrigatório' }, { status: 400 });
     }
 
-    const VALID_CARRIERS = ['correios_pac', 'correios_sedex', 'jadlog_package', 'jadlog_expresso', 'pickup'];
+    const VALID_CARRIERS = [
+      'pickup',
+      'correios_pac', 'correios_sedex',
+      'jadlog_package', 'jadlog_expresso',
+      'melhor_envio_1', 'melhor_envio_2',
+    ];
     if (!shipping || typeof shipping.carrier !== 'string' || !VALID_CARRIERS.includes(shipping.carrier)) {
       return NextResponse.json({ error: 'Forma de envio inválida' }, { status: 400 });
     }

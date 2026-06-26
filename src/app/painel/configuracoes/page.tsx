@@ -344,6 +344,28 @@ export default function ConfiguracoesPage() {
                 : `✅ Cartão habilitado para pedidos acima de R$ ${(settings.creditMinOrderCents/100).toFixed(2)}`} />
           </Card>
 
+          <Card icon="🔖" title="Desconto PIX" desc="Ofereça desconto percentual para pagamentos via PIX acima de um valor mínimo — 0 desativa">
+            <Row>
+              <Num label="Valor mínimo para desconto (R$)"
+                value={(settings.pixDiscountThresholdCents ?? 0) / 100}
+                onChange={v => set('pixDiscountThresholdCents', Math.round(v * 100))}
+                min={0}
+                hint={(settings.pixDiscountThresholdCents ?? 0) === 0
+                  ? 'Desconto PIX desativado'
+                  : `Ativa o desconto para pedidos acima de R$ ${((settings.pixDiscountThresholdCents ?? 0)/100).toFixed(2)}`}
+              />
+              <Num label="Percentual de desconto (%)"
+                value={settings.pixDiscountPct ?? 10}
+                onChange={v => set('pixDiscountPct', Math.min(100, Math.max(0, v)))}
+                min={0}
+                max={100}
+                hint={(settings.pixDiscountThresholdCents ?? 0) === 0
+                  ? '—'
+                  : `Cliente economiza ${settings.pixDiscountPct ?? 10}% pagando com PIX`}
+              />
+            </Row>
+          </Card>
+
         </div>
       )}
 

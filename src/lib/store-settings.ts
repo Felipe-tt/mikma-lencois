@@ -60,6 +60,8 @@ export type StoreSettings = {
   businessHoursTimezone: string; // IANA, ex: "America/Sao_Paulo"
   // Payment
   creditMinOrderCents: number; // 0 = desabilitado; >0 = valor mínimo para habilitar cartão
+  pixDiscountThresholdCents: number; // 0 = desabilitado; >0 = valor mínimo para aplicar desconto PIX
+  pixDiscountPct: number; // percentual do desconto PIX (ex: 10 = 10%)
   foundedYear: string;
   // Hero
   heroLine1: string;
@@ -146,6 +148,8 @@ export const STORE_DEFAULTS: StoreSettings = {
   businessHours: JSON.stringify(DEFAULT_BUSINESS_HOURS),
   businessHoursTimezone: 'America/Sao_Paulo',
   creditMinOrderCents: 0,
+  pixDiscountThresholdCents: 180000, // R$ 1.800,00
+  pixDiscountPct: 10,
   foundedYear: '2018',
   heroLine1: '',
   heroLine2: '',

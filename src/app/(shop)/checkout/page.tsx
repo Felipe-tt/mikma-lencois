@@ -173,6 +173,10 @@ export default function CheckoutPage() {
   const [shippingError, setShipErr]     = useState('');
   const [quotedCep, setQuotedCep]       = useState('');
 
+  // Configurações de desconto PIX vindas do servidor (painel → settings)
+  const [pixThresholdCents, setPixThreshold] = useState(180000);
+  const [pixDiscountPct, setPixDiscountPct]  = useState(10);
+
   const cepRef = useRef<string>('');
 
   const quoteShipping = useCallback(async (cep: string) => {
@@ -213,6 +217,16 @@ export default function CheckoutPage() {
         email: user.email ?? '',
       });
     });
+    // Buscar configurações de desconto PIX do servidor
+    fetch('/api/checkout/pix-discount')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          setPixThreshold(d.pixDiscountThresholdCents);
+          setPixDiscountPct(d.pixDiscountPct);
+        }
+      })
+      .catch(() => { /* mantém defaults */ });
     return unsub;
   }, [user, loading, router]);
 
@@ -301,8 +315,8 @@ export default function CheckoutPage() {
   const items       = cart?.items ?? [];
   const subtotal    = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const shipCents   = selectedShipping?.priceCents ?? 0;
-  const PIX_DISCOUNT_THRESHOLD = 180000; // R$ 1.800,00
-  const pixDiscount  = subtotal >= PIX_DISCOUNT_THRESHOLD ? Math.round(subtotal * 0.10) : 0;
+  const PIX_DISCOUNT_THRESHOLD = pixThresholdCents;
+  const pixDiscount  = pixThresholdCents > 0 && subtotal >= PIX_DISCOUNT_THRESHOLD ? Math.round(subtotal * (pixDiscountPct / 100)) : 0;
   const pixTotal     = subtotal - pixDiscount + shipCents;
   // Crédito: sem desconto, com possibilidade de juros (embutidos no backend)
   const creditTotal  = subtotal + shipCents;
@@ -549,7 +563,7 @@ export default function CheckoutPage() {
                           <p className="text-sm font-bold text-[#1E1208]">PIX</p>
                           {pixDiscount > 0 && (
                             <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                              10% de desconto
+                              {pixDiscountPct}% de desconto
                             </span>
                           )}
                         </div>
@@ -617,7 +631,7 @@ export default function CheckoutPage() {
                     </div>
                     {pixDiscount > 0 && payMethod === 'pix' && (
                       <div className="flex justify-between text-emerald-600 font-medium">
-                        <span>Desconto PIX (10%)</span><span>-{formatCurrency(pixDiscount)}</span>
+                        <span>Desconto PIX ({pixDiscountPct}%)</span><span>-{formatCurrency(pixDiscount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-[#705A48]">
@@ -707,7 +721,7 @@ export default function CheckoutPage() {
                 </div>
                 {pixDiscount > 0 && payMethod === 'pix' && (
                   <div className="flex justify-between text-sm text-emerald-600 font-medium">
-                    <span>Desconto PIX (10%)</span><span>-{formatCurrency(pixDiscount)}</span>
+                    <span>Desconto PIX ({pixDiscountPct}%)</span><span>-{formatCurrency(pixDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
