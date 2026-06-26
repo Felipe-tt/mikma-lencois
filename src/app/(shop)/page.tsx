@@ -100,14 +100,43 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Trust — sem ícones, sem boxes, texto simples */}
+          {/* Trust strip — 4 pilares com ícone + separador */}
           {trustItems.length > 0 && (
-            <div className="mt-10 pt-8 border-t border-[#E0D8CE] flex flex-wrap gap-x-8 gap-y-1.5">
-              {trustItems.map(t => (
-                <span key={t} className="font-mono text-[11px] text-[#B09C8C] tracking-[0.08em]">
-                  {t}
-                </span>
-              ))}
+            <div className="mt-12 pt-8 border-t border-[#D4C4AE]/60">
+              <div className="flex flex-wrap gap-y-4 gap-x-0">
+                {trustItems.map((t, i) => (
+                  <div key={t} className="flex items-center">
+                    <div className="flex items-center gap-2.5 pr-6 sm:pr-10">
+                      <span className="text-[#7C5C3E] shrink-0">
+                        {i === 0 && (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                        )}
+                        {i === 1 && (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+                          </svg>
+                        )}
+                        {i === 2 && (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+                          </svg>
+                        )}
+                        {i === 3 && (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                          </svg>
+                        )}
+                      </span>
+                      <span className="text-[12px] text-[#5C4433] font-medium tracking-[0.02em]">{t}</span>
+                    </div>
+                    {i < trustItems.length - 1 && (
+                      <span className="h-4 w-px bg-[#D4C4AE] mr-6 sm:mr-10 shrink-0 hidden sm:block" />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
