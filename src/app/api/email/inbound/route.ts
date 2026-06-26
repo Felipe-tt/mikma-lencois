@@ -157,10 +157,84 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Erro ao buscar conteúdo do e-mail' }, { status: 500 });
   }
 
-  const text: string = fullEmail.text ?? '';
+  const rawText: string = fullEmail.text ?? '';
   const rawHtml: string = fullEmail.html ?? '';
-  const html = rawHtml ? sanitizeHtml(rawHtml) : '';
   const subject: string = fullEmail.subject ?? event.data.subject ?? '(sem assunto)';
+
+  // ── Remove o histórico citado (quoted reply) ────────────────────────────────
+  // Clientes de email incluem o thread completo na resposta. Isolamos só a
+  // parte nova antes do quote para exibir algo limpo no painel.
+
+  /**
+   * Text: remove tudo a partir de linhas com padrões típicos de quote/header:
+   *   "Em [data], [nome] escreveu:"  (Gmail pt-BR)
+   *   "On [date], [name] wrote:"     (Gmail en)
+   *   "De: " / "From: "             (Outlook forward header)
+   *   Linhas que começam com ">"    (quote puro)
+   */
+  function stripQuotedText(t: string): string {
+    const lines = t.split('\n');
+    const cutPatterns = [
+      /^>+\s?/,                                             // > quoted line
+      /^-{3,}\s*(original message|mensagem original)/i,    // --- Original Message ---
+      /^On .+wrote:$/i,                                     // On date, X wrote:
+      /^Em .+escreveu:$/i,                                  // Em data, X escreveu:
+      /^De:\s+/i,                                           // De: (Outlook header)
+      /^From:\s+/i,                                         // From:
+      /^Enviado:\s+/i,                                      // Enviado: (Outlook)
+      /^Sent:\s+/i,                                         // Sent:
+    ];
+    // Encontra a primeira linha que é claramente um delimitador de quote
+    let cutAt = lines.length;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (cutPatterns.some(p => p.test(line))) {
+        // Padrão de "Em... escreveu:" pode ser multi-linha — olha linha anterior
+        cutAt = i === 0 ? 0 : i;
+        break;
+      }
+    }
+    return lines.slice(0, cutAt).join('\n').trim();
+  }
+
+  /**
+   * HTML: remove elementos que clientes de email usam para encapsular o thread:
+   *   <blockquote>            (Gmail, Apple Mail)
+   *   <div class="gmail_quote">
+   *   <div id="divRplyFwdMsg"> (Outlook)
+   *   <hr> seguido de header   (Outlook)
+   * Estratégia: clona o DOM via regex/string, remove os containers de quote e
+   * retorna o HTML restante. Não temos DOM no Node, mas podemos usar a lib de
+   * sanitização para remover blockquotes e depois limpar.
+   */
+  function stripQuotedHtml(h: string): string {
+    // Remove blocos de quote: <blockquote ...>...</blockquote>
+    let stripped = h.replace(/<blockquote[\s\S]*?<\/blockquote>/gi, '');
+
+    // Gmail: <div class="gmail_quote ...">...</div>
+    stripped = stripped.replace(/<div[^>]*class="[^"]*gmail_quote[^"]*"[\s\S]*?<\/div>/gi, '');
+
+    // Outlook: <div id="divRplyFwdMsg">...</div>
+    stripped = stripped.replace(/<div[^>]*id="divRplyFwdMsg"[\s\S]*?<\/div>/gi, '');
+
+    // Outlook: <div id="appendonsend">...</div>
+    stripped = stripped.replace(/<div[^>]*id="appendonsend"[\s\S]*?<\/div>/gi, '');
+
+    // Remove qualquer <hr> isolado que geralmente separa o histórico
+    stripped = stripped.replace(/<hr[^>]*>/gi, '');
+
+    // Remove estilos externos que clientes de email injetam (resets, fonts)
+    stripped = stripped.replace(/<style[\s\S]*?<\/style>/gi, '');
+
+    // Limpa espaço em branco resultante de tags removidas
+    stripped = stripped.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');
+
+    return stripped.trim();
+  }
+
+  const text: string = stripQuotedText(rawText);
+  const strippedHtml = rawHtml ? stripQuotedHtml(rawHtml) : '';
+  const html = strippedHtml ? sanitizeHtml(strippedHtml) : '';
 
   // ── 2. Busca lista de attachments com download_url ─────────────────────────
   // receiving.get() traz metadados dos attachments mas sem download_url.
@@ -203,6 +277,7 @@ export async function POST(req: NextRequest) {
   const customerEmail = extractEmail(from);
   const customerName = extractName(from);
   const now = new Date().toISOString();
+  // Preview usa o texto limpo (sem quote) — se vazio (só citação), usa assunto
   const preview = text.trim().slice(0, 140) || subject;
 
   const convId = conversationIdFor(customerEmail);

@@ -378,6 +378,13 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
   const images = attachments.filter(a => a.isImage);
   const files = attachments.filter(a => !a.isImage);
 
+  const htmlContent = (msg as { html?: string }).html;
+  const textContent = msg.text;
+
+  // Usa text quando: não há HTML, ou o HTML resultante é só tags vazias/brancos
+  const htmlIsEmpty = !htmlContent || htmlContent.replace(/<[^>]*>/g, '').trim().length === 0;
+  const showHtml = !isOut && !htmlIsEmpty && !!htmlContent;
+
   return (
     <div className={`flex flex-col gap-1.5 max-w-[88%] ${isOut ? 'self-end items-end' : 'self-start items-start'}`}>
 
@@ -394,14 +401,20 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
           ? 'bg-[#1E1208] text-[#FAF8F5] px-4 py-3 rounded-tl rounded-bl'
           : 'bg-white border border-[#E6DFD5] text-[#1E1208] px-4 py-3 rounded-tr rounded-br'
       }`}>
-        {(msg as { html?: string }).html ? (
+        {showHtml ? (
           <div
             className="email-html-body"
-            style={{ fontSize: 13, lineHeight: 1.6, wordBreak: 'break-word', overflowX: 'auto' }}
-            dangerouslySetInnerHTML={{ __html: (msg as { html?: string }).html! }}
+            style={{
+              fontSize: 13,
+              lineHeight: 1.6,
+              wordBreak: 'break-word',
+              overflowX: 'auto',
+              maxWidth: '100%',
+            }}
+            dangerouslySetInnerHTML={{ __html: htmlContent! }}
           />
         ) : (
-          <p className="whitespace-pre-wrap">{msg.text}</p>
+          <p className="whitespace-pre-wrap">{textContent || '(mensagem vazia)'}</p>
         )}
       </div>
 
