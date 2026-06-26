@@ -1,4 +1,5 @@
 'use client';
+import { IconAlert, IconBox, IconCheck } from '@/components/ui/Icon';
 
 import { useEffect, useState, useRef } from 'react';
 import { collection, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
@@ -66,7 +67,7 @@ export default function EstoquePage() {
 
       {lowCount > 0 && (
         <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex items-center gap-3">
-          <span className="text-xl">⚠️</span>
+          <IconAlert size={18} className="text-amber-600 shrink-0" />
           <p className="text-[13px] text-amber-800">
             <strong>{lowCount} {lowCount === 1 ? 'produto está' : 'produtos estão'} quase acabando!</strong>
             {' '}Verifique os itens destacados em amarelo abaixo e reabasteça o estoque.
@@ -84,7 +85,7 @@ export default function EstoquePage() {
 
       {filtered.length === 0 ? (
         <div className="border border-[#E6DFD5] bg-[#FAF8F5] py-16 text-center">
-          <p className="text-4xl mb-3">📦</p>
+          <IconBox size={40} className="text-[#E6DFD5] mx-auto mb-3" />
           <p className="text-sm text-[#B09C8C]">{search ? 'Nenhum resultado.' : 'Nenhum produto no estoque ainda.'}</p>
           {!search && <Link href="/painel/produtos/novo" className="mt-3 inline-block text-[12px] text-[#C4714A] font-semibold">Adicionar produto</Link>}
         </div>
@@ -103,7 +104,7 @@ export default function EstoquePage() {
                       Tamanho: {item.variant.size}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}
                     </p>
                   </div>
-                  {low && <span className="shrink-0 text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2.5 py-1">⚠️ ACABANDO</span>}
+                  {low && <span className="shrink-0 text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2.5 py-1" flex items-center gap-1"><IconAlert size={10} />ACABANDO</span>}
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 mb-4">
@@ -138,7 +139,7 @@ export default function EstoquePage() {
 
                 {e ? (
                   <div className="flex gap-2">
-                    <button onClick={() => saveItem(item.id)} className="flex-1 bg-[#1E1208] text-white text-[12px] font-bold py-2.5 hover:bg-[#1E1208]/80 transition-colors">✓ Salvar</button>
+                    <button onClick={() => saveItem(item.id)} className="flex-1 bg-[#1E1208] text-white text-[12px] font-bold py-2.5 hover:bg-[#1E1208]/80 transition-colors flex items-center justify-center gap-1"><IconCheck size={12} />Salvar</button>
                     <button onClick={() => setEditing(ed => { const n = {...ed}; delete n[item.id]; return n; })} className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors">Cancelar</button>
                   </div>
                 ) : (

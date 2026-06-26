@@ -326,10 +326,11 @@ export default function CartPage() {
 
             {/* Selos mini */}
             <div className="mt-4 flex flex-col gap-2 px-1">
-              {[                { icon: '🔄', text: 'Troca em até 7 dias após o recebimento' },
-              ].map(({ icon, text }) => (
+              {[
+                'Troca em até 7 dias após o recebimento',
+              ].map((text) => (
                 <div key={text} className="flex items-center gap-2.5 text-xs text-faint">
-                  <span>{icon}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-[#705A48]"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/></svg>
                   <span>{text}</span>
                 </div>
               ))}

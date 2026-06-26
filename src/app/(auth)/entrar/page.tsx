@@ -123,7 +123,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
                 className="text-sm text-clay font-medium hover:underline disabled:text-faint transition-colors">
                 {loading ? 'Enviando…' : resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Reenviar link'}
               </button>
-              {resent && <p className="text-xs text-green-600 mt-2">✓ E-mail reenviado.</p>}
+              {resent && <p className="text-xs text-green-600 mt-2">E-mail reenviado.</p>}
             </div>
           </>
         )}

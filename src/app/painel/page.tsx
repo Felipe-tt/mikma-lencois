@@ -6,14 +6,15 @@ import type { Order } from '@/types';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import Link from 'next/link';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProducts, IconAlert } from '@/components/ui/Icon';
 
 const BADGE: Record<string, string> = {
   pending_payment: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
   shipped: 'badge-shipped', delivered: 'badge-delivered', cancelled: 'badge-cancelled',
 };
 const LABEL: Record<string, string> = {
-  pending_payment: 'Aguardando pagamento', paid: 'Pago ✓', preparing: 'Separando',
-  shipped: 'A caminho', delivered: 'Entregue ✓', cancelled: 'Cancelado',
+  pending_payment: 'Aguardando pagamento', paid: 'Pago', preparing: 'Separando',
+  shipped: 'A caminho', delivered: 'Entregue', cancelled: 'Cancelado',
 };
 
 export default function PainelDashboard() {
@@ -37,16 +38,16 @@ export default function PainelDashboard() {
   const needAction = orders.filter(o => o.status === 'paid').length;
 
   const kpis = [
-    { label: 'Pedidos hoje', value: paid.filter(o => o.createdAt >= todayStr).length, fmt: 'n' as const, desc: 'pedidos pagos', icon: '📦' },
-    { label: 'Dinheiro hoje', value: paid.filter(o => o.createdAt >= todayStr).reduce((s, o) => s + o.totalCents, 0), fmt: 'c' as const, desc: 'receita do dia', icon: '💰' },
-    { label: 'Pedidos no mês', value: paid.filter(o => o.createdAt >= monthStr).length, fmt: 'n' as const, desc: 'pedidos pagos', icon: '📅' },
-    { label: 'Dinheiro no mês', value: paid.filter(o => o.createdAt >= monthStr).reduce((s, o) => s + o.totalCents, 0), fmt: 'c' as const, desc: 'receita do mês', icon: '📈' },
+    { label: 'Pedidos hoje',    value: paid.filter(o => o.createdAt >= todayStr).length, fmt: 'n' as const, desc: 'pedidos pagos',  Icon: IconBox },
+    { label: 'Dinheiro hoje',   value: paid.filter(o => o.createdAt >= todayStr).reduce((s, o) => s + o.totalCents, 0), fmt: 'c' as const, desc: 'receita do dia',  Icon: IconMoney },
+    { label: 'Pedidos no mês',  value: paid.filter(o => o.createdAt >= monthStr).length, fmt: 'n' as const, desc: 'pedidos pagos',  Icon: IconCalendar },
+    { label: 'Dinheiro no mês', value: paid.filter(o => o.createdAt >= monthStr).reduce((s, o) => s + o.totalCents, 0), fmt: 'c' as const, desc: 'receita do mês', Icon: IconTrend },
   ];
 
   return (
     <div className="max-w-5xl">
       <div className="mb-8">
-        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Olá! 👋</h1>
+        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Olá!</h1>
         <p className="text-[13px] text-[#B09C8C] mt-1">Aqui está um resumo do que está acontecendo na sua loja.</p>
       </div>
 
@@ -56,25 +57,23 @@ export default function PainelDashboard() {
           {needAction > 0 && (
             <Link href="/painel/pedidos" className="flex items-center justify-between bg-[#C4714A] text-white px-5 py-3.5 hover:bg-[#A05432] transition-colors">
               <div className="flex items-center gap-3">
-                <span className="text-xl">📦</span>
+                <IconBox size={18} className="shrink-0" />
                 <div>
                   <p className="text-[13px] font-bold">{needAction} {needAction === 1 ? 'pedido precisa' : 'pedidos precisam'} ser separado{needAction !== 1 ? 's' : ''}</p>
                   <p className="text-[11px] opacity-80">Clique aqui para ver e começar a separar</p>
                 </div>
               </div>
-              
             </Link>
           )}
           {waiting > 0 && (
             <Link href="/painel/pedidos" className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 px-5 py-3.5 hover:bg-amber-100 transition-colors">
               <div className="flex items-center gap-3">
-                <span className="text-xl">⏳</span>
+                <IconHourglass size={18} className="shrink-0" />
                 <div>
                   <p className="text-[13px] font-bold">{waiting} {waiting === 1 ? 'pedido aguardando' : 'pedidos aguardando'} pagamento</p>
                   <p className="text-[11px] opacity-70">O cliente ainda não pagou — pode ser normal levar alguns minutos</p>
                 </div>
               </div>
-              
             </Link>
           )}
         </div>
@@ -84,7 +83,7 @@ export default function PainelDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {kpis.map(k => (
           <div key={k.label} className="bg-[#FAF8F5] border border-[#E6DFD5] px-4 py-4 flex flex-col gap-2">
-            <span className="text-2xl">{k.icon}</span>
+            <k.Icon size={20} className="text-[#C4714A]" />
             <div>
               <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#B09C8C] mb-0.5">{k.label}</p>
               <p className="font-display text-xl text-[#1E1208] leading-none">
@@ -106,7 +105,7 @@ export default function PainelDashboard() {
       <div className="bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
         {orders.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-4xl mb-3">🛍</p>
+            <IconProducts size={40} className="text-[#E6DFD5] mx-auto mb-3" />
             <p className="text-sm text-[#B09C8C]">Nenhum pedido ainda.<br />Quando alguém comprar, vai aparecer aqui.</p>
           </div>
         ) : orders.map((o, idx) => (

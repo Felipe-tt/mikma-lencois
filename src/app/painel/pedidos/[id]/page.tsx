@@ -39,12 +39,7 @@ const TIMELINE_LABEL: Record<string, string> = {
   delivered: 'Pedido entregue ao cliente',
   cancelled: 'Pedido cancelado',
 };
-const TIMELINE_ICON: Record<string, string> = {
-  created: '🛍', payment_initiated: '⏳', payment_confirmed: '✅',
-  payment_expired: '⌛', payment_failed: '❌', pending_payment: '⏳',
-  paid: '💰', preparing: '📦', shipped: '🚚', delivery_cancelled: '↩',
-  delivered: '🎉', cancelled: '✕',
-};
+
 const TIMELINE_COLOR: Record<string, string> = {
   created: 'bg-[#E6DFD5]', payment_initiated: 'bg-blue-300', payment_confirmed: 'bg-emerald-400',
   payment_expired: 'bg-orange-400', payment_failed: 'bg-red-400', pending_payment: 'bg-yellow-300',
@@ -96,11 +91,16 @@ function Row({ label, value, mono }: { label: string; value?: string | null; mon
   );
 }
 
+const CARD_ICONS: Record<string, React.FC<{ size?: number; className?: string }>> = {
+  user: IconUser, card: IconCard, pin: IconPin, truck: IconTruck, clock: IconClock,
+};
+
 function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+  const IconComp = CARD_ICONS[icon];
   return (
     <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
       <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-        <span>{icon}</span>
+        {IconComp && <IconComp size={13} className="text-[#705A48]" />}
         <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">{title}</p>
       </div>
       <div className="px-5 py-1">{children}</div>
@@ -350,11 +350,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           const carrier = shipping?.carrier ?? 'correios_pac';
           const isPickup = carrier === 'pickup';
           const CARRIER_LABELS: Record<string, string> = {
-            correios_pac: '📮 Correios PAC',
-            correios_sedex: '⚡ Correios SEDEX',
-            jadlog_package: '🚚 Jadlog Package',
-            jadlog_expresso: '🚚 Jadlog Expresso',
-            pickup: '🏠 Retirada na loja',
+            correios_pac: 'Correios PAC',
+            correios_sedex: 'Correios SEDEX',
+            jadlog_package: 'Jadlog Package',
+            jadlog_expresso: 'Jadlog Expresso',
+            pickup: 'Retirada na loja',
           };
           return (
             <div className="border border-[#1E1208]/20 bg-[#1E1208]/5 px-5 py-4 flex flex-col gap-3">
@@ -412,7 +412,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {order.status === 'shipped' && (
           <div className="border border-[#E6DFD5] px-5 py-4 flex flex-col gap-3">
-            <p className="text-[13px] font-bold text-[#1E1208]">Pedido despachado 🚚</p>
+            <p className="text-[13px] font-bold text-[#1E1208]" flex items-center gap-1.5"><IconTruck size={13} className="text-[#C4714A]" /> Pedido despachado</p>
             {order.delivery?.trackingCode && (
               <div className="flex items-center justify-between bg-[#F0EBE1] px-3 py-2.5">
                 <div>
@@ -421,20 +421,20 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 </div>
                 <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
                   className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
-                  {copied === 'tracking' ? '✓ Copiado!' : 'Copiar'}
+                  {copied === 'tracking' ? 'Copiado!' : 'Copiar'}
                 </button>
               </div>
             )}
             {order.delivery?.trackingUrl && (
               <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
                 className="text-[12px] text-[#C4714A] font-semibold hover:underline">
-                🔍 Rastrear envio →
+                Rastrear envio →
               </a>
             )}
             {order.delivery?.labelUrl && (
               <a href={order.delivery.labelUrl} target="_blank" rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors">
-                🖨️ Reimprimir etiqueta
+                Reimprimir etiqueta
               </a>
             )}
             <button onClick={advanceStatus} disabled={updating}
@@ -447,13 +447,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             )}
             <button onClick={cancelDelivery} disabled={cancellingDelivery}
               className="w-full text-[12px] font-semibold text-red-600 hover:text-red-700 disabled:opacity-50 transition-colors py-1">
-              {cancellingDelivery ? 'Cancelando…' : '✕ Cancelar entrega'}
+              {cancellingDelivery ? 'Cancelando…' : 'Cancelar entrega'}
             </button>
           </div>
         )}
 
         {/* ── Cliente ── */}
-        <Card title="Cliente" icon="👤">
+        <Card title="Cliente" icon="user">
           {customer ? (
             <>
               <Row label="Nome" value={customer.name} />
@@ -472,7 +472,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {/* ── Itens ── */}
         <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-            <span>🛍</span>
+            <IconProducts size={14} className="text-[#705A48] shrink-0" />
             <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Itens do pedido</p>
           </div>
           <div className="divide-y divide-[#E6DFD5]">
@@ -513,7 +513,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </div>
 
         {/* ── Pagamento ── */}
-        <Card title="Pagamento" icon="💳">
+        <Card title="Pagamento" icon="card">
           <Row label="Método" value={order.payment.method.toUpperCase()} />
           <Row label="Status" value={STATUS_LABELS[order.status]} />
           <Row label="Pago em" value={order.payment.paidAt ? formatDateTime(order.payment.paidAt) : null} />
@@ -529,7 +529,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <span className="text-[12px] text-[#B09C8C]">PIX Copia e Cola</span>
                 <button onClick={() => copy(order.payment.method === 'pix' ? order.payment.pixCopyPaste! : '', 'pix')}
                   className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
-                  {copied === 'pix' ? '✓ Copiado!' : 'Copiar'}
+                  {copied === 'pix' ? 'Copiado!' : 'Copiar'}
                 </button>
               </div>
               <p className="text-[10px] font-mono text-[#B09C8C] break-all bg-[#F0EBE1] px-2 py-1.5 leading-relaxed">
@@ -540,7 +540,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </Card>
 
         {/* ── Endereço de entrega ── */}
-        <Card title="Endereço de entrega" icon="📍">
+        <Card title="Endereço de entrega" icon="pin">
           <Row label="Rua" value={`${order.address.street}, ${order.address.number}${order.address.complement ? ` — ${order.address.complement}` : ''}`} />
           <Row label="Bairro" value={order.address.neighborhood} />
           <Row label="Cidade" value={`${order.address.city} — ${order.address.state}`} />
@@ -549,14 +549,14 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <button
               onClick={() => copy(`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP ${order.address.cep}`, 'address')}
               className="w-full border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2 hover:bg-[#F0EBE1] transition-colors">
-              {copied === 'address' ? '✓ Endereço copiado!' : 'Copiar endereço completo'}
+              {copied === 'address' ? 'Endereço copiado!' : 'Copiar endereço completo'}
             </button>
           </div>
         </Card>
 
         {/* ── Entrega / Rastreio ── */}
         {order.delivery && (
-          <Card title="Entrega" icon="🚚">
+          <Card title="Entrega" icon="truck">
             <Row label="Transportadora" value={order.delivery.carrier ? carrierNameVendor(order.delivery.carrier) : 'Não definida'} />
             <Row label="Despachado em" value={order.delivery.dispatchedAt ? formatDateTime(order.delivery.dispatchedAt) : null} />
             <Row label="Previsão" value={order.delivery.estimatedDelivery ? formatDateTime(order.delivery.estimatedDelivery) : null} />
@@ -566,7 +566,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   <span className="text-[12px] text-[#B09C8C]">Código de rastreio</span>
                   <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
                     className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
-                    {copied === 'tracking' ? '✓ Copiado!' : 'Copiar'}
+                    {copied === 'tracking' ? 'Copiado!' : 'Copiar'}
                   </button>
                 </div>
                 <p className="font-mono text-[13px] text-[#1E1208] font-bold mb-2">{order.delivery.trackingCode}</p>
@@ -590,7 +590,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {order.delivery?.carrier && order.delivery.carrier !== 'pickup' && order.delivery.carrier !== 'manual' && (
           <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-              <span>📦</span>
+              <IconBox size={16} className="text-[#705A48] shrink-0" />
               <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Rastreamento</p>
               <span className="ml-auto font-mono text-[11px] text-[#705A48]">{order.delivery.trackingCode}</span>
             </div>
@@ -601,7 +601,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         )}
 
         {/* ── Histórico do pedido ── */}
-        <Card title="Histórico do pedido" icon="🕐">
+        <Card title="Histórico do pedido" icon="clock">
           <div className="py-3">
             {timeline.length === 0 ? (
               <p className="text-[12px] text-[#B09C8C] text-center py-3">Sem histórico registrado.</p>
@@ -612,7 +612,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     <div className={`w-2.5 h-2.5 shrink-0 mt-1.5 ${TIMELINE_COLOR[ev.status] ?? 'bg-[#E6DFD5]'}`} />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{TIMELINE_ICON[ev.status] ?? '•'}</span>
+                        (() => {
+                        const TLIcon = TIMELINE_ICON_COMP[ev.status];
+                        return TLIcon ? <TLIcon size={13} /> : <span>•</span>;
+                      })()
                         <p className="text-[13px] font-semibold text-[#1E1208]">{timelineLabel(ev.status, order)}</p>
                       </div>
                       {ev.note && <p className="text-[12px] text-[#705A48] mt-0.5 ml-7">{ev.note}</p>}
@@ -628,7 +631,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {/* ── Info técnica ── */}
         <details className="bg-[#FAF8F5] border border-[#E6DFD5]">
           <summary className="flex items-center gap-2 px-5 py-3.5 cursor-pointer select-none bg-[#F0EAE1] border-b border-[#E6DFD5]">
-            <span>🔧</span>
+            <IconMaintenance size={14} className="text-[#705A48] shrink-0" />
             <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Informações técnicas</p>
           </summary>
           <div className="px-5 py-1">

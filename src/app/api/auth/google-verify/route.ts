@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ⚠️  NÃO ADICIONE createCustomToken AQUI.
+    // NAO ADICIONE createCustomToken AQUI.
     //
     // createCustomToken exige iam.serviceAccounts.signBlob na service account
     // do Cloud Run. No Firebase Hosting com webframeworks, essa permissão causou

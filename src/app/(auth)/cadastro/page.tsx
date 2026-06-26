@@ -29,7 +29,7 @@ function PasswordStrength({ password }: { password: string }) {
         ))}
       </div>
       <p className={`text-xs ${score===3?'text-green-500':score===2?'text-yellow-500':'text-red-400'}`}>
-        {score===3?'✓ Senha forte':score===2?'Senha média — adicione maiúscula ou número':'Senha fraca'}
+        {score===3?'Senha forte':score===2?'Senha média — adicione maiúscula ou número':'Senha fraca'}
       </p>
     </div>
   );
@@ -207,7 +207,7 @@ function RegisterContent() {
                     n === stepNum ? 'bg-ink text-paper' :
                     'bg-mist text-faint'
                   }`}>
-                    {n < stepNum ? '✓' : n}
+                    {n}
                   </div>
                   <p className={`text-xs hidden sm:block ${n === stepNum ? 'text-ink font-medium' : 'text-faint'}`}>
                     {n===1?'Seu e-mail':n===2?'Confirmar':n===3?'Sua senha':''}
@@ -291,7 +291,7 @@ function RegisterContent() {
                 >
                   {loading ? 'Enviando…' : resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Enviar novamente'}
                 </button>
-                {resent && <p className="text-xs text-green-600 mt-2">✓ E-mail reenviado.</p>}
+                {resent && <p className="text-xs text-green-600 mt-2">E-mail reenviado.</p>}
                 <p className="text-xs text-faint mt-2">Verifique também a caixa de spam.</p>
                 <button onClick={() => { setStep('email'); setError(''); }}
                   className="block mx-auto mt-4 text-xs text-faint hover:text-mid underline underline-offset-2">
@@ -341,7 +341,7 @@ function RegisterContent() {
                     className="input text-base" placeholder="Digite a senha novamente"
                     autoComplete="new-password" />
                   {confirm && password === confirm && (
-                    <p className="mt-1.5 text-xs text-green-500 flex items-center gap-1"><span>✓</span> Senhas iguais</p>
+                    <p className="mt-1.5 text-xs text-green-500 flex items-center gap-1">Senhas iguais</p>
                   )}
                 </div>
 

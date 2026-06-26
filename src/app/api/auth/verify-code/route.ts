@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
   }
 
-  // ✅ Token correto — marca como verificado
+  // Token correto — marca como verificado
   await ref.update({ verified: true, verifiedAt: new Date().toISOString(), ip });
 
   return NextResponse.json({ ok: true, name: data.name });

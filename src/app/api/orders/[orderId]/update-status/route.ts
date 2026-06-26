@@ -96,7 +96,7 @@ function buildPreparing(order: Order, name: string) {
   const html = wrap(`
     <div style="padding:36px 36px 4px;">
       <p style="margin:0 0 4px;font-size:12px;color:#9C8B7C;letter-spacing:.08em;text-transform:uppercase;">Pedido #${id}</p>
-      <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">📦 Pedido em separação!</h1>
+      <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">Pedido em separação!</h1>
       <p style="margin:0 0 14px;font-size:15px;color:#2C1F14;line-height:1.7;">
         Olá, <strong>${name}</strong>! Nossa equipe já começou a separar e embalar o seu pedido com todo cuidado.
       </p>
@@ -108,7 +108,7 @@ function buildPreparing(order: Order, name: string) {
     </div>
     ${sig()}`);
   return {
-    subject: `📦 Pedido #${id} em separação — ${STORE}`,
+    subject: `Pedido #${id} em separação — ${STORE}`,
     html,
     text: `Olá, ${name}! Seu pedido #${id} está sendo separado. Acompanhe em: ${url}`,
   };
@@ -130,7 +130,7 @@ function buildShipped(order: Order, name: string) {
   const html = wrap(`
     <div style="padding:36px 36px 4px;">
       <p style="margin:0 0 4px;font-size:12px;color:#9C8B7C;letter-spacing:.08em;text-transform:uppercase;">Pedido #${id}</p>
-      <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">🚚 Pedido despachado!</h1>
+      <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">Pedido despachado!</h1>
       <p style="margin:0 0 14px;font-size:15px;color:#2C1F14;line-height:1.7;">
         Olá, <strong>${name}</strong>! Seu pedido saiu e está a caminho. Fique de olho!
       </p>
@@ -140,7 +140,7 @@ function buildShipped(order: Order, name: string) {
     </div>
     ${sig()}`);
   return {
-    subject: `🚚 Pedido #${id} despachado — ${STORE}`,
+    subject: `Pedido #${id} despachado — ${STORE}`,
     html,
     text: `Olá, ${name}! Pedido #${id} despachado.${code ? ` Rastreio: ${code}` : ''} Veja em: ${url}`,
   };
@@ -152,9 +152,9 @@ function buildDelivered(order: Order, name: string) {
   const html = wrap(`
     <div style="padding:36px 36px 4px;">
       <p style="margin:0 0 4px;font-size:12px;color:#9C8B7C;letter-spacing:.08em;text-transform:uppercase;">Pedido #${id}</p>
-      <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">🎉 Pedido entregue!</h1>
+      <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">Pedido entregue!</h1>
       <p style="margin:0 0 14px;font-size:15px;color:#2C1F14;line-height:1.7;">
-        Olá, <strong>${name}</strong>! Seu pedido chegou. Esperamos que você ame seus novos lençóis! 🛏
+        Olá, <strong>${name}</strong>! Seu pedido chegou. Esperamos que você ame seus novos lençóis!
       </p>
       <p style="margin:0 0 20px;font-size:14px;color:#705A48;line-height:1.65;">
         Qualquer dúvida, é só responder esse e-mail — estamos aqui.
@@ -164,7 +164,7 @@ function buildDelivered(order: Order, name: string) {
     </div>
     ${sig()}`);
   return {
-    subject: `🎉 Pedido #${id} entregue — ${STORE}`,
+    subject: `Pedido #${id} entregue — ${STORE}`,
     html,
     text: `Olá, ${name}! Pedido #${id} entregue com sucesso. Veja em: ${url}`,
   };

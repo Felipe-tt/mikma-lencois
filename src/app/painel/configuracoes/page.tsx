@@ -1,4 +1,11 @@
 'use client';
+import React from 'react';
+import {
+  IconStore, IconImage, IconBox, IconTruck, IconEdit, IconPin, IconPhone,
+  IconClock, IconAlert, IconCheck, IconTrend, IconBolt, IconShield,
+  IconRuler, IconGift, IconBell, IconCard, IconReceipt, IconSettings,
+  IconInfo, IconX, IconInventory, IconMail,
+} from '@/components/ui/Icon';
 
 import { useEffect, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -15,10 +22,10 @@ import { maskCnpj, isValidCnpj } from '@/lib/masks';
 type Tab = 'loja' | 'vitrine' | 'produto' | 'entrega';
 
 const TABS: { id: Tab; icon: string; label: string; sub: string }[] = [
-  { id: 'loja',    icon: '🏪', label: 'Minha loja',   sub: 'Nome, endereço, contato' },
-  { id: 'vitrine', icon: '🖼️', label: 'Vitrine',       sub: 'Como o site aparece' },
-  { id: 'produto', icon: '📦', label: 'Produtos',      sub: 'Guias e informações' },
-  { id: 'entrega', icon: '🚚', label: 'Entrega',       sub: 'Frete e pagamento' },
+  { id: 'loja',    icon: 'loja',    label: 'Minha loja',   sub: 'Nome, endereço, contato' },
+  { id: 'vitrine', icon: 'vitrine', label: 'Vitrine',       sub: 'Como o site aparece' },
+  { id: 'produto', icon: 'produto', label: 'Produtos',      sub: 'Guias e informações' },
+  { id: 'entrega', icon: 'entrega', label: 'Entrega',       sub: 'Frete e pagamento' },
 ];
 
 export default function ConfiguracoesPage() {
@@ -84,7 +91,7 @@ export default function ConfiguracoesPage() {
         <div className="flex flex-col gap-5">
 
           <Card
-            icon="✏️"
+            icon="edit"
             title="Nome e slogan"
             desc="Como sua loja aparece para os clientes"
           >
@@ -94,12 +101,12 @@ export default function ConfiguracoesPage() {
               value={settings.storeSlogan} onChange={v => set('storeSlogan', v)}
               placeholder="Conforto direto da fábrica" />
             <F label="CNPJ (opcional)"
-              hint={!settings.storeCnpj ? 'Aparece no rodapé do site' : isValidCnpj(settings.storeCnpj) ? '✅ CNPJ válido' : '⚠️ CNPJ incompleto'}
+              hint={!settings.storeCnpj ? 'Aparece no rodapé do site' : isValidCnpj(settings.storeCnpj) ? 'CNPJ válido' : 'CNPJ incompleto'}
               value={settings.storeCnpj ?? ''} onChange={v => set('storeCnpj', maskCnpj(v))}
               placeholder="00.000.000/0000-00" maxLength={18} />
           </Card>
 
-          <Card icon="📍" title="Onde você fica" desc="Endereço físico da sua loja — usado também para gerar etiquetas de envio">
+          <Card icon="pin" title="Onde você fica" desc="Endereço físico da sua loja — usado também para gerar etiquetas de envio">
             <Row>
               <F label="Rua" value={settings.storeAddress} onChange={v => set('storeAddress', v)} placeholder="Rua das Flores" />
               <F label="Número" value={settings.storeNumber} onChange={v => set('storeNumber', v)} placeholder="123" />
@@ -115,7 +122,7 @@ export default function ConfiguracoesPage() {
             </Row>
           </Card>
 
-          <Card icon="📞" title="Como te chamam?" desc="Formas de contato que aparecem no site" onPreview={() => setPreview('footer')}>
+          <Card icon="phone" title="Como te chamam?" desc="Formas de contato que aparecem no site" onPreview={() => setPreview('footer')}>
             <F label="WhatsApp" value={settings.storePhone} onChange={v => set('storePhone', v)}
               placeholder="(47) 99999-0000" hint="Número principal de atendimento" />
             <F label="Link do WhatsApp" value={settings.whatsappUrl ?? ''} onChange={v => set('whatsappUrl', v)}
@@ -126,7 +133,7 @@ export default function ConfiguracoesPage() {
               placeholder="https://instagram.com/mikmalencois" hint="Aparece no rodapé" />
           </Card>
 
-          <Card icon="🕐" title="Horário de funcionamento" desc="Quando sua loja está aberta — aparece no site com indicador 'aberto agora'" onPreview={() => setPreview('sobre')}>
+          <Card icon="clock" title="Horário de funcionamento" desc="Quando sua loja está aberta — aparece no site com indicador 'aberto agora'" onPreview={() => setPreview('sobre')}>
             <BusinessHoursEditor
               value={parseBusinessHours(settings.businessHours)}
               onChange={next => set('businessHours', serializeBusinessHours(next))}
@@ -152,14 +159,14 @@ export default function ConfiguracoesPage() {
       {tab === 'vitrine' && (
         <div className="flex flex-col gap-5">
 
-          <Card icon="📢" title="Faixa de aviso" desc='Barra no topo do site — ótima para promoções ("Frete grátis acima de R$ 199")' onPreview={() => setPreview('hero')}>
+          <Card icon="megaphone" title="Faixa de aviso" desc='Barra no topo do site — ótima para promoções ("Frete grátis acima de R$ 199")' onPreview={() => setPreview('hero')}>
             <F label="Texto do aviso"
               value={settings.topbarText} onChange={v => set('topbarText', v)}
-              placeholder="🚚 Entrega grátis acima de R$ 199 · Blumenau em 1h"
+              placeholder="Entrega grátis acima de R$ 199 · Blumenau em 1h"
               hint="Deixe em branco para ocultar" />
           </Card>
 
-          <Card icon="🖼️" title="Banner principal" desc="A primeira coisa que o cliente vê — título grande e destaque da sua loja" onPreview={() => setPreview('hero')}>
+          <Card icon="frame" title="Banner principal" desc="A primeira coisa que o cliente vê — título grande e destaque da sua loja" onPreview={() => setPreview('hero')}>
             <Info>O título aparece em 3 linhas. A linha do meio fica em laranja — use para a parte mais impactante.</Info>
             <F label="Linha 1" value={settings.heroLine1 ?? ''} onChange={v => set('heroLine1', v)} placeholder="O conforto" />
             <F label="Linha 2 (laranja)" value={settings.heroLine2 ?? ''} onChange={v => set('heroLine2', v)} placeholder="que acompanha" />
@@ -178,7 +185,7 @@ export default function ConfiguracoesPage() {
             </Row>
           </Card>
 
-          <Card icon="✅" title="Selos de confiança" desc="4 frases curtas que aparecem abaixo do banner — transmite segurança ao cliente" onPreview={() => setPreview('hero')}>
+          <Card icon="check" title="Selos de confiança" desc="4 frases curtas que aparecem abaixo do banner — transmite segurança ao cliente" onPreview={() => setPreview('hero')}>
             <Info>Frases objetivas que respondem: por que comprar aqui? Ex: entrega rápida, PIX, frete grátis.</Info>
             {[1,2,3,4].map(n => (
               <F key={n} label={`Selo ${n}`}
@@ -188,7 +195,7 @@ export default function ConfiguracoesPage() {
             ))}
           </Card>
 
-          <Card icon="📊" title="Números da sua loja" desc="Estatísticas que aparecem num banner escuro na página inicial — prova social" onPreview={() => setPreview('featured')}>
+          <Card icon="trend" title="Números da sua loja" desc="Estatísticas que aparecem num banner escuro na página inicial — prova social" onPreview={() => setPreview('featured')}>
             <Info>Mostre resultados reais da sua loja. Isso gera confiança no cliente.</Info>
             <Row>
               <F label="Pedidos entregues" value={settings.statOrders} onChange={v => set('statOrders', v)} placeholder="1.200+" />
@@ -202,7 +209,7 @@ export default function ConfiguracoesPage() {
               placeholder="Escolhas da semana" hint="Aparece acima dos produtos em destaque na página inicial" />
           </Card>
 
-          <Card icon="🔚" title="Chamada final" desc="Seção escura no final da página inicial com uma frase marcante e botões de ação" onPreview={() => setPreview('cta')}>
+          <Card icon="bolt" title="Chamada final" desc="Seção escura no final da página inicial com uma frase marcante e botões de ação" onPreview={() => setPreview('cta')}>
             <F label="Linha 1 da frase" value={settings.ctaSloganLine1 ?? ''} onChange={v => set('ctaSloganLine1', v)} placeholder="Feito em Blumenau." />
             <F label="Linha 2 (em laranja)" value={settings.ctaSloganLine2 ?? ''} onChange={v => set('ctaSloganLine2', v)} placeholder="Dorme bem." />
             <Row>
@@ -211,7 +218,7 @@ export default function ConfiguracoesPage() {
             </Row>
           </Card>
 
-          <Card icon="📖" title="Página Sobre nós" desc="Conte a história da sua empresa para os clientes" onPreview={() => setPreview('sobre')}>
+          <Card icon="book" title="Página Sobre nós" desc="Conte a história da sua empresa para os clientes" onPreview={() => setPreview('sobre')}>
             <Row>
               <F label="Título (linha laranja)" value={settings.aboutHeroLine1} onChange={v => set('aboutHeroLine1', v)} placeholder={settings.storeName || 'Mikma Lençóis'} />
               <F label="Título (linha cinza)" value={settings.aboutHeroLine2} onChange={v => set('aboutHeroLine2', v)} placeholder={`em ${settings.storeCity || 'Blumenau'}, SC.`} />
@@ -245,14 +252,14 @@ export default function ConfiguracoesPage() {
       {tab === 'produto' && (
         <div className="flex flex-col gap-5">
 
-          <Card icon="🛡️" title="Garantias do produto" desc="3 frases que aparecem na página de cada produto abaixo do botão de comprar — reforça confiança">
+          <Card icon="shield" title="Garantias do produto" desc="3 frases que aparecem na página de cada produto abaixo do botão de comprar — reforça confiança">
             <Info>Use frases curtas e diretas. Ex: entrega, pagamento, suporte.</Info>
             <F label="Garantia 1" value={settings.productTrust1 ?? ''} onChange={v => set('productTrust1', v)} placeholder="Entrega local em Blumenau em até 1h" />
             <F label="Garantia 2" value={settings.productTrust2 ?? ''} onChange={v => set('productTrust2', v)} placeholder="Frete para todo o Brasil com rastreio" />
             <F label="Garantia 3" value={settings.productTrust3 ?? ''} onChange={v => set('productTrust3', v)} placeholder="Pagamento PIX com confirmação imediata" />
           </Card>
 
-          <Card icon="📏" title="Guia de medidas" desc="Tabela que abre quando o cliente clica em 'Guia de medidas' na página do produto">
+          <Card icon="ruler" title="Guia de medidas" desc="Tabela que abre quando o cliente clica em 'Guia de medidas' na página do produto">
             <Info>Configure as colunas (separadas por vírgula) e depois preencha as linhas. A primeira coluna é sempre o nome do tamanho.</Info>
             <F label="Colunas da tabela"
               value={(() => { try { return JSON.parse(settings.sizeGuideColumns || '[]').join(', '); } catch { return ''; } })()}
@@ -268,7 +275,7 @@ export default function ConfiguracoesPage() {
               placeholder="Medidas podem variar ±2 cm após lavagem. Recomendamos lavar antes do primeiro uso." />
           </Card>
 
-          <Card icon="🛏️" title="Guia de tamanhos de cama" desc="Tabela recolhível na página do produto — mostra dimensões de cada tamanho de cama">
+          <Card icon="ruler" title="Guia de tamanhos de cama" desc="Tabela recolhível na página do produto — mostra dimensões de cada tamanho de cama">
             <Info>Ajuda o cliente a saber qual tamanho pedir conforme o tamanho da cama dele.</Info>
             <F label="Colunas da tabela"
               value={(() => { try { return JSON.parse(settings.bedSizeColumns || '[]').join(', '); } catch { return ''; } })()}
@@ -288,7 +295,7 @@ export default function ConfiguracoesPage() {
       {tab === 'entrega' && (
         <div className="flex flex-col gap-5">
 
-          <Card icon="📦" title="De onde você envia?" desc="Endereço de onde seus produtos saem — usado para calcular o frete automaticamente">
+          <Card icon="produto" title="De onde você envia?" desc="Endereço de onde seus produtos saem — usado para calcular o frete automaticamente">
             <F label="CEP de envio" value={settings.originCep} onChange={v => set('originCep', v)}
               placeholder="89000-000" hint="CEP do seu estoque ou loja física" />
             <Num label="Raio de entrega rápida (km)"
@@ -297,7 +304,7 @@ export default function ConfiguracoesPage() {
               min={1} max={100} />
             <details className="border border-[#E6DFD5]">
               <summary className="px-3 py-2.5 text-[12px] text-[#B09C8C] cursor-pointer select-none">
-                ⚙️ Coordenadas GPS (avançado — só mexa se souber)
+                Coordenadas GPS (avançado — só mexa se souber)
               </summary>
               <div className="px-3 pb-3 pt-2 flex flex-col gap-3">
                 <Row>
@@ -308,17 +315,17 @@ export default function ConfiguracoesPage() {
             </details>
           </Card>
 
-          <Card icon="🎁" title="Frete grátis" desc="A partir de qual valor o frete passa a ser gratuito">
+          <Card icon="gift" title="Frete grátis" desc="A partir de qual valor o frete passa a ser gratuito">
             <Num label="Valor mínimo para frete grátis (R$)"
               value={settings.freeShippingThresholdCents / 100}
               onChange={v => set('freeShippingThresholdCents', Math.round(v * 100))}
               hint={settings.freeShippingThresholdCents === 0
                 ? 'Digite 0 para manter desativado'
-                : `✅ Frete grátis em pedidos acima de R$ ${(settings.freeShippingThresholdCents/100).toFixed(2)}`}
+                : `Frete grátis em pedidos acima de R$ ${(settings.freeShippingThresholdCents/100).toFixed(2)}`}
               min={0} />
           </Card>
 
-          <Card icon="⏰" title="Quando você envia?" desc="Horário limite para o pedido sair hoje — depois desse horário vai no próximo dia útil">
+          <Card icon="timer" title="Quando você envia?" desc="Horário limite para o pedido sair hoje — depois desse horário vai no próximo dia útil">
             <F label="Horário de corte" value={settings.dispatchCutoffTime}
               onChange={v => set('dispatchCutoffTime', v)} type="time"
               hint={`Pedidos feitos após ${settings.dispatchCutoffTime} são enviados no próximo dia útil`} />
@@ -327,24 +334,24 @@ export default function ConfiguracoesPage() {
               step={0.1} hint="Usado para calcular o frete — peso do lençol já dentro da embalagem" />
           </Card>
 
-          <Card icon="🔔" title="Alerta de estoque baixo" desc="Quando o sistema avisa que um produto está quase acabando">
+          <Card icon="bell" title="Alerta de estoque baixo" desc="Quando o sistema avisa que um produto está quase acabando">
             <Num label="Avisar quando restar quantas unidades?"
               value={settings.lowStockThreshold} onChange={v => set('lowStockThreshold', v)}
               min={0}
               hint={`O produto aparecerá como "Últimas unidades" quando restar ${settings.lowStockThreshold} ou menos`} />
           </Card>
 
-          <Card icon="💳" title="Pagamento por cartão" desc="Habilite cartão de crédito a partir de um valor mínimo — 0 desativa">
+          <Card icon="card" title="Pagamento por cartão" desc="Habilite cartão de crédito a partir de um valor mínimo — 0 desativa">
             <Num label="Valor mínimo para cartão (R$)"
               value={settings.creditMinOrderCents / 100}
               onChange={v => set('creditMinOrderCents', Math.round(v * 100))}
               min={0}
               hint={settings.creditMinOrderCents === 0
-                ? '❌ Cartão desativado — apenas PIX disponível'
-                : `✅ Cartão habilitado para pedidos acima de R$ ${(settings.creditMinOrderCents/100).toFixed(2)}`} />
+                ? 'Cartão desativado — apenas PIX disponível'
+                : `Cartão habilitado para pedidos acima de R$ ${(settings.creditMinOrderCents/100).toFixed(2)}`} />
           </Card>
 
-          <Card icon="🔖" title="Desconto PIX" desc="Ofereça desconto percentual para pagamentos via PIX acima de um valor mínimo — 0 desativa">
+          <Card icon="tag" title="Desconto PIX" desc="Ofereça desconto percentual para pagamentos via PIX acima de um valor mínimo — 0 desativa">
             <Row>
               <Num label="Valor mínimo para desconto (R$)"
                 value={(settings.pixDiscountThresholdCents ?? 0) / 100}
@@ -378,7 +385,7 @@ export default function ConfiguracoesPage() {
             {saving
               ? <><span className="spinner" />Salvando…</>
               : saved
-              ? '✅ Salvo com sucesso!'
+              ? 'Salvo com sucesso!'
               : 'Salvar alterações'}
           </button>
           {saved && <p className="text-center text-[11px] text-[#B09C8C] mt-2">Mudanças podem levar até 10 min para aparecer no site.</p>}
@@ -396,15 +403,26 @@ export default function ConfiguracoesPage() {
 }
 
 /* ── Card container ────────────────────────────────────────────────────── */
+const CARD_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
+  loja: IconStore, vitrine: IconImage, produto: IconBox, entrega: IconTruck,
+  edit: IconEdit, pin: IconPin, phone: IconPhone, clock: IconClock,
+  alert: IconAlert, check: IconCheck, trend: IconTrend, bolt: IconBolt,
+  shield: IconShield, ruler: IconRuler, gift: IconGift, bell: IconBell,
+  card: IconCard, receipt: IconReceipt, settings: IconSettings,
+  info: IconInfo, inventory: IconInventory, mail: IconMail, book: IconShield,
+  megaphone: IconBell, frame: IconImage, timer: IconClock, tag: IconReceipt,
+};
+
 function Card({ icon, title, desc, children, onPreview }: {
   icon: string; title: string; desc: string;
   children: React.ReactNode; onPreview?: () => void;
 }) {
+  const IconComp = CARD_ICON_MAP[icon];
   return (
     <div className="border border-[#E6DFD5] bg-white overflow-hidden">
       <div className="flex items-start justify-between gap-3 px-5 py-4 bg-[#FAF8F5] border-b border-[#E6DFD5]">
         <div className="flex items-start gap-3">
-          <span className="text-xl mt-0.5 shrink-0">{icon}</span>
+          {IconComp ? <IconComp size={16} className="text-[#705A48] mt-0.5 shrink-0" /> : null}
           <div>
             <p className="text-[13px] font-bold text-[#1E1208]">{title}</p>
             <p className="text-[11px] text-[#B09C8C] mt-0.5 leading-relaxed">{desc}</p>
@@ -431,7 +449,7 @@ function Divider({ label }: { label: string }) {
 function Info({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex gap-2 bg-blue-50 border border-blue-100 px-3 py-2.5 rounded-sm -mt-1">
-      <span className="text-blue-400 text-xs mt-0.5 shrink-0">ℹ️</span>
+      <IconInfo size={13} className="text-blue-400 mt-0.5 shrink-0" />
       <p className="text-[11px] text-blue-700 leading-relaxed">{children}</p>
     </div>
   );
@@ -510,7 +528,7 @@ function TableEditor({ colsJson, rowsJson, onRowsChange }: {
           </div>
           <button onClick={() => onRowsChange(JSON.stringify(rows.filter((_,idx)=>idx!==i)))}
             className="w-7 h-7 flex items-center justify-center text-[#C8BAB0] hover:text-red-400 transition-colors shrink-0 text-sm">
-            ✕
+            <IconX size={14} />
           </button>
         </div>
       ))}

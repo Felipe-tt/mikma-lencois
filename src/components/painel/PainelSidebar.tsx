@@ -6,17 +6,21 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import {
+  IconHome, IconOrders, IconMessages, IconProducts,
+  IconInventory, IconReports, IconCoupons, IconSettings, IconMaintenance,
+} from '@/components/ui/Icon';
 
 const NAV = [
-  { href: '/painel', label: 'Início', desc: 'Resumo da loja', exact: true, icon: '🏠' },
-  { href: '/painel/pedidos', label: 'Pedidos', desc: 'Ver e separar pedidos', icon: '📦' },
-  { href: '/painel/mensagens', label: 'Mensagens', desc: 'Conversas com clientes', icon: '✉️' },
-  { href: '/painel/produtos', label: 'Produtos', desc: 'Cadastrar e editar', icon: '🛍' },
-  { href: '/painel/estoque', label: 'Estoque', desc: 'Quantidades disponíveis', icon: '📋' },
-  { href: '/painel/relatorios', label: 'Relatórios', desc: 'Vendas e faturamento', icon: '📊' },
-  { href: '/painel/cupons', label: 'Cupons', desc: 'Descontos para clientes', icon: '🎟' },
-  { href: '/painel/configuracoes', label: 'Configurações', desc: 'Textos e informações', icon: '⚙️' },
-  { href: '/painel/manutencao', label: 'Manutenção', desc: 'Controle de acesso ao site', icon: '🔧' },
+  { href: '/painel',                label: 'Início',         desc: 'Resumo da loja',             exact: true, Icon: IconHome },
+  { href: '/painel/pedidos',        label: 'Pedidos',        desc: 'Ver e separar pedidos',                   Icon: IconOrders },
+  { href: '/painel/mensagens',      label: 'Mensagens',      desc: 'Conversas com clientes',                  Icon: IconMessages },
+  { href: '/painel/produtos',       label: 'Produtos',       desc: 'Cadastrar e editar',                      Icon: IconProducts },
+  { href: '/painel/estoque',        label: 'Estoque',        desc: 'Quantidades disponíveis',                 Icon: IconInventory },
+  { href: '/painel/relatorios',     label: 'Relatórios',     desc: 'Vendas e faturamento',                    Icon: IconReports },
+  { href: '/painel/cupons',         label: 'Cupons',         desc: 'Descontos para clientes',                 Icon: IconCoupons },
+  { href: '/painel/configuracoes',  label: 'Configurações',  desc: 'Textos e informações',                    Icon: IconSettings },
+  { href: '/painel/manutencao',     label: 'Manutenção',     desc: 'Controle de acesso ao site',              Icon: IconMaintenance },
 ];
 
 export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
@@ -45,7 +49,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         <ul className="flex flex-col gap-0.5">
-          {NAV.map(({ href, label, desc, exact, icon }) => {
+          {NAV.map(({ href, label, desc, exact, Icon }) => {
             const active = exact ? pathname === href : pathname.startsWith(href);
             return (
               <li key={href}>
@@ -58,7 +62,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
                       : 'text-[#705A48] hover:text-[#1E1208] hover:bg-[#F0EBE1]'
                     }`}
                 >
-                  <span className="text-base shrink-0">{icon}</span>
+                  <Icon size={15} className="shrink-0" />
                   <span className="flex flex-col flex-1">
                     <span className="text-[13px] font-semibold leading-tight flex items-center gap-2">
                       {label}

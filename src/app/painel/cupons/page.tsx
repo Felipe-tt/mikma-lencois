@@ -1,4 +1,5 @@
 'use client';
+import { IconAlert, IconCoupons, IconInfo, IconCheck } from '@/components/ui/Icon';
 
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -63,7 +64,7 @@ export default function CuponsPage() {
       {showForm && (
         <div className="bg-[#FAF8F5] border border-[#E6DFD5] p-5 mb-6">
           <h2 className="text-[14px] font-bold text-[#1E1208] mb-4">Novo cupom</h2>
-          {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold">⚠️ {error}</div>}
+          {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold" flex items-center gap-1"><IconAlert size={11} />{error}</div>}
 
           <div className="flex flex-col gap-4">
             <div>
@@ -117,7 +118,7 @@ export default function CuponsPage() {
             {form.code && form.value > 0 && (
               <div className="bg-[#C4714A]/5 border border-[#C4714A]/20 px-4 py-3">
                 <p className="text-[12px] text-[#1E1208]">
-                  💡 <strong>Resumo:</strong> O cupom <strong className="font-mono">{form.code || '...'}</strong> vai dar{' '}
+                  <IconInfo size={13} className="text-[#705A48]" /> <strong>Resumo:</strong> O cupom <strong className="font-mono">{form.code || '...'}</strong> vai dar{' '}
                   <strong>{form.type === 'percent' ? `${form.value}%` : `R$ ${form.value.toFixed(2)}`} de desconto</strong>
                   {form.minOrderCents > 0 && ` em pedidos acima de R$ ${form.minOrderCents.toFixed(2)}`}
                   {` e pode ser usado ${form.maxUses} vez${form.maxUses !== 1 ? 'es' : ''}`}
@@ -136,7 +137,7 @@ export default function CuponsPage() {
 
       {coupons.length === 0 ? (
         <div className="border border-[#E6DFD5] bg-[#FAF8F5] py-16 text-center">
-          <p className="text-4xl mb-3">🎟</p>
+          <IconCoupons size={40} className="text-[#E6DFD5] mx-auto mb-3" />
           <p className="text-sm text-[#B09C8C]">Nenhum cupom criado ainda.<br />Crie seu primeiro cupom clicando no botão acima!</p>
         </div>
       ) : (
@@ -152,7 +153,7 @@ export default function CuponsPage() {
                   className={`shrink-0 text-[11px] font-bold px-3 py-1.5 border transition-colors ${
                     c.active ? 'border-[#C4714A] text-[#C4714A] hover:bg-[#C4714A] hover:text-white' : 'border-[#E6DFD5] text-[#B09C8C] hover:bg-[#F0EBE1]'
                   }`}>
-                  {c.active ? '✓ Ativo' : 'Pausado'}
+                  {c.active ? 'Ativo' : 'Pausado'}
                 </button>
               </div>
               <div className="flex items-center justify-between text-[11px] text-[#B09C8C] pt-3 border-t border-[#E6DFD5]">

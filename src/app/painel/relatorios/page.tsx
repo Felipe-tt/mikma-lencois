@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { IconMoney, IconBox, IconReceipt, IconTrophy, IconTruck, IconReports } from '@/components/ui/Icon';
 import { collection, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Order } from '@/types';
@@ -90,12 +91,12 @@ export default function RelatoriosPage() {
           {/* KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
-              { icon: '💰', label: 'Total faturado', value: fmt(stats.revenue), desc: 'soma de todos os pedidos pagos' },
-              { icon: '📦', label: 'Pedidos entregues', value: String(stats.orders), desc: 'pedidos concluídos no período' },
-              { icon: '🧾', label: 'Valor médio por pedido', value: fmt(stats.avgTicket), desc: 'quanto cada cliente gastou em média' },
+              { Icon: IconMoney, label: 'Total faturado', value: fmt(stats.revenue), desc: 'soma de todos os pedidos pagos' },
+              { Icon: IconBox, label: 'Pedidos entregues', value: String(stats.orders), desc: 'pedidos concluídos no período' },
+              { Icon: IconReceipt, label: 'Valor médio por pedido', value: fmt(stats.avgTicket), desc: 'quanto cada cliente gastou em média' },
             ].map(k => (
               <div key={k.label} className="bg-[#FAF8F5] border border-[#E6DFD5] px-5 py-4">
-                <span className="text-2xl mb-2 block">{k.icon}</span>
+                <k.Icon size={20} className="text-[#C4714A] mb-2" />
                 <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#B09C8C] mb-1">{k.label}</p>
                 <p className="font-display text-2xl text-[#1E1208] leading-none">{k.value}</p>
                 <p className="text-[10px] text-[#B09C8C] mt-1">{k.desc}</p>
@@ -106,7 +107,7 @@ export default function RelatoriosPage() {
           {/* Top produtos */}
           <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
             <div className="px-5 py-4 border-b border-[#E6DFD5]">
-              <p className="text-[13px] font-bold text-[#1E1208]">🏆 Produtos mais vendidos</p>
+              <p className="text-[13px] font-bold text-[#1E1208] flex items-center gap-2"><IconTrophy size={14} className="text-[#C4714A]" /> Produtos mais vendidos</p>
               <p className="text-[11px] text-[#B09C8C] mt-0.5">Os produtos que mais geraram receita no período</p>
             </div>
             {stats.topProducts.length === 0 ? (
@@ -138,7 +139,7 @@ export default function RelatoriosPage() {
           {stats.byCarrier.length > 0 && (
             <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
               <div className="px-5 py-4 border-b border-[#E6DFD5]">
-                <p className="text-[13px] font-bold text-[#1E1208]">🚚 Como os pedidos foram entregues</p>
+                <p className="text-[13px] font-bold text-[#1E1208] flex items-center gap-2"><IconTruck size={14} className="text-[#C4714A]" /> Como os pedidos foram entregues</p>
                 <p className="text-[11px] text-[#B09C8C] mt-0.5">Qual método de entrega foi mais usado</p>
               </div>
               {stats.byCarrier.map((c, i) => (
@@ -152,7 +153,7 @@ export default function RelatoriosPage() {
 
           {stats.orders === 0 && (
             <div className="bg-[#FAF8F5] border border-[#E6DFD5] py-12 text-center">
-              <p className="text-4xl mb-3">📊</p>
+              <IconReports size={40} className="text-[#E6DFD5] mx-auto mb-3" />
               <p className="text-[13px] text-[#B09C8C]">Não houve vendas nos {period === '7d' ? '7' : period === '30d' ? '30' : '90'} dias selecionados.<br />Experimente selecionar um período maior.</p>
             </div>
           )}

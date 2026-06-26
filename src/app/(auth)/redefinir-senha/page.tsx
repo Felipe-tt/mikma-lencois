@@ -24,7 +24,7 @@ function PasswordStrength({ password }: { password: string }) {
         ))}
       </div>
       <p className={`text-xs ${score===3?'text-green-500':score===2?'text-yellow-500':'text-red-400'}`}>
-        {score===3?'✓ Senha forte':score===2?'Senha média':'Senha fraca — adicione maiúscula e número'}
+        {score===3?'Senha forte':score===2?'Senha média':'Senha fraca — adicione maiúscula e número'}
       </p>
     </div>
   );
@@ -180,7 +180,7 @@ function ResetForm() {
             className="input text-base" placeholder="Digite a senha novamente"
             autoComplete="new-password" />
           {confirm && password === confirm && (
-            <p className="mt-1.5 text-xs text-green-500 flex items-center gap-1"><span>✓</span> Senhas iguais</p>
+            <p className="mt-1.5 text-xs text-green-500 flex items-center gap-1">Senhas iguais</p>
           )}
         </div>
 

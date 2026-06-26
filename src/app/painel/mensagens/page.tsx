@@ -1,4 +1,5 @@
 'use client';
+import { IconMail, IconMessages, IconAlert } from '@/components/ui/Icon';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
@@ -57,7 +58,7 @@ export default function PainelMensagens() {
           <div className="overflow-y-auto flex-1">
             {conversations.length === 0 ? (
               <div className="py-16 text-center px-6">
-                <p className="text-4xl mb-3">✉️</p>
+                <IconMail size={40} className="text-[#E6DFD5] mx-auto mb-3" />
                 <p className="text-[13px] font-semibold text-[#1E1208] mb-1">Nenhuma mensagem ainda</p>
                 <p className="text-[12px] text-[#B09C8C]">
                   Quando alguém escrever para contato@mikma.com.br, a conversa aparece aqui.
@@ -110,7 +111,7 @@ export default function PainelMensagens() {
             <ConversationThread conversation={selected} onBack={() => setSelectedId(null)} />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-3">
-              <p className="text-3xl">💬</p>
+              <IconMessages size={32} className="text-[#E6DFD5] mx-auto mb-3" />
               <p className="text-[14px] font-semibold text-[#1E1208]">Selecione uma conversa</p>
               <p className="text-[12px] text-[#B09C8C]">As mensagens aparecem aqui.</p>
             </div>
@@ -301,7 +302,7 @@ function ConversationThread({
 
         <div className="p-3 flex flex-col gap-2">
           {error && (
-            <p className="text-[12px] text-red-500 font-medium">⚠️ {error}</p>
+            <p className="text-[12px] text-red-500 font-medium flex items-center gap-1"><IconAlert size={11} />{error}</p>
           )}
 
           {/* Assunto (opcional, expansível) */}

@@ -100,7 +100,7 @@ export function PhotoCaptureModal({ onCapture, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex flex-col bg-black/95">
       <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
         <span className="text-sm font-semibold">Foto do produto</span>
-        <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center">✕</button>
+        <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
@@ -126,7 +126,7 @@ export function PhotoCaptureModal({ onCapture, onClose }: Props) {
                 onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
               />
               <div className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/30 rounded-2xl py-14 px-6 text-white/80 active:border-white/60">
-                <span className="text-6xl">📷</span>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 <span className="text-base font-semibold text-center">Tirar foto</span>
                 <span className="text-xs text-white/50 text-center">Aponte para o produto</span>
               </div>

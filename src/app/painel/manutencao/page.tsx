@@ -1,4 +1,5 @@
 'use client';
+import { IconMaintenance, IconCheck, IconMobile, IconComputer, IconPin, IconAlert } from '@/components/ui/Icon';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -156,7 +157,7 @@ export default function ManutencaoPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[14px] font-bold text-[#1E1208] mb-0.5">
-              {status.active ? '🔧 Site em manutenção' : '✅ Site online'}
+              {status.active ? 'Site em manutenção' : 'Site online'}
             </p>
             <p className="text-[12px] text-[#B09C8C]">
               {status.active
@@ -252,7 +253,7 @@ export default function ManutencaoPage() {
           <div className="divide-y divide-[#E6DFD5]">
             {currentList.map(entry => {
               const location = [entry.geoCity, entry.geoRegion, entry.geoCountry].filter(Boolean).join(', ');
-              const device = entry.isMobile === '?1' ? '📱 Celular' : entry.isMobile === '?0' ? '💻 Computador' : '';
+              const device = entry.isMobile === '?1' ? 'Celular' : entry.isMobile === '?0' ? 'Computador' : '';
               return (
                 <div key={entry.id} className="px-5 py-3 flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -274,10 +275,10 @@ export default function ManutencaoPage() {
                           <span className="text-[10px] text-[#C8BAB0] font-mono">{entry.ip}</span>
                         )}
                         {location && (
-                          <span className="text-[10px] text-[#B09C8C]">📍 {location}</span>
+                          <span className="text-[10px] text-[#B09C8C] flex items-center gap-0.5"><IconPin size={9} />{location}</span>
                         )}
                         {entry.isp && (
-                          <span className="text-[10px] text-[#B09C8C]">🌐 {entry.isp}</span>
+                          <span className="text-[10px] text-[#B09C8C]">{entry.isp}</span>
                         )}
                         {device && (
                           <span className="text-[10px] text-[#B09C8C]">{device}</span>
@@ -286,7 +287,7 @@ export default function ManutencaoPage() {
                           <span className="text-[10px] text-[#B09C8C]">{entry.platform}</span>
                         )}
                         {entry.geoDebug && (
-                          <span className="text-[10px] text-red-400">⚠ geo: {entry.geoDebug}</span>
+                          <span className="text-[10px] text-red-400">geo: {entry.geoDebug}</span>
                         )}
                       </div>
 
@@ -323,7 +324,7 @@ export default function ManutencaoPage() {
                       {releasing === (entry.uid ?? entry.ip) ? '…' : 'Liberar'}
                     </button>
                   ) : (
-                    <span className="shrink-0 text-[11px] text-green-600 font-semibold">✓ Liberado</span>
+                    <span className="shrink-0 text-[11px] text-green-600 font-semibold flex items-center gap-0.5"><IconCheck size={10} />Liberado</span>
                   )}
                 </div>
               );

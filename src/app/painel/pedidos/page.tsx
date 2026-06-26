@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -7,6 +8,10 @@ import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
 import { PainelSkeleton } from '@/components/painel/PainelSkeleton';
 import Link from 'next/link';
+import {
+  IconAlert, IconBox, IconTruck, IconCheck, IconHourglass, IconX,
+  IconHome, IconPostOffice, IconBolt, IconSearch, IconPin, IconArrowRight,
+} from '@/components/ui/Icon';
 
 const STATUS_LABEL: Record<string, string> = {
   pending_payment: 'Aguardando pagamento',
@@ -26,14 +31,14 @@ const BADGE: Record<string, string> = {
   cancelled:       'badge-cancelled',
 };
 
-const FILTERS = [
-  { id: 'todos',           label: 'Todos',              emoji: '' },
-  { id: 'paid',            label: 'Precisam separar',   emoji: '🔴' },
-  { id: 'preparing',       label: 'Separando',          emoji: '📦' },
-  { id: 'shipped',         label: 'Despachados',        emoji: '🚚' },
-  { id: 'delivered',       label: 'Entregues',          emoji: '✓' },
-  { id: 'pending_payment', label: 'Aguardando pgto',    emoji: '⏳' },
-  { id: 'cancelled',       label: 'Cancelados',         emoji: '✕' },
+const FILTERS: { id: string; label: string; Icon?: React.FC<React.SVGProps<SVGSVGElement> & { size?: number }> }[] = [
+  { id: 'todos',           label: 'Todos' },
+  { id: 'paid',            label: 'Precisam separar',   Icon: IconAlert },
+  { id: 'preparing',       label: 'Separando',          Icon: IconBox },
+  { id: 'shipped',         label: 'Despachados',        Icon: IconTruck },
+  { id: 'delivered',       label: 'Entregues',          Icon: IconCheck },
+  { id: 'pending_payment', label: 'Aguardando pgto',    Icon: IconHourglass },
+  { id: 'cancelled',       label: 'Cancelados',         Icon: IconX },
 ];
 
 function paymentLabel(order: Order) {
@@ -47,10 +52,10 @@ function paymentLabel(order: Order) {
 
 function carrierLabel(carrier?: string) {
   if (!carrier) return '';
-  if (carrier === 'pickup') return '🏠 Retirada';
-  if (carrier.startsWith('correios_pac')) return '📮 Correios PAC';
-  if (carrier.startsWith('correios_sedex')) return '⚡ SEDEX';
-  if (carrier.startsWith('jadlog')) return '🚚 Jadlog';
+  if (carrier === 'pickup') return 'Retirada';
+  if (carrier.startsWith('correios_pac')) return 'Correios PAC';
+  if (carrier.startsWith('correios_sedex')) return 'Correios SEDEX';
+  if (carrier.startsWith('jadlog')) return 'Jadlog';
   return carrier;
 }
 
@@ -174,7 +179,7 @@ export default function PainelPedidos() {
       {/* Alerta de ação necessária */}
       {needActionCount > 0 && (
         <div className="bg-[#C4714A]/10 border border-[#C4714A]/30 px-4 py-3.5 mb-5 flex items-center gap-3">
-          <span className="text-xl shrink-0">🔴</span>
+          <IconAlert size={18} className="shrink-0 text-[#C4714A]" />
           <p className="text-[13px] text-[#1E1208] flex-1">
             <strong>{needActionCount} pedido{needActionCount > 1 ? 's' : ''} pago{needActionCount > 1 ? 's' : ''}</strong> esperando você separar.
           </p>
@@ -198,7 +203,7 @@ export default function PainelPedidos() {
                     ? 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208]'
                     : 'bg-[#FAF8F5] text-[#705A48] border-[#E6DFD5] hover:bg-[#F0EBE1]'
                 }`}>
-                {f.emoji && <span>{f.emoji}</span>}
+                {f.Icon && <f.Icon size={11} className="shrink-0" />}
                 {f.label}
                 <span className={`text-[9px] font-bold ${filter === f.id ? 'opacity-40' : 'opacity-50'}`}>{count}</span>
               </button>
@@ -225,7 +230,7 @@ export default function PainelPedidos() {
       <div className="border border-[#E6DFD5] overflow-hidden divide-y divide-[#E6DFD5]">
         {filtered.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-3xl mb-3">{search ? '🔍' : '🎉'}</p>
+            <IconSearch size={32} className="text-[#E6DFD5] mx-auto mb-3" />
             <p className="text-sm text-[#B09C8C]">
               {search ? `Nenhum pedido encontrado para "${search}"` : 'Nenhum pedido nessa categoria.'}
             </p>
@@ -259,7 +264,7 @@ export default function PainelPedidos() {
                     <span className="text-[11px] text-[#B09C8C]">{carrierLabel(order.delivery.carrier)}</span>
                   )}
                   {order.address?.city && (
-                    <span className="text-[11px] text-[#B09C8C]">📍 {order.address.city}, {order.address.state}</span>
+                    <span className="text-[11px] text-[#B09C8C] flex items-center gap-1"><IconPin size={10} />{order.address.city}, {order.address.state}</span>
                   )}
                 </div>
                 {/* Itens */}
@@ -279,7 +284,7 @@ export default function PainelPedidos() {
             {/* CTA pago */}
             {order.status === 'paid' && (
               <div className="mt-3 flex items-center gap-3 p-3 bg-[#C4714A]/5 border border-[#C4714A]/20">
-                <span className="text-base shrink-0">👉</span>
+                <IconArrowRight size={16} className="shrink-0 text-[#C4714A]" />
                 <div className="flex-1">
                   <p className="text-[12px] font-semibold text-[#1E1208]">Pagamento confirmado — separe o pedido!</p>
                   <p className="text-[11px] text-[#B09C8C]">Clique quando começar a preparar.</p>
@@ -294,7 +299,7 @@ export default function PainelPedidos() {
             {/* CTA separando */}
             {order.status === 'preparing' && (
               <div className="mt-3 flex items-center gap-3 p-3 bg-[#1E1208]/5 border border-[#1E1208]/10">
-                <span className="text-base shrink-0">📦</span>
+                <IconBox size={16} className="shrink-0" />
                 <div className="flex-1">
                   <p className="text-[12px] font-semibold text-[#1E1208]">Separando o pedido</p>
                   <p className="text-[11px] text-[#B09C8C]">Quando embalado e pronto para sair, clique em Despachar.</p>

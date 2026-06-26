@@ -191,7 +191,7 @@ export default function PedidosPage() {
                       >
                         {actionOrderId === order.id
                           ? <><span className="spinner w-3.5 h-3.5" /> Gerando…</>
-                          : '💸 Pagar agora'
+                          : 'Pagar agora'
                         }
                       </button>
                       <button

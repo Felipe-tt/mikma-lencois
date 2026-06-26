@@ -1,4 +1,5 @@
 'use client';
+import { IconAlert, IconSearch, IconProducts } from '@/components/ui/Icon';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -79,7 +80,7 @@ export default function PainelProdutosPage() {
 
       {errorMsg && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-2">
-          ⚠️ {errorMsg}
+          <IconAlert size={12} className="shrink-0" /> {errorMsg}
         </div>
       )}
 
@@ -102,7 +103,7 @@ export default function PainelProdutosPage() {
 
       {filtered.length === 0 ? (
         <div className="border border-[#E6DFD5] py-16 text-center bg-[#FAF8F5]">
-          <p className="text-4xl mb-3">{search ? '🔍' : '🛍'}</p>
+          {search ? <IconSearch size={36} className="text-[#E6DFD5] mx-auto mb-3" /> : <IconProducts size={36} className="text-[#E6DFD5] mx-auto mb-3" />}
           <p className="text-sm text-[#B09C8C]">{search ? 'Nenhum produto encontrado com esse nome.' : 'Você ainda não cadastrou nenhum produto.'}</p>
           {!search && <p className="text-[12px] text-[#C4714A] mt-2 font-semibold">Clique em &quot;+ Novo produto&quot; para começar!</p>}
         </div>
@@ -159,7 +160,7 @@ export default function PainelProdutosPage() {
                         : 'border-[#E6DFD5] text-[#B09C8C] hover:bg-[#F0EBE1]'
                     }`}
                   >
-                    {isBusy ? '…' : p.active ? '✓ Visível' : 'Oculto'}
+                    {isBusy ? '…' : p.active ? 'Visível' : 'Oculto'}
                   </button>
                 </div>
 
@@ -174,7 +175,7 @@ export default function PainelProdutosPage() {
                         : 'border-[#E6DFD5] text-[#B09C8C]'
                     }`}
                   >
-                    {isBusy ? '…' : p.active ? '✓ Visível' : 'Oculto'}
+                    {isBusy ? '…' : p.active ? 'Visível' : 'Oculto'}
                   </button>
 
                   {isConfirming ? (
