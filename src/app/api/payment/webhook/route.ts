@@ -215,6 +215,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (eventType === 'transparent.expired') {
+    // PIX expirou — marca o pedido como payment_expired para o cliente saber
+    const transparent = data.transparent;
+    const orderId = transparent.externalId as string | undefined;
+    if (orderId) {
+      const orderRef = adminDb.collection('orders').doc(orderId);
+      const orderSnap = await orderRef.get();
+      if (orderSnap.exists && orderSnap.data()!.status === 'pending_payment') {
+        const now = new Date().toISOString();
+        await orderRef.update({
+          status: 'payment_expired',
+          updatedAt: FieldValue.serverTimestamp(),
+          timeline: FieldValue.arrayUnion({
+            status: 'payment_expired',
+            at: now,
+            note: 'PIX expirou sem pagamento',
+          }),
+        });
+        console.log(`Order ${orderId} marked as payment_expired`);
+      }
+    }
+  }
+
   if (eventType === 'transparent.completed') {
     const transparent = data.transparent;
     const txId = transparent.id as string;

@@ -35,18 +35,21 @@ const TIMELINE_LABEL: Record<string, string> = {
   paid: 'Pagamento recebido',
   preparing: 'Começou a separar o pedido',
   shipped: 'Pedido despachado',
+  delivery_cancelled: 'Entrega cancelada — remetente corrigiu',
   delivered: 'Pedido entregue ao cliente',
   cancelled: 'Pedido cancelado',
 };
 const TIMELINE_ICON: Record<string, string> = {
   created: '🛍', payment_initiated: '⏳', payment_confirmed: '✅',
   payment_expired: '⌛', payment_failed: '❌', pending_payment: '⏳',
-  paid: '💰', preparing: '📦', shipped: '🚚', delivered: '🎉', cancelled: '✕',
+  paid: '💰', preparing: '📦', shipped: '🚚', delivery_cancelled: '↩',
+  delivered: '🎉', cancelled: '✕',
 };
 const TIMELINE_COLOR: Record<string, string> = {
   created: 'bg-[#E6DFD5]', payment_initiated: 'bg-blue-300', payment_confirmed: 'bg-emerald-400',
   payment_expired: 'bg-orange-400', payment_failed: 'bg-red-400', pending_payment: 'bg-yellow-300',
   paid: 'bg-emerald-400', preparing: 'bg-blue-400', shipped: 'bg-purple-400',
+  delivery_cancelled: 'bg-orange-300',
   delivered: 'bg-emerald-500', cancelled: 'bg-red-400',
 };
 

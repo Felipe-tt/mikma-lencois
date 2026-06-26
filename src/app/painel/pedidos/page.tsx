@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
@@ -98,7 +98,12 @@ export default function PainelPedidos() {
   async function markPreparing(orderId: string) {
     setUpdating(orderId);
     try {
-      await updateDoc(doc(db, 'orders', orderId), { status: 'preparing', updatedAt: serverTimestamp() });
+      const token = await auth.currentUser?.getIdToken();
+      await fetch(`/api/orders/${orderId}/update-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'preparing' }),
+      });
     } finally { setUpdating(null); }
   }
 

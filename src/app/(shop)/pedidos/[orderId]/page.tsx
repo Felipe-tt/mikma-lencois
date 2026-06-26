@@ -71,17 +71,18 @@ function stepIndex(status: OrderStatus) {
 // ─── Timeline interna do pedido (eventos do Firestore) ───────────────────────
 
 const TIMELINE_LABEL: Record<string, string> = {
-  created:           'Pedido criado',
-  payment_initiated: 'Aguardando pagamento',
-  payment_confirmed: 'Pagamento confirmado',
-  payment_expired:   'PIX expirou',
-  payment_failed:    'Pagamento recusado',
-  pending_payment:   'Aguardando pagamento',
-  paid:              'Pagamento confirmado',
-  preparing:         'Pedido em preparação',
-  shipped:           'Pedido despachado',
-  delivered:         'Pedido entregue',
-  cancelled:         'Pedido cancelado',
+  created:              'Pedido criado',
+  payment_initiated:    'Aguardando pagamento',
+  payment_confirmed:    'Pagamento confirmado',
+  payment_expired:      'PIX expirou',
+  payment_failed:       'Pagamento recusado',
+  pending_payment:      'Aguardando pagamento',
+  paid:                 'Pagamento confirmado',
+  preparing:            'Pedido em preparação',
+  shipped:              'Pedido despachado',
+  delivery_cancelled:   'Entrega cancelada — novo envio em breve',
+  delivered:            'Pedido entregue',
+  cancelled:            'Pedido cancelado',
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────

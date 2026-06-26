@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         'delivery.dispatchedAt': FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         timeline: FieldValue.arrayUnion({
-          event: 'shipped',
+          status: 'shipped',
           at: new Date().toISOString(),
           note: 'Cliente retirou na loja',
         }),
@@ -134,10 +134,21 @@ export async function POST(req: NextRequest) {
     const userData = userSnap.data() ?? {};
     const cpf = (userData.cpf ?? '').replace(/\D/g, '');
 
+    // Email com fallback para Auth (igual ao webhook)
+    let customerEmail = (userData.email as string | undefined) ?? '';
+    if (!customerEmail) {
+      try {
+        const authUser = await adminAuth.getUser(order.userId);
+        customerEmail = authUser.email ?? '';
+      } catch {
+        console.warn(`[delivery] não foi possível obter email do Auth para uid=${order.userId}`);
+      }
+    }
+
     const to: MEAddress = {
       name:        userData.name || 'Cliente',
       phone:       (userData.phone || '').replace(/\D/g, '').slice(0, 11) || '47999999999',
-      email:       userData.email || '',
+      email:       customerEmail,
       document:    cpf || '00000000000', // CPF obrigatório no ME
       address:     addr.street,
       number:      addr.number || 'S/N',
@@ -192,7 +203,7 @@ export async function POST(req: NextRequest) {
       'delivery.dispatchedAt':     FieldValue.serverTimestamp(),
       updatedAt:                   FieldValue.serverTimestamp(),
       timeline: FieldValue.arrayUnion({
-        event: 'shipped',
+        status: 'shipped',
         at:    new Date().toISOString(),
         note:  `Despachado via Melhor Envio · ${carrier} · ${trackingCode ?? 'sem rastreio ainda'}`,
       }),
@@ -278,7 +289,7 @@ export async function DELETE(req: NextRequest) {
       'delivery.dispatchedAt':       null,
       updatedAt: FieldValue.serverTimestamp(),
       timeline: FieldValue.arrayUnion({
-        event: 'delivery_cancelled',
+        status: 'delivery_cancelled',
         at:    new Date().toISOString(),
         note:  `Entrega cancelada por ${decoded.email ?? decoded.uid} · Motivo: ${reason}`,
       }),
