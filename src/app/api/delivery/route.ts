@@ -18,6 +18,7 @@ import type { Order } from '@/types';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import {
   meDispatch,
+  meCancel,
   ME_SERVICES,
   type MEAddress,
   type MEProduct,
@@ -201,5 +202,91 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[delivery/dispatch]', err);
     return NextResponse.json({ error: 'Erro ao despachar o pedido. Tente novamente.' }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/delivery
+ * Cancela uma entrega já despachada via Melhor Envio.
+ * Apenas seller/admin — nunca o cliente.
+ *
+ * Cancela a etiqueta no Melhor Envio, reverte o pedido para
+ * 'preparing' (volta pra fila de despacho) e limpa os dados de
+ * entrega, deixando o seller livre para redespachar com outro
+ * carrier ou corrigir o que precisar.
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
+    if (!['seller', 'admin'].includes((decoded as { role?: string }).role ?? '')) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
+
+    const ip    = getClientIp(req);
+    const rlKey = `delivery-cancel:${ip}`;
+    if (!rateLimit(rlKey, 30, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(rlKey));
+
+    const body = await req.json().catch(() => null);
+    const orderId: string = body?.orderId;
+    const reason: string = (body?.reason ?? '').trim();
+    if (!orderId || typeof orderId !== 'string') {
+      return NextResponse.json({ error: 'orderId inválido' }, { status: 400 });
+    }
+    if (!reason) {
+      return NextResponse.json({ error: 'Informe o motivo do cancelamento' }, { status: 400 });
+    }
+
+    const orderSnap = await adminDb.collection('orders').doc(orderId).get();
+    if (!orderSnap.exists) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+
+    const order = { id: orderSnap.id, ...orderSnap.data() } as Order;
+
+    if (order.status !== 'shipped') {
+      return NextResponse.json(
+        { error: `Só é possível cancelar entregas com status "shipped" (atual: "${order.status}")` },
+        { status: 409 }
+      );
+    }
+
+    const meOrderId = order.delivery?.melhorEnvioOrderId;
+
+    // Retirada na loja não tem nada a cancelar no Melhor Envio
+    if (meOrderId) {
+      try {
+        await meCancel(meOrderId, `Cancelado pelo vendedor: ${reason}`);
+      } catch (err) {
+        console.error('[delivery/cancel] meCancel falhou:', err);
+        return NextResponse.json(
+          { error: 'Não foi possível cancelar a etiqueta no Melhor Envio. Verifique o status diretamente no painel deles antes de tentar novamente.' },
+          { status: 502 }
+        );
+      }
+    }
+
+    await adminDb.collection('orders').doc(orderId).update({
+      status: 'preparing',
+      'delivery.carrier':            null,
+      'delivery.trackingCode':       null,
+      'delivery.trackingUrl':        null,
+      'delivery.melhorEnvioOrderId': null,
+      'delivery.labelUrl':           null,
+      'delivery.dispatchedAt':       null,
+      updatedAt: FieldValue.serverTimestamp(),
+      timeline: FieldValue.arrayUnion({
+        event: 'delivery_cancelled',
+        at:    new Date().toISOString(),
+        note:  `Entrega cancelada por ${decoded.email ?? decoded.uid} · Motivo: ${reason}`,
+      }),
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('[delivery/cancel]', err);
+    return NextResponse.json({ error: 'Erro ao cancelar a entrega. Tente novamente.' }, { status: 500 });
   }
 }

@@ -170,6 +170,19 @@ export async function meTracking(orderIds: string[]): Promise<MEShipmentStatus[]
   return meGet(`/me/shipment/tracking?orders=${ids}`);
 }
 
+// ── 7. Cancelar envio ─────────────────────────────────────────────────────────
+// reason_id varia conforme a lista atual de motivos do Melhor Envio.
+// Usamos um valor genérico ("outros"/erro operacional) e colocamos o
+// motivo real em texto livre na description — é o que importa de fato
+// para qualquer disputa/suporte.
+export async function meCancel(meOrderId: string, description: string): Promise<void> {
+  await mePost('/me/shipment/cancel', {
+    order: { id: meOrderId },
+    reason_id: 6,
+    description: description.slice(0, 255),
+  });
+}
+
 // ── Fluxo completo: adiciona + compra + gera + imprime ────────────────────────
 
 export async function meDispatch(params: {

@@ -220,6 +220,16 @@ async function quoteMelhorEnvio(
   }
 
   const data: MEShipment[] = await res.json();
+
+  // Loga cada serviço que veio com erro — sem isso, um serviço não
+  // contratado/habilitado na conta (ex: Jadlog) simplesmente
+  // desaparece da lista sem nenhuma pista do motivo.
+  for (const s of data) {
+    if (s.error) {
+      console.warn(`[MelhorEnvio] serviço ${s.id} (${s.name ?? '?'}) indisponível: ${s.error}`);
+    }
+  }
+
   return data
     .filter(s => !s.error && parseFloat(s.custom_price ?? s.price ?? '0') > 0)
     .map(s => {

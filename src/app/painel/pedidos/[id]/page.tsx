@@ -110,6 +110,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   // carrier vem do selectedShipping do pedido — cliente já escolheu no checkout
   const [labelUrl, setLabelUrl]   = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
+  const [cancellingDelivery, setCancellingDelivery] = useState(false);
+  const [cancelDeliveryError, setCancelDeliveryError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
@@ -220,6 +222,36 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       setDispatchError('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setUpdating(false);
+    }
+  }
+
+  async function cancelDelivery() {
+    if (!order) return;
+    const reason = prompt('Motivo do cancelamento (obrigatório, aparece no registro do pedido):');
+    if (reason === null) return; // usuário cancelou o prompt
+    if (!reason.trim()) { alert('Informe um motivo para cancelar.'); return; }
+    if (!confirm(`Cancelar a entrega despachada via ${order.delivery?.carrier ?? 'transportadora'}? A etiqueta será cancelada no Melhor Envio e o pedido volta para "Em preparo".`)) return;
+
+    setCancellingDelivery(true);
+    setCancelDeliveryError(null);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch('/api/delivery', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orderId: order.id, reason: reason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCancelDeliveryError(data.error || 'Não foi possível cancelar a entrega.');
+        return;
+      }
+      setTrackingCode('');
+      setLabelUrl(null);
+    } catch {
+      setCancelDeliveryError('Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+      setCancellingDelivery(false);
     }
   }
 
@@ -370,6 +402,14 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <button onClick={advanceStatus} disabled={updating}
               className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors">
               {updating ? 'Salvando…' : 'Confirmar entrega ao cliente'}
+            </button>
+
+            {cancelDeliveryError && (
+              <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2">{cancelDeliveryError}</p>
+            )}
+            <button onClick={cancelDelivery} disabled={cancellingDelivery}
+              className="w-full text-[12px] font-semibold text-red-600 hover:text-red-700 disabled:opacity-50 transition-colors py-1">
+              {cancellingDelivery ? 'Cancelando…' : '✕ Cancelar entrega'}
             </button>
           </div>
         )}
