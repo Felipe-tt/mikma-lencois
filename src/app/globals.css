@@ -321,6 +321,12 @@ html.dark [style*="background-image"] {
   filter: invert(1) hue-rotate(180deg);
 }
 
+/* Páginas de sistema (ex: manutenção) que precisam manter aparência fixa,
+   independente do tema escolhido pelo usuário — desfaz o invert do <html> */
+html.dark .theme-locked {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 /* Scrollbar dark */
 html.dark ::-webkit-scrollbar-thumb { background: #3C3028; }
 html.dark ::-webkit-scrollbar-thumb:hover { background: #5A4838; }
