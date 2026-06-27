@@ -1,0 +1,12 @@
+# Sessão autenticada do WhatsApp — NUNCA versionar isso (equivale a estar logado na sua conta)
+auth_info/
+
+# Dependências locais desta ferramenta
+node_modules/
+
+# Dados exportados do catálogo (imagens + CSV/JSON) — são dados do negócio,
+# não código. Ficam só localmente até serem revisados e importados.
+catalogo-whatsapp/
+
+*.log
+.env
