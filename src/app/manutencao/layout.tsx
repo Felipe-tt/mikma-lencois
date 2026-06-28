@@ -1,3 +1,3 @@
 export default function ManutencaoLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <body className="theme-locked" style={{ margin: 0, padding: 0 }}>{children}</body>;
 }
