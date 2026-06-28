@@ -10,15 +10,11 @@ import { hexToColorName } from '@/lib/colorNames';
 import { ColorPicker } from './ColorPicker';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
 import { PhotoColorPicker } from './PhotoColorPicker';
+import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS } from '@/lib/productOptions';
 
 type Props = {
   initial?: Partial<Product> & { id?: string };
 };
-
-const CATEGORIES = ['Lençóis', 'Fronhas', 'Edredons', 'Travesseiros', 'Jogos de cama', 'Outros'];
-const SIZES = ['solteiro', 'casal', 'queen', 'king'] as const;
-const SIZE_LABEL: Record<string, string> = { solteiro: 'Solteiro', casal: 'Casal', queen: 'Queen', king: 'King' };
-const FABRICS = ['Algodão', 'Malha', 'Percal 200 fios', 'Percal 300 fios', 'Cetim'];
 
 function makeVariantId(size: string, fabric: string) {
   // SKU usa apenas size+fabric — cor não inclusa para evitar quebrar inventário ao trocar foto

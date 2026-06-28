@@ -87,7 +87,6 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isSellerOrAdmin();
     }
-
     match /maintenance_queue/{doc} {
       allow read: if true;        // middleware precisa checar
       // O middleware roda sem autenticação (Edge Runtime) e precisa
@@ -115,6 +114,24 @@ service cloud.firestore {
         // Escrita só via Admin SDK (webhook inbound, rota de envio).
         allow write: if false;
       }
+    }
+
+    // ── WhatsApp catalog import ──────────────────────────────────────────────
+    // Sessão do WhatsApp (credenciais Baileys) — equivale a estar logado na
+    // conta. Acesso SOMENTE pelo Admin SDK (que ignora estas regras). Client
+    // nunca lê nem escreve, nem seller/admin.
+    match /whatsappAuth/{doc} {
+      allow read, write: if false;
+    }
+    match /whatsappAuthKeys/{doc} {
+      allow read, write: if false;
+    }
+    // Status da conexão + QR code atual — não é sensível por si só (QR
+    // expira em segundos), seller/admin pode ler em tempo real pra exibir
+    // na tela de importação. Escrita só pelo Admin SDK.
+    match /whatsappCatalogStatus/{doc} {
+      allow read: if isSellerOrAdmin();
+      allow write: if false;
     }
 
     // ── Tudo mais: negar por padrão ──────────────────────────────────────────

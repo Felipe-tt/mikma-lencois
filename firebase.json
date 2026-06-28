@@ -13,7 +13,7 @@
       "concurrency": 80,
       "minInstances": 0,
       "maxInstances": 3,
-      "timeoutSeconds": 60
+      "timeoutSeconds": 120
     }
   },
   "storage": {

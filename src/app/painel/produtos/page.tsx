@@ -94,6 +94,12 @@ export default function PainelProdutosPage() {
           />
         </div>
         <Link
+          href="/painel/produtos/importar-whatsapp"
+          className="shrink-0 border border-mist text-ink text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-warm transition-colors"
+        >
+          Importar do WhatsApp
+        </Link>
+        <Link
           href="/painel/produtos/novo"
           className="shrink-0 bg-[#1E1208] text-[#FAF8F5] text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-[#1E1208]/80 transition-colors"
         >

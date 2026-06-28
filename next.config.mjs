@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@node-rs/argon2', 'firebase-admin'],
+  serverExternalPackages: ['@node-rs/argon2', 'firebase-admin', 'baileys'],
 
   images: {
     remotePatterns: [
