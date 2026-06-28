@@ -121,7 +121,7 @@ export default function PedidosPage() {
                       <div className="relative w-12 h-[60px] shrink-0 overflow-hidden bg-warm border border-mist/60">
                         <img src={order.items[0].image} alt={order.items[0].productName} className="w-full h-full object-cover" />
                         {order.items.length > 1 && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-ink/80 text-paper text-[9px] font-bold flex items-center justify-center" style={{borderRadius:'1px'}}>
+                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-ink/80 text-paper text-[9px] font-bold flex items-center justify-center rounded-[1px]">
                             +{order.items.length - 1}
                           </span>
                         )}

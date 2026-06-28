@@ -25,13 +25,13 @@ export function FadeIn({ children, className = '', delay = 0 }: Props) {
   return (
     <div
       ref={ref}
-      className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(16px)',
-        transition: `opacity 0.5s ease ${delay}ms, transform 0.5s cubic-bezier(0.4,0,0.2,1) ${delay}ms`,
-        willChange: 'opacity, transform',
-      }}
+      data-visible={visible}
+      data-delay={delay}
+      className={`will-change-[opacity,transform] transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+        data-[visible=false]:opacity-0 data-[visible=false]:translate-y-4
+        data-[visible=true]:opacity-100 data-[visible=true]:translate-y-0
+        ${className}`}
+      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}
     </div>

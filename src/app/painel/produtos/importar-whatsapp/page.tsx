@@ -65,7 +65,7 @@ function isValid(it: DraftItem): boolean {
   );
 }
 
-const selectInputClass = 'w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20';
+const selectInputClass = 'w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]';
 
 export default function ImportarWhatsappPage() {
   const [number, setNumber] = useState('');
@@ -364,21 +364,21 @@ export default function ImportarWhatsappPage() {
                     </div>
                     <div>
                       <label className="label">Categoria</label>
-                      <select value={it.category} onChange={(e) => updateItem(idx, { category: e.target.value })} className={selectInputClass} style={{ borderRadius: '4px' }}>
+                      <select value={it.category} onChange={(e) => updateItem(idx, { category: e.target.value })} className={selectInputClass}
                         <option value="">Selecione</option>
                         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="label">Tamanho</label>
-                      <select value={it.size} onChange={(e) => updateItem(idx, { size: e.target.value })} className={selectInputClass} style={{ borderRadius: '4px' }}>
+                      <select value={it.size} onChange={(e) => updateItem(idx, { size: e.target.value })} className={selectInputClass}
                         <option value="">Selecione</option>
                         {SIZES.map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="label">Tecido</label>
-                      <select value={it.fabric} onChange={(e) => updateItem(idx, { fabric: e.target.value })} className={selectInputClass} style={{ borderRadius: '4px' }}>
+                      <select value={it.fabric} onChange={(e) => updateItem(idx, { fabric: e.target.value })} className={selectInputClass}
                         <option value="">Selecione</option>
                         {FABRICS.map((f) => <option key={f} value={f}>{f}</option>)}
                       </select>

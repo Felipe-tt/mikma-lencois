@@ -35,7 +35,7 @@ export function HeroPreview({ s }: { s: StoreSettings }) {
       </div>
 
       {/* Hero */}
-      <section className="border-b border-[#E0D8CE] relative overflow-hidden" style={{ backgroundColor: '#F9F6F1' }}>
+      <section className="border-b border-[#E0D8CE] relative overflow-hidden bg-[#F9F6F1]">
         <div className="px-6 sm:px-10 pt-12 sm:pt-16 pb-10 sm:pb-14 relative">
           <p className="font-mono text-[10px] sm:text-[11px] tracking-[0.22em] uppercase text-[#9C8878] mb-8 sm:mb-10">
             {city}, SC · Fábrica própria · {new Date().getFullYear()}

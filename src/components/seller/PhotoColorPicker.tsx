@@ -167,8 +167,7 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
           )}
 
           <div
-            className="relative w-full rounded-2xl overflow-hidden border border-white/20 cursor-crosshair bg-white/5"
-            style={{ aspectRatio: '1/1' }}
+            className="relative w-full rounded-2xl overflow-hidden border border-white/20 cursor-crosshair bg-white/5 aspect-square"
             onPointerDown={e => ready && handlePointer(e)}
             onPointerMove={e => ready && e.buttons > 0 && handlePointer(e)}
           >

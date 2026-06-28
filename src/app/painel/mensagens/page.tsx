@@ -404,14 +404,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
       }`}>
         {showHtml ? (
           <div
-            className="email-html-body"
-            style={{
-              fontSize: 13,
-              lineHeight: 1.6,
-              wordBreak: 'break-word',
-              overflowX: 'auto',
-              maxWidth: '100%',
-            }}
+            className="email-html-body text-[13px] leading-[1.6] break-words overflow-x-auto max-w-full"
             dangerouslySetInnerHTML={{ __html: htmlContent! }}
           />
         ) : (

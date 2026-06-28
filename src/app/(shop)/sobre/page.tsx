@@ -29,8 +29,8 @@ export default async function SobrePage() {
       {/* ── Hero ── */}
       <div className="relative overflow-hidden bg-warm border-b border-mist">
         <div className="absolute inset-0 pointer-events-none select-none">
-          <img src="/sobre-bg.jpg" alt="" aria-hidden="true" className="w-full h-full object-cover object-center" style={{ opacity: 0.18 }} />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, var(--color-warm) 0%, transparent 50%, var(--color-warm) 100%)' }} />
+          <img src="/sobre-bg.jpg" alt="" aria-hidden="true" className="w-full h-full object-cover object-center opacity-[0.18]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-warm)_0%,transparent_50%,var(--color-warm)_100%)]" />
         </div>
         <div className="container-shop py-20 sm:py-28 relative z-10">
           <div className="flex flex-col gap-6 max-w-2xl">

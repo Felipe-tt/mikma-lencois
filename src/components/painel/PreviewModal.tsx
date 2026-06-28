@@ -33,13 +33,12 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8"
-      style={{ background: 'rgba(30, 18, 8, 0.55)', backdropFilter: 'blur(2px)' }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8 bg-[rgba(30,18,8,0.55)] backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div
-        className="bg-[#FAF8F5] w-full max-h-full flex flex-col shadow-2xl animate-preview-in"
-        style={{ maxWidth: viewport === 'mobile' ? 480 : 1180, borderRadius: '6px', overflow: 'hidden' }}
+        className="bg-[#FAF8F5] w-full max-h-full flex flex-col shadow-2xl animate-preview-in rounded-[6px] overflow-hidden"
+        style={{ maxWidth: viewport === 'mobile' ? 480 : 1180 }}
         onClick={e => e.stopPropagation()}
       >
         {/* ── Toolbar ── */}
@@ -90,7 +89,7 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
         </div>
 
         {/* ── Frame ── */}
-        <div className="flex-1 overflow-auto bg-[#E6DFD5]" style={{ maxHeight: '78vh' }}>
+        <div className="flex-1 overflow-auto bg-[#E6DFD5] max-h-[78vh]">
           <div
             className="mx-auto bg-white transition-[max-width] duration-200"
             style={{ maxWidth: viewport === 'mobile' ? 420 : '100%' }}

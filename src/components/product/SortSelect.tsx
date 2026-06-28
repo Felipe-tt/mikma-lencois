@@ -20,8 +20,7 @@ export function SortSelect({ current }: Props) {
     <select
       defaultValue={current ?? ''}
       onChange={handleChange}
-      className="text-[12px] text-mid border border-mist bg-paper px-3 py-2 cursor-pointer hover:border-ink/20 transition-colors focus:outline-none focus:border-clay/40"
-      style={{ borderRadius: '2px' }}
+      className="text-[12px] text-mid border border-mist bg-paper px-3 py-2 cursor-pointer hover:border-ink/20 transition-colors focus:outline-none focus:border-clay/40 rounded-[2px]"
     >
       {options.map(o => (
         <option key={o.value} value={o.value}>{o.label}</option>

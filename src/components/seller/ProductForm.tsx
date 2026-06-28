@@ -329,7 +329,7 @@ export default function ProductForm({ initial }: Props) {
             <div className="flex flex-wrap gap-2">
               {images.map((img, i) => (
                 <div key={i} className="relative group">
-                  <img src={img.dataUrl} alt="" className="h-20 w-20 border border-mist object-cover" style={{ borderRadius: '4px' }} />
+                  <img src={img.dataUrl} alt="" className="h-20 w-20 border border-mist object-cover rounded-[4px]" />
                   {i === 0 ? (
                     <span className="absolute bottom-1 left-1 bg-ink/80 text-paper text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm">Capa</span>
                   ) : (
@@ -353,8 +353,7 @@ export default function ProductForm({ initial }: Props) {
 
               <button
                 onClick={() => setShowCamera(true)}
-                className="h-20 w-20 border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 hover:border-clay hover:text-clay transition-colors"
-                style={{ borderRadius: '4px' }}
+                className="h-20 w-20 border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 hover:border-clay hover:text-clay transition-colors rounded-[4px]"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 <span className="text-[10px] font-medium">Foto</span>
@@ -437,7 +436,7 @@ export default function ProductForm({ initial }: Props) {
             hint="Cada combinação de tamanho, tecido e cor vira um item separado no estoque"
           >
             {variants.length === 0 && (
-              <div className="border border-dashed border-mist px-4 py-6 text-center" style={{ borderRadius: '4px' }}>
+              <div className="border border-dashed border-mist px-4 py-6 text-center rounded-[4px]">
                 <p className="text-[12px] text-faint mb-3">Nenhuma variação ainda</p>
                 <button onClick={addVariant} className="btn-outline text-[12px] px-4 py-2">
                   + Adicionar variação
@@ -447,7 +446,7 @@ export default function ProductForm({ initial }: Props) {
 
             <div className="flex flex-col gap-2.5">
               {variants.map((v, i) => (
-                <div key={i} className={`border p-3.5 flex flex-col gap-3 ${duplicateVariantIndexes.has(i) ? 'border-red-300 bg-red-50/50' : 'border-mist bg-warm/40'}`} style={{ borderRadius: '4px' }}>
+                <div key={i} className={`border p-3.5 flex flex-col gap-3 rounded-[4px] ${duplicateVariantIndexes.has(i) ? 'border-red-300 bg-red-50/50' : 'border-mist bg-warm/40'}`}>
                   {duplicateVariantIndexes.has(i) && (
                     <p className="text-[11px] text-red-600 font-medium flex items-center gap-1.5 -mb-1">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -460,8 +459,7 @@ export default function ProductForm({ initial }: Props) {
                       <select
                         value={v.size}
                         onChange={e => updateVariant(i, 'size', e.target.value)}
-                        className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
-                        style={{ borderRadius: '4px' }}
+                        className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]"
                       >
                         {SIZES.map(s => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
                       </select>
@@ -471,8 +469,7 @@ export default function ProductForm({ initial }: Props) {
                       <select
                         value={v.fabric}
                         onChange={e => updateVariant(i, 'fabric', e.target.value)}
-                        className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
-                        style={{ borderRadius: '4px' }}
+                        className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]"
                       >
                         {FABRICS.map(f => <option key={f}>{f}</option>)}
                       </select>
@@ -513,8 +510,7 @@ export default function ProductForm({ initial }: Props) {
                           value={v.qty}
                           onChange={e => updateVariant(i, 'qty', Number(e.target.value))}
                           inputMode="numeric"
-                          className="w-full border border-mist px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20"
-                          style={{ borderRadius: '4px' }}
+                          className="w-full border border-mist px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]"
                         />
                       </div>
                     )}
@@ -553,7 +549,7 @@ export default function ProductForm({ initial }: Props) {
             </button>
 
             {specsOpen && (
-              <div className="border border-mist p-4 grid grid-cols-2 gap-3" style={{ borderRadius: '4px' }}>
+              <div className="border border-mist p-4 grid grid-cols-2 gap-3 rounded-[4px]">
                 <div>
                   <label className="label">Fio count</label>
                   <input type="number" min={0} placeholder="400" value={threadCount} onChange={e => setThreadCount(e.target.value)} className="input-sm" />
@@ -581,8 +577,7 @@ export default function ProductForm({ initial }: Props) {
                 type="checkbox"
                 checked={active}
                 onChange={e => setActive(e.target.checked)}
-                className="w-4 h-4 accent-clay"
-                style={{ borderRadius: '3px' }}
+                className="w-4 h-4 accent-clay rounded-[3px]"
               />
               <span className="text-sm text-mid">Produto ativo (visível na loja)</span>
             </label>
@@ -590,7 +585,7 @@ export default function ProductForm({ initial }: Props) {
 
           {/* ── Aviso: variações removidas que ainda têm estoque ── */}
           {isEdit && orphanedWithStock.length > 0 && (
-            <div className="border border-amber-300 bg-amber-50 px-4 py-3 -mt-2 flex items-start gap-2.5" style={{ borderRadius: '4px' }}>
+            <div className="border border-amber-300 bg-amber-50 px-4 py-3 -mt-2 flex items-start gap-2.5 rounded-[4px]">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600 shrink-0 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <p className="text-[12px] text-amber-800 leading-relaxed">
                 {orphanedWithStock.length === 1

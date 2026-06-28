@@ -165,7 +165,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                 <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
               {count > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-clay text-paper text-[9px] font-bold flex items-center justify-center leading-none px-[3px]" style={{borderRadius: '2px'}}>
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-clay text-paper text-[9px] font-bold flex items-center justify-center leading-none px-[3px] rounded-[2px]">
                   {count > 9 ? '9+' : count}
                 </span>
               )}
@@ -177,7 +177,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
         {showFreeShippingBar && (
           <div className="border-t border-mist/60 bg-warm/50">
             <div className="container-shop py-1.5 flex items-center gap-3">
-              <div className="flex-1 h-[3px] bg-mist overflow-hidden" style={{borderRadius: '2px'}}>
+              <div className="flex-1 h-[3px] bg-mist overflow-hidden rounded-[2px]">
                 <div className="h-full bg-clay transition-all duration-500 ease-out" style={{width: `${progress}%`}} />
               </div>
               <span className="text-[10px] font-medium text-mid shrink-0">
@@ -213,7 +213,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
             {/* Search mobile */}
             <div className="px-4 py-3 border-b border-mist">
-              <form onSubmit={handleSearch} className="flex items-center gap-2 px-3 py-2 border border-mist bg-paper/80" style={{borderRadius: '2px'}}>
+              <form onSubmit={handleSearch} className="flex items-center gap-2 px-3 py-2 border border-mist bg-paper/80 rounded-[2px]">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>

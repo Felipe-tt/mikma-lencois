@@ -31,25 +31,27 @@ function Bar() {
       timerRef.current = setTimeout(() => { setVisible(false); setProgress(0); }, 300);
     }, 350);
 
-    return () => { cancelAnimationFrame(rafRef.current!); clearTimeout(timerRef.current); };
+    return () => { cancelAnimationFrame(rafRef.current!); clearTimeout(timerRef.current); }
   }, [pathname, searchParams]);
 
   if (!visible) return null;
+
+  const transition = progress === 100
+    ? 'width 0.25s ease'
+    : progress === 0
+      ? 'none'
+      : 'width 0.4s cubic-bezier(0.4,0,0.2,1)';
 
   return (
     <div className="fixed top-0 left-0 right-0 z-[10000] h-[2px] pointer-events-none">
       <div
         className="h-full bg-clay shadow-[0_0_6px_rgba(196,113,74,0.5)]"
-        style={{
-          width: `${progress}%`,
-          transition: progress === 100 ? 'width 0.25s ease' : progress === 0 ? 'none' : 'width 0.4s cubic-bezier(0.4,0,0.2,1)',
-        }}
+        style={{ width: `${progress}%`, transition }}
       />
     </div>
   );
 }
 
-// Suspense embutido — não precisa de Suspense no ponto de uso
 export function TopProgress() {
   return <Suspense fallback={null}><Bar /></Suspense>;
 }

@@ -17,13 +17,10 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(6px)',
-        transition: visible
-          ? 'opacity 0.28s ease, transform 0.28s cubic-bezier(0.4,0,0.2,1)'
-          : 'none',
-      }}
+      data-visible={visible}
+      className="transition-[opacity,transform] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)]
+        data-[visible=false]:opacity-0 data-[visible=false]:translate-y-1.5
+        data-[visible=true]:opacity-100 data-[visible=true]:translate-y-0"
     >
       {children}
     </div>

@@ -62,11 +62,11 @@ export default async function HomePage() {
           HERO — tipografia como protagonista
           Branco absoluto. Headline enorme. Nada mais.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="border-b border-[#E0D8CE] relative overflow-hidden" style={{ backgroundColor: '#F9F6F1' }}>
-        <div className="absolute inset-0 pointer-events-none select-none" style={{ zIndex: 0 }}>
-          <img src="/hero-bg.jpg" alt="" className="w-full h-full object-cover object-center" style={{ opacity: 0.22 }} aria-hidden="true" />
+      <section className="border-b border-[#E0D8CE] relative overflow-hidden bg-[#F9F6F1]">
+        <div className="absolute inset-0 pointer-events-none select-none z-0">
+          <img src="/hero-bg.jpg" alt="" className="w-full h-full object-cover object-center opacity-[0.22]" aria-hidden="true" />
         </div>
-        <div className="container-shop pt-16 sm:pt-24 pb-14 sm:pb-20 relative" style={{ zIndex: 2 }}>
+        <div className="container-shop pt-16 sm:pt-24 pb-14 sm:pb-20 relative z-[2]">
 
           {/* Origem — linha de contexto, não eyebrow decorativo */}
           <p className="font-mono text-[11px] tracking-[0.22em] uppercase text-[#9C8878] mb-10 sm:mb-14">
