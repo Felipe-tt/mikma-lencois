@@ -125,7 +125,7 @@ function buildShipped(order: Order, name: string) {
     <div style="background:#F5F0EB;padding:16px 20px;margin:20px 0;border-left:3px solid #C4714A;">
       <p style="margin:0 0 4px;font-size:11px;color:#9C8B7C;text-transform:uppercase;letter-spacing:.08em;">Código de rastreio · ${carrierLabel}</p>
       <p style="margin:0;font-family:monospace;font-size:18px;font-weight:bold;color:#1E1208;letter-spacing:.12em;">${code}</p>
-      ${rastreioUrl ? `<p style="margin:8px 0 0;"><a href="${rastreioUrl}" style="font-size:12px;color:#C4714A;text-decoration:none;">Rastrear na ${carrierLabel} →</a></p>` : ''}
+      ${rastreioUrl ? `<p style="margin:8px 0 0;"><a href="${rastreioUrl}" style="font-size:12px;color:#C4714A;text-decoration:none;">Rastrear na ${carrierLabel}</a></p>` : ''}
     </div>` : '';
   const html = wrap(`
     <div style="padding:36px 36px 4px;">

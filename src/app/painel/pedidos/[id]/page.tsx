@@ -447,7 +447,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             {order.delivery?.trackingUrl && (
               <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
                 className="text-[12px] text-[#C4714A] font-semibold hover:underline">
-                Rastrear envio →
+                Rastrear envio
               </a>
             )}
             {order.delivery?.labelUrl && (
@@ -596,7 +596,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   return url ? (
                     <a href={url} target="_blank" rel="noopener noreferrer"
                       className="text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
-                      Rastrear na transportadora →
+                      Rastrear na transportadora
                     </a>
                   ) : null;
                 })()}

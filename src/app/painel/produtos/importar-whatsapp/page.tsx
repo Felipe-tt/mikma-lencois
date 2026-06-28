@@ -229,7 +229,7 @@ export default function ImportarWhatsappPage() {
             Traga os produtos do catálogo do WhatsApp Business — depois é só revisar tamanho, tecido e peso antes de importar pro site.
           </p>
         </div>
-        <Link href="/painel/produtos" className="text-[12px] font-semibold text-mid hover:text-ink shrink-0 whitespace-nowrap">← Voltar</Link>
+        <Link href="/painel/produtos" className="text-[12px] font-semibold text-mid hover:text-ink shrink-0 whitespace-nowrap">Voltar</Link>
       </div>
 
       {/* ── Passo 1 — Conectar ── */}
@@ -239,7 +239,7 @@ export default function ImportarWhatsappPage() {
           <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">Conectar ao WhatsApp</h2>
         </div>
         <p className="text-[12px] text-faint mb-3 ml-[30px] max-w-md">
-          Deixe o WhatsApp aberto no celular antes de clicar — vai aparecer um QR code aqui pra escanear em <strong>Configurações → Dispositivos conectados</strong>. Não precisa ser o número da loja, pode ser qualquer WhatsApp.
+          Deixe o WhatsApp aberto no celular antes de clicar — vai aparecer um QR code aqui pra escanear em <strong>Configurações, Dispositivos conectados</strong>. Não precisa ser o número da loja, pode ser qualquer WhatsApp.
         </p>
 
         <div className="ml-[30px] flex flex-col gap-3 max-w-sm">
@@ -268,7 +268,7 @@ export default function ImportarWhatsappPage() {
             <div className="flex flex-col items-center gap-2 border border-mist bg-white p-4 self-start">
               <QRCodeSVG value={qr} size={196} />
               <p className="text-[11px] text-faint text-center max-w-[220px]">
-                Escaneie com o WhatsApp: Configurações → Dispositivos conectados → Conectar um dispositivo
+                Escaneie com o WhatsApp: Configurações, Dispositivos conectados, Conectar um dispositivo
               </p>
             </div>
           )}
@@ -436,7 +436,7 @@ export default function ImportarWhatsappPage() {
               </p>
               {importSummary.created > 0 && (
                 <Link href="/painel/produtos" className="inline-block mt-3 text-[12px] font-semibold text-clay hover:text-clay-d">
-                  Ver produtos importados →
+                  Ver produtos importados
                 </Link>
               )}
             </div>

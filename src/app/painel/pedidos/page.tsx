@@ -277,7 +277,7 @@ export default function PainelPedidos() {
 
               <Link href={`/painel/pedidos/${order.id}`}
                 className="shrink-0 text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors border border-[#C4714A]/30 px-3 py-1.5 hover:bg-[#C4714A]/5">
-                Ver detalhes →
+                Ver detalhes
               </Link>
             </div>
 

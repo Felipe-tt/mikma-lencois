@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     // ── Envio via Melhor Envio ───────────────────────────────────────────────
     if (!process.env.MELHOR_ENVIO_TOKEN) {
       return NextResponse.json(
-        { error: 'MELHOR_ENVIO_TOKEN não configurado. Configure em Configurações → Entrega.' },
+        { error: 'MELHOR_ENVIO_TOKEN não configurado. Configure em Configurações, Entrega.' },
         { status: 500 }
       );
     }
