@@ -1,8 +1,4 @@
-import { checkMaintenance } from '@/lib/maintenanceCheck';
-
-export const dynamic = 'force-dynamic';
-
-export default async function AuthLayout({ children }: { children: React.ReactNode }) {
-  await checkMaintenance();
+// Sem force-dynamic: manutenção é verificada no middleware (Edge).
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }

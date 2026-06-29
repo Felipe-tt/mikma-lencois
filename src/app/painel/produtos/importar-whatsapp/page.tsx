@@ -178,6 +178,69 @@ export default function ImportarWhatsappPage() {
     setImportSummary(null);
     const attempted = selectedValid;
     try {
+      // ── Passo 1: pedir URLs assinadas para todas as imagens ──────────────
+      // Baixa cada imagem do CDN do WhatsApp no browser (sem passar pelo Cloud Run)
+      // e pede ao servidor uma URL assinada para upload direto ao Storage.
+      const allImageUrls = attempted.flatMap((it) => it.imageUrls);
+
+      // Baixa os blobs no browser
+      const blobs: Array<{ blob: Blob; contentType: string } | null> = await Promise.all(
+        allImageUrls.map(async (url) => {
+          try {
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            const contentType = res.headers.get('content-type') || 'image/jpeg';
+            if (!contentType.startsWith('image/')) return null;
+            const blob = await res.blob();
+            if (blob.size === 0 || blob.size > 8 * 1024 * 1024) return null;
+            return { blob, contentType };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      // Pede URLs assinadas apenas para os que conseguiu baixar
+      const validBlobs = blobs.map((b, i) => ({ ...b, originalUrl: allImageUrls[i] }));
+      const signPayload = {
+        files: validBlobs.map((b) =>
+          b?.blob ? { contentType: b.contentType, sizeBytes: b.blob.size } : null
+        ).filter(Boolean),
+      };
+
+      const signData = await authedFetch('/api/painel/whatsapp-catalog/sign-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(signPayload),
+      });
+
+      const uploads: Array<{ signedUrl: string; publicUrl: string }> = signData.uploads ?? [];
+
+      // ── Passo 2: fazer upload direto browser → Storage ──────────────────
+      let uploadIdx = 0;
+      const hostedUrlMap = new Map<string, string>(); // originalUrl → publicUrl
+      for (let i = 0; i < validBlobs.length; i++) {
+        const b = validBlobs[i];
+        if (!b?.blob) continue;
+        const upload = uploads[uploadIdx++];
+        if (!upload) continue;
+        try {
+          await fetch(upload.signedUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': b.contentType,
+              'x-goog-meta-firebasestoragedownloadtokens': upload.publicUrl.match(/token=([^&]+)/)?.[1] ?? '',
+              'x-goog-meta-cache-control': 'public, max-age=31536000, immutable',
+            },
+            body: b.blob,
+          });
+          hostedUrlMap.set(b.originalUrl, upload.publicUrl);
+        } catch {
+          // falha num upload não deve travar tudo
+        }
+      }
+
+      // ── Passo 3: enviar ao servidor só os metadados + URLs hospedadas ───
       const payload = {
         items: attempted.map((it) => ({
           name: it.nameInput.trim(),
@@ -189,32 +252,51 @@ export default function ImportarWhatsappPage() {
           colorHex: it.colorHex,
           colorName: it.colorName,
           weightKg: parseFloat(it.weightKg.replace(',', '.')),
-          imageUrls: it.imageUrls,
-        })),
+          imageUrls: it.imageUrls
+            .map((u) => hostedUrlMap.get(u))
+            .filter((u): u is string => Boolean(u)),
+          active: true,
+        })).filter((it) => it.imageUrls.length > 0),
       };
+
+      if (payload.items.length === 0) {
+        setImportSummary({ created: 0, failed: attempted.length });
+        return;
+      }
+
       const data = await authedFetch('/api/painel/whatsapp-catalog/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const results = data.results as Array<{ ok: true; productId: string } | { ok: false; reason: string }>;
 
+      const created: number = data.created ?? 0;
+      const failed = attempted.length - created;
+
+      // Remove os importados com sucesso da lista
       setItems((prev) => {
-        const next: DraftItem[] = [];
-        for (const it of prev) {
-          const idx = attempted.indexOf(it);
-          if (idx === -1) { next.push(it); continue; }
-          const r = results[idx];
-          if (r?.ok) continue; // importado com sucesso — remove da lista
-          next.push({ ...it, lastError: r?.ok === false ? r.reason : 'Erro ao importar.' });
-        }
-        return next;
+        const successIds = new Set((data.productIds ?? []) as string[]);
+        if (successIds.size === 0) return prev;
+        let removed = 0;
+        return prev.filter((it) => {
+          if (attempted.includes(it) && removed < successIds.size) {
+            removed++;
+            return false;
+          }
+          return true;
+        });
       });
 
-      setImportSummary({ created: data.created ?? 0, failed: attempted.length - (data.created ?? 0) });
+      setImportSummary({ created, failed });
     } catch (err) {
       setImportSummary({ created: 0, failed: attempted.length });
-      setItems((prev) => prev.map((it) => (attempted.includes(it) ? { ...it, lastError: err instanceof Error ? err.message : 'Erro ao importar.' } : it)));
+      setItems((prev) =>
+        prev.map((it) =>
+          attempted.includes(it)
+            ? { ...it, lastError: err instanceof Error ? err.message : 'Erro ao importar.' }
+            : it
+        )
+      );
     } finally {
       setImporting(false);
     }

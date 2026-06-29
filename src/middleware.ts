@@ -1,24 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Lê o status de manutenção via Firestore REST API
-// (middleware roda no Edge Runtime — não pode usar Firebase Admin SDK)
-async function getMaintenanceStatus(projectId: string) {
-  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`;
+// ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
+
+async function getMaintenanceStatus(projectId: string): Promise<boolean> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(4000), cache: 'no-store' });
-    if (!res.ok) return { active: false };
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`,
+      { signal: AbortSignal.timeout(3000), cache: 'no-store' }
+    );
+    if (!res.ok) return false;
     const data = await res.json();
-    const active = data?.fields?.active?.booleanValue ?? false;
-    return { active };
+    return data?.fields?.active?.booleanValue ?? false;
   } catch {
-    return { active: false };
+    return false;
   }
 }
 
-async function isIpReleased(projectId: string, docId: string) {
-  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
+async function isIpReleased(projectId: string, docId: string): Promise<boolean> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(4000), cache: 'no-store' });
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`,
+      { signal: AbortSignal.timeout(3000), cache: 'no-store' }
+    );
     if (!res.ok) return false;
     const data = await res.json();
     return data?.fields?.released?.booleanValue ?? false;
@@ -27,90 +30,67 @@ async function isIpReleased(projectId: string, docId: string) {
   }
 }
 
-async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; country: string; isp: string; debugError: string }> {
-  // IPs locais/privados não são geolocalizáveis
-  if (ip === '0.0.0.0' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
-    return { city: '', region: '', country: '', isp: '', debugError: 'ip_local' };
-  }
-  try {
-    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
-      signal: AbortSignal.timeout(5000),
-      headers: { 'User-Agent': 'MikmaLencois/1.0' },
-    });
-    if (!res.ok) return { city: '', region: '', country: '', isp: '', debugError: `http_${res.status}` };
-    const data = await res.json();
-    if (data.error) return { city: '', region: '', country: '', isp: '', debugError: `api_error_${data.reason ?? 'unknown'}` };
-    return {
-      city: data.city ?? '',
-      region: data.region ?? '',
-      country: data.country_name ?? '',
-      isp: data.org ?? '',
-      debugError: '',
-    };
-  } catch (err) {
-    return { city: '', region: '', country: '', isp: '', debugError: `exception_${err instanceof Error ? err.message : String(err)}`.slice(0, 200) };
-  }
-}
-
-async function registerInQueue(
-  projectId: string,
-  docId: string,
-  ip: string,
-  req: NextRequest,
-  uid?: string,
-  email?: string,
-  displayName?: string
-) {
+async function registerInQueue(projectId: string, docId: string, ip: string, req: NextRequest) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
-
-  const userAgent = req.headers.get('user-agent') ?? '';
-  const referer = req.headers.get('referer') ?? '';
-  const acceptLanguage = req.headers.get('accept-language') ?? '';
-  const secChUa = req.headers.get('sec-ch-ua') ?? '';
-  const secChUaPlatform = req.headers.get('sec-ch-ua-platform') ?? '';
-  const secChUaMobile = req.headers.get('sec-ch-ua-mobile') ?? '';
-  const requestedPath = req.nextUrl.pathname + req.nextUrl.search;
-  const method = req.method;
-  // Geolocalização real do IP (cidade, região, país, provedor)
-  const geo = await lookupIpGeo(ip);
-
   const fields: Record<string, unknown> = {
     ip: { stringValue: ip },
     released: { booleanValue: false },
     enteredAt: { stringValue: new Date().toISOString() },
-    userAgent: { stringValue: userAgent },
-    referer: { stringValue: referer },
-    acceptLanguage: { stringValue: acceptLanguage },
-    requestedPath: { stringValue: requestedPath },
-    method: { stringValue: method },
-    secChUa: { stringValue: secChUa },
-    platform: { stringValue: secChUaPlatform.replace(/"/g, '') },
-    isMobile: { stringValue: secChUaMobile },
-    geoCity: { stringValue: geo.city },
-    geoRegion: { stringValue: geo.region },
-    geoCountry: { stringValue: geo.country },
-    isp: { stringValue: geo.isp },
-    geoDebug: { stringValue: geo.debugError },
-    visitCount: { integerValue: '1' },
+    userAgent: { stringValue: req.headers.get('user-agent') ?? '' },
+    referer: { stringValue: req.headers.get('referer') ?? '' },
+    acceptLanguage: { stringValue: req.headers.get('accept-language') ?? '' },
+    requestedPath: { stringValue: req.nextUrl.pathname + req.nextUrl.search },
+    platform: { stringValue: (req.headers.get('sec-ch-ua-platform') ?? '').replace(/"/g, '') },
+    isMobile: { stringValue: req.headers.get('sec-ch-ua-mobile') ?? '' },
+    geoCity: { stringValue: '' },
+    geoRegion: { stringValue: '' },
+    geoCountry: { stringValue: '' },
+    isp: { stringValue: '' },
+    geoDebug: { stringValue: 'pending' },
   };
-  if (uid) fields.uid = { stringValue: uid };
-  if (email) fields.email = { stringValue: email };
-  if (displayName) fields.displayName = { stringValue: displayName };
-
   try {
     await fetch(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields }),
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(3000),
     });
   } catch { /* silencioso */ }
 }
 
+// ── Security headers (aplicados em todas as respostas) ───────────────────────
+
+function applySecurityHeaders(res: NextResponse): void {
+  res.headers.set('X-Frame-Options', 'DENY');
+  res.headers.set('X-Content-Type-Options', 'nosniff');
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.headers.set('X-DNS-Prefetch-Control', 'off');
+  res.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()');
+  res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  res.headers.set('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://accounts.google.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com",
+    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://api.abacatepay.com https://viacep.com.br https://nominatim.openstreetmap.org https://www.thecolorapi.com https://tessdata.projectnaptha.com https://cdn.jsdelivr.net https://unpkg.com https://storage.googleapis.com",
+    "frame-src https://www.google.com https://recaptcha.google.com https://accounts.google.com https://*.firebaseapp.com https://*.web.app",
+    "worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "upgrade-insecure-requests",
+  ].join('; '));
+  res.headers.delete('Server');
+  res.headers.delete('X-Powered-By');
+}
+
+// ── Middleware principal ──────────────────────────────────────────────────────
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ── Manutenção ────────────────────────────────────────────────────────────
   const isExempt =
     pathname.startsWith('/painel') ||
     pathname.startsWith('/api/') ||
@@ -132,65 +112,46 @@ export async function middleware(req: NextRequest) {
       req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       req.headers.get('x-real-ip') ||
       '0.0.0.0';
+    const docId = ip.replace(/[.:]/g, '_');
 
-    const { active } = await getMaintenanceStatus(projectId);
+    const active = await getMaintenanceStatus(projectId);
 
     if (active) {
-      const docId = ip.replace(/[.:]/g, '_');
       const released = await isIpReleased(projectId, docId);
 
       if (!released) {
-        // registra IP na queue — aguarda para garantir que completa
-        // antes da função terminar (ambientes serverless matam fire-and-forget)
         await registerInQueue(projectId, docId, ip, req);
         const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
-        // Nunca cachear este redirect — senão ao desativar a manutenção,
-        // visitantes continuariam travados na tela de manutenção pela CDN.
         redirectRes.headers.set('Cache-Control', 'no-store, must-revalidate');
+        applySecurityHeaders(redirectRes);
         return redirectRes;
       }
     }
   }
 
   const res = NextResponse.next();
+  applySecurityHeaders(res);
 
-  // Force the Firebase Hosting CDN to never cache full page responses.
-  // Without this, the CDN caches Next.js ISR responses (s-maxage=900) at
-  // the edge and serves them directly, bypassing Cloud Run entirely — which
-  // means this middleware never runs during the cache window, so maintenance
-  // mode is invisible to users until the CDN cache expires on its own.
-  // Next.js's internal data cache (ISR for Firestore reads etc.) is
-  // unaffected — only the CDN-level full-page HTML cache is disabled.
-  res.headers.set('Cache-Control', 'private, no-store');
-
-  // ── Security headers ──────────────────────────────────────────────────────
-  res.headers.set('X-Frame-Options', 'DENY');
-  res.headers.set('X-Content-Type-Options', 'nosniff');
-  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.headers.set('X-DNS-Prefetch-Control', 'off');
-  res.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
-  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()');
-  res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
-
-  // ── Content Security Policy ───────────────────────────────────────────────
-  const csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://accounts.google.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
-    "font-src 'self' data: https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com",
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://api.abacatepay.com https://viacep.com.br https://nominatim.openstreetmap.org https://www.thecolorapi.com https://tessdata.projectnaptha.com https://cdn.jsdelivr.net https://unpkg.com",
-    "frame-src https://www.google.com https://recaptcha.google.com https://accounts.google.com https://*.firebaseapp.com https://*.web.app",
-    "worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "upgrade-insecure-requests",
-  ].join('; ');
-
-  res.headers.set('Content-Security-Policy', csp);
-  res.headers.delete('Server');
-  res.headers.delete('X-Powered-By');
+  // Páginas do painel e auth: nunca cachear (dados do usuário)
+  // Páginas da loja: deixar o Next.js/CDN cachearem normalmente via ISR
+  // O middleware já garantiu que manutenção ativa redireciona antes de chegar aqui
+  if (
+    pathname.startsWith('/painel') ||
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/conta') ||
+    pathname.startsWith('/perfil') ||
+    pathname.startsWith('/pedidos') ||
+    pathname.startsWith('/checkout') ||
+    pathname.startsWith('/carrinho') ||
+    pathname.startsWith('/entrar') ||
+    pathname.startsWith('/cadastro') ||
+    pathname.startsWith('/redefinir-senha') ||
+    pathname.startsWith('/confirmar-email')
+  ) {
+    res.headers.set('Cache-Control', 'private, no-store');
+  }
+  // Páginas públicas da loja (/, /produtos, /sobre, etc.) NÃO recebem Cache-Control aqui
+  // — o Next.js ISR cuida disso via revalidate nas páginas
 
   return res;
 }
