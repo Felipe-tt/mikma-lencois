@@ -71,19 +71,24 @@ export default function ConfiguracoesPage() {
 
       {/* Tabs */}
       <div className="grid grid-cols-4 gap-1.5 mb-8 p-1 bg-[#F0EBE1] rounded-sm">
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex flex-col items-center gap-0.5 py-3 px-1 text-center rounded-sm transition-all ${
-              tab === t.id
-                ? 'bg-[#1E1208] text-[#FAF8F5] shadow-sm'
-                : 'text-[#705A48] hover:bg-[#E8DFD3]'
-            }`}
-          >
-            <span className="text-lg">{t.icon}</span>
-            <span className="text-[11px] font-bold leading-tight">{t.label}</span>
-            <span className={`text-[9px] leading-tight ${tab === t.id ? 'text-[#FAF8F5]/50' : 'text-[#B09C8C]'}`}>{t.sub}</span>
-          </button>
-        ))}
+        {TABS.map(t => {
+          const TabIcon = CARD_ICON_MAP[t.icon];
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`flex flex-col items-center gap-1 py-3 px-1 text-center rounded-sm transition-all ${
+                tab === t.id
+                  ? 'bg-[#1E1208] text-[#FAF8F5] shadow-sm'
+                  : 'text-[#705A48] hover:bg-[#E8DFD3]'
+              }`}
+            >
+              {TabIcon && (
+                <TabIcon size={18} className={tab === t.id ? 'text-[#FAF8F5]' : 'text-[#9C8878]'} />
+              )}
+              <span className="text-[12px] font-bold leading-tight">{t.label}</span>
+              <span className={`text-[10px] leading-tight ${tab === t.id ? 'text-[#FAF8F5]/50' : 'text-[#B09C8C]'}`}>{t.sub}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── MINHA LOJA ── */}
@@ -171,18 +176,6 @@ export default function ConfiguracoesPage() {
             <F label="Linha 1" value={settings.heroLine1 ?? ''} onChange={v => set('heroLine1', v)} placeholder="O conforto" />
             <F label="Linha 2 (laranja)" value={settings.heroLine2 ?? ''} onChange={v => set('heroLine2', v)} placeholder="que acompanha" />
             <F label="Linha 3" value={settings.heroLine3 ?? ''} onChange={v => set('heroLine3', v)} placeholder="seus sonhos." />
-            <F label="Tag pequena acima do título" value={settings.heroTag} onChange={v => set('heroTag', v)}
-              placeholder="Blumenau, SC — Coleção 2025" hint='Ex: "Novidades" ou "Coleção Verão 2025"' />
-            <Divider label="Destaques flutuantes (opcional)" />
-            <Info>Dois pequenos cards que aparecem sobre o banner com curiosidades do seu produto.</Info>
-            <Row>
-              <F label="Destaque 1 — nome" value={settings.heroFloatTag1Label} onChange={v => set('heroFloatTag1Label', v)} placeholder="Fios" />
-              <F label="Destaque 1 — valor" value={settings.heroFloatTag1Value} onChange={v => set('heroFloatTag1Value', v)} placeholder="400 fios" />
-            </Row>
-            <Row>
-              <F label="Destaque 2 — nome" value={settings.heroFloatTag2Label} onChange={v => set('heroFloatTag2Label', v)} placeholder="Entrega" />
-              <F label="Destaque 2 — valor" value={settings.heroFloatTag2Value} onChange={v => set('heroFloatTag2Value', v)} placeholder="Em 1h" />
-            </Row>
           </Card>
 
           <Card icon="check" title="Selos de confiança" desc="4 frases curtas que aparecem abaixo do banner — transmite segurança ao cliente" onPreview={() => setPreview('hero')}>
@@ -195,18 +188,9 @@ export default function ConfiguracoesPage() {
             ))}
           </Card>
 
-          <Card icon="trend" title="Números da sua loja" desc="Estatísticas que aparecem num banner escuro na página inicial — prova social" onPreview={() => setPreview('featured')}>
-            <Info>Mostre resultados reais da sua loja. Isso gera confiança no cliente.</Info>
-            <Row>
-              <F label="Pedidos entregues" value={settings.statOrders} onChange={v => set('statOrders', v)} placeholder="1.200+" />
-              <F label="Avaliação" value={settings.statRating} onChange={v => set('statRating', v)} placeholder="4.9 ⭐" />
-            </Row>
-            <Row>
-              <F label="Tempo de entrega" value={settings.statDelivery} onChange={v => set('statDelivery', v)} placeholder="< 1h" />
-              <F label="Anos no mercado" value={settings.statYears} onChange={v => set('statYears', v)} placeholder="6 anos" />
-            </Row>
-            <F label="Título da grade de produtos" value={settings.featuredTitle} onChange={v => set('featuredTitle', v)}
-              placeholder="Escolhas da semana" hint="Aparece acima dos produtos em destaque na página inicial" />
+          <Card icon="trend" title="Grade de produtos" desc="Título da seção de produtos em destaque na página inicial" onPreview={() => setPreview('featured')}>
+            <F label="Título da seção" value={settings.featuredTitle} onChange={v => set('featuredTitle', v)}
+              placeholder="Escolhas da semana" hint="Aparece acima dos produtos em destaque na página inicial. Em branco usa 'Destaques'." />
           </Card>
 
           <Card icon="bolt" title="Chamada final" desc="Seção escura no final da página inicial com uma frase marcante e botões de ação" onPreview={() => setPreview('cta')}>

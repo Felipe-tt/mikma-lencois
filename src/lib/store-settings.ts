@@ -19,16 +19,7 @@ export type StoreSettings = {
   instagramUrl: string;
   whatsappUrl: string;
   topbarText: string;
-  heroTitle: string;
   heroSubtitle: string;
-  heroTag: string;
-  heroFloatTag1Label: string;
-  heroFloatTag1Value: string;
-  heroFloatTag2Label: string;
-  heroFloatTag2Value: string;
-  feat1Title: string; feat1Sub: string;
-  feat2Title: string; feat2Sub: string;
-  feat3Title: string; feat3Sub: string;
   aboutPara1: string;
   aboutPara2: string;
   aboutPara3: string;
@@ -76,12 +67,8 @@ export type StoreSettings = {
   ctaSloganLine2: string;
   ctaBtn1: string;
   ctaBtn2: string;
-  // Homepage stats
+  // Homepage — título da grade de produtos
   featuredTitle: string;
-  statOrders: string;
-  statRating: string;
-  statDelivery: string;
-  statYears: string;
   sizeGuideRows: string;
   sizeGuideColumns: string;
   sizeGuideNote: string;
@@ -108,16 +95,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   instagramUrl: '',
   whatsappUrl: '',
   topbarText: '',
-  heroTitle: '',
   heroSubtitle: '',
-  heroTag: '',
-  heroFloatTag1Label: '',
-  heroFloatTag1Value: '',
-  heroFloatTag2Label: '',
-  heroFloatTag2Value: '',
-  feat1Title: '', feat1Sub: '',
-  feat2Title: '', feat2Sub: '',
-  feat3Title: '', feat3Sub: '',
   aboutPara1: '',
   aboutPara2: '',
   aboutPara3: '',
@@ -163,10 +141,6 @@ export const STORE_DEFAULTS: StoreSettings = {
   ctaBtn1: '',
   ctaBtn2: '',
   featuredTitle: 'Escolhas da semana',
-  statOrders: '1.200+',
-  statRating: '4.9',
-  statDelivery: '< 1h',
-  statYears: '6 anos',
   sizeGuideRows: JSON.stringify([
     { Tamanho: 'Solteiro', 'Lençol': '150×220 cm', Fronha: '50×70 cm', 'Capa duvet': '150×200 cm' },
     { Tamanho: 'Casal',   'Lençol': '180×220 cm', Fronha: '50×70 cm', 'Capa duvet': '180×200 cm' },
