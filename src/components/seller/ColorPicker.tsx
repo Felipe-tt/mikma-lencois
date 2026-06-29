@@ -89,8 +89,8 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
         <button
           type="button"
           onClick={() => { setShowSwatches(s => !s); setShowSugg(false); }}
-          style={{ background: value || '#cccccc' }}
-          className="w-9 h-9 border-2 border-mist shrink-0 transition-transform active:scale-95 relative rounded-[4px]"
+          style={{ '--color': value || '#cccccc' } as React.CSSProperties}
+          className="w-9 h-9 border-2 border-mist shrink-0 transition-transform active:scale-95 relative rounded-[4px] bg-[var(--color)]"
           title="Escolher da paleta"
           aria-label="Abrir paleta de cores"
         >
@@ -127,7 +127,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
                   onMouseDown={() => pickSuggestion(s)}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-warm text-left transition-colors"
                 >
-                  <span className="w-4 h-4 border border-mist shrink-0 rounded-[3px]" style={{ background: s.hex }} />
+                  <span className="w-4 h-4 border border-mist shrink-0 rounded-[3px] bg-[var(--color)]" style={{ '--color': s.hex } as React.CSSProperties} />
                   <span className="text-sm text-ink">{s.name}</span>
                 </button>
               ))}
@@ -147,7 +147,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
 
       {/* Paleta rápida — grade de swatches */}
       {showSwatches && (
-        <div className="absolute top-11 left-0 right-0 sm:right-auto z-30 bg-white border border-mist shadow-card-hover p-3 rounded-[4px]" style={{ maxWidth: 264 }}>
+        <div className="absolute top-11 left-0 right-0 sm:right-auto z-30 bg-white border border-mist shadow-card-hover p-3 rounded-[4px] max-w-[264px]">
           <p className="text-[9px] font-bold tracking-[0.14em] uppercase text-faint mb-2">Paleta têxtil</p>
           <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto pr-1">
             {TEXTILE_COLORS.map(c => (
@@ -155,8 +155,8 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
                 key={c.hex}
                 type="button"
                 onClick={() => { setInputName(c.name); setError(''); onChange(c.hex, c.name); setShowSwatches(false); }}
-                className={`w-8 h-8 border transition-transform hover:scale-110 shrink-0 rounded-[4px] ${value?.toLowerCase() === c.hex.toLowerCase() ? 'ring-2 ring-clay ring-offset-1' : 'border-mist'}`}
-                style={{ background: c.hex }}
+                className={`w-8 h-8 border transition-transform hover:scale-110 shrink-0 rounded-[4px] bg-[var(--color)] ${value?.toLowerCase() === c.hex.toLowerCase() ? 'ring-2 ring-clay ring-offset-1' : 'border-mist'}`}
+                style={{ '--color': c.hex } as React.CSSProperties}
                 title={c.name}
                 aria-label={c.name}
               />

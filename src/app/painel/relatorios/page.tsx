@@ -128,7 +128,7 @@ export default function RelatoriosPage() {
                     </div>
                   </div>
                   <div className="h-1 bg-[#E6DFD5] overflow-hidden">
-                    <div className="h-full bg-[#C4714A]" style={{ width: `${pct}%` }} />
+                    <div className="h-full bg-[#C4714A] w-[var(--w)]" style={{ '--w': `${pct}%` } as React.CSSProperties} />
                   </div>
                 </div>
               );

@@ -75,8 +75,7 @@ export default async function HomePage() {
 
           {/* Headline — ocupa toda a largura disponível */}
           <h1
-            className="font-display font-normal text-[#1E1208] leading-[0.96] tracking-[-0.025em]"
-            style={{ fontSize: 'clamp(3.8rem, 9.5vw, 9rem)' }}
+            className="font-display font-normal text-[#1E1208] leading-[0.96] tracking-[-0.025em] text-[clamp(3.8rem,9.5vw,9rem)]"
           >
             <span className="block">{heroLine1}</span>
             <span className="block italic text-[#7C5C3E]">{heroLine2}</span>
@@ -205,8 +204,7 @@ export default async function HomePage() {
             {city} · Est. {s.foundedYear || ''}
           </p>
           <h2
-            className="font-display font-normal text-[#F9F6F1] leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl"
-            style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)' }}
+            className="font-display font-normal text-[#F9F6F1] leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl text-[clamp(2.2rem,5vw,4rem)]"
           >
             {ctaLine1}<br /><em className="text-[#A07850] not-italic">{ctaLine2}</em>
           </h2>

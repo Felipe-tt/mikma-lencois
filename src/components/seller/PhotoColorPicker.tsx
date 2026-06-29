@@ -188,18 +188,18 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
 
             {ready && !loadError && (
               <div
-                className="absolute pointer-events-none"
-                style={{ left: `${crosshair.x * 100}%`, top: `${crosshair.y * 100}%`, transform: 'translate(-50%, -50%)' }}
+                className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 [left:var(--x)] [top:var(--y)]"
+                style={{ '--x': `${crosshair.x * 100}%`, '--y': `${crosshair.y * 100}%` } as React.CSSProperties}
               >
-                <div className="absolute top-1/2 -translate-y-px bg-white/80 h-px" style={{ width: 40, left: -20 }} />
-                <div className="absolute left-1/2 -translate-x-px bg-white/80 w-px" style={{ height: 40, top: -20 }} />
-                <div className="w-9 h-9 rounded-full border-[3px] border-white shadow-lg -translate-x-1/2 -translate-y-1/2 absolute top-0 left-0" style={{ background: pickedHex }} />
+                <div className="absolute top-1/2 -translate-y-px bg-white/80 h-px w-10 -left-5" />
+                <div className="absolute left-1/2 -translate-x-px bg-white/80 w-px h-10 -top-5" />
+                <div className="w-9 h-9 rounded-full border-[3px] border-white shadow-lg -translate-x-1/2 -translate-y-1/2 absolute top-0 left-0 bg-[var(--color)]" style={{ '--color': pickedHex } as React.CSSProperties} />
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-3 bg-white/10 px-4 py-2.5 w-full rounded-xl">
-            <div className="w-7 h-7 rounded-full border border-white/30 shrink-0" style={{ background: pickedHex }} />
+            <div className="w-7 h-7 rounded-full border border-white/30 shrink-0 bg-[var(--color)]" style={{ '--color': pickedHex } as React.CSSProperties} />
             <span className="text-sm text-white flex-1">
               {loadError ? 'Erro ao carregar a foto' : pickedName || 'Carregando…'}
             </span>

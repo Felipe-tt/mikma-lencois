@@ -35,8 +35,8 @@ export function SobrePreview({ s }: { s: StoreSettings }) {
           <div className="flex flex-col gap-4 max-w-xl">
             <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-[#C4714A]">Sobre nós</p>
             <h1 className="font-display font-normal leading-[1.02]">
-              <em className="text-[#C4714A] not-italic block" style={{ fontSize: 'clamp(1.8rem, 6vw, 3rem)' }}>{heroLine1}</em>
-              <span className="text-[#1E1208]/35 block mt-1" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.9rem)' }}>{heroLine2}</span>
+              <em className="text-[#C4714A] not-italic block text-[clamp(1.8rem,6vw,3rem)]">{heroLine1}</em>
+              <span className="text-[#1E1208]/35 block mt-1 text-[clamp(1.2rem,4vw,1.9rem)]">{heroLine2}</span>
             </h1>
           </div>
         </div>

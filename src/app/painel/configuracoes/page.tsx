@@ -508,7 +508,7 @@ function TableEditor({ colsJson, rowsJson, onRowsChange }: {
   return (
     <div className="flex flex-col gap-2">
       {/* Header */}
-      <div className="grid gap-2 pr-8" style={{ gridTemplateColumns: `repeat(${cols.length}, 1fr)` }}>
+      <div className="grid gap-2 pr-8 [grid-template-columns:repeat(var(--cols),1fr)]" style={{ '--cols': cols.length } as React.CSSProperties}>
         {cols.map(c => (
           <p key={c} className="text-[9px] font-bold tracking-[0.14em] uppercase text-[#B09C8C]">{c}</p>
         ))}
@@ -516,7 +516,7 @@ function TableEditor({ colsJson, rowsJson, onRowsChange }: {
       {/* Rows */}
       {rows.map((row, i) => (
         <div key={i} className="flex gap-2 items-center">
-          <div className="grid gap-2 flex-1" style={{ gridTemplateColumns: `repeat(${cols.length}, 1fr)` }}>
+          <div className="grid gap-2 flex-1 [grid-template-columns:repeat(var(--cols),1fr)]" style={{ '--cols': cols.length } as React.CSSProperties}>
             {cols.map(col => (
               <input key={col} type="text" value={row[col]??''} placeholder={col}
                 onChange={e => {

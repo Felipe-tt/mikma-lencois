@@ -42,8 +42,7 @@ export function HeroPreview({ s }: { s: StoreSettings }) {
           </p>
 
           <h1
-            className="font-display font-normal text-[#1E1208] leading-[0.96] tracking-[-0.025em]"
-            style={{ fontSize: 'clamp(2.2rem, 7vw, 4.5rem)' }}
+            className="font-display font-normal text-[#1E1208] leading-[0.96] tracking-[-0.025em] text-[clamp(2.2rem,7vw,4.5rem)]"
           >
             <span className="block">{heroLine1}</span>
             <span className="block italic text-[#7C5C3E]">{heroLine2}</span>
@@ -119,8 +118,7 @@ export function CtaPreview({ s }: { s: StoreSettings }) {
           {city} · Est. {s.foundedYear || ''}
         </p>
         <h2
-          className="font-display font-normal text-[#F9F6F1] leading-[1.04] tracking-[-0.02em] mb-7 max-w-2xl"
-          style={{ fontSize: 'clamp(1.6rem, 4.5vw, 3rem)' }}
+          className="font-display font-normal text-[#F9F6F1] leading-[1.04] tracking-[-0.02em] mb-7 max-w-2xl text-[clamp(1.6rem,4.5vw,3rem)]"
         >
           {ctaLine1}<br /><em className="text-[#A07850] not-italic">{ctaLine2}</em>
         </h2>

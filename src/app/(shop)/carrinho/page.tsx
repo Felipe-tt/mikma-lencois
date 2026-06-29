@@ -150,8 +150,8 @@ export default function CartPage() {
             </div>
             <div className="h-[3px] bg-mist/60 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-700 ${freeShip ? 'bg-emerald-500' : 'bg-ink'}`}
-                style={{ width: `${progress}%` }}
+                className={`h-full rounded-full transition-all duration-700 w-[var(--w)] ${freeShip ? 'bg-emerald-500' : 'bg-ink'}`}
+                style={{ '--w': `${progress}%` } as React.CSSProperties}
               />
             </div>
           </div>

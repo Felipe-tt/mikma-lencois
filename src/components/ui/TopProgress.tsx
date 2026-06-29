@@ -36,7 +36,7 @@ function Bar() {
 
   if (!visible) return null;
 
-  const transition = progress === 100
+  const transitionVal = progress === 100
     ? 'width 0.25s ease'
     : progress === 0
       ? 'none'
@@ -45,8 +45,8 @@ function Bar() {
   return (
     <div className="fixed top-0 left-0 right-0 z-[10000] h-[2px] pointer-events-none">
       <div
-        className="h-full bg-clay shadow-[0_0_6px_rgba(196,113,74,0.5)]"
-        style={{ width: `${progress}%`, transition }}
+        className="h-full bg-clay shadow-[0_0_6px_rgba(196,113,74,0.5)] w-[var(--w)] [transition:var(--t)]"
+        style={{ '--w': `${progress}%`, '--t': transitionVal } as React.CSSProperties}
       />
     </div>
   );

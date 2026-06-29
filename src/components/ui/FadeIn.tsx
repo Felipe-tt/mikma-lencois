@@ -26,12 +26,11 @@ export function FadeIn({ children, className = '', delay = 0 }: Props) {
     <div
       ref={ref}
       data-visible={visible}
-      data-delay={delay}
-      className={`will-change-[opacity,transform] transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+      className={`will-change-[opacity,transform] transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] [transition-delay:var(--delay,0ms)]
         data-[visible=false]:opacity-0 data-[visible=false]:translate-y-4
         data-[visible=true]:opacity-100 data-[visible=true]:translate-y-0
         ${className}`}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      style={{ '--delay': `${delay}ms` } as React.CSSProperties}
     >
       {children}
     </div>

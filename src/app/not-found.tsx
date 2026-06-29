@@ -10,8 +10,7 @@ export default async function NotFound() {
         Erro 404
       </p>
       <h1
-        className="font-display font-normal text-[#1E1208] leading-none tracking-[-0.02em] mb-6"
-        style={{ fontSize: 'clamp(4rem, 12vw, 9rem)' }}
+        className="font-display font-normal text-[#1E1208] leading-none tracking-[-0.02em] mb-6 text-[clamp(4rem,12vw,9rem)]"
       >
         Ops.
       </h1>

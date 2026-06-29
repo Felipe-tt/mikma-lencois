@@ -37,8 +37,7 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
       onClick={onClose}
     >
       <div
-        className="bg-[#FAF8F5] w-full max-h-full flex flex-col shadow-2xl animate-preview-in rounded-[6px] overflow-hidden"
-        style={{ maxWidth: viewport === 'mobile' ? 480 : 1180 }}
+        className={`bg-[#FAF8F5] w-full max-h-full flex flex-col shadow-2xl animate-preview-in rounded-[6px] overflow-hidden ${viewport === 'mobile' ? 'max-w-[480px]' : 'max-w-[1180px]'}`}
         onClick={e => e.stopPropagation()}
       >
         {/* ── Toolbar ── */}
@@ -91,8 +90,7 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
         {/* ── Frame ── */}
         <div className="flex-1 overflow-auto bg-[#E6DFD5] max-h-[78vh]">
           <div
-            className="mx-auto bg-white transition-[max-width] duration-200"
-            style={{ maxWidth: viewport === 'mobile' ? 420 : '100%' }}
+            className={`mx-auto bg-white transition-[max-width] duration-200 ${viewport === 'mobile' ? 'max-w-[420px]' : 'max-w-full'}`}
           >
             {children}
           </div>
