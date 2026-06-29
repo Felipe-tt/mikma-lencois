@@ -228,7 +228,7 @@ export default function ImportarWhatsappPage() {
           await fetch(upload.signedUrl, {
             method: 'PUT',
             headers: {
-              'Content-Type': b.contentType,
+              'Content-Type': b.contentType ?? 'application/octet-stream',
               'x-goog-meta-firebasestoragedownloadtokens': upload.publicUrl.match(/token=([^&]+)/)?.[1] ?? '',
               'x-goog-meta-cache-control': 'public, max-age=31536000, immutable',
             },
