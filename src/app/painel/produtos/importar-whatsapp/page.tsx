@@ -364,21 +364,21 @@ export default function ImportarWhatsappPage() {
                     </div>
                     <div>
                       <label className="label">Categoria</label>
-                      <select value={it.category} onChange={(e) => updateItem(idx, { category: e.target.value })} className={selectInputClass}
+                      <select value={it.category} onChange={(e) => updateItem(idx, { category: e.target.value })} className={selectInputClass}>
                         <option value="">Selecione</option>
                         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="label">Tamanho</label>
-                      <select value={it.size} onChange={(e) => updateItem(idx, { size: e.target.value })} className={selectInputClass}
+                      <select value={it.size} onChange={(e) => updateItem(idx, { size: e.target.value })} className={selectInputClass}>
                         <option value="">Selecione</option>
                         {SIZES.map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="label">Tecido</label>
-                      <select value={it.fabric} onChange={(e) => updateItem(idx, { fabric: e.target.value })} className={selectInputClass}
+                      <select value={it.fabric} onChange={(e) => updateItem(idx, { fabric: e.target.value })} className={selectInputClass}>
                         <option value="">Selecione</option>
                         {FABRICS.map((f) => <option key={f} value={f}>{f}</option>)}
                       </select>
