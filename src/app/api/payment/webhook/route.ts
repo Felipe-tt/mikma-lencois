@@ -246,6 +246,83 @@ export async function POST(req: NextRequest) {
           }
         }
         console.log(`Order ${orderId} marked as payment_expired, stock reservation released`);
+
+        // ── E-mail: PIX expirou, gere um novo ─────────────────────────────
+        try {
+          const userSnap = await adminDb.collection('users').doc(order.userId as string).get();
+          const userData = userSnap.data() ?? {};
+          const customerName = (userData.name ?? userData.displayName ?? 'Cliente') as string;
+          let customerEmail = userData.email as string | undefined;
+          if (!customerEmail) {
+            try {
+              const authUser = await adminAuth.getUser(order.userId as string);
+              customerEmail = authUser.email;
+            } catch { /* sem email */ }
+          }
+
+          if (customerEmail) {
+            const shortId  = orderId.slice(-8).toUpperCase();
+            const orderUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://mikma.com.br'}/pedidos/${orderId}`;
+            const total    = formatCurrency(order.totalCents as number);
+
+            await sendEmail({
+              to: customerEmail,
+              subject: `PIX expirado — gere um novo para o pedido #${shortId}`,
+              text: [
+                `Olá, ${customerName}.`,
+                '',
+                `O tempo para pagamento do pedido #${shortId} (${total}) expirou.`,
+                '',
+                'Mas não se preocupe — você ainda tem tempo para pagar. Acesse seu pedido e gere um novo código PIX.',
+                '',
+                `Acessar pedido: ${orderUrl}`,
+                '',
+                'O pedido será cancelado automaticamente se não for pago em 48h após a criação.',
+                '',
+                '— Mikma Lençóis',
+              ].join('\n'),
+              html: `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#FAF8F5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF8F5;padding:40px 20px;">
+<tr><td align="center">
+<table width="100%" style="max-width:480px;">
+  <tr><td style="padding:0 0 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td><span style="font-family:Georgia,serif;font-size:20px;color:#1E1208;letter-spacing:0.04em;">Mikma Lençóis</span></td>
+      <td align="right"><span style="font-size:10px;color:#B09C8C;letter-spacing:0.15em;text-transform:uppercase;">Blumenau, SC</span></td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:36px;border-top:3px solid #C4714A;">
+    <p style="margin:0 0 6px;font-size:18px;font-weight:bold;color:#1E1208;">PIX expirado</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#705A48;line-height:1.65;">
+      Olá, ${customerName}. O tempo de pagamento do pedido <strong>#${shortId}</strong> (${total}) expirou.
+    </p>
+    <p style="margin:0 0 28px;font-size:14px;color:#705A48;line-height:1.65;">
+      Sem problemas — você pode gerar um novo código PIX e concluir o pagamento.
+      O pedido só será cancelado após <strong>48 horas</strong> da criação.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+      <a href="${orderUrl}" style="display:inline-block;background:#1E1208;color:#FAF8F5;font-family:Georgia,serif;font-size:14px;text-decoration:none;padding:14px 36px;letter-spacing:0.04em;">
+        Gerar novo PIX
+      </a>
+    </td></tr></table>
+  </td></tr>
+  <tr><td style="padding:20px 0 0;">
+    <p style="margin:0;font-size:11px;color:#B09C8C;text-align:center;line-height:1.7;">
+      Dúvidas? Responda este e-mail ou acesse <a href="https://mikma.com.br" style="color:#C4714A;text-decoration:none;">mikma.com.br</a>
+    </p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`,
+            }).catch((err) => {
+              console.error('[webhook] falha ao enviar email PIX expirado:', err);
+            });
+          }
+        } catch (emailErr) {
+          console.error('[webhook] erro ao processar email PIX expirado:', emailErr);
+        }
       }
     }
   }

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { extractBearer, getClientIp, tooManyRequests } from '@/lib/security';
 
@@ -32,8 +33,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const snap  = await ref.get();
   if (!snap.exists) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
   const order = snap.data()!;
-  if (order.userId !== uid)               return NextResponse.json({ error: 'Acesso negado' },      { status: 403 });
-  if (order.status !== 'pending_payment') return NextResponse.json({ error: 'Pedido não está aguardando pagamento' }, { status: 400 });
+  if (order.userId !== uid) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+  const allowedStatuses = ['pending_payment', 'payment_expired'];
+  if (!allowedStatuses.includes(order.status as string)) {
+    return NextResponse.json({ error: 'Pedido não pode ter PIX gerado neste status' }, { status: 400 });
+  }
 
   // Carrega dados do usuário para customer
   const userSnap = await adminDb.collection('users').doc(uid).get();
@@ -70,12 +74,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   }
 
   const pix = (await pixRes.json()).data;
+  const nowIso = new Date().toISOString();
   await ref.update({
+    status: 'pending_payment',
     'payment.txId':         pix.id,
     'payment.pixQrCode':    pix.brCodeBase64,
     'payment.pixCopyPaste': pix.brCode,
     'payment.expiresAt':    pix.expiresAt ? new Date(pix.expiresAt) : null,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso,
+    timeline: FieldValue.arrayUnion({
+      status: 'payment_initiated',
+      at: nowIso,
+      note: 'Novo PIX gerado pelo cliente',
+    }),
   });
 
   return NextResponse.json({

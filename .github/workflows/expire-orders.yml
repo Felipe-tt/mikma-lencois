@@ -1,0 +1,27 @@
+name: Cron · Expirar pedidos sem pagamento
+
+on:
+  schedule:
+    # Roda a cada hora (minuto 0)
+    - cron: '0 * * * *'
+  workflow_dispatch: # permite rodar manualmente
+
+jobs:
+  expire-orders:
+    name: Expirar pedidos sem pagamento
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar API de expiração
+        run: |
+          STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            https://mikma.com.br/api/cron/expire-orders)
+
+          echo "HTTP status: $STATUS"
+          echo "Resposta:"
+          cat /tmp/response.json
+
+          if [ "$STATUS" != "200" ]; then
+            echo "Erro: status $STATUS"
+            exit 1
+          fi

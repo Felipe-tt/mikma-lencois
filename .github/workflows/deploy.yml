@@ -82,6 +82,7 @@ jobs:
           ABACATEPAY_API_KEY=${{ secrets.ABACATEPAY_API_KEY }}
           ABACATEPAY_PUBLIC_KEY=${{ secrets.ABACATEPAY_PUBLIC_KEY }}
           MELHOR_ENVIO_TOKEN=${{ secrets.MELHOR_ENVIO_TOKEN }}
+          CRON_SECRET=${{ secrets.CRON_SECRET }}
           EOF
 
       - name: Build Next.js
