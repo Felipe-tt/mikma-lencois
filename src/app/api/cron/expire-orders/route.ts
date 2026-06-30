@@ -142,17 +142,45 @@ export async function GET(req: NextRequest) {
         const ref = adminDb.collection('orders').doc(orderId);
         const nowIso = new Date().toISOString();
 
-        await ref.update({
-          status: 'cancelled',
-          cancelledAt: nowIso,
-          cancelledBy: 'cron',
-          updatedAt: FieldValue.serverTimestamp(),
-          timeline: FieldValue.arrayUnion({
+        // Usa transação para reler o status no momento da escrita: o
+        // snapshot do início do cron (linha ~107) pode estar desatualizado
+        // se o webhook de pagamento confirmou esse pedido enquanto o loop
+        // processava outros pedidos antes deste (cada iteração faz fetch
+        // de usuário + envio de e-mail, então a janela entre ler e
+        // escrever não é instantânea). Sem reler dentro da transação, um
+        // pedido pago no meio dessa janela seria marcado 'cancelled' por
+        // cima do 'paid', e reserved seria decrementado duas vezes
+        // (uma em confirmOrder no webhook, outra aqui).
+        const wasCancelled = await adminDb.runTransaction(async (tx) => {
+          const freshSnap = await tx.get(ref);
+          if (!freshSnap.exists) return false;
+          const freshOrder = freshSnap.data()!;
+          if (freshOrder.status !== 'pending_payment') {
+            // Mudou de status (pago, já cancelado, etc.) entre a leitura
+            // inicial do cron e agora — não mexe em nada.
+            return false;
+          }
+
+          tx.update(ref, {
             status: 'cancelled',
-            at: nowIso,
-            note: 'Cancelado automaticamente por falta de pagamento após 48h',
-          }),
+            cancelledAt: nowIso,
+            cancelledBy: 'cron',
+            updatedAt: FieldValue.serverTimestamp(),
+            timeline: FieldValue.arrayUnion({
+              status: 'cancelled',
+              at: nowIso,
+              note: 'Cancelado automaticamente por falta de pagamento após 48h',
+            }),
+          });
+          return true;
         });
+
+        if (!wasCancelled) {
+          // Pedido já tinha saído de pending_payment (provavelmente pago
+          // pelo webhook) — pula o e-mail de cancelamento e a liberação
+          // de estoque, que já foram tratados em outro lugar.
+          continue;
+        }
 
         // Libera reserva de estoque
         const items = (order.items ?? []) as Array<{ sku: string; quantity: number }>;

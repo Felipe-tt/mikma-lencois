@@ -58,49 +58,57 @@ export async function POST(req: NextRequest) {
   // ── Helper: confirm an order as paid ─────────────────────────────────────
   async function confirmOrder(orderId: string, txId: string, note: string) {
     const orderRef = adminDb.collection('orders').doc(orderId);
-    const orderSnap = await orderRef.get();
-
-    if (!orderSnap.exists) {
-      console.error('Order not found:', orderId);
-      return;
-    }
-
-    const order = orderSnap.data()!;
-
-    if (order.status !== 'pending_payment') {
-      console.log('Order already processed:', orderId, '— status:', order.status);
-      return;
-    }
-
     const now = new Date().toISOString();
-    const batch = adminDb.batch();
 
-    batch.update(orderRef, {
-      status: 'paid',
-      'payment.paidAt': FieldValue.serverTimestamp(),
-      'payment.txId': txId,
-      updatedAt: FieldValue.serverTimestamp(),
-      timeline: FieldValue.arrayUnion({ status: 'paid', at: now, note }),
-    });
+    // Transação: lê e escreve o status atomicamente. O cron de expiração
+    // (expire-orders) também decide com base em status === 'pending_payment'
+    // — sem essa transação, o cron poderia cancelar e decrementar reserved
+    // entre o get() e o commit() daqui, duplicando o decremento e deixando
+    // o pedido marcado 'cancelled' por cima de um pagamento real.
+    let order: FirebaseFirestore.DocumentData | null;
+    try {
+      order = await adminDb.runTransaction(async (tx) => {
+        const orderSnap = await tx.get(orderRef);
+        if (!orderSnap.exists) return null;
+        const data = orderSnap.data()!;
+        if (data.status !== 'pending_payment') return null;
 
-    for (const item of order.items as Array<{ sku: string; quantity: number }>) {
-      const invRef = adminDb.collection('inventory').doc(item.sku);
-      // NOTE: only 'quantity' is decremented here, not 'reserved'.
-      // Nothing in this codebase currently increments 'reserved' when
-      // an order is created — decrementing it on every paid order with
-      // no matching increment anywhere drives it permanently negative,
-      // which inflates available stock (available = quantity - reserved)
-      // a little more with every single sale. If/when proper stock
-      // reservation is added at order-creation time, this should also
-      // Decrementa quantity (estoque real) e reserved (liberado pela confirmação do PIX)
-      batch.update(invRef, {
-        quantity: FieldValue.increment(-item.quantity),
-        reserved: FieldValue.increment(-item.quantity),
-        updatedAt: FieldValue.serverTimestamp(),
+        tx.update(orderRef, {
+          status: 'paid',
+          'payment.paidAt': FieldValue.serverTimestamp(),
+          'payment.txId': txId,
+          updatedAt: FieldValue.serverTimestamp(),
+          timeline: FieldValue.arrayUnion({ status: 'paid', at: now, note }),
+        });
+
+        // Decrementa quantity (estoque real, debitado de fato) e reserved
+        // (libera a reserva feita em create-checkout/create-pix na criação
+        // do pedido) — ambos pelo mesmo motivo: a venda se concretizou.
+        for (const item of data.items as Array<{ sku: string; quantity: number }>) {
+          const invRef = adminDb.collection('inventory').doc(item.sku);
+          tx.update(invRef, {
+            quantity: FieldValue.increment(-item.quantity),
+            reserved: FieldValue.increment(-item.quantity),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
+
+        return data;
       });
+    } catch (err) {
+      console.error(`Failed to confirm order ${orderId}:`, err);
+      return;
     }
 
-    // ── Limpa o carrinho do cliente ───────────────────────────────────────
+    if (!order) {
+      console.log('Order not found or already processed:', orderId);
+      return;
+    }
+
+    // ── Limpa o carrinho do cliente + notifica vendedor ───────────────────
+    // Fora da transação (best-effort — não precisa ser atômico com o
+    // pagamento em si).
+    const batch = adminDb.batch();
     const cartRef = adminDb.collection('carts').doc(order.userId as string);
     batch.update(cartRef, { items: [], updatedAt: FieldValue.serverTimestamp() });
 
