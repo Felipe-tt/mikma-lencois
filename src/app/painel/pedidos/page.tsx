@@ -8,8 +8,8 @@ import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
 import { PainelSkeleton } from '@/components/painel/PainelSkeleton';
 import Link from 'next/link';
-import {
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import {
   IconAlert, IconBox, IconTruck, IconCheck, IconHourglass, IconX,
   IconHome, IconPostOffice, IconBolt, IconSearch, IconPin, IconArrowRight,
 } from '@/components/ui/Icon';
