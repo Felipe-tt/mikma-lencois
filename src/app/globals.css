@@ -284,13 +284,6 @@
   90%  { width: 95%;  opacity: 0.6; }
   100% { width: 100%; opacity: 0; }
 }
-/* Usada quando a navegação termina antes da progress-bar acima chegar a
-   100% sozinha — completa rapidamente e some, em vez de pular de corte. */
-@keyframes progress-bar-finish {
-  0%   { width: var(--progress-current, 85%); opacity: 1; }
-  60%  { width: 100%; opacity: 1; }
-  100% { width: 100%; opacity: 0; }
-}
 /* ── Scrollbar customizada ───────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;

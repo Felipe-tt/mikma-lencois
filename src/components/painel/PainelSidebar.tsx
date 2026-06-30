@@ -2,11 +2,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { usePainelNav } from '@/components/painel/PainelNavProgress';
 import {
   IconHome, IconOrders, IconMessages, IconProducts,
   IconInventory, IconReports, IconCoupons, IconSettings, IconMaintenance,
@@ -26,11 +25,8 @@ const NAV = [
 
 export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { navigate, isPending } = usePainelNav();
   const { logout, user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   useEffect(() => {
     return onSnapshot(
@@ -38,18 +34,6 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
       snap => setUnreadCount(snap.size)
     );
   }, []);
-
-  // Limpa o estado de "carregando" do item assim que a navegação terminar.
-  useEffect(() => {
-    if (!isPending) setPendingHref(null);
-  }, [isPending]);
-
-  function handleNavClick(e: React.MouseEvent, href: string) {
-    e.preventDefault();
-    onClose?.();
-    setPendingHref(href);
-    navigate(() => router.push(href));
-  }
 
   return (
     <aside className="w-60 shrink-0 flex flex-col border-r border-[#E6DFD5] bg-[#FAF8F5] h-full">
@@ -67,27 +51,18 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
         <ul className="flex flex-col gap-0.5">
           {NAV.map(({ href, label, desc, exact, Icon }) => {
             const active = exact ? pathname === href : pathname.startsWith(href);
-            const pending = pendingHref === href && isPending;
             return (
               <li key={href}>
                 <Link
                   href={href}
-                  onClick={e => handleNavClick(e, href)}
-                  aria-current={active ? 'page' : undefined}
+                  onClick={onClose}
                   className={`flex items-center gap-3 px-3 py-2.5 transition-all duration-150 rounded-sm
                     ${active
                       ? 'bg-[#1E1208] text-[#FAF8F5]'
                       : 'text-[#705A48] hover:text-[#1E1208] hover:bg-[#F0EBE1]'
-                    } ${pending ? 'opacity-60' : ''}`}
+                    }`}
                 >
-                  {pending ? (
-                    <svg className="shrink-0 animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.25" />
-                      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                    </svg>
-                  ) : (
-                    <Icon size={15} className="shrink-0" />
-                  )}
+                  <Icon size={15} className="shrink-0" />
                   <span className="flex flex-col flex-1">
                     <span className="text-[13px] font-semibold leading-tight flex items-center gap-2">
                       {label}
