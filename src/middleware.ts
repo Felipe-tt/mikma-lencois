@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { NextFetchEvent } from 'next/server';
 
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
 
@@ -28,6 +29,58 @@ async function isIpReleased(projectId: string, docId: string): Promise<boolean> 
   } catch {
     return false;
   }
+}
+
+async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; country: string; isp: string; debugError: string }> {
+  // IPs locais/privados não são geolocalizáveis
+  if (ip === '0.0.0.0' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+    return { city: '', region: '', country: '', isp: '', debugError: 'ip_local' };
+  }
+  try {
+    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
+      signal: AbortSignal.timeout(5000),
+      headers: { 'User-Agent': 'MikmaLencois/1.0' },
+    });
+    if (!res.ok) return { city: '', region: '', country: '', isp: '', debugError: `http_${res.status}` };
+    const data = await res.json();
+    if (data.error) return { city: '', region: '', country: '', isp: '', debugError: `api_error_${data.reason ?? 'unknown'}` };
+    return {
+      city: data.city ?? '',
+      region: data.region ?? '',
+      country: data.country_name ?? '',
+      isp: data.org ?? '',
+      debugError: '',
+    };
+  } catch (err) {
+    return { city: '', region: '', country: '', isp: '', debugError: `exception_${err instanceof Error ? err.message : String(err)}`.slice(0, 200) };
+  }
+}
+
+// Atualiza só os campos de geo num documento que já existe (PATCH com
+// updateMask, pra não sobrescrever `released`/`enteredAt`/etc. que podem
+// já ter mudado entre o registro inicial e a geo resolver) — chamada via
+// event.waitUntil(), nunca aguardada no caminho do redirect.
+async function updateGeoInQueue(projectId: string, docId: string, ip: string) {
+  const geo = await lookupIpGeo(ip);
+  const fieldPaths = ['geoCity', 'geoRegion', 'geoCountry', 'isp', 'geoDebug']
+    .map(f => `updateMask.fieldPaths=${f}`)
+    .join('&');
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}?${fieldPaths}`;
+  const fields = {
+    geoCity: { stringValue: geo.city },
+    geoRegion: { stringValue: geo.region },
+    geoCountry: { stringValue: geo.country },
+    isp: { stringValue: geo.isp },
+    geoDebug: { stringValue: geo.debugError },
+  };
+  try {
+    await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+      signal: AbortSignal.timeout(6000),
+    });
+  } catch { /* silencioso — best-effort, não afeta o visitante */ }
 }
 
 async function registerInQueue(projectId: string, docId: string, ip: string, req: NextRequest) {
@@ -88,7 +141,7 @@ function applySecurityHeaders(res: NextResponse): void {
 
 // ── Middleware principal ──────────────────────────────────────────────────────
 
-export async function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest, event: NextFetchEvent) {
   const { pathname } = req.nextUrl;
 
   const isExempt =
@@ -121,6 +174,11 @@ export async function middleware(req: NextRequest) {
 
       if (!released) {
         await registerInQueue(projectId, docId, ip, req);
+        // Geo não bloqueia o redirect — ipapi.co pode levar até alguns
+        // segundos, e o visitante não deve esperar isso pra ver a página
+        // de manutenção. waitUntil mantém a isolate viva até o PATCH de
+        // geo terminar, mesmo depois da resposta já ter sido enviada.
+        event.waitUntil(updateGeoInQueue(projectId, docId, ip));
         const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
         redirectRes.headers.set('Cache-Control', 'no-store, must-revalidate');
         applySecurityHeaders(redirectRes);
