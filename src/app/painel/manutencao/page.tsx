@@ -1,5 +1,6 @@
 'use client';
 import { IconMaintenance, IconCheck, IconMobile, IconComputer, IconPin, IconAlert } from '@/components/ui/Icon';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -124,7 +125,13 @@ export default function ManutencaoPage() {
   };
 
   const clearQueue = async () => {
-    if (!confirm('Limpar toda a fila?')) return;
+    const { confirmed } = await confirmDialog({
+      message: 'Limpar toda a fila?',
+      detail: 'Todos os registros de visitantes serão removidos permanentemente.',
+      confirmLabel: 'Limpar fila',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     const h = await getHeaders();
     await fetch('/api/maintenance', {
       method: 'POST', headers: h,

@@ -1,5 +1,6 @@
 'use client';
 import { IconAlert, IconCoupons, IconInfo, IconCheck } from '@/components/ui/Icon';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -42,7 +43,16 @@ export default function CuponsPage() {
   };
 
   const toggleActive = (id: string, active: boolean) => updateDoc(doc(db, 'coupons', id), { active: !active });
-  const remove = (id: string) => { if (confirm('Tem certeza que quer apagar este cupom? Os clientes não poderão mais usá-lo.')) deleteDoc(doc(db, 'coupons', id)); };
+  const remove = async (id: string) => {
+    const { confirmed } = await confirmDialog({
+      message: 'Apagar este cupom?',
+      detail: 'Os clientes não poderão mais usá-lo. Esta ação não tem como desfazer.',
+      confirmLabel: 'Apagar cupom',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    deleteDoc(doc(db, 'coupons', id));
+  };
 
   const desconto = (c: Coupon) => c.type === 'percent' ? `${c.value}% de desconto` : `R$ ${c.value.toFixed(2)} de desconto`;
 

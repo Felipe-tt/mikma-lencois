@@ -13,6 +13,7 @@ import {
   IconTruck, IconProducts, IconBox, IconMaintenance, IconUser, IconCard, IconPin, IconClock,
   IconHourglass, IconCheck, IconMoney, IconTrophy, IconAlert, IconX,
 } from '@/components/ui/Icon';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending_payment: 'Aguardando Pagamento',
@@ -227,7 +228,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(err.error ?? 'Erro ao atualizar status');
+        await confirmDialog({
+          message: err.error ?? 'Erro ao atualizar status',
+          alertOnly: true,
+        });
       }
     } finally { setUpdating(false); }
   }
@@ -260,10 +264,26 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   async function cancelDelivery() {
     if (!order) return;
-    const reason = prompt('Motivo do cancelamento (obrigatório, aparece no registro do pedido):');
-    if (reason === null) return; // usuário cancelou o prompt
-    if (!reason.trim()) { alert('Informe um motivo para cancelar.'); return; }
-    if (!confirm(`Cancelar a entrega despachada via ${order.delivery?.carrier ?? 'transportadora'}? A etiqueta será cancelada no Melhor Envio e o pedido volta para "Em preparo".`)) return;
+    const { confirmed: hasReason, value: reason } = await confirmDialog({
+      message: 'Motivo do cancelamento',
+      detail: 'Obrigatório — aparece no registro do pedido.',
+      withInput: true,
+      inputPlaceholder: 'Ex: etiqueta gerada com endereço errado',
+      confirmLabel: 'Continuar',
+    });
+    if (!hasReason) return;
+    if (!reason?.trim()) {
+      await confirmDialog({ message: 'Informe um motivo para cancelar.', alertOnly: true });
+      return;
+    }
+    const carrier = order.delivery?.carrier ?? 'transportadora';
+    const { confirmed } = await confirmDialog({
+      message: `Cancelar a entrega despachada via ${carrier}?`,
+      detail: 'A etiqueta será cancelada no Melhor Envio e o pedido voltará para "Em preparo".',
+      confirmLabel: 'Cancelar entrega',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     setCancellingDelivery(true);
     setCancelDeliveryError(null);
@@ -272,7 +292,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       const res = await fetch('/api/delivery', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ orderId: order.id, reason: reason.trim() }),
+        body: JSON.stringify({ orderId: order.id, reason: (reason ?? '').trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -290,9 +310,16 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   async function handleCancelOrder() {
     if (!order || order.status === 'cancelled' || order.status === 'delivered') return;
-    const reason = prompt('Motivo do cancelamento (opcional):') ?? '';
-    if (reason === null) return; // pressionou ESC
-    if (!confirm(`Cancelar este pedido? ${order.status !== 'pending_payment' ? 'O estoque será devolvido.' : ''} Não tem como desfazer.`)) return;
+    const willReturnStock = order.status !== 'pending_payment';
+    const { confirmed, value: reason } = await confirmDialog({
+      message: 'Cancelar este pedido?',
+      detail: `${willReturnStock ? 'O estoque será devolvido. ' : ''}Esta ação não tem como desfazer.`,
+      withInput: true,
+      inputPlaceholder: 'Motivo do cancelamento (opcional)',
+      confirmLabel: 'Cancelar pedido',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     setCancellingOrder(true);
     setCancelOrderError(null);
     try {
@@ -300,7 +327,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       const res = await fetch(`/api/orders/${order.id}/admin-cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ reason: reason.trim() || 'Cancelado pelo lojista' }),
+        body: JSON.stringify({ reason: (reason ?? '').trim() || 'Cancelado pelo lojista' }),
       });
       const data = await res.json();
       if (!res.ok) { setCancelOrderError(data.error ?? 'Erro ao cancelar pedido'); return; }
@@ -314,7 +341,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   async function handleDelete() {
     if (!order || order.status !== 'cancelled') return;
-    if (!confirm('Apagar permanentemente este pedido? Não tem como desfazer.')) return;
+    const { confirmed } = await confirmDialog({
+      message: 'Apagar permanentemente este pedido?',
+      detail: 'Esta ação não tem como desfazer.',
+      confirmLabel: 'Apagar pedido',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     setDeleting(true);
     try { await deleteDoc(doc(db, 'orders', id)); router.push('/painel/pedidos'); }
     catch { setDeleting(false); }

@@ -9,6 +9,7 @@ import type { Order } from '@/types';
 import { PainelSkeleton } from '@/components/painel/PainelSkeleton';
 import Link from 'next/link';
 import {
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
   IconAlert, IconBox, IconTruck, IconCheck, IconHourglass, IconX,
   IconHome, IconPostOffice, IconBolt, IconSearch, IconPin, IconArrowRight,
 } from '@/components/ui/Icon';
@@ -127,11 +128,20 @@ export default function PainelPedidos() {
   async function handleDeleteCancelled() {
     const cancelled = orders.filter(o => o.status === 'cancelled');
     if (!cancelled.length) return;
-    if (!confirm(`Apagar ${cancelled.length} pedido(s) cancelado(s)?`)) return;
+    const count = cancelled.length;
+    const { confirmed } = await confirmDialog({
+      message: `Apagar ${count} pedido${count !== 1 ? 's' : ''} cancelado${count !== 1 ? 's' : ''}?`,
+      detail: 'Os pedidos serão removidos permanentemente. Esta ação não tem como desfazer.',
+      confirmLabel: 'Apagar pedidos',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       const token = await auth.currentUser?.getIdToken();
       await fetch('/api/orders/delete-cancelled', { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-    } catch { alert('Erro ao apagar. Tente novamente.'); }
+    } catch {
+      await confirmDialog({ message: 'Erro ao apagar. Tente novamente.', alertOnly: true });
+    }
   }
 
   const filtered = useMemo(() => {

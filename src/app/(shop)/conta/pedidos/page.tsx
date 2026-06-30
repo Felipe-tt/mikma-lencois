@@ -10,6 +10,7 @@ import type { Order } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { OrdersListSkeleton } from '@/components/ui/Skeleton';
 import { PIXModal } from '@/components/checkout/PIXModal';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 const BADGES: Record<string, string> = {
   pending_payment: 'badge-pending',
@@ -69,7 +70,14 @@ export default function PedidosPage() {
   }
 
   async function handleCancel(order: Order) {
-    if (!user || !confirm('Tem certeza que deseja cancelar este pedido?')) return;
+    if (!user) return;
+    const { confirmed } = await confirmDialog({
+      message: 'Cancelar este pedido?',
+      detail: 'Esta ação não pode ser desfeita.',
+      confirmLabel: 'Cancelar pedido',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     setActionOId(order.id);
     setActionError(e => ({ ...e, [order.id]: '' }));
     try {

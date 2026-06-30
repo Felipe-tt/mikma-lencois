@@ -11,6 +11,7 @@ import { ColorPicker } from './ColorPicker';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
 import { PhotoColorPicker } from './PhotoColorPicker';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS } from '@/lib/productOptions';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 type Props = {
   initial?: Partial<Product> & { id?: string };
@@ -249,10 +250,13 @@ export default function ProductForm({ initial }: Props) {
         // Bloqueia o salvamento se isso for apagar SKUs com estoque restante
         // sem confirmação — evita perder quantidade rastreada por acidente.
         if (orphanedWithStock.length > 0) {
-          const ok = window.confirm(
-            `${orphanedWithStock.length === 1 ? 'Uma variação removida ainda tem' : `${orphanedWithStock.length} variações removidas ainda têm`} estoque cadastrado. ` +
-            'Se continuar, esse estoque será apagado permanentemente. Deseja continuar?'
-          );
+          const count = orphanedWithStock.length;
+          const { confirmed: ok } = await confirmDialog({
+            message: `${count === 1 ? 'Uma variação removida ainda tem' : `${count} variações removidas ainda têm`} estoque cadastrado.`,
+            detail: 'Se continuar, esse estoque será apagado permanentemente.',
+            confirmLabel: 'Continuar mesmo assim',
+            variant: 'danger',
+          });
           if (!ok) { setSaving(false); return; }
         }
 
