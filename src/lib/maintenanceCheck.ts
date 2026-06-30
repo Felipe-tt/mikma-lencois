@@ -1,6 +1,7 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 
 /**
@@ -191,23 +192,34 @@ export async function checkMaintenance(): Promise<void> {
     // Write immediately, with no geo data — never blocks the redirect below.
     queueRef.set(doc, { merge: true }).catch(() => {});
 
-    // Enrich with geo data fully in the background. CRITICAL: this is never
-    // awaited. ipapi.co (and most free geo-IP APIs) routinely rate-limit or
-    // outright block traffic from cloud provider IP ranges (GCP/AWS/Azure),
-    // which made this hang or eat its full timeout on every new visitor
-    // when this was awaited before the redirect — exactly what caused the
-    // whole site (and /painel, sharing the same Cloud Run service) to feel
-    // stuck. If this background call never completes, the only cost is a
-    // missing city/ISP label in the admin queue view — never a blocked
-    // visitor.
-    lookupIpGeo(ip)
-      .then(geo => {
-        queueRef.set(
-          { geoCity: geo.city, geoRegion: geo.region, geoCountry: geo.country, isp: geo.isp, geoDebug: geo.debugError },
-          { merge: true }
-        ).catch(() => {});
-      })
-      .catch(() => {});
+    // Enrich with geo data fully in the background. CRITICAL: this must never
+    // block the redirect below. ipapi.co (and most free geo-IP APIs) routinely
+    // rate-limit or outright block traffic from cloud provider IP ranges
+    // (GCP/AWS/Azure), which made this hang or eat its full timeout on every
+    // new visitor when this was awaited before the redirect — exactly what
+    // caused the whole site (and /painel, sharing the same Cloud Run service)
+    // to feel stuck.
+    //
+    // A bare unawaited promise (the previous approach here) doesn't actually
+    // survive in this environment though: Cloud Run only keeps CPU allocated
+    // to an instance while a request is in flight, so the moment this Server
+    // Component's response (the redirect below) is sent, the instance can be
+    // frozen mid-fetch — the lookupIpGeo() call never gets to finish, which is
+    // exactly why every entry in the queue was stuck on "geo: pending"
+    // forever, no matter how long it had been waiting. middleware.ts already
+    // solves this correctly for its own (Edge Runtime) code path via
+    // event.waitUntil(); after() is the Server Component / Route Handler
+    // equivalent — it keeps this request alive just long enough to run the
+    // callback after the response is sent, without delaying the redirect
+    // itself. If it still never completes, the only cost is a missing
+    // city/ISP label in the admin queue view — never a blocked visitor.
+    after(async () => {
+      const geo = await lookupIpGeo(ip);
+      await queueRef.set(
+        { geoCity: geo.city, geoRegion: geo.region, geoCountry: geo.country, isp: geo.isp, geoDebug: geo.debugError },
+        { merge: true }
+      ).catch(() => {});
+    });
   }
 
   redirect('/manutencao');
