@@ -92,12 +92,10 @@ export function confirmDialog(options: ConfirmOptions): Promise<ConfirmResult> {
 export function ConfirmDialogHost() {
   const [pending, setPending] = useState<PendingDialog | null>(null);
   const [inputValue, setInputValue] = useState('');
-  const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    setMounted(true);
     pushPending = (p) => {
       setInputValue('');
       setPending(p);
@@ -147,7 +145,7 @@ export function ConfirmDialogHost() {
     setPending(null);
   }
 
-  if (!mounted || !pending) return null;
+  if (!pending) return null;
 
   const {
     message, detail, confirmLabel, cancelLabel,
@@ -220,13 +218,6 @@ export function ConfirmDialogHost() {
         </div>
       </div>
 
-      <style jsx global>{`
-        @keyframes confirm-in {
-          from { opacity: 0; transform: scale(0.96) translateY(6px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .animate-confirm-in { animation: confirm-in 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
-      `}</style>
     </div>,
     document.body
   );
