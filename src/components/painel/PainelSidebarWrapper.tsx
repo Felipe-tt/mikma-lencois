@@ -16,7 +16,7 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-screen bg-[#F0EAE1]">
       {/* Sidebar desktop */}
-      <div className="hidden lg:block sticky top-0 h-screen self-start">
+      <div className="hidden lg:block sticky top-0 h-screen self-start overflow-hidden">
         <PainelSidebar />
       </div>
 
