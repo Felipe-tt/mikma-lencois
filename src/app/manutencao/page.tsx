@@ -5,6 +5,14 @@ export const metadata = {
 export default function ManutencaoPage() {
   return (
     <>
+      {/* Dispara o geo lookup assim que a página carrega.
+          Roda durante um request HTTP ativo → Cloud Run não congela a instância.
+          É isso que garante que o geo deixe de ficar "pending" no painel. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `fetch('/api/maintenance/geo').catch(function(){});`,
+        }}
+      />
       <style>{`
         .mnt-page {
           min-height: 100vh;
