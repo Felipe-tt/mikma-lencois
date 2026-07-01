@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
       geoRegion: geo.region,
       geoCountry: geo.country,
       isp: geo.isp,
-      geoDebug: geo.debugError || 'ok',
+      geoDebug: geo.debugError,
     },
     { merge: true }
   );
