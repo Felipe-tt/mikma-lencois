@@ -36,24 +36,58 @@ async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; 
   if (ip === '0.0.0.0' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
     return { city: '', region: '', country: '', isp: '', debugError: 'ip_local' };
   }
-  try {
-    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
-      signal: AbortSignal.timeout(5000),
-      headers: { 'User-Agent': 'MikmaLencois/1.0' },
-    });
-    if (!res.ok) return { city: '', region: '', country: '', isp: '', debugError: `http_${res.status}` };
-    const data = await res.json();
-    if (data.error) return { city: '', region: '', country: '', isp: '', debugError: `api_error_${data.reason ?? 'unknown'}` };
-    return {
-      city: data.city ?? '',
-      region: data.region ?? '',
-      country: data.country_name ?? '',
-      isp: data.org ?? '',
-      debugError: '',
-    };
-  } catch (err) {
-    return { city: '', region: '', country: '', isp: '', debugError: `exception_${err instanceof Error ? err.message : String(err)}`.slice(0, 200) };
+
+  // ipapi.co bloqueia/rate-limita IPs de cloud providers (GCP, AWS, Azure).
+  // Tentamos múltiplas APIs em sequência — a primeira que responder com sucesso vence.
+  // ip-api.com (HTTP) e freeipapi.com funcionam bem de cloud; ipapi.co fica por último.
+  type GeoResult = { city: string; region: string; country: string; isp: string; debugError: string };
+  const attempts: Array<() => Promise<GeoResult | null>> = [
+    // 1. ip-api.com — funciona de cloud, sem chave, 45 req/min grátis
+    async () => {
+      const res = await fetch(
+        `http://ip-api.com/json/${ip}?fields=status,city,regionName,country,org`,
+        { signal: AbortSignal.timeout(4000) }
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      if (d.status !== 'success') return null;
+      return { city: d.city ?? '', region: d.regionName ?? '', country: d.country ?? '', isp: d.org ?? '', debugError: '' };
+    },
+    // 2. freeipapi.com — funciona de cloud, sem chave
+    async () => {
+      const res = await fetch(
+        `https://freeipapi.com/api/json/${ip}`,
+        { signal: AbortSignal.timeout(4000) }
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      if (!d.cityName) return null;
+      return { city: d.cityName ?? '', region: d.regionName ?? '', country: d.countryName ?? '', isp: '', debugError: '' };
+    },
+    // 3. ipapi.co — fallback: funciona de IPs residenciais, mas bloqueia cloud
+    async () => {
+      const res = await fetch(
+        `https://ipapi.co/${ip}/json/`,
+        { signal: AbortSignal.timeout(5000), headers: { 'User-Agent': 'MikmaLencois/1.0' } }
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      if (d.error) return null;
+      return { city: d.city ?? '', region: d.region ?? '', country: d.country_name ?? '', isp: d.org ?? '', debugError: '' };
+    },
+  ];
+
+  const errors: string[] = [];
+  for (let i = 0; i < attempts.length; i++) {
+    try {
+      const result = await attempts[i]();
+      if (result) return result;
+      errors.push(`attempt_${i + 1}_no_data`);
+    } catch (err) {
+      errors.push(`attempt_${i + 1}_${err instanceof Error ? err.message.slice(0, 40) : 'err'}`);
+    }
   }
+  return { city: '', region: '', country: '', isp: '', debugError: errors.join('|') };
 }
 
 // Atualiza só os campos de geo num documento que já existe (PATCH com
