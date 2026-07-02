@@ -33,19 +33,23 @@ function CarrierIcon({ carrier }: { carrier: string }) {
   if (carrier === 'pickup') return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
   );
+  if (carrier === 'uber_direct') return (
+    /* moto / scooter icon */
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={cls}><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M8 17.5h7M15 17.5V9l3 2 2-2"/><path d="M6 9l3-4h5l2 4"/><path d="M6 9h9"/></svg>
+  );
   if (carrier.startsWith('jadlog')) return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
   );
-  // correios_pac, correios_sedex
+  // correios_pac, correios_sedex, outros
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
   );
 }
 
 const TAG: Record<string, { label: string; cls: string }> = {
-  local:     { label: 'Retirada grátis', cls: 'bg-emerald-100 text-emerald-800' },
-  rapido:    { label: 'Mais rápido',     cls: 'bg-amber-100 text-amber-800' },
-  economico: { label: 'Mais econômico',  cls: 'bg-sky-100 text-sky-800' },
+  local:     { label: 'Entrega hoje',   cls: 'bg-emerald-100 text-emerald-800' },
+  rapido:    { label: 'Mais rápido',    cls: 'bg-amber-100 text-amber-800' },
+  economico: { label: 'Mais econômico', cls: 'bg-sky-100 text-sky-800' },
 };
 
 // ── Field components ─────────────────────────────────────────────────────────

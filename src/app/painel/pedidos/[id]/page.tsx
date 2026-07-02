@@ -465,6 +465,59 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {order.status === 'shipped' && (
           <div className="border border-[#E6DFD5] px-5 py-4 flex flex-col gap-3">
             <p className="text-[13px] font-bold text-[#1E1208] flex items-center gap-1.5"><IconTruck size={13} className="text-[#C4714A]" /> Pedido despachado</p>
+
+            {/* ── Uber Direct: entregador em tempo real ─────────────────── */}
+            {order.delivery?.carrier === 'uber_direct' && (
+              <div className="bg-[#F5F1EB] border border-[#E6DFD5] px-4 py-3 flex flex-col gap-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#B09C8C]">Uber Direct</p>
+
+                {/* Entregador */}
+                {order.delivery.courierName ? (
+                  <div className="flex items-center gap-3">
+                    {order.delivery.courierPhoto ? (
+                      <img src={order.delivery.courierPhoto} alt={order.delivery.courierName}
+                        className="w-9 h-9 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <span className="w-9 h-9 rounded-full bg-[#E6DFD5] flex items-center justify-center shrink-0">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#C4714A" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                      </span>
+                    )}
+                    <div>
+                      <p className="text-[13px] font-semibold text-[#1E1208]">{order.delivery.courierName}</p>
+                      {order.delivery.courierPhone && (
+                        <p className="text-[11px] text-[#705A48] font-mono">{order.delivery.courierPhone}</p>
+                      )}
+                      {order.delivery.courierVehicle && (
+                        <p className="text-[11px] text-[#B09C8C] capitalize">{order.delivery.courierVehicle}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-[#B09C8C]">Procurando entregador…</p>
+                )}
+
+                {/* ETA */}
+                {order.delivery.dropoffEta && (
+                  <p className="text-[12px] text-[#705A48]">
+                    Previsão de chegada:{' '}
+                    <span className="font-bold text-[#1E1208]">
+                      {new Date(order.delivery.dropoffEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </p>
+                )}
+
+                {/* Link rastreio em tempo real */}
+                {order.delivery.trackingUrl && (
+                  <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 w-full py-2 bg-[#1E1208] text-[#FAF8F5] text-[12px] font-bold hover:bg-[#1E1208]/80 transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                    Ver motoboy no mapa
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Código de rastreio (Melhor Envio / Correios) */}
             {order.delivery?.trackingCode && (
               <div className="flex items-center justify-between bg-[#F0EBE1] px-3 py-2.5">
                 <div>
@@ -477,7 +530,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 </button>
               </div>
             )}
-            {order.delivery?.trackingUrl && (
+            {order.delivery?.trackingUrl && order.delivery?.carrier !== 'uber_direct' && (
               <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
                 className="text-[12px] text-[#C4714A] font-semibold hover:underline">
                 Rastrear envio

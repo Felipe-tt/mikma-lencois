@@ -115,7 +115,7 @@ export interface Order {
   delivery: {
     carrier: 'melhor_envio' | 'correios_pac' | 'correios_sedex' | 'jadlog_package' | 'jadlog_expresso' | 'pickup' | 'uber_direct' | 'manual' | null
     trackingCode?: string
-    trackingUrl?: string
+    trackingUrl?: string        // URL real da entrega (Uber Direct: link de rastreio em tempo real)
     melhorEnvioOrderId?: string
     uberDirectDeliveryId?: string
     labelUrl?: string
@@ -123,6 +123,12 @@ export interface Order {
     deliveredAt?: string
     estimatedDelivery?: string
     estimatedDays?: number
+    // Uber Direct — atualizados pelo webhook
+    courierName?: string        // Nome do entregador
+    courierPhone?: string       // Telefone mascarado do entregador
+    courierPhoto?: string       // Foto do entregador (img_href)
+    courierVehicle?: string     // vehicle_type (car, bicycle, scooter…)
+    dropoffEta?: string         // ETA de entrega (ISO)
   }
   address: Address
   totalCents: number

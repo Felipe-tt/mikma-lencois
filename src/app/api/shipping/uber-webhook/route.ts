@@ -109,7 +109,13 @@ export async function POST(req: NextRequest) {
 
     if (newStatus !== orderData.status) update.status = newStatus;
     if (data?.tracking_url)             update['delivery.trackingUrl'] = data.tracking_url;
+    if (data?.dropoff_eta)              update['delivery.dropoffEta']  = data.dropoff_eta;
     if (uberStatus === 'delivered')     update['delivery.deliveredAt'] = FieldValue.serverTimestamp();
+    // Preenche courier se presente no evento (nem sempre vem, mas quando vem aproveita)
+    const courierInStatus = data?.courier as Record<string, unknown> | undefined;
+    if (courierInStatus?.name)      update['delivery.courierName']  = courierInStatus.name;
+    if (courierInStatus?.img_href)  update['delivery.courierPhoto'] = courierInStatus.img_href;
+    if (courierInStatus?.vehicle_type) update['delivery.courierVehicle'] = courierInStatus.vehicle_type;
 
     if (uberStatus === 'canceled' || uberStatus === 'returned') {
       update['delivery.carrier']              = null;
