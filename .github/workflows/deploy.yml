@@ -83,6 +83,11 @@ jobs:
           ABACATEPAY_PUBLIC_KEY=${{ secrets.ABACATEPAY_PUBLIC_KEY }}
           MELHOR_ENVIO_TOKEN=${{ secrets.MELHOR_ENVIO_TOKEN }}
           CRON_SECRET=${{ secrets.CRON_SECRET }}
+          UBER_DIRECT_CLIENT_ID=${{ secrets.UBER_DIRECT_CLIENT_ID }}
+          UBER_DIRECT_CLIENT_SECRET=${{ secrets.UBER_DIRECT_CLIENT_SECRET }}
+          UBER_DIRECT_CUSTOMER_ID=${{ secrets.UBER_DIRECT_CUSTOMER_ID }}
+          UBER_DIRECT_WEBHOOK_SECRET=${{ secrets.UBER_DIRECT_WEBHOOK_SECRET }}
+          UBER_DIRECT_RADIUS_KM=15
           EOF
 
       - name: Build Next.js
