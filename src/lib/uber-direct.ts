@@ -13,9 +13,10 @@
 import { adminDb } from '@/lib/firebase/admin';
 
 const SANDBOX  = process.env.UBER_DIRECT_SANDBOX === 'true';
+// Auth URL conforme securitySchemes.direct_auth.flows.clientCredentials.tokenUrl do OpenAPI
 const AUTH_URL = SANDBOX
-  ? 'https://sandbox-login.uber.com/oauth/v2/token'
-  : 'https://login.uber.com/oauth/v2/token';
+  ? 'https://auth.uber.com/oauth/v2/token'   // sandbox usa o mesmo endpoint
+  : 'https://auth.uber.com/oauth/v2/token';
 const API_BASE = SANDBOX
   ? 'https://sandbox-api.uber.com/v1'
   : 'https://api.uber.com/v1';
@@ -258,11 +259,13 @@ export async function uberGetDelivery(deliveryId: string): Promise<UberDeliveryS
   if (!res.ok) throw new Error(`Uber Direct get delivery falhou: ${res.status}`);
 
   const d = await res.json();
+  // Campos conforme GetDeliveryResp + CourierInfo do OpenAPI
   return {
     status:          d.status,
     trackingUrl:     d.tracking_url ?? '',
     courierName:     d.courier?.name,
     courierPhone:    d.courier?.phone_number,
+    courierVehicle:  d.courier?.vehicle_type,  // vehicle_type em CourierInfo
     pickupEta:       d.pickup_eta,
     dropoffEta:      d.dropoff_eta,
     complete:        d.complete ?? false,
@@ -271,15 +274,34 @@ export async function uberGetDelivery(deliveryId: string): Promise<UberDeliveryS
 
 // ── Cancelar ──────────────────────────────────────────────────────────────────
 
-/** POST /customers/{customer_id}/deliveries/{delivery_id}/cancel */
-export async function uberCancelDelivery(deliveryId: string): Promise<void> {
+/**
+ * POST /customers/{customer_id}/deliveries/{delivery_id}/cancel
+ * Body: CancelDeliveryReq — cancelation_reason (obrigatório se reason=other) + additional_description
+ * Valores válidos: out_of_items | store_closed | customer_called_to_cancel | store_too_busy |
+ *                  courier_delayed_en_route_to_pickup | too_expensive |
+ *                  customer_changed_order_requirements | delivery_vehicle_too_small |
+ *                  no_courier_assigned | other
+ */
+export async function uberCancelDelivery(
+  deliveryId: string,
+  reason: string = 'customer_called_to_cancel',
+  additionalDescription?: string,
+): Promise<void> {
   const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
   if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
 
   const token = await getUberToken();
-  const res   = await fetch(
+  const body: Record<string, string> = { cancelation_reason: reason };
+  if (additionalDescription) body.additional_description = additionalDescription;
+
+  const res = await fetch(
     `${API_BASE}/customers/${customerId}/deliveries/${deliveryId}/cancel`,
-    { method: 'POST', headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) }
+    {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body:    JSON.stringify(body),
+      signal:  AbortSignal.timeout(8000),
+    }
   );
 
   if (!res.ok) {

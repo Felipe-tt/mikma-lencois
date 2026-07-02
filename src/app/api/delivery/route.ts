@@ -369,7 +369,7 @@ export async function DELETE(req: NextRequest) {
     // ── Uber Direct ────────────────────────────────────────────────────────────────────────────
     if (uberDirectDeliveryId) {
       try {
-        await uberCancelDelivery(uberDirectDeliveryId);
+        await uberCancelDelivery(uberDirectDeliveryId, 'customer_called_to_cancel');
       } catch (err) {
         console.error('[delivery/cancel] uberCancelDelivery falhou:', err);
         return NextResponse.json(

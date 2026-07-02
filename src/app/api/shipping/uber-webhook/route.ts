@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
 
     if (courier.name)         update['delivery.courierName']  = courier.name;
     if (courier.phone_number) update['delivery.courierPhone'] = courier.phone_number;
-    if (courier.picture_url)  update['delivery.courierPhoto'] = courier.picture_url;
+    if (courier.img_href)     update['delivery.courierPhoto'] = courier.img_href; // img_href conforme OpenAPI CourierInfo
 
     // ETAs atualizados
     const dropoff = data?.dropoff as Record<string, unknown> | undefined;
