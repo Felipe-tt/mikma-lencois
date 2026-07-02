@@ -27,7 +27,9 @@ import {
 import {
   uberCreateDelivery,
   uberCancelDelivery,
+  buildUberAddress,
   formatPhone,
+  type UberManifestItem,
 } from '@/lib/uber-direct';
 
 async function getStoreSettings(): Promise<StoreSettings> {
@@ -114,42 +116,42 @@ export async function POST(req: NextRequest) {
       const customerName  = (userData.name as string | undefined) || 'Cliente';
       const customerPhone = formatPhone((userData.phone as string | undefined) || '47999999999');
 
-      // Monta endereços completos
-      const pickupAddress = [
-        settings.storeAddress,
-        settings.storeNumber,
-        settings.storeCity,
-        settings.storeState,
-        settings.originCep,
-        'BR',
-      ].filter(Boolean).join(', ');
+      // Monta endereços no formato JSON string exigido pela API Uber Direct
+      const pickupAddress = buildUberAddress({
+        street:  settings.storeAddress ?? '',
+        number:  settings.storeNumber  ?? '',
+        city:    settings.storeCity    ?? '',
+        state:   settings.storeState   ?? '',
+        zipCode: settings.originCep    ?? '',
+      });
 
-      const dropoffAddress = [
-        addr.street,
-        addr.number,
-        addr.complement,
-        addr.neighborhood,
-        addr.city,
-        addr.state,
-        addr.cep,
-        'BR',
-      ].filter(Boolean).join(', ');
+      const dropoffAddress = buildUberAddress({
+        street:     addr.street      ?? '',
+        number:     addr.number      ?? '',
+        complement: addr.complement,
+        city:       addr.city        ?? '',
+        state:      addr.state       ?? '',
+        zipCode:    addr.cep         ?? '',
+      });
 
-      // Resumo dos itens para o entregador
-      const itemDescription = order.items
-        .map(i => `${i.quantity}x ${i.productName}`)
-        .join(', ')
-        .slice(0, 280);
+      // manifest_items é OBRIGATÓRIO — array com cada item do pedido
+      const manifestItems: UberManifestItem[] = order.items.map(i => ({
+        name:     `${i.productName}${i.variantLabel ? ` (${i.variantLabel})` : ''}`.slice(0, 80),
+        quantity: i.quantity,
+        size:     'medium' as const,
+        price:    i.priceCents,
+      }));
 
       const uberDelivery = await uberCreateDelivery({
-        orderId:         orderId,
-        pickupName:      settings.storeName || 'Mikma Lençóis',
+        orderId:             orderId,
+        pickupName:          settings.storeName || 'Mikma Lençóis',
         pickupAddress,
-        pickupPhone:     formatPhone(settings.storePhone || '47000000000'),
-        dropoffName:     customerName,
+        pickupPhoneNumber:   formatPhone(settings.storePhone || '47000000000'),
+        dropoffName:         customerName,
         dropoffAddress,
-        dropoffPhone:    customerPhone,
-        itemDescription,
+        dropoffPhoneNumber:  customerPhone,
+        manifestItems,
+        manifestTotalValue:  order.totalCents,
       });
 
       await adminDb.collection('orders').doc(orderId).update({

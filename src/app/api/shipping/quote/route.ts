@@ -64,7 +64,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 // ── Uber Direct ───────────────────────────────────────────────────────────────
-import { getUberToken, uberQuote, formatPhone } from '@/lib/uber-direct';
+import { getUberToken, uberQuote, formatPhone, buildUberAddress } from '@/lib/uber-direct';
 
 /**
  * Monta string de endereço para a API do Uber Direct a partir dos dados do ViaCEP.
@@ -73,18 +73,24 @@ import { getUberToken, uberQuote, formatPhone } from '@/lib/uber-direct';
  * Na criação real da entrega (delivery/route.ts) usamos o endereço completo do pedido.
  */
 async function buildDropoffAddress(cep: string): Promise<string> {
+  // Retorna JSON string conforme exigido pela API Uber Direct
   const clean = cep.replace(/\D/g, '');
   try {
     const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`, {
       signal: AbortSignal.timeout(3000),
     });
     const d = await res.json();
-    if (d.erro) return `${clean}, BR`;
-    return [d.logradouro, d.bairro, d.localidade, d.uf, clean, 'BR']
-      .filter(Boolean)
-      .join(', ');
+    if (d.erro) {
+      return JSON.stringify({ street_address: [clean], city: '', state: '', zip_code: clean, country: 'BR' });
+    }
+    return buildUberAddress({
+      street:  d.logradouro ?? '',
+      city:    d.localidade ?? '',
+      state:   d.uf ?? '',
+      zipCode: clean,
+    });
   } catch {
-    return `${clean}, BR`;
+    return JSON.stringify({ street_address: [''], city: '', state: '', zip_code: clean, country: 'BR' });
   }
 }
 
@@ -515,14 +521,13 @@ export async function POST(req: NextRequest) {
         try {
           const token = await getUberToken();
           void token; // já validado — uberQuote usa internamente
-          const pickupAddr = [
-            settings.storeAddress,
-            settings.storeNumber,
-            settings.storeCity,
-            settings.storeState,
-            fromCep,
-            'BR',
-          ].filter(Boolean).join(', ');
+          const pickupAddr = buildUberAddress({
+            street:  settings.storeAddress ?? '',
+            number:  settings.storeNumber  ?? '',
+            city:    settings.storeCity    ?? '',
+            state:   settings.storeState   ?? '',
+            zipCode: fromCep,
+          });
           const dropoffAddr = await buildDropoffAddress(destCep);
           const quote = await uberQuote(pickupAddr, dropoffAddr);
           options.push({

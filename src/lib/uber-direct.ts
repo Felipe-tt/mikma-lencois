@@ -1,21 +1,13 @@
 /**
  * src/lib/uber-direct.ts
- * Cliente centralizado para a API Uber Direct (entrega local sob demanda).
+ * Cliente Uber Direct baseado no OpenAPI oficial (openapi.json).
  *
- * CREDENCIAIS necessárias (configurar no .env.local e no Cloud Run):
- *   UBER_DIRECT_CLIENT_ID      — developer.uber.com → seu app
- *   UBER_DIRECT_CLIENT_SECRET  — developer.uber.com → seu app
- *   UBER_DIRECT_CUSTOMER_ID    — direct.uber.com → configurações da conta
- *   UBER_DIRECT_WEBHOOK_SECRET — developer.uber.com → Webhooks → segredo de assinatura
- *   UBER_DIRECT_SANDBOX=true   — usar sandbox (omitir ou false em produção)
- *
- * COMO OBTER:
- *   1. Acesse https://developer.uber.com/dashboard e crie um app
- *   2. Em "Products", habilite "Delivery" (Uber Direct)
- *   3. Copie Client ID e Client Secret
- *   4. Acesse https://direct.uber.com → Settings → API Access → copie Customer ID
- *   5. Em developer.uber.com → seu app → Webhooks → crie um webhook apontando para
- *      https://mikma.com.br/api/shipping/uber-webhook e copie o signing secret
+ * CREDENCIAIS (configurar no Cloud Run → Variáveis de ambiente):
+ *   UBER_DIRECT_CLIENT_ID      — developer.uber.com → seu app → Credentials
+ *   UBER_DIRECT_CLIENT_SECRET  — developer.uber.com → seu app → Credentials
+ *   UBER_DIRECT_CUSTOMER_ID    — ed166cc1-bc6c-4eec-a2a1-719773f6ec6f
+ *   UBER_DIRECT_WEBHOOK_SECRET — developer.uber.com → seu app → Webhooks
+ *   UBER_DIRECT_SANDBOX=true   — remover em produção
  */
 
 import { adminDb } from '@/lib/firebase/admin';
@@ -28,28 +20,26 @@ const API_BASE = SANDBOX
   ? 'https://sandbox-api.uber.com/v1'
   : 'https://api.uber.com/v1';
 
-// ── Token OAuth2 (client_credentials, cache no Firestore) ────────────────────
+// ── Token OAuth2 ──────────────────────────────────────────────────────────────
 
 export async function getUberToken(): Promise<string> {
   const clientId     = process.env.UBER_DIRECT_CLIENT_ID;
   const clientSecret = process.env.UBER_DIRECT_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
+  if (!clientId || !clientSecret)
     throw new Error('UBER_DIRECT_CLIENT_ID / UBER_DIRECT_CLIENT_SECRET não configurados');
-  }
 
-  // Token pode durar horas — cacheia pra não bater no auth em toda requisição
   try {
     const snap = await adminDb.collection('_cache').doc('uber_token').get();
     if (snap.exists) {
       const d = snap.data()!;
       if (d.token && d.expiresAt && Date.now() < d.expiresAt - 60_000) return d.token as string;
     }
-  } catch { /* cache miss, prossegue */ }
+  } catch { /* cache miss */ }
 
   const res = await fetch(AUTH_URL, {
-    method: 'POST',
+    method:  'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
+    body:    new URLSearchParams({
       client_id:     clientId,
       client_secret: clientSecret,
       grant_type:    'client_credentials',
@@ -66,21 +56,39 @@ export async function getUberToken(): Promise<string> {
   const data      = await res.json();
   const token     = data.access_token as string;
   const expiresAt = Date.now() + (data.expires_in ?? 3600) * 1000;
-
   adminDb.collection('_cache').doc('uber_token').set({ token, expiresAt }).catch(() => {});
   return token;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Formato de endereço ───────────────────────────────────────────────────────
+// A API Uber Direct exige um JSON STRING escapado no campo pickup_address /
+// dropoff_address — NÃO uma string de texto puro.
+// Exemplo: "{\"street_address\":[\"Rua XV de Novembro, 234\"],\"city\":\"Blumenau\",
+//            \"state\":\"SC\",\"zip_code\":\"89010400\",\"country\":\"BR\"}"
 
-/** Normaliza fee da API (pode vir em centavos ou em reais dependendo do endpoint/região) */
-function normalizeFee(raw: unknown): number {
-  if (typeof raw !== 'number' || raw === 0) return 0;
-  // Heurística: se o valor for >= 100 provavelmente já está em centavos (R$1,00+)
-  return raw >= 100 ? raw : Math.round(raw * 100);
+export interface UberAddressInput {
+  street:       string;   // logradouro
+  number?:      string;
+  complement?:  string;
+  city:         string;
+  state:        string;   // sigla, ex: "SC"
+  zipCode:      string;
+  country?:     string;   // padrão "BR"
 }
 
-/** Formata número de telefone para E.164 (+55...) */
+export function buildUberAddress(a: UberAddressInput): string {
+  const streetLine = [a.street, a.number, a.complement].filter(Boolean).join(', ');
+  return JSON.stringify({
+    street_address: [streetLine],
+    city:           a.city,
+    state:          a.state,
+    zip_code:       a.zipCode.replace(/\D/g, ''),
+    country:        a.country ?? 'BR',
+  });
+}
+
+// ── Formatar telefone para E.164 (+55...) ────────────────────────────────────
+
 export function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.startsWith('55')) return `+${digits}`;
@@ -90,26 +98,26 @@ export function formatPhone(phone: string): string {
 // ── Quote ─────────────────────────────────────────────────────────────────────
 
 export interface UberQuoteResult {
-  quoteId:   string;
-  feeCents:  number;
-  expiresAt: string; // ISO
+  quoteId:      string;
+  feeCents:     number;  // sempre em centavos (integer)
+  expiresAt:    string;  // ISO
+  dropoffEta?:  string;  // ISO — previsão de entrega
+  durationMin?: number;  // minutos estimados
 }
 
 /**
- * Cota uma entrega sem criá-la. Útil para exibir o preço no checkout.
- * O quoteId pode ser reaproveitado em uberCreateDelivery se ainda não expirou.
- * Endereços devem ser strings geocodificáveis, ex:
- *   "Rua XV de Novembro, 234, Centro, Blumenau, SC, 89010-400, BR"
+ * POST /customers/{customer_id}/delivery_quotes
+ * pickup_address e dropoff_address são JSON strings (use buildUberAddress).
  */
 export async function uberQuote(
-  pickupAddress: string,
-  dropoffAddress: string,
+  pickupAddress:  string,  // JSON string
+  dropoffAddress: string,  // JSON string
 ): Promise<UberQuoteResult> {
   const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
   if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
 
   const token = await getUberToken();
-  const res = await fetch(`${API_BASE}/customers/${customerId}/delivery_quotes`, {
+  const res   = await fetch(`${API_BASE}/customers/${customerId}/delivery_quotes`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body:    JSON.stringify({ pickup_address: pickupAddress, dropoff_address: dropoffAddress }),
@@ -118,60 +126,87 @@ export async function uberQuote(
 
   if (!res.ok) {
     const err = await res.text().catch(() => '');
-    throw new Error(`Uber Direct quote falhou: ${res.status} ${err.slice(0, 200)}`);
+    throw new Error(`Uber Direct quote falhou: ${res.status} ${err.slice(0, 300)}`);
   }
 
   const data = await res.json();
+  // fee é sempre integer em centavos conforme spec (ex: 600 = R$6,00)
   return {
-    quoteId:   data.id ?? data.quote_id ?? '',
-    feeCents:  normalizeFee(data.fee ?? data.total_fee),
-    expiresAt: data.expires ?? new Date(Date.now() + 5 * 60_000).toISOString(),
+    quoteId:      data.id ?? '',
+    feeCents:     data.fee ?? 0,
+    expiresAt:    data.expires ?? new Date(Date.now() + 5 * 60_000).toISOString(),
+    dropoffEta:   data.dropoff_eta,
+    durationMin:  data.duration,
   };
 }
 
 // ── Criar entrega ─────────────────────────────────────────────────────────────
 
+export interface UberManifestItem {
+  name:      string;
+  quantity:  number;   // inteiro >= 1
+  size?:     'small' | 'medium' | 'large' | 'xlarge'; // padrão: small
+  price?:    number;   // centavos
+  weight?:   number;   // gramas
+}
+
 export interface UberCreateParams {
-  orderId:         string;
-  quoteId?:        string; // reaproveitado se ainda válido — economiza nova cobrança
-  pickupName:      string;
-  pickupAddress:   string;
-  pickupPhone:     string; // formato E.164, ex: +5547999999999
-  dropoffName:     string;
-  dropoffAddress:  string;
-  dropoffPhone:    string;
-  itemDescription: string; // resumo do pedido, max 280 chars
+  orderId:              string;
+  quoteId?:             string;
+  pickupName:           string;
+  pickupAddress:        string;  // JSON string (buildUberAddress)
+  pickupPhoneNumber:    string;  // E.164
+  pickupNotes?:         string;
+  dropoffName:          string;
+  dropoffAddress:       string;  // JSON string (buildUberAddress)
+  dropoffPhoneNumber:   string;  // E.164
+  dropoffNotes?:        string;
+  manifestItems:        UberManifestItem[];
+  manifestTotalValue?:  number;  // centavos — valor total dos itens
 }
 
 export interface UberCreateResult {
-  deliveryId:  string;
-  trackingUrl: string;
-  feeCents:    number;
-  status:      string; // 'pending' inicialmente
+  deliveryId:   string;
+  trackingUrl:  string;
+  feeCents:     number;
+  status:       string;
+  pickupEta?:   string;
+  dropoffEta?:  string;
 }
 
+/**
+ * POST /customers/{customer_id}/deliveries
+ * Campos OBRIGATÓRIOS: pickup_name, pickup_address, pickup_phone_number,
+ *                      dropoff_name, dropoff_address, dropoff_phone_number,
+ *                      manifest_items (array)
+ */
 export async function uberCreateDelivery(params: UberCreateParams): Promise<UberCreateResult> {
   const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
   if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
 
   const token = await getUberToken();
+
   const body: Record<string, unknown> = {
-    pickup: {
-      name:         params.pickupName,
-      address:      params.pickupAddress,
-      phone_number: params.pickupPhone,
-    },
-    dropoff: {
-      name:         params.dropoffName,
-      address:      params.dropoffAddress,
-      phone_number: params.dropoffPhone,
-    },
-    manifest: {
-      reference:   params.orderId,
-      description: params.itemDescription.slice(0, 280),
-    },
+    // Pickup — OBRIGATÓRIOS
+    pickup_name:         params.pickupName,
+    pickup_address:      params.pickupAddress,
+    pickup_phone_number: params.pickupPhoneNumber,
+    // Dropoff — OBRIGATÓRIOS
+    dropoff_name:         params.dropoffName,
+    dropoff_address:      params.dropoffAddress,
+    dropoff_phone_number: params.dropoffPhoneNumber,
+    // Manifest — OBRIGATÓRIO (array de itens)
+    manifest_items:       params.manifestItems,
+    // Referência do pedido (visível para o entregador)
+    manifest_reference:   params.orderId,
+    // Chave de idempotência — previne entregas duplicadas se o request for repetido
+    idempotency_key:      params.orderId,
   };
-  if (params.quoteId) body.quote_id = params.quoteId;
+
+  if (params.quoteId)             body.quote_id            = params.quoteId;
+  if (params.pickupNotes)         body.pickup_notes        = params.pickupNotes.slice(0, 280);
+  if (params.dropoffNotes)        body.dropoff_notes       = params.dropoffNotes.slice(0, 280);
+  if (params.manifestTotalValue)  body.manifest_total_value = params.manifestTotalValue;
 
   const res = await fetch(`${API_BASE}/customers/${customerId}/deliveries`, {
     method:  'POST',
@@ -182,35 +217,40 @@ export async function uberCreateDelivery(params: UberCreateParams): Promise<Uber
 
   if (!res.ok) {
     const err = await res.text().catch(() => '');
-    throw new Error(`Uber Direct create delivery falhou: ${res.status} ${err.slice(0, 300)}`);
+    throw new Error(`Uber Direct create delivery falhou: ${res.status} ${err.slice(0, 400)}`);
   }
 
   const data = await res.json();
   return {
     deliveryId:  data.id,
     trackingUrl: data.tracking_url ?? '',
-    feeCents:    normalizeFee(data.fee ?? data.total_fee),
+    feeCents:    data.fee ?? 0,
     status:      data.status ?? 'pending',
+    pickupEta:   data.pickup_eta,
+    dropoffEta:  data.dropoff_eta,
   };
 }
 
 // ── Consultar status ──────────────────────────────────────────────────────────
 
 export interface UberDeliveryStatus {
-  status:           string; // pending | pickup | pickup_complete | dropoff | delivered | cancelled | returned
-  trackingUrl:      string;
-  courierName?:     string;
-  courierPhone?:    string;
-  estimatedPickup?: string; // ISO
-  estimatedDropoff?: string; // ISO
+  status:            string;
+  trackingUrl:       string;
+  courierName?:      string;
+  courierPhone?:     string;
+  courierVehicle?:   string;
+  pickupEta?:        string;
+  dropoffEta?:       string;
+  complete:          boolean;
 }
 
+/** GET /customers/{customer_id}/deliveries/{delivery_id} */
 export async function uberGetDelivery(deliveryId: string): Promise<UberDeliveryStatus> {
   const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
   if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
 
   const token = await getUberToken();
-  const res = await fetch(`${API_BASE}/customers/${customerId}/deliveries/${deliveryId}`, {
+  const res   = await fetch(`${API_BASE}/customers/${customerId}/deliveries/${deliveryId}`, {
     headers: { Authorization: `Bearer ${token}` },
     signal:  AbortSignal.timeout(8000),
   });
@@ -219,27 +259,28 @@ export async function uberGetDelivery(deliveryId: string): Promise<UberDeliveryS
 
   const d = await res.json();
   return {
-    status:            d.status,
-    trackingUrl:       d.tracking_url ?? '',
-    courierName:       d.courier?.name,
-    courierPhone:      d.courier?.phone_number,
-    estimatedPickup:   d.pickup?.eta,
-    estimatedDropoff:  d.dropoff?.eta,
+    status:          d.status,
+    trackingUrl:     d.tracking_url ?? '',
+    courierName:     d.courier?.name,
+    courierPhone:    d.courier?.phone_number,
+    pickupEta:       d.pickup_eta,
+    dropoffEta:      d.dropoff_eta,
+    complete:        d.complete ?? false,
   };
 }
 
 // ── Cancelar ──────────────────────────────────────────────────────────────────
 
+/** POST /customers/{customer_id}/deliveries/{delivery_id}/cancel */
 export async function uberCancelDelivery(deliveryId: string): Promise<void> {
   const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
   if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
 
   const token = await getUberToken();
-  const res = await fetch(`${API_BASE}/customers/${customerId}/deliveries/${deliveryId}/cancel`, {
-    method:  'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    signal:  AbortSignal.timeout(8000),
-  });
+  const res   = await fetch(
+    `${API_BASE}/customers/${customerId}/deliveries/${deliveryId}/cancel`,
+    { method: 'POST', headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) }
+  );
 
   if (!res.ok) {
     const err = await res.text().catch(() => '');

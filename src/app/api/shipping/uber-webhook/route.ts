@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Se cancelado/devolvido, limpa o deliveryId para permitir novo despacho
-  if (uberStatus === 'cancelled' || uberStatus === 'returned') {
+  if (uberStatus === 'canceled' || uberStatus === 'returned') {
     update['delivery.carrier']              = null;
     update['delivery.uberDirectDeliveryId'] = null;
     update['delivery.trackingUrl']          = null;
