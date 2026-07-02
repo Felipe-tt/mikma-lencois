@@ -400,13 +400,15 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {order.status === 'preparing' && (() => {
           const shipping = (order as unknown as { selectedShipping?: { carrier?: string; label?: string; priceCents?: number; estimatedDays?: number } }).selectedShipping;
           const carrier = shipping?.carrier ?? 'correios_pac';
-          const isPickup = carrier === 'pickup';
+          const isPickup    = carrier === 'pickup';
+          const isUberDirect = carrier === 'uber_direct';
           const CARRIER_LABELS: Record<string, string> = {
-            correios_pac: 'Correios PAC',
-            correios_sedex: 'Correios SEDEX',
-            jadlog_package: 'Jadlog Package',
+            correios_pac:    'Correios PAC',
+            correios_sedex:  'Correios SEDEX',
+            jadlog_package:  'Jadlog Package',
             jadlog_expresso: 'Jadlog Expresso',
-            pickup: 'Retirada na loja',
+            pickup:          'Retirada na loja',
+            uber_direct:     'Uber Direct',
           };
           return (
             <div className="border border-[#1E1208]/20 bg-[#1E1208]/5 px-5 py-4 flex flex-col gap-3">
@@ -438,6 +440,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <p className="text-[12px] text-[#705A48]">
                   O cliente vai retirar na loja. Quando ele buscar o pedido, clique em &quot;Confirmar retirada&quot;.
                 </p>
+              ) : isUberDirect ? (
+                <p className="text-[11px] text-[#B09C8C]">
+                  Um motoboy Uber será solicitado assim que você clicar. Acompanhe o status em tempo real aqui no painel.
+                </p>
               ) : (
                 <p className="text-[11px] text-[#B09C8C]">
                   A etiqueta será gerada automaticamente via Melhor Envio e o saldo da sua conta será debitado.
@@ -455,8 +461,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors"
               >
                 {updating
-                  ? (isPickup ? 'Salvando…' : 'Gerando etiqueta…')
-                  : (isPickup ? 'Confirmar retirada' : 'Gerar etiqueta e despachar')}
+                  ? (isPickup ? 'Salvando…' : isUberDirect ? 'Solicitando motoboy…' : 'Gerando etiqueta…')
+                  : (isPickup ? 'Confirmar retirada' : isUberDirect ? 'Solicitar motoboy Uber' : 'Gerar etiqueta e despachar')}
               </button>
             </div>
           );

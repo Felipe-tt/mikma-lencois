@@ -15,6 +15,8 @@ export interface ShippingOption {
   available: boolean;
   tag?: 'local' | 'economico' | 'rapido';
   error?: string;
+  /** Uber Direct: quoteId retornado pela API para garantir o preço cotado no despacho */
+  quoteId?: string;
 }
 
 interface PackageDimensions {
@@ -531,12 +533,13 @@ export async function POST(req: NextRequest) {
           const dropoffAddr = await buildDropoffAddress(destCep);
           const quote = await uberQuote(pickupAddr, dropoffAddr);
           options.push({
-            carrier:      'uber_direct',
-            label:        'Entrega hoje · Uber Direct',
-            priceCents:   quote.feeCents,
+            carrier:       'uber_direct',
+            label:         'Entrega hoje · Uber Direct',
+            priceCents:    quote.feeCents,
             estimatedDays: 0,
-            available:    true,
-            tag:          'local',
+            available:     true,
+            tag:           'local',
+            quoteId:       quote.quoteId,  // garante o preço cotado no despacho
           });
         } catch (e) {
           // Uber indisponível para essa rota — não exibe a opção

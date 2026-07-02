@@ -192,12 +192,14 @@ export async function POST(req: NextRequest) {
         label: shipping.label ?? '',
         priceCents: shippingCents,
         estimatedDays: shipping.estimatedDays ?? null,
+        ...(shipping.quoteId ? { uberQuoteId: shipping.quoteId } : {}),
       },
       selectedShipping: {
         carrier: shipping.carrier,
         label: shipping.label ?? '',
         priceCents: shippingCents,
         estimatedDays: shipping.estimatedDays ?? null,
+        ...(shipping.quoteId ? { quoteId: shipping.quoteId } : {}),
       },
       timeline: [
         { status: 'created', at: now, note: 'Pedido criado' },

@@ -167,6 +167,7 @@ export async function POST(req: NextRequest) {
         label: shipping.label ?? '',
         priceCents: shippingCents,
         estimatedDays: shipping.estimatedDays ?? null,
+        ...(shipping.quoteId ? { uberQuoteId: shipping.quoteId } : {}),
       },
       selectedShipping: {
         carrier: shipping.carrier,

@@ -152,6 +152,8 @@ export async function POST(req: NextRequest) {
         dropoffPhoneNumber:  customerPhone,
         manifestItems,
         manifestTotalValue:  order.totalCents,
+        // Garante o preço cotado — evita divergência se a tarifa mudar entre cotação e despacho
+        quoteId:             order.delivery?.uberQuoteId,
       });
 
       await adminDb.collection('orders').doc(orderId).update({
