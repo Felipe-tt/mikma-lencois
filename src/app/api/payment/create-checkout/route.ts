@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
 
     const VALID_CARRIERS = [
       'pickup',
+      'uber_direct',
       'correios_pac', 'correios_sedex',
       'jadlog_package', 'jadlog_expresso',
       'melhor_envio_1', 'melhor_envio_2',

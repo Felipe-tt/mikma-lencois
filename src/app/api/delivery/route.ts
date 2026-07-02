@@ -24,6 +24,11 @@ import {
   type MEProduct,
   type MEPackage,
 } from '@/lib/melhorenvio';
+import {
+  uberCreateDelivery,
+  uberCancelDelivery,
+  formatPhone,
+} from '@/lib/uber-direct';
 
 async function getStoreSettings(): Promise<StoreSettings> {
   const snap = await adminDb.collection('settings').doc('store').get();
@@ -87,6 +92,88 @@ export async function POST(req: NextRequest) {
         }),
       });
       return NextResponse.json({ carrier: 'pickup', trackingCode: null, labelUrl: null });
+    }
+
+    // ── Entrega Uber Direct ──────────────────────────────────────────────────
+    if (carrier === 'uber_direct') {
+      if (!process.env.UBER_DIRECT_CLIENT_ID || !process.env.UBER_DIRECT_CUSTOMER_ID) {
+        return NextResponse.json(
+          { error: 'UBER_DIRECT_CLIENT_ID / UBER_DIRECT_CUSTOMER_ID não configurados.' },
+          { status: 500 }
+        );
+      }
+
+      const addr = order.address;
+      if (!addr?.street || !addr?.number) {
+        return NextResponse.json({ error: 'Endereço do cliente incompleto para Uber Direct' }, { status: 400 });
+      }
+
+      // Busca dados do cliente (nome + telefone)
+      const userSnap   = await adminDb.collection('users').doc(order.userId).get();
+      const userData   = userSnap.data() ?? {};
+      const customerName  = (userData.name as string | undefined) || 'Cliente';
+      const customerPhone = formatPhone((userData.phone as string | undefined) || '47999999999');
+
+      // Monta endereços completos
+      const pickupAddress = [
+        settings.storeAddress,
+        settings.storeNumber,
+        settings.storeCity,
+        settings.storeState,
+        settings.originCep,
+        'BR',
+      ].filter(Boolean).join(', ');
+
+      const dropoffAddress = [
+        addr.street,
+        addr.number,
+        addr.complement,
+        addr.neighborhood,
+        addr.city,
+        addr.state,
+        addr.cep,
+        'BR',
+      ].filter(Boolean).join(', ');
+
+      // Resumo dos itens para o entregador
+      const itemDescription = order.items
+        .map(i => `${i.quantity}x ${i.productName}`)
+        .join(', ')
+        .slice(0, 280);
+
+      const uberDelivery = await uberCreateDelivery({
+        orderId:         orderId,
+        pickupName:      settings.storeName || 'Mikma Lençóis',
+        pickupAddress,
+        pickupPhone:     formatPhone(settings.storePhone || '47000000000'),
+        dropoffName:     customerName,
+        dropoffAddress,
+        dropoffPhone:    customerPhone,
+        itemDescription,
+      });
+
+      await adminDb.collection('orders').doc(orderId).update({
+        status: 'shipped',
+        'delivery.carrier':               'uber_direct',
+        'delivery.uberDirectDeliveryId':  uberDelivery.deliveryId,
+        'delivery.trackingUrl':           uberDelivery.trackingUrl,
+        'delivery.trackingCode':          null,
+        'delivery.dispatchedAt':          FieldValue.serverTimestamp(),
+        updatedAt:                        FieldValue.serverTimestamp(),
+        timeline: FieldValue.arrayUnion({
+          status: 'shipped',
+          at:     new Date().toISOString(),
+          note:   `Despachado via Uber Direct · status: ${uberDelivery.status}`,
+        }),
+      });
+
+      return NextResponse.json({
+        carrier:     'uber_direct',
+        deliveryId:  uberDelivery.deliveryId,
+        trackingUrl: uberDelivery.trackingUrl,
+        feeCents:    uberDelivery.feeCents,
+        labelUrl:    null,
+      });
     }
 
     // ── Envio via Melhor Envio ───────────────────────────────────────────────
@@ -274,9 +361,23 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const meOrderId = order.delivery?.melhorEnvioOrderId;
+    const meOrderId           = order.delivery?.melhorEnvioOrderId;
+    const uberDirectDeliveryId = order.delivery?.uberDirectDeliveryId;
 
-    // Retirada na loja não tem nada a cancelar no Melhor Envio
+    // ── Uber Direct ────────────────────────────────────────────────────────────────────────────
+    if (uberDirectDeliveryId) {
+      try {
+        await uberCancelDelivery(uberDirectDeliveryId);
+      } catch (err) {
+        console.error('[delivery/cancel] uberCancelDelivery falhou:', err);
+        return NextResponse.json(
+          { error: 'Não foi possível cancelar a entrega no Uber Direct. Verifique o status no painel do Uber antes de tentar novamente.' },
+          { status: 502 }
+        );
+      }
+    }
+
+    // ── Melhor Envio — Retirada na loja não tem nada a cancelar ─────────────────────────
     if (meOrderId) {
       try {
         await meCancel(meOrderId, `Cancelado pelo vendedor: ${reason}`);
@@ -291,12 +392,13 @@ export async function DELETE(req: NextRequest) {
 
     await adminDb.collection('orders').doc(orderId).update({
       status: 'preparing',
-      'delivery.carrier':            null,
-      'delivery.trackingCode':       null,
-      'delivery.trackingUrl':        null,
-      'delivery.melhorEnvioOrderId': null,
-      'delivery.labelUrl':           null,
-      'delivery.dispatchedAt':       null,
+      'delivery.carrier':              null,
+      'delivery.trackingCode':         null,
+      'delivery.trackingUrl':          null,
+      'delivery.melhorEnvioOrderId':   null,
+      'delivery.uberDirectDeliveryId': null,
+      'delivery.labelUrl':             null,
+      'delivery.dispatchedAt':         null,
       updatedAt: FieldValue.serverTimestamp(),
       timeline: FieldValue.arrayUnion({
         status: 'delivery_cancelled',

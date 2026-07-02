@@ -63,78 +63,28 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ── Uber Direct OAuth2 ────────────────────────────────────────────────────────
-// Uber Direct usa Client Credentials OAuth2 — token em cache no Firestore
+// ── Uber Direct ───────────────────────────────────────────────────────────────
+import { getUberToken, uberQuote, formatPhone } from '@/lib/uber-direct';
 
-async function getUberToken(): Promise<string | null> {
-  const clientId     = process.env.UBER_DIRECT_CLIENT_ID;
-  const clientSecret = process.env.UBER_DIRECT_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-
-  // Cache token para evitar chamada a cada cotação
+/**
+ * Monta string de endereço para a API do Uber Direct a partir dos dados do ViaCEP.
+ * O número da casa não está disponível na etapa de cotação (só temos o CEP),
+ * então usamos o logradouro sem número — suficiente para estimativa de preço.
+ * Na criação real da entrega (delivery/route.ts) usamos o endereço completo do pedido.
+ */
+async function buildDropoffAddress(cep: string): Promise<string> {
+  const clean = cep.replace(/\D/g, '');
   try {
-    const cacheSnap = await adminDb.collection('_cache').doc('uber_token').get();
-    if (cacheSnap.exists) {
-      const d = cacheSnap.data()!;
-      if (d.token && d.expiresAt && Date.now() < d.expiresAt - 60_000) return d.token as string;
-    }
-  } catch { /* miss */ }
-
-  const res = await fetch('https://login.uber.com/oauth/v2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: 'client_credentials',
-      scope: 'eats.deliveries',
-    }),
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  const token = data.access_token as string;
-  const expiresAt = Date.now() + (data.expires_in ?? 3600) * 1000;
-  adminDb.collection('_cache').doc('uber_token').set({ token, expiresAt }).catch(() => {});
-  return token;
-}
-
-async function quoteUberDirect(
-  distKm: number,
-  fromAddress: string,
-  toAddress: string,
-  token: string
-): Promise<ShippingOption> {
-  const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
-  if (!customerId) {
-    // Estimativa local sem API
-    const priceCents = Math.round(800 + 150 * Math.max(0, distKm - 2));
-    return { carrier: 'uber_direct', label: 'Entrega hoje · Uber Direct', priceCents, estimatedDays: 0, available: true, tag: 'local' };
-  }
-
-  try {
-    const res = await fetch(`https://api.uber.com/v1/customers/${customerId}/delivery_quotes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        pickup_address: fromAddress,
-        dropoff_address: toAddress,
-      }),
+    const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`, {
+      signal: AbortSignal.timeout(3000),
     });
-    if (!res.ok) throw new Error(`Uber quote ${res.status}`);
-    const data = await res.json();
-    const fee = data.fee ?? data.total_fee ?? 0; // centavos já
-    return {
-      carrier: 'uber_direct',
-      label: 'Entrega hoje · Uber Direct',
-      priceCents: typeof fee === 'number' ? fee : Math.round(parseFloat(fee) * 100),
-      estimatedDays: 0,
-      available: true,
-      tag: 'local',
-    };
+    const d = await res.json();
+    if (d.erro) return `${clean}, BR`;
+    return [d.logradouro, d.bairro, d.localidade, d.uf, clean, 'BR']
+      .filter(Boolean)
+      .join(', ');
   } catch {
-    // Fallback por distância
-    const priceCents = Math.round(800 + 150 * Math.max(0, distKm - 2));
-    return { carrier: 'uber_direct', label: 'Entrega hoje · Uber Direct', priceCents, estimatedDays: 0, available: true, tag: 'local' };
+    return `${clean}, BR`;
   }
 }
 
@@ -537,10 +487,11 @@ export async function POST(req: NextRequest) {
       ? haversineKm(originCoords.lat, originCoords.lng, destCoords.lat, destCoords.lng)
       : 9999;
 
-    const isLocal = distKm <= (settings.localDeliveryRadiusKm || 10);
-    const fromCep = settings.originCep || '';
+    const radiusKm = parseInt(process.env.UBER_DIRECT_RADIUS_KM ?? '0') || settings.localDeliveryRadiusKm || 10;
+    const isLocal  = distKm <= radiusKm;
+    const fromCep  = settings.originCep || '';
 
-    // ── Opções de frete: Retirada + Correios + Jadlog ───────────────────────
+    // ── Opções de frete ─────────────────────────────────────────────────────────────────
     const options: ShippingOption[] = [];
 
     // Retirada na loja (sempre disponível)
@@ -552,6 +503,42 @@ export async function POST(req: NextRequest) {
       available: true,
       tag: 'local',
     });
+
+    // ── Uber Direct (entrega local no mesmo dia) ──────────────────────────────
+    // Só aparece se: cliente está dentro do raio E as 3 credenciais estão configuradas.
+    // A cotação usa endereço do ViaCEP (sem número — suficiente para estimativa).
+    // Na criação real da entrega usamos o endereço completo do pedido.
+    if (isLocal) {
+      const uberClientId  = process.env.UBER_DIRECT_CLIENT_ID;
+      const uberCustomerId = process.env.UBER_DIRECT_CUSTOMER_ID;
+      if (uberClientId && uberCustomerId) {
+        try {
+          const token = await getUberToken();
+          void token; // já validado — uberQuote usa internamente
+          const pickupAddr = [
+            settings.storeAddress,
+            settings.storeNumber,
+            settings.storeCity,
+            settings.storeState,
+            fromCep,
+            'BR',
+          ].filter(Boolean).join(', ');
+          const dropoffAddr = await buildDropoffAddress(destCep);
+          const quote = await uberQuote(pickupAddr, dropoffAddr);
+          options.push({
+            carrier:      'uber_direct',
+            label:        'Entrega hoje · Uber Direct',
+            priceCents:   quote.feeCents,
+            estimatedDays: 0,
+            available:    true,
+            tag:          'local',
+          });
+        } catch (e) {
+          // Uber indisponível para essa rota — não exibe a opção
+          console.warn('[uber-direct] quote falhou, opção omitida:', e instanceof Error ? e.message : e);
+        }
+      }
+    }
 
     const meToken = process.env.MELHOR_ENVIO_TOKEN;
     const sandbox = process.env.MELHOR_ENVIO_SANDBOX === 'true';

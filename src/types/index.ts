@@ -113,10 +113,11 @@ export interface Order {
     paidAt?: string
   }
   delivery: {
-    carrier: 'melhor_envio' | 'correios_pac' | 'correios_sedex' | 'jadlog_package' | 'jadlog_expresso' | 'pickup' | 'manual' | null
+    carrier: 'melhor_envio' | 'correios_pac' | 'correios_sedex' | 'jadlog_package' | 'jadlog_expresso' | 'pickup' | 'uber_direct' | 'manual' | null
     trackingCode?: string
     trackingUrl?: string
     melhorEnvioOrderId?: string
+    uberDirectDeliveryId?: string
     labelUrl?: string
     dispatchedAt?: string
     deliveredAt?: string
