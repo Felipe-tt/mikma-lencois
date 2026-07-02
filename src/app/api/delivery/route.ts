@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
 
       // manifest_items é OBRIGATÓRIO — array com cada item do pedido
       const manifestItems: UberManifestItem[] = order.items.map(i => ({
-        name:     `${i.productName}${i.variant?.label ? ` (${i.variant.label})` : ''}`.slice(0, 80),
+        name:     `${i.productName}${i.variant ? ` (${i.variant.size} ${i.variant.colorName ?? i.variant.color})` : ''}`.slice(0, 80),
         quantity: i.quantity,
         size:     'medium' as const,
         price:    i.unitPrice,
