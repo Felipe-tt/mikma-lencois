@@ -140,9 +140,9 @@ export async function POST(req: NextRequest) {
     if (courier.phone_number) update['delivery.courierPhone'] = courier.phone_number;
     if (courier.img_href)     update['delivery.courierPhoto'] = courier.img_href; // img_href conforme OpenAPI CourierInfo
 
-    // ETAs atualizados
-    const dropoff = data?.dropoff as Record<string, unknown> | undefined;
-    if (dropoff?.eta) update['delivery.dropoffEta'] = dropoff.eta;
+    // ETAs atualizados — em courier_update o ETA vem no top-level do objeto data
+    if (data?.dropoff_eta) update['delivery.dropoffEta'] = data.dropoff_eta;
+    if (data?.pickup_eta)  update['delivery.pickupEta']  = data.pickup_eta;
 
     await orderRef.update(update);
     console.log(`[uber-webhook] ${orderRef.id}: courier_update — ${courier.name ?? '?'}`);

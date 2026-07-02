@@ -198,9 +198,12 @@ export async function uberCreateDelivery(params: UberCreateParams): Promise<Uber
     dropoff_phone_number: params.dropoffPhoneNumber,
     // Manifest — OBRIGATÓRIO (array de itens)
     manifest_items:       params.manifestItems,
-    // Referência do pedido (visível para o entregador)
+    // Referência do pedido (visível para o entregador no app)
     manifest_reference:   params.orderId,
+    // external_id: mesma referência — torna o pedido pesquisável no dashboard Uber
+    external_id:          params.orderId,
     // Chave de idempotência — previne entregas duplicadas se o request for repetido
+    // Combinado com manifest_reference, external_id deve ser único (per spec)
     idempotency_key:      params.orderId,
   };
 
