@@ -341,7 +341,7 @@ export function OrderDetailSkeleton() {
           </div>
           {/* Sidebar */}
           <div className="flex flex-col gap-4">
-            {[80, 80, 60].map((h, i) => (
+            {[80, 80, 60].map((_, i) => (
               <div key={i} className="border border-mist p-5 flex flex-col gap-2">
                 <Skeleton className="h-2.5 w-20 mb-1" />
                 <Skeleton className={`h-3.5 w-full`} />

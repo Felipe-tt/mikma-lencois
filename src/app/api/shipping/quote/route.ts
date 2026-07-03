@@ -66,7 +66,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 // ── Uber Direct ───────────────────────────────────────────────────────────────
-import { getUberToken, uberQuote, formatPhone, buildUberAddress } from '@/lib/uber-direct';
+import { getUberToken, uberQuote, buildUberAddress } from '@/lib/uber-direct';
 
 /**
  * Monta string de endereço para a API do Uber Direct a partir dos dados do ViaCEP.
@@ -94,31 +94,6 @@ async function buildDropoffAddress(cep: string): Promise<string> {
   } catch {
     return JSON.stringify({ street_address: [''], city: '', state: '', zip_code: clean, country: 'BR' });
   }
-}
-
-// ── Disk Tenha ────────────────────────────────────────────────────────────────
-// Disk Tenha não tem API pública — tabela de preço fixo por raio de distância.
-// Valores podem ser ajustados nas variáveis de ambiente.
-
-function quoteDiskTenha(distKm: number): ShippingOption {
-  // Tabela padrão — substitua pelos valores reais do contrato Disk Tenha
-  const priceByRadius = [
-    { maxKm: 3,  priceCents: parseInt(process.env.DISK_TENHA_PRICE_3KM  ?? '600')  },
-    { maxKm: 7,  priceCents: parseInt(process.env.DISK_TENHA_PRICE_7KM  ?? '900')  },
-    { maxKm: 12, priceCents: parseInt(process.env.DISK_TENHA_PRICE_12KM ?? '1300') },
-    { maxKm: 20, priceCents: parseInt(process.env.DISK_TENHA_PRICE_20KM ?? '1800') },
-  ];
-  const found = priceByRadius.find(r => distKm <= r.maxKm);
-  const priceCents = found?.priceCents ?? 2500;
-
-  return {
-    carrier: 'disk_tenha',
-    label: 'Entrega hoje · Disk Tenha',
-    priceCents,
-    estimatedDays: 0,
-    available: true,
-    tag: 'local',
-  };
 }
 
 // ── Melhor Envio (PAC + SEDEX Correios) ──────────────────────────────────────
@@ -370,65 +345,6 @@ async function quoteCorreiosDireto(
     } catch { /* serviço indisponível, tenta o próximo */ }
   }
   return results;
-}
-
-// ── Total Express ─────────────────────────────────────────────────────────────
-// API REST Total Express — documentação: https://api.totalexpress.com.br
-// Necessita: TOTAL_EXPRESS_TOKEN + TOTAL_EXPRESS_CLIENT_CODE
-
-async function quoteTotalExpress(
-  fromCep: string,
-  toCep: string,
-  pkg: PackageDimensions,
-  productValueCents: number
-): Promise<ShippingOption[]> {
-  const token      = process.env.TOTAL_EXPRESS_TOKEN;
-  const clientCode = process.env.TOTAL_EXPRESS_CLIENT_CODE;
-  if (!token || !clientCode) return [];
-
-  try {
-    const res = await fetch('https://api.totalexpress.com.br/api/v2/cota', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        remetente: { cep: fromCep.replace(/\D/g, '') },
-        destinatario: { cep: toCep.replace(/\D/g, '') },
-        volumes: [{
-          peso: Math.max(0.3, pkg.weightKg),
-          altura: pkg.heightCm,
-          largura: pkg.widthCm,
-          comprimento: pkg.lengthCm,
-          valor: productValueCents / 100,
-        }],
-        codigoCliente: clientCode,
-      }),
-    });
-
-    if (!res.ok) {
-      console.warn('[TotalExpress] quote failed:', res.status);
-      return [];
-    }
-
-    const data = await res.json();
-    const servicos: Array<{ nome: string; preco: number; prazo: number }> = data?.servicos ?? [];
-
-    return servicos
-      .filter(s => s.preco > 0)
-      .map(s => ({
-        carrier:      'total_express',
-        label:        `Total Express · ${s.nome}`,
-        priceCents:   Math.round(s.preco * 100),
-        estimatedDays: s.prazo,
-        available:    true,
-        tag:          s.prazo <= 2 ? 'rapido' : 'economico',
-      }));
-  } catch (e) {
-    console.warn('[TotalExpress] error:', e);
-    return [];
-  }
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────

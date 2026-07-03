@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';

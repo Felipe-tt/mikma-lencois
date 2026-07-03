@@ -4,7 +4,7 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { z } from 'zod';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { getClientIp, safeJson, tooManyRequests } from '@/lib/security';
+import { safeJson, tooManyRequests } from '@/lib/security';
 
 const VariantSchema = z.object({
   id: z.string().max(64),

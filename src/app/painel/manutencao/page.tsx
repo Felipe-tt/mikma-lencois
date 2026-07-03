@@ -1,5 +1,5 @@
 'use client';
-import { IconMaintenance, IconCheck, IconMobile, IconComputer, IconPin, IconAlert } from '@/components/ui/Icon';
+import { IconCheck, IconPin } from '@/components/ui/Icon';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useState, useCallback } from 'react';

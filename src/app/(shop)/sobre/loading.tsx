@@ -15,7 +15,7 @@ export default function SobreLoading() {
           <div className="flex flex-col gap-5">
             {[100,90,85,80,75].map((w,i) => <Skeleton key={i} className={`h-4 w-[${w}%]`} />)}
             <div className="mt-2 flex flex-col gap-4">
-              {[95,88,92,80].map((w,i) => <Skeleton key={i} className="h-4 w-full" />)}
+              {[95,88,92,80].map((_, i) => <Skeleton key={i} className="h-4 w-full" />)}
             </div>
           </div>
           <div className="flex flex-col gap-4">

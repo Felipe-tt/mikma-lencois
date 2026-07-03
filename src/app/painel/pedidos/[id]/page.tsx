@@ -139,8 +139,6 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [deleting, setDeleting] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
   const [copied, setCopied]       = useState<string | null>(null);
-  // carrier vem do selectedShipping do pedido — cliente já escolheu no checkout
-  const [labelUrl, setLabelUrl]   = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [cancellingDelivery, setCancellingDelivery] = useState(false);
   const [cancelDeliveryError, setCancelDeliveryError] = useState<string | null>(null);
@@ -254,7 +252,6 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         return;
       }
       if (data.trackingCode) setTrackingCode(data.trackingCode);
-      if (data.labelUrl) setLabelUrl(data.labelUrl);
     } catch {
       setDispatchError('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
@@ -300,7 +297,6 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         return;
       }
       setTrackingCode('');
-      setLabelUrl(null);
     } catch {
       setCancelDeliveryError('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
@@ -361,7 +357,6 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   if (!order) return <p className="text-sm text-[#B09C8C] py-8 text-center">Pedido não encontrado.</p>;
 
-  const nextStatus = STATUS_NEXT[order.status];
   const timeline = [...(order.timeline ?? [])].reverse();
   const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
 

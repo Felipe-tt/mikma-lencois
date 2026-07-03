@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   IconAlert, IconBox, IconTruck, IconCheck, IconHourglass, IconX,
-  IconHome, IconPostOffice, IconBolt, IconSearch, IconPin, IconArrowRight,
+  IconSearch, IconPin, IconArrowRight,
 } from '@/components/ui/Icon';
 
 const STATUS_LABEL: Record<string, string> = {

@@ -37,7 +37,6 @@ export default async function HomePage() {
     getFeatured(), getCategories(), getSettings(),
   ]);
 
-  const storeName = s.storeName || 'Mikma Lençóis';
   const city      = s.storeCity?.split(',')[0] || 'Blumenau';
 
   // Hero lines — fallback vazio para forçar admin a preencher nas configs

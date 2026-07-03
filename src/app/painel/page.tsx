@@ -6,7 +6,7 @@ import type { Order } from '@/types';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import Link from 'next/link';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
-import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProducts, IconAlert } from '@/components/ui/Icon';
+import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProducts } from '@/components/ui/Icon';
 
 const BADGE: Record<string, string> = {
   pending_payment: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',

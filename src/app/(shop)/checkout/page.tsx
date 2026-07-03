@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
@@ -169,7 +169,6 @@ export default function CheckoutPage() {
   const [pixData, setPixData] = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string; expiresAt?: string } | null>(null);
   const [payMethod, setPayMethod]     = useState<'pix' | 'credit'>('pix');
   const [installments, setInstall]    = useState(1);
-  const [creditRedirect, setCreditRed] = useState<string | null>(null);
 
   const [shippingOptions, setShipOpts]  = useState<ShippingOption[]>([]);
   const [selectedShipping, setSelShip]  = useState<ShippingOption | null>(null);
@@ -181,7 +180,6 @@ export default function CheckoutPage() {
   const [pixThresholdCents, setPixThreshold] = useState(180000);
   const [pixDiscountPct, setPixDiscountPct]  = useState(10);
 
-  const cepRef = useRef<string>('');
 
   const quoteShipping = useCallback(async (cep: string) => {
     const clean = onlyDigits(cep);
@@ -308,7 +306,6 @@ export default function CheckoutPage() {
         });
         if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar checkout');
         const d = await res.json();
-        setCreditRed(d.checkoutUrl);
         window.location.href = d.checkoutUrl;
       }
     } catch (err: unknown) {

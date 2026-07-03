@@ -51,7 +51,6 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
   const freeShippingUnlocked = cartTotal >= threshold && threshold > 0;
   const showFreeShippingBar = hasFreeShipping && count > 0;
 
-  const isHome = pathname === '/';
   const isDark = false; // hero is now light, header stays light always
 
   return (
