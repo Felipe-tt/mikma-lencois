@@ -3,17 +3,40 @@ import type { NextFetchEvent } from 'next/server';
 
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
 
+// Cache em memória do status de manutenção. Sem isso, TODA requisição que
+// chega no Cloud Run (inclusive bots/scanners batendo em URLs aleatórias,
+// tipo /wp-login.php, /.env etc.) dispara uma chamada de rede ao Firestore
+// antes mesmo de saber se a página existe — isso custa dinheiro em cada
+// invocação (tempo de CPU do round-trip) e em leituras do Firestore, 24/7,
+// mesmo com o site nunca em manutenção.
+// TTL curto (15s) porque o toggle de manutenção já força um cache-bust via
+// revalidatePath('/', 'layout') na API — o pior caso aqui é só um atraso
+// extra de até 15s pra propagar, o que é inofensivo pra uma ação manual e
+// rara do admin.
+const MAINTENANCE_CACHE_TTL_MS = 15_000;
+let maintenanceCache: { active: boolean; expiresAt: number } | null = null;
+
 async function getMaintenanceStatus(projectId: string): Promise<boolean> {
+  const now = Date.now();
+  if (maintenanceCache && maintenanceCache.expiresAt > now) {
+    return maintenanceCache.active;
+  }
   try {
     const res = await fetch(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`,
       { signal: AbortSignal.timeout(3000), cache: 'no-store' }
     );
-    if (!res.ok) return false;
+    if (!res.ok) {
+      // Não sobrescreve o cache com falha — mantém o último valor conhecido
+      // (ou false, se nunca resolveu com sucesso) até a próxima tentativa.
+      return maintenanceCache?.active ?? false;
+    }
     const data = await res.json();
-    return data?.fields?.active?.booleanValue ?? false;
+    const active = data?.fields?.active?.booleanValue ?? false;
+    maintenanceCache = { active, expiresAt: now + MAINTENANCE_CACHE_TTL_MS };
+    return active;
   } catch {
-    return false;
+    return maintenanceCache?.active ?? false;
   }
 }
 
