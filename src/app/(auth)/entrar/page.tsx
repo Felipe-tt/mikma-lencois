@@ -196,22 +196,20 @@ export default function LoginPage() {
 
       <div className="min-h-screen bg-paper flex">
         {/* Painel esquerdo — logo em destaque */}
-        <div className="hidden lg:flex w-[45%] xl:w-1/2 flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist">
-          <Link href="/">
+        <div className="hidden lg:flex w-[45%] xl:w-1/2 flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist relative overflow-hidden">
+          <Image
+            src="/logo-moon-transparent.png"
+            alt=""
+            width={400}
+            height={400}
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[280px] h-auto object-contain opacity-[0.14]"
+          />
+          <Link href="/" className="relative z-10">
             <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" />
           </Link>
 
-          <div className="flex-1 flex items-center justify-center py-8">
-            <Image
-              src="/logo-moon-transparent.png"
-              alt="Mikma Lençóis"
-              width={400}
-              height={400}
-              className="w-full max-w-[260px] h-auto object-contain opacity-[0.14]"
-            />
-          </div>
-
-          <div>
+          <div className="relative z-10">
             <p className="font-display text-ink font-normal leading-[1.08] mb-4 text-[clamp(1.8rem,2.5vw,2.6rem)]">
               Bem-vindo<br />de <em className="text-clay not-italic">volta.</em>
             </p>
@@ -219,6 +217,7 @@ export default function LoginPage() {
               Lençóis de qualidade direto de fábrica.
             </p>
           </div>
+          <p className="relative z-10 text-xs text-faint tracking-widest uppercase">Blumenau · SC · Brasil</p>
         </div>
 
         {/* Formulário */}
