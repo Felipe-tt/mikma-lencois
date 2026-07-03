@@ -495,7 +495,10 @@ export async function POST(req: NextRequest) {
       ? haversineKm(originCoords.lat, originCoords.lng, destCoords.lat, destCoords.lng)
       : 9999;
 
-    const radiusKm = parseInt(process.env.UBER_DIRECT_RADIUS_KM ?? '0') || settings.localDeliveryRadiusKm || 10;
+    // O painel (settings.localDeliveryRadiusKm) é a fonte de verdade — a env var
+    // UBER_DIRECT_RADIUS_KM só serve de fallback caso o documento de settings não
+    // tenha o campo definido (nunca deve sobrepor o valor salvo no painel).
+    const radiusKm = settings.localDeliveryRadiusKm || parseInt(process.env.UBER_DIRECT_RADIUS_KM ?? '0') || 10;
     const isLocal  = distKm <= radiusKm;
     const fromCep  = settings.originCep || '';
 
