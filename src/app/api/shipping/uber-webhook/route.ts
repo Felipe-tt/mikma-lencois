@@ -6,7 +6,10 @@
  *   event.delivery_status  → atualiza status do pedido (o principal)
  *   event.courier_update   → atualiza info do entregador (nome, ETA)
  *
- * UBER_DIRECT_WEBHOOK_SECRET = 08a17383-8c2b-44b4-b4e9-de07eb2ae50d
+ * UBER_DIRECT_WEBHOOK_SECRET configurada como variável de ambiente
+ * (painel do Uber Direct → Webhooks → Signing key). Nunca hardcode
+ * o valor real aqui — se precisar rotacionar, gere um novo no painel
+ * do Uber e atualize a env var no Cloud Run.
  */
 
 export const dynamic = 'force-dynamic';
@@ -40,8 +43,8 @@ const STATUS_NOTE: Record<string, string> = {
 function verifySignature(rawBody: Buffer, header: string): boolean {
   const secret = process.env.UBER_DIRECT_WEBHOOK_SECRET;
   if (!secret) {
-    console.warn('[uber-webhook] UBER_DIRECT_WEBHOOK_SECRET não configurado');
-    return true; // permissivo enquanto não configurado
+    console.error('[uber-webhook] UBER_DIRECT_WEBHOOK_SECRET não configurado — rejeitando (fail-closed)');
+    return false;
   }
   const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
   const received = header.replace(/^sha256=/, '');

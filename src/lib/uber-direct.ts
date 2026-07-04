@@ -5,7 +5,7 @@
  * CREDENCIAIS (configurar no Cloud Run → Variáveis de ambiente):
  *   UBER_DIRECT_CLIENT_ID      — developer.uber.com → seu app → Credentials
  *   UBER_DIRECT_CLIENT_SECRET  — developer.uber.com → seu app → Credentials
- *   UBER_DIRECT_CUSTOMER_ID    — ed166cc1-bc6c-4eec-a2a1-719773f6ec6f
+ *   UBER_DIRECT_CUSTOMER_ID    — developer.uber.com → seu app → Customer ID
  *   UBER_DIRECT_WEBHOOK_SECRET — developer.uber.com → seu app → Webhooks
  *   UBER_DIRECT_SANDBOX=true   — remover em produção
  */

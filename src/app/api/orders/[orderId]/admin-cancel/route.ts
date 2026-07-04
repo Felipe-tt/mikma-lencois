@@ -19,8 +19,12 @@ export async function POST(
   let role: string;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    const uSnap = await adminDb.collection('users').doc(decoded.uid).get();
-    role = uSnap.data()?.role ?? '';
+    // IMPORTANTE: role vem do custom claim do token, não do documento
+    // Firestore /users/{uid} — esse campo pode ser escrito pelo próprio
+    // usuário (regra allow update: if isSelf(uid)), então usá-lo aqui
+    // permitiria qualquer comprador se autopromover e cancelar pedidos
+    // de qualquer cliente.
+    role = (decoded as { role?: string }).role ?? '';
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }

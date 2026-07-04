@@ -22,7 +22,13 @@ service cloud.firestore {
       // ao visualizar o detalhe de um pedido no painel.
       allow read: if isSelf(uid) || isSellerOrAdmin();
       allow create: if isSelf(uid);
-      allow update: if isSelf(uid) || hasRole('admin');
+      // isSelf só pode atualizar o próprio doc SE o campo role não mudar
+      // (senão um comprador poderia se autopromover a seller/admin no
+      // Firestore — o custom claim do token continuaria 'buyer', mas
+      // qualquer código que ler o role daqui em vez do claim seria
+      // enganado). Só admin pode alterar o role de alguém.
+      allow update: if (isSelf(uid) && request.resource.data.role == resource.data.role)
+        || hasRole('admin');
       allow delete: if hasRole('admin');
     }
 

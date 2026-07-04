@@ -65,10 +65,12 @@ function sanitizeHtml(html: string): string {
       img: ['src', 'alt', 'width', 'height'],
       '*': ['style'],
     },
-    allowedSchemes: ['http', 'https', 'mailto', 'data'],
+    allowedSchemes: ['http', 'https', 'mailto'],
     allowedSchemesByTag: {
       // Imagens inline do Resend vêm como data: URI (base64) — restringe
-      // ainda mais para apenas esse uso, não libera data: em outras tags.
+      // ainda mais para apenas esse uso, não libera data: em outras tags
+      // (em especial não em <a href>, onde data:text/html poderia abrir
+      // uma página com HTML/JS arbitrário disfarçada de link legítimo).
       img: ['http', 'https', 'data'],
     },
     // Remove qualquer CSS que tente navegar/executar via url() perigosa

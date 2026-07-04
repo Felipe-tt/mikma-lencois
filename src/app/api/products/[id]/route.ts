@@ -16,11 +16,17 @@ async function getSeller(req: NextRequest) {
   } catch { return null; }
 }
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const snap = await adminDb.collection('products').doc(id).get();
   if (!snap.exists) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
-  return NextResponse.json({ id: snap.id, ...snap.data() });
+  const data = snap.data()!;
+  // Produto inativo/rascunho não é público — só quem tem o link do painel (autenticado) pode ver.
+  if (data.active !== true) {
+    const seller = await getSeller(req);
+    if (!seller) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
+  }
+  return NextResponse.json({ id: snap.id, ...data });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

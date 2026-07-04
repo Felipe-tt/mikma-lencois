@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email';
+import { timingSafeEqual } from 'crypto';
 
 // ── Timings ────────────────────────────────────────────────────────────────────
 // Pedido sem pagamento por WARN_AFTER_MS → envia aviso "vai cancelar em 24h"
@@ -91,9 +92,12 @@ function emailHtml({
 }
 
 export async function GET(req: NextRequest) {
-  // Autenticação via secret compartilhado
+  // Autenticação via secret compartilhado (comparação timing-safe)
   const secret = req.headers.get('x-cron-secret');
-  if (!secret || secret !== process.env.CRON_SECRET) {
+  const expected = process.env.CRON_SECRET;
+  const isValid = !!secret && !!expected && secret.length === expected.length
+    && timingSafeEqual(Buffer.from(secret), Buffer.from(expected));
+  if (!isValid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

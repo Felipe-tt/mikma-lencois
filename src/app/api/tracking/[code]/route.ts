@@ -24,10 +24,14 @@ export interface TrackingResult {
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
-const LT_USER  = process.env.LINKETRACK_USER  ?? 'teste';
-const LT_TOKEN = process.env.LINKETRACK_TOKEN ?? '1abcd00b2731640e886fb41a8a9671ad1434c599dbaa0a0de9a5aa619f29a83f';
+const LT_USER  = process.env.LINKETRACK_USER;
+const LT_TOKEN = process.env.LINKETRACK_TOKEN;
 
 async function fetchCorreios(code: string): Promise<TrackingResult | null> {
+  if (!LT_USER || !LT_TOKEN) {
+    console.error('[tracking] LINKETRACK_USER/LINKETRACK_TOKEN não configurados');
+    return null;
+  }
   try {
     const url = `https://api.linketrack.com/track/json?user=${LT_USER}&token=${LT_TOKEN}&codigo=${encodeURIComponent(code)}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
