@@ -5,7 +5,7 @@ import type { Product, InventoryItem } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { VariantSelector } from '@/components/product/VariantSelector';
 import { ProductGallery } from '@/components/product/ProductGallery';
-import { ProductCard } from '@/components/product/ProductCard';
+import { ProductCarousel } from '@/components/product/ProductCarousel';
 import { SizeGuideModal } from '@/components/product/SizeGuideModal';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { getSettings } from '@/lib/settings';
@@ -42,15 +42,15 @@ async function getInventory(id: string): Promise<InventoryItem[]> {
 }
 async function getRelated(product: Product): Promise<Product[]> {
   try {
-    // limit(5) em vez de 6 já que filtramos o próprio produto: economiza 1 leitura
+    // limit(13) em vez de 12 já que filtramos o próprio produto
     const snap = await adminDb.collection('products')
       .where('active','==',true)
       .where('category','==',product.category)
-      .limit(5).get();
+      .limit(13).get();
     return snap.docs
       .map(d => serialize<Product>({ id: d.id, ...d.data() }))
       .filter(p => p.id !== product.id)
-      .slice(0, 4);
+      .slice(0, 12);
   } catch { return []; }
 }
 
@@ -236,12 +236,13 @@ export default async function ProductPage({ params }: Props) {
                 className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-mid hover:text-ink transition-colors group pb-0.5"
               >
                 Ver tudo
-                
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  className="transition-transform duration-150 group-hover:translate-x-0.5">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
               </Link>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-mist border border-mist">
-              {related.map(p => <ProductCard key={p.id} product={p} />)}
-            </div>
+            <ProductCarousel products={related} />
           </div>
         </section>
       )}
