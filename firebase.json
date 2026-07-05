@@ -8,7 +8,7 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "frameworksBackend": {
       "region": "southamerica-east1",
-      "memory": "256MiB",
+      "memory": "512MiB",
       "cpu": 1,
       "concurrency": 40,
       "minInstances": 0,
