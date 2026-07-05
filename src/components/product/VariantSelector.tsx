@@ -91,7 +91,7 @@ export function VariantSelector({ product, inventory }: Props) {
           <p className="label">Tamanho / Variação</p>
           {selectedVariant && (
             <span className="text-[11px] text-faint font-medium">
-              {availableStock > 0 ? `${availableStock} disponíve${availableStock !== 1 ? 'is' : 'l'}` : ''}
+              {availableStock > 0 && availableStock <= 5 ? `Só ${availableStock} disponíve${availableStock !== 1 ? 'is' : 'l'}` : ''}
             </span>
           )}
         </div>

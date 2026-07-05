@@ -63,7 +63,7 @@ export function ProductGallery({ images, name, tag }: Props) {
       <div className="flex flex-col gap-3">
         {/* ── Main image ── */}
         <div
-          className={`relative aspect-[4/5] overflow-hidden bg-warm select-none ${hasImages ? 'cursor-zoom-in' : ''}`}
+          className={`relative aspect-[4/5] overflow-hidden bg-[#F3EFE8] border border-mist select-none ${hasImages ? 'cursor-zoom-in' : ''}`}
           onClick={() => {
             if (!hasImages) return;
             if (justSwiped.current) { justSwiped.current = false; return; }
@@ -76,19 +76,23 @@ export function ProductGallery({ images, name, tag }: Props) {
           onTouchEnd={onTouchEnd}
         >
           {hasImages ? (
-            <Image
-              src={images[active]}
-              alt={`${name} — foto ${active + 1}`}
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-              style={zoom ? {
-                transform: 'scale(2)',
-                transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
-                transition: 'transform-origin 0s',
-              } : { transition: 'transform 0.4s ease' }}
-            />
+            <div className="absolute inset-0 p-6 sm:p-10">
+              <div className="relative w-full h-full">
+                <Image
+                  src={images[active]}
+                  alt={`${name} — foto ${active + 1}`}
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-contain"
+                  style={zoom ? {
+                    transform: 'scale(1.6)',
+                    transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                    transition: 'transform-origin 0s',
+                  } : { transition: 'transform 0.4s ease' }}
+                />
+              </div>
+            </div>
           ) : (
             <div className="flex h-full items-center justify-center">
               <span className="font-display text-6xl text-faint select-none">M</span>
@@ -147,12 +151,12 @@ export function ProductGallery({ images, name, tag }: Props) {
               <button
                 key={i}
                 onClick={() => setActive(i)}
-                className={`relative aspect-square overflow-hidden bg-warm border-2 transition-all duration-150 focus:outline-none ${
+                className={`relative aspect-square overflow-hidden bg-[#F3EFE8] border-2 transition-all duration-150 focus:outline-none ${
                   active === i ? 'border-ink' : 'border-transparent hover:border-mist'
                 }`}
                 aria-label={`Ver foto ${i + 1}`}
               >
-                <Image src={img} alt="" fill sizes="15vw" className="object-cover" />
+                <Image src={img} alt="" fill sizes="15vw" className="object-contain p-1.5" />
               </button>
             ))}
           </div>
@@ -162,7 +166,7 @@ export function ProductGallery({ images, name, tag }: Props) {
       {/* ── Lightbox ── */}
       {lightbox && (
         <div
-          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
+          className="fixed inset-0 z-[100] bg-[#0c0c0c] flex items-center justify-center"
           onClick={() => setLightbox(false)}
           onTouchStart={onTouchStart}
           onTouchEnd={e => {
@@ -203,7 +207,7 @@ export function ProductGallery({ images, name, tag }: Props) {
 
           {/* Image */}
           <div
-            className="relative w-full h-full flex items-center justify-center px-16 py-12"
+            className="relative w-full h-full flex items-center justify-center px-6 py-16 sm:px-20 sm:py-14"
             onClick={e => e.stopPropagation()}
           >
             <Image

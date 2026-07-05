@@ -6,6 +6,7 @@ import { getSettings } from '@/lib/settings';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
+import { StockError } from '@/lib/errors';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -82,24 +83,49 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Check inventory before creating order ────────────────────────────────
-    const inventoryChecks = await Promise.all(
+    // ── Checar e reservar estoque ATOMICAMENTE (evita oversell por concorrência) ──
+    // Antes: check e reserve eram dois passos separados — dois pedidos simultâneos
+    // podiam ambos "ver" a última unidade livre e ambos reservarem. Agora tudo
+    // acontece dentro de uma única transação do Firestore, que serializa
+    // automaticamente escritas concorrentes no mesmo documento (retry interno).
+    const inventoryQueries = await Promise.all(
       cartItems.map(ci =>
         adminDb.collection('inventory').where('sku', '==', ci.sku).limit(1).get()
       )
     );
-    for (let i = 0; i < cartItems.length; i++) {
-      const inv = inventoryChecks[i].docs[0]?.data();
-      if (!inv) continue; // item sem controle de estoque passa
-      const available = (inv.quantity ?? 0) - (inv.reserved ?? 0);
-      if (available < cartItems[i].quantity) {
-        const ci = cartItems[i];
-        const name = productMap[ci.productId]?.name ?? ci.sku;
-        return NextResponse.json(
-          { error: `"${name}" não tem estoque suficiente. Disponível: ${available}` },
-          { status: 409 }
+    const invDocRefs = inventoryQueries.map(snap => snap.docs[0]?.ref ?? null);
+
+    try {
+      await adminDb.runTransaction(async tx => {
+        // Firestore exige todas as leituras antes de qualquer escrita na transação
+        const invSnaps = await Promise.all(
+          invDocRefs.map(ref => (ref ? tx.get(ref) : null))
         );
+        for (let i = 0; i < cartItems.length; i++) {
+          const snap = invSnaps[i];
+          if (!snap) continue; // item sem controle de estoque passa
+          const inv = snap.data()!;
+          const available = (inv.quantity ?? 0) - (inv.reserved ?? 0);
+          if (available < cartItems[i].quantity) {
+            const ci = cartItems[i];
+            const name = productMap[ci.productId]?.name ?? ci.sku;
+            throw new StockError(`"${name}" não tem estoque suficiente. Disponível: ${available}`);
+          }
+        }
+        for (let i = 0; i < cartItems.length; i++) {
+          const ref = invDocRefs[i];
+          if (!ref) continue;
+          tx.update(ref, {
+            reserved: FieldValue.increment(cartItems[i].quantity),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
+      });
+    } catch (err) {
+      if (err instanceof StockError) {
+        return NextResponse.json({ error: err.message }, { status: 409 });
       }
+      throw err;
     }
 
     // ── Build verified order items ────────────────────────────────────────────
@@ -183,18 +209,6 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
-    // ── Reservar estoque para evitar oversell ────────────────────────────────
-    // Incrementa 'reserved' atomicamente; se a AbacatePay falhar, libera abaixo
-    const inventoryDocs = inventoryChecks.map(snap => snap.docs[0]);
-    for (let i = 0; i < cartItems.length; i++) {
-      const invDoc = inventoryDocs[i];
-      if (!invDoc) continue;
-      await adminDb.collection('inventory').doc(invDoc.id).update({
-        reserved: FieldValue.increment(cartItems[i].quantity),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    }
-
     // Incrementa usedCount do cupom atomicamente (best-effort)
     if (couponCode) {
       adminDb.collection('coupons').doc(couponCode).update({
@@ -247,9 +261,9 @@ export async function POST(req: NextRequest) {
       await orderRef.delete();
       // Liberar reserva de estoque
       for (let i = 0; i < cartItems.length; i++) {
-        const invDoc = inventoryDocs[i];
-        if (!invDoc) continue;
-        adminDb.collection('inventory').doc(invDoc.id).update({
+        const ref = invDocRefs[i];
+        if (!ref) continue;
+        ref.update({
           reserved: FieldValue.increment(-cartItems[i].quantity),
           updatedAt: FieldValue.serverTimestamp(),
         }).catch(() => {});
