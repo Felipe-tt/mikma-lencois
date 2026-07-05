@@ -12,6 +12,7 @@ export function ProductGallery({ images, name, tag }: Props) {
   // swipe
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const justSwiped   = useRef(false);
 
   const prev = useCallback(() => setActive(a => (a - 1 + images.length) % images.length), [images.length]);
   const next = useCallback(() => setActive(a => (a + 1) % images.length), [images.length]);
@@ -40,6 +41,7 @@ export function ProductGallery({ images, name, tag }: Props) {
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
       dx < 0 ? next() : prev();
+      justSwiped.current = true;
     }
     touchStartX.current = null;
     touchStartY.current = null;
@@ -61,8 +63,12 @@ export function ProductGallery({ images, name, tag }: Props) {
       <div className="flex flex-col gap-3">
         {/* ── Main image ── */}
         <div
-          className={`relative aspect-[4/5] overflow-hidden bg-warm select-none ${hasImages ? (zoom ? 'cursor-zoom-out' : 'cursor-zoom-in') : ''}`}
-          onClick={() => { if (hasImages) { if (zoom) setZoom(false); else setLightbox(true); } }}
+          className={`relative aspect-[4/5] overflow-hidden bg-warm select-none ${hasImages ? 'cursor-zoom-in' : ''}`}
+          onClick={() => {
+            if (!hasImages) return;
+            if (justSwiped.current) { justSwiped.current = false; return; }
+            setLightbox(true);
+          }}
           onMouseEnter={() => hasImages && setZoom(true)}
           onMouseLeave={() => setZoom(false)}
           onMouseMove={handleMouseMove}
