@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -18,6 +19,7 @@ export function VariantSelector({ product, inventory }: Props) {
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(product.variants[0]?.id ?? null);
   const [qty, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
+  const [addedOpen, setAddedOpen] = useState(false);
 
   const selectedVariant = product.variants.find(v => v.id === selectedVariantId);
 
@@ -30,6 +32,16 @@ export function VariantSelector({ product, inventory }: Props) {
 
   const availableStock = selectedVariant ? getStock(selectedVariant) : 0;
   const outOfStock = availableStock === 0;
+
+  const closeAdded = useCallback(() => setAddedOpen(false), []);
+
+  useEffect(() => {
+    if (!addedOpen) return;
+    document.body.style.overflow = 'hidden';
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closeAdded(); };
+    window.addEventListener('keydown', handler);
+    return () => { window.removeEventListener('keydown', handler); document.body.style.overflow = ''; };
+  }, [addedOpen, closeAdded]);
 
   async function addToCart() {
     if (loading) return;
@@ -70,7 +82,7 @@ export function VariantSelector({ product, inventory }: Props) {
         updatedAt: serverTimestamp(),
       }, { merge: true });
 
-      router.push('/carrinho');
+      setAddedOpen(true);
     } catch (err) {
       console.error('addToCart error:', err);
     } finally {
@@ -83,6 +95,7 @@ export function VariantSelector({ product, inventory }: Props) {
   }
 
   return (
+    <>
     <div className="flex flex-col gap-6">
 
       {/* ── Variant selector ── */}
@@ -197,5 +210,44 @@ export function VariantSelector({ product, inventory }: Props) {
         </p>
       )}
     </div>
+
+      {/* ── Modal: item adicionado — continuar comprando ou ir pro carrinho ── */}
+      {addedOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[80] bg-ink/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-fadeIn"
+          onClick={closeAdded}
+        >
+          <div
+            className="w-full sm:max-w-sm bg-paper sm:mx-4 sm:rounded-sm overflow-hidden shadow-modal animate-scaleIn"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 pt-7 pb-6 text-center">
+              <div className="mx-auto mb-4 w-11 h-11 rounded-full bg-clay/10 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-clay">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <h3 className="font-display font-normal text-ink text-xl leading-none mb-1">Adicionado ao carrinho</h3>
+              <p className="text-[13px] text-faint">{qty} {qty > 1 ? 'unidades' : 'unidade'} de {product.name}{selectedVariant ? ` · ${selectedVariant.size}${selectedVariant.color ? ` · ${selectedVariant.color}` : ''}` : ''}</p>
+            </div>
+
+            <div className="flex flex-col gap-2 px-6 pb-6">
+              <button
+                onClick={() => router.push('/carrinho')}
+                className="w-full h-12 text-[13px] font-semibold tracking-[0.06em] bg-ink text-paper border border-ink hover:bg-clay hover:border-clay transition-colors duration-150"
+              >
+                Ver carrinho
+              </button>
+              <button
+                onClick={closeAdded}
+                className="w-full h-12 text-[13px] font-semibold tracking-[0.06em] text-mid border border-mist hover:border-ink/50 hover:text-ink transition-colors duration-150"
+              >
+                Continuar comprando
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+    </>
   );
 }
