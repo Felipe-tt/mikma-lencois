@@ -27,7 +27,14 @@ service cloud.firestore {
       // Firestore — o custom claim do token continuaria 'buyer', mas
       // qualquer código que ler o role daqui em vez do claim seria
       // enganado). Só admin pode alterar o role de alguém.
-      allow update: if (isSelf(uid) && request.resource.data.role == resource.data.role)
+      // .get(key, default) em vez de acesso direto por ponto: a maioria
+      // dos compradores nunca teve campo "role" no Firestore (só existe
+      // via custom claim do token) — acesso direto a um campo ausente
+      // lança erro de avaliação, e regra com erro = negada por padrão.
+      // Isso quebrava QUALQUER usuário sem o campo salvando o próprio
+      // perfil (ex: endereço no checkout) com "Missing or insufficient
+      // permissions", mesmo sendo o dono do documento.
+      allow update: if (isSelf(uid) && request.resource.data.get('role', null) == resource.data.get('role', null))
         || hasRole('admin');
       allow delete: if hasRole('admin');
     }

@@ -137,51 +137,60 @@ async function quoteMelhorEnvio(
     services: '1,2,7,18', // 1=PAC, 2=SEDEX, 7=Jadlog Package, 18=Jadlog Expresso
   };
 
-  const res = await fetch(`${base}/api/v2/me/shipment/calculate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'User-Agent': 'MikmaLencois/1.0 (contato@mikma.com.br)',
-    },
-    body: JSON.stringify(body),
-  });
+  try {
+    const res = await fetch(`${base}/api/v2/me/shipment/calculate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        'User-Agent': 'MikmaLencois/1.0 (contato@mikma.com.br)',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(8000),
+    });
 
-  if (!res.ok) {
-    console.warn('[MelhorEnvio] quote failed:', res.status, await res.text().catch(() => ''));
+    if (!res.ok) {
+      console.warn('[MelhorEnvio] quote failed:', res.status, await res.text().catch(() => ''));
+      return [];
+    }
+
+    const data: MEShipment[] = await res.json();
+
+    // Loga cada serviço que veio com erro — sem isso, um serviço não
+    // contratado/habilitado na conta (ex: Jadlog) simplesmente
+    // desaparece da lista sem nenhuma pista do motivo.
+    for (const s of data) {
+      if (s.error) {
+        console.warn(`[MelhorEnvio] serviço ${s.id} (${s.name ?? '?'}) indisponível: ${s.error}`);
+      }
+    }
+
+    return data
+      .filter(s => !s.error && parseFloat(s.custom_price ?? s.price ?? '0') > 0)
+      .map(s => {
+        const price    = parseFloat(s.custom_price ?? s.price);
+        const days     = s.custom_delivery_time ?? s.delivery_time ?? 7;
+        const id       = String(s.id);
+        const isPac    = id === '1';
+        const isSedex  = id === '2';
+        const isJadPkg = id === '7';
+        const isJadExp = id === '18';
+        return {
+          carrier:       isPac ? 'correios_pac' : isSedex ? 'correios_sedex' : isJadPkg ? 'jadlog_package' : isJadExp ? 'jadlog_expresso' : `melhor_envio_${id}`,
+          label:         isPac ? 'Correios PAC' : isSedex ? 'Correios SEDEX' : isJadPkg ? 'Jadlog Package' : isJadExp ? 'Jadlog Expresso' : s.name,
+          priceCents:    Math.round(price * 100),
+          estimatedDays: days,
+          available:     true,
+          tag:           isPac || isJadPkg ? 'economico' : isSedex || isJadExp ? 'rapido' : undefined,
+        } satisfies ShippingOption;
+      });
+  } catch (e) {
+    // Rede instável, timeout, DNS etc. — sem isso, um problema pontual na
+    // API do Melhor Envio derrubava a cotação de frete INTEIRA (pickup,
+    // Correios, Uber, tudo) em vez de só omitir essa transportadora.
+    console.warn('[MelhorEnvio] erro de rede/timeout, transportadora omitida:', e instanceof Error ? e.message : e);
     return [];
   }
-
-  const data: MEShipment[] = await res.json();
-
-  // Loga cada serviço que veio com erro — sem isso, um serviço não
-  // contratado/habilitado na conta (ex: Jadlog) simplesmente
-  // desaparece da lista sem nenhuma pista do motivo.
-  for (const s of data) {
-    if (s.error) {
-      console.warn(`[MelhorEnvio] serviço ${s.id} (${s.name ?? '?'}) indisponível: ${s.error}`);
-    }
-  }
-
-  return data
-    .filter(s => !s.error && parseFloat(s.custom_price ?? s.price ?? '0') > 0)
-    .map(s => {
-      const price    = parseFloat(s.custom_price ?? s.price);
-      const days     = s.custom_delivery_time ?? s.delivery_time ?? 7;
-      const id       = String(s.id);
-      const isPac    = id === '1';
-      const isSedex  = id === '2';
-      const isJadPkg = id === '7';
-      const isJadExp = id === '18';
-      return {
-        carrier:       isPac ? 'correios_pac' : isSedex ? 'correios_sedex' : isJadPkg ? 'jadlog_package' : isJadExp ? 'jadlog_expresso' : `melhor_envio_${id}`,
-        label:         isPac ? 'Correios PAC' : isSedex ? 'Correios SEDEX' : isJadPkg ? 'Jadlog Package' : isJadExp ? 'Jadlog Expresso' : s.name,
-        priceCents:    Math.round(price * 100),
-        estimatedDays: days,
-        available:     true,
-        tag:           isPac || isJadPkg ? 'economico' : isSedex || isJadExp ? 'rapido' : undefined,
-      } satisfies ShippingOption;
-    });
 }
 
 
