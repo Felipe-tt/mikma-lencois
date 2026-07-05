@@ -51,7 +51,21 @@ export async function getUberToken(): Promise<string> {
 
   if (!res.ok) {
     const err = await res.text().catch(() => '');
-    throw new Error(`Uber Direct OAuth falhou: ${res.status} ${err.slice(0, 200)}`);
+    // Log completo pra abrir chamado em https://t.uber.com/integration-support
+    // (developer.uber.com/docs/deliveries/support) — a Uber pede o request-id
+    // e o horário exatos da chamada que falhou, sem isso o suporte não acha
+    // o log deles do lado de lá.
+    const requestId = res.headers.get('x-uber-trace-id') ?? res.headers.get('x-request-id') ?? 'n/a';
+    console.warn('[uber-direct] OAuth falhou — detalhes p/ chamado de suporte Uber:', {
+      status:     res.status,
+      requestId,
+      timestamp:  new Date().toISOString(),
+      sandbox:    SANDBOX,
+      authUrl:    AUTH_URL,
+      clientIdPrefix: clientId.slice(0, 6) + '…',
+      body:       err.slice(0, 500),
+    });
+    throw new Error(`Uber Direct OAuth falhou: ${res.status} ${err.slice(0, 200)}${requestId !== 'n/a' ? ` (request-id: ${requestId})` : ''}`);
   }
 
   const data      = await res.json();
