@@ -444,6 +444,7 @@ export async function POST(req: NextRequest) {
     // Só aparece se: cliente está dentro do raio E as 3 credenciais estão configuradas.
     // A cotação usa endereço do ViaCEP (sem número — suficiente para estimativa).
     // Na criação real da entrega usamos o endereço completo do pedido.
+    let uberDebug: string | undefined;
     if (isLocal) {
       const uberClientId  = process.env.UBER_DIRECT_CLIENT_ID;
       const uberCustomerId = process.env.UBER_DIRECT_CUSTOMER_ID;
@@ -471,8 +472,11 @@ export async function POST(req: NextRequest) {
           });
         } catch (e) {
           // Uber indisponível para essa rota — não exibe a opção
-          console.warn('[uber-direct] quote falhou, opção omitida:', e instanceof Error ? e.message : e);
+          uberDebug = e instanceof Error ? e.message : String(e);
+          console.warn('[uber-direct] quote falhou, opção omitida:', uberDebug);
         }
+      } else {
+        uberDebug = 'UBER_DIRECT_CLIENT_ID ou UBER_DIRECT_CUSTOMER_ID não configurados no ambiente';
       }
     }
 
@@ -522,6 +526,10 @@ export async function POST(req: NextRequest) {
       distKm: Math.round(distKm),
       isLocal,
       freeShipping,
+      // Diagnóstico temporário: só exposto pra seller/admin, nunca pro
+      // comprador final. Motivo exato de o Uber Direct ter sido omitido
+      // da lista (undefined = não se aplicava ou funcionou normalmente).
+      ...(uberDebug && (decoded.role === 'seller' || decoded.role === 'admin') ? { uberDebug } : {}),
     });
   } catch (err) {
     console.error('shipping/quote error:', err);
