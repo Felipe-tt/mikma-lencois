@@ -118,6 +118,7 @@ export interface Order {
     trackingUrl?: string        // URL real da entrega (Uber Direct: link de rastreio em tempo real)
     melhorEnvioOrderId?: string
     uberDirectDeliveryId?: string
+    uberSandbox?: boolean
     uberQuoteId?: string          // quoteId da cotação — passado no despacho para garantir o preço
     labelUrl?: string
     dispatchedAt?: string

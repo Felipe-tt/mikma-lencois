@@ -66,7 +66,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 // ── Uber Direct ───────────────────────────────────────────────────────────────
-import { getUberToken, uberQuote, buildUberAddress } from '@/lib/uber-direct';
+import { getUberToken, uberQuote, buildUberAddress, uberDirectConfigured } from '@/lib/uber-direct';
 
 /**
  * Monta string de endereço para a API do Uber Direct a partir dos dados do ViaCEP.
@@ -441,16 +441,15 @@ export async function POST(req: NextRequest) {
     });
 
     // ── Uber Direct (entrega local no mesmo dia) ──────────────────────────────
-    // Só aparece se: cliente está dentro do raio E as 3 credenciais estão configuradas.
-    // A cotação usa endereço do ViaCEP (sem número — suficiente para estimativa).
-    // Na criação real da entrega usamos o endereço completo do pedido.
+    // Só aparece se: cliente está dentro do raio E as credenciais do ambiente
+    // selecionado (settings.uberDirectSandboxMode, editável no painel) estão
+    // configuradas. Sandbox nunca gera entrega real — só pra testar o fluxo.
+    const uberSandbox = !!settings.uberDirectSandboxMode;
     let uberDebug: string | undefined;
     if (isLocal) {
-      const uberClientId  = process.env.UBER_DIRECT_CLIENT_ID;
-      const uberCustomerId = process.env.UBER_DIRECT_CUSTOMER_ID;
-      if (uberClientId && uberCustomerId) {
+      if (uberDirectConfigured(uberSandbox)) {
         try {
-          const token = await getUberToken();
+          const token = await getUberToken(uberSandbox);
           void token; // já validado — uberQuote usa internamente
           const pickupAddr = buildUberAddress({
             street:  settings.storeAddress ?? '',
@@ -460,10 +459,10 @@ export async function POST(req: NextRequest) {
             zipCode: fromCep,
           });
           const dropoffAddr = await buildDropoffAddress(destCep);
-          const quote = await uberQuote(pickupAddr, dropoffAddr);
+          const quote = await uberQuote(pickupAddr, dropoffAddr, uberSandbox);
           options.push({
             carrier:       'uber_direct',
-            label:         'Entrega hoje · Uber Direct',
+            label:         uberSandbox ? 'Entrega hoje · Uber Direct (TESTE)' : 'Entrega hoje · Uber Direct',
             priceCents:    quote.feeCents,
             estimatedDays: 0,
             available:     true,
@@ -473,10 +472,12 @@ export async function POST(req: NextRequest) {
         } catch (e) {
           // Uber indisponível para essa rota — não exibe a opção
           uberDebug = e instanceof Error ? e.message : String(e);
-          console.warn('[uber-direct] quote falhou, opção omitida:', uberDebug);
+          console.warn(`[uber-direct] quote falhou (${uberSandbox ? 'sandbox' : 'produção'}), opção omitida:`, uberDebug);
         }
       } else {
-        uberDebug = 'UBER_DIRECT_CLIENT_ID ou UBER_DIRECT_CUSTOMER_ID não configurados no ambiente';
+        uberDebug = uberSandbox
+          ? 'UBER_DIRECT_SANDBOX_CLIENT_ID / SECRET / CUSTOMER_ID não configurados no ambiente'
+          : 'UBER_DIRECT_CLIENT_ID / SECRET / CUSTOMER_ID não configurados no ambiente';
       }
     }
 
@@ -529,7 +530,7 @@ export async function POST(req: NextRequest) {
       // Diagnóstico temporário: só exposto pra seller/admin, nunca pro
       // comprador final. Motivo exato de o Uber Direct ter sido omitido
       // da lista (undefined = não se aplicava ou funcionou normalmente).
-      ...(uberDebug && (decoded.role === 'seller' || decoded.role === 'admin') ? { uberDebug } : {}),
+      ...(uberDebug && (decoded.role === 'seller' || decoded.role === 'admin') ? { uberDebug, uberSandbox } : {}),
     });
   } catch (err) {
     console.error('shipping/quote error:', err);

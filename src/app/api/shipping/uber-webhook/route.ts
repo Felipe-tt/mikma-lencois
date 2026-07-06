@@ -41,18 +41,31 @@ const STATUS_NOTE: Record<string, string> = {
 };
 
 function verifySignature(rawBody: Buffer, header: string): boolean {
-  const secret = process.env.UBER_DIRECT_WEBHOOK_SECRET;
-  if (!secret) {
-    console.error('[uber-webhook] UBER_DIRECT_WEBHOOK_SECRET não configurado — rejeitando (fail-closed)');
+  // Testa contra os dois secrets configurados (produção e sandbox) — o
+  // toggle de ambiente é por pedido (delivery.uberSandbox), não global, então
+  // um webhook de qualquer um dos dois apps pode legitimamente chegar aqui.
+  const secrets = [process.env.UBER_DIRECT_WEBHOOK_SECRET, process.env.UBER_DIRECT_SANDBOX_WEBHOOK_SECRET]
+    .filter((s): s is string => !!s);
+  if (secrets.length === 0) {
+    console.error('[uber-webhook] nenhum UBER_DIRECT_WEBHOOK_SECRET configurado — rejeitando (fail-closed)');
     return false;
   }
-  const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
   const received = header.replace(/^sha256=/, '');
+  let receivedBuf: Buffer;
   try {
-    return timingSafeEqual(Buffer.from(received, 'hex'), Buffer.from(expected, 'hex'));
+    receivedBuf = Buffer.from(received, 'hex');
   } catch {
     return false;
   }
+  return secrets.some(secret => {
+    const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
+    try {
+      return receivedBuf.length === Buffer.from(expected, 'hex').length
+        && timingSafeEqual(receivedBuf, Buffer.from(expected, 'hex'));
+    } catch {
+      return false;
+    }
+  });
 }
 
 export async function POST(req: NextRequest) {

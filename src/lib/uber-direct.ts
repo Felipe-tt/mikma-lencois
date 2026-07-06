@@ -2,35 +2,68 @@
  * src/lib/uber-direct.ts
  * Cliente Uber Direct baseado no OpenAPI oficial (openapi.json).
  *
- * CREDENCIAIS (configurar no Cloud Run → Variáveis de ambiente):
- *   UBER_DIRECT_CLIENT_ID      — developer.uber.com → seu app → Credentials
- *   UBER_DIRECT_CLIENT_SECRET  — developer.uber.com → seu app → Credentials
- *   UBER_DIRECT_CUSTOMER_ID    — developer.uber.com → seu app → Customer ID
- *   UBER_DIRECT_WEBHOOK_SECRET — developer.uber.com → seu app → Webhooks
- *   UBER_DIRECT_SANDBOX=true   — remover em produção
+ * CREDENCIAIS (configurar como GitHub Secrets — nunca no Firestore, que tem
+ * leitura pública em /settings):
+ *   Produção:
+ *     UBER_DIRECT_CLIENT_ID / UBER_DIRECT_CLIENT_SECRET / UBER_DIRECT_CUSTOMER_ID
+ *   Teste/sandbox (app separado no painel Uber Direct → "Mudar para teste"):
+ *     UBER_DIRECT_SANDBOX_CLIENT_ID / UBER_DIRECT_SANDBOX_CLIENT_SECRET / UBER_DIRECT_SANDBOX_CUSTOMER_ID
+ *
+ * Qual ambiente é usado em cada chamada é decidido pelo toggle
+ * settings.uberDirectSandboxMode (editável em /painel/configuracoes) — cada
+ * função abaixo recebe `sandbox: boolean` explicitamente, não lê de env var
+ * fixa, pra poder trocar sem novo deploy.
  */
 
 import { adminDb } from '@/lib/firebase/admin';
 
-const SANDBOX  = process.env.UBER_DIRECT_SANDBOX === 'true';
-// Auth URL conforme securitySchemes.direct_auth.flows.clientCredentials.tokenUrl do OpenAPI
-const AUTH_URL = SANDBOX
-  ? 'https://auth.uber.com/oauth/v2/token'   // sandbox usa o mesmo endpoint
-  : 'https://auth.uber.com/oauth/v2/token';
-const API_BASE = SANDBOX
-  ? 'https://sandbox-api.uber.com/v1'
-  : 'https://api.uber.com/v1';
+// Auth URL conforme securitySchemes.direct_auth.flows.clientCredentials.tokenUrl
+// do OpenAPI — a Uber usa o MESMO endpoint de auth para teste e produção;
+// só o app (client_id/secret) e a API_BASE mudam por ambiente.
+const AUTH_URL = 'https://auth.uber.com/oauth/v2/token';
+
+function apiBase(sandbox: boolean): string {
+  return sandbox ? 'https://sandbox-api.uber.com/v1' : 'https://api.uber.com/v1';
+}
+
+function credentials(sandbox: boolean): { clientId?: string; clientSecret?: string; customerId?: string } {
+  return sandbox
+    ? {
+        clientId:     process.env.UBER_DIRECT_SANDBOX_CLIENT_ID,
+        clientSecret: process.env.UBER_DIRECT_SANDBOX_CLIENT_SECRET,
+        customerId:   process.env.UBER_DIRECT_SANDBOX_CUSTOMER_ID,
+      }
+    : {
+        clientId:     process.env.UBER_DIRECT_CLIENT_ID,
+        clientSecret: process.env.UBER_DIRECT_CLIENT_SECRET,
+        customerId:   process.env.UBER_DIRECT_CUSTOMER_ID,
+      };
+}
+
+/** true se as credenciais do ambiente pedido estiverem configuradas */
+export function uberDirectConfigured(sandbox: boolean): boolean {
+  const c = credentials(sandbox);
+  return !!(c.clientId && c.clientSecret && c.customerId);
+}
 
 // ── Token OAuth2 ──────────────────────────────────────────────────────────────
 
-export async function getUberToken(): Promise<string> {
-  const clientId     = process.env.UBER_DIRECT_CLIENT_ID;
-  const clientSecret = process.env.UBER_DIRECT_CLIENT_SECRET;
-  if (!clientId || !clientSecret)
-    throw new Error('UBER_DIRECT_CLIENT_ID / UBER_DIRECT_CLIENT_SECRET não configurados');
+export async function getUberToken(sandbox: boolean): Promise<string> {
+  const { clientId, clientSecret } = credentials(sandbox);
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      sandbox
+        ? 'UBER_DIRECT_SANDBOX_CLIENT_ID / UBER_DIRECT_SANDBOX_CLIENT_SECRET não configurados'
+        : 'UBER_DIRECT_CLIENT_ID / UBER_DIRECT_CLIENT_SECRET não configurados'
+    );
+  }
+
+  // Cache separado por ambiente — nunca reaproveita token de teste em
+  // produção nem vice-versa.
+  const cacheDoc = sandbox ? 'uber_token_sandbox' : 'uber_token_prod';
 
   try {
-    const snap = await adminDb.collection('_cache').doc('uber_token').get();
+    const snap = await adminDb.collection('_cache').doc(cacheDoc).get();
     if (snap.exists) {
       const d = snap.data()!;
       if (d.token && d.expiresAt && Date.now() < d.expiresAt - 60_000) return d.token as string;
@@ -60,18 +93,18 @@ export async function getUberToken(): Promise<string> {
       status:     res.status,
       requestId,
       timestamp:  new Date().toISOString(),
-      sandbox:    SANDBOX,
+      sandbox,
       authUrl:    AUTH_URL,
       clientIdPrefix: clientId.slice(0, 6) + '…',
       body:       err.slice(0, 500),
     });
-    throw new Error(`Uber Direct OAuth falhou: ${res.status} ${err.slice(0, 200)}${requestId !== 'n/a' ? ` (request-id: ${requestId})` : ''}`);
+    throw new Error(`Uber Direct OAuth falhou (${sandbox ? 'sandbox' : 'produção'}): ${res.status} ${err.slice(0, 200)}${requestId !== 'n/a' ? ` (request-id: ${requestId})` : ''}`);
   }
 
   const data      = await res.json();
   const token     = data.access_token as string;
   const expiresAt = Date.now() + (data.expires_in ?? 3600) * 1000;
-  adminDb.collection('_cache').doc('uber_token').set({ token, expiresAt }).catch(() => {});
+  adminDb.collection('_cache').doc(cacheDoc).set({ token, expiresAt }).catch(() => {});
   return token;
 }
 
@@ -127,12 +160,15 @@ export interface UberQuoteResult {
 export async function uberQuote(
   pickupAddress:  string,  // JSON string
   dropoffAddress: string,  // JSON string
+  sandbox:        boolean,
 ): Promise<UberQuoteResult> {
-  const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
-  if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
+  const { customerId } = credentials(sandbox);
+  if (!customerId) {
+    throw new Error(sandbox ? 'UBER_DIRECT_SANDBOX_CUSTOMER_ID não configurado' : 'UBER_DIRECT_CUSTOMER_ID não configurado');
+  }
 
-  const token = await getUberToken();
-  const res   = await fetch(`${API_BASE}/customers/${customerId}/delivery_quotes`, {
+  const token = await getUberToken(sandbox);
+  const res   = await fetch(`${apiBase(sandbox)}/customers/${customerId}/delivery_quotes`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body:    JSON.stringify({ pickup_address: pickupAddress, dropoff_address: dropoffAddress }),
@@ -195,11 +231,13 @@ export interface UberCreateResult {
  *                      dropoff_name, dropoff_address, dropoff_phone_number,
  *                      manifest_items (array)
  */
-export async function uberCreateDelivery(params: UberCreateParams): Promise<UberCreateResult> {
-  const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
-  if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
+export async function uberCreateDelivery(params: UberCreateParams, sandbox: boolean): Promise<UberCreateResult> {
+  const { customerId } = credentials(sandbox);
+  if (!customerId) {
+    throw new Error(sandbox ? 'UBER_DIRECT_SANDBOX_CUSTOMER_ID não configurado' : 'UBER_DIRECT_CUSTOMER_ID não configurado');
+  }
 
-  const token = await getUberToken();
+  const token = await getUberToken(sandbox);
 
   const body: Record<string, unknown> = {
     // Pickup — OBRIGATÓRIOS
@@ -226,7 +264,7 @@ export async function uberCreateDelivery(params: UberCreateParams): Promise<Uber
   if (params.dropoffNotes)        body.dropoff_notes       = params.dropoffNotes.slice(0, 280);
   if (params.manifestTotalValue)  body.manifest_total_value = params.manifestTotalValue;
 
-  const res = await fetch(`${API_BASE}/customers/${customerId}/deliveries`, {
+  const res = await fetch(`${apiBase(sandbox)}/customers/${customerId}/deliveries`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body:    JSON.stringify(body),
@@ -263,12 +301,14 @@ export interface UberDeliveryStatus {
 }
 
 /** GET /customers/{customer_id}/deliveries/{delivery_id} */
-export async function uberGetDelivery(deliveryId: string): Promise<UberDeliveryStatus> {
-  const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
-  if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
+export async function uberGetDelivery(deliveryId: string, sandbox: boolean): Promise<UberDeliveryStatus> {
+  const { customerId } = credentials(sandbox);
+  if (!customerId) {
+    throw new Error(sandbox ? 'UBER_DIRECT_SANDBOX_CUSTOMER_ID não configurado' : 'UBER_DIRECT_CUSTOMER_ID não configurado');
+  }
 
-  const token = await getUberToken();
-  const res   = await fetch(`${API_BASE}/customers/${customerId}/deliveries/${deliveryId}`, {
+  const token = await getUberToken(sandbox);
+  const res   = await fetch(`${apiBase(sandbox)}/customers/${customerId}/deliveries/${deliveryId}`, {
     headers: { Authorization: `Bearer ${token}` },
     signal:  AbortSignal.timeout(8000),
   });
@@ -302,17 +342,20 @@ export async function uberGetDelivery(deliveryId: string): Promise<UberDeliveryS
 export async function uberCancelDelivery(
   deliveryId: string,
   reason: string = 'customer_called_to_cancel',
-  additionalDescription?: string,
+  additionalDescription: string | undefined,
+  sandbox: boolean,
 ): Promise<void> {
-  const customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
-  if (!customerId) throw new Error('UBER_DIRECT_CUSTOMER_ID não configurado');
+  const { customerId } = credentials(sandbox);
+  if (!customerId) {
+    throw new Error(sandbox ? 'UBER_DIRECT_SANDBOX_CUSTOMER_ID não configurado' : 'UBER_DIRECT_CUSTOMER_ID não configurado');
+  }
 
-  const token = await getUberToken();
+  const token = await getUberToken(sandbox);
   const body: Record<string, string> = { cancelation_reason: reason };
   if (additionalDescription) body.additional_description = additionalDescription;
 
   const res = await fetch(
-    `${API_BASE}/customers/${customerId}/deliveries/${deliveryId}/cancel`,
+    `${apiBase(sandbox)}/customers/${customerId}/deliveries/${deliveryId}/cancel`,
     {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

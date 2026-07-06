@@ -27,6 +27,7 @@ import {
 import {
   uberCreateDelivery,
   uberCancelDelivery,
+  uberDirectConfigured,
   buildUberAddress,
   formatPhone,
   type UberManifestItem,
@@ -98,9 +99,14 @@ export async function POST(req: NextRequest) {
 
     // ── Entrega Uber Direct ──────────────────────────────────────────────────
     if (carrier === 'uber_direct') {
-      if (!process.env.UBER_DIRECT_CLIENT_ID || !process.env.UBER_DIRECT_CUSTOMER_ID) {
+      const uberSandbox = !!settings.uberDirectSandboxMode;
+      if (!uberDirectConfigured(uberSandbox)) {
         return NextResponse.json(
-          { error: 'UBER_DIRECT_CLIENT_ID / UBER_DIRECT_CUSTOMER_ID não configurados.' },
+          {
+            error: uberSandbox
+              ? 'UBER_DIRECT_SANDBOX_CLIENT_ID / SECRET / CUSTOMER_ID não configurados.'
+              : 'UBER_DIRECT_CLIENT_ID / SECRET / CUSTOMER_ID não configurados.',
+          },
           { status: 500 }
         );
       }
@@ -154,12 +160,13 @@ export async function POST(req: NextRequest) {
         manifestTotalValue:  order.totalCents,
         // Garante o preço cotado — evita divergência se a tarifa mudar entre cotação e despacho
         quoteId:             order.delivery?.uberQuoteId,
-      });
+      }, uberSandbox);
 
       await adminDb.collection('orders').doc(orderId).update({
         status: 'shipped',
         'delivery.carrier':               'uber_direct',
         'delivery.uberDirectDeliveryId':  uberDelivery.deliveryId,
+        'delivery.uberSandbox':           uberSandbox,
         'delivery.trackingUrl':           uberDelivery.trackingUrl,
         'delivery.trackingCode':          null,
         'delivery.dispatchedAt':          FieldValue.serverTimestamp(),
@@ -367,11 +374,14 @@ export async function DELETE(req: NextRequest) {
 
     const meOrderId           = order.delivery?.melhorEnvioOrderId;
     const uberDirectDeliveryId = order.delivery?.uberDirectDeliveryId;
+    // Usa o ambiente em que a entrega foi DE FATO criada — não as settings
+    // atuais, que podem ter sido trocadas no painel entre o despacho e agora.
+    const uberSandboxAtDispatch = !!order.delivery?.uberSandbox;
 
     // ── Uber Direct ────────────────────────────────────────────────────────────────────────────
     if (uberDirectDeliveryId) {
       try {
-        await uberCancelDelivery(uberDirectDeliveryId, 'customer_called_to_cancel');
+        await uberCancelDelivery(uberDirectDeliveryId, 'customer_called_to_cancel', undefined, uberSandboxAtDispatch);
       } catch (err) {
         console.error('[delivery/cancel] uberCancelDelivery falhou:', err);
         return NextResponse.json(

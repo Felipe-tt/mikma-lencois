@@ -42,6 +42,10 @@ export type StoreSettings = {
   originLng: number;
   originCep: string;
   localDeliveryRadiusKm: number;
+  // Toggle editável no painel — troca instantaneamente entre credenciais de
+  // teste e produção do Uber Direct (env vars separadas), sem precisar de
+  // novo deploy. Nunca guarda client_secret aqui — só a flag.
+  uberDirectSandboxMode?: boolean;
   defaultItemWeightKg: number;
   dispatchCutoffTime: string;
   freeShippingThresholdCents: number;
@@ -119,6 +123,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   originLng: 0,
   originCep: '',
   localDeliveryRadiusKm: 10,
+  uberDirectSandboxMode: false,
   defaultItemWeightKg: 0.8,
   dispatchCutoffTime: '17:00',
   freeShippingThresholdCents: 0,

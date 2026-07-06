@@ -43,7 +43,7 @@ export default function ConfiguracoesPage() {
     });
   }, []);
 
-  const set = (field: keyof StoreSettings, value: string | number) =>
+  const set = (field: keyof StoreSettings, value: string | number | boolean) =>
     setSettings(s => ({ ...s, [field]: value }));
 
   const handleSave = async () => {
@@ -299,6 +299,16 @@ export default function ConfiguracoesPage() {
             </details>
           </Card>
 
+          <Card icon="produto" title="Uber Direct — ambiente" desc="Alterna instantaneamente entre teste e produção, sem precisar de novo deploy">
+            <Toggle
+              label="Usar ambiente de teste (sandbox)"
+              checked={!!settings.uberDirectSandboxMode}
+              onChange={v => set('uberDirectSandboxMode', v)}
+              hint="Ligado: usa as credenciais de teste do Uber Direct — cotações funcionam normalmente, mas nenhuma entrega real é criada nem cobrada. Desligado: usa as credenciais de produção (entregas reais, motoboy de verdade)."
+              warn="TESTE ATIVO — o checkout mostra 'Uber Direct (TESTE)' e nenhuma entrega será despachada de verdade. Desligue antes de vender de verdade."
+            />
+          </Card>
+
           <Card icon="gift" title="Frete grátis" desc="A partir de qual valor o frete passa a ser gratuito">
             <Num label="Valor mínimo para frete grátis (R$)"
               value={settings.freeShippingThresholdCents / 100}
@@ -461,6 +471,28 @@ function TA({ label, value, onChange, rows=3, placeholder, hint }: {
       <textarea value={value} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={placeholder}
         className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/60 resize-y placeholder:text-[#C8BAB0]" />
       {hint && <p className="mt-1.5 text-[11px] text-[#B09C8C]">{hint}</p>}
+    </div>
+  );
+}
+function Toggle({ label, checked, onChange, hint, warn }: {
+  label:string; checked:boolean; onChange:(v:boolean)=>void; hint?:string; warn?:string;
+}) {
+  return (
+    <div>
+      <label className="flex items-center gap-3 cursor-pointer select-none">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          onClick={() => onChange(!checked)}
+          className={`relative w-10 h-6 rounded-full shrink-0 transition-colors duration-150 ${checked ? 'bg-[#C4714A]' : 'bg-[#E6DFD5]'}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-150 ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
+        </button>
+        <span className="text-[11px] font-semibold text-[#705A48]">{label}</span>
+      </label>
+      {hint && <p className="mt-1.5 text-[11px] text-[#B09C8C] leading-relaxed">{hint}</p>}
+      {checked && warn && <p className="mt-1.5 text-[11px] text-[#C4714A] font-semibold leading-relaxed">{warn}</p>}
     </div>
   );
 }
