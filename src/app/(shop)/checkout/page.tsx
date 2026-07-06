@@ -9,7 +9,7 @@ import type { Cart, Address } from '@/types';
 import { PIXModal } from '@/components/checkout/PIXModal';
 import { CheckoutSkeleton } from '@/components/ui/Skeleton';
 import { maskCep, maskCpf, maskPhone, onlyDigits, isValidCpf, isValidPhone, isValidCep, BR_STATES } from '@/lib/masks';
-import type { ShippingOption } from '@/app/api/shipping/quote/route';
+import type { ShippingOption } from '@/lib/shipping-pricing';
 import Image from 'next/image';
 
 interface CustomerData { name: string; cpf: string; phone: string; email: string }

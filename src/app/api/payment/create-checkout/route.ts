@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { getSettings } from '@/lib/settings';
+import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
@@ -48,23 +50,18 @@ export async function POST(req: NextRequest) {
 
     const { address, installments = 1, shipping } = await req.json();
 
-    if (!address) {
+    // NOTA DE SEGURANÇA: nada do frete é confiado do cliente além de QUAL
+    // carrier ele escolheu — preço, label, prazo e quoteId são sempre
+    // recalculados via computeShippingOptions() (mesma fonte usada em
+    // /api/shipping/quote), e só aceitamos o carrier se ele aparecer na
+    // lista recém-computada para esse endereço/carrinho exatos.
+
+    if (!address?.cep) {
       return NextResponse.json({ error: 'Endereço obrigatório' }, { status: 400 });
     }
-
-    const VALID_CARRIERS = [
-      'pickup',
-      'uber_direct',
-      'correios_pac', 'correios_sedex',
-      'jadlog_package', 'jadlog_expresso',
-      'melhor_envio_1', 'melhor_envio_2',
-    ];
-    if (!shipping || typeof shipping.carrier !== 'string' || !VALID_CARRIERS.includes(shipping.carrier)) {
+    if (!shipping || typeof shipping.carrier !== 'string' || !shipping.carrier) {
       return NextResponse.json({ error: 'Forma de envio inválida' }, { status: 400 });
     }
-    const shippingCents: number = typeof shipping.priceCents === 'number' && shipping.priceCents >= 0
-      ? Math.round(shipping.priceCents)
-      : 0;
 
     const parsedInstallments = Math.max(1, Math.min(12, parseInt(installments, 10) || 1));
 
@@ -85,20 +82,87 @@ export async function POST(req: NextRequest) {
     const cartItems: Array<{ sku: string; productId: string; quantity: number }> = cartData.items;
     const cartCouponCode: string | null = cartData.couponCode ?? null;
 
-    // ── Load product prices from Firestore (never trust client) ───────────────
+    // ── Load product prices/pesos from Firestore (never trust client) ─────────
     const productIds = Array.from(new Set(cartItems.map(i => i.productId)));
     const productDocs = await Promise.all(
       productIds.map(id => adminDb.collection('products').doc(id).get())
     );
-    const productMap: Record<string, { price: number; name: string }> = {};
+    const productMap: Record<string, { price: number; name: string; weightKg?: number }> = {};
     for (const snap of productDocs) {
       if (snap.exists) {
         productMap[snap.id] = {
           price: snap.data()!.price as number,
           name: snap.data()!.name as string,
+          weightKg: snap.data()!.weightKg as number | undefined,
         };
       }
     }
+
+    // ── Build verified items & total ──────────────────────────────────────────
+    const verifiedItems = cartItems.map(ci => {
+      const prod = productMap[ci.productId];
+      if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
+      return { ...ci, unitPrice: prod.price, productName: prod.name };
+    });
+
+    const subtotalCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const productsCents = subtotalCents;
+
+    if (subtotalCents < creditMinCents) {
+      return NextResponse.json(
+        { error: `Pagamento por cartão disponível a partir de R$ ${(creditMinCents / 100).toFixed(2)}` },
+        { status: 422 }
+      );
+    }
+
+    if (subtotalCents <= 0) {
+      return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
+    }
+
+    const settings = await getSettings();
+
+    const totalWeightKg = cartItems.reduce(
+      (s, ci) => s + (productMap[ci.productId]?.weightKg ?? settings.defaultItemWeightKg ?? 0.8) * ci.quantity,
+      0
+    );
+
+    // ── Frete — recalculado do zero, nunca confiado do cliente ────────────────
+    const shippingResult = await computeShippingOptions(address.cep, settings, productsCents, totalWeightKg);
+    const matchedShipping = shippingResult.options.find(o => o.carrier === shipping.carrier);
+    if (!matchedShipping) {
+      return NextResponse.json(
+        { error: 'Opção de frete indisponível para este endereço. Recalcule o frete e tente novamente.' },
+        { status: 400 }
+      );
+    }
+    const shippingCents = matchedShipping.priceCents;
+
+    // ── Validar cupom server-side ─────────────────────────────────────────────
+    let couponDiscountCents = 0;
+    let couponCode: string | null = null;
+    if (cartCouponCode) {
+      const couponSnap = await adminDb.collection('coupons').doc(cartCouponCode).get();
+      if (couponSnap.exists) {
+        const c = couponSnap.data()!;
+        const now2 = new Date();
+        const valid =
+          c.active &&
+          (!c.expiresAt || new Date(c.expiresAt) > now2) &&
+          (!c.maxUses || (c.usedCount ?? 0) < c.maxUses) &&
+          (!c.minOrderCents || productsCents >= c.minOrderCents);
+        if (valid) {
+          couponDiscountCents = c.type === 'percent'
+            ? Math.round(productsCents * c.value / 100)
+            : c.value;
+          couponCode = cartCouponCode;
+        }
+      }
+    }
+
+    // ── Aplica juros de parcelamento (se houver) ──────────────────────────────
+    const feeRate = INSTALLMENT_FEES[parsedInstallments] ?? 0;
+    const totalCents = Math.max(0, Math.round((productsCents - couponDiscountCents + shippingCents) * (1 + feeRate)));
+    const installmentCents = Math.round(totalCents / parsedInstallments);
 
     // ── Checar e reservar estoque ATOMICAMENTE (evita oversell por concorrência) ──
     // Ver mesmo fix em create-pix/route.ts: check e reserve unidos numa transação
@@ -143,54 +207,6 @@ export async function POST(req: NextRequest) {
       throw err;
     }
 
-    // ── Build verified items & total ──────────────────────────────────────────
-    const verifiedItems = cartItems.map(ci => {
-      const prod = productMap[ci.productId];
-      if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
-      return { ...ci, unitPrice: prod.price, productName: prod.name };
-    });
-
-    const subtotalCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-    const productsCents = subtotalCents;
-
-    if (subtotalCents < creditMinCents) {
-      return NextResponse.json(
-        { error: `Pagamento por cartão disponível a partir de R$ ${(creditMinCents / 100).toFixed(2)}` },
-        { status: 422 }
-      );
-    }
-
-    if (subtotalCents <= 0) {
-      return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
-    }
-
-    // ── Validar cupom server-side ─────────────────────────────────────────────
-    let couponDiscountCents = 0;
-    let couponCode: string | null = null;
-    if (cartCouponCode) {
-      const couponSnap = await adminDb.collection('coupons').doc(cartCouponCode).get();
-      if (couponSnap.exists) {
-        const c = couponSnap.data()!;
-        const now2 = new Date();
-        const valid =
-          c.active &&
-          (!c.expiresAt || new Date(c.expiresAt) > now2) &&
-          (!c.maxUses || (c.usedCount ?? 0) < c.maxUses) &&
-          (!c.minOrderCents || productsCents >= c.minOrderCents);
-        if (valid) {
-          couponDiscountCents = c.type === 'percent'
-            ? Math.round(productsCents * c.value / 100)
-            : c.value;
-          couponCode = cartCouponCode;
-        }
-      }
-    }
-
-    // ── Aplica juros de parcelamento (se houver) ──────────────────────────────
-    const feeRate = INSTALLMENT_FEES[parsedInstallments] ?? 0;
-    const totalCents = Math.max(0, Math.round((productsCents - couponDiscountCents + shippingCents) * (1 + feeRate)));
-    const installmentCents = Math.round(totalCents / parsedInstallments);
-
     // ── Create order ──────────────────────────────────────────────────────────
     const orderId = `ord_${randomBytes(8).toString('hex')}`;
     const orderRef = adminDb.collection('orders').doc(orderId);
@@ -212,18 +228,19 @@ export async function POST(req: NextRequest) {
         installmentCents,
       },
       delivery: {
-        carrier: shipping.carrier,
-        label: shipping.label ?? '',
+        carrier: matchedShipping.carrier,
+        label: matchedShipping.label,
         priceCents: shippingCents,
-        estimatedDays: shipping.estimatedDays ?? null,
-        ...(shipping.quoteId ? { uberQuoteId: shipping.quoteId } : {}),
+        estimatedDays: matchedShipping.estimatedDays,
+        uberSandbox: shippingResult.uberSandbox,
+        ...(matchedShipping.quoteId ? { uberQuoteId: matchedShipping.quoteId } : {}),
       },
       selectedShipping: {
-        carrier: shipping.carrier,
-        label: shipping.label ?? '',
+        carrier: matchedShipping.carrier,
+        label: matchedShipping.label,
         priceCents: shippingCents,
-        estimatedDays: shipping.estimatedDays ?? null,
-        ...(shipping.quoteId ? { quoteId: shipping.quoteId } : {}),
+        estimatedDays: matchedShipping.estimatedDays,
+        ...(matchedShipping.quoteId ? { quoteId: matchedShipping.quoteId } : {}),
       },
       timeline: [
         { status: 'created', at: now, note: 'Pedido criado' },
