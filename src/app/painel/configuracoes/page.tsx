@@ -618,12 +618,16 @@ function TimelineEditor({ value, onChange }: { value:string; onChange:(v:string)
  * sempre checada no servidor via custom claim — esta tela é só a interface.
  */
 type TeamMember = { uid: string; email: string; displayName: string | null; role: 'seller' | 'admin' };
+type SearchUser = { uid: string; email: string | null; displayName: string | null; photoURL: string | null; role: string };
 
 function TeamPanel() {
   const { user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState('');
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchUser[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selected, setSelected] = useState<SearchUser | null>(null);
   const [role, setRole] = useState<'seller' | 'admin'>('seller');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -649,15 +653,35 @@ function TeamPanel() {
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Busca com debounce — só dispara 300ms depois que a pessoa para de digitar
+  useEffect(() => {
+    setSelected(null);
+    if (query.trim().length < 2) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await authFetch(`/api/painel/team/users?q=${encodeURIComponent(query.trim())}`);
+        const data = await res.json();
+        if (res.ok) setResults(data.users ?? []);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
+    if (!selected?.email) { setError('Escolha alguém da lista de busca.'); return; }
     setError('');
     setBusy(true);
     try {
-      const res = await authFetch('/api/painel/team', { method: 'POST', body: JSON.stringify({ email, role }) });
+      const res = await authFetch('/api/painel/team', { method: 'POST', body: JSON.stringify({ email: selected.email, role }) });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Erro ao adicionar'); return; }
-      setEmail('');
+      setQuery('');
+      setSelected(null);
+      setResults([]);
       setRole('seller');
       await load();
     } catch {
@@ -678,12 +702,44 @@ function TeamPanel() {
     }
   }
 
+  const memberUids = new Set(members.map(m => m.uid));
+
   return (
     <>
-      <Card icon="shield" title="Adicionar à equipe" desc="A pessoa precisa já ter criado uma conta no site (cadastro ou login com Google) — depois disso, coloque o e-mail aqui.">
+      <Card icon="shield" title="Adicionar à equipe" desc="Busque por nome ou e-mail entre as contas que já existem no site — não precisa digitar o e-mail inteiro certinho.">
         <Info>Só admins conseguem gerenciar a equipe. Sellers têm acesso ao painel, mas não podem adicionar ou remover outras pessoas — assim uma conta de seller comprometida não vira uma porta pra criar acessos ilimitados.</Info>
         <form onSubmit={handleAdd} className="flex flex-col gap-3">
-          <F label="E-mail da pessoa" value={email} onChange={setEmail} placeholder="nome@email.com" />
+          <div className="relative flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-[#705A48] uppercase tracking-wide">Buscar pessoa</label>
+            <input
+              value={selected ? (selected.displayName || selected.email || '') : query}
+              onChange={e => { setQuery(e.target.value); setSelected(null); }}
+              placeholder="Nome ou e-mail…"
+              className="border border-[#E6DFD5] px-3 py-2.5 text-[13px] outline-none focus:border-[#C4714A] bg-white"
+            />
+            {!selected && query.trim().length >= 2 && (
+              <div className="border border-[#E6DFD5] bg-white max-h-64 overflow-y-auto shadow-sm">
+                {searching ? (
+                  <p className="px-3 py-2.5 text-[12px] text-[#B09C8C]">Buscando…</p>
+                ) : results.length === 0 ? (
+                  <p className="px-3 py-2.5 text-[12px] text-[#B09C8C]">Ninguém encontrado com esse nome/e-mail.</p>
+                ) : results.map(u => (
+                  <button type="button" key={u.uid} onClick={() => { setSelected(u); setQuery(''); }}
+                    className="w-full text-left px-3 py-2.5 hover:bg-[#F0EBE1] transition-colors border-b border-[#F0EBE1] last:border-0 flex items-center justify-between gap-2">
+                    <span>
+                      <span className="block text-[13px] font-semibold text-[#1E1208]">{u.displayName || u.email}</span>
+                      <span className="block text-[11px] text-[#B09C8C]">{u.email}</span>
+                    </span>
+                    {memberUids.has(u.uid) ? (
+                      <span className="text-[10px] font-bold text-[#C4714A] uppercase shrink-0">já é {u.role === 'admin' ? 'admin' : 'seller'}</span>
+                    ) : (
+                      <span className="text-[10px] text-[#B09C8C] uppercase shrink-0">{u.role === 'buyer' ? 'cliente' : u.role}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-bold text-[#705A48] uppercase tracking-wide">Nível de acesso</label>
             <div className="flex gap-2">
@@ -698,9 +754,9 @@ function TeamPanel() {
             </div>
           </div>
           {error && <p className="text-[12px] text-red-600">{error}</p>}
-          <button type="submit" disabled={busy || !email}
+          <button type="submit" disabled={busy || !selected}
             className="bg-[#C4714A] text-white text-[13px] font-semibold py-3 disabled:opacity-50 hover:bg-[#B0603C] transition-colors">
-            {busy ? 'Adicionando…' : 'Adicionar'}
+            {busy ? 'Adicionando…' : selected ? `Adicionar ${selected.displayName || selected.email}` : 'Escolha alguém acima'}
           </button>
         </form>
       </Card>
