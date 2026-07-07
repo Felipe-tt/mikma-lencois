@@ -1,0 +1,42 @@
+name: Definir role de usuário (bootstrap admin)
+
+# Só workflow_dispatch: só quem tem acesso de escrita no repo consegue
+# disparar isso. É o único jeito de criar o primeiro admin, já que o
+# painel em si exige ser admin pra promover qualquer pessoa (ver
+# /api/painel/team) — sem isso ninguém conseguiria começar.
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'E-mail da conta (precisa já ter feito login/cadastro no site pelo menos uma vez)'
+        required: true
+      role:
+        description: 'Nova role'
+        required: true
+        type: choice
+        options:
+          - admin
+          - seller
+          - buyer
+
+jobs:
+  set-role:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar firebase-admin
+        run: npm install firebase-admin@12 --no-save
+
+      - name: Definir role
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          TARGET_EMAIL: ${{ inputs.email }}
+          TARGET_ROLE: ${{ inputs.role }}
+        run: node scripts/set-role.mjs

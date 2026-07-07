@@ -155,6 +155,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── Equipe (quem tem acesso ao painel) ───────────────────────────────────
+    // Só existe pra exibição na tela de configurações. A autorização de
+    // verdade nunca vem daqui — sempre do custom claim do token (ver
+    // /api/painel/team). Acesso exclusivo pelo Admin SDK, direto do client
+    // (mesmo admin) não lê nem escreve, pra não abrir brecha de alguém
+    // editar a própria role aqui direto.
+    match /team/{uid} {
+      allow read, write: if false;
+    }
+
     // ── Tudo mais: negar por padrão ──────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

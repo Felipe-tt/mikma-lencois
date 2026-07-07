@@ -18,8 +18,9 @@ import { SobrePreview } from '@/components/painel/preview/SobrePreview';
 import { BusinessHoursEditor } from '@/components/painel/BusinessHoursEditor';
 import { parseBusinessHours, serializeBusinessHours } from '@/lib/business-hours';
 import { maskCnpj, isValidCnpj } from '@/lib/masks';
+import { useAuth } from '@/lib/auth/AuthContext';
 
-type Tab = 'loja' | 'vitrine' | 'produto' | 'entrega';
+type Tab = 'loja' | 'vitrine' | 'produto' | 'entrega' | 'equipe';
 
 const TABS: { id: Tab; icon: string; label: string; sub: string }[] = [
   { id: 'loja',    icon: 'loja',    label: 'Minha loja',   sub: 'Nome, endereço, contato' },
@@ -28,7 +29,14 @@ const TABS: { id: Tab; icon: string; label: string; sub: string }[] = [
   { id: 'entrega', icon: 'entrega', label: 'Entrega',       sub: 'Frete e pagamento' },
 ];
 
+// Só admin vê essa aba — sellers não gerenciam quem tem acesso ao painel.
+const EQUIPE_TAB: { id: Tab; icon: string; label: string; sub: string } =
+  { id: 'equipe', icon: 'shield', label: 'Equipe', sub: 'Quem acessa o painel' };
+
 export default function ConfiguracoesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const visibleTabs = isAdmin ? [...TABS, EQUIPE_TAB] : TABS;
   const [settings, setSettings] = useState<StoreSettings>(STORE_DEFAULTS);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
@@ -70,8 +78,9 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-4 gap-1.5 mb-8 p-1 bg-[#F0EBE1] rounded-sm">
-        {TABS.map(t => {
+      <div className="grid gap-1.5 mb-8 p-1 bg-[#F0EBE1] rounded-sm"
+        style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}>
+        {visibleTabs.map(t => {
           const TabIcon = CARD_ICON_MAP[t.icon];
           return (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -370,7 +379,15 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
+      {/* ── EQUIPE (admin only) ── */}
+      {tab === 'equipe' && isAdmin && (
+        <div className="flex flex-col gap-5">
+          <TeamPanel />
+        </div>
+      )}
+
       {/* Botão salvar fixo */}
+      {tab !== 'equipe' && (
       <div className="fixed bottom-0 left-0 right-0 z-30 md:relative md:bottom-auto md:mt-8">
         <div className="bg-[#FAF8F5] border-t border-[#E6DFD5] md:border-0 px-4 py-3 md:px-0 md:py-0">
           <button onClick={handleSave} disabled={saving}
@@ -385,6 +402,7 @@ export default function ConfiguracoesPage() {
           {saved && <p className="text-center text-[11px] text-[#B09C8C] mt-2">Mudanças podem levar até 10 min para aparecer no site.</p>}
         </div>
       </div>
+      )}
 
       {/* Previews */}
       <PreviewModal open={preview==='hero'}     onClose={() => setPreview(null)} title="Banner principal"      routeLabel="/"><HeroPreview s={settings}/></PreviewModal>
@@ -591,5 +609,126 @@ function TimelineEditor({ value, onChange }: { value:string; onChange:(v:string)
         + Adicionar marco
       </button>
     </div>
+  );
+}
+
+/* ── Equipe (admin only) ──────────────────────────────────────────────────
+ * Promove/revoga acesso ao painel pra contas que já existem (já fizeram
+ * login/cadastro no site pelo menos uma vez). A autorização de verdade é
+ * sempre checada no servidor via custom claim — esta tela é só a interface.
+ */
+type TeamMember = { uid: string; email: string; displayName: string | null; role: 'seller' | 'admin' };
+
+function TeamPanel() {
+  const { user } = useAuth();
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'seller' | 'admin'>('seller');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function authFetch(path: string, init?: RequestInit) {
+    const token = await user!.getIdToken();
+    return fetch(path, {
+      ...init,
+      headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+  }
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await authFetch('/api/painel/team');
+      const data = await res.json();
+      if (res.ok) setMembers(data.members ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      const res = await authFetch('/api/painel/team', { method: 'POST', body: JSON.stringify({ email, role }) });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? 'Erro ao adicionar'); return; }
+      setEmail('');
+      setRole('seller');
+      await load();
+    } catch {
+      setError('Erro de conexão. Tente de novo.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove(uid: string) {
+    if (!confirm('Remover o acesso dessa pessoa ao painel?')) return;
+    setBusy(true);
+    try {
+      await authFetch('/api/painel/team', { method: 'DELETE', body: JSON.stringify({ uid }) });
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Card icon="shield" title="Adicionar à equipe" desc="A pessoa precisa já ter criado uma conta no site (cadastro ou login com Google) — depois disso, coloque o e-mail aqui.">
+        <Info>Só admins conseguem gerenciar a equipe. Sellers têm acesso ao painel, mas não podem adicionar ou remover outras pessoas — assim uma conta de seller comprometida não vira uma porta pra criar acessos ilimitados.</Info>
+        <form onSubmit={handleAdd} className="flex flex-col gap-3">
+          <F label="E-mail da pessoa" value={email} onChange={setEmail} placeholder="nome@email.com" />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-[#705A48] uppercase tracking-wide">Nível de acesso</label>
+            <div className="flex gap-2">
+              {(['seller', 'admin'] as const).map(r => (
+                <button type="button" key={r} onClick={() => setRole(r)}
+                  className={`flex-1 py-2.5 text-[12px] font-semibold border transition-colors ${
+                    role === r ? 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208]' : 'border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1]'
+                  }`}>
+                  {r === 'seller' ? 'Seller (gerencia loja)' : 'Admin (gerencia loja + equipe)'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {error && <p className="text-[12px] text-red-600">{error}</p>}
+          <button type="submit" disabled={busy || !email}
+            className="bg-[#C4714A] text-white text-[13px] font-semibold py-3 disabled:opacity-50 hover:bg-[#B0603C] transition-colors">
+            {busy ? 'Adicionando…' : 'Adicionar'}
+          </button>
+        </form>
+      </Card>
+
+      <Card icon="shield" title="Quem tem acesso hoje" desc="Sellers e admins ativos no painel">
+        {loading ? (
+          <p className="text-[13px] text-[#B09C8C]">Carregando…</p>
+        ) : members.length === 0 ? (
+          <p className="text-[13px] text-[#B09C8C]">Ninguém além de você ainda.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {members.map(m => (
+              <div key={m.uid} className="flex items-center justify-between border border-[#E6DFD5] px-3 py-2.5">
+                <div>
+                  <p className="text-[13px] font-semibold text-[#1E1208]">{m.displayName || m.email}</p>
+                  <p className="text-[11px] text-[#B09C8C]">{m.email} · {m.role === 'admin' ? 'Admin' : 'Seller'}</p>
+                </div>
+                {m.uid !== user?.uid && (
+                  <button onClick={() => handleRemove(m.uid)} disabled={busy}
+                    className="text-[11px] text-[#B09C8C] hover:text-red-500 transition-colors disabled:opacity-50">
+                    Remover
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </>
   );
 }
