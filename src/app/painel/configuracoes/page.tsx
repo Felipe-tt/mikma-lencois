@@ -57,6 +57,22 @@ export default function ConfiguracoesPage() {
   const handleSave = async () => {
     setSaving(true);
     await setDoc(doc(db, 'settings', 'store'), settings, { merge: true });
+    // Best-effort: revalida as páginas públicas da loja (ISR) pra mudança
+    // aparecer na hora, sem depender do intervalo de revalidate de cada
+    // página (até 24h em /sobre, /termos, /privacidade). Falha aqui nunca
+    // deve impedir o salvamento — a config já está no Firestore de
+    // qualquer jeito, só o cache demoraria mais pra atualizar sozinho.
+    try {
+      const token = await user?.getIdToken();
+      if (token) {
+        await fetch('/api/painel/revalidate-store', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    } catch {
+      /* ignora — cache expira sozinho de qualquer forma */
+    }
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };

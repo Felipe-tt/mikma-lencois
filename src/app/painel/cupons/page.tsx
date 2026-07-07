@@ -3,12 +3,12 @@ import { IconAlert, IconCoupons, IconInfo } from '@/components/ui/Icon';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 
 type Coupon = {
   id: string; code: string; type: 'percent' | 'fixed'; value: number;
-  minOrderCents: number; maxUses: number; uses: number; active: boolean; expiresAt: string;
+  minOrderCents: number; maxUses: number; usedCount: number; active: boolean; expiresAt: string;
 };
 type FormState = { code: string; type: 'percent' | 'fixed'; value: number; minOrderCents: number; maxUses: number; expiresAt: string; };
 const EMPTY: FormState = { code: '', type: 'percent', value: 10, minOrderCents: 0, maxUses: 100, expiresAt: '' };
@@ -30,11 +30,24 @@ export default function CuponsPage() {
     if (!form.code) { setError('Digite o código do cupom.'); return; }
     if (!form.value) { setError('Digite o valor do desconto.'); return; }
     setSaving(true); setError('');
+    const code = form.code.toUpperCase().trim();
     try {
-      await addDoc(collection(db, 'coupons'), {
-        code: form.code.toUpperCase().trim(), type: form.type, value: form.value,
+      // IMPORTANTE: o código do cupom precisa ser o ID do documento — é
+      // assim que /api/checkout/validate-coupon e as rotas de pagamento
+      // (create-checkout, create-pix) procuram o cupom. Antes isso usava
+      // addDoc (ID aleatório, código só como campo), e por isso nenhum
+      // cupom criado pelo painel era encontrado na hora de aplicar.
+      const ref = doc(db, 'coupons', code);
+      const existing = await getDoc(ref);
+      if (existing.exists()) {
+        setError(`Já existe um cupom com o código ${code}.`);
+        setSaving(false);
+        return;
+      }
+      await setDoc(ref, {
+        code, type: form.type, value: form.value,
         minOrderCents: Math.round(form.minOrderCents * 100),
-        maxUses: form.maxUses, uses: 0, active: true,
+        maxUses: form.maxUses, usedCount: 0, active: true,
         expiresAt: form.expiresAt || null, createdAt: serverTimestamp(),
       });
       setForm(EMPTY); setShowForm(false);
@@ -168,7 +181,7 @@ export default function CuponsPage() {
               </div>
               <div className="flex items-center justify-between text-[11px] text-[#B09C8C] pt-3 border-t border-[#E6DFD5]">
                 <span>
-                  Usado <strong>{c.uses}</strong> de <strong>{c.maxUses}</strong> vezes
+                  Usado <strong>{c.usedCount ?? 0}</strong> de <strong>{c.maxUses}</strong> vezes
                   {c.expiresAt && ` · Válido até ${new Date(c.expiresAt + 'T00:00:00').toLocaleDateString('pt-BR')}`}
                 </span>
                 <button onClick={() => remove(c.id)} className="text-red-400 hover:text-red-600 font-semibold transition-colors">Apagar</button>
