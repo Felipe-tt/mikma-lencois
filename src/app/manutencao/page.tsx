@@ -24,6 +24,34 @@ export default async function ManutencaoPage() {
           __html: `fetch('/api/maintenance/geo').catch(function(){});`,
         }}
       />
+
+      {/* Polling: assim que a manutenção acabar (ou esse IP for liberado
+          manualmente pelo painel), sai sozinho de /manutencao de volta pra
+          "/" — sem precisar que o visitante dê refresh. Checa a cada 5s;
+          silencioso em caso de erro de rede (só tenta de novo no próximo tick). */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function () {
+              var checking = false;
+              function checkMaintenanceStatus() {
+                if (checking) return;
+                checking = true;
+                fetch('/api/maintenance/status', { cache: 'no-store' })
+                  .then(function (res) { return res.json(); })
+                  .then(function (data) {
+                    if (!data.active || data.released) {
+                      window.location.href = '/';
+                    }
+                  })
+                  .catch(function () {})
+                  .finally(function () { checking = false; });
+              }
+              setInterval(checkMaintenanceStatus, 5000);
+            })();
+          `,
+        }}
+      />
       <style>{`
         .mnt-page {
           min-height: 100vh;
