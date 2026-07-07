@@ -34,6 +34,26 @@ export async function POST(req: NextRequest) {
   const { token } = parsed.data;
   const uid = auth.decoded.uid;
 
+  // Remove tokens antigos do MESMO uid antes de salvar o novo. Sem isso,
+  // cada vez que o vendor reativa (ex: depois de limpar dados do
+  // navegador, trocar de aba, etc.) um token "zumbi" antigo pode continuar
+  // válido por um tempo e receber a notificação em duplicidade junto com
+  // o novo. Mantemos só o token mais recente por vendor.
+  const staleTokensSnap = await adminDb
+    .collection('pushTokens')
+    .where('uid', '==', uid)
+    .get();
+
+  const batch = adminDb.batch();
+  let hasStale = false;
+  staleTokensSnap.docs.forEach((doc) => {
+    if (doc.id !== token) {
+      batch.delete(doc.ref);
+      hasStale = true;
+    }
+  });
+  if (hasStale) await batch.commit();
+
   // Um documento por token (não por uid) — o mesmo vendor pode ter o token
   // trocado ao reinstalar/limpar o navegador; guardamos por token para
   // permitir múltiplos dispositivos por vendor sem duplicar envio.

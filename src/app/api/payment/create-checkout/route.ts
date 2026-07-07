@@ -9,6 +9,7 @@ import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
+import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -264,7 +265,7 @@ export async function POST(req: NextRequest) {
     // sobre CPU throttling do Cloud Run em chamadas fire-and-forget.
     await notifySeller({
       title: 'Pagamento iniciado',
-      body: `Pedido de R$ ${(totalCents / 100).toFixed(2)} · Frete: ${matchedShipping.label}`,
+      body: `${summarizeOrderItems(verifiedItems)} · R$ ${(totalCents / 100).toFixed(2)} · ${matchedShipping.label}`,
       url: `/painel/pedidos/${orderId}`,
       data: { orderId, event: 'payment_initiated' },
     });

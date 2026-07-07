@@ -1,16 +1,60 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { PainelSidebar } from './PainelSidebar';
+
+// Distância mínima (px) pro gesto contar como swipe intencional, e não
+// um toque acidental ou scroll vertical.
+const SWIPE_THRESHOLD = 60;
+// Só considera abrir o menu se o toque começar perto da borda esquerda
+// da tela — evita conflito com swipes de conteúdo (carrossel, etc).
+const EDGE_ZONE = 24;
 
 export function PainelSidebarWrapper({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => { setOpen(false); }, [pathname]);
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
+  // Gesto de swipe pra abrir/fechar o menu no mobile. Aberto: swipe pra
+  // qualquer lugar do drawer fecha ao arrastar pra esquerda. Fechado:
+  // só abre se o gesto começar perto da borda esquerda da tela (evita
+  // interceptar swipes horizontais de outros elementos, tipo carrosséis).
+  useEffect(() => {
+    function onTouchStart(e: TouchEvent) {
+      const t = e.touches[0];
+      if (!open && t.clientX > EDGE_ZONE) {
+        touchStart.current = null;
+        return;
+      }
+      touchStart.current = { x: t.clientX, y: t.clientY };
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      if (!touchStart.current) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStart.current.x;
+      const dy = t.clientY - touchStart.current.y;
+      touchStart.current = null;
+
+      // Ignora se o movimento vertical dominar (é scroll, não swipe lateral)
+      if (Math.abs(dy) > Math.abs(dx)) return;
+
+      if (!open && dx > SWIPE_THRESHOLD) setOpen(true);
+      if (open && dx < -SWIPE_THRESHOLD) setOpen(false);
+    }
+
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
   }, [open]);
 
   return (

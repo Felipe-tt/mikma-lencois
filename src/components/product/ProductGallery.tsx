@@ -228,10 +228,7 @@ export function ProductGallery({ images, name, tag }: Props) {
           )}
 
           {/* Image */}
-          <div
-            className="relative w-full h-full flex items-center justify-center px-6 py-16 sm:px-20 sm:py-14 z-[1]"
-            onClick={e => e.stopPropagation()}
-          >
+          <div className="relative w-full h-full flex items-center justify-center px-6 py-16 sm:px-20 sm:py-14 z-[1] pointer-events-none">
             <Image
               src={images[active]}
               alt={`${name} — foto ${active + 1}`}

@@ -9,6 +9,7 @@ import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
+import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -238,7 +239,7 @@ export async function POST(req: NextRequest) {
     // nunca chegaria a ser enviado, sem gerar nenhum log.
     await notifySeller({
       title: 'Pagamento PIX iniciado',
-      body: `Pedido de R$ ${(amountCents / 100).toFixed(2)} · Frete: ${matchedShipping.label}`,
+      body: `${summarizeOrderItems(verifiedItems)} · R$ ${(amountCents / 100).toFixed(2)} · ${matchedShipping.label}`,
       url: `/painel/pedidos/${orderId}`,
       data: { orderId, event: 'payment_initiated' },
     });

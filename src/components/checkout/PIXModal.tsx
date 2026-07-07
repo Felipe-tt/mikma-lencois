@@ -61,10 +61,10 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
   useEffect(() => {
     setMounted(true);
     document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && (confirmed || expired || failed)) onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey); };
-  }, [onClose, confirmed, expired, failed]);
+  }, [onClose]);
 
   function copy() {
     navigator.clipboard.writeText(copyPaste);

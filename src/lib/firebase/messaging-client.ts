@@ -25,6 +25,13 @@ export async function enablePush(getIdToken: () => Promise<string>): Promise<Pus
     const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
 
     const messaging = getMessaging(app);
+
+    // Força descartar qualquer subscription antiga em cache antes de pedir
+    // uma nova — sem isso, o SDK pode reaproveitar uma subscription criada
+    // com uma VAPID key antiga/incompatível, gerando um token que o
+    // navegador acha válido mas o FCM já considera morto (NotRegistered).
+    await deleteToken(messaging).catch(() => {});
+
     const token = await getToken(messaging, {
       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
       serviceWorkerRegistration: registration,

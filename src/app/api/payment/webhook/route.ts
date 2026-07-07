@@ -5,6 +5,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email';
 import { notifySeller } from '@/lib/push/notifySeller';
+import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 
 const ABACATEPAY_PUBLIC_KEY = process.env.ABACATEPAY_PUBLIC_KEY!;
 
@@ -131,14 +132,11 @@ export async function POST(req: NextRequest) {
 
     // Push pro vendor (best-effort — nunca deve afetar a confirmação do pedido)
     const payMethodLabel = (order.payment as { method: string }).method === 'pix' ? 'PIX' : 'Cartão';
-    const shippingLabel = (order.selectedShipping as { label?: string } | undefined)?.label
-      ?? (order.delivery as { label?: string } | undefined)?.label
-      ?? 'a combinar';
     // IMPORTANTE: await de propósito — ver nota em create-pix/route.ts
     // sobre CPU throttling do Cloud Run em chamadas fire-and-forget.
     await notifySeller({
       title: 'Pagamento confirmado 🎉',
-      body: `${formatCurrency(order.totalCents as number)} · ${payMethodLabel} · Frete: ${shippingLabel}`,
+      body: `${summarizeOrderItems((order.items ?? []) as { productName: string; quantity: number }[])} · ${formatCurrency(order.totalCents as number)} · ${payMethodLabel}`,
       url: `/painel/pedidos/${orderId}`,
       data: { orderId, event: 'payment_confirmed' },
     });
