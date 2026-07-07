@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { NextFetchEvent } from 'next/server';
+import { verifyBypassCookie, MAINTENANCE_BYPASS_COOKIE } from '@/lib/auth/maintenanceBypass';
 
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
 
@@ -227,6 +228,18 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
     const active = await getMaintenanceStatus(projectId);
 
     if (active) {
+      // Admin logado tem um cookie assinado (emitido em /api/auth/bypass-session
+      // após login) que deixa navegar pela loja normalmente mesmo com a
+      // manutenção ativa — sem isso, todo mundo (inclusive o dono da loja)
+      // caía na tela de manutenção junto com o público.
+      const bypassCookie = req.cookies.get(MAINTENANCE_BYPASS_COOKIE)?.value;
+      const secret = process.env.CRON_SECRET;
+      if (bypassCookie && secret && (await verifyBypassCookie(bypassCookie, secret))) {
+        const res = NextResponse.next();
+        applySecurityHeaders(res);
+        return res;
+      }
+
       const released = await isIpReleased(projectId, docId);
 
       if (!released) {

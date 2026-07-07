@@ -40,7 +40,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser(await mapUser(firebaseUser));
+        const mapped = await mapUser(firebaseUser);
+        setUser(mapped);
+
+        // Admin ganha um cookie de bypass da tela de manutenção — sem
+        // isso, o próprio dono da loja fica bloqueado junto com o
+        // público quando ativa a manutenção pra fazer ajustes.
+        // Best-effort: se falhar, o admin só continua vendo a tela de
+        // manutenção normalmente, sem quebrar o login.
+        if (mapped.role === 'admin') {
+          const idToken = await mapped.getIdToken();
+          fetch('/api/auth/bypass-session', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${idToken}` },
+          }).catch(() => {});
+        }
       } else {
         setUser(null);
       }
@@ -50,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = async () => {
+    await fetch('/api/auth/bypass-session', { method: 'DELETE' }).catch(() => {});
     await signOut(auth);
     setUser(null);
   };
