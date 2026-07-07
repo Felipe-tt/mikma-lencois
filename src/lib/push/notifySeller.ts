@@ -25,7 +25,34 @@ export async function notifySeller(payload: SellerPushPayload): Promise<void> {
       return;
     }
 
-    const tokens = tokensSnap.docs.map((d) => d.id);
+    // Dedupe por uid: mantém só o token mais recente de cada vendor.
+    // Isso é uma segunda camada de proteção além do dedupe feito no
+    // cadastro (POST /api/painel/push-token) — cobre o caso de tokens
+    // "zumbis" que já existiam no banco antes daquele fix e continuam
+    // válidos, o que causava notificação em duplicidade pro mesmo vendor.
+    const latestByUid = new Map<string, { token: string; updatedAtMs: number }>();
+    tokensSnap.docs.forEach((doc) => {
+      const data = doc.data();
+      const uid = (data.uid as string) ?? doc.id; // fallback: sem uid, trata como único
+      const updatedAtMs = (data.updatedAt?.toMillis?.() ?? data.createdAt?.toMillis?.() ?? 0) as number;
+      const current = latestByUid.get(uid);
+      if (!current || updatedAtMs > current.updatedAtMs) {
+        latestByUid.set(uid, { token: doc.id, updatedAtMs });
+      }
+    });
+
+    const staleTokenIds = tokensSnap.docs
+      .map((d) => d.id)
+      .filter((id) => ![...latestByUid.values()].some((v) => v.token === id));
+
+    const tokens = [...latestByUid.values()].map((v) => v.token);
+    if (staleTokenIds.length > 0) {
+      console.log(`[notifySeller] ignorando ${staleTokenIds.length} token(s) zumbi (uid duplicado) e limpando do banco`);
+      const batch = adminDb.batch();
+      for (const id of staleTokenIds) batch.delete(adminDb.collection('pushTokens').doc(id));
+      await batch.commit();
+    }
+
     console.log(`[notifySeller] enviando para ${tokens.length} token(s) — título: "${payload.title}"`);
     const messaging = getAdminMessaging();
 
