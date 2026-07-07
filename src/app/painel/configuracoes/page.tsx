@@ -724,7 +724,7 @@ function TeamPanel() {
                 ) : results.length === 0 ? (
                   <p className="px-3 py-2.5 text-[12px] text-[#B09C8C]">Ninguém encontrado com esse nome/e-mail.</p>
                 ) : results.map(u => (
-                  <button type="button" key={u.uid} onClick={() => { setSelected(u); setQuery(''); }}
+                  <button type="button" key={u.uid} onClick={() => setSelected(u)}
                     className="w-full text-left px-3 py-2.5 hover:bg-[#F0EBE1] transition-colors border-b border-[#F0EBE1] last:border-0 flex items-center justify-between gap-2">
                     <span>
                       <span className="block text-[13px] font-semibold text-[#1E1208]">{u.displayName || u.email}</span>

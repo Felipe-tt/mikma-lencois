@@ -24,6 +24,7 @@ type QueueEntry = {
   method?: string;
   platform?: string;
   isMobile?: string;
+  isBot?: boolean;
   geoCity?: string;
   geoRegion?: string;
   geoCountry?: string;
@@ -140,9 +141,11 @@ export default function ManutencaoPage() {
     setQueue([]);
   };
 
-  const ipEntries = queue.filter(e => !e.uid);
+  // Bots/crawlers não entram na fila de IPs visível pro admin — não são
+  // visitantes reais aguardando acesso.
+  const ipEntries = queue.filter(e => !e.uid && !e.isBot);
   const userEntries = queue.filter(e => !!e.uid);
-  const waiting = queue.filter(e => !e.released);
+  const waiting = queue.filter(e => !e.released && !e.isBot);
 
   if (loading) return (
     <div className="flex flex-col gap-3">

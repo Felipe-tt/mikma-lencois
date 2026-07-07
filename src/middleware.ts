@@ -140,13 +140,24 @@ async function updateGeoInQueue(projectId: string, docId: string, ip: string) {
   } catch { /* silencioso — best-effort, não afeta o visitante */ }
 }
 
+// Bots/crawlers que não devem poluir a fila de manutenção — não são
+// visitantes reais esperando acesso, e não faz sentido o admin ficar
+// vendo "GoogleBot entrou na fila".
+const BOT_UA_PATTERN = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|whatsapp|telegrambot|discordbot|semrush|ahrefs|mj12bot|dotbot|petalbot|yandex|baidu|duckduckbot|nutch|scrapy|python-requests|curl\/|wget\/|headless|phantomjs|okhttp|libwww-perl|go-http-client/i;
+
+function isBotUserAgent(ua: string): boolean {
+  return BOT_UA_PATTERN.test(ua);
+}
+
 async function registerInQueue(projectId: string, docId: string, ip: string, req: NextRequest) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
+  const userAgent = req.headers.get('user-agent') ?? '';
   const fields: Record<string, unknown> = {
     ip: { stringValue: ip },
     released: { booleanValue: false },
     enteredAt: { stringValue: new Date().toISOString() },
-    userAgent: { stringValue: req.headers.get('user-agent') ?? '' },
+    userAgent: { stringValue: userAgent },
+    isBot: { booleanValue: isBotUserAgent(userAgent) },
     referer: { stringValue: req.headers.get('referer') ?? '' },
     acceptLanguage: { stringValue: req.headers.get('accept-language') ?? '' },
     requestedPath: { stringValue: req.nextUrl.pathname + req.nextUrl.search },
