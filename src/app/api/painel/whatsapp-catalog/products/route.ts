@@ -63,10 +63,19 @@ export async function POST(req: NextRequest) {
       products,
       nextCursor: result?.nextPageCursor || null,
     });
-  } catch {
+  } catch (err) {
+    // Loga o erro real — sem isso, a causa de "não consegue buscar o
+    // catálogo" fica invisível, só aparece um genérico pro lojista.
+    console.error(`[whatsapp-catalog] getCatalog falhou pra jid=${jid}:`, err);
+    // status 200 (não 5xx) de propósito: alguns proxies/CDNs na frente
+    // do Cloud Run interceptam respostas 5xx e substituem por uma
+    // página de erro genérica, escondendo esta mensagem JSON do
+    // cliente — o mesmo motivo pelo qual /connect já usa 200 em erro.
     return NextResponse.json(
-      { error: 'Não foi possível buscar o catálogo nesse número. Confira se o número está certo e se o catálogo está público.' },
-      { status: 502 }
+      {
+        error: 'Não foi possível buscar o catálogo nesse número. Confira se o número está certo e se o catálogo está público.',
+      },
+      { status: 200 }
     );
   } finally {
     try {

@@ -109,7 +109,11 @@ export default function ImportarWhatsappPage() {
     if (!token) throw new Error('Sessão expirada. Atualize a página e entre novamente.');
     const res = await fetch(url, { ...init, headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token}` } });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error ?? `Erro ao processar (status ${res.status})`);
+    // Algumas rotas (connect, products) devolvem 200 mesmo em erro de
+    // propósito — evita que proxies/CDNs na frente do Cloud Run
+    // interceptem status 5xx e substituam a resposta por uma página de
+    // erro genérica. Por isso checamos `data.error` mesmo com res.ok.
+    if (!res.ok || data?.error) throw new Error(data?.error ?? `Erro ao processar (status ${res.status})`);
     return data;
   }
 
