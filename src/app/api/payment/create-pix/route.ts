@@ -232,12 +232,16 @@ export async function POST(req: NextRequest) {
 
     // Avisa o vendor que alguém iniciou um pagamento PIX (ainda não confirmado).
     // Best-effort: nunca deve bloquear ou falhar o checkout do cliente.
-    notifySeller({
+    // IMPORTANTE: await de propósito. Em Cloud Run, sem "CPU always
+    // allocated", a CPU é pausada assim que a resposta é enviada — uma
+    // chamada "fire and forget" aqui seria interrompida no meio e o push
+    // nunca chegaria a ser enviado, sem gerar nenhum log.
+    await notifySeller({
       title: 'Pagamento PIX iniciado',
       body: `Pedido de R$ ${(amountCents / 100).toFixed(2)} · Frete: ${matchedShipping.label}`,
       url: `/painel/pedidos/${orderId}`,
       data: { orderId, event: 'payment_initiated' },
-    }).catch(() => {});
+    });
 
     // ── Load user profile for customer data ──────────────────────────────────
     const userSnap = await adminDb.collection('users').doc(uid).get();

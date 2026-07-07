@@ -260,12 +260,14 @@ export async function POST(req: NextRequest) {
 
     // Avisa o vendor que alguém iniciou um pagamento (ainda não confirmado).
     // Best-effort: nunca deve bloquear ou falhar o checkout do cliente.
-    notifySeller({
+    // IMPORTANTE: await de propósito — ver nota em create-pix/route.ts
+    // sobre CPU throttling do Cloud Run em chamadas fire-and-forget.
+    await notifySeller({
       title: 'Pagamento iniciado',
       body: `Pedido de R$ ${(totalCents / 100).toFixed(2)} · Frete: ${matchedShipping.label}`,
       url: `/painel/pedidos/${orderId}`,
       data: { orderId, event: 'payment_initiated' },
-    }).catch(() => {});
+    });
 
     // ── Upsert product on AbacatePay (one per order, single-use) ─────────────
     // AbacatePay /checkouts/create precisa de um produto existente.

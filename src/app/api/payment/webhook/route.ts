@@ -134,12 +134,14 @@ export async function POST(req: NextRequest) {
     const shippingLabel = (order.selectedShipping as { label?: string } | undefined)?.label
       ?? (order.delivery as { label?: string } | undefined)?.label
       ?? 'a combinar';
-    notifySeller({
+    // IMPORTANTE: await de propósito — ver nota em create-pix/route.ts
+    // sobre CPU throttling do Cloud Run em chamadas fire-and-forget.
+    await notifySeller({
       title: 'Pagamento confirmado 🎉',
       body: `${formatCurrency(order.totalCents as number)} · ${payMethodLabel} · Frete: ${shippingLabel}`,
       url: `/painel/pedidos/${orderId}`,
       data: { orderId, event: 'payment_confirmed' },
-    }).catch(() => {});
+    });
 
     // ── Email de confirmação ao cliente ───────────────────────────────────
     // Fora do batch (best-effort — falha de email não reverte o pedido)
