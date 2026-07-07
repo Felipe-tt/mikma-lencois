@@ -95,6 +95,14 @@ service cloud.firestore {
       allow write: if isSellerOrAdmin();
     }
 
+    // ── Push tokens (FCM) — só o backend (Admin SDK) acessa; nunca o client ──
+    // Tokens são vinculados a seller/admin pelo endpoint /api/painel/push-token
+    // (que valida a role via verifyAuth). Não expor leitura/escrita direta:
+    // um vendor não deve ver ou apagar o token de outro vendor pelo client.
+    match /pushTokens/{tokenId} {
+      allow read, write: if false;
+    }
+
     // ── Maintenance — leitura pública (status), escrita só admin/seller ───────
     match /maintenance/{doc} {
       allow read: if true;

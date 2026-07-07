@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email';
+import { notifySeller } from '@/lib/push/notifySeller';
 
 const ABACATEPAY_PUBLIC_KEY = process.env.ABACATEPAY_PUBLIC_KEY!;
 
@@ -127,6 +128,18 @@ export async function POST(req: NextRequest) {
 
     await batch.commit();
     console.log(`Order ${orderId} confirmed — ${note}`);
+
+    // Push pro vendor (best-effort — nunca deve afetar a confirmação do pedido)
+    const payMethodLabel = (order.payment as { method: string }).method === 'pix' ? 'PIX' : 'Cartão';
+    const shippingLabel = (order.selectedShipping as { label?: string } | undefined)?.label
+      ?? (order.delivery as { label?: string } | undefined)?.label
+      ?? 'a combinar';
+    notifySeller({
+      title: 'Pagamento confirmado 🎉',
+      body: `${formatCurrency(order.totalCents as number)} · ${payMethodLabel} · Frete: ${shippingLabel}`,
+      url: `/painel/pedidos/${orderId}`,
+      data: { orderId, event: 'payment_confirmed' },
+    }).catch(() => {});
 
     // ── Email de confirmação ao cliente ───────────────────────────────────
     // Fora do batch (best-effort — falha de email não reverte o pedido)

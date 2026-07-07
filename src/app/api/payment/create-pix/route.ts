@@ -8,6 +8,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
 import { StockError } from '@/lib/errors';
+import { notifySeller } from '@/lib/push/notifySeller';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -228,6 +229,15 @@ export async function POST(req: NextRequest) {
         usedCount: FieldValue.increment(1),
       }).catch(() => {});
     }
+
+    // Avisa o vendor que alguém iniciou um pagamento PIX (ainda não confirmado).
+    // Best-effort: nunca deve bloquear ou falhar o checkout do cliente.
+    notifySeller({
+      title: 'Pagamento PIX iniciado',
+      body: `Pedido de R$ ${(amountCents / 100).toFixed(2)} · Frete: ${matchedShipping.label}`,
+      url: `/painel/pedidos/${orderId}`,
+      data: { orderId, event: 'payment_initiated' },
+    }).catch(() => {});
 
     // ── Load user profile for customer data ──────────────────────────────────
     const userSnap = await adminDb.collection('users').doc(uid).get();
