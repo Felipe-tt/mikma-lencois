@@ -21,9 +21,13 @@ interface SellerPushPayload {
 export async function notifySeller(payload: SellerPushPayload): Promise<void> {
   try {
     const tokensSnap = await adminDb.collection('pushTokens').get();
-    if (tokensSnap.empty) return;
+    if (tokensSnap.empty) {
+      console.log('[notifySeller] nenhum token cadastrado, pulando envio');
+      return;
+    }
 
     const tokens = tokensSnap.docs.map((d) => d.id);
+    console.log(`[notifySeller] enviando para ${tokens.length} token(s) — título: "${payload.title}"`);
     const messaging = getMessaging();
 
     const response = await messaging.sendEachForMulticast({
@@ -51,6 +55,7 @@ export async function notifySeller(payload: SellerPushPayload): Promise<void> {
     response.responses.forEach((r, i) => {
       if (!r.success) {
         const code = r.error?.code ?? '';
+        console.error(`[notifySeller] falha no token ${tokens[i].slice(0, 12)}...: ${code} — ${r.error?.message ?? ''}`);
         if (
           code === 'messaging/registration-token-not-registered' ||
           code === 'messaging/invalid-registration-token'
@@ -59,6 +64,8 @@ export async function notifySeller(payload: SellerPushPayload): Promise<void> {
         }
       }
     });
+
+    console.log(`[notifySeller] resultado: ${response.successCount} sucesso(s), ${response.failureCount} falha(s)`);
 
     if (deadTokens.length > 0) {
       const batch = adminDb.batch();
