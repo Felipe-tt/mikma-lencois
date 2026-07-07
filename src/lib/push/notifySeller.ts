@@ -1,5 +1,4 @@
-import { getMessaging } from 'firebase-admin/messaging';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, getAdminMessaging } from '@/lib/firebase/admin';
 
 interface SellerPushPayload {
   title: string;
@@ -28,7 +27,7 @@ export async function notifySeller(payload: SellerPushPayload): Promise<void> {
 
     const tokens = tokensSnap.docs.map((d) => d.id);
     console.log(`[notifySeller] enviando para ${tokens.length} token(s) — título: "${payload.title}"`);
-    const messaging = getMessaging();
+    const messaging = getAdminMessaging();
 
     const response = await messaging.sendEachForMulticast({
       tokens,

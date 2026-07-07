@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app'
 import { getFirestore, Firestore } from 'firebase-admin/firestore'
 import { getAuth, Auth } from 'firebase-admin/auth'
+import { getMessaging, Messaging } from 'firebase-admin/messaging'
 
 // Evita MaxListenersExceededWarning do Firebase Admin em SSR
 if (typeof process !== 'undefined' && process.setMaxListeners) {
@@ -22,6 +23,7 @@ function getAdminApp(): App {
 // Lazy getters — só inicializa quando chamado em runtime, não no build
 let _db: Firestore | null = null
 let _auth: Auth | null = null
+let _messaging: Messaging | null = null
 
 export function getAdminDb(): Firestore {
   if (!_db) _db = getFirestore(getAdminApp())
@@ -31,6 +33,17 @@ export function getAdminDb(): Firestore {
 export function getAdminAuth(): Auth {
   if (!_auth) _auth = getAuth(getAdminApp())
   return _auth
+}
+
+// getMessaging() sem argumento depende do app default já estar
+// inicializado antes de ser chamado — como a inicialização aqui é lazy,
+// passar getAdminApp() explicitamente evita o erro
+// "The default Firebase app does not exist" quando esta é a primeira
+// coisa a tocar o firebase-admin numa invocação (ex: rota que só usa
+// notifySeller e nunca toca adminDb/adminAuth antes).
+export function getAdminMessaging(): Messaging {
+  if (!_messaging) _messaging = getMessaging(getAdminApp())
+  return _messaging
 }
 
 // Storage admin
