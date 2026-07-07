@@ -65,9 +65,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.css', 'src/**/*.ts', 'src/**/*.tsx', 'tailwind.config.ts') }}
-          restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+          key: nextjs-v2-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.css', 'src/**/*.ts', 'src/**/*.tsx', 'tailwind.config.ts') }}
+          # Sem restore-keys de propósito: um fallback por prefixo pode
+          # restaurar um cache de webpack de um commit anterior quando o
+          # hash exato não bate, e isso já causou pelo menos um chunk
+          # compartilhado ficar desatualizado (código antigo servido em
+          # produção mesmo após o fix estar no commit). Preferimos um
+          # cache miss ocasional (build mais lenta) a servir código stale.
 
       - name: Criar .env.production com variáveis server-side
         run: |

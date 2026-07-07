@@ -42,7 +42,10 @@ export function getAdminAuth(): Auth {
 // coisa a tocar o firebase-admin numa invocação (ex: rota que só usa
 // notifySeller e nunca toca adminDb/adminAuth antes).
 export function getAdminMessaging(): Messaging {
-  if (!_messaging) _messaging = getMessaging(getAdminApp())
+  if (!_messaging) {
+    console.log('[getAdminMessaging] init sentinel-v2 — app já registrado?', getApps().length > 0);
+    _messaging = getMessaging(getAdminApp());
+  }
   return _messaging
 }
 
