@@ -18,6 +18,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual }  from 'crypto';
 import { adminDb }                      from '@/lib/firebase/admin';
 import { FieldValue }                   from 'firebase-admin/firestore';
+import { notifySeller }                 from '@/lib/push/notifySeller';
+import { summarizeOrderItems }          from '@/lib/push/summarizeOrderItems';
 
 // Status Uber Direct → status interno do pedido
 const STATUS_MAP: Record<string, string> = {
@@ -38,6 +40,29 @@ const STATUS_NOTE: Record<string, string> = {
   delivered:       'Entregue via Uber Direct',
   canceled:        'Entrega Uber Direct cancelada',
   returned:        'Pacote devolvido pelo Uber Direct',
+};
+
+// Nem todo status vira notificação — só os que exigem atenção/ação do
+// seller (chegou pra coletar, terminou, ou deu problema). "pickup_complete"
+// e "dropoff" ficam só no histórico pra não empilhar push demais no
+// celular pra cada micro-atualização da corrida.
+const PUSH_ON_STATUS: Record<string, (itemsSummary: string) => { title: string; body: string }> = {
+  pickup: (itemsSummary) => ({
+    title: 'Motoboy a caminho da loja 🛵',
+    body: `Uber Direct já está indo buscar: ${itemsSummary}. Deixa separado!`,
+  }),
+  delivered: (itemsSummary) => ({
+    title: 'Entrega concluída ✅',
+    body: `${itemsSummary} foi entregue pelo Uber Direct.`,
+  }),
+  canceled: (itemsSummary) => ({
+    title: 'Entrega Uber Direct cancelada ⚠️',
+    body: `Precisa despachar de novo: ${itemsSummary}`,
+  }),
+  returned: (itemsSummary) => ({
+    title: 'Pacote devolvido pelo Uber Direct ⚠️',
+    body: `${itemsSummary} voltou pra loja — confira o pedido.`,
+  }),
 };
 
 function verifySignature(rawBody: Buffer, header: string): boolean {
@@ -142,6 +167,20 @@ export async function POST(req: NextRequest) {
 
     await orderRef.update(update);
     console.log(`[uber-webhook] ${orderRef.id}: ${uberStatus} → ${newStatus}`);
+
+    const pushBuilder = PUSH_ON_STATUS[uberStatus];
+    if (pushBuilder) {
+      const items = (orderData.items ?? []) as { productName: string; quantity: number }[];
+      const { title, body } = pushBuilder(summarizeOrderItems(items));
+      // Best-effort — notifySeller nunca lança, só loga falha internamente.
+      await notifySeller({
+        title,
+        body,
+        url: `/painel/pedidos/${orderRef.id}`,
+        data: { orderId: orderRef.id, event: `uber_${uberStatus}` },
+      });
+    }
+
     return NextResponse.json({ ok: true });
   }
 

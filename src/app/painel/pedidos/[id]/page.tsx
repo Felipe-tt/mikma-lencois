@@ -497,14 +497,26 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   <p className="text-[12px] text-[#B09C8C]">Procurando entregador…</p>
                 )}
 
-                {/* ETA */}
-                {order.delivery.dropoffEta && (
-                  <p className="text-[12px] text-[#705A48]">
-                    Previsão de chegada:{' '}
-                    <span className="font-bold text-[#1E1208]">
-                      {new Date(order.delivery.dropoffEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </p>
+                {/* ETAs */}
+                {(order.delivery.pickupEta || order.delivery.dropoffEta) && (
+                  <div className="flex gap-4">
+                    {order.delivery.pickupEta && (
+                      <p className="text-[12px] text-[#705A48]">
+                        Previsão de coleta:{' '}
+                        <span className="font-bold text-[#1E1208]">
+                          {new Date(order.delivery.pickupEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </p>
+                    )}
+                    {order.delivery.dropoffEta && (
+                      <p className="text-[12px] text-[#705A48]">
+                        Previsão de chegada:{' '}
+                        <span className="font-bold text-[#1E1208]">
+                          {new Date(order.delivery.dropoffEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {/* Link rastreio em tempo real */}
@@ -692,8 +704,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </Card>
         )}
 
-        {/* ── Rastreamento (só Correios usa a API Link&Track) ── */}
-        {order.delivery?.carrier && order.delivery.carrier !== 'pickup' && order.delivery.carrier !== 'manual' && (
+        {/* ── Rastreamento (Correios/Melhor Envio — Uber Direct já tem o card
+             próprio "entregador em tempo real" acima, com ETA e link do
+             mapa; esse aqui não tem noção de Uber Direct e só mostraria um
+             erro confuso de "Melhor Envio" pra esses pedidos) ── */}
+        {order.delivery?.carrier && order.delivery.carrier !== 'pickup' && order.delivery.carrier !== 'manual' && order.delivery.carrier !== 'uber_direct' && (
           <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
               <IconBox size={16} className="text-[#705A48] shrink-0" />

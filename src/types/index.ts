@@ -131,6 +131,7 @@ export interface Order {
     courierPhoto?: string       // Foto do entregador (img_href)
     courierVehicle?: string     // vehicle_type (car, bicycle, scooter…)
     dropoffEta?: string         // ETA de entrega (ISO)
+    pickupEta?: string          // ETA de coleta na loja (ISO)
   }
   address: Address
   totalCents: number
