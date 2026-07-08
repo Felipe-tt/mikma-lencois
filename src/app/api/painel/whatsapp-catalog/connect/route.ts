@@ -18,7 +18,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const sock = await connectAndWait(95_000);
+    // 45s, não 95s: o proxy do Firebase Hosting na frente do Cloud Run tem
+    // um limite de resposta de ~60s pra requisições reescritas — mesmo o
+    // maxDuration da function sendo maior, se a gente esperar 95s o proxy
+    // mata a conexão e devolve 502 pro navegador antes da function
+    // terminar (só o "Conectando..." no QR já demorava perto de 1min e
+    // sempre acabava em 502, sem nenhuma chance de terminar a tempo).
+    const sock = await connectAndWait(45_000);
     // Não precisamos manter a conexão aberta agora — a sessão já foi
     // salva no Firestore. As próximas chamadas (buscar produtos, importar)
     // reconectam usando essa sessão, normalmente em 1-2s, sem QR.

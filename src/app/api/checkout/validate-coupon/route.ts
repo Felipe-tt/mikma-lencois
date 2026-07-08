@@ -46,7 +46,9 @@ export async function POST(req: NextRequest) {
     const now = new Date();
 
     if (!coupon.active) return NextResponse.json({ error: 'Cupom inativo' }, { status: 400 });
-    if (new Date(coupon.expiresAt) < now) return NextResponse.json({ error: 'Cupom expirado' }, { status: 400 });
+    if (coupon.expiresAt && new Date(coupon.expiresAt) < now) {
+      return NextResponse.json({ error: 'Cupom expirado' }, { status: 400 });
+    }
     if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
       return NextResponse.json({ error: 'Cupom esgotado' }, { status: 400 });
     }
