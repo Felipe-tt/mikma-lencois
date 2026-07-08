@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ['@node-rs/argon2', 'firebase-admin', 'baileys'],
@@ -39,4 +41,17 @@ const nextConfig = {
     ];
   },
 };
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  // Sem org/project/authToken, o plugin simplesmente pula o upload de
+  // sourcemaps (loga um aviso, não falha o build) — então isso é seguro
+  // de deixar ligado mesmo antes de criar a conta no Sentry.
+  silent: true,
+  widenClientFileUpload: true,
+  webpack: {
+    treeshake: { removeDebugLogging: true },
+    reactComponentAnnotation: { enabled: true },
+  },
+});

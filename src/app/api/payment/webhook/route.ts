@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (err) {
       console.error(`Failed to confirm order ${orderId}:`, err);
+      Sentry.captureException(err, { tags: { route: 'payment-webhook', step: 'confirm-order' }, extra: { orderId } });
       return;
     }
 

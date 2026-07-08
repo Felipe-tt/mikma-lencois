@@ -40,6 +40,11 @@ jobs:
       NEXT_PUBLIC_APP_URL: https://mikma.com.br
       NEXT_PUBLIC_BASE_URL: https://mikma.com.br
       GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,6 +65,9 @@ jobs:
       - name: Install dependencies
         if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
+
+      - name: Rodar testes automatizados
+        run: npm test
 
       - name: Cache Next.js build cache
         uses: actions/cache@v4
@@ -97,6 +105,11 @@ jobs:
           UBER_DIRECT_SANDBOX_CUSTOMER_ID=${{ secrets.UBER_DIRECT_SANDBOX_CUSTOMER_ID }}
           UBER_DIRECT_SANDBOX_WEBHOOK_SECRET=${{ secrets.UBER_DIRECT_SANDBOX_WEBHOOK_SECRET }}
           UBER_DIRECT_RADIUS_KM=15
+          SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+          NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           EOF
 
       - name: Build Next.js

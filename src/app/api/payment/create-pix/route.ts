@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getSettings } from '@/lib/settings';
@@ -9,6 +10,7 @@ import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
+import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
@@ -243,6 +245,12 @@ export async function POST(req: NextRequest) {
       url: `/painel/pedidos/${orderId}`,
       data: { orderId, event: 'payment_initiated' },
     });
+    await notifyInApp({
+      type: 'payment_initiated',
+      message: `PIX gerado: ${summarizeOrderItems(verifiedItems)} · R$ ${(amountCents / 100).toFixed(2)}`,
+      orderId,
+      url: `/painel/pedidos/${orderId}`,
+    });
 
     // ── Load user profile for customer data ──────────────────────────────────
     const userSnap = await adminDb.collection('users').doc(uid).get();
@@ -318,6 +326,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('create-pix error:', err);
+    Sentry.captureException(err, { tags: { route: 'create-pix' } });
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }

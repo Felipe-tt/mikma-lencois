@@ -1,0 +1,27 @@
+name: Cron · Verificar estoque baixo
+
+on:
+  schedule:
+    # Roda a cada 6 horas
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  low-stock:
+    name: Verificar estoque baixo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar API de verificação de estoque
+        run: |
+          STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            https://mikma.com.br/api/cron/low-stock)
+
+          echo "HTTP status: $STATUS"
+          echo "Resposta:"
+          cat /tmp/response.json
+
+          if [ "$STATUS" != "200" ]; then
+            echo "Erro: status $STATUS"
+            exit 1
+          fi

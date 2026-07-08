@@ -19,7 +19,9 @@ import { createHmac, timingSafeEqual }  from 'crypto';
 import { adminDb }                      from '@/lib/firebase/admin';
 import { FieldValue }                   from 'firebase-admin/firestore';
 import { notifySeller }                 from '@/lib/push/notifySeller';
+import { notifyInApp }                  from '@/lib/push/notifyInApp';
 import { summarizeOrderItems }          from '@/lib/push/summarizeOrderItems';
+import { notifyCustomerDeliveryStatus } from '@/lib/email/deliveryStatusEmail';
 
 // Status Uber Direct → status interno do pedido
 const STATUS_MAP: Record<string, string> = {
@@ -179,6 +181,22 @@ export async function POST(req: NextRequest) {
         url: `/painel/pedidos/${orderRef.id}`,
         data: { orderId: orderRef.id, event: `uber_${uberStatus}` },
       });
+      const IN_APP_TYPE: Record<string, 'uber_pickup' | 'uber_delivered' | 'uber_problem'> = {
+        pickup: 'uber_pickup', delivered: 'uber_delivered', canceled: 'uber_problem', returned: 'uber_problem',
+      };
+      await notifyInApp({
+        type: IN_APP_TYPE[uberStatus],
+        message: `${title} — ${body}`,
+        orderId: orderRef.id,
+        url: `/painel/pedidos/${orderRef.id}`,
+      });
+    }
+
+    // Cliente só precisa saber quando sai pra entrega, chega, ou dá problema
+    // — "pending"/"pickup"/"dropoff" ainda estão dentro do fluxo esperado e
+    // encher a caixa de entrada dele com cada micro-status não ajuda.
+    if (uberStatus === 'pickup_complete' || uberStatus === 'delivered' || uberStatus === 'canceled' || uberStatus === 'returned') {
+      await notifyCustomerDeliveryStatus(orderRef.id, orderData as { userId?: string; customerName?: string; customerEmail?: string }, uberStatus);
     }
 
     return NextResponse.json({ ok: true });

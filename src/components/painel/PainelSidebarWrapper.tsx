@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { PainelSidebar } from './PainelSidebar';
+import { NotificationBell } from './NotificationBell';
 
 // Distância mínima (px) pro gesto contar como swipe intencional, e não
 // um toque acidental ou scroll vertical.
@@ -91,6 +92,9 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
             </svg>
           </button>
           <span className="font-display text-base text-[#1E1208]">Painel</span>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </div>
 
         <main className="flex-1 p-5 sm:p-8 overflow-y-auto animate-fade-in">

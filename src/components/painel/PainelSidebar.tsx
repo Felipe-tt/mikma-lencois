@@ -10,6 +10,7 @@ import {
   IconHome, IconOrders, IconMessages, IconProducts,
   IconInventory, IconReports, IconCoupons, IconSettings, IconMaintenance,
 } from '@/components/ui/Icon';
+import { NotificationBell } from './NotificationBell';
 
 const NAV = [
   { href: '/painel',                label: 'Início',         desc: 'Resumo da loja',             exact: true, Icon: IconHome },
@@ -38,12 +39,13 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
   return (
     <aside className="w-60 shrink-0 flex flex-col border-r border-[#E6DFD5] bg-[#FAF8F5] h-full">
       {/* Brand */}
-      <div className="h-[64px] flex items-center px-5 border-b border-[#E6DFD5]">
+      <div className="h-[64px] flex items-center justify-between px-5 border-b border-[#E6DFD5]">
         <Link href="/" className="flex items-center gap-3" onClick={onClose}>
           <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-7 w-auto object-contain" />
           <div className="w-px h-4 bg-[#E6DFD5]" />
           <span className="font-mono text-[9px] text-[#C4714A] tracking-[0.22em] uppercase">Painel</span>
         </Link>
+        <NotificationBell />
       </div>
 
       {/* Nav */}
