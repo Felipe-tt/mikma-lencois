@@ -1,14 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { QRCodeSVG } from 'qrcode.react';
-import { db, auth } from '@/lib/firebase/client';
+import Papa from 'papaparse';
+import { auth } from '@/lib/firebase/client';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS } from '@/lib/productOptions';
 import { IconAlert, IconCheck } from '@/components/ui/Icon';
-
-type ConnStatus = 'idle' | 'connecting' | 'qr' | 'connected' | 'timeout' | 'logged_out' | 'error';
 
 interface FetchedProduct {
   id: string;
@@ -67,42 +64,123 @@ function isValid(it: DraftItem): boolean {
 
 const selectInputClass = 'w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]';
 
-export default function ImportarWhatsappPage() {
-  const [number, setNumber] = useState('');
+// ── Parser do CSV exportado do Meta Commerce Manager ────────────────────────
+// O Commerce Manager exporta no formato padrão de feed de produtos da Meta
+// (mesmo usado pra Facebook/Instagram Shops), mas os nomes exatos das
+// colunas variam um pouco conforme o idioma da conta e a origem do feed.
+// Por isso a leitura abaixo aceita várias variações de nome por campo, em
+// vez de depender de um cabeçalho fixo.
+const HEADER_ALIASES: Record<string, string[]> = {
+  id: ['id', 'item_id', 'retailer_id', 'sku', 'product_id', 'content_id'],
+  name: ['title', 'name', 'nome', 'product name', 'nome do produto'],
+  description: ['description', 'descrição', 'descricao', 'desc'],
+  price: ['price', 'sale_price', 'preço', 'preco', 'valor'],
+  image: [
+    'image_link', 'image_url', 'image link', 'image', 'photo url', 'photo',
+    'foto', 'imagem', 'main_image', 'additional_image_link',
+  ],
+  availability: ['availability', 'disponibilidade', 'status'],
+};
 
-  const [connecting, setConnecting] = useState(false);
-  const [connStatus, setConnStatus] = useState<ConnStatus>('idle');
-  const [qr, setQr] = useState<string | null>(null);
-  const [connectError, setConnectError] = useState('');
-  const [connected, setConnected] = useState(false);
+function findColumn(headers: string[], aliases: string[]): string | null {
+  const normalized = headers.map((h) => h.trim().toLowerCase());
+  for (const alias of aliases) {
+    const idx = normalized.indexOf(alias);
+    if (idx !== -1) return headers[idx];
+  }
+  return null;
+}
+
+/** Extrai um valor em reais de campos tipo "129.90 BRL", "R$ 129,90", "129,90". */
+function parsePriceBRL(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const cleaned = raw.replace(/[^\d.,]/g, '').trim();
+  if (!cleaned) return null;
+  // "129.90" (ponto decimal, formato do feed da Meta) vs "129,90" (vírgula, formato BR)
+  let normalized = cleaned;
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    // "1.299,90" — ponto é milhar, vírgula é decimal
+    normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (cleaned.includes(',')) {
+    normalized = cleaned.replace(',', '.');
+  }
+  const value = parseFloat(normalized);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** Extrai todas as URLs de imagem de uma célula (podem vir separadas por vírgula/espaço/pipe). */
+function extractImageUrls(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(/[,|\s]+/)
+    .map((s) => s.trim())
+    .filter((s) => /^https?:\/\//i.test(s));
+}
+
+interface CsvParseResult {
+  products: FetchedProduct[];
+  skipped: number;
+}
+
+function parseCommerceManagerCsv(csvText: string): CsvParseResult {
+  const parsed = Papa.parse<Record<string, string>>(csvText, {
+    header: true,
+    skipEmptyLines: true,
+  });
+
+  const headers = parsed.meta.fields ?? [];
+  const idCol = findColumn(headers, HEADER_ALIASES.id);
+  const nameCol = findColumn(headers, HEADER_ALIASES.name);
+  const descCol = findColumn(headers, HEADER_ALIASES.description);
+  const priceCol = findColumn(headers, HEADER_ALIASES.price);
+  const availCol = findColumn(headers, HEADER_ALIASES.availability);
+  // Imagem pode estar espalhada em mais de uma coluna (image_link +
+  // additional_image_link) — junta todas as que baterem o alias.
+  const imageCols = headers.filter((h) =>
+    HEADER_ALIASES.image.includes(h.trim().toLowerCase())
+  );
+
+  if (!nameCol) {
+    throw new Error(
+      'Não encontrei uma coluna de nome/título no CSV. Confirme se exportou o arquivo certo do Commerce Manager.'
+    );
+  }
+
+  let skipped = 0;
+  const products: FetchedProduct[] = [];
+
+  parsed.data.forEach((row, i) => {
+    const name = nameCol ? row[nameCol]?.trim() : '';
+    if (!name) { skipped++; return; }
+
+    const imageUrls = Array.from(
+      new Set(imageCols.flatMap((c) => extractImageUrls(row[c])))
+    );
+
+    products.push({
+      id: (idCol && row[idCol]) || `csv-${i}`,
+      retailerId: (idCol && row[idCol]) || `csv-${i}`,
+      name,
+      description: descCol ? (row[descCol] ?? '') : '',
+      priceBRL: priceCol ? parsePriceBRL(row[priceCol]) : null,
+      currency: 'BRL',
+      available: availCol ? /in stock|available|dispon[íi]vel/i.test(row[availCol] ?? '') : true,
+      imageUrls,
+    });
+  });
+
+  return { products, skipped };
+}
+
+export default function ImportarWhatsappPage() {
+  const [csvError, setCsvError] = useState('');
+  const [csvFileName, setCsvFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [items, setItems] = useState<DraftItem[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [productsError, setProductsError] = useState('');
 
   const [importing, setImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<{ created: number; failed: number } | null>(null);
-
-  // Prefill com o número de WhatsApp já configurado em Configurações.
-  useEffect(() => {
-    fetch('/api/settings/public')
-      .then((r) => r.json())
-      .then((d) => { if (d?.storePhone) setNumber(d.storePhone); })
-      .catch(() => {});
-  }, []);
-
-  // Enquanto está conectando, escuta o status/QR em tempo real direto do Firestore.
-  useEffect(() => {
-    if (!connecting) return;
-    const unsub = onSnapshot(doc(db, 'whatsappCatalogStatus', 'current'), (snap) => {
-      const data = snap.data() as { status?: ConnStatus; qr?: string } | undefined;
-      if (!data?.status) return;
-      setConnStatus(data.status);
-      setQr(data.status === 'qr' ? data.qr ?? null : null);
-    });
-    return unsub;
-  }, [connecting]);
 
   async function authedFetch(url: string, init: RequestInit) {
     const token = await auth.currentUser?.getIdToken();
@@ -117,50 +195,31 @@ export default function ImportarWhatsappPage() {
     return data;
   }
 
-  async function handleConnect() {
-    setConnectError('');
-    setConnecting(true);
-    setConnStatus('connecting');
-    setQr(null);
-    setConnected(false);
-    try {
-      const data = await authedFetch('/api/painel/whatsapp-catalog/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number }),
-      });
-      if (data.connected) {
-        setConnected(true);
-        setConnStatus('connected');
-      } else {
-        setConnStatus('error');
-        setConnectError(data.error || 'Não foi possível conectar.');
-      }
-    } catch (err) {
-      setConnStatus('error');
-      setConnectError(err instanceof Error ? err.message : 'Não foi possível conectar.');
-    } finally {
-      setConnecting(false);
-    }
-  }
+  function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvError('');
+    setCsvFileName(file.name);
 
-  async function handleFetchProducts(reset: boolean) {
-    setProductsError('');
-    setLoadingProducts(true);
-    try {
-      const data = await authedFetch('/api/painel/whatsapp-catalog/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number, cursor: reset ? undefined : cursor }),
-      });
-      const drafts = (data.products as FetchedProduct[]).map(toDraft);
-      setItems((prev) => (reset ? drafts : [...prev, ...drafts]));
-      setCursor(data.nextCursor || null);
-    } catch (err) {
-      setProductsError(err instanceof Error ? err.message : 'Não foi possível buscar os produtos.');
-    } finally {
-      setLoadingProducts(false);
-    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result ?? '');
+        const { products, skipped } = parseCommerceManagerCsv(text);
+        if (products.length === 0) {
+          setCsvError('Nenhum produto encontrado nesse CSV. Confira se o arquivo exportado tem linhas de produto.');
+          return;
+        }
+        setItems(products.map(toDraft));
+        if (skipped > 0) {
+          setCsvError(`${skipped} linha(s) ignorada(s) por não ter nome de produto.`);
+        }
+      } catch (err) {
+        setCsvError(err instanceof Error ? err.message : 'Não foi possível ler esse CSV.');
+      }
+    };
+    reader.onerror = () => setCsvError('Não foi possível ler esse arquivo.');
+    reader.readAsText(file, 'utf-8');
   }
 
   function updateItem(idx: number, patch: Partial<DraftItem>) {
@@ -318,94 +377,85 @@ export default function ImportarWhatsappPage() {
         <Link href="/painel/produtos" className="text-[12px] font-semibold text-mid hover:text-ink shrink-0 whitespace-nowrap">Voltar</Link>
       </div>
 
-      {/* ── Passo 1 — Conectar ── */}
+      {/* ── Passo 1 — Exportar do Commerce Manager ── */}
       <section className="bg-paper border border-mist p-5 mb-5">
         <div className="flex items-baseline gap-2.5 mb-3">
           <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">1</span>
-          <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">Conectar ao WhatsApp</h2>
+          <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">Exportar o catálogo do Commerce Manager</h2>
         </div>
-        <p className="text-[12px] text-faint mb-3 ml-[30px] max-w-md">
-          Deixe o WhatsApp aberto no celular antes de clicar — vai aparecer um QR code aqui pra escanear em <strong>Configurações, Dispositivos conectados</strong>. Não precisa ser o número da loja, pode ser qualquer WhatsApp.
+
+        <ol className="ml-[30px] flex flex-col gap-3 max-w-lg text-[13px] text-ink">
+          <li className="flex gap-2.5">
+            <span className="font-bold text-clay shrink-0">1.</span>
+            <span>
+              Acesse o{' '}
+              <a href="https://business.facebook.com/commerce" target="_blank" rel="noopener noreferrer" className="font-semibold text-clay hover:text-clay-d underline">
+                Meta Commerce Manager
+              </a>{' '}
+              com a conta que administra o catálogo do WhatsApp Business.
+            </span>
+          </li>
+          <li className="flex gap-2.5">
+            <span className="font-bold text-clay shrink-0">2.</span>
+            <span>Selecione o catálogo vinculado ao seu número de WhatsApp.</span>
+          </li>
+          <li className="flex gap-2.5">
+            <span className="font-bold text-clay shrink-0">3.</span>
+            <span>No menu lateral, abra <strong>Itens do catálogo</strong> (ou <em>Data feed / Fontes de dados</em>, dependendo do idioma da conta).</span>
+          </li>
+          <li className="flex gap-2.5">
+            <span className="font-bold text-clay shrink-0">4.</span>
+            <span>Clique em <strong>Baixar</strong> (ou <em>Download</em>) e escolha o formato <strong>CSV</strong>.</span>
+          </li>
+          <li className="flex gap-2.5">
+            <span className="font-bold text-clay shrink-0">5.</span>
+            <span>Envie o arquivo baixado aqui embaixo.</span>
+          </li>
+        </ol>
+
+        <p className="ml-[30px] mt-3 text-[11px] text-faint max-w-lg">
+          Esse caminho usa só a exportação oficial da Meta — sem conectar nem simular nenhum WhatsApp por aqui, então não corre risco de o número ser banido.
         </p>
 
-        <div className="ml-[30px] flex flex-col gap-3 max-w-sm">
-          <div>
-            <label className="label">Número do catálogo (DDI + DDD + número)</label>
-            <input
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              placeholder="554799964885"
-              disabled={connecting}
-              className="input-sm"
-            />
-          </div>
+        {csvFileName && !csvError && (
+          <p className="ml-[30px] mt-3 text-[12px] text-faint">Arquivo selecionado: <strong>{csvFileName}</strong></p>
+        )}
 
-          {!connected && (
-            <button
-              onClick={handleConnect}
-              disabled={connecting || !number.replace(/\D/g, '')}
-              className="btn-primary py-2.5 px-5 text-[11px] tracking-[0.08em] uppercase self-start disabled:opacity-50"
-            >
-              {connecting ? 'Conectando…' : 'Conectar ao WhatsApp'}
-            </button>
-          )}
+        <div className="ml-[30px] mt-4 flex flex-col gap-3 max-w-sm">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleCsvUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn-primary py-2.5 px-5 text-[11px] tracking-[0.08em] uppercase self-start"
+          >
+            {items.length > 0 ? 'Enviar outro CSV' : 'Enviar CSV do Commerce Manager'}
+          </button>
 
-          {connecting && connStatus === 'qr' && qr && (
-            <div className="flex flex-col items-center gap-2 border border-mist bg-white p-4 self-start">
-              <QRCodeSVG value={qr} size={196} />
-              <p className="text-[11px] text-faint text-center max-w-[220px]">
-                Escaneie com o WhatsApp: Configurações, Dispositivos conectados, Conectar um dispositivo
-              </p>
-            </div>
-          )}
-          {connecting && connStatus === 'connecting' && !qr && (
-            <p className="text-[12px] text-faint">Conectando…</p>
-          )}
-
-          {connectError && (
+          {csvError && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2">
-              <IconAlert size={12} className="shrink-0 mt-0.5" /> {connectError}
+              <IconAlert size={12} className="shrink-0 mt-0.5" /> {csvError}
             </div>
           )}
 
-          {connected && (
+          {items.length > 0 && !csvError && (
             <div className="bg-green-50 border border-green-200 text-green-700 text-[12px] px-3 py-2 flex items-center gap-2">
-              <IconCheck size={12} className="shrink-0" /> Conectado! Agora busque os produtos do catálogo.
+              <IconCheck size={12} className="shrink-0" /> {items.length} produto{items.length !== 1 ? 's' : ''} encontrado{items.length !== 1 ? 's' : ''} no arquivo — revise abaixo antes de importar.
             </div>
           )}
         </div>
       </section>
 
-      {/* ── Passo 2 — Buscar produtos ── */}
-      {connected && (
-        <section className="bg-paper border border-mist p-5 mb-5">
-          <div className="flex items-baseline gap-2.5 mb-3">
-            <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">2</span>
-            <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">Buscar produtos do catálogo</h2>
-          </div>
-          <div className="ml-[30px] flex flex-col gap-3">
-            <button
-              onClick={() => handleFetchProducts(true)}
-              disabled={loadingProducts}
-              className="btn-primary py-2.5 px-5 text-[11px] tracking-[0.08em] uppercase self-start disabled:opacity-50"
-            >
-              {loadingProducts ? 'Buscando…' : items.length > 0 ? 'Buscar de novo' : 'Buscar produtos'}
-            </button>
-            {productsError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2">
-                <IconAlert size={12} className="shrink-0 mt-0.5" /> {productsError}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* ── Passo 3 — Revisar e importar ── */}
+      {/* ── Passo 2 — Revisar e importar ── */}
       {items.length > 0 && (
         <section className="mb-10">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-baseline gap-2.5">
-              <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">3</span>
+              <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">2</span>
               <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">
                 Revisar e importar ({items.length} produto{items.length !== 1 ? 's' : ''})
               </h2>
@@ -494,12 +544,6 @@ export default function ImportarWhatsappPage() {
               );
             })}
           </div>
-
-          {cursor && (
-            <button onClick={() => handleFetchProducts(false)} disabled={loadingProducts} className="mt-3 text-[12px] font-semibold text-clay hover:text-clay-d">
-              {loadingProducts ? 'Carregando…' : 'Carregar mais produtos'}
-            </button>
-          )}
 
           <div className="mt-5 flex items-center gap-3 flex-wrap">
             <button
