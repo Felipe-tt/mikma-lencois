@@ -11,8 +11,8 @@ async function getActiveProducts(): Promise<Product[]> {
 }
 
 export const metadata = {
-  title: 'Guia de tamanhos — qual lençol comprar | Mikma Lençóis',
-  description: 'Não sabe se seu colchão é Solteiro, Casal, Queen ou King? Informe as medidas e a gente te mostra o tamanho certo — sem achismo.',
+  title: 'Guia de tamanhos: qual lençol comprar | Mikma Lençóis',
+  description: 'Não sabe se seu colchão é Solteiro, Casal, Queen ou King? Informe as medidas e a gente te mostra o tamanho certo, sem achismo.',
 };
 
 export default async function GuiaDeTamanhosPage() {
@@ -27,7 +27,7 @@ export default async function GuiaDeTamanhosPage() {
         Qual lençol é o certo pro seu colchão?
       </h1>
       <p className="text-[15px] text-[#705A48] max-w-[52ch] mx-auto text-center leading-relaxed mb-10">
-        Meça a largura e o comprimento do colchão (não da cama — do colchão em si) e a gente te diz exatamente qual tamanho comprar, sem chute.
+        Meça a largura e o comprimento do colchão (não da cama, do colchão em si) e a gente te diz exatamente qual tamanho comprar, sem chute.
       </p>
 
       <SizeGuideCalculator products={products} />

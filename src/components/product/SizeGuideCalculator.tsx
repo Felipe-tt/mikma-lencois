@@ -39,7 +39,7 @@ export function SizeGuideCalculator({ products }: Props) {
     const h = height ? parseFloat(height.replace(',', '.')) : undefined;
 
     if (!w || !l || w < 30 || l < 30 || w > 300 || l > 300) {
-      setError('Confere as medidas — largura e comprimento em centímetros (ex: 138 e 188).');
+      setError('Confere as medidas: largura e comprimento em centímetros (ex: 138 e 188).');
       setResult(null);
       return;
     }
@@ -57,7 +57,7 @@ export function SizeGuideCalculator({ products }: Props) {
           : `O mais próximo é ${MATTRESS_SIZES[r.size].label} (diferença de ${r.distanceCm}cm nas duas medidas somadas).`
       );
     } else {
-      setConfidenceMsg(`Suas medidas ficaram bem diferentes de todos os tamanhos que vendemos — o mais próximo seria ${MATTRESS_SIZES[r.size].label}, mas confirma antes de comprar. Pode ser um colchão de tamanho especial.`);
+      setConfidenceMsg(`Suas medidas ficaram bem diferentes de todos os tamanhos que vendemos. O mais próximo seria ${MATTRESS_SIZES[r.size].label}, mas confirma antes de comprar. Pode ser um colchão de tamanho especial.`);
     }
   }
 
@@ -80,7 +80,7 @@ export function SizeGuideCalculator({ products }: Props) {
       setConfidenceMsg('');
     } else {
       setResult(null);
-      setError('Não reconheço esse nome — tenta usar o modo "Vou medir" com a largura e o comprimento em cm.');
+      setError('Não reconheço esse nome. Tenta usar o modo "Vou medir" com a largura e o comprimento em cm.');
     }
   }
 

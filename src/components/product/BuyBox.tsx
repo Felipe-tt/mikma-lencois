@@ -227,7 +227,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             })}
           </div>
           <Link href="/guia-de-tamanhos" className="inline-block mt-2.5 text-[11.5px] text-[#9C8878] hover:text-[#C4714A] transition-colors border-b border-dotted border-[#D4C4AE] hover:border-[#C4714A]">
-            Não sabe seu tamanho? Meça o colchão e a gente te diz →
+            Não sabe seu tamanho? Meça o colchão e a gente te diz
           </Link>
         </div>
 

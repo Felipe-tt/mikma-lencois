@@ -48,9 +48,9 @@ export function matchMattressSize(widthCm: number, lengthCm: number, heightCm?: 
   let heightWarning: string | undefined;
   if (heightCm !== undefined) {
     if (heightCm > 35) {
-      heightWarning = 'Seu colchão é bem alto (mais de 35cm). Nossos lençóis têm elástico padrão de mercado — pode ficar justo. Se tiver dúvida, manda uma mensagem antes de comprar.';
+      heightWarning = 'Seu colchão é bem alto (mais de 35cm). Nossos lençóis têm elástico padrão de mercado, pode ficar justo. Se tiver dúvida, manda uma mensagem antes de comprar.';
     } else if (heightCm < 12) {
-      heightWarning = 'Colchão fino (menos de 12cm) — o elástico pode ficar folgado, mas geralmente segura bem.';
+      heightWarning = 'Colchão fino (menos de 12cm). O elástico pode ficar folgado, mas geralmente segura bem.';
     }
   }
 
@@ -69,10 +69,10 @@ export function matchMattressSize(widthCm: number, lengthCm: number, heightCm?: 
  * "não encontrado".
  */
 const KNOWN_ALIASES: Record<string, { closest: MattressSizeKey; note: string }> = {
-  viuva:      { closest: 'solteiro', note: 'Colchão de viúva (128×188 ou 120×200) fica entre Solteiro e Casal. Nosso Solteiro (88×188) vai ficar largo demais — meça a largura exata do seu colchão pra eu confirmar.' },
-  'meio casal': { closest: 'solteiro', note: 'Meio casal costuma ser 120×188 ou 128×188 — mais largo que nosso Solteiro. Confirme a largura exata do colchão antes de comprar.' },
-  solteirao:  { closest: 'casal', note: 'Solteirão (96×203) é mais estreito que o Casal e mais comprido que o Solteiro — vale medir certinho, pode não ter um encaixe perfeito no nosso catálogo.' },
-  'super king': { closest: 'king', note: 'Super King (193×203 ou maior) — nosso King deve servir, mas confirme a largura.' },
+  viuva:      { closest: 'solteiro', note: 'Colchão de viúva (128×188 ou 120×200) fica entre Solteiro e Casal. Nosso Solteiro (88×188) vai ficar largo demais. Meça a largura exata do seu colchão pra eu confirmar.' },
+  'meio casal': { closest: 'solteiro', note: 'Meio casal costuma ser 120×188 ou 128×188, mais largo que nosso Solteiro. Confirme a largura exata do colchão antes de comprar.' },
+  solteirao:  { closest: 'casal', note: 'Solteirão (96×203) é mais estreito que o Casal e mais comprido que o Solteiro. Vale medir certinho, pode não ter um encaixe perfeito no nosso catálogo.' },
+  'super king': { closest: 'king', note: 'Super King (193×203 ou maior). Nosso King deve servir, mas confirme a largura.' },
 };
 
 export function lookupAlias(name: string): { closest: MattressSizeKey; note: string } | null {
