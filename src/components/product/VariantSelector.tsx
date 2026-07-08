@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { formatCurrency } from '@/lib/utils/format';
 import type { Product, InventoryItem, ProductVariant, CartItem } from '@/types';
 
 interface Props {
@@ -171,12 +172,12 @@ export function VariantSelector({ product, inventory }: Props) {
         </div>
       )}
 
-      {/* ── CTA ── */}
+      {/* ── CTA — desktop; no mobile a barra fixa abaixo já cobre isso ── */}
       <button
         onClick={addToCart}
         disabled={outOfStock || adding || !selectedVariant || loading}
         className={[
-          'w-full h-14 text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
+          'hidden sm:flex w-full h-14 text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 items-center justify-center gap-2',
           outOfStock || !selectedVariant
             ? 'cursor-not-allowed bg-warm text-faint border-mist'
             : loading
@@ -210,6 +211,35 @@ export function VariantSelector({ product, inventory }: Props) {
         </p>
       )}
     </div>
+
+      {/* ── Barra fixa mobile — preço + CTA sempre à mão ao rolar a página ── */}
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-[70] bg-paper border-t border-mist px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center gap-3">
+        <div className="flex flex-col leading-tight shrink-0">
+          <span className="text-[10px] text-faint">{qty > 1 ? `${qty} un.` : 'Preço'}</span>
+          <span className="font-display text-[1.3rem] text-ink">{formatCurrency(product.price * qty)}</span>
+        </div>
+        <button
+          onClick={addToCart}
+          disabled={outOfStock || adding || !selectedVariant || loading}
+          className={[
+            'flex-1 h-12 text-[12px] font-semibold tracking-[0.05em] border transition-all duration-150 flex items-center justify-center gap-2',
+            outOfStock || !selectedVariant
+              ? 'cursor-not-allowed bg-warm text-faint border-mist'
+              : loading
+              ? 'cursor-wait bg-warm text-faint border-mist'
+              : adding
+              ? 'cursor-wait bg-clay/80 text-paper border-clay/80'
+              : 'bg-ink text-paper border-ink active:bg-clay active:border-clay',
+          ].join(' ')}
+        >
+          {outOfStock
+            ? 'Fora de estoque'
+            : adding
+            ? <span className="spinner" />
+            : 'Adicionar ao carrinho'
+          }
+        </button>
+      </div>
 
       {/* ── Modal: item adicionado — continuar comprando ou ir pro carrinho ── */}
       {addedOpen && createPortal(
