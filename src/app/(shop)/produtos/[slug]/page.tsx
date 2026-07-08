@@ -2,8 +2,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Product, InventoryItem } from '@/types';
-import { formatCurrency } from '@/lib/utils/format';
-import { VariantSelector } from '@/components/product/VariantSelector';
+import { BuyBox } from '@/components/product/BuyBox';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCarousel } from '@/components/product/ProductCarousel';
 import { SizeGuideModal } from '@/components/product/SizeGuideModal';
@@ -121,102 +120,110 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="container-shop py-10 pb-28 sm:pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 xl:gap-24 items-start">
+      <div className="container-shop py-8 pb-28 sm:pb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
 
-          {/* ── Gallery ── */}
-          <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} />
+          {/* ── Coluna esquerda: galeria + informações do produto ── */}
+          <div className="flex flex-col gap-8 min-w-0">
+            <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} />
 
-          {/* ── Info ── */}
-          <FadeIn className="lg:sticky lg:top-24 flex flex-col gap-5" delay={100}>
-
-            <div>
-              <h1 className="font-display font-normal text-ink leading-[1.06] text-[2rem] sm:text-[2.4rem] lg:text-[2.8rem] mb-4">
-                {product.name}
-              </h1>
-              <p className="font-display text-[2rem] text-clay font-normal tracking-[-0.02em]">
-                {formatCurrency(product.price)}
-              </p>
-            </div>
-
-            {product.description && (
-              <p className="text-[14px] text-mid leading-relaxed pt-1">
-                {product.description}
-              </p>
-            )}
-
-            {/* ── Specs table ── */}
-            {(product.threadCount || product.composition || product.weightGsm || specTags.length > 0) && (
-              <div className="border border-mist">
-                <div className="px-4 py-3 bg-warm/50 border-b border-mist">
-                  <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Especificações do tecido</p>
-                </div>
-                <div className="divide-y divide-mist">
-                  {product.threadCount && (
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-[12px] text-mid">Fio count</span>
-                      <span className="text-[13px] font-semibold text-ink">{product.threadCount} fios</span>
-                    </div>
-                  )}
-                  {product.composition && (
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-[12px] text-mid">Composição</span>
-                      <span className="text-[13px] font-semibold text-ink">{product.composition}</span>
-                    </div>
-                  )}
-                  {product.weightGsm && (
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-[12px] text-mid">Gramatura</span>
-                      <span className="text-[13px] font-semibold text-ink">{product.weightGsm} g/m²</span>
-                    </div>
-                  )}
-                  {specTags.map(tag => (
-                    <div key={tag} className="flex items-center justify-between px-4 py-3">
-                      <span className="text-[12px] text-mid">Tipo</span>
-                      <span className="text-[13px] font-semibold text-ink capitalize">{tag}</span>
-                    </div>
-                  ))}
-                  {product.certifications?.map(cert => (
-                    <div key={cert} className="flex items-center justify-between px-4 py-3">
-                      <span className="text-[12px] text-mid">Certificação</span>
-                      <span className="text-[13px] font-semibold text-clay">{cert}</span>
-                    </div>
-                  ))}
-                </div>
+            <FadeIn className="flex flex-col gap-6">
+              <div>
+                {product.category && (
+                  <Link
+                    href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
+                    className="eyebrow text-clay hover:text-ink transition-colors mb-2 inline-block"
+                  >
+                    {product.category}
+                  </Link>
+                )}
+                <h1 className="font-display font-normal text-ink leading-[1.08] text-[1.9rem] sm:text-[2.3rem] lg:text-[2.5rem]">
+                  {product.name}
+                </h1>
               </div>
-            )}
 
-            {/* ── Size guide link ── */}
-            <div className="flex items-center gap-4">
-              <SizeGuideModal
-                columns={sizeGuideColumns}
-                rows={sizeGuideRows}
-                note={sizeGuideNote}
-                whatsappUrl={s.whatsappUrl || undefined}
-              />
-            </div>
+              {product.description && (
+                <p className="text-[14px] text-mid leading-relaxed max-w-[60ch]">
+                  {product.description}
+                </p>
+              )}
 
-            {/* Variant selector */}
-            <div className="border-t border-mist pt-5">
-              <VariantSelector product={product} inventory={inventory} />
-            </div>
-
-            {/* Trust signals — vindos das configs */}
-            {productTrusts.length > 0 && (
-              <div className="flex flex-col gap-2.5 border-t border-mist pt-4">
-                {productTrusts.map((text, i) => (
-                  <div key={i} className="flex items-center gap-3 text-[13px] text-mid">
-                    <span className="text-clay/80 shrink-0">{i === 0 ? <TruckIcon /> : i === 1 ? <PackageIcon /> : <PixIcon />}</span>
-                    <span>{text}</span>
+              {/* ── Specs table ── */}
+              {(product.threadCount || product.composition || product.weightGsm || specTags.length > 0) && (
+                <div className="border border-mist max-w-[520px]">
+                  <div className="px-4 py-3 bg-warm/50 border-b border-mist">
+                    <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Especificações do tecido</p>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="divide-y divide-mist">
+                    {product.threadCount && (
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <span className="text-[12px] text-mid">Fio count</span>
+                        <span className="text-[13px] font-semibold text-ink">{product.threadCount} fios</span>
+                      </div>
+                    )}
+                    {product.composition && (
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <span className="text-[12px] text-mid">Composição</span>
+                        <span className="text-[13px] font-semibold text-ink">{product.composition}</span>
+                      </div>
+                    )}
+                    {product.weightGsm && (
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <span className="text-[12px] text-mid">Gramatura</span>
+                        <span className="text-[13px] font-semibold text-ink">{product.weightGsm} g/m²</span>
+                      </div>
+                    )}
+                    {specTags.map(tag => (
+                      <div key={tag} className="flex items-center justify-between px-4 py-3">
+                        <span className="text-[12px] text-mid">Tipo</span>
+                        <span className="text-[13px] font-semibold text-ink capitalize">{tag}</span>
+                      </div>
+                    ))}
+                    {product.certifications?.map(cert => (
+                      <div key={cert} className="flex items-center justify-between px-4 py-3">
+                        <span className="text-[12px] text-mid">Certificação</span>
+                        <span className="text-[13px] font-semibold text-clay">{cert}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* Size guide */}
-            <SizeGuide
-              columns={(() => { try { return JSON.parse(s.bedSizeColumns || '[]'); } catch { return ['Tamanho','Cama','Comprimento','Largura']; } })()}
-              rows={(() => { try { return JSON.parse(s.bedSizeRows || '[]'); } catch { return []; } })()}
+              <div className="flex items-center gap-4">
+                <SizeGuideModal
+                  columns={sizeGuideColumns}
+                  rows={sizeGuideRows}
+                  note={sizeGuideNote}
+                  whatsappUrl={s.whatsappUrl || undefined}
+                />
+              </div>
+
+              {/* Trust signals — vindos das configs */}
+              {productTrusts.length > 0 && (
+                <div className="flex flex-col gap-2.5 border-t border-mist pt-5 max-w-[520px]">
+                  {productTrusts.map((text, i) => (
+                    <div key={i} className="flex items-center gap-3 text-[13px] text-mid">
+                      <span className="text-clay/80 shrink-0">{i === 0 ? <TruckIcon /> : i === 1 ? <PackageIcon /> : <PixIcon />}</span>
+                      <span>{text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <SizeGuide
+                columns={(() => { try { return JSON.parse(s.bedSizeColumns || '[]'); } catch { return ['Tamanho','Cama','Comprimento','Largura']; } })()}
+                rows={(() => { try { return JSON.parse(s.bedSizeRows || '[]'); } catch { return []; } })()}
+              />
+            </FadeIn>
+          </div>
+
+          {/* ── Coluna direita: buy box fixa, padrão marketplace ── */}
+          <FadeIn className="lg:sticky lg:top-24" delay={100}>
+            <BuyBox
+              product={product}
+              inventory={inventory}
+              pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
+              pixDiscountPct={s.pixDiscountPct ?? 0}
             />
           </FadeIn>
         </div>
