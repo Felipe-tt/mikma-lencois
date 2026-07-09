@@ -24,6 +24,9 @@ import { summarizeOrderItems }          from '@/lib/push/summarizeOrderItems';
 import { notifyCustomerDeliveryStatus } from '@/lib/email/deliveryStatusEmail';
 import { getClientIp }                  from '@/lib/security';
 import { rateLimit }                    from '@/lib/rateLimit';
+import { getSettings }                  from '@/lib/settings';
+import { geocodeCep }                   from '@/lib/shipping-pricing';
+import { fetchRoute }                   from '@/lib/routing';
 
 // Status Uber Direct → status interno do pedido
 const STATUS_MAP: Record<string, string> = {
@@ -95,6 +98,44 @@ function verifySignature(rawBody: Buffer, header: string): boolean {
       return false;
     }
   });
+}
+
+/**
+ * Calcula a rota loja→cliente (seguindo as ruas) e salva no pedido, mas só
+ * na primeira vez — a rota em si não muda durante a entrega, só a posição
+ * do motoboy ao longo dela. Chamado tanto no primeiro courier_update quanto
+ * na primeira mudança de status pra "pickup", o que vier primeiro.
+ * Best-effort: se a geocodificação ou o ORS falhar, simplesmente não seta
+ * routePoints — o mapa cai pro fallback de linha reta.
+ */
+async function ensureRoutePoints(
+  orderRef: FirebaseFirestore.DocumentReference,
+  orderData: FirebaseFirestore.DocumentData,
+  vehicleType?: string
+): Promise<void> {
+  if (orderData.delivery?.routePoints?.length) return; // já calculada
+
+  const cep = orderData.address?.cep as string | undefined;
+  if (!cep) return;
+
+  try {
+    const [settings, destCoords] = await Promise.all([
+      getSettings(),
+      geocodeCep(cep),
+    ]);
+    if (!destCoords || !settings.originLat || !settings.originLng) return;
+
+    const routePoints = await fetchRoute(
+      { lat: settings.originLat, lng: settings.originLng },
+      destCoords,
+      vehicleType
+    );
+    if (routePoints && routePoints.length > 0) {
+      await orderRef.update({ 'delivery.routePoints': routePoints });
+    }
+  } catch (err) {
+    console.warn('[uber-webhook] falha ao calcular rota (best-effort, ignorado):', err);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -174,10 +215,17 @@ export async function POST(req: NextRequest) {
       update['delivery.uberDirectDeliveryId'] = null;
       update['delivery.trackingUrl']          = null;
       update['delivery.dispatchedAt']         = null;
+      update['delivery.courierLat']           = null;
+      update['delivery.courierLng']           = null;
+      update['delivery.routePoints']          = null;
     }
 
     await orderRef.update(update);
     console.log(`[uber-webhook] ${orderRef.id}: ${uberStatus} → ${newStatus}`);
+
+    if (uberStatus === 'pickup') {
+      await ensureRoutePoints(orderRef, orderData, courierInStatus?.vehicle_type as string | undefined);
+    }
 
     const pushBuilder = PUSH_ON_STATUS[uberStatus];
     if (pushBuilder) {
@@ -195,7 +243,7 @@ export async function POST(req: NextRequest) {
       };
       await notifyInApp({
         type: IN_APP_TYPE[uberStatus],
-        message: `${title} — ${body}`,
+        message: `${title}: ${body}`,
         orderId: orderRef.id,
         url: `/painel/pedidos/${orderRef.id}`,
       });
@@ -221,6 +269,16 @@ export async function POST(req: NextRequest) {
     if (courier.name)         update['delivery.courierName']  = courier.name;
     if (courier.phone_number) update['delivery.courierPhone'] = courier.phone_number;
     if (courier.img_href)     update['delivery.courierPhoto'] = courier.img_href; // img_href conforme OpenAPI CourierInfo
+    if (courier.vehicle_type) update['delivery.courierVehicle'] = courier.vehicle_type;
+
+    // Posição ao vivo — chega a cada ~20s enquanto o motoboy está a
+    // caminho. É o que alimenta o pino que se move no mapa embutido.
+    const location = courier.location as { lat?: number; lng?: number } | undefined;
+    if (typeof location?.lat === 'number' && typeof location?.lng === 'number') {
+      update['delivery.courierLat']        = location.lat;
+      update['delivery.courierLng']        = location.lng;
+      update['delivery.courierLocationAt'] = new Date().toISOString();
+    }
 
     // ETAs atualizados — em courier_update o ETA vem no top-level do objeto data
     if (data?.dropoff_eta) update['delivery.dropoffEta'] = data.dropoff_eta;
@@ -228,6 +286,9 @@ export async function POST(req: NextRequest) {
 
     await orderRef.update(update);
     console.log(`[uber-webhook] ${orderRef.id}: courier_update — ${courier.name ?? '?'}`);
+
+    await ensureRoutePoints(orderRef, orderData, courier.vehicle_type as string | undefined);
+
     return NextResponse.json({ ok: true });
   }
 

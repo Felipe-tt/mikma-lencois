@@ -132,6 +132,10 @@ export interface Order {
     courierVehicle?: string     // vehicle_type (car, bicycle, scooter…)
     dropoffEta?: string         // ETA de entrega (ISO)
     pickupEta?: string          // ETA de coleta na loja (ISO)
+    courierLat?: number         // Posição ao vivo do entregador (atualizada a cada courier_update)
+    courierLng?: number
+    courierLocationAt?: string  // ISO — quando essa posição foi recebida
+    routePoints?: { lat: number; lng: number }[]  // rota loja→cliente (calculada 1x quando o motoboy é atribuído)
   }
   address: Address
   totalCents: number

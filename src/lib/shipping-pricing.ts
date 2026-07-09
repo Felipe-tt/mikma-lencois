@@ -42,7 +42,7 @@ export interface ShippingQuoteResult {
 
 // ── Geocode + cache ───────────────────────────────────────────────────────────
 
-async function geocodeCep(cep: string): Promise<{ lat: number; lng: number } | null> {
+export async function geocodeCep(cep: string): Promise<{ lat: number; lng: number } | null> {
   const clean = cep.replace(/\D/g, '');
   if (clean.length !== 8) return null;
 

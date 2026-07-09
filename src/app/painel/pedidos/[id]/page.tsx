@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Order, User } from '@/types';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
+import { LiveDeliveryMap } from '@/components/tracking/LiveDeliveryMap';
 import { carrierNameVendor, trackingUrl } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import {
@@ -519,12 +520,21 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   </div>
                 )}
 
+                {/* Mapa ao vivo */}
+                <LiveDeliveryMap
+                  routePoints={order.delivery.routePoints}
+                  courierLat={order.delivery.courierLat}
+                  courierLng={order.delivery.courierLng}
+                  courierLocationAt={order.delivery.courierLocationAt}
+                  courierName={order.delivery.courierName}
+                />
+
                 {/* Link rastreio em tempo real */}
                 {order.delivery.trackingUrl && (
                   <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
                     className="flex items-center justify-center gap-1.5 w-full py-2 bg-[#1E1208] text-[#FAF8F5] text-[12px] font-bold hover:bg-[#1E1208]/80 transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                    Ver motoboy no mapa
+                    Abrir rastreio da Uber em outra aba
                   </a>
                 )}
               </div>
