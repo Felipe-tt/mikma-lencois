@@ -1,5 +1,6 @@
 'use client';
-import { IconMail, IconMessages, IconAlert } from '@/components/ui/Icon';
+import { IconMail, IconMessages, IconAlert, IconTrash } from '@/components/ui/Icon';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
@@ -27,6 +28,41 @@ export default function PainelMensagens() {
     () => conversations.find(c => c.id === selectedId) ?? null,
     [conversations, selectedId]
   );
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function deleteConversation(conv: Conversation, e?: React.MouseEvent) {
+    e?.stopPropagation();
+    const { confirmed } = await confirmDialog({
+      message: `Excluir conversa com ${conv.customerName || conv.customerEmail}?`,
+      detail: 'Todas as mensagens dessa conversa serão apagadas permanentemente. Essa ação não pode ser desfeita.',
+      variant: 'danger',
+      confirmLabel: 'Excluir conversa',
+    });
+    if (!confirmed) return;
+
+    setDeletingId(conv.id);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`/api/painel/conversations/${conv.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Erro ao excluir a conversa');
+      }
+      if (selectedId === conv.id) setSelectedId(null);
+    } catch (err) {
+      await confirmDialog({
+        message: 'Não foi possível excluir a conversa',
+        detail: err instanceof Error ? err.message : 'Tente novamente em instantes.',
+        alertOnly: true,
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function openConversation(conv: Conversation) {
     setSelectedId(conv.id);
@@ -65,42 +101,60 @@ export default function PainelMensagens() {
                 </p>
               </div>
             ) : conversations.map(conv => (
-              <button
-                key={conv.id}
-                onClick={() => openConversation(conv)}
-                className={`w-full text-left px-4 py-3.5 border-b border-[#E6DFD5] transition-colors ${
-                  selectedId === conv.id
-                    ? 'bg-[#1E1208] text-[#FAF8F5]'
-                    : 'hover:bg-[#F0EBE1]'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  {/* Avatar inicial */}
-                  <div className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                    selectedId === conv.id ? 'bg-[#FAF8F5]/20 text-[#FAF8F5]' : 'bg-[#E6DFD5] text-[#705A48]'
-                  }`}>
-                    {(conv.customerName || conv.customerEmail)[0].toUpperCase()}
+              <div key={conv.id} className="group relative">
+                <button
+                  onClick={() => openConversation(conv)}
+                  className={`w-full text-left px-4 py-3.5 pr-10 border-b border-[#E6DFD5] transition-colors ${
+                    selectedId === conv.id
+                      ? 'bg-[#1E1208] text-[#FAF8F5]'
+                      : 'hover:bg-[#F0EBE1]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {/* Avatar inicial */}
+                    <div className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                      selectedId === conv.id ? 'bg-[#FAF8F5]/20 text-[#FAF8F5]' : 'bg-[#E6DFD5] text-[#705A48]'
+                    }`}>
+                      {(conv.customerName || conv.customerEmail)[0].toUpperCase()}
+                    </div>
+                    <span className={`text-[13px] font-semibold truncate flex-1 ${
+                      selectedId === conv.id ? 'text-[#FAF8F5]' : 'text-[#1E1208]'
+                    }`}>
+                      {conv.customerName || conv.customerEmail}
+                    </span>
+                    {conv.unread && (
+                      <span className="shrink-0 w-2 h-2 rounded-full bg-[#C4714A]" />
+                    )}
                   </div>
-                  <span className={`text-[13px] font-semibold truncate flex-1 ${
-                    selectedId === conv.id ? 'text-[#FAF8F5]' : 'text-[#1E1208]'
+                  <p className={`text-[11px] truncate pl-8 ${
+                    selectedId === conv.id ? 'text-[#FAF8F5]/60' : 'text-[#B09C8C]'
                   }`}>
-                    {conv.customerName || conv.customerEmail}
-                  </span>
-                  {conv.unread && (
-                    <span className="shrink-0 w-2 h-2 rounded-full bg-[#C4714A]" />
+                    {conv.lastMessagePreview || '—'}
+                  </p>
+                  <p className={`text-[10px] mt-1 pl-8 ${
+                    selectedId === conv.id ? 'text-[#FAF8F5]/40' : 'text-[#B09C8C]/60'
+                  }`}>
+                    {formatTsDateTime(conv.lastMessageAt)}
+                  </p>
+                </button>
+
+                <button
+                  onClick={e => deleteConversation(conv, e)}
+                  disabled={deletingId === conv.id}
+                  title="Excluir conversa"
+                  className={`absolute right-2.5 top-3.5 w-7 h-7 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity disabled:opacity-60 ${
+                    selectedId === conv.id
+                      ? 'text-[#FAF8F5]/50 hover:text-[#FAF8F5]'
+                      : 'text-[#B09C8C] hover:text-red-500'
+                  }`}
+                >
+                  {deletingId === conv.id ? (
+                    <span className="w-3.5 h-3.5 border border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <IconTrash size={14} />
                   )}
-                </div>
-                <p className={`text-[11px] truncate pl-8 ${
-                  selectedId === conv.id ? 'text-[#FAF8F5]/60' : 'text-[#B09C8C]'
-                }`}>
-                  {conv.lastMessagePreview || '—'}
-                </p>
-                <p className={`text-[10px] mt-1 pl-8 ${
-                  selectedId === conv.id ? 'text-[#FAF8F5]/40' : 'text-[#B09C8C]/60'
-                }`}>
-                  {formatTsDateTime(conv.lastMessageAt)}
-                </p>
-              </button>
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -108,7 +162,12 @@ export default function PainelMensagens() {
         {/* ── Thread ── */}
         <div className={`flex-1 flex flex-col overflow-hidden ${selected ? '' : 'hidden sm:flex'}`}>
           {selected ? (
-            <ConversationThread conversation={selected} onBack={() => setSelectedId(null)} />
+            <ConversationThread
+              conversation={selected}
+              onBack={() => setSelectedId(null)}
+              onDelete={() => deleteConversation(selected)}
+              deleting={deletingId === selected.id}
+            />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-3">
               <IconMessages size={32} className="text-[#E6DFD5] mx-auto mb-3" />
@@ -127,9 +186,13 @@ export default function PainelMensagens() {
 function ConversationThread({
   conversation,
   onBack,
+  onDelete,
+  deleting,
 }: {
   conversation: Conversation;
   onBack: () => void;
+  onDelete: () => void;
+  deleting: boolean;
 }) {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -264,6 +327,18 @@ function ConversationThread({
           >
             Abrir no e-mail
           </a>
+          <button
+            onClick={onDelete}
+            disabled={deleting}
+            title="Excluir conversa"
+            className="w-7 h-7 flex items-center justify-center text-[#B09C8C] hover:text-red-500 transition-colors disabled:opacity-60"
+          >
+            {deleting ? (
+              <span className="w-3.5 h-3.5 border border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <IconTrash size={14} />
+            )}
+          </button>
         </div>
       </div>
 
