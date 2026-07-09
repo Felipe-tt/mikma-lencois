@@ -22,6 +22,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { getClientIp } from '@/lib/security';
+import { rateLimit } from '@/lib/rateLimit';
 
 interface MEOrderEventData {
   id: string;               // ID do envio no ME (= delivery.melhorEnvioOrderId)
@@ -80,6 +82,13 @@ function verifySignature(rawBody: string, signature: string | null): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  // Defesa contra flood — o Melhor Envio manda poucos eventos por minuto
+  // em operação normal; isso só protege contra abuso/DoS na URL pública.
+  const ip = getClientIp(req);
+  if (!rateLimit(`me-webhook-ip:${ip}`, 60, 60_000)) {
+    return NextResponse.json({ error: 'Muitas requisições' }, { status: 429 });
+  }
+
   const rawBody = await req.text();
   const signature = req.headers.get('x-me-signature');
 

@@ -7,6 +7,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
+import { getClientIp } from '@/lib/security';
+import { rateLimit } from '@/lib/rateLimit';
 
 const ABACATEPAY_PUBLIC_KEY = process.env.ABACATEPAY_PUBLIC_KEY!;
 
@@ -30,6 +32,13 @@ function formatCurrency(cents: number): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Defesa contra flood — a AbacatePay manda poucos eventos por transação
+  // em operação normal; isso só protege contra abuso/DoS na URL pública.
+  const ip = getClientIp(req);
+  if (!rateLimit(`payment-webhook-ip:${ip}`, 60, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   const rawBody = await req.text();
   const signature = req.headers.get('x-abacatepay-signature') ?? '';
 

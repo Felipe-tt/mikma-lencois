@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { verifyAuth } from '@/lib/security';
+import { verifyAuth, getClientIp } from '@/lib/security';
+import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -18,6 +19,15 @@ const deleteSchema = z.object({
 export async function POST(req: NextRequest) {
   const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
   if (!auth.ok) return auth.response;
+
+  const ip = getClientIp(req);
+  const key = `push-token:${auth.decoded.uid}`;
+  if (!rateLimit(key, 15, 60_000) || !rateLimit(`push-token-ip:${ip}`, 30, 60_000)) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde um pouco.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }
+    );
+  }
 
   let body: unknown;
   try {
@@ -72,6 +82,15 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
   if (!auth.ok) return auth.response;
+
+  const ip = getClientIp(req);
+  const key = `push-token-del:${auth.decoded.uid}`;
+  if (!rateLimit(key, 15, 60_000) || !rateLimit(`push-token-del-ip:${ip}`, 30, 60_000)) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde um pouco.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }
+    );
+  }
 
   let body: unknown;
   try {

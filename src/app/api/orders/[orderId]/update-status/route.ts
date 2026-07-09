@@ -5,7 +5,8 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { carrierName, trackingUrl as getTrackingUrl } from '@/lib/carriers';
 import { sendEmail } from '@/lib/email';
 import { formatCurrency } from '@/lib/utils/format';
-import { extractBearer } from '@/lib/security';
+import { extractBearer, getClientIp } from '@/lib/security';
+import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import type { Order, OrderStatus, User } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br';
@@ -182,6 +183,7 @@ export async function POST(
   if ('response' in bearer) return bearer.response;
 
   let role: string;
+  let uid: string;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
     // IMPORTANTE: o role vem do custom claim do token (setado via Admin SDK),
@@ -190,12 +192,22 @@ export async function POST(
     // então ler o role de lá permitiria qualquer comprador se autopromover
     // a seller e alterar status/cancelar pedidos de qualquer cliente.
     role = (decoded as { role?: string }).role ?? '';
+    uid = decoded.uid;
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
 
   if (role !== 'seller' && role !== 'admin') {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+  }
+
+  const ip = getClientIp(req);
+  const key = `update-status:${uid}`;
+  if (!rateLimit(key, 40, 60_000) || !rateLimit(`update-status-ip:${ip}`, 80, 60_000)) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde um pouco.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }
+    );
   }
 
   const body = await req.json().catch(() => ({})) as { trackingCode?: string };

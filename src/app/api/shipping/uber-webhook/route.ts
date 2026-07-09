@@ -22,6 +22,8 @@ import { notifySeller }                 from '@/lib/push/notifySeller';
 import { notifyInApp }                  from '@/lib/push/notifyInApp';
 import { summarizeOrderItems }          from '@/lib/push/summarizeOrderItems';
 import { notifyCustomerDeliveryStatus } from '@/lib/email/deliveryStatusEmail';
+import { getClientIp }                  from '@/lib/security';
+import { rateLimit }                    from '@/lib/rateLimit';
 
 // Status Uber Direct → status interno do pedido
 const STATUS_MAP: Record<string, string> = {
@@ -96,6 +98,13 @@ function verifySignature(rawBody: Buffer, header: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  // Defesa contra flood — a Uber manda poucos eventos por corrida em
+  // operação normal; isso só protege contra abuso/DoS na URL pública.
+  const ip = getClientIp(req);
+  if (!rateLimit(`uber-webhook-ip:${ip}`, 60, 60_000)) {
+    return NextResponse.json({ error: 'too many requests' }, { status: 429 });
+  }
+
   const rawBody = Buffer.from(await req.arrayBuffer());
   const sig     = req.headers.get('x-postmates-signature')
                 ?? req.headers.get('x-uber-signature')

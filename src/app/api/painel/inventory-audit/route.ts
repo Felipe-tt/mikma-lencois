@@ -2,7 +2,8 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/security';
+import { verifyAuth, getClientIp } from '@/lib/security';
+import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { adminDb } from '@/lib/firebase/admin';
 
 /**
@@ -20,6 +21,17 @@ import { adminDb } from '@/lib/firebase/admin';
 export async function GET(req: NextRequest) {
   const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
   if (!auth.ok) return auth.response;
+
+  // Rota cara (varre todos os pedidos pending_payment + todo o inventário,
+  // até 30s de execução) — limite mais apertado que o normal.
+  const ip = getClientIp(req);
+  const key = `inventory-audit:${auth.decoded.uid}`;
+  if (!rateLimit(key, 6, 60_000) || !rateLimit(`inventory-audit-ip:${ip}`, 12, 60_000)) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde um pouco antes de rodar a auditoria de novo.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }
+    );
+  }
 
   // ── 1. Soma, por SKU, quanto deveria estar reservado ──────────────────
   // Fonte da verdade: pedidos com status pending_payment são os únicos

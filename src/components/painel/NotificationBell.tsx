@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -38,9 +39,12 @@ export function NotificationBell() {
   const router = useRouter();
   const [items, setItems] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const q = query(
@@ -64,13 +68,35 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
+  const PANEL_WIDTH = 320;
+  const MARGIN = 12;
+
+  function computePos() {
+    if (!btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    const left = Math.min(
+      Math.max(MARGIN, r.right - PANEL_WIDTH),
+      window.innerWidth - PANEL_WIDTH - MARGIN
+    );
+    setPos({ top: r.bottom + 8, left });
+  }
+
   function toggleOpen() {
-    if (!open && btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 8, right: window.innerWidth - r.right });
-    }
+    if (!open) computePos();
     setOpen(o => !o);
   }
+
+  useEffect(() => {
+    if (!open) return;
+    function onReposition() { computePos(); }
+    window.addEventListener('resize', onReposition);
+    window.addEventListener('scroll', onReposition, true);
+    return () => {
+      window.removeEventListener('resize', onReposition);
+      window.removeEventListener('scroll', onReposition, true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const unread = items.filter(n => !n.read);
 
@@ -108,11 +134,11 @@ export function NotificationBell() {
         )}
       </button>
 
-      {open && pos && (
+      {open && pos && mounted && createPortal(
         <div
           ref={panelRef}
-          style={{ position: 'fixed', top: pos.top, right: pos.right }}
-          className="w-80 max-w-[90vw] bg-white border border-[#E6DFD5] shadow-lg z-[100] max-h-[70vh] flex flex-col"
+          style={{ position: 'fixed', top: pos.top, left: pos.left, width: PANEL_WIDTH }}
+          className="max-w-[calc(100vw-24px)] bg-white border border-[#E6DFD5] shadow-lg z-[100] max-h-[70vh] flex flex-col"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#E6DFD5]">
             <p className="text-[12px] font-bold text-[#1E1208] uppercase tracking-wide">Notificações</p>
@@ -144,7 +170,8 @@ export function NotificationBell() {
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
