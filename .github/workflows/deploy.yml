@@ -127,8 +127,8 @@ jobs:
         run: |
           git diff --name-only HEAD~1 HEAD | grep -q '^functions/' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
 
-      - name: Deploy Firestore Rules
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules --project mikma-lencois
+      - name: Deploy Firestore Rules & Indexes
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules,firestore:indexes --project mikma-lencois
 
       - name: Deploy Storage Rules
         # continue-on-error mantido como rede de segurança: se faltar
