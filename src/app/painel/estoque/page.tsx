@@ -78,9 +78,26 @@ export default function EstoquePage() {
   const available = (item: InventoryItem) => item.quantity - item.reserved;
   const isLow = (item: InventoryItem) => available(item) <= item.lowStockThreshold;
   const filtered = items
-    .filter(i => !search || i.productName?.toLowerCase().includes(search.toLowerCase()) || variantLabel(i).toLowerCase().includes(search.toLowerCase()))
+    .filter(i => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return i.productName?.toLowerCase().includes(q) || variantLabel(i).toLowerCase().includes(q) || i.sku?.toLowerCase().includes(q);
+    })
     .filter(i => !onlyLow || isLow(i));
   const lowCount = items.filter(isLow).length;
+
+  // Agrupa por produto (uma linha de várias variações fica muito mais fácil de escanear assim)
+  const groups = useMemo(() => {
+    const map = new Map<string, InventoryItem[]>();
+    for (const item of filtered) {
+      const key = item.productId || item.productName || item.id;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(item);
+    }
+    return Array.from(map.entries())
+      .map(([productId, list]) => ({ productId, productName: list[0]?.productName || productId, list }))
+      .sort((a, b) => a.productName.localeCompare(b.productName));
+  }, [filtered]);
 
   function baseLog(type: 'in' | 'out', quantity: number, reason: string): MovementLog {
     return {
@@ -275,7 +292,7 @@ export default function EstoquePage() {
         </div>
       )}
 
-      {items.length > 3 && (
+      {items.length > 0 && (
         <div className="flex items-center gap-3 mb-4">
           <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B09C8C]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -319,8 +336,17 @@ export default function EstoquePage() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {filtered.map((item) => {
+        <div className="flex flex-col gap-5">
+          {groups.map((group) => (
+            <div key={group.productId}>
+              <div className="flex items-baseline justify-between mb-2 px-0.5">
+                <p className="text-[13px] font-bold text-[#1E1208]">{group.productName}</p>
+                <p className="text-[11px] text-[#B09C8C]">
+                  {group.list.length} {group.list.length === 1 ? 'variação' : 'variações'} · {group.list.reduce((s, i) => s + available(i), 0)} un. disponíveis
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                {group.list.map((item) => {
             const low = isLow(item);
             const avail = available(item);
             const action = actionFor?.id === item.id ? actionFor.kind : null;
@@ -421,6 +447,9 @@ export default function EstoquePage() {
               </div>
             );
           })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
