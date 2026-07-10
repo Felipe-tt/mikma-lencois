@@ -74,33 +74,33 @@ export default function HistoricoEstoquePage() {
     <div className="max-w-4xl">
       <div className="flex items-start justify-between mb-6 gap-3">
         <div>
-          <h1 className="font-display font-normal text-[#1E1208] text-2xl">Histórico de estoque</h1>
-          <p className="text-[13px] text-[#B09C8C] mt-1">Todas as movimentações registradas, dos itens mais recentes.</p>
+          <h1 className="font-display font-normal text-ink text-2xl">Histórico de estoque</h1>
+          <p className="text-[13px] text-faint mt-1">Todas as movimentações registradas, dos itens mais recentes.</p>
         </div>
-        <Link href="/painel/estoque" className="shrink-0 border border-[#E6DFD5] text-[#705A48] text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-[#F0EBE1] transition-colors">
+        <Link href="/painel/estoque" className="shrink-0 border border-mist text-mid text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-warm transition-colors">
           Voltar ao estoque
         </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="text-center bg-[#FAF8F5] border border-[#E6DFD5] px-3 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-[#B09C8C] mb-1">Saídas (no filtro atual)</p>
+        <div className="text-center bg-paper border border-mist px-3 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-faint mb-1">Saídas (no filtro atual)</p>
           <p className="text-2xl font-bold text-red-600">{totals.out}</p>
         </div>
-        <div className="text-center bg-[#FAF8F5] border border-[#E6DFD5] px-3 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-[#B09C8C] mb-1">Entradas (no filtro atual)</p>
+        <div className="text-center bg-paper border border-mist px-3 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-faint mb-1">Entradas (no filtro atual)</p>
           <p className="text-2xl font-bold text-emerald-700">{totals.inn}</p>
         </div>
       </div>
 
       <div className="flex items-center gap-2 mb-4">
         <div className="relative flex-1">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B09C8C]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
           <input type="search" placeholder="Buscar por produto, motivo ou quem registrou..." value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full border border-[#E6DFD5] bg-[#FAF8F5] pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />
+            className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40" />
         </div>
         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as 'todos' | 'in' | 'out')}
-          className="border border-[#E6DFD5] bg-[#FAF8F5] px-3 py-2.5 text-sm focus:outline-none">
+          className="border border-mist bg-paper px-3 py-2.5 text-sm focus:outline-none">
           <option value="todos">Tudo</option>
           <option value="out">Só saídas</option>
           <option value="in">Só entradas</option>
@@ -108,28 +108,28 @@ export default function HistoricoEstoquePage() {
       </div>
 
       {movements.length === 0 ? (
-        <div className="border border-[#E6DFD5] bg-[#FAF8F5] py-16 text-center">
-          <IconBox size={40} className="text-[#E6DFD5] mx-auto mb-3" />
-          <p className="text-sm text-[#B09C8C]">Nenhuma movimentação encontrada.</p>
+        <div className="border border-mist bg-paper py-16 text-center">
+          <IconBox size={40} className="text-mist mx-auto mb-3" />
+          <p className="text-sm text-faint">Nenhuma movimentação encontrada.</p>
         </div>
       ) : (
-        <div className="border border-[#E6DFD5] bg-[#FAF8F5] divide-y divide-[#E6DFD5]">
+        <div className="border border-mist bg-paper divide-y divide-mist">
           {movements.map((m, i) => (
             <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-[#1E1208] truncate">{m.productName} <span className="font-normal text-[#B09C8C]">· {m.variantLabel}</span></p>
-                <p className="text-[11px] text-[#B09C8C] truncate">{m.reason}{m.by ? ` — ${m.by}` : ''}</p>
+                <p className="text-[13px] font-semibold text-ink truncate">{m.productName} <span className="font-normal text-faint">· {m.variantLabel}</span></p>
+                <p className="text-[11px] text-faint truncate">{m.reason}{m.by ? ` — ${m.by}` : ''}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className={`text-[13px] font-bold ${m.type === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>{m.type === 'out' ? '−' : '+'}{m.quantity}</p>
-                <p className="text-[10px] text-[#B09C8C]">{new Date(m.date).toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] text-faint">{new Date(m.date).toLocaleString('pt-BR')}</p>
               </div>
             </div>
           ))}
         </div>
       )}
       {movements.length === 300 && (
-        <p className="text-[11px] text-[#B09C8C] mt-3 text-center">Mostrando as 300 movimentações mais recentes.</p>
+        <p className="text-[11px] text-faint mt-3 text-center">Mostrando as 300 movimentações mais recentes.</p>
       )}
     </div>
   );

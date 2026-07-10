@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  darkMode: 'class',
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
@@ -10,20 +11,24 @@ const config: Config = {
         mono:    ['ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {
-        ink:       '#1E1208',
-        'ink-80':  'rgba(30,18,8,0.8)',
-        paper:     '#FAF8F5',
-        warm:      '#F0EAE1',
-        'warm-d':  '#E5DDD2',
-        linen:     '#D8CFBF',
-        clay:      '#B8622F',
-        'clay-d':  '#96501E',
-        'clay-l':  '#CC7A47',
-        mist:      '#E6DFD5',
-        'mist-d':  '#D5CAC0',
-        mid:       '#705A48',
-        faint:     '#B09C8C',
-        'faint-l': '#CCBDB0',
+        // Cada token é uma CSS variable (definida em globals.css) para que o
+        // dark mode troque a paleta inteira sem precisar de `dark:` em todo
+        // componente. O modificador de opacidade (ex: bg-ink/80) continua
+        // funcionando graças ao formato "R G B" + `<alpha-value>`.
+        ink:       'rgb(var(--c-ink) / <alpha-value>)',
+        'ink-80':  'rgb(var(--c-ink) / 0.8)',
+        paper:     'rgb(var(--c-paper) / <alpha-value>)',
+        warm:      'rgb(var(--c-warm) / <alpha-value>)',
+        'warm-d':  'rgb(var(--c-warm-d) / <alpha-value>)',
+        linen:     'rgb(var(--c-linen) / <alpha-value>)',
+        clay:      'rgb(var(--c-clay) / <alpha-value>)',
+        'clay-d':  'rgb(var(--c-clay-d) / <alpha-value>)',
+        'clay-l':  'rgb(var(--c-clay-l) / <alpha-value>)',
+        mist:      'rgb(var(--c-mist) / <alpha-value>)',
+        'mist-d':  'rgb(var(--c-mist-d) / <alpha-value>)',
+        mid:       'rgb(var(--c-mid) / <alpha-value>)',
+        faint:     'rgb(var(--c-faint) / <alpha-value>)',
+        'faint-l': 'rgb(var(--c-faint-l) / <alpha-value>)',
       },
       fontSize: {
         '2xs': ['0.65rem',  { lineHeight: '1rem' }],

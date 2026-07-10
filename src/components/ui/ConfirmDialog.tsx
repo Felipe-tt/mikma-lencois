@@ -154,7 +154,7 @@ export function ConfirmDialogHost() {
 
   const confirmCls = variant === 'danger'
     ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-300'
-    : 'bg-[#C4714A] text-white hover:bg-[#A8593A] focus:ring-[#C4714A]/40';
+    : 'bg-clay-l text-paper hover:bg-[#A8593A] focus:ring-clay-l/40';
 
   return createPortal(
     <div
@@ -165,22 +165,22 @@ export function ConfirmDialogHost() {
       aria-labelledby="confirm-dialog-message"
     >
       <div
-        className="bg-[#FAF8F5] w-full max-w-[400px] shadow-2xl animate-confirm-in rounded-none overflow-hidden"
+        className="bg-paper w-full max-w-[400px] shadow-2xl animate-confirm-in rounded-none overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header stripe */}
-        <div className={`h-1 w-full ${variant === 'danger' ? 'bg-red-500' : 'bg-[#C4714A]'}`} />
+        <div className={`h-1 w-full ${variant === 'danger' ? 'bg-red-500' : 'bg-clay-l'}`} />
 
         {/* Content */}
         <div className="px-6 pt-5 pb-2">
           <p
             id="confirm-dialog-message"
-            className="text-[14px] font-semibold text-[#1E1208] leading-snug"
+            className="text-[14px] font-semibold text-ink leading-snug"
           >
             {message}
           </p>
           {detail && (
-            <p className="mt-1.5 text-[12px] text-[#705A48] leading-relaxed">{detail}</p>
+            <p className="mt-1.5 text-[12px] text-mid leading-relaxed">{detail}</p>
           )}
 
           {withInput && (
@@ -191,7 +191,7 @@ export function ConfirmDialogHost() {
               onChange={e => setInputValue(e.target.value)}
               placeholder={inputPlaceholder ?? ''}
               onKeyDown={e => { if (e.key === 'Enter') resolve(true); }}
-              className="mt-4 w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#C4714A]/25 placeholder:text-[#C8BAB0]"
+              className="mt-4 w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/25 placeholder:text-faint-l"
             />
           )}
         </div>
@@ -202,7 +202,7 @@ export function ConfirmDialogHost() {
             <button
               type="button"
               onClick={() => resolve(false)}
-              className="px-4 py-2 text-[12px] font-semibold text-[#705A48] border border-[#E6DFD5] hover:bg-[#F0EBE1] transition-colors focus:outline-none focus:ring-2 focus:ring-[#E6DFD5]"
+              className="px-4 py-2 text-[12px] font-semibold text-mid border border-mist hover:bg-warm transition-colors focus:outline-none focus:ring-2 focus:ring-mist"
             >
               {cancelLabel ?? 'Cancelar'}
             </button>

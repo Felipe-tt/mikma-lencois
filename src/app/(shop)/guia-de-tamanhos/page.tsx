@@ -20,13 +20,13 @@ export default async function GuiaDeTamanhosPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 sm:py-14">
-      <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-[#9C8878] mb-4 text-center">
+      <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-4 text-center">
         Guia de tamanhos
       </p>
-      <h1 className="font-display font-normal text-[#1E1208] leading-[1.05] tracking-[-0.02em] mb-4 text-[clamp(2rem,6vw,3.2rem)] text-center">
+      <h1 className="font-display font-normal text-ink leading-[1.05] tracking-[-0.02em] mb-4 text-[clamp(2rem,6vw,3.2rem)] text-center">
         Qual lençol é o certo pro seu colchão?
       </h1>
-      <p className="text-[15px] text-[#705A48] max-w-[52ch] mx-auto text-center leading-relaxed mb-10">
+      <p className="text-[15px] text-mid max-w-[52ch] mx-auto text-center leading-relaxed mb-10">
         Meça a largura e o comprimento do colchão (não da cama, do colchão em si) e a gente te diz exatamente qual tamanho comprar, sem chute.
       </p>
 

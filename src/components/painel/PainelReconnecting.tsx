@@ -61,7 +61,7 @@ export function PainelReconnectingBanner() {
 
   return (
     <div
-      className="fixed top-3 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-2 px-3.5 py-2 bg-[#1E1208] text-[#FAF8F5] text-[12px] font-medium shadow-lg rounded-sm animate-fade-in"
+      className="fixed top-3 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-2 px-3.5 py-2 bg-ink text-paper text-[12px] font-medium shadow-lg rounded-sm animate-fade-in"
       role="status"
       aria-live="polite"
     >

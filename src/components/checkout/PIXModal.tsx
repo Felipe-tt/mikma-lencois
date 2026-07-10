@@ -175,7 +175,7 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
 
                 {/* QR Code */}
                 <div className="flex flex-col items-center gap-3">
-                  <div className="border-2 border-mist p-3 bg-white">
+                  <div className="border-2 border-mist p-3 bg-white dark:bg-warm">
                     {qrCode ? (
                       <img src={qrCode} alt="QR Code PIX" className="w-44 h-44 block" width={176} height={176}/>
                     ) : (
@@ -209,7 +209,7 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
                     <button
                       onClick={copy}
                       className={`shrink-0 px-4 py-2.5 text-xs font-bold tracking-[0.08em] uppercase transition-colors ${
-                        copied ? 'bg-emerald-600 text-white' : 'bg-ink text-paper hover:bg-clay'
+                        copied ? 'bg-emerald-600 text-paper' : 'bg-ink text-paper hover:bg-clay'
                       }`}
                     >
                       {copied ? (

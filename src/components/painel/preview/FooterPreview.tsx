@@ -11,65 +11,65 @@ export function FooterPreview({ s }: { s: StoreSettings }) {
   const status = s.businessHours ? getOpenStatus(parseBusinessHours(s.businessHours), s.businessHoursTimezone) : null;
 
   return (
-    <footer className="bg-[#1E1208] text-[#FAF8F5]">
-      <div className="px-6 sm:px-10 py-10 border-t border-[#FAF8F5]/[0.07]">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 pb-9 border-b border-[#FAF8F5]/[0.07]">
+    <footer className="bg-ink text-paper">
+      <div className="px-6 sm:px-10 py-10 border-t border-paper/[0.07]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 pb-9 border-b border-paper/[0.07]">
 
           <div className="col-span-2 sm:col-span-1 flex flex-col gap-4">
-            <div className="h-5 w-24 bg-[#FAF8F5]/15 rounded-sm" />
-            <p className="text-[12px] text-[#FAF8F5]/45 leading-relaxed max-w-[20ch]">
+            <div className="h-5 w-24 bg-paper/15 rounded-sm" />
+            <p className="text-[12px] text-paper/45 leading-relaxed max-w-[20ch]">
               {s.storeSlogan}
             </p>
             {(s.instagramUrl || wa) && (
               <div className="flex items-center gap-3 mt-1">
-                {s.instagramUrl && <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#FAF8F5]/40">Instagram</span>}
-                {wa && <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#FAF8F5]/40">WhatsApp</span>}
+                {s.instagramUrl && <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-paper/40">Instagram</span>}
+                {wa && <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-paper/40">WhatsApp</span>}
               </div>
             )}
           </div>
 
           <div>
-            <p className="text-[8px] font-bold tracking-[0.24em] uppercase text-[#FAF8F5]/30 mb-4">Loja</p>
+            <p className="text-[8px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-4">Loja</p>
             <ul className="flex flex-col gap-2.5">
-              <li className="text-[12px] text-[#FAF8F5]/50">Produtos</li>
-              <li className="text-[12px] text-[#FAF8F5]/50">Sobre nós</li>
+              <li className="text-[12px] text-paper/50">Produtos</li>
+              <li className="text-[12px] text-paper/50">Sobre nós</li>
             </ul>
           </div>
 
           <div>
-            <p className="text-[8px] font-bold tracking-[0.24em] uppercase text-[#FAF8F5]/30 mb-4">Conta</p>
+            <p className="text-[8px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-4">Conta</p>
             <ul className="flex flex-col gap-2.5">
-              <li className="text-[12px] text-[#FAF8F5]/50">Meus pedidos</li>
-              <li className="text-[12px] text-[#FAF8F5]/50">Minha conta</li>
+              <li className="text-[12px] text-paper/50">Meus pedidos</li>
+              <li className="text-[12px] text-paper/50">Minha conta</li>
             </ul>
           </div>
 
           <div>
-            <p className="text-[8px] font-bold tracking-[0.24em] uppercase text-[#FAF8F5]/30 mb-4">Contato</p>
+            <p className="text-[8px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-4">Contato</p>
             <ul className="flex flex-col gap-2.5">
               {status && (
                 <li className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.isOpen ? 'bg-green-400' : 'bg-[#FAF8F5]/25'}`} />
-                  <span className={`text-[12px] ${status.isOpen ? 'text-green-400/90' : 'text-[#FAF8F5]/50'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.isOpen ? 'bg-green-400' : 'bg-paper/25'}`} />
+                  <span className={`text-[12px] ${status.isOpen ? 'text-green-400/90' : 'text-paper/50'}`}>
                     {status.isOpen ? 'Aberto agora' : 'Fechado agora'}
                   </span>
                 </li>
               )}
-              {s.storeEmail && <li className="text-[12px] text-[#FAF8F5]/50">{s.storeEmail}</li>}
-              <li className="text-[12px] text-[#FAF8F5]/50">Privacidade</li>
-              <li className="text-[12px] text-[#FAF8F5]/50">Termos de uso</li>
+              {s.storeEmail && <li className="text-[12px] text-paper/50">{s.storeEmail}</li>}
+              <li className="text-[12px] text-paper/50">Privacidade</li>
+              <li className="text-[12px] text-paper/50">Termos de uso</li>
             </ul>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
-          <p className="text-[10px] text-[#FAF8F5]/35">
+          <p className="text-[10px] text-paper/35">
             © {year} {storeName} · Todos os direitos reservados
           </p>
-          <div className="flex items-center gap-3">            <span className="text-[#FAF8F5]/10">·</span>
-            <span className="text-[9px] font-semibold tracking-[0.1em] text-[#FAF8F5]/25 uppercase">PIX</span>
-            <span className="text-[#FAF8F5]/10">·</span>
-            <span className="text-[9px] text-[#FAF8F5]/25 tracking-[0.16em] uppercase">{(s.storeCity || '').toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
+          <div className="flex items-center gap-3">            <span className="text-paper/10">·</span>
+            <span className="text-[9px] font-semibold tracking-[0.1em] text-paper/25 uppercase">PIX</span>
+            <span className="text-paper/10">·</span>
+            <span className="text-[9px] text-paper/25 tracking-[0.16em] uppercase">{(s.storeCity || '').toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
           </div>
         </div>
       </div>

@@ -121,14 +121,14 @@ export function NotificationBell() {
         ref={btnRef}
         onClick={toggleOpen}
         aria-label="Notificações"
-        className="relative p-2 text-[#705A48] hover:text-[#1E1208] hover:bg-[#F0EBE1] transition-colors rounded-sm"
+        className="relative p-2 text-mid hover:text-ink hover:bg-warm transition-colors rounded-sm"
       >
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 01-3.46 0" />
         </svg>
         {unread.length > 0 && (
-          <span className="absolute top-0.5 right-0.5 min-w-[15px] h-[15px] px-[3px] rounded-full bg-[#C4714A] text-white text-[9px] font-bold leading-[15px] text-center">
+          <span className="absolute top-0.5 right-0.5 min-w-[15px] h-[15px] px-[3px] rounded-full bg-clay-l text-paper text-[9px] font-bold leading-[15px] text-center">
             {unread.length > 9 ? '9+' : unread.length}
           </span>
         )}
@@ -138,35 +138,35 @@ export function NotificationBell() {
         <div
           ref={panelRef}
           style={{ position: 'fixed', top: pos.top, left: pos.left, width: PANEL_WIDTH }}
-          className="max-w-[calc(100vw-24px)] bg-white border border-[#E6DFD5] shadow-lg z-[100] max-h-[70vh] flex flex-col"
+          className="max-w-[calc(100vw-24px)] bg-white dark:bg-warm border border-mist shadow-lg z-[100] max-h-[70vh] flex flex-col"
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#E6DFD5]">
-            <p className="text-[12px] font-bold text-[#1E1208] uppercase tracking-wide">Notificações</p>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-mist">
+            <p className="text-[12px] font-bold text-ink uppercase tracking-wide">Notificações</p>
             {unread.length > 0 && (
-              <button onClick={markAllRead} className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+              <button onClick={markAllRead} className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
                 Marcar todas como lidas
               </button>
             )}
           </div>
           <div className="overflow-y-auto flex-1">
             {items.length === 0 ? (
-              <p className="text-[12px] text-[#B09C8C] text-center py-8">Nenhuma notificação ainda.</p>
+              <p className="text-[12px] text-faint text-center py-8">Nenhuma notificação ainda.</p>
             ) : items.map(n => (
               <button
                 key={n.id}
                 onClick={() => handleClick(n)}
-                className={`w-full text-left px-4 py-3 border-b border-[#F0EBE1] last:border-0 hover:bg-[#F0EBE1] transition-colors flex items-start gap-2.5 ${!n.read ? 'bg-[#FDF6EF]' : ''}`}
+                className={`w-full text-left px-4 py-3 border-b border-warm last:border-0 hover:bg-warm transition-colors flex items-start gap-2.5 ${!n.read ? 'bg-[#FDF6EF]' : ''}`}
               >
                 <span className="text-[15px] shrink-0 mt-0.5">{ICON_BY_TYPE[n.type] ?? '🔔'}</span>
                 <span className="flex-1 min-w-0">
-                  <span className={`block text-[12.5px] leading-snug ${!n.read ? 'font-semibold text-[#1E1208]' : 'text-[#705A48]'}`}>
+                  <span className={`block text-[12.5px] leading-snug ${!n.read ? 'font-semibold text-ink' : 'text-mid'}`}>
                     {n.message}
                   </span>
                   {n.createdAt && (
-                    <span className="block text-[10.5px] text-[#B09C8C] mt-0.5">{timeAgo(n.createdAt.toMillis())}</span>
+                    <span className="block text-[10.5px] text-faint mt-0.5">{timeAgo(n.createdAt.toMillis())}</span>
                   )}
                 </span>
-                {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#C4714A] shrink-0 mt-1.5" />}
+                {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-clay-l shrink-0 mt-1.5" />}
               </button>
             ))}
           </div>

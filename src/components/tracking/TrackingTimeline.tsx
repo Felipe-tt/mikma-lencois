@@ -14,7 +14,7 @@ interface Props {
 // SVG inline — sem emojis
 function StatusIcon({ status, active }: { status: string; active: boolean }) {
   const s = status.toLowerCase();
-  const cls = `w-4 h-4 ${active ? 'stroke-white' : 'stroke-[#B09C8C]'}`;
+  const cls = `w-4 h-4 ${active ? 'stroke-white' : 'stroke-faint'}`;
   const base = { fill: 'none' as const, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
   if (s.includes('entregue') || s.includes('entrega efetuada'))
@@ -38,11 +38,11 @@ function StatusIcon({ status, active }: { status: string; active: boolean }) {
 }
 
 function statusColor(status: string, isFirst: boolean): string {
-  if (!isFirst) return 'bg-[#E6DFD5]';
+  if (!isFirst) return 'bg-mist';
   const s = status.toLowerCase();
   if (s.includes('entregue') || s.includes('entrega efetuada')) return 'bg-emerald-500';
   if (s.includes('tentativa') || s.includes('não entregue') || s.includes('ausente') || s.includes('devolvido') || s.includes('cancelado')) return 'bg-amber-400';
-  return 'bg-[#C4714A]';
+  return 'bg-clay-l';
 }
 
 export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) {
@@ -72,15 +72,15 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
 
   if (loading) return (
     <div className="flex items-center gap-3 py-4">
-      <div className="w-4 h-4 border-2 border-[#C4714A]/30 border-t-[#C4714A] rounded-full animate-spin" />
-      <span className="text-[13px] text-[#B09C8C]">Buscando atualizações{carrierName ? ` da ${carrierName}` : ''}…</span>
+      <div className="w-4 h-4 border-2 border-clay-l/30 border-t-clay-l rounded-full animate-spin" />
+      <span className="text-[13px] text-faint">Buscando atualizações{carrierName ? ` da ${carrierName}` : ''}…</span>
     </div>
   );
 
   if (error) return (
     <div className="flex flex-col gap-2 py-3">
-      <p className="text-[13px] text-[#705A48]">{error}</p>
-      <button onClick={fetch_} className="text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors self-start">
+      <p className="text-[13px] text-mid">{error}</p>
+      <button onClick={fetch_} className="text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors self-start">
         Tentar novamente
       </button>
     </div>
@@ -91,14 +91,14 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
     if (result?.trackingUrl) {
       return (
         <div className="py-3 flex flex-col gap-3">
-          <p className="text-[13px] text-[#705A48]">
+          <p className="text-[13px] text-mid">
             Rastreie diretamente no site da transportadora para ver os eventos detalhados.
           </p>
           <a
             href={result.trackingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors"
+            className="inline-flex items-center gap-2 text-[13px] font-semibold text-clay-l hover:text-clay-d transition-colors"
           >
             Rastrear{carrierName ? ` na ${carrierName}` : ''}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -107,7 +107,7 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
       );
     }
     return (
-      <p className="text-[13px] text-[#B09C8C] py-3">
+      <p className="text-[13px] text-faint py-3">
         Ainda sem movimentações registradas. Pode levar até 24h após a postagem.
       </p>
     );
@@ -116,27 +116,27 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        {result.service && <p className="text-[11px] text-[#B09C8C]">{result.service}</p>}
+        {result.service && <p className="text-[11px] text-faint">{result.service}</p>}
         <div className="ml-auto flex items-center gap-3">
           {result.trackingUrl && (
             <a
               href={result.trackingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-semibold text-[#705A48] hover:text-[#1E1208] transition-colors inline-flex items-center gap-1"
+              className="text-[11px] font-semibold text-mid hover:text-ink transition-colors inline-flex items-center gap-1"
             >
               Ver no site
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </a>
           )}
-          <button onClick={fetch_} className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+          <button onClick={fetch_} className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
             Atualizar
           </button>
         </div>
       </div>
 
       <div className="relative">
-        <div className="absolute left-[18px] top-5 bottom-5 w-px bg-[#E6DFD5]" />
+        <div className="absolute left-[18px] top-5 bottom-5 w-px bg-mist" />
         <div className="flex flex-col gap-5">
           {result.events.map((ev, i) => (
             <div key={i} className="flex items-start gap-4">
@@ -144,19 +144,19 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
                 <StatusIcon status={ev.status} active={i === 0} />
               </div>
               <div className="flex-1 pt-1.5">
-                <p className={`text-[13px] font-semibold leading-snug ${i === 0 ? 'text-[#1E1208]' : 'text-[#705A48]'}`}>
+                <p className={`text-[13px] font-semibold leading-snug ${i === 0 ? 'text-ink' : 'text-mid'}`}>
                   {ev.status}
                 </p>
                 {ev.subStatus && ev.subStatus.length > 0 && (
-                  <p className="text-[12px] text-[#B09C8C] mt-0.5 leading-relaxed">
+                  <p className="text-[12px] text-faint mt-0.5 leading-relaxed">
                     {ev.subStatus.join(' · ')}
                   </p>
                 )}
                 {(ev.location || ev.date) && (
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {ev.location && <span className="text-[11px] text-[#B09C8C]">{ev.location}</span>}
-                    {ev.location && ev.date && <span className="text-[#E6DFD5]">·</span>}
-                    {ev.date && <span className="text-[11px] text-[#B09C8C] tabular-nums">{ev.date}{ev.time ? ` às ${ev.time}` : ''}</span>}
+                    {ev.location && <span className="text-[11px] text-faint">{ev.location}</span>}
+                    {ev.location && ev.date && <span className="text-mist">·</span>}
+                    {ev.date && <span className="text-[11px] text-faint tabular-nums">{ev.date}{ev.time ? ` às ${ev.time}` : ''}</span>}
                   </div>
                 )}
               </div>
@@ -166,7 +166,7 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
       </div>
 
       {result.source === 'cache' && (
-        <p className="text-[10px] text-[#B09C8C] mt-4 text-right">
+        <p className="text-[10px] text-faint mt-4 text-right">
           Cache · {new Date(result.updatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
         </p>
       )}

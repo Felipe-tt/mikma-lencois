@@ -61,38 +61,38 @@ export default async function HomePage() {
           HERO — tipografia como protagonista
           Branco absoluto. Headline enorme. Nada mais.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="border-b border-[#E0D8CE] relative overflow-hidden bg-[#F9F6F1]">
+      <section className="border-b border-mist relative overflow-hidden bg-paper">
         <div className="absolute inset-0 pointer-events-none select-none z-0">
           <img src="/hero-bg.jpg" alt="" className="w-full h-full object-cover object-center opacity-[0.22]" aria-hidden="true" />
         </div>
         <div className="container-shop pt-16 sm:pt-24 pb-14 sm:pb-20 relative z-[2]">
 
           {/* Origem — linha de contexto, não eyebrow decorativo */}
-          <p className="font-mono text-[11px] tracking-[0.22em] uppercase text-[#9C8878] mb-10 sm:mb-14">
+          <p className="font-mono text-[11px] tracking-[0.22em] uppercase text-faint mb-10 sm:mb-14">
             {city}, SC · Fábrica própria · {new Date().getFullYear()}
           </p>
 
           {/* Headline — ocupa toda a largura disponível */}
           <h1
-            className="font-display font-normal text-[#1E1208] leading-[0.96] tracking-[-0.025em] text-[clamp(3.8rem,9.5vw,9rem)]"
+            className="font-display font-normal text-ink leading-[0.96] tracking-[-0.025em] text-[clamp(3.8rem,9.5vw,9rem)]"
           >
             <span className="block">{heroLine1}</span>
-            <span className="block italic text-[#7C5C3E]">{heroLine2}</span>
+            <span className="block italic text-mid">{heroLine2}</span>
             <span className="block">{heroLine3}</span>
           </h1>
 
           {/* Copy + CTA — linha única embaixo do headline */}
           <div className="mt-10 sm:mt-14 flex flex-col sm:flex-row sm:items-end justify-between gap-8">
-            <p className="text-[15px] text-[#705A48] leading-relaxed max-w-[38ch] font-light">
+            <p className="text-[15px] text-mid leading-relaxed max-w-[38ch] font-light">
               {heroSubtitle}
             </p>
             <div className="flex items-center gap-5 shrink-0">
               <Link href="/produtos"
-                className="inline-flex items-center justify-center h-12 px-7 bg-[#1E1208] text-[#F9F6F1] text-[13px] font-medium tracking-[0.05em] hover:bg-[#7C5C3E] transition-colors duration-200">
+                className="inline-flex items-center justify-center h-12 px-7 bg-ink text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-mid transition-colors duration-200">
                 Ver produtos
               </Link>
               <Link href="/sobre"
-                className="text-[13px] text-[#9C8878] hover:text-[#1E1208] transition-colors duration-200 border-b border-[#D4C4AE] hover:border-[#1E1208] pb-px">
+                className="text-[13px] text-faint hover:text-ink transition-colors duration-200 border-b border-faint-l hover:border-ink pb-px">
                 Sobre nós
               </Link>
             </div>
@@ -100,12 +100,12 @@ export default async function HomePage() {
 
           {/* Trust strip — 4 pilares com ícone + separador */}
           {trustItems.length > 0 && (
-            <div className="mt-12 pt-8 border-t border-[#D4C4AE]/60">
+            <div className="mt-12 pt-8 border-t border-faint-l/60">
               <div className="flex flex-wrap gap-y-4 gap-x-0">
                 {trustItems.map((t, i) => (
                   <div key={t} className="flex items-center">
                     <div className="flex items-center gap-2.5 pr-6 sm:pr-10">
-                      <span className="text-[#7C5C3E] shrink-0">
+                      <span className="text-mid shrink-0">
                         {i === 0 && (
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -130,7 +130,7 @@ export default async function HomePage() {
                       <span className="text-[12px] text-[#5C4433] font-medium tracking-[0.02em]">{t}</span>
                     </div>
                     {i < trustItems.length - 1 && (
-                      <span className="h-4 w-px bg-[#D4C4AE] mr-6 sm:mr-10 shrink-0 hidden sm:block" />
+                      <span className="h-4 w-px bg-faint-l mr-6 sm:mr-10 shrink-0 hidden sm:block" />
                     )}
                   </div>
                 ))}
@@ -144,14 +144,14 @@ export default async function HomePage() {
           PRODUTOS — imediatamente após o hero
           Sem seção intermediária. O produto fala por si.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="bg-[#F9F6F1]">
+      <section className="bg-paper">
         {/* Header da seção — minimal */}
         <div className="container-shop pt-14 sm:pt-20 pb-8 flex items-baseline justify-between gap-6">
-          <h2 className="font-display font-normal text-[#1E1208] text-2xl sm:text-3xl">
+          <h2 className="font-display font-normal text-ink text-2xl sm:text-3xl">
             {s.featuredTitle || 'Destaques'}
           </h2>
           <Link href="/produtos"
-            className="font-mono text-[11px] tracking-[0.14em] uppercase text-[#9C8878] hover:text-[#1E1208] transition-colors duration-150 border-b border-transparent hover:border-[#1E1208] pb-px">
+            className="font-mono text-[11px] tracking-[0.14em] uppercase text-faint hover:text-ink transition-colors duration-150 border-b border-transparent hover:border-ink pb-px">
             Ver todos
           </Link>
         </div>
@@ -162,7 +162,7 @@ export default async function HomePage() {
             {categories.map(cat => (
               <Link key={cat}
                 href={`/produtos?categoria=${encodeURIComponent(cat)}`}
-                className="font-mono text-[10px] tracking-[0.12em] uppercase px-3 py-1.5 border border-[#D4C4AE] text-[#9C8878] hover:border-[#1E1208] hover:text-[#1E1208] transition-colors duration-150">
+                className="font-mono text-[10px] tracking-[0.12em] uppercase px-3 py-1.5 border border-faint-l text-faint hover:border-ink hover:text-ink transition-colors duration-150">
                 {cat}
               </Link>
             ))}
@@ -172,13 +172,13 @@ export default async function HomePage() {
         {/* Grid */}
         <div className="container-shop pb-20">
           {products.length === 0 ? (
-            <div className="py-20 text-center border border-[#E0D8CE]">
-              <p className="font-display text-2xl text-[#B09C8C] font-normal">
+            <div className="py-20 text-center border border-mist">
+              <p className="font-display text-2xl text-faint font-normal">
                 Nenhum produto cadastrado ainda.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-[#E0D8CE] border border-[#E0D8CE]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-mist border border-mist">
               {products.map((p, i) => (
                 <ProductCard key={p.id} product={p} priority={i < 4} />
               ))}
@@ -186,7 +186,7 @@ export default async function HomePage() {
           )}
           <div className="mt-8 sm:hidden text-center">
             <Link href="/produtos"
-              className="inline-flex items-center justify-center h-11 px-6 border border-[#1E1208] text-[#1E1208] text-[13px] font-medium hover:bg-[#1E1208] hover:text-[#F9F6F1] transition-colors duration-200">
+              className="inline-flex items-center justify-center h-11 px-6 border border-ink text-ink text-[13px] font-medium hover:bg-ink hover:text-paper transition-colors duration-200">
               Ver todos os produtos
             </Link>
           </div>
@@ -197,23 +197,23 @@ export default async function HomePage() {
           PROPOSTA — uma frase e dois botões. Sem stats, sem grade.
           Fundo escuro como ponto final da página.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="bg-[#1E1208]">
+      <section className="bg-ink">
         <div className="container-shop py-14 sm:py-20">
-          <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-[#6B5444] mb-8">
+          <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-mid mb-8">
             {city} · Est. {s.foundedYear || ''}
           </p>
           <h2
-            className="font-display font-normal text-[#F9F6F1] leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl text-[clamp(2.2rem,5vw,4rem)]"
+            className="font-display font-normal text-paper leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl text-[clamp(2.2rem,5vw,4rem)]"
           >
-            {ctaLine1}<br /><em className="text-[#A07850] not-italic">{ctaLine2}</em>
+            {ctaLine1}<br /><em className="text-clay-d not-italic">{ctaLine2}</em>
           </h2>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/produtos"
-              className="inline-flex items-center justify-center h-12 px-7 bg-[#7C5C3E] text-[#F9F6F1] text-[13px] font-medium tracking-[0.05em] hover:bg-[#A07850] transition-colors duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 bg-mid text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-clay-d transition-colors duration-200">
               {ctaBtn1}
             </Link>
             <Link href="/sobre"
-              className="inline-flex items-center justify-center h-12 px-7 border border-[#F9F6F1]/15 text-[#F9F6F1]/50 text-[13px] font-medium hover:text-[#F9F6F1] hover:border-[#F9F6F1]/30 transition-colors duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 border border-paper/15 text-paper/50 text-[13px] font-medium hover:text-paper hover:border-paper/30 transition-colors duration-200">
               {ctaBtn2}
             </Link>
           </div>

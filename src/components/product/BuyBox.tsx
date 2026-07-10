@@ -226,7 +226,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               );
             })}
           </div>
-          <Link href="/guia-de-tamanhos" className="inline-block mt-2.5 text-[11.5px] text-[#9C8878] hover:text-[#C4714A] transition-colors border-b border-dotted border-[#D4C4AE] hover:border-[#C4714A]">
+          <Link href="/guia-de-tamanhos" className="inline-block mt-2.5 text-[11.5px] text-faint hover:text-clay-l transition-colors border-b border-dotted border-faint-l hover:border-clay-l">
             Não sabe seu tamanho? Meça o colchão e a gente te diz
           </Link>
         </div>
@@ -255,8 +255,9 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           </div>
         )}
 
-        {/* CTAs — padrão "Comprar agora" + "Adicionar ao carrinho" (Amazon) */}
-        <div className="flex flex-col gap-2 border-t border-mist pt-5">
+        {/* CTAs — padrão "Comprar agora" + "Adicionar ao carrinho" (Amazon).
+            Em mobile essas ações moram só na barra fixa abaixo, pra não duplicar o CTA. */}
+        <div className="hidden sm:flex flex-col gap-2 border-t border-mist pt-5">
           <button
             onClick={buyNow}
             disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
@@ -351,6 +352,24 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           <p className="text-[15px] font-bold text-ink leading-none">{formatCurrency(product.price)}</p>
           <p className="text-[10px] text-faint mt-1">{maxInstall}x de {formatCurrency(installVal)}</p>
         </div>
+        {!outOfStock && (
+          <button
+            onClick={addToCart}
+            disabled={adding || buyingNow || !selectedVariant || loading}
+            aria-label="Adicionar ao carrinho"
+            title="Adicionar ao carrinho"
+            className="w-11 h-11 shrink-0 flex items-center justify-center border border-ink text-ink hover:bg-warm active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
+          >
+            {adding ? (
+              <span className="spinner-dark" />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+              </svg>
+            )}
+          </button>
+        )}
         <button
           onClick={buyNow}
           disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}

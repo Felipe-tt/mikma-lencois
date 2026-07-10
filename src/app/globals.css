@@ -4,6 +4,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Paleta de cores (light / dark) ──────────────────────────────────
+   Cada token de cor do tailwind.config aponta pra uma dessas variáveis
+   (formato "R G B" sem vírgula, pra funcionar com rgb(var(--x) / alpha)).
+   O dark mode troca só os valores abaixo — nenhum componente precisa de
+   classes `dark:` para cores básicas de fundo/texto/borda. */
+:root {
+  --c-ink:      30 18 8;      /* #1E1208 — texto principal */
+  --c-paper:    250 248 245;  /* #FAF8F5 — fundo da página */
+  --c-warm:     240 234 225;  /* #F0EAE1 — superfície elevada (cards, header) */
+  --c-warm-d:   229 221 210;  /* #E5DDD2 — superfície elevada, variante */
+  --c-linen:    216 207 191;  /* #D8CFBF */
+  --c-clay:     184 98 47;    /* #B8622F — cor de destaque (accent) */
+  --c-clay-d:   150 80 30;    /* #96501E — accent, hover/escuro */
+  --c-clay-l:   204 122 71;   /* #CC7A47 — accent, claro */
+  --c-mist:     230 223 213;  /* #E6DFD5 — bordas/divisórias */
+  --c-mist-d:   213 202 192;  /* #D5CAC0 — bordas, variante */
+  --c-mid:      112 90 72;    /* #705A48 — texto secundário */
+  --c-faint:    176 156 140;  /* #B09C8C — texto terciário/placeholder */
+  --c-faint-l:  204 189 176;  /* #CCBDB0 */
+}
+
+html.dark {
+  color-scheme: dark;
+  --c-ink:      241 233 224;  /* texto principal (claro sobre fundo escuro) */
+  --c-paper:    19 15 11;     /* fundo da página — marrom quase preto */
+  --c-warm:     32 25 18;     /* superfície elevada (cards, header) */
+  --c-warm-d:   42 33 24;     /* superfície elevada, variante (hover) */
+  --c-linen:    54 43 31;     /* superfícies mais destacadas */
+  --c-clay:     217 138 91;   /* accent — mais claro para contraste no escuro */
+  --c-clay-d:   190 112 68;   /* accent, hover */
+  --c-clay-l:   232 165 122;  /* accent, claro/hover sutil */
+  --c-mist:     56 45 33;     /* bordas/divisórias sobre fundo escuro */
+  --c-mist-d:   70 57 42;     /* bordas, variante (mais visível) */
+  --c-mid:      184 166 148;  /* texto secundário */
+  --c-faint:    138 118 100;  /* texto terciário/placeholder */
+  --c-faint-l:  164 145 126;
+}
+
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
   html {
@@ -85,7 +123,7 @@
 
   /* ─── Inputs ──────────────────────────────────────────────────── */
   .input {
-    @apply w-full px-4 py-3 text-sm bg-white text-ink
+    @apply w-full px-4 py-3 text-sm bg-white dark:bg-warm text-ink
            border border-mist outline-none
            placeholder:text-faint
            focus:border-clay/60 focus:ring-2 focus:ring-clay/[0.12]
@@ -94,7 +132,7 @@
     border-radius: 2px;
   }
   .input-sm {
-    @apply w-full px-3 py-2.5 text-sm bg-white text-ink
+    @apply w-full px-3 py-2.5 text-sm bg-white dark:bg-warm text-ink
            border border-mist outline-none
            placeholder:text-faint
            focus:border-clay/60 focus:ring-1 focus:ring-clay/[0.12]
@@ -106,7 +144,7 @@
     @apply block text-[10px] font-semibold tracking-[0.14em] uppercase text-ink/60 mb-1.5;
   }
   .select {
-    @apply w-full px-4 py-3 text-sm bg-white text-ink
+    @apply w-full px-4 py-3 text-sm bg-white dark:bg-warm text-ink
            border border-mist outline-none appearance-none
            focus:border-clay/60 focus:ring-2 focus:ring-clay/[0.12]
            hover:border-ink/20
@@ -152,11 +190,11 @@
 
   /* ─── Badges ──────────────────────────────────────────────────── */
   .badge           { @apply inline-flex items-center px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.08em] uppercase; }
-  .badge-pending   { @apply badge bg-amber-50   text-amber-700  border border-amber-200/80; }
-  .badge-paid      { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80; }
-  .badge-preparing { @apply badge bg-blue-50    text-blue-700   border border-blue-200/80; }
-  .badge-shipped   { @apply badge bg-violet-50  text-violet-700 border border-violet-200/80; }
-  .badge-delivered { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80; }
+  .badge-pending   { @apply badge bg-amber-50   text-amber-700  border border-amber-200/80  dark:bg-amber-500/10   dark:text-amber-300  dark:border-amber-500/30; }
+  .badge-paid      { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30; }
+  .badge-preparing { @apply badge bg-blue-50    text-blue-700   border border-blue-200/80   dark:bg-blue-500/10    dark:text-blue-300   dark:border-blue-500/30; }
+  .badge-shipped   { @apply badge bg-violet-50  text-violet-700 border border-violet-200/80  dark:bg-violet-500/10  dark:text-violet-300 dark:border-violet-500/30; }
+  .badge-delivered { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30; }
   .badge-cancelled { @apply badge text-faint; }
 
   .chip        { @apply inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer; }
@@ -216,9 +254,8 @@
     background-size: 200% 100%;
     animation: shimmer 1.8s ease-in-out infinite;
   }
-  /* No dark mode o filter:invert já escurece tudo — usamos branco aqui
-     para que, após o invert, o resultado visual continue sendo o
-     mesmo highlight sutil (e não vire um "buraco preto" no shimmer) */
+  /* No dark mode o fundo do skeleton (bg-warm) já é escuro — o brilho do
+     shimmer precisa ser um highlight branco (sutil), não preto. */
   html.dark .skeleton::after {
     background: linear-gradient(
       90deg,
@@ -307,24 +344,29 @@
 
 
 /* ── Dark mode ───────────────────────────────────────────────────── */
-/* Usa filter invert+hue-rotate para funcionar com cores hardcoded   */
-html.dark {
-  color-scheme: dark;
-  filter: invert(1) hue-rotate(180deg);
-}
+/* A troca de paleta acontece via CSS variables (ver :root / html.dark
+   no topo do arquivo) + classes `dark:` pontuais nos componentes que
+   usam cores fixas (branco, preto, cinza do Tailwind, badges etc).
+   Não usamos mais filter: invert() — a técnica quebrava sombras,
+   imagens, iframes e cores de marca em todo o site. */
 
-/* Imagens, vídeos e iframes: desfaz o invert para ficarem naturais */
-html.dark img,
-html.dark video,
-html.dark iframe,
-html.dark [style*="background-image"] {
-  filter: invert(1) hue-rotate(180deg);
-}
-
-/* Páginas de sistema (ex: manutenção) que precisam manter aparência fixa,
-   independente do tema escolhido pelo usuário — desfaz o invert do <html> */
-html.dark .theme-locked {
-  filter: invert(1) hue-rotate(180deg);
+/* Páginas que precisam manter aparência fixa (sempre clara), independente
+   do tema escolhido pelo usuário — ex: página de manutenção do sistema. */
+.theme-locked {
+  color-scheme: light;
+  --c-ink:      30 18 8;
+  --c-paper:    250 248 245;
+  --c-warm:     240 234 225;
+  --c-warm-d:   229 221 210;
+  --c-linen:    216 207 191;
+  --c-clay:     184 98 47;
+  --c-clay-d:   150 80 30;
+  --c-clay-l:   204 122 71;
+  --c-mist:     230 223 213;
+  --c-mist-d:   213 202 192;
+  --c-mid:      112 90 72;
+  --c-faint:    176 156 140;
+  --c-faint-l:  204 189 176;
 }
 
 /* Scrollbar dark */

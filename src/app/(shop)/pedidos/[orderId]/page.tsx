@@ -16,7 +16,7 @@ import { LiveDeliveryMap } from '@/components/tracking/LiveDeliveryMap';
 
 // SVG ícones para cada step do progresso (sem emojis)
 function StepIcon({ status, active }: { status: OrderStatus; active: boolean }) {
-  const cls = `w-4 h-4 ${active ? 'stroke-[#C4714A]' : 'stroke-[#C8B8A8]'}`;
+  const cls = `w-4 h-4 ${active ? 'stroke-clay-l' : 'stroke-faint-l'}`;
   const base = { fill: 'none' as const, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   if (status === 'pending_payment')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
@@ -34,7 +34,7 @@ function StepIcon({ status, active }: { status: OrderStatus; active: boolean }) 
 // SVG ícones para timeline interna
 function TimelineIcon({ status }: { status: string }) {
   const base = { fill: 'none' as const, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-  const cls = 'w-4 h-4 stroke-[#C4714A]';
+  const cls = 'w-4 h-4 stroke-clay-l';
   if (status === 'created')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>;
   if (status === 'payment_initiated' || status === 'pending_payment')
@@ -155,16 +155,16 @@ export default function OrderDetailPage() {
                   {/* linha conectora */}
                   {i > 0 && (
                     <div className={`absolute top-[18px] right-1/2 w-full h-[2px] ${
-                      i <= currentStep ? 'bg-[#C4714A]' : 'bg-[#E6DFD5]'
+                      i <= currentStep ? 'bg-clay-l' : 'bg-mist'
                     }`} />
                   )}
                   {/* círculo */}
                   <div className={`relative z-10 w-9 h-9 flex items-center justify-center text-sm border-2 transition-all ${
                     i < currentStep
-                      ? 'bg-[#C4714A] border-[#C4714A] text-white'
+                      ? 'bg-clay-l border-clay-l text-paper'
                       : i === currentStep
-                        ? 'bg-white border-[#C4714A] text-[#C4714A] shadow-sm'
-                        : 'bg-white border-[#E6DFD5] text-[#C8B8A8]'
+                        ? 'bg-white dark:bg-warm border-clay-l text-clay-l shadow-sm'
+                        : 'bg-white dark:bg-warm border-mist text-faint-l'
                   }`}>
                     {i < currentStep
                       ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -173,7 +173,7 @@ export default function OrderDetailPage() {
                   </div>
                   {/* label */}
                   <span className={`mt-2 text-[11px] text-center leading-tight px-1 ${
-                    i <= currentStep ? 'text-[#1E1208] font-medium' : 'text-[#C8B8A8]'
+                    i <= currentStep ? 'text-ink font-medium' : 'text-faint-l'
                   }`}>
                     {step.label}
                   </span>
@@ -299,7 +299,7 @@ export default function OrderDetailPage() {
                           className="w-10 h-10 rounded-full object-cover shrink-0"
                         />
                       ) : (
-                        <span className="w-10 h-10 rounded-full bg-[#E6DFD5] flex items-center justify-center shrink-0">
+                        <span className="w-10 h-10 rounded-full bg-mist flex items-center justify-center shrink-0">
                           <svg viewBox="0 0 24 24" fill="none" stroke="#C4714A" strokeWidth="1.8" strokeLinecap="round" className="w-5 h-5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                         </span>
                       )}
@@ -333,7 +333,7 @@ export default function OrderDetailPage() {
                       href={order.delivery.trackingUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#1E1208] text-[#FAF8F5] text-[13px] font-semibold hover:bg-[#1E1208]/80 transition-colors"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-paper text-[13px] font-semibold hover:bg-ink/80 transition-colors"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
                       Abrir rastreio da Uber em outra aba
@@ -366,7 +366,7 @@ export default function OrderDetailPage() {
                         href={rastreioUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors"
+                        className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors"
                       >
                         Rastrear
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>

@@ -47,15 +47,15 @@ export default function PainelDashboard() {
   return (
     <div className="max-w-5xl">
       <div className="mb-8">
-        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Olá!</h1>
-        <p className="text-[13px] text-[#B09C8C] mt-1">Aqui está um resumo do que está acontecendo na sua loja.</p>
+        <h1 className="font-display font-normal text-ink text-2xl">Olá!</h1>
+        <p className="text-[13px] text-faint mt-1">Aqui está um resumo do que está acontecendo na sua loja.</p>
       </div>
 
       {/* Alertas */}
       {(waiting > 0 || needAction > 0) && (
         <div className="flex flex-col gap-2 mb-6">
           {needAction > 0 && (
-            <Link href="/painel/pedidos" className="flex items-center justify-between bg-[#C4714A] text-white px-5 py-3.5 hover:bg-[#A05432] transition-colors">
+            <Link href="/painel/pedidos" className="flex items-center justify-between bg-clay-l text-paper px-5 py-3.5 hover:bg-clay-d transition-colors">
               <div className="flex items-center gap-3">
                 <IconBox size={18} className="shrink-0" />
                 <div>
@@ -82,11 +82,11 @@ export default function PainelDashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {kpis.map(k => (
-          <div key={k.label} className="bg-[#FAF8F5] border border-[#E6DFD5] px-4 py-4 flex flex-col gap-2">
-            <k.Icon size={20} className="text-[#C4714A]" />
+          <div key={k.label} className="bg-paper border border-mist px-4 py-4 flex flex-col gap-2">
+            <k.Icon size={20} className="text-clay-l" />
             <div>
-              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#B09C8C] mb-0.5">{k.label}</p>
-              <p className="font-display text-xl text-[#1E1208] leading-none">
+              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-faint mb-0.5">{k.label}</p>
+              <p className="font-display text-xl text-ink leading-none">
                 {k.fmt === 'c' ? formatCurrency(k.value) : k.value}
               </p>
             </div>
@@ -96,28 +96,28 @@ export default function PainelDashboard() {
 
       {/* Pedidos recentes */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-display font-normal text-[#1E1208] text-lg">Últimos pedidos</h2>
-        <Link href="/painel/pedidos" className="text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+        <h2 className="font-display font-normal text-ink text-lg">Últimos pedidos</h2>
+        <Link href="/painel/pedidos" className="text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors">
           Ver todos
         </Link>
       </div>
 
-      <div className="bg-[#FAF8F5] border border-[#E6DFD5] overflow-hidden">
+      <div className="bg-paper border border-mist overflow-hidden">
         {orders.length === 0 ? (
           <div className="py-16 text-center">
-            <IconProducts size={40} className="text-[#E6DFD5] mx-auto mb-3" />
-            <p className="text-sm text-[#B09C8C]">Nenhum pedido ainda.<br />Quando alguém comprar, vai aparecer aqui.</p>
+            <IconProducts size={40} className="text-mist mx-auto mb-3" />
+            <p className="text-sm text-faint">Nenhum pedido ainda.<br />Quando alguém comprar, vai aparecer aqui.</p>
           </div>
         ) : orders.map((o, idx) => (
-          <div key={o.id} className={`flex items-center justify-between px-5 py-3.5 hover:bg-[#F0EAE1] transition-colors ${idx < orders.length - 1 ? 'border-b border-[#E6DFD5]' : ''}`}>
+          <div key={o.id} className={`flex items-center justify-between px-5 py-3.5 hover:bg-warm transition-colors ${idx < orders.length - 1 ? 'border-b border-mist' : ''}`}>
             <div className="flex items-center gap-3 min-w-0">
-              <span className="text-[11px] font-mono text-[#B09C8C] shrink-0">#{o.id.slice(-6).toUpperCase()}</span>
+              <span className="text-[11px] font-mono text-faint shrink-0">#{o.id.slice(-6).toUpperCase()}</span>
               <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-[11px] text-[#B09C8C] hidden sm:block">{formatTsDateTime(o.createdAt)}</span>
-              <span className="font-display text-sm text-[#1E1208]">{formatCurrency(o.totalCents)}</span>
-              <Link href={`/painel/pedidos/${o.id}`} className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors shrink-0">Ver</Link>
+              <span className="text-[11px] text-faint hidden sm:block">{formatTsDateTime(o.createdAt)}</span>
+              <span className="font-display text-sm text-ink">{formatCurrency(o.totalCents)}</span>
+              <Link href={`/painel/pedidos/${o.id}`} className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors shrink-0">Ver</Link>
             </div>
           </div>
         ))}

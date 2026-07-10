@@ -158,24 +158,24 @@ export default function ManutencaoPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-7">
-        <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Painel</p>
-        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Manutenção</h1>
+        <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-clay-l mb-1">Painel</p>
+        <h1 className="font-display font-normal text-ink text-2xl">Manutenção</h1>
       </div>
 
       {/* Toggle */}
-      <div className={`border p-6 mb-6 ${status.active ? 'border-amber-300 bg-amber-50' : 'border-[#E6DFD5] bg-white'}`}>
+      <div className={`border p-6 mb-6 ${status.active ? 'border-amber-300 bg-amber-50' : 'border-mist bg-white dark:bg-warm'}`}>
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-[14px] font-bold text-[#1E1208] mb-0.5">
+            <p className="text-[14px] font-bold text-ink mb-0.5">
               {status.active ? 'Site em manutenção' : 'Site online'}
             </p>
-            <p className="text-[12px] text-[#B09C8C]">
+            <p className="text-[12px] text-faint">
               {status.active
                 ? 'Visitantes são redirecionados para a página de manutenção.'
                 : 'O site está acessível normalmente para todos.'}
             </p>
             {status.updatedBy && (
-              <p className="text-[11px] text-[#C8BAB0] mt-1">
+              <p className="text-[11px] text-faint-l mt-1">
                 Alterado por {status.updatedBy}
                 {status.updatedAt ? ` · ${new Date(status.updatedAt).toLocaleString('pt-BR')}` : ''}
               </p>
@@ -196,41 +196,41 @@ export default function ManutencaoPage() {
       </div>
 
       {/* CLI hint */}
-      <div className="border border-[#E6DFD5] bg-[#FAF8F5] px-5 py-4 mb-6">
-        <p className="text-[11px] font-bold text-[#705A48] mb-2 tracking-[0.1em] uppercase">Pelo terminal</p>
+      <div className="border border-mist bg-paper px-5 py-4 mb-6">
+        <p className="text-[11px] font-bold text-mid mb-2 tracking-[0.1em] uppercase">Pelo terminal</p>
         <div className="flex flex-col gap-1.5">
-          <code className="text-[11px] bg-[#1E1208] text-[#FAF8F5] px-3 py-2 block font-mono">
+          <code className="text-[11px] bg-ink text-paper px-3 py-2 block font-mono">
             node scripts/maintenance.js on
           </code>
-          <code className="text-[11px] bg-[#1E1208] text-[#FAF8F5] px-3 py-2 block font-mono">
+          <code className="text-[11px] bg-ink text-paper px-3 py-2 block font-mono">
             node scripts/maintenance.js allow
           </code>
-          <p className="text-[10px] text-[#B09C8C]">
+          <p className="text-[10px] text-faint">
             Rode dentro da pasta do projeto. Vai pedir seu e-mail e senha de vendedor (os mesmos deste painel) — não precisa de Firebase CLI nem de nenhuma configuração extra. O comando <strong>allow</strong> detecta e libera seu IP automaticamente.
           </p>
         </div>
       </div>
 
       {/* Queue */}
-      <div className="border border-[#E6DFD5] bg-white">
-        <div className="px-5 py-4 border-b border-[#E6DFD5] bg-[#FAF8F5]">
+      <div className="border border-mist bg-white dark:bg-warm">
+        <div className="px-5 py-4 border-b border-mist bg-paper">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-[13px] font-bold text-[#1E1208]">Fila de visitantes</p>
-              <p className="text-[11px] text-[#B09C8C] mt-0.5">
+              <p className="text-[13px] font-bold text-ink">Fila de visitantes</p>
+              <p className="text-[11px] text-faint mt-0.5">
                 {waiting.length} aguardando · {queue.length - waiting.length} liberados
               </p>
             </div>
             <div className="flex gap-2">
               {waiting.length > 0 && (
                 <button onClick={releaseAll}
-                  className="px-3 py-1.5 text-[11px] font-semibold bg-[#1E1208] text-[#FAF8F5] hover:bg-[#1E1208]/80 transition-colors">
+                  className="px-3 py-1.5 text-[11px] font-semibold bg-ink text-paper hover:bg-ink/80 transition-colors">
                   Liberar todos
                 </button>
               )}
               {queue.length > 0 && (
                 <button onClick={clearQueue}
-                  className="px-3 py-1.5 text-[11px] font-semibold border border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1] transition-colors">
+                  className="px-3 py-1.5 text-[11px] font-semibold border border-mist text-mid hover:bg-warm transition-colors">
                   Limpar fila
                 </button>
               )}
@@ -242,7 +242,7 @@ export default function ManutencaoPage() {
             {(['ips', 'users'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-3 py-1.5 text-[11px] font-semibold transition-colors ${
-                  tab === t ? 'bg-[#1E1208] text-[#FAF8F5]' : 'border border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1]'
+                  tab === t ? 'bg-ink text-paper' : 'border border-mist text-mid hover:bg-warm'
                 }`}>
                 {t === 'ips' ? `IPs (${ipEntries.length})` : `Usuários (${userEntries.length})`}
               </button>
@@ -252,15 +252,15 @@ export default function ManutencaoPage() {
 
         {currentList.length === 0 ? (
           <div className="px-5 py-10 text-center">
-            <p className="text-[13px] text-[#B09C8C]">
+            <p className="text-[13px] text-faint">
               {tab === 'ips' ? 'Nenhum IP na fila.' : 'Nenhum usuário logado na fila.'}
             </p>
-            <p className="text-[11px] text-[#C8BAB0] mt-1">
+            <p className="text-[11px] text-faint-l mt-1">
               Quando o site estiver em manutenção, os visitantes aparecerão aqui.
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-[#E6DFD5]">
+          <div className="divide-y divide-mist">
             {currentList.map(entry => {
               const location = [entry.geoCity, entry.geoRegion, entry.geoCountry].filter(Boolean).join(', ');
               const device = entry.isMobile === '?1' ? 'Celular' : entry.isMobile === '?0' ? 'Computador' : '';
@@ -271,30 +271,30 @@ export default function ManutencaoPage() {
                     <div className="min-w-0 flex-1">
                       {entry.uid ? (
                         <>
-                          <p className="text-[13px] font-semibold text-[#1E1208] truncate">
+                          <p className="text-[13px] font-semibold text-ink truncate">
                             {entry.displayName || 'Usuário sem nome'}
                           </p>
-                          <p className="text-[11px] text-[#B09C8C] truncate">{entry.email}</p>
+                          <p className="text-[11px] text-faint truncate">{entry.email}</p>
                         </>
                       ) : (
-                        <p className="text-[13px] font-mono text-[#1E1208] truncate">{entry.ip}</p>
+                        <p className="text-[13px] font-mono text-ink truncate">{entry.ip}</p>
                       )}
 
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                         {entry.uid && (
-                          <span className="text-[10px] text-[#C8BAB0] font-mono">{entry.ip}</span>
+                          <span className="text-[10px] text-faint-l font-mono">{entry.ip}</span>
                         )}
                         {location && (
-                          <span className="text-[10px] text-[#B09C8C] flex items-center gap-0.5"><IconPin size={9} />{location}</span>
+                          <span className="text-[10px] text-faint flex items-center gap-0.5"><IconPin size={9} />{location}</span>
                         )}
                         {entry.isp && (
-                          <span className="text-[10px] text-[#B09C8C]">{entry.isp}</span>
+                          <span className="text-[10px] text-faint">{entry.isp}</span>
                         )}
                         {device && (
-                          <span className="text-[10px] text-[#B09C8C]">{device}</span>
+                          <span className="text-[10px] text-faint">{device}</span>
                         )}
                         {entry.platform && (
-                          <span className="text-[10px] text-[#B09C8C]">{entry.platform}</span>
+                          <span className="text-[10px] text-faint">{entry.platform}</span>
                         )}
                         {entry.geoDebug && (
                           <span className="text-[10px] text-red-400">geo: {entry.geoDebug}</span>
@@ -302,12 +302,12 @@ export default function ManutencaoPage() {
                       </div>
 
                       {entry.requestedPath && (
-                        <p className="text-[10px] text-[#C8BAB0] mt-0.5 truncate">
+                        <p className="text-[10px] text-faint-l mt-0.5 truncate">
                           Tentou acessar: <span className="font-mono">{entry.requestedPath}</span>
                         </p>
                       )}
 
-                      <p className="text-[10px] text-[#B09C8C] mt-0.5">
+                      <p className="text-[10px] text-faint mt-0.5">
                         Entrou: {new Date(entry.enteredAt).toLocaleString('pt-BR')}
                         {entry.released && entry.releasedAt && (
                           <span> · Liberado: {new Date(entry.releasedAt).toLocaleString('pt-BR')}</span>
@@ -316,8 +316,8 @@ export default function ManutencaoPage() {
 
                       {entry.userAgent && (
                         <details className="mt-1">
-                          <summary className="text-[10px] text-[#C8BAB0] cursor-pointer select-none">Mais detalhes</summary>
-                          <div className="mt-1 text-[10px] text-[#B09C8C] space-y-0.5 pl-2 border-l border-[#E6DFD5]">
+                          <summary className="text-[10px] text-faint-l cursor-pointer select-none">Mais detalhes</summary>
+                          <div className="mt-1 text-[10px] text-faint space-y-0.5 pl-2 border-l border-mist">
                             <p className="break-all"><strong>User-Agent:</strong> {entry.userAgent}</p>
                             {entry.referer && <p className="break-all"><strong>Veio de:</strong> {entry.referer}</p>}
                             {entry.acceptLanguage && <p><strong>Idioma:</strong> {entry.acceptLanguage}</p>}
@@ -330,7 +330,7 @@ export default function ManutencaoPage() {
                     <button
                       onClick={() => releaseEntry(entry)}
                       disabled={releasing === (entry.uid ?? entry.ip)}
-                      className="shrink-0 px-3 py-1 text-[11px] font-semibold bg-[#1E1208] text-[#FAF8F5] hover:bg-[#1E1208]/80 transition-colors disabled:opacity-50">
+                      className="shrink-0 px-3 py-1 text-[11px] font-semibold bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50">
                       {releasing === (entry.uid ?? entry.ip) ? '…' : 'Liberar'}
                     </button>
                   ) : (

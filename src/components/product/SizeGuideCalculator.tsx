@@ -93,39 +93,39 @@ export function SizeGuideCalculator({ products }: Props) {
       {/* Seletor de modo */}
       <div className="flex gap-2 justify-center">
         <button onClick={() => { setMode('medir'); setResult(null); setError(''); }}
-          className={`px-5 py-2.5 text-[12px] font-semibold border transition-colors ${mode === 'medir' ? 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208]' : 'border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1]'}`}>
+          className={`px-5 py-2.5 text-[12px] font-semibold border transition-colors ${mode === 'medir' ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm'}`}>
           Vou medir agora
         </button>
         <button onClick={() => { setMode('nome'); setResult(null); setError(''); }}
-          className={`px-5 py-2.5 text-[12px] font-semibold border transition-colors ${mode === 'nome' ? 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208]' : 'border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1]'}`}>
+          className={`px-5 py-2.5 text-[12px] font-semibold border transition-colors ${mode === 'nome' ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm'}`}>
           Já sei o nome
         </button>
       </div>
 
       {mode === 'medir' ? (
-        <form onSubmit={handleMeasure} className="bg-[#FAF8F5] border border-[#E6DFD5] p-6 flex flex-col gap-4">
-          <p className="text-[12px] text-[#B09C8C] leading-relaxed">
-            Meça o <strong className="text-[#705A48]">colchão</strong> (não a cama) com uma trena ou fita métrica, de ponta a ponta. A altura é opcional, mas ajuda se o seu colchão for bem alto ou bem fino.
+        <form onSubmit={handleMeasure} className="bg-paper border border-mist p-6 flex flex-col gap-4">
+          <p className="text-[12px] text-faint leading-relaxed">
+            Meça o <strong className="text-mid">colchão</strong> (não a cama) com uma trena ou fita métrica, de ponta a ponta. A altura é opcional, mas ajuda se o seu colchão for bem alto ou bem fino.
           </p>
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-[#705A48] uppercase tracking-wide">Largura (cm)</label>
+              <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Largura (cm)</label>
               <input value={width} onChange={e => setWidth(e.target.value)} inputMode="decimal" placeholder="138"
-                className="border border-[#E6DFD5] px-3 py-2.5 text-[14px] outline-none focus:border-[#C4714A] bg-white" />
+                className="border border-mist px-3 py-2.5 text-[14px] outline-none focus:border-clay-l bg-white dark:bg-warm" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-[#705A48] uppercase tracking-wide">Comprimento (cm)</label>
+              <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Comprimento (cm)</label>
               <input value={length} onChange={e => setLength(e.target.value)} inputMode="decimal" placeholder="188"
-                className="border border-[#E6DFD5] px-3 py-2.5 text-[14px] outline-none focus:border-[#C4714A] bg-white" />
+                className="border border-mist px-3 py-2.5 text-[14px] outline-none focus:border-clay-l bg-white dark:bg-warm" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-[#705A48] uppercase tracking-wide">Altura (opcional)</label>
+              <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Altura (opcional)</label>
               <input value={height} onChange={e => setHeight(e.target.value)} inputMode="decimal" placeholder="25"
-                className="border border-[#E6DFD5] px-3 py-2.5 text-[14px] outline-none focus:border-[#C4714A] bg-white" />
+                className="border border-mist px-3 py-2.5 text-[14px] outline-none focus:border-clay-l bg-white dark:bg-warm" />
             </div>
           </div>
           {error && <p className="text-[12px] text-red-600">{error}</p>}
-          <button type="submit" className="bg-[#C4714A] text-white text-[13px] font-semibold py-3 hover:bg-[#B0603C] transition-colors">
+          <button type="submit" className="bg-clay-l text-paper text-[13px] font-semibold py-3 hover:bg-clay transition-colors">
             Descobrir meu tamanho
           </button>
         </form>
@@ -134,30 +134,30 @@ export function SizeGuideCalculator({ products }: Props) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {SIZE_BUTTONS.map(b => (
               <button key={b.key} onClick={() => handlePickName(b.key)}
-                className={`border p-4 text-center transition-colors ${result === b.key ? 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208]' : 'border-[#E6DFD5] bg-[#FAF8F5] hover:bg-[#F0EBE1] text-[#1E1208]'}`}>
+                className={`border p-4 text-center transition-colors ${result === b.key ? 'bg-ink text-paper border-ink' : 'border-mist bg-paper hover:bg-warm text-ink'}`}>
                 <p className="text-[14px] font-semibold">{b.label}</p>
-                <p className={`text-[11px] mt-0.5 ${result === b.key ? 'text-[#D8C8B8]' : 'text-[#B09C8C]'}`}>{b.desc}</p>
+                <p className={`text-[11px] mt-0.5 ${result === b.key ? 'text-[#D8C8B8]' : 'text-faint'}`}>{b.desc}</p>
               </button>
             ))}
           </div>
           <form onSubmit={handleOtherName} className="flex gap-2 items-center justify-center">
-            <span className="text-[12px] text-[#B09C8C]">Ouviu outro nome (viúva, solteirão)?</span>
+            <span className="text-[12px] text-faint">Ouviu outro nome (viúva, solteirão)?</span>
             <input value={otherName} onChange={e => setOtherName(e.target.value)} placeholder="ex: viúva"
-              className="border border-[#E6DFD5] px-3 py-2 text-[13px] outline-none focus:border-[#C4714A] bg-white w-36" />
-            <button type="submit" className="text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">Ver</button>
+              className="border border-mist px-3 py-2 text-[13px] outline-none focus:border-clay-l bg-white dark:bg-warm w-36" />
+            <button type="submit" className="text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors">Ver</button>
           </form>
           {error && <p className="text-[12px] text-red-600 text-center">{error}</p>}
         </div>
       )}
 
       {result && (
-        <div className="border-t border-[#E6DFD5] pt-8 flex flex-col gap-5">
+        <div className="border-t border-mist pt-8 flex flex-col gap-5">
           <div className="text-center">
-            <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-[#9C8878] mb-2">Recomendação</p>
-            <p className="font-display text-3xl text-[#1E1208] mb-2">{MATTRESS_SIZES[result].label}</p>
-            {confidenceMsg && <p className="text-[13px] text-[#705A48] max-w-[48ch] mx-auto leading-relaxed">{confidenceMsg}</p>}
-            {aliasNote && <p className="text-[13px] text-[#C4714A] max-w-[48ch] mx-auto leading-relaxed mt-2">{aliasNote}</p>}
-            {heightWarning && <p className="text-[13px] text-[#C4714A] max-w-[48ch] mx-auto leading-relaxed mt-2">{heightWarning}</p>}
+            <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-2">Recomendação</p>
+            <p className="font-display text-3xl text-ink mb-2">{MATTRESS_SIZES[result].label}</p>
+            {confidenceMsg && <p className="text-[13px] text-mid max-w-[48ch] mx-auto leading-relaxed">{confidenceMsg}</p>}
+            {aliasNote && <p className="text-[13px] text-clay-l max-w-[48ch] mx-auto leading-relaxed mt-2">{aliasNote}</p>}
+            {heightWarning && <p className="text-[13px] text-clay-l max-w-[48ch] mx-auto leading-relaxed mt-2">{heightWarning}</p>}
           </div>
 
           {matchingProducts.length > 0 ? (
@@ -165,7 +165,7 @@ export function SizeGuideCalculator({ products }: Props) {
               {matchingProducts.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           ) : (
-            <p className="text-[13px] text-[#B09C8C] text-center">Não temos produtos nesse tamanho no momento.</p>
+            <p className="text-[13px] text-faint text-center">Não temos produtos nesse tamanho no momento.</p>
           )}
         </div>
       )}

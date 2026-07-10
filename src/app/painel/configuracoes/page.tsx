@@ -88,13 +88,13 @@ export default function ConfiguracoesPage() {
 
       {/* Título */}
       <div className="mb-6">
-        <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C4714A] mb-1">Painel</p>
-        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Configurações</h1>
-        <p className="text-[13px] text-[#B09C8C] mt-1">Personalize sua loja. As mudanças aparecem no site em até 10 minutos.</p>
+        <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-clay-l mb-1">Painel</p>
+        <h1 className="font-display font-normal text-ink text-2xl">Configurações</h1>
+        <p className="text-[13px] text-faint mt-1">Personalize sua loja. As mudanças aparecem no site em até 10 minutos.</p>
       </div>
 
       {/* Tabs */}
-      <div className="grid gap-1.5 mb-8 p-1 bg-[#F0EBE1] rounded-sm"
+      <div className="grid gap-1.5 mb-8 p-1 bg-warm rounded-sm"
         style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}>
         {visibleTabs.map(t => {
           const TabIcon = CARD_ICON_MAP[t.icon];
@@ -102,15 +102,15 @@ export default function ConfiguracoesPage() {
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex flex-col items-center gap-1 py-3 px-1 text-center rounded-sm transition-all ${
                 tab === t.id
-                  ? 'bg-[#1E1208] text-[#FAF8F5] shadow-sm'
-                  : 'text-[#705A48] hover:bg-[#E8DFD3]'
+                  ? 'bg-ink text-paper shadow-sm'
+                  : 'text-mid hover:bg-[#E8DFD3]'
               }`}
             >
               {TabIcon && (
-                <TabIcon size={18} className={tab === t.id ? 'text-[#FAF8F5]' : 'text-[#9C8878]'} />
+                <TabIcon size={18} className={tab === t.id ? 'text-paper' : 'text-faint'} />
               )}
               <span className="text-[12px] font-bold leading-tight">{t.label}</span>
-              <span className={`text-[10px] leading-tight ${tab === t.id ? 'text-[#FAF8F5]/50' : 'text-[#B09C8C]'}`}>{t.sub}</span>
+              <span className={`text-[10px] leading-tight ${tab === t.id ? 'text-paper/50' : 'text-faint'}`}>{t.sub}</span>
             </button>
           );
         })}
@@ -169,10 +169,10 @@ export default function ConfiguracoesPage() {
               onChange={next => set('businessHours', serializeBusinessHours(next))}
             />
             <div>
-              <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">Fuso horário</label>
+              <label className="block text-[11px] font-semibold text-mid mb-1.5">Fuso horário</label>
               <select value={settings.businessHoursTimezone || 'America/Sao_Paulo'}
                 onChange={e => set('businessHoursTimezone', e.target.value)}
-                className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20"
+                className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20"
               >
                 <option value="America/Sao_Paulo">Brasília (GMT-3) — maioria do Brasil</option>
                 <option value="America/Manaus">Manaus (GMT-4)</option>
@@ -311,8 +311,8 @@ export default function ConfiguracoesPage() {
               value={settings.localDeliveryRadiusKm} onChange={v => set('localDeliveryRadiusKm', v)}
               hint={`Pedidos dentro de ${settings.localDeliveryRadiusKm} km recebem opção de entrega em 1h`}
               min={1} max={100} />
-            <details className="border border-[#E6DFD5]">
-              <summary className="px-3 py-2.5 text-[12px] text-[#B09C8C] cursor-pointer select-none">
+            <details className="border border-mist">
+              <summary className="px-3 py-2.5 text-[12px] text-faint cursor-pointer select-none">
                 Coordenadas GPS (avançado — só mexa se souber)
               </summary>
               <div className="px-3 pb-3 pt-2 flex flex-col gap-3">
@@ -405,9 +405,9 @@ export default function ConfiguracoesPage() {
       {/* Botão salvar fixo */}
       {tab !== 'equipe' && (
       <div className="fixed bottom-0 left-0 right-0 z-30 md:relative md:bottom-auto md:mt-8">
-        <div className="bg-[#FAF8F5] border-t border-[#E6DFD5] md:border-0 px-4 py-3 md:px-0 md:py-0">
+        <div className="bg-paper border-t border-mist md:border-0 px-4 py-3 md:px-0 md:py-0">
           <button onClick={handleSave} disabled={saving}
-            className="w-full bg-[#1E1208] text-[#FAF8F5] text-sm font-semibold py-4 disabled:opacity-50 hover:bg-[#2E2010] transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-ink text-paper text-sm font-semibold py-4 disabled:opacity-50 hover:bg-[#2E2010] transition-colors flex items-center justify-center gap-2"
           >
             {saving
               ? <><span className="spinner" />Salvando…</>
@@ -415,7 +415,7 @@ export default function ConfiguracoesPage() {
               ? 'Salvo com sucesso!'
               : 'Salvar alterações'}
           </button>
-          {saved && <p className="text-center text-[11px] text-[#B09C8C] mt-2">Mudanças podem levar até 10 min para aparecer no site.</p>}
+          {saved && <p className="text-center text-[11px] text-faint mt-2">Mudanças podem levar até 10 min para aparecer no site.</p>}
         </div>
       </div>
       )}
@@ -447,13 +447,13 @@ function Card({ icon, title, desc, children, onPreview }: {
 }) {
   const IconComp = CARD_ICON_MAP[icon];
   return (
-    <div className="border border-[#E6DFD5] bg-white overflow-hidden">
-      <div className="flex items-start justify-between gap-3 px-5 py-4 bg-[#FAF8F5] border-b border-[#E6DFD5]">
+    <div className="border border-mist bg-white dark:bg-warm overflow-hidden">
+      <div className="flex items-start justify-between gap-3 px-5 py-4 bg-paper border-b border-mist">
         <div className="flex items-start gap-3">
-          {IconComp ? <IconComp size={16} className="text-[#705A48] mt-0.5 shrink-0" /> : null}
+          {IconComp ? <IconComp size={16} className="text-mid mt-0.5 shrink-0" /> : null}
           <div>
-            <p className="text-[13px] font-bold text-[#1E1208]">{title}</p>
-            <p className="text-[11px] text-[#B09C8C] mt-0.5 leading-relaxed">{desc}</p>
+            <p className="text-[13px] font-bold text-ink">{title}</p>
+            <p className="text-[11px] text-faint mt-0.5 leading-relaxed">{desc}</p>
           </div>
         </div>
         {onPreview && <div className="shrink-0 pt-0.5"><PreviewButton onClick={onPreview} /></div>}
@@ -469,8 +469,8 @@ function Row({ children }: { children: React.ReactNode }) {
 }
 function Divider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 -mx-5 px-5 pt-2 pb-1 border-t border-[#F0EBE1]">
-      <span className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#B09C8C] whitespace-nowrap">{label}</span>
+    <div className="flex items-center gap-3 -mx-5 px-5 pt-2 pb-1 border-t border-warm">
+      <span className="text-[10px] font-bold tracking-[0.16em] uppercase text-faint whitespace-nowrap">{label}</span>
     </div>
   );
 }
@@ -488,11 +488,11 @@ function F({ label, value, onChange, hint, placeholder, maxLength, type='text' }
 }) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">{label}</label>
+      <label className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
       <input type={type} value={value} onChange={e=>onChange(e.target.value)}
         placeholder={placeholder} maxLength={maxLength}
-        className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/60 placeholder:text-[#C8BAB0]" />
-      {hint && <p className="mt-1.5 text-[11px] text-[#B09C8C] leading-relaxed">{hint}</p>}
+        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint-l" />
+      {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>
   );
 }
@@ -501,10 +501,10 @@ function TA({ label, value, onChange, rows=3, placeholder, hint }: {
 }) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">{label}</label>
+      <label className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
       <textarea value={value} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={placeholder}
-        className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/60 resize-y placeholder:text-[#C8BAB0]" />
-      {hint && <p className="mt-1.5 text-[11px] text-[#B09C8C]">{hint}</p>}
+        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 resize-y placeholder:text-faint-l" />
+      {hint && <p className="mt-1.5 text-[11px] text-faint">{hint}</p>}
     </div>
   );
 }
@@ -519,14 +519,14 @@ function Toggle({ label, checked, onChange, hint, warn }: {
           role="switch"
           aria-checked={checked}
           onClick={() => onChange(!checked)}
-          className={`relative w-10 h-6 rounded-full shrink-0 transition-colors duration-150 ${checked ? 'bg-[#C4714A]' : 'bg-[#E6DFD5]'}`}
+          className={`relative w-10 h-6 rounded-full shrink-0 transition-colors duration-150 ${checked ? 'bg-clay-l' : 'bg-mist'}`}
         >
-          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-150 ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white dark:bg-warm shadow transition-transform duration-150 ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
         </button>
-        <span className="text-[11px] font-semibold text-[#705A48]">{label}</span>
+        <span className="text-[11px] font-semibold text-mid">{label}</span>
       </label>
-      {hint && <p className="mt-1.5 text-[11px] text-[#B09C8C] leading-relaxed">{hint}</p>}
-      {checked && warn && <p className="mt-1.5 text-[11px] text-[#C4714A] font-semibold leading-relaxed">{warn}</p>}
+      {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
+      {checked && warn && <p className="mt-1.5 text-[11px] text-clay-l font-semibold leading-relaxed">{warn}</p>}
     </div>
   );
 }
@@ -536,11 +536,11 @@ function Num({ label, value, onChange, hint, min, max, step=1 }: {
 }) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-[#705A48] mb-1.5">{label}</label>
+      <label className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
       <input type="number" value={value} onChange={e=>onChange(parseFloat(e.target.value)||0)}
         min={min} max={max} step={step} inputMode="decimal"
-        className="w-full border border-[#E6DFD5] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/60" />
-      {hint && <p className="mt-1.5 text-[11px] text-[#B09C8C] leading-relaxed">{hint}</p>}
+        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60" />
+      {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>
   );
 }
@@ -553,14 +553,14 @@ function TableEditor({ colsJson, rowsJson, onRowsChange }: {
   try { cols = JSON.parse(colsJson || '[]'); } catch {}
   try { rows = JSON.parse(rowsJson || '[]'); } catch {}
 
-  if (!cols.length) return <p className="text-[12px] text-[#B09C8C]">Defina as colunas acima primeiro.</p>;
+  if (!cols.length) return <p className="text-[12px] text-faint">Defina as colunas acima primeiro.</p>;
 
   return (
     <div className="flex flex-col gap-2">
       {/* Header */}
       <div className="grid gap-2 pr-8 [grid-template-columns:repeat(var(--cols),1fr)]" style={{ '--cols': cols.length } as React.CSSProperties}>
         {cols.map(c => (
-          <p key={c} className="text-[9px] font-bold tracking-[0.14em] uppercase text-[#B09C8C]">{c}</p>
+          <p key={c} className="text-[9px] font-bold tracking-[0.14em] uppercase text-faint">{c}</p>
         ))}
       </div>
       {/* Rows */}
@@ -573,17 +573,17 @@ function TableEditor({ colsJson, rowsJson, onRowsChange }: {
                   const next = [...rows]; next[i]={...next[i],[col]:e.target.value};
                   onRowsChange(JSON.stringify(next));
                 }}
-                className="w-full border border-[#E6DFD5] bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C4714A]/30" />
+                className="w-full border border-mist bg-white dark:bg-warm px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay-l/30" />
             ))}
           </div>
           <button onClick={() => onRowsChange(JSON.stringify(rows.filter((_,idx)=>idx!==i)))}
-            className="w-7 h-7 flex items-center justify-center text-[#C8BAB0] hover:text-red-400 transition-colors shrink-0 text-sm">
+            className="w-7 h-7 flex items-center justify-center text-faint-l hover:text-red-400 transition-colors shrink-0 text-sm">
             <IconX size={14} />
           </button>
         </div>
       ))}
       <button onClick={() => onRowsChange(JSON.stringify([...rows, Object.fromEntries(cols.map(c=>[c,'']))]))}
-        className="mt-1 border-2 border-dashed border-[#C4714A]/25 text-[#C4714A] text-[12px] font-semibold py-2.5 hover:bg-[#C4714A]/5 hover:border-[#C4714A]/50 transition-all">
+        className="mt-1 border-2 border-dashed border-clay-l/25 text-clay-l text-[12px] font-semibold py-2.5 hover:bg-clay-l/5 hover:border-clay-l/50 transition-all">
         + Adicionar linha
       </button>
     </div>
@@ -600,16 +600,16 @@ function TimelineEditor({ value, onChange }: { value:string; onChange:(v:string)
   return (
     <div className="flex flex-col gap-3">
       {items.length===0 && (
-        <p className="text-[12px] text-[#B09C8C] text-center py-4 border border-dashed border-[#E6DFD5]">
+        <p className="text-[12px] text-faint text-center py-4 border border-dashed border-mist">
           Nenhum marco ainda — clique abaixo para adicionar
         </p>
       )}
       {items.map((item,i) => (
-        <div key={i} className="border border-[#E6DFD5] p-4 flex flex-col gap-3">
+        <div key={i} className="border border-mist p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <p className="text-[12px] font-bold text-[#1E1208]">Marco {i+1}</p>
+            <p className="text-[12px] font-bold text-ink">Marco {i+1}</p>
             <button onClick={()=>upd(items.filter((_,idx)=>idx!==i))}
-              className="text-[11px] text-[#B09C8C] hover:text-red-500 transition-colors">Remover</button>
+              className="text-[11px] text-faint hover:text-red-500 transition-colors">Remover</button>
           </div>
           <Row>
             <F label="Ano" value={item.year} onChange={v=>upd(items.map((it,idx)=>idx===i?{...it,year:v}:it))} placeholder="2018" />
@@ -621,7 +621,7 @@ function TimelineEditor({ value, onChange }: { value:string; onChange:(v:string)
         </div>
       ))}
       <button onClick={()=>upd([...items,{year:'',label:'',desc:''}])}
-        className="border-2 border-dashed border-[#C4714A]/30 text-[#C4714A] text-[13px] font-semibold py-3 hover:bg-[#C4714A]/5 transition-all">
+        className="border-2 border-dashed border-clay-l/30 text-clay-l text-[13px] font-semibold py-3 hover:bg-clay-l/5 transition-all">
         + Adicionar marco
       </button>
     </div>
@@ -726,30 +726,30 @@ function TeamPanel() {
         <Info>Só admins conseguem gerenciar a equipe. Sellers têm acesso ao painel, mas não podem adicionar ou remover outras pessoas — assim uma conta de seller comprometida não vira uma porta pra criar acessos ilimitados.</Info>
         <form onSubmit={handleAdd} className="flex flex-col gap-3">
           <div className="relative flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-[#705A48] uppercase tracking-wide">Buscar pessoa</label>
+            <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Buscar pessoa</label>
             <input
               value={selected ? (selected.displayName || selected.email || '') : query}
               onChange={e => { setQuery(e.target.value); setSelected(null); }}
               placeholder="Nome ou e-mail…"
-              className="border border-[#E6DFD5] px-3 py-2.5 text-[13px] outline-none focus:border-[#C4714A] bg-white"
+              className="border border-mist px-3 py-2.5 text-[13px] outline-none focus:border-clay-l bg-white dark:bg-warm"
             />
             {!selected && query.trim().length >= 2 && (
-              <div className="border border-[#E6DFD5] bg-white max-h-64 overflow-y-auto shadow-sm">
+              <div className="border border-mist bg-white dark:bg-warm max-h-64 overflow-y-auto shadow-sm">
                 {searching ? (
-                  <p className="px-3 py-2.5 text-[12px] text-[#B09C8C]">Buscando…</p>
+                  <p className="px-3 py-2.5 text-[12px] text-faint">Buscando…</p>
                 ) : results.length === 0 ? (
-                  <p className="px-3 py-2.5 text-[12px] text-[#B09C8C]">Ninguém encontrado com esse nome/e-mail.</p>
+                  <p className="px-3 py-2.5 text-[12px] text-faint">Ninguém encontrado com esse nome/e-mail.</p>
                 ) : results.map(u => (
                   <button type="button" key={u.uid} onClick={() => setSelected(u)}
-                    className="w-full text-left px-3 py-2.5 hover:bg-[#F0EBE1] transition-colors border-b border-[#F0EBE1] last:border-0 flex items-center justify-between gap-2">
+                    className="w-full text-left px-3 py-2.5 hover:bg-warm transition-colors border-b border-warm last:border-0 flex items-center justify-between gap-2">
                     <span>
-                      <span className="block text-[13px] font-semibold text-[#1E1208]">{u.displayName || u.email}</span>
-                      <span className="block text-[11px] text-[#B09C8C]">{u.email}</span>
+                      <span className="block text-[13px] font-semibold text-ink">{u.displayName || u.email}</span>
+                      <span className="block text-[11px] text-faint">{u.email}</span>
                     </span>
                     {memberUids.has(u.uid) ? (
-                      <span className="text-[10px] font-bold text-[#C4714A] uppercase shrink-0">já é {u.role === 'admin' ? 'admin' : 'seller'}</span>
+                      <span className="text-[10px] font-bold text-clay-l uppercase shrink-0">já é {u.role === 'admin' ? 'admin' : 'seller'}</span>
                     ) : (
-                      <span className="text-[10px] text-[#B09C8C] uppercase shrink-0">{u.role === 'buyer' ? 'cliente' : u.role}</span>
+                      <span className="text-[10px] text-faint uppercase shrink-0">{u.role === 'buyer' ? 'cliente' : u.role}</span>
                     )}
                   </button>
                 ))}
@@ -757,12 +757,12 @@ function TeamPanel() {
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-[#705A48] uppercase tracking-wide">Nível de acesso</label>
+            <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Nível de acesso</label>
             <div className="flex gap-2">
               {(['seller', 'admin'] as const).map(r => (
                 <button type="button" key={r} onClick={() => setRole(r)}
                   className={`flex-1 py-2.5 text-[12px] font-semibold border transition-colors ${
-                    role === r ? 'bg-[#1E1208] text-[#FAF8F5] border-[#1E1208]' : 'border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1]'
+                    role === r ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm'
                   }`}>
                   {r === 'seller' ? 'Seller (gerencia loja)' : 'Admin (gerencia loja + equipe)'}
                 </button>
@@ -771,7 +771,7 @@ function TeamPanel() {
           </div>
           {error && <p className="text-[12px] text-red-600">{error}</p>}
           <button type="submit" disabled={busy || !selected}
-            className="bg-[#C4714A] text-white text-[13px] font-semibold py-3 disabled:opacity-50 hover:bg-[#B0603C] transition-colors">
+            className="bg-clay-l text-paper text-[13px] font-semibold py-3 disabled:opacity-50 hover:bg-clay transition-colors">
             {busy ? 'Adicionando…' : selected ? `Adicionar ${selected.displayName || selected.email}` : 'Escolha alguém acima'}
           </button>
         </form>
@@ -779,20 +779,20 @@ function TeamPanel() {
 
       <Card icon="shield" title="Quem tem acesso hoje" desc="Sellers e admins ativos no painel">
         {loading ? (
-          <p className="text-[13px] text-[#B09C8C]">Carregando…</p>
+          <p className="text-[13px] text-faint">Carregando…</p>
         ) : members.length === 0 ? (
-          <p className="text-[13px] text-[#B09C8C]">Ninguém além de você ainda.</p>
+          <p className="text-[13px] text-faint">Ninguém além de você ainda.</p>
         ) : (
           <div className="flex flex-col gap-2">
             {members.map(m => (
-              <div key={m.uid} className="flex items-center justify-between border border-[#E6DFD5] px-3 py-2.5">
+              <div key={m.uid} className="flex items-center justify-between border border-mist px-3 py-2.5">
                 <div>
-                  <p className="text-[13px] font-semibold text-[#1E1208]">{m.displayName || m.email}</p>
-                  <p className="text-[11px] text-[#B09C8C]">{m.email} · {m.role === 'admin' ? 'Admin' : 'Seller'}</p>
+                  <p className="text-[13px] font-semibold text-ink">{m.displayName || m.email}</p>
+                  <p className="text-[11px] text-faint">{m.email} · {m.role === 'admin' ? 'Admin' : 'Seller'}</p>
                 </div>
                 {m.uid !== user?.uid && (
                   <button onClick={() => handleRemove(m.uid)} disabled={busy}
-                    className="text-[11px] text-[#B09C8C] hover:text-red-500 transition-colors disabled:opacity-50">
+                    className="text-[11px] text-faint hover:text-red-500 transition-colors disabled:opacity-50">
                     Remover
                   </button>
                 )}

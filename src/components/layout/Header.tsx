@@ -63,7 +63,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
       )}
 
       {/* ── Main header ─────────────────────────────────────────── */}
-      <header className={`sticky top-0 z-40 bg-paper transition-shadow duration-200 ${scrolled ? 'shadow-[0_1px_0_0_#E4DED5]' : 'border-b border-mist'}`}>
+      <header className={`sticky top-0 z-40 bg-paper transition-shadow duration-200 ${scrolled ? 'shadow-[0_1px_0_0_rgb(var(--c-mist))]' : 'border-b border-mist'}`}>
         <div className="container-shop h-[60px] flex items-center">
 
           {/* Mobile hamburger */}

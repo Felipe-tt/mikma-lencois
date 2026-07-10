@@ -62,7 +62,7 @@ const TIMELINE_ICON_COMP: Record<string, React.FC<{ size?: number; className?: s
 };
 
 const TIMELINE_COLOR: Record<string, string> = {
-  created: 'bg-[#E6DFD5]', payment_initiated: 'bg-blue-300', payment_confirmed: 'bg-emerald-400',
+  created: 'bg-mist', payment_initiated: 'bg-blue-300', payment_confirmed: 'bg-emerald-400',
   payment_expired: 'bg-orange-400', payment_failed: 'bg-red-400', pending_payment: 'bg-yellow-300',
   paid: 'bg-emerald-400', preparing: 'bg-blue-400', shipped: 'bg-purple-400',
   delivery_cancelled: 'bg-orange-300',
@@ -105,9 +105,9 @@ function formatDateTime(value: unknown): string {
 function Row({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
   if (!value) return null;
   return (
-    <div className="flex justify-between items-start gap-4 py-2.5 border-b border-[#F0EBE1] last:border-0">
-      <span className="text-[12px] text-[#B09C8C] shrink-0">{label}</span>
-      <span className={`text-[13px] text-[#1E1208] text-right ${mono ? 'font-mono text-[11px] break-all' : 'font-medium'}`}>{value}</span>
+    <div className="flex justify-between items-start gap-4 py-2.5 border-b border-warm last:border-0">
+      <span className="text-[12px] text-faint shrink-0">{label}</span>
+      <span className={`text-[13px] text-ink text-right ${mono ? 'font-mono text-[11px] break-all' : 'font-medium'}`}>{value}</span>
     </div>
   );
 }
@@ -119,10 +119,10 @@ const CARD_ICONS: Record<string, React.FC<{ size?: number; className?: string }>
 function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   const IconComp = CARD_ICONS[icon];
   return (
-    <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
-      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-        {IconComp && <IconComp size={13} className="text-[#705A48]" />}
-        <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">{title}</p>
+    <div className="bg-paper border border-mist">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
+        {IconComp && <IconComp size={13} className="text-mid" />}
+        <p className="text-[12px] font-bold text-ink tracking-wide uppercase">{title}</p>
       </div>
       <div className="px-5 py-1">{children}</div>
     </div>
@@ -356,7 +356,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     </div>
   );
 
-  if (!order) return <p className="text-sm text-[#B09C8C] py-8 text-center">Pedido não encontrado.</p>;
+  if (!order) return <p className="text-sm text-faint py-8 text-center">Pedido não encontrado.</p>;
 
   const timeline = [...(order.timeline ?? [])].reverse();
   const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
@@ -365,14 +365,14 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     <div className="max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-[#B09C8C] hover:text-[#1E1208] transition-colors p-1 -ml-1">
+        <button onClick={() => router.back()} className="text-faint hover:text-ink transition-colors p-1 -ml-1">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
         </button>
         <div className="flex-1">
-          <h1 className="font-display font-normal text-[#1E1208] text-xl">Pedido #{order.id.slice(-8).toUpperCase()}</h1>
-          <p className="text-[11px] text-[#B09C8C]">Criado em {formatDateTime(order.createdAt)}</p>
+          <h1 className="font-display font-normal text-ink text-xl">Pedido #{order.id.slice(-8).toUpperCase()}</h1>
+          <p className="text-[11px] text-faint">Criado em {formatDateTime(order.createdAt)}</p>
         </div>
         <span className={STATUS_BADGE[order.status] ?? 'badge'}>
           {STATUS_LABELS[order.status]}
@@ -383,11 +383,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {/* ── Alerta de ação necessária ── */}
         {order.status === 'paid' && (
-          <div className="border-2 border-[#C4714A] bg-[#C4714A]/5 px-5 py-4">
-            <p className="text-[14px] font-bold text-[#1E1208] mb-1">Este pedido foi pago e está esperando você!</p>
-            <p className="text-[12px] text-[#705A48] mb-3">Comece a separar os itens e clique no botão abaixo quando terminar.</p>
+          <div className="border-2 border-clay-l bg-clay-l/5 px-5 py-4">
+            <p className="text-[14px] font-bold text-ink mb-1">Este pedido foi pago e está esperando você!</p>
+            <p className="text-[12px] text-mid mb-3">Comece a separar os itens e clique no botão abaixo quando terminar.</p>
             <button onClick={advanceStatus} disabled={updating}
-              className="w-full bg-[#C4714A] text-white text-[13px] font-bold py-3 hover:bg-[#A05432] disabled:opacity-50 transition-colors">
+              className="w-full bg-clay-l text-paper text-[13px] font-bold py-3 hover:bg-clay-d disabled:opacity-50 transition-colors">
               {updating ? 'Salvando…' : 'Comecei a separar o pedido'}
             </button>
           </div>
@@ -407,41 +407,41 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             uber_direct:     'Uber Direct',
           };
           return (
-            <div className="border border-[#1E1208]/20 bg-[#1E1208]/5 px-5 py-4 flex flex-col gap-3">
-              <p className="text-[13px] font-bold text-[#1E1208]">Pedido sendo separado</p>
+            <div className="border border-ink/20 bg-ink/5 px-5 py-4 flex flex-col gap-3">
+              <p className="text-[13px] font-bold text-ink">Pedido sendo separado</p>
 
               {/* Forma de envio escolhida pelo cliente — não editável */}
-              <div className="flex items-center justify-between bg-white border border-[#E6DFD5] px-4 py-3">
+              <div className="flex items-center justify-between bg-white dark:bg-warm border border-mist px-4 py-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#B09C8C] mb-0.5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-faint mb-0.5">
                     Envio escolhido pelo cliente
                   </p>
-                  <p className="text-[13px] font-semibold text-[#1E1208]">
+                  <p className="text-[13px] font-semibold text-ink">
                     {CARRIER_LABELS[carrier] ?? shipping?.label ?? carrier}
                   </p>
                   {shipping?.estimatedDays !== undefined && !isPickup && (
-                    <p className="text-[11px] text-[#B09C8C] mt-0.5">
+                    <p className="text-[11px] text-faint mt-0.5">
                       Prazo: {shipping.estimatedDays === 0 ? 'hoje' : `${shipping.estimatedDays} dias úteis`}
                     </p>
                   )}
                 </div>
                 {shipping?.priceCents !== undefined && (
-                  <span className="text-[14px] font-bold text-[#1E1208]">
+                  <span className="text-[14px] font-bold text-ink">
                     {shipping.priceCents === 0 ? 'Grátis' : `R$ ${(shipping.priceCents / 100).toFixed(2).replace('.', ',')}`}
                   </span>
                 )}
               </div>
 
               {isPickup ? (
-                <p className="text-[12px] text-[#705A48]">
+                <p className="text-[12px] text-mid">
                   O cliente vai retirar na loja. Quando ele buscar o pedido, clique em &quot;Confirmar retirada&quot;.
                 </p>
               ) : isUberDirect ? (
-                <p className="text-[11px] text-[#B09C8C]">
+                <p className="text-[11px] text-faint">
                   Um motoboy Uber será solicitado assim que você clicar. Acompanhe o status em tempo real aqui no painel.
                 </p>
               ) : (
-                <p className="text-[11px] text-[#B09C8C]">
+                <p className="text-[11px] text-faint">
                   A etiqueta será gerada automaticamente via Melhor Envio e o saldo da sua conta será debitado.
                   Imprima, cole na caixa e poste.
                 </p>
@@ -454,7 +454,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <button
                 onClick={dispatchDelivery}
                 disabled={updating}
-                className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors"
+                className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors"
               >
                 {updating
                   ? (isPickup ? 'Salvando…' : isUberDirect ? 'Solicitando motoboy…' : 'Gerando etiqueta…')
@@ -465,13 +465,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         })()}
 
         {order.status === 'shipped' && (
-          <div className="border border-[#E6DFD5] px-5 py-4 flex flex-col gap-3">
-            <p className="text-[13px] font-bold text-[#1E1208] flex items-center gap-1.5"><IconTruck size={13} className="text-[#C4714A]" /> Pedido despachado</p>
+          <div className="border border-mist px-5 py-4 flex flex-col gap-3">
+            <p className="text-[13px] font-bold text-ink flex items-center gap-1.5"><IconTruck size={13} className="text-clay-l" /> Pedido despachado</p>
 
             {/* ── Uber Direct: entregador em tempo real ─────────────────── */}
             {order.delivery?.carrier === 'uber_direct' && (
-              <div className="bg-[#F5F1EB] border border-[#E6DFD5] px-4 py-3 flex flex-col gap-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#B09C8C]">Uber Direct</p>
+              <div className="bg-[#F5F1EB] border border-mist px-4 py-3 flex flex-col gap-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-faint">Uber Direct</p>
 
                 {/* Entregador */}
                 {order.delivery.courierName ? (
@@ -480,39 +480,39 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                       <img src={order.delivery.courierPhoto} alt={order.delivery.courierName}
                         className="w-9 h-9 rounded-full object-cover shrink-0" />
                     ) : (
-                      <span className="w-9 h-9 rounded-full bg-[#E6DFD5] flex items-center justify-center shrink-0">
+                      <span className="w-9 h-9 rounded-full bg-mist flex items-center justify-center shrink-0">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#C4714A" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                       </span>
                     )}
                     <div>
-                      <p className="text-[13px] font-semibold text-[#1E1208]">{order.delivery.courierName}</p>
+                      <p className="text-[13px] font-semibold text-ink">{order.delivery.courierName}</p>
                       {order.delivery.courierPhone && (
-                        <p className="text-[11px] text-[#705A48] font-mono">{order.delivery.courierPhone}</p>
+                        <p className="text-[11px] text-mid font-mono">{order.delivery.courierPhone}</p>
                       )}
                       {order.delivery.courierVehicle && (
-                        <p className="text-[11px] text-[#B09C8C] capitalize">{order.delivery.courierVehicle}</p>
+                        <p className="text-[11px] text-faint capitalize">{order.delivery.courierVehicle}</p>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-[12px] text-[#B09C8C]">Procurando entregador…</p>
+                  <p className="text-[12px] text-faint">Procurando entregador…</p>
                 )}
 
                 {/* ETAs */}
                 {(order.delivery.pickupEta || order.delivery.dropoffEta) && (
                   <div className="flex gap-4">
                     {order.delivery.pickupEta && (
-                      <p className="text-[12px] text-[#705A48]">
+                      <p className="text-[12px] text-mid">
                         Previsão de coleta:{' '}
-                        <span className="font-bold text-[#1E1208]">
+                        <span className="font-bold text-ink">
                           {new Date(order.delivery.pickupEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </p>
                     )}
                     {order.delivery.dropoffEta && (
-                      <p className="text-[12px] text-[#705A48]">
+                      <p className="text-[12px] text-mid">
                         Previsão de chegada:{' '}
-                        <span className="font-bold text-[#1E1208]">
+                        <span className="font-bold text-ink">
                           {new Date(order.delivery.dropoffEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </p>
@@ -532,7 +532,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 {/* Link rastreio em tempo real */}
                 {order.delivery.trackingUrl && (
                   <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 w-full py-2 bg-[#1E1208] text-[#FAF8F5] text-[12px] font-bold hover:bg-[#1E1208]/80 transition-colors">
+                    className="flex items-center justify-center gap-1.5 w-full py-2 bg-ink text-paper text-[12px] font-bold hover:bg-ink/80 transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
                     Abrir rastreio da Uber em outra aba
                   </a>
@@ -542,31 +542,31 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
             {/* Código de rastreio (Melhor Envio / Correios) */}
             {order.delivery?.trackingCode && (
-              <div className="flex items-center justify-between bg-[#F0EBE1] px-3 py-2.5">
+              <div className="flex items-center justify-between bg-warm px-3 py-2.5">
                 <div>
-                  <p className="text-[10px] text-[#B09C8C] mb-0.5">Código de rastreio</p>
-                  <p className="text-[13px] font-mono font-bold text-[#1E1208]">{order.delivery.trackingCode}</p>
+                  <p className="text-[10px] text-faint mb-0.5">Código de rastreio</p>
+                  <p className="text-[13px] font-mono font-bold text-ink">{order.delivery.trackingCode}</p>
                 </div>
                 <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
-                  className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+                  className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
                   {copied === 'tracking' ? 'Copiado!' : 'Copiar'}
                 </button>
               </div>
             )}
             {order.delivery?.trackingUrl && order.delivery?.carrier !== 'uber_direct' && (
               <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
-                className="text-[12px] text-[#C4714A] font-semibold hover:underline">
+                className="text-[12px] text-clay-l font-semibold hover:underline">
                 Rastrear envio
               </a>
             )}
             {order.delivery?.labelUrl && (
               <a href={order.delivery.labelUrl} target="_blank" rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors">
+                className="w-full flex items-center justify-center gap-2 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors">
                 Reimprimir etiqueta
               </a>
             )}
             <button onClick={advanceStatus} disabled={updating}
-              className="w-full bg-[#1E1208] text-white text-[13px] font-bold py-3 hover:bg-[#1E1208]/80 disabled:opacity-50 transition-colors">
+              className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors">
               {updating ? 'Salvando…' : 'Confirmar entrega ao cliente'}
             </button>
 
@@ -598,33 +598,33 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </Card>
 
         {/* ── Itens ── */}
-        <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
-          <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-            <IconProducts size={14} className="text-[#705A48] shrink-0" />
-            <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Itens do pedido</p>
+        <div className="bg-paper border border-mist">
+          <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
+            <IconProducts size={14} className="text-mid shrink-0" />
+            <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Itens do pedido</p>
           </div>
-          <div className="divide-y divide-[#E6DFD5]">
+          <div className="divide-y divide-mist">
             {order.items.map((item, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-3.5">
                 {item.image && (
-                  <div className="w-10 h-[52px] shrink-0 overflow-hidden bg-[#F0EBE1] border border-[#E6DFD5]">
+                  <div className="w-10 h-[52px] shrink-0 overflow-hidden bg-warm border border-mist">
                     <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-[#1E1208] leading-snug">{item.productName}</p>
-                  <p className="text-[11px] text-[#B09C8C] mt-0.5">
+                  <p className="text-[13px] font-medium text-ink leading-snug">{item.productName}</p>
+                  <p className="text-[11px] text-faint mt-0.5">
                     {item.variant.size}{item.variant.color ? ` · ${item.variant.color}` : ''}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}{' '}
                     · {item.quantity} {item.quantity === 1 ? 'unidade' : 'unidades'} · {formatCurrency(item.unitPrice)} cada
                   </p>
-                  <p className="text-[10px] font-mono text-[#B09C8C]/60 mt-0.5">SKU: {item.sku}</p>
+                  <p className="text-[10px] font-mono text-faint/60 mt-0.5">SKU: {item.sku}</p>
                 </div>
-                <span className="text-[13px] font-semibold text-[#1E1208] shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                <span className="text-[13px] font-semibold text-ink shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
               </div>
             ))}
           </div>
-          <div className="px-5 py-3 border-t border-[#E6DFD5] flex flex-col gap-1.5">
-            <div className="flex justify-between text-[12px] text-[#B09C8C]">
+          <div className="px-5 py-3 border-t border-mist flex flex-col gap-1.5">
+            <div className="flex justify-between text-[12px] text-faint">
               <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
             </div>
             {order.discountCents ? (
@@ -633,9 +633,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <span>- {formatCurrency(order.discountCents)}</span>
               </div>
             ) : null}
-            <div className="flex justify-between pt-2 border-t border-[#E6DFD5]">
-              <span className="text-[13px] font-bold text-[#1E1208]">Total pago</span>
-              <span className="font-display text-xl text-[#1E1208]">{formatCurrency(order.totalCents)}</span>
+            <div className="flex justify-between pt-2 border-t border-mist">
+              <span className="text-[13px] font-bold text-ink">Total pago</span>
+              <span className="font-display text-xl text-ink">{formatCurrency(order.totalCents)}</span>
             </div>
           </div>
         </div>
@@ -652,15 +652,15 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <Row label="Parcelas" value={`${order.payment.installments}x`} />
           )}
           {order.payment.method === 'pix' && order.payment.pixCopyPaste && (
-            <div className="py-2.5 border-b border-[#F0EBE1]">
+            <div className="py-2.5 border-b border-warm">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[12px] text-[#B09C8C]">PIX Copia e Cola</span>
+                <span className="text-[12px] text-faint">PIX Copia e Cola</span>
                 <button onClick={() => copy(order.payment.method === 'pix' ? order.payment.pixCopyPaste! : '', 'pix')}
-                  className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+                  className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
                   {copied === 'pix' ? 'Copiado!' : 'Copiar'}
                 </button>
               </div>
-              <p className="text-[10px] font-mono text-[#B09C8C] break-all bg-[#F0EBE1] px-2 py-1.5 leading-relaxed">
+              <p className="text-[10px] font-mono text-faint break-all bg-warm px-2 py-1.5 leading-relaxed">
                 {order.payment.pixCopyPaste.slice(0, 80)}…
               </p>
             </div>
@@ -676,7 +676,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           <div className="py-2.5">
             <button
               onClick={() => copy(`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP ${order.address.cep}`, 'address')}
-              className="w-full border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2 hover:bg-[#F0EBE1] transition-colors">
+              className="w-full border border-mist text-mid text-[12px] font-semibold py-2 hover:bg-warm transition-colors">
               {copied === 'address' ? 'Endereço copiado!' : 'Copiar endereço completo'}
             </button>
           </div>
@@ -691,20 +691,20 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             {order.delivery.trackingCode && (
               <div className="py-2.5">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[12px] text-[#B09C8C]">Código de rastreio</span>
+                  <span className="text-[12px] text-faint">Código de rastreio</span>
                   <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
-                    className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+                    className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
                     {copied === 'tracking' ? 'Copiado!' : 'Copiar'}
                   </button>
                 </div>
-                <p className="font-mono text-[13px] text-[#1E1208] font-bold mb-2">{order.delivery.trackingCode}</p>
+                <p className="font-mono text-[13px] text-ink font-bold mb-2">{order.delivery.trackingCode}</p>
                 {(() => {
                   const url = order.delivery.carrier
                     ? trackingUrl(order.delivery.carrier, order.delivery.trackingCode)
                     : null;
                   return url ? (
                     <a href={url} target="_blank" rel="noopener noreferrer"
-                      className="text-[12px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors">
+                      className="text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors">
                       Rastrear na transportadora
                     </a>
                   ) : null;
@@ -719,11 +719,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
              mapa; esse aqui não tem noção de Uber Direct e só mostraria um
              erro confuso de "Melhor Envio" pra esses pedidos) ── */}
         {order.delivery?.carrier && order.delivery.carrier !== 'pickup' && order.delivery.carrier !== 'manual' && order.delivery.carrier !== 'uber_direct' && (
-          <div className="bg-[#FAF8F5] border border-[#E6DFD5]">
-            <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[#E6DFD5] bg-[#F0EAE1]">
-              <IconBox size={16} className="text-[#705A48] shrink-0" />
-              <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Rastreamento</p>
-              <span className="ml-auto font-mono text-[11px] text-[#705A48]">{order.delivery.trackingCode}</span>
+          <div className="bg-paper border border-mist">
+            <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
+              <IconBox size={16} className="text-mid shrink-0" />
+              <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Rastreamento</p>
+              <span className="ml-auto font-mono text-[11px] text-mid">{order.delivery.trackingCode}</span>
             </div>
             <div className="px-5 py-4">
               <TrackingTimeline orderId={order.id} carrierName={carrierNameVendor(order.delivery.carrier!)} />
@@ -735,19 +735,19 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         <Card title="Histórico do pedido" icon="clock">
           <div className="py-3">
             {timeline.length === 0 ? (
-              <p className="text-[12px] text-[#B09C8C] text-center py-3">Sem histórico registrado.</p>
+              <p className="text-[12px] text-faint text-center py-3">Sem histórico registrado.</p>
             ) : (
               <div className="flex flex-col gap-4">
                 {timeline.map((ev, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <div className={`w-2.5 h-2.5 shrink-0 mt-1.5 ${TIMELINE_COLOR[ev.status] ?? 'bg-[#E6DFD5]'}`} />
+                    <div className={`w-2.5 h-2.5 shrink-0 mt-1.5 ${TIMELINE_COLOR[ev.status] ?? 'bg-mist'}`} />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         {(() => { const TLIcon = TIMELINE_ICON_COMP[ev.status]; return TLIcon ? <TLIcon size={13} /> : <span>•</span>; })()}
-                        <p className="text-[13px] font-semibold text-[#1E1208]">{timelineLabel(ev.status, order)}</p>
+                        <p className="text-[13px] font-semibold text-ink">{timelineLabel(ev.status, order)}</p>
                       </div>
-                      {ev.note && <p className="text-[12px] text-[#705A48] mt-0.5 ml-7">{ev.note}</p>}
-                      <p className="text-[11px] text-[#B09C8C] mt-0.5 ml-7 tabular-nums">{formatDateTime(ev.at)}</p>
+                      {ev.note && <p className="text-[12px] text-mid mt-0.5 ml-7">{ev.note}</p>}
+                      <p className="text-[11px] text-faint mt-0.5 ml-7 tabular-nums">{formatDateTime(ev.at)}</p>
                     </div>
                   </div>
                 ))}
@@ -757,10 +757,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </Card>
 
         {/* ── Info técnica ── */}
-        <details className="bg-[#FAF8F5] border border-[#E6DFD5]">
-          <summary className="flex items-center gap-2 px-5 py-3.5 cursor-pointer select-none bg-[#F0EAE1] border-b border-[#E6DFD5]">
-            <IconMaintenance size={14} className="text-[#705A48] shrink-0" />
-            <p className="text-[12px] font-bold text-[#1E1208] tracking-wide uppercase">Informações técnicas</p>
+        <details className="bg-paper border border-mist">
+          <summary className="flex items-center gap-2 px-5 py-3.5 cursor-pointer select-none bg-warm border-b border-mist">
+            <IconMaintenance size={14} className="text-mid shrink-0" />
+            <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Informações técnicas</p>
           </summary>
           <div className="px-5 py-1">
             <Row label="ID do pedido" value={order.id} mono />

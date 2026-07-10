@@ -67,7 +67,7 @@ export function ProductGallery({ images, name, tag }: Props) {
               <button
                 key={i}
                 onClick={() => setActive(i)}
-                className={`relative aspect-square shrink-0 overflow-hidden bg-[#F3EFE8] border transition-colors duration-150 focus:outline-none ${
+                className={`relative aspect-square shrink-0 overflow-hidden bg-warm border transition-colors duration-150 focus:outline-none ${
                   active === i ? 'border-ink border-2' : 'border-mist/60 hover:border-ink/40'
                 }`}
                 aria-label={`Ver foto ${i + 1}`}
@@ -80,7 +80,7 @@ export function ProductGallery({ images, name, tag }: Props) {
 
         <div className="flex-1 min-w-0 flex flex-col gap-2">
           <div
-            className={`group relative aspect-square overflow-hidden bg-[#F3EFE8] select-none ${hasImages ? 'cursor-zoom-in' : ''}`}
+            className={`group relative aspect-square overflow-hidden bg-warm select-none ${hasImages ? 'cursor-zoom-in' : ''}`}
             onClick={() => {
               if (!hasImages) return;
               if (justSwiped.current) { justSwiped.current = false; return; }
@@ -163,7 +163,7 @@ export function ProductGallery({ images, name, tag }: Props) {
                 <button
                   key={i}
                   onClick={() => setActive(i)}
-                  className={`relative aspect-square w-14 shrink-0 overflow-hidden bg-[#F3EFE8] border transition-colors duration-150 ${
+                  className={`relative aspect-square w-14 shrink-0 overflow-hidden bg-warm border transition-colors duration-150 ${
                     active === i ? 'border-ink border-2' : 'border-mist/60'
                   }`}
                   aria-label={`Ver foto ${i + 1}`}

@@ -76,17 +76,17 @@ export default function PainelMensagens() {
   return (
     <div className="max-w-5xl">
       <div className="mb-6">
-        <h1 className="font-display font-normal text-[#1E1208] text-2xl">Mensagens</h1>
-        <p className="text-[13px] text-[#B09C8C] mt-1">
+        <h1 className="font-display font-normal text-ink text-2xl">Mensagens</h1>
+        <p className="text-[13px] text-faint mt-1">
           Responda e-mails de clientes direto pelo painel. As respostas chegam com o visual da loja.
         </p>
       </div>
 
-      <div className="bg-[#FAF8F5] border border-[#E6DFD5] flex h-[calc(100vh-220px)] min-h-[500px] overflow-hidden">
+      <div className="bg-paper border border-mist flex h-[calc(100vh-220px)] min-h-[500px] overflow-hidden">
         {/* ── Lista de conversas ── */}
-        <div className={`w-full sm:w-[300px] shrink-0 border-r border-[#E6DFD5] flex flex-col overflow-hidden ${selected ? 'hidden sm:flex' : ''}`}>
-          <div className="px-4 py-3 border-b border-[#E6DFD5] bg-[#F0EAE1] shrink-0">
-            <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#B09C8C]">
+        <div className={`w-full sm:w-[300px] shrink-0 border-r border-mist flex flex-col overflow-hidden ${selected ? 'hidden sm:flex' : ''}`}>
+          <div className="px-4 py-3 border-b border-mist bg-warm shrink-0">
+            <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">
               {conversations.length} conversa{conversations.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -94,9 +94,9 @@ export default function PainelMensagens() {
           <div className="overflow-y-auto flex-1">
             {conversations.length === 0 ? (
               <div className="py-16 text-center px-6">
-                <IconMail size={40} className="text-[#E6DFD5] mx-auto mb-3" />
-                <p className="text-[13px] font-semibold text-[#1E1208] mb-1">Nenhuma mensagem ainda</p>
-                <p className="text-[12px] text-[#B09C8C]">
+                <IconMail size={40} className="text-mist mx-auto mb-3" />
+                <p className="text-[13px] font-semibold text-ink mb-1">Nenhuma mensagem ainda</p>
+                <p className="text-[12px] text-faint">
                   Quando alguém escrever para contato@mikma.com.br, a conversa aparece aqui.
                 </p>
               </div>
@@ -104,35 +104,35 @@ export default function PainelMensagens() {
               <div key={conv.id} className="group relative">
                 <button
                   onClick={() => openConversation(conv)}
-                  className={`w-full text-left px-4 py-3.5 pr-10 border-b border-[#E6DFD5] transition-colors ${
+                  className={`w-full text-left px-4 py-3.5 pr-10 border-b border-mist transition-colors ${
                     selectedId === conv.id
-                      ? 'bg-[#1E1208] text-[#FAF8F5]'
-                      : 'hover:bg-[#F0EBE1]'
+                      ? 'bg-ink text-paper'
+                      : 'hover:bg-warm'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     {/* Avatar inicial */}
                     <div className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                      selectedId === conv.id ? 'bg-[#FAF8F5]/20 text-[#FAF8F5]' : 'bg-[#E6DFD5] text-[#705A48]'
+                      selectedId === conv.id ? 'bg-paper/20 text-paper' : 'bg-mist text-mid'
                     }`}>
                       {(conv.customerName || conv.customerEmail)[0].toUpperCase()}
                     </div>
                     <span className={`text-[13px] font-semibold truncate flex-1 ${
-                      selectedId === conv.id ? 'text-[#FAF8F5]' : 'text-[#1E1208]'
+                      selectedId === conv.id ? 'text-paper' : 'text-ink'
                     }`}>
                       {conv.customerName || conv.customerEmail}
                     </span>
                     {conv.unread && (
-                      <span className="shrink-0 w-2 h-2 rounded-full bg-[#C4714A]" />
+                      <span className="shrink-0 w-2 h-2 rounded-full bg-clay-l" />
                     )}
                   </div>
                   <p className={`text-[11px] truncate pl-8 ${
-                    selectedId === conv.id ? 'text-[#FAF8F5]/60' : 'text-[#B09C8C]'
+                    selectedId === conv.id ? 'text-paper/60' : 'text-faint'
                   }`}>
                     {conv.lastMessagePreview || '—'}
                   </p>
                   <p className={`text-[10px] mt-1 pl-8 ${
-                    selectedId === conv.id ? 'text-[#FAF8F5]/40' : 'text-[#B09C8C]/60'
+                    selectedId === conv.id ? 'text-paper/40' : 'text-faint/60'
                   }`}>
                     {formatTsDateTime(conv.lastMessageAt)}
                   </p>
@@ -144,8 +144,8 @@ export default function PainelMensagens() {
                   title="Excluir conversa"
                   className={`absolute right-2.5 top-3.5 w-7 h-7 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity disabled:opacity-60 ${
                     selectedId === conv.id
-                      ? 'text-[#FAF8F5]/50 hover:text-[#FAF8F5]'
-                      : 'text-[#B09C8C] hover:text-red-500'
+                      ? 'text-paper/50 hover:text-paper'
+                      : 'text-faint hover:text-red-500'
                   }`}
                 >
                   {deletingId === conv.id ? (
@@ -170,9 +170,9 @@ export default function PainelMensagens() {
             />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-3">
-              <IconMessages size={32} className="text-[#E6DFD5] mx-auto mb-3" />
-              <p className="text-[14px] font-semibold text-[#1E1208]">Selecione uma conversa</p>
-              <p className="text-[12px] text-[#B09C8C]">As mensagens aparecem aqui.</p>
+              <IconMessages size={32} className="text-mist mx-auto mb-3" />
+              <p className="text-[14px] font-semibold text-ink">Selecione uma conversa</p>
+              <p className="text-[12px] text-faint">As mensagens aparecem aqui.</p>
             </div>
           )}
         </div>
@@ -293,10 +293,10 @@ function ConversationThread({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-[#E6DFD5] bg-[#FAF8F5] shrink-0">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-mist bg-paper shrink-0">
         <button
           onClick={onBack}
-          className="sm:hidden text-[#705A48] hover:text-[#1E1208] transition-colors p-1 -ml-1"
+          className="sm:hidden text-mid hover:text-ink transition-colors p-1 -ml-1"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 19l-7-7 7-7" />
@@ -304,26 +304,26 @@ function ConversationThread({
         </button>
 
         {/* Avatar */}
-        <div className="w-8 h-8 bg-[#E6DFD5] flex items-center justify-center text-[13px] font-bold text-[#705A48] shrink-0">
+        <div className="w-8 h-8 bg-mist flex items-center justify-center text-[13px] font-bold text-mid shrink-0">
           {(conversation.customerName || conversation.customerEmail)[0].toUpperCase()}
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-semibold text-[#1E1208] leading-tight truncate">
+          <p className="text-[14px] font-semibold text-ink leading-tight truncate">
             {conversation.customerName || conversation.customerEmail}
           </p>
           {conversation.customerName && (
-            <p className="text-[11px] text-[#B09C8C] truncate">{conversation.customerEmail}</p>
+            <p className="text-[11px] text-faint truncate">{conversation.customerEmail}</p>
           )}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[11px] text-[#B09C8C]">
+          <span className="text-[11px] text-faint">
             {messages.length} msg{messages.length !== 1 ? 's' : ''}
           </span>
           <a
             href={`mailto:${conversation.customerEmail}`}
-            className="text-[11px] font-semibold text-[#C4714A] hover:text-[#A05432] transition-colors"
+            className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors"
           >
             Abrir no e-mail
           </a>
@@ -331,7 +331,7 @@ function ConversationThread({
             onClick={onDelete}
             disabled={deleting}
             title="Excluir conversa"
-            className="w-7 h-7 flex items-center justify-center text-[#B09C8C] hover:text-red-500 transition-colors disabled:opacity-60"
+            className="w-7 h-7 flex items-center justify-center text-faint hover:text-red-500 transition-colors disabled:opacity-60"
           >
             {deleting ? (
               <span className="w-3.5 h-3.5 border border-current border-t-transparent rounded-full animate-spin" />
@@ -345,9 +345,9 @@ function ConversationThread({
       {/* Mensagens */}
       <div className="flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-4">
         {loading ? (
-          <p className="text-[12px] text-[#B09C8C] text-center mt-8">Carregando mensagens…</p>
+          <p className="text-[12px] text-faint text-center mt-8">Carregando mensagens…</p>
         ) : messages.length === 0 ? (
-          <p className="text-[12px] text-[#B09C8C] text-center mt-8">Nenhuma mensagem nesta conversa.</p>
+          <p className="text-[12px] text-faint text-center mt-8">Nenhuma mensagem nesta conversa.</p>
         ) : (
           messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)
         )}
@@ -355,16 +355,16 @@ function ConversationThread({
       </div>
 
       {/* Área de resposta */}
-      <div className="border-t border-[#E6DFD5] bg-[#FAF8F5] shrink-0">
+      <div className="border-t border-mist bg-paper shrink-0">
 
         {/* Preview do e-mail */}
         {showPreview && reply.trim() && (
-          <div className="border-b border-[#E6DFD5] max-h-[280px] overflow-y-auto">
-            <div className="flex items-center justify-between px-4 py-2 bg-[#F0EAE1]">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#B09C8C]">
+          <div className="border-b border-mist max-h-[280px] overflow-y-auto">
+            <div className="flex items-center justify-between px-4 py-2 bg-warm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-faint">
                 Preview — como o cliente vai receber
               </p>
-              <button onClick={() => setShowPreview(false)} className="text-[11px] text-[#B09C8C] hover:text-[#1E1208]">
+              <button onClick={() => setShowPreview(false)} className="text-[11px] text-faint hover:text-ink">
                 Fechar
               </button>
             </div>
@@ -383,14 +383,14 @@ function ConversationThread({
           {/* Assunto (opcional, expansível) */}
           {showSubject ? (
             <div className="flex items-center gap-2">
-              <label className="text-[10px] font-bold uppercase tracking-wide text-[#B09C8C] shrink-0">Assunto</label>
+              <label className="text-[10px] font-bold uppercase tracking-wide text-faint shrink-0">Assunto</label>
               <input
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
                 placeholder="Re: contato Mikma Lençóis"
-                className="flex-1 border border-[#E6DFD5] bg-white px-2.5 py-1.5 text-[12px] text-[#1E1208] focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/60"
+                className="flex-1 border border-mist bg-white dark:bg-warm px-2.5 py-1.5 text-[12px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60"
               />
-              <button onClick={() => { setShowSubject(false); setSubject(''); }} className="text-[10px] text-[#B09C8C] hover:text-[#1E1208]">
+              <button onClick={() => { setShowSubject(false); setSubject(''); }} className="text-[10px] text-faint hover:text-ink">
                 Remover
               </button>
             </div>
@@ -403,7 +403,7 @@ function ConversationThread({
             onKeyDown={handleKeyDown}
             placeholder="Escreva sua resposta… (Ctrl+Enter para enviar)"
             rows={3}
-            className="w-full resize-none border border-[#E6DFD5] bg-white px-3 py-2.5 text-[13px] text-[#1E1208] focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/60 placeholder:text-[#C8BAB0]"
+            className="w-full resize-none border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint-l"
           />
 
           {/* Barra de ações */}
@@ -412,7 +412,7 @@ function ConversationThread({
               {!showSubject && (
                 <button
                   onClick={() => setShowSubject(true)}
-                  className="text-[11px] text-[#B09C8C] hover:text-[#705A48] transition-colors"
+                  className="text-[11px] text-faint hover:text-mid transition-colors"
                 >
                   + Assunto
                 </button>
@@ -420,7 +420,7 @@ function ConversationThread({
               {reply.trim() && (
                 <button
                   onClick={() => setShowPreview(v => !v)}
-                  className="text-[11px] text-[#B09C8C] hover:text-[#705A48] transition-colors"
+                  className="text-[11px] text-faint hover:text-mid transition-colors"
                 >
                   {showPreview ? 'Ocultar preview' : 'Ver como vai ficar'}
                 </button>
@@ -430,7 +430,7 @@ function ConversationThread({
             <button
               onClick={handleSend}
               disabled={!reply.trim() || sending}
-              className="flex items-center gap-2 px-5 py-2.5 text-[12px] font-bold uppercase tracking-wide bg-[#C4714A] text-white hover:bg-[#A05432] transition-colors disabled:opacity-40"
+              className="flex items-center gap-2 px-5 py-2.5 text-[12px] font-bold uppercase tracking-wide bg-clay-l text-paper hover:bg-clay-d transition-colors disabled:opacity-40"
             >
               {sending ? (
                 <>
@@ -466,7 +466,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
 
       {/* Assunto (só inbound) */}
       {!isOut && (msg as { subject?: string }).subject && (
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#B09C8C] px-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-faint px-1">
           {(msg as { subject?: string }).subject}
         </p>
       )}
@@ -474,8 +474,8 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
       {/* Corpo */}
       <div className={`text-[13px] leading-relaxed ${
         isOut
-          ? 'bg-[#1E1208] text-[#FAF8F5] px-4 py-3 rounded-tl rounded-bl'
-          : 'bg-white border border-[#E6DFD5] text-[#1E1208] px-4 py-3 rounded-tr rounded-br'
+          ? 'bg-ink text-paper px-4 py-3 rounded-tl rounded-bl'
+          : 'bg-white dark:bg-warm border border-mist text-ink px-4 py-3 rounded-tr rounded-br'
       }`}>
         {showHtml ? (
           <div
@@ -495,7 +495,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
               <img
                 src={att.url}
                 alt={att.filename}
-                className="max-w-[200px] max-h-[160px] object-cover border border-[#E6DFD5] hover:opacity-90 transition-opacity"
+                className="max-w-[200px] max-h-[160px] object-cover border border-mist hover:opacity-90 transition-opacity"
               />
             </a>
           ))}
@@ -511,7 +511,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
               href={att.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 border border-[#E6DFD5] bg-white hover:bg-[#F0EBE1] transition-colors text-[12px] text-[#705A48] font-medium"
+              className="flex items-center gap-2 px-3 py-2 border border-mist bg-white dark:bg-warm hover:bg-warm transition-colors text-[12px] text-mid font-medium"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
@@ -522,7 +522,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
         </div>
       )}
 
-      <span className="text-[10px] text-[#B09C8C]">{formatTsDateTime(msg.createdAt)}</span>
+      <span className="text-[10px] text-faint">{formatTsDateTime(msg.createdAt)}</span>
     </div>
   );
 }

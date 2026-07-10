@@ -24,12 +24,12 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   return (
     <NavLink
       href={`/produtos/${product.id}`}
-      className="group block bg-[#F9F6F1] relative overflow-hidden"
+      className="group block bg-paper relative overflow-hidden"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {/* Imagem */}
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#F0EAE1]">
+      <div className="relative aspect-[3/4] overflow-hidden bg-warm">
         {img0 && !imgError ? (
           <>
             <Image
@@ -51,7 +51,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
             )}
           </>
         ) : (
-          <div className="flex h-full items-center justify-center bg-[#F0EAE1]">
+          <div className="flex h-full items-center justify-center bg-warm">
             <Image src="/logo-dark.png" alt="" width={800} height={242}
               className="w-28 h-auto opacity-[0.12]" />
           </div>
@@ -62,7 +62,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
             {badge && (
               <span className={`text-[9px] font-bold tracking-[0.14em] uppercase px-2.5 py-1 leading-none ${
-                isNew ? 'bg-[#7C5C3E] text-[#F9F6F1]' : 'bg-[#1E1208] text-[#F9F6F1]'
+                isNew ? 'bg-mid text-paper' : 'bg-ink text-paper'
               }`}>{badge}</span>
             )}
             {lowStock && (
@@ -76,15 +76,15 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
 
       {/* Info */}
       <div className="px-4 pt-4 pb-5">
-        <p className="text-[12px] font-medium text-[#1E1208] leading-snug line-clamp-2 mb-3 group-hover:text-[#7C5C3E] transition-colors duration-200">
+        <p className="text-[12px] font-medium text-ink leading-snug line-clamp-2 mb-3 group-hover:text-mid transition-colors duration-200">
           {product.name}
         </p>
         <div className="flex items-baseline justify-between">
-          <p className="font-display text-[1.2rem] text-[#1E1208] font-normal leading-none tracking-[-0.01em]">
+          <p className="font-display text-[1.2rem] text-ink font-normal leading-none tracking-[-0.01em]">
             {formatCurrency(product.price)}
           </p>
           {product.variants && product.variants.length > 1 && (
-            <p className="font-mono text-[10px] text-[#B09C8C]">
+            <p className="font-mono text-[10px] text-faint">
               {product.variants.length} tam.
             </p>
           )}

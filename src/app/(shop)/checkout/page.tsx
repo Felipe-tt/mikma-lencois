@@ -55,9 +55,9 @@ const TAG: Record<string, { label: string; cls: string }> = {
 // ── Field components ─────────────────────────────────────────────────────────
 function Label({ children, optional }: { children: React.ReactNode; optional?: boolean }) {
   return (
-    <label className="block text-xs font-semibold text-[#5A4535] mb-1.5 tracking-[0.03em]">
+    <label className="block text-xs font-semibold text-mid mb-1.5 tracking-[0.03em]">
       {children}
-      {optional && <span className="ml-1.5 text-[#B09C8C] font-normal">opcional</span>}
+      {optional && <span className="ml-1.5 text-faint font-normal">opcional</span>}
     </label>
   );
 }
@@ -93,13 +93,13 @@ function Input({
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
         onBlur={() => { setTouched(true); onBlur?.(); }}
-        className={`w-full border px-3.5 py-3 text-sm text-[#1E1208] placeholder:text-[#C8B8A8] focus:outline-none transition-all duration-150 ${
+        className={`w-full border px-3.5 py-3 text-sm text-ink placeholder:text-faint-l focus:outline-none transition-all duration-150 ${
           hasError && touched
             ? 'border-red-400 bg-red-50/40 focus:border-red-400 focus:ring-2 focus:ring-red-100'
             : valid
-              ? 'border-emerald-400 bg-white focus:border-ink/40 focus:ring-2 focus:ring-ink/5'
-              : 'border-[#E0D8CE] bg-white focus:border-[#1E1208]/40 focus:ring-2 focus:ring-[#1E1208]/5'
-        } disabled:bg-[#F9F6F1] disabled:text-[#B09C8C]`}
+              ? 'border-emerald-400 bg-white dark:bg-warm focus:border-ink/40 focus:ring-2 focus:ring-ink/5'
+              : 'border-mist bg-white dark:bg-warm focus:border-ink/40 focus:ring-2 focus:ring-ink/5'
+        } disabled:bg-paper disabled:text-faint`}
       />
       {valid && (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none">
@@ -118,15 +118,15 @@ function Section({
   onEdit?: () => void; children: React.ReactNode;
 }) {
   return (
-    <div className={`border transition-colors ${open ? 'border-[#1E1208]/20' : 'border-[#E0D8CE]'}`}>
+    <div className={`border transition-colors ${open ? 'border-ink/20' : 'border-mist'}`}>
       <div
-        className={`flex items-center gap-3 px-5 py-4 ${!open && done ? 'cursor-pointer hover:bg-[#F9F6F1]/60' : ''}`}
+        className={`flex items-center gap-3 px-5 py-4 ${!open && done ? 'cursor-pointer hover:bg-paper/60' : ''}`}
         onClick={() => !open && done && onEdit?.()}
       >
         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
           done && !open ? 'bg-emerald-600 text-white' :
-          open          ? 'bg-[#1E1208] text-white' :
-                          'border-2 border-[#E0D8CE] text-[#B09C8C]'
+          open          ? 'bg-ink text-paper' :
+                          'border-2 border-mist text-faint'
         }`}>
           {done && !open
             ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -134,12 +134,12 @@ function Section({
           }
         </span>
         <div className="flex-1 min-w-0">
-          <h2 className={`text-sm font-bold ${open ? 'text-[#1E1208]' : done ? 'text-[#5A4535]' : 'text-[#B09C8C]'}`}>
+          <h2 className={`text-sm font-bold ${open ? 'text-ink' : done ? 'text-mid' : 'text-faint'}`}>
             {label}
           </h2>
         </div>
         {done && !open && (
-          <button type="button" onClick={onEdit} className="text-xs font-semibold text-[#C4714A] hover:text-[#A05838] transition-colors shrink-0">
+          <button type="button" onClick={onEdit} className="text-xs font-semibold text-clay-l hover:text-[#A05838] transition-colors shrink-0">
             Editar
           </button>
         )}
@@ -343,7 +343,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-[#FAFAF9]">
 
       {/* ── Top bar ── */}
-      <div className="bg-white border-b border-[#E0D8CE] sticky top-0 z-20">
+      <div className="bg-white dark:bg-warm border-b border-mist sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 overflow-x-auto scrollbar-none">
             <Crumb state="done" label="Carrinho" />
@@ -398,7 +398,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <button type="button" onClick={advanceToStep2}
-                  className="w-full h-12 bg-[#1E1208] text-white text-sm font-bold tracking-[0.05em] hover:bg-[#7C5C3E] transition-colors mt-1">
+                  className="w-full h-12 bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
                   Continuar para endereço
                 </button>
               </div>
@@ -463,17 +463,17 @@ export default function CheckoutPage() {
                     <Label>UF</Label>
                     <div className="relative">
                       <select value={addr.state} required onChange={e => setAddr(a => ({ ...a, state: e.target.value }))}
-                        className={`w-full border px-3 py-3 text-sm appearance-none bg-white focus:outline-none focus:ring-2 transition-all ${errors.state ? 'border-red-400 focus:ring-red-100' : 'border-[#E0D8CE] focus:border-[#1E1208]/40 focus:ring-[#1E1208]/5'}`}>
+                        className={`w-full border px-3 py-3 text-sm appearance-none bg-white dark:bg-warm focus:outline-none focus:ring-2 transition-all ${errors.state ? 'border-red-400 focus:ring-red-100' : 'border-mist focus:border-ink/40 focus:ring-ink/5'}`}>
                         <option value="">--</option>
                         {BR_STATES.map(uf => <option key={uf}>{uf}</option>)}
                       </select>
-                      <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#B09C8C]" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                      <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-faint" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
                     </div>
                     <Err msg={errors.state} />
                   </div>
                 </div>
                 <button type="button" onClick={advanceToStep3}
-                  className="w-full h-12 bg-[#1E1208] text-white text-sm font-bold tracking-[0.05em] hover:bg-[#7C5C3E] transition-colors mt-1">
+                  className="w-full h-12 bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
                   Continuar para entrega
                 </button>
               </div>
@@ -485,9 +485,9 @@ export default function CheckoutPage() {
 
                 {/* Opções de frete */}
                 <div>
-                  <p className="text-xs font-bold text-[#5A4535] tracking-[0.05em] uppercase mb-3">Opção de entrega</p>
+                  <p className="text-xs font-bold text-mid tracking-[0.05em] uppercase mb-3">Opção de entrega</p>
                   {shippingLoading ? (
-                    <div className="flex items-center gap-3 border border-[#E0D8CE] bg-white px-4 py-4 text-sm text-[#9C8878]">
+                    <div className="flex items-center gap-3 border border-mist bg-white dark:bg-warm px-4 py-4 text-sm text-faint">
                       <span className="spinner shrink-0" />
                       Calculando opções para o CEP {addr.cep}…
                     </div>
@@ -500,7 +500,7 @@ export default function CheckoutPage() {
                       </button>
                     </div>
                   ) : shippingOptions.length > 0 ? (
-                    <div className="flex flex-col divide-y divide-[#E0D8CE] border border-[#E0D8CE] bg-white overflow-hidden">
+                    <div className="flex flex-col divide-y divide-mist border border-mist bg-white dark:bg-warm overflow-hidden">
                       {shippingOptions.map(opt => {
                         const sel = selectedShipping?.carrier === opt.carrier;
                         return (
@@ -508,30 +508,30 @@ export default function CheckoutPage() {
                             key={opt.carrier}
                             type="button"
                             onClick={() => setSelShip(opt)}
-                            className={`flex items-center gap-4 w-full px-4 py-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E1208]/30 ${sel ? 'bg-[#F2ECE5]' : 'hover:bg-[#F9F6F1]'}`}
+                            className={`flex items-center gap-4 w-full px-4 py-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${sel ? 'bg-warm' : 'hover:bg-paper'}`}
                           >
                             {/* Radio */}
-                            <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${sel ? 'border-[#1E1208]' : 'border-[#C8B8A8]'}`}>
-                              {sel && <span className="w-2.5 h-2.5 rounded-full bg-[#1E1208]" />}
+                            <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${sel ? 'border-ink' : 'border-faint-l'}`}>
+                              {sel && <span className="w-2.5 h-2.5 rounded-full bg-ink" />}
                             </span>
                             {/* Icon */}
-                            <span className="text-[#9C8878] shrink-0">
+                            <span className="text-faint shrink-0">
                               <CarrierIcon carrier={opt.carrier} />
                             </span>
                             {/* Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[13px] font-semibold text-[#1E1208]">{opt.label}</span>
+                                <span className="text-[13px] font-semibold text-ink">{opt.label}</span>
                                 {opt.tag && <span className={`text-[10px] font-bold tracking-[0.06em] uppercase px-2 py-0.5 rounded-full ${TAG[opt.tag]?.cls}`}>{TAG[opt.tag]?.label}</span>}
                               </div>
-                              <p className="text-[11px] text-[#9C8878] mt-0.5">
+                              <p className="text-[11px] text-faint mt-0.5">
                                 {opt.estimatedDays === 0
                                   ? 'Entrega hoje'
                                   : `Recebe ${estimatedDate(opt.estimatedDays)}`}
                               </p>
                             </div>
                             {/* Preço */}
-                            <span className={`text-sm font-bold shrink-0 ${opt.priceCents === 0 ? 'text-emerald-600' : 'text-[#1E1208]'}`}>
+                            <span className={`text-sm font-bold shrink-0 ${opt.priceCents === 0 ? 'text-emerald-600' : 'text-ink'}`}>
                               {opt.priceCents === 0 ? 'Grátis' : formatCurrency(opt.priceCents)}
                             </span>
                           </button>
@@ -539,20 +539,20 @@ export default function CheckoutPage() {
                       })}
                     </div>
                   ) : step === 3 ? (
-                    <p className="text-sm text-[#B09C8C]">Nenhuma opção de entrega disponível para o CEP informado.</p>
+                    <p className="text-sm text-faint">Nenhuma opção de entrega disponível para o CEP informado.</p>
                   ) : null}
                 </div>
 
                 {/* Pagamento */}
                 <div>
-                  <p className="text-xs font-bold text-[#5A4535] tracking-[0.05em] uppercase mb-3">Forma de pagamento</p>
-                  <div className="flex flex-col divide-y divide-[#E0D8CE] border border-[#E0D8CE] bg-white overflow-hidden">
+                  <p className="text-xs font-bold text-mid tracking-[0.05em] uppercase mb-3">Forma de pagamento</p>
+                  <div className="flex flex-col divide-y divide-mist border border-mist bg-white dark:bg-warm overflow-hidden">
 
                     {/* PIX */}
                     <button type="button" onClick={() => setPayMethod('pix')}
-                      className={`flex items-center gap-4 w-full px-4 py-4 text-left transition-all ${payMethod === 'pix' ? 'bg-[#F2ECE5]' : 'hover:bg-[#F9F6F1]'}`}>
-                      <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${payMethod === 'pix' ? 'border-[#1E1208]' : 'border-[#C8B8A8]'}`}>
-                        {payMethod === 'pix' && <span className="w-2.5 h-2.5 rounded-full bg-[#1E1208]" />}
+                      className={`flex items-center gap-4 w-full px-4 py-4 text-left transition-all ${payMethod === 'pix' ? 'bg-warm' : 'hover:bg-paper'}`}>
+                      <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${payMethod === 'pix' ? 'border-ink' : 'border-faint-l'}`}>
+                        {payMethod === 'pix' && <span className="w-2.5 h-2.5 rounded-full bg-ink" />}
                       </span>
                       <div className="w-8 h-8 rounded-full bg-[#32BCAD]/10 flex items-center justify-center shrink-0">
                         <svg viewBox="0 0 512 512" className="w-5 h-5 fill-[#32BCAD]">
@@ -561,14 +561,14 @@ export default function CheckoutPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-bold text-[#1E1208]">PIX</p>
+                          <p className="text-sm font-bold text-ink">PIX</p>
                           {pixDiscount > 0 && (
                             <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
                               {pixDiscountPct}% de desconto
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-[#9C8878] mt-0.5">
+                        <p className="text-xs text-faint mt-0.5">
                           {pixDiscount > 0
                             ? `Economize ${formatCurrency(pixDiscount)} pagando com PIX`
                             : 'Aprovação instantânea'}
@@ -579,26 +579,26 @@ export default function CheckoutPage() {
                     {/* Crédito */}
                     {creditTotal >= 10000 && (
                       <button type="button" onClick={() => setPayMethod('credit')}
-                        className={`flex flex-col w-full px-4 py-4 text-left transition-all ${payMethod === 'credit' ? 'bg-[#F2ECE5]' : 'hover:bg-[#F9F6F1]'}`}>
+                        className={`flex flex-col w-full px-4 py-4 text-left transition-all ${payMethod === 'credit' ? 'bg-warm' : 'hover:bg-paper'}`}>
                         <div className="flex items-center gap-4 w-full">
-                          <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${payMethod === 'credit' ? 'border-[#1E1208]' : 'border-[#C8B8A8]'}`}>
-                            {payMethod === 'credit' && <span className="w-2.5 h-2.5 rounded-full bg-[#1E1208]" />}
+                          <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${payMethod === 'credit' ? 'border-ink' : 'border-faint-l'}`}>
+                            {payMethod === 'credit' && <span className="w-2.5 h-2.5 rounded-full bg-ink" />}
                           </span>
-                          <div className="w-8 h-8 rounded-full bg-[#E6DFD5] flex items-center justify-center shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-mist flex items-center justify-center shrink-0">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#705A48" strokeWidth="1.8" strokeLinecap="round">
                               <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
                             </svg>
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-bold text-[#1E1208]">Cartão de crédito</p>
-                            <p className="text-xs text-[#9C8878] mt-0.5">Qualquer bandeira · até {Math.min(8, Math.floor(creditTotal / 10000))}x</p>
+                            <p className="text-sm font-bold text-ink">Cartão de crédito</p>
+                            <p className="text-xs text-faint mt-0.5">Qualquer bandeira · até {Math.min(8, Math.floor(creditTotal / 10000))}x</p>
                           </div>
                         </div>
 
                         {/* Seletor de parcelas */}
                         {payMethod === 'credit' && maxInstall > 1 && (
                           <div className="mt-3 ml-9 pl-4">
-                            <p className="text-[11px] font-semibold text-[#5A4535] mb-2">Em quantas vezes?</p>
+                            <p className="text-[11px] font-semibold text-mid mb-2">Em quantas vezes?</p>
                             <div className="flex flex-wrap gap-2">
                               {Array.from({ length: maxInstall }, (_, i) => i + 1).map(n => {
                                 const val = Math.round(creditTotal / n);
@@ -607,8 +607,8 @@ export default function CheckoutPage() {
                                     onClick={e => { e.stopPropagation(); setInstall(n); }}
                                     className={`px-3 py-2 border text-xs font-medium transition-all ${
                                       installments === n
-                                        ? 'border-[#1E1208] bg-[#1E1208] text-white'
-                                        : 'border-[#E0D8CE] text-[#5A4535] hover:border-[#1E1208]/40'
+                                        ? 'border-ink bg-ink text-paper'
+                                        : 'border-mist text-mid hover:border-ink/40'
                                     }`}
                                   >
                                     {n}x {formatCurrency(val)}
@@ -625,9 +625,9 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Resumo de valores (mobile repetition) */}
-                <div className="border border-[#E0D8CE] bg-white p-4 lg:hidden">
+                <div className="border border-mist bg-white dark:bg-warm p-4 lg:hidden">
                   <div className="flex flex-col gap-2 text-sm">
-                    <div className="flex justify-between text-[#705A48]">
+                    <div className="flex justify-between text-mid">
                       <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
                     </div>
                     {pixDiscount > 0 && payMethod === 'pix' && (
@@ -635,17 +635,17 @@ export default function CheckoutPage() {
                         <span>Desconto PIX ({pixDiscountPct}%)</span><span>-{formatCurrency(pixDiscount)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-[#705A48]">
+                    <div className="flex justify-between text-mid">
                       <span>Frete</span>
                       <span className={selectedShipping?.priceCents === 0 ? 'text-emerald-600 font-semibold' : ''}>
                         {selectedShipping ? (selectedShipping.priceCents === 0 ? 'Grátis' : formatCurrency(selectedShipping.priceCents)) : '—'}
                       </span>
                     </div>
-                    <div className="flex justify-between font-bold text-[#1E1208] pt-2 border-t border-[#E0D8CE] mt-1">
+                    <div className="flex justify-between font-bold text-ink pt-2 border-t border-mist mt-1">
                       <span>Total</span><span>{formatCurrency(total)}</span>
                     </div>
                     {payMethod === 'credit' && installments > 1 && (
-                      <p className="text-[11px] text-[#9C8878] text-right">{installments}x de {formatCurrency(installVal)}</p>
+                      <p className="text-[11px] text-faint text-right">{installments}x de {formatCurrency(installVal)}</p>
                     )}
                   </div>
                 </div>
@@ -653,7 +653,7 @@ export default function CheckoutPage() {
                 {/* CTA — Trust signals adjacent */}
                 <div className="flex flex-col gap-3">
                   {/* Trust inline — 18% higher completion rate (Baymard) */}
-                  <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[11px] text-[#9C8878]">
+                  <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[11px] text-faint">
                     <span>PIX confirmado em segundos</span>
                     <span>Troca em até 7 dias</span>
                   </div>
@@ -661,7 +661,7 @@ export default function CheckoutPage() {
                   <button
                     type="submit"
                     disabled={submitting || !selectedShipping}
-                    className="flex items-center justify-center gap-2.5 w-full h-14 bg-[#1E1208] text-white text-[15px] font-bold tracking-[0.03em] hover:bg-[#7C5C3E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 active:scale-[0.99]"
+                    className="flex items-center justify-center gap-2.5 w-full h-14 bg-ink text-paper text-[15px] font-bold tracking-[0.03em] hover:bg-mid disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 active:scale-[0.99]"
                   >
                     {submitting
                       ? <><span className="spinner mr-1" />{payMethod === 'credit' ? 'Redirecionando…' : 'Gerando PIX…'}</>
@@ -686,38 +686,38 @@ export default function CheckoutPage() {
 
           {/* ── Order summary sticky ── */}
           <div className="w-full hidden lg:block lg:sticky lg:top-[72px]">
-            <div className="bg-white border border-[#E0D8CE]">
+            <div className="bg-white dark:bg-warm border border-mist">
               {/* Header */}
-              <div className="px-5 py-4 border-b border-[#E0D8CE] flex items-center justify-between">
-                <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-[#9C8878]">Seu pedido</h2>
-                <span className="text-xs text-[#B09C8C]">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</span>
+              <div className="px-5 py-4 border-b border-mist flex items-center justify-between">
+                <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-faint">Seu pedido</h2>
+                <span className="text-xs text-faint">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</span>
               </div>
 
               {/* Items */}
               <div className="px-5 py-4 flex flex-col gap-4">
                 {items.map(item => (
                   <div key={item.sku} className="flex items-start gap-3">
-                    <div className="relative shrink-0 w-12 h-14 bg-[#F9F6F1] border border-[#E0D8CE] overflow-hidden">
+                    <div className="relative shrink-0 w-12 h-14 bg-paper border border-mist overflow-hidden">
                       {item.image
                         ? <Image src={item.image} alt={item.productName} fill sizes="48px" className="object-cover" />
-                        : <div className="h-full flex items-center justify-center text-[#C8B8A8] text-xs font-display">M</div>
+                        : <div className="h-full flex items-center justify-center text-faint-l text-xs font-display">M</div>
                       }
-                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#1E1208] text-white text-[9px] font-bold flex items-center justify-center rounded-full">
+                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ink text-paper text-[9px] font-bold flex items-center justify-center rounded-full">
                         {item.quantity}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-[#1E1208] leading-snug line-clamp-2">{item.productName}</p>
-                      {item.variant?.size && <p className="text-[11px] text-[#B09C8C] mt-0.5">{item.variant.size}</p>}
+                      <p className="text-xs font-semibold text-ink leading-snug line-clamp-2">{item.productName}</p>
+                      {item.variant?.size && <p className="text-[11px] text-faint mt-0.5">{item.variant.size}</p>}
                     </div>
-                    <span className="text-xs font-semibold text-[#1E1208] shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                    <span className="text-xs font-semibold text-ink shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
                   </div>
                 ))}
               </div>
 
               {/* Totais */}
-              <div className="px-5 py-4 border-t border-[#E0D8CE] flex flex-col gap-2.5">
-                <div className="flex justify-between text-sm text-[#705A48]">
+              <div className="px-5 py-4 border-t border-mist flex flex-col gap-2.5">
+                <div className="flex justify-between text-sm text-mid">
                   <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
                 </div>
                 {pixDiscount > 0 && payMethod === 'pix' && (
@@ -726,18 +726,18 @@ export default function CheckoutPage() {
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#B09C8C]">Frete</span>
+                  <span className="text-faint">Frete</span>
                   {shippingLoading
-                    ? <span className="text-[#B09C8C] text-xs animate-pulse">calculando…</span>
+                    ? <span className="text-faint text-xs animate-pulse">calculando…</span>
                     : selectedShipping
-                      ? <span className={selectedShipping.priceCents === 0 ? 'text-emerald-600 font-semibold text-xs' : 'text-[#1E1208]'}>
+                      ? <span className={selectedShipping.priceCents === 0 ? 'text-emerald-600 font-semibold text-xs' : 'text-ink'}>
                           {selectedShipping.priceCents === 0 ? 'Grátis' : formatCurrency(selectedShipping.priceCents)}
                         </span>
-                      : <span className="text-[#B09C8C] text-xs">a calcular</span>
+                      : <span className="text-faint text-xs">a calcular</span>
                   }
                 </div>
                 {selectedShipping && (
-                  <div className="flex justify-between text-xs text-[#B09C8C]">
+                  <div className="flex justify-between text-xs text-faint">
                     <span>{selectedShipping.label}</span>
                     <span>{selectedShipping.estimatedDays === 0 ? 'hoje' : `${selectedShipping.estimatedDays} d.u.`}</span>
                   </div>
@@ -745,11 +745,11 @@ export default function CheckoutPage() {
               </div>
 
               {/* Total */}
-              <div className="px-5 py-4 border-t border-[#E0D8CE] flex justify-between items-center">
-                <span className="text-sm font-bold text-[#1E1208]">Total</span>
+              <div className="px-5 py-4 border-t border-mist flex justify-between items-center">
+                <span className="text-sm font-bold text-ink">Total</span>
                 <div className="text-right">
-                  <span className="font-display text-2xl text-[#1E1208]">{formatCurrency(total)}</span>
-                  <p className="text-[10px] text-[#B09C8C]">
+                  <span className="font-display text-2xl text-ink">{formatCurrency(total)}</span>
+                  <p className="text-[10px] text-faint">
                     {payMethod === 'credit' && installments > 1
                       ? `${installments}x de ${formatCurrency(installVal)}`
                       : payMethod === 'pix' ? 'à vista no PIX' : 'em 1x no cartão'}
@@ -758,12 +758,12 @@ export default function CheckoutPage() {
               </div>
 
               {/* Info objetiva — prazo e política */}
-              <div className="px-5 pb-5 border-t border-[#E0D8CE] pt-4 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-[11px] text-[#B09C8C]">
+              <div className="px-5 pb-5 border-t border-mist pt-4 flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-[11px] text-faint">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                   Troca e devolução em até 7 dias
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-[#B09C8C]">
+                <div className="flex items-center gap-2 text-[11px] text-faint">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                   PIX confirmado em segundos
                 </div>
@@ -785,13 +785,13 @@ function Crumb({ state, label }: { state: 'done' | 'active' | 'pending'; label: 
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       )}
-      <span className={`text-xs font-semibold hidden sm:block ${state === 'active' ? 'text-[#1E1208]' : state === 'done' ? 'text-[#9C8878]' : 'text-[#B09C8C]'}`}>
+      <span className={`text-xs font-semibold hidden sm:block ${state === 'active' ? 'text-ink' : state === 'done' ? 'text-faint' : 'text-faint'}`}>
         {label}
       </span>
-      {state === 'active' && <span className="sm:hidden text-xs font-bold text-[#1E1208]">{label}</span>}
+      {state === 'active' && <span className="sm:hidden text-xs font-bold text-ink">{label}</span>}
     </span>
   );
 }
 function CrumbDivider() {
-  return <span className="text-[#E0D8CE] text-xs shrink-0">/</span>;
+  return <span className="text-mist text-xs shrink-0">/</span>;
 }

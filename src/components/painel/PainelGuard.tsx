@@ -23,7 +23,7 @@ export function PainelGuard({ children }: { children: React.ReactNode }) {
   // verdade está só esperando o refresh do token.
   if (loading || !user || (user.role !== 'seller' && user.role !== 'admin')) {
     return (
-      <div className="min-h-screen bg-[#F0EAE1] p-5 sm:p-8">
+      <div className="min-h-screen bg-warm p-5 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <PainelDashboardSkeleton />
         </div>
