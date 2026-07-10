@@ -1,10 +1,11 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import type { Product, InventoryItem } from '@/types';
+import type { Product, InventoryItem, Review } from '@/types';
 import { BuyBox } from '@/components/product/BuyBox';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCarousel } from '@/components/product/ProductCarousel';
+import { ProductReviews } from '@/components/product/ProductReviews';
 import { SizeGuideModal } from '@/components/product/SizeGuideModal';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { getSettings } from '@/lib/settings';
@@ -53,6 +54,17 @@ async function getRelated(product: Product): Promise<Product[]> {
   } catch { return []; }
 }
 
+async function getReviews(productId: string): Promise<Review[]> {
+  try {
+    const snap = await adminDb.collection('reviews')
+      .where('productId', '==', productId)
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get();
+    return snap.docs.map(d => serialize<Review>({ id: d.id, ...d.data() }));
+  } catch { return []; }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = await getProduct(slug);
@@ -77,7 +89,7 @@ export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const [product, inventory, s] = await Promise.all([getProduct(slug), getInventory(slug), getSettings()]);
   if (!product) notFound();
-  const related = await getRelated(product);
+  const [related, reviews] = await Promise.all([getRelated(product), getReviews(product.id)]);
 
   // Extract specs from tags (thread count, fabric composition, etc.)
   // Size guide data from settings
@@ -228,6 +240,8 @@ export default async function ProductPage({ params }: Props) {
           </FadeIn>
         </div>
       </div>
+
+      <ProductReviews productId={product.id} initialReviews={reviews} />
 
       {/* ── Produtos relacionados ── */}
       {related.length > 0 && (

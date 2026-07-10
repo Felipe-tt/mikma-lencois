@@ -66,6 +66,24 @@ service cloud.firestore {
       allow read, write: if isSelf(userId);
     }
 
+    // ── Wishlists (favoritos) ───────────────────────────────────────────────
+    match /wishlists/{userId} {
+      allow read, write: if isSelf(userId);
+    }
+
+    // ── Reviews ──────────────────────────────────────────────────────────────
+    // Leitura pública (mostrado na página do produto). Criação só via API
+    // route (Admin SDK) — precisa validar que o pedido é do usuário, está
+    // 'delivered' e contém o produto, o que não dá pra expressar com
+    // segurança só em regra do Firestore. Edição/exclusão: só admin
+    // (moderação de conteúdo abusivo).
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if hasRole('admin');
+    }
+
     // ── Orders ───────────────────────────────────────────────────────────────
     match /orders/{orderId} {
       // Comprador lê somente os próprios pedidos

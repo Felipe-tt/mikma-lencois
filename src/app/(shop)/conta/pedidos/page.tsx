@@ -158,6 +158,21 @@ export default function PedidosPage() {
                   ))}
                 </div>
 
+                {/* CTA de avaliação — só em pedidos entregues */}
+                {order.status === 'delivered' && (
+                  <div className="border-t border-mist px-5 sm:px-6 py-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                    {order.items.map(item => (
+                      <Link
+                        key={item.sku}
+                        href={`/produtos/${item.productId}#avaliacoes`}
+                        className="text-[11px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.06em]"
+                      >
+                        Avaliar {item.productName.length > 24 ? item.productName.slice(0, 24) + '…' : item.productName}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
                 {/* Rastreio inline com copiar */}
                 {order.delivery?.trackingCode && (
                   <div className="border-t border-mist px-5 sm:px-6 py-3 flex items-center justify-between gap-3">

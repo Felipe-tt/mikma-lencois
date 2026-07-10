@@ -52,6 +52,24 @@ export interface Product {
   certifications?: string[]  // e.g. ["OEKO-TEX", "Fair Trade"]
 }
 
+// ─── Reviews ─────────────────────────────────────────────────────────────────
+export interface Review {
+  id: string
+  productId: string
+  orderId: string
+  userId: string
+  userName: string
+  rating: 1 | 2 | 3 | 4 | 5
+  comment: string
+  createdAt: string
+}
+
+// ─── Wishlist ────────────────────────────────────────────────────────────────
+export interface Wishlist {
+  productIds: string[]
+  updatedAt: string
+}
+
 // ─── Inventory ───────────────────────────────────────────────────────────────
 export interface MovementLog {
   type: 'in' | 'out'

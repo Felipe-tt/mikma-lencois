@@ -4,7 +4,9 @@ import { BrandLogo } from '@/components/BrandLogo';
 import type { Product } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { NavLink } from '@/components/ui/NavLink';
+import { useWishlist } from '@/lib/hooks/useWishlist';
 
 interface Props {
   product: Product;
@@ -17,10 +19,20 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   const img1 = product.images?.[1] ?? null;
   const [imgError, setImgError] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const router = useRouter();
+  const { isFavorite, toggle, loggedIn } = useWishlist();
+  const favorite = isFavorite(product.id);
 
   const isNew        = product.tags?.includes('novo') || product.tags?.includes('new');
   const isBestSeller = product.tags?.includes('bestseller') || product.tags?.includes('mais vendido');
   const badge        = isNew ? 'Novo' : isBestSeller ? 'Destaque' : null;
+
+  async function handleFavoriteClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!loggedIn) { router.push('/entrar'); return; }
+    await toggle(product.id);
+  }
 
   return (
     <NavLink
@@ -56,6 +68,24 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
             <BrandLogo alt="" className="w-28 h-auto opacity-[0.12]" />
           </div>
         )}
+
+        {/* Favoritar */}
+        <button
+          type="button"
+          onClick={handleFavoriteClick}
+          aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+          aria-pressed={favorite}
+          className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full transition-transform hover:scale-110 active:scale-95"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24"
+            fill={favorite ? '#b45744' : 'none'}
+            stroke={favorite ? '#b45744' : 'currentColor'}
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            className={favorite ? '' : 'text-ink/70'}
+          >
+            <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" />
+          </svg>
+        </button>
 
         {/* Badge */}
         {(badge || lowStock) && (

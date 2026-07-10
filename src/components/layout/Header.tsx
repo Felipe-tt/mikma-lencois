@@ -157,6 +157,15 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             {/* Theme toggle */}
             <ThemeToggle />
 
+            {/* Favoritos */}
+            {user && (
+              <NavLink href="/favoritos" className={`relative p-2 ml-0.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`} aria-label="Favoritos">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" />
+                </svg>
+              </NavLink>
+            )}
+
             {/* Cart */}
             <NavLink href="/carrinho" className={`relative p-2 ml-0.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`} aria-label="Carrinho">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
