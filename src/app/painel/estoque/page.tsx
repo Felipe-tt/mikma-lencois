@@ -42,7 +42,7 @@ export default function EstoquePage() {
   // Modo dia-a-dia: qual item tem um formulário de ação aberto
   const [actionFor, setActionFor] = useState<{ id: string; kind: 'venda' | 'entrada' | 'correcao' } | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
-  const [historyOpenId, setHistoryOpenId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [thresholdDraft, setThresholdDraft] = useState<Record<string, number>>({});
   const [onlyLow, setOnlyLow] = useState(false);
 
@@ -179,6 +179,13 @@ export default function EstoquePage() {
     }
   }
 
+  function quickSale(item: InventoryItem) {
+    applyMovement(item, 'out', 1, '');
+  }
+  function quickRestock(item: InventoryItem) {
+    applyMovement(item, 'in', 1, '');
+  }
+
   async function saveThreshold(item: InventoryItem, value: number) {
     if (!Number.isFinite(value) || value < 0 || value === item.lowStockThreshold) return;
     await updateDoc(doc(db, 'inventory', item.id), { lowStockThreshold: value });
@@ -245,14 +252,14 @@ export default function EstoquePage() {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-start justify-between mb-6 gap-3">
+      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-display font-normal text-[#1E1208] text-2xl">Estoque</h1>
           <p className="text-[13px] text-[#B09C8C] mt-1">
             {mode === 'contagem' ? 'Digite quantas peças você tem em mãos de cada item agora.' : 'Registre vendas na loja e chegadas de mercadoria.'}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href="/painel/estoque/historico"
             className="border border-[#E6DFD5] text-[#705A48] text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-[#F0EBE1] transition-colors">
             Histórico geral
@@ -316,18 +323,26 @@ export default function EstoquePage() {
         </div>
       ) : mode === 'contagem' ? (
         <div className="border border-[#E6DFD5] bg-[#FAF8F5]">
-          {filtered.map((item, idx) => (
-            <div key={item.id} className={`flex items-center gap-3 px-4 py-3 ${idx !== 0 ? 'border-t border-[#E6DFD5]' : ''}`}>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-[#1E1208] truncate">{item.productName}</p>
-                <p className="text-[11px] text-[#B09C8C]">{variantLabel(item)}</p>
+          {filtered.map((item, idx) => {
+            const val = countDraft[item.id] ?? item.quantity;
+            return (
+              <div key={item.id} className={`flex items-center gap-2 px-4 py-2.5 ${idx !== 0 ? 'border-t border-[#E6DFD5]' : ''}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-[#1E1208] truncate">{item.productName}</p>
+                  <p className="text-[11px] text-[#B09C8C] truncate">{variantLabel(item)}</p>
+                </div>
+                <div className="flex items-center shrink-0">
+                  <button type="button" onClick={() => setCountDraft(d => ({ ...d, [item.id]: Math.max(0, val - 1) }))}
+                    className="h-10 w-10 border border-[#E6DFD5] bg-white text-[#705A48] font-bold text-lg flex items-center justify-center active:bg-[#F0EBE1]">−</button>
+                  <input type="number" min={0} value={val}
+                    onChange={e => setCountDraft(d => ({ ...d, [item.id]: Number(e.target.value) }))}
+                    className="w-14 h-10 border-y border-[#E6DFD5] bg-white text-center font-bold text-[#1E1208] focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20" />
+                  <button type="button" onClick={() => setCountDraft(d => ({ ...d, [item.id]: val + 1 }))}
+                    className="h-10 w-10 border border-[#E6DFD5] bg-white text-[#705A48] font-bold text-lg flex items-center justify-center active:bg-[#F0EBE1]">+</button>
+                </div>
               </div>
-              <input type="number" min={0}
-                value={countDraft[item.id] ?? item.quantity}
-                onChange={e => setCountDraft(d => ({ ...d, [item.id]: Number(e.target.value) }))}
-                className="w-20 border border-[#E6DFD5] bg-white text-center py-2 font-bold text-[#1E1208] focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />
-            </div>
-          ))}
+            );
+          })}
           <div className="sticky bottom-4 flex justify-end px-4 py-3">
             <button onClick={saveCount} disabled={savingCount}
               className="bg-[#1E1208] text-white text-[12px] font-bold tracking-[0.05em] uppercase px-6 py-3 shadow-lg hover:bg-[#1E1208]/80 transition-colors disabled:opacity-50">
@@ -345,103 +360,119 @@ export default function EstoquePage() {
                   {group.list.length} {group.list.length === 1 ? 'variação' : 'variações'} · {group.list.reduce((s, i) => s + available(i), 0)} un. disponíveis
                 </p>
               </div>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2.5">
                 {group.list.map((item) => {
             const low = isLow(item);
             const avail = available(item);
             const action = actionFor?.id === item.id ? actionFor.kind : null;
             const threshold = thresholdDraft[item.id] ?? item.lowStockThreshold;
             const history = [...(item.history || [])].reverse().slice(0, 10);
+            const expanded = expandedId === item.id;
+            const busy = submittingId === item.id;
             return (
-              <div key={item.id} className={`border px-5 py-4 ${low ? 'border-amber-200 bg-amber-50' : 'border-[#E6DFD5] bg-[#FAF8F5]'}`}>
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div>
-                    <p className="text-[14px] font-semibold text-[#1E1208]">{item.productName}</p>
-                    <p className="text-[12px] text-[#B09C8C] mt-0.5">{variantLabel(item)}</p>
+              <div key={item.id} className={`border ${low ? 'border-amber-200 bg-amber-50' : 'border-[#E6DFD5] bg-[#FAF8F5]'}`}>
+                {/* Linha compacta -- sempre visível, pensada pra polegar */}
+                <button onClick={() => setExpandedId(e => e === item.id ? null : item.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13.5px] font-semibold text-[#1E1208] truncate">{item.productName}</p>
+                    <p className="text-[11.5px] text-[#B09C8C] truncate">{variantLabel(item)}</p>
                   </div>
-                  {low && <span className="shrink-0 text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2.5 py-1 flex items-center gap-1"><IconAlert size={10} />ACABANDO</span>}
-                </div>
+                  {low && <IconAlert size={16} className="text-amber-600 shrink-0" />}
+                  <div className="text-right shrink-0 leading-none">
+                    <p className={`text-xl font-bold ${low ? 'text-amber-600' : 'text-[#1E1208]'}`}>{avail}</p>
+                    <p className="text-[9px] text-[#B09C8C] mt-0.5">disponível</p>
+                  </div>
+                  <svg className={`shrink-0 text-[#B09C8C] transition-transform ${expanded ? 'rotate-180' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                </button>
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center bg-white border border-[#E6DFD5] px-3 py-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#B09C8C] mb-1">Disponível para venda</p>
-                    <p className={`text-2xl font-bold ${low ? 'text-amber-600' : 'text-[#1E1208]'}`}>{avail}</p>
-                    <p className="text-[10px] text-[#B09C8C] mt-1">unidades</p>
-                  </div>
-                  <div className="text-center bg-white border border-[#E6DFD5] px-3 py-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#B09C8C] mb-1">Reservado (pedidos)</p>
-                    <p className="text-2xl font-bold text-[#705A48]">{item.reserved}</p>
-                    <p className="text-[10px] text-[#B09C8C] mt-1">em pedidos ativos</p>
-                  </div>
-                  <div className="text-center bg-white border border-[#E6DFD5] px-3 py-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#B09C8C] mb-1">Avisar quando restar</p>
-                    <input type="number" min={0} value={threshold}
-                      onChange={ev => setThresholdDraft(d => ({ ...d, [item.id]: Number(ev.target.value) }))}
-                      onBlur={ev => saveThreshold(item, Number(ev.target.value))}
-                      className="w-full bg-transparent border-none text-center text-2xl font-bold text-[#705A48] py-0 focus:outline-none" />
-                    <p className="text-[10px] text-[#B09C8C] mt-1">unidades</p>
-                  </div>
-                </div>
-
-                {action ? (
-                  <InlineActionForm
-                    item={item}
-                    kind={action}
-                    available={avail}
-                    submitting={submittingId === item.id}
-                    onCancel={() => setActionFor(null)}
-                    onConfirm={(qty, note) => {
-                      if (action === 'venda') applyMovement(item, 'out', qty, note);
-                      else if (action === 'entrada') applyMovement(item, 'in', qty, note);
-                      else applyCorrection(item, qty, note);
-                    }}
-                  />
-                ) : (
-                  <div className="flex gap-2">
-                    <button onClick={() => setActionFor({ id: item.id, kind: 'venda' })} disabled={submittingId === item.id}
-                      className="flex-1 bg-[#1E1208] text-white text-[12px] font-bold py-2.5 hover:bg-[#1E1208]/80 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
-                      <IconMinusCircle size={13} /> Vendi na loja
-                    </button>
-                    <button onClick={() => setActionFor({ id: item.id, kind: 'entrada' })} disabled={submittingId === item.id}
-                      className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
-                      <IconPlusCircle size={13} /> Chegou mercadoria
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between mt-2.5">
-                  <button onClick={() => setHistoryOpenId(h => h === item.id ? null : item.id)}
-                    className="text-[11px] text-[#B09C8C] underline hover:text-[#705A48]">
-                    {historyOpenId === item.id ? 'Ocultar histórico' : `Ver histórico${item.history?.length ? ` (${item.history.length})` : ''}`}
+                {/* Ações rápidas -- 1 toque cobre o caso mais comum (vender/repor 1 unidade) */}
+                <div className="flex gap-2 px-4 pb-3">
+                  <button onClick={() => quickSale(item)} disabled={busy}
+                    className="flex-1 h-11 bg-[#1E1208] text-white text-[13px] font-bold hover:bg-[#1E1208]/80 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
+                    <IconMinusCircle size={15} /> Vendi 1
                   </button>
-                  {!action && (
-                    <button onClick={() => setActionFor({ id: item.id, kind: 'correcao' })} disabled={submittingId === item.id}
-                      className="text-[11px] text-[#B09C8C] underline hover:text-[#705A48] disabled:opacity-50">
-                      Corrigir número
-                    </button>
-                  )}
+                  <button onClick={() => quickRestock(item)} disabled={busy}
+                    className="h-11 w-11 shrink-0 border border-[#E6DFD5] text-[#705A48] hover:bg-[#F0EBE1] transition-colors flex items-center justify-center disabled:opacity-50" aria-label="Chegou 1 unidade">
+                    <IconPlusCircle size={17} />
+                  </button>
+                  <button onClick={() => setExpandedId(item.id)} disabled={busy}
+                    className="h-11 px-3 shrink-0 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold hover:bg-[#F0EBE1] transition-colors disabled:opacity-50">
+                    Outra qtd. / mais
+                  </button>
                 </div>
 
-                {historyOpenId === item.id && (
-                  <div className="mt-2.5 border-t border-dashed border-[#E6DFD5] pt-2.5 flex flex-col gap-1.5">
-                    {history.length === 0 ? (
-                      <p className="text-[11px] text-[#B09C8C]">Nenhuma movimentação registrada ainda.</p>
-                    ) : history.map((m, i) => (
-                      <div key={i} className="flex items-center justify-between text-[11px]">
-                        <span className={m.type === 'out' ? 'text-red-600' : 'text-emerald-700'}>
-                          {m.type === 'out' ? '−' : '+'}{m.quantity} · {m.reason}{m.by ? ` (${m.by})` : ''}
-                        </span>
-                        <span className="text-[#B09C8C] shrink-0 ml-2 flex items-center gap-2">
-                          {timeAgo(m.date)}
-                          {i === 0 && (
-                            <button onClick={() => undoLast(item)} disabled={submittingId === item.id}
-                              className="text-red-500 underline disabled:opacity-50">
-                              Desfazer
-                            </button>
-                          )}
-                        </span>
+                {expanded && (
+                  <div className="px-4 pb-4 border-t border-dashed border-[#E6DFD5] pt-3.5 flex flex-col gap-3.5">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center bg-white border border-[#E6DFD5] px-3 py-2.5">
+                        <p className="text-[9.5px] font-bold uppercase tracking-wide text-[#B09C8C] mb-1">Reservado (pedidos)</p>
+                        <p className="text-lg font-bold text-[#705A48]">{item.reserved}</p>
                       </div>
-                    ))}
+                      <div className="text-center bg-white border border-[#E6DFD5] px-3 py-2.5">
+                        <p className="text-[9.5px] font-bold uppercase tracking-wide text-[#B09C8C] mb-1">Avisar quando restar</p>
+                        <input type="number" min={0} value={threshold}
+                          onChange={ev => setThresholdDraft(d => ({ ...d, [item.id]: Number(ev.target.value) }))}
+                          onBlur={ev => saveThreshold(item, Number(ev.target.value))}
+                          className="w-full bg-transparent border-none text-center text-lg font-bold text-[#705A48] py-0 focus:outline-none" />
+                      </div>
+                    </div>
+
+                    {action ? (
+                      <InlineActionForm
+                        item={item}
+                        kind={action}
+                        available={avail}
+                        submitting={busy}
+                        onCancel={() => setActionFor(null)}
+                        onConfirm={(qty, note) => {
+                          if (action === 'venda') applyMovement(item, 'out', qty, note);
+                          else if (action === 'entrada') applyMovement(item, 'in', qty, note);
+                          else applyCorrection(item, qty, note);
+                        }}
+                      />
+                    ) : (
+                      <div className="flex gap-2">
+                        <button onClick={() => setActionFor({ id: item.id, kind: 'venda' })} disabled={busy}
+                          className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors disabled:opacity-50">
+                          Vender + de 1
+                        </button>
+                        <button onClick={() => setActionFor({ id: item.id, kind: 'entrada' })} disabled={busy}
+                          className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors disabled:opacity-50">
+                          Entrada + de 1
+                        </button>
+                        <button onClick={() => setActionFor({ id: item.id, kind: 'correcao' })} disabled={busy}
+                          className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors disabled:opacity-50">
+                          Corrigir número
+                        </button>
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-[#B09C8C] mb-1.5">
+                        Histórico{item.history?.length ? ` (${item.history.length})` : ''}
+                      </p>
+                      <div className="flex flex-col gap-1.5">
+                        {history.length === 0 ? (
+                          <p className="text-[11px] text-[#B09C8C]">Nenhuma movimentação registrada ainda.</p>
+                        ) : history.map((m, i) => (
+                          <div key={i} className="flex items-center justify-between text-[11px]">
+                            <span className={m.type === 'out' ? 'text-red-600' : 'text-emerald-700'}>
+                              {m.type === 'out' ? '−' : '+'}{m.quantity} · {m.reason}{m.by ? ` (${m.by})` : ''}
+                            </span>
+                            <span className="text-[#B09C8C] shrink-0 ml-2 flex items-center gap-2">
+                              {timeAgo(m.date)}
+                              {i === 0 && (
+                                <button onClick={() => undoLast(item)} disabled={busy}
+                                  className="text-red-500 underline disabled:opacity-50">
+                                  Desfazer
+                                </button>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
