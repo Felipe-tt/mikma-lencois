@@ -58,7 +58,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
     <>
       {/* ── Topbar ──────────────────────────────────────────────── */}
       {topbarText && (
-        <div className="bg-ink text-paper/55 text-[10px] text-center py-2 tracking-[0.22em] uppercase font-medium">
+        <div className="theme-locked bg-ink text-paper/55 text-[10px] text-center py-2 tracking-[0.22em] uppercase font-medium">
           {topbarText}
         </div>
       )}
@@ -198,7 +198,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
       {/* ── Mobile drawer ──────────────────────────────────────────── */}
       {menuOpen && (
         <>
-          <div className="fixed inset-0 z-50 bg-ink/45 backdrop-blur-sm animate-fade-in" onClick={() => setMenuOpen(false)} />
+          <div className="fixed inset-0 z-50 bg-[rgba(30,18,8,0.45)] backdrop-blur-sm animate-fade-in" onClick={() => setMenuOpen(false)} />
           <div className="fixed top-0 left-0 z-50 w-[300px] h-full bg-paper shadow-modal animate-slide-in flex flex-col">
             <div className="flex items-center justify-between px-5 h-[60px] border-b border-mist">
               <NavLink href="/" onClick={() => setMenuOpen(false)}>

@@ -197,7 +197,7 @@ export default async function HomePage() {
           PROPOSTA — uma frase e dois botões. Sem stats, sem grade.
           Fundo escuro como ponto final da página.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="bg-ink">
+      <section className="theme-locked bg-ink">
         <div className="container-shop py-14 sm:py-20">
           <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-mid mb-8">
             {city} · Est. {s.foundedYear || ''}

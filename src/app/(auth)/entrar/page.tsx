@@ -77,7 +77,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-[rgba(30,18,8,0.6)] backdrop-blur-sm" />
       <div className="relative w-full max-w-sm bg-paper shadow-2xl p-8">
         <button onClick={onClose} className="absolute top-4 right-4 text-mist hover:text-mid transition-colors">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

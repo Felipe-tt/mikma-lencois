@@ -85,7 +85,7 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-ink/70 backdrop-blur-sm p-0 sm:p-4"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-[rgba(30,18,8,0.7)] backdrop-blur-sm p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="pix-modal-title"

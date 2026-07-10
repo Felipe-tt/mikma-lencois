@@ -28,7 +28,7 @@ export function MobileFilterSheet({ categories, active }: Props) {
       {open && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-ink/40 animate-fade-in"
+            className="fixed inset-0 z-40 bg-[rgba(30,18,8,0.4)] animate-fade-in"
             onClick={() => setOpen(false)}
           />
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-paper border-t border-mist rounded-t-xl shadow-2xl animate-fade-up max-h-[70vh] flex flex-col">

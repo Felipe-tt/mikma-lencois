@@ -68,7 +68,7 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
       {/* Overlay mobile */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-ink/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-[rgba(30,18,8,0.5)] backdrop-blur-sm lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
