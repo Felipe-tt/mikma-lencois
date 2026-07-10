@@ -2,7 +2,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import { BrandLogo } from '@/components/BrandLogo';
 
 function ConfirmContent() {
   const router = useRouter();
@@ -45,7 +45,7 @@ function ConfirmContent() {
   return (
     <div className="w-full max-w-[420px] mx-auto text-center py-10">
       <Link href="/" className="flex justify-center mb-10">
-        <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" />
+        <BrandLogo alt="Mikma" className="h-9 w-auto object-contain" />
       </Link>
 
       {state === 'checking' && (

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { BrandLogo } from '@/components/BrandLogo';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -41,7 +41,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
       {/* Brand */}
       <div className="h-[64px] flex items-center justify-between px-5 border-b border-mist">
         <Link href="/" className="flex items-center gap-3" onClick={onClose}>
-          <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-7 w-auto object-contain" />
+          <BrandLogo alt="Mikma" className="h-7 w-auto object-contain" />
           <div className="w-px h-4 bg-mist" />
           <span className="font-mono text-[9px] text-clay-l tracking-[0.22em] uppercase">Painel</span>
         </Link>

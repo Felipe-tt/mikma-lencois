@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase/client';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import Link from 'next/link';
 import Image from 'next/image';
+import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -206,7 +207,7 @@ export default function LoginPage() {
             className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[280px] h-auto object-contain opacity-[0.14]"
           />
           <Link href="/" className="relative z-10">
-            <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" />
+            <BrandLogo alt="Mikma" className="h-9 w-auto object-contain" />
           </Link>
 
           <div className="relative z-10">
@@ -224,7 +225,7 @@ export default function LoginPage() {
         <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-paper">
           <div className="w-full max-w-[400px]">
             <Link href="/" className="flex mb-10 lg:hidden">
-              <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-8 w-auto object-contain" />
+              <BrandLogo alt="Mikma" className="h-8 w-auto object-contain" />
             </Link>
 
             <h1 className="font-display font-normal text-ink text-[2.2rem] mb-2 leading-tight">Entrar</h1>

@@ -8,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { NavLink } from '@/components/ui/NavLink';
 import { formatCurrency } from '@/lib/utils/format';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { BrandLogo } from '@/components/BrandLogo';
 
 interface Props { topbarText?: string; freeShippingThresholdCents?: number }
 
@@ -78,7 +79,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Logo */}
           <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <Image src="/logo-dark.png" alt="Mikma Lençóis" width={800} height={242} className="h-8 w-auto object-contain" priority />
+            <BrandLogo alt="Mikma Lençóis" className="h-8 w-auto object-contain" priority />
           </NavLink>
 
           {/* Desktop nav — right next to the logo */}
@@ -201,7 +202,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           <div className="fixed top-0 left-0 z-50 w-[300px] h-full bg-paper shadow-modal animate-slide-in flex flex-col">
             <div className="flex items-center justify-between px-5 h-[60px] border-b border-mist">
               <NavLink href="/" onClick={() => setMenuOpen(false)}>
-                <Image src="/logo-dark.png" alt="Logo" width={800} height={242} className="h-9 w-auto object-contain" />
+                <BrandLogo alt="Logo" className="h-9 w-auto object-contain" />
               </NavLink>
               <button className="btn-ghost p-2" onClick={() => setMenuOpen(false)} aria-label="Fechar">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">

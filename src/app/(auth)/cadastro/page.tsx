@@ -6,6 +6,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import Link from 'next/link';
 import Image from 'next/image';
+import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { maskPhone, maskCpf, isValidCpf, isValidPhone } from '@/lib/masks';
 
@@ -177,7 +178,7 @@ function RegisterContent() {
           aria-hidden="true"
           className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[280px] h-auto object-contain opacity-[0.14]"
         />
-        <Link href="/" className="relative z-10"><Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-9 w-auto object-contain" /></Link>
+        <Link href="/" className="relative z-10"><BrandLogo alt="Mikma" className="h-9 w-auto object-contain" /></Link>
         <div className="relative z-10">
           <p className="font-display font-normal text-ink leading-[1.08] mb-4 text-[clamp(1.8rem,2.5vw,2.6rem)]">
             Crie sua<br /><em className="text-clay not-italic">conta.</em>
@@ -194,7 +195,7 @@ function RegisterContent() {
         <div className="w-full max-w-[400px] mx-auto py-10">
 
           <Link href="/" className="flex mb-8 lg:hidden">
-            <Image src="/logo-dark.png" alt="Mikma" width={800} height={242} className="h-8 w-auto object-contain" />
+            <BrandLogo alt="Mikma" className="h-8 w-auto object-contain" />
           </Link>
 
           {/* Indicador de progresso */}

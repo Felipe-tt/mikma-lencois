@@ -33,7 +33,7 @@ export function Footer({
   const status = businessHours ? getOpenStatus(parseBusinessHours(businessHours), businessHoursTimezone) : null;
 
   return (
-    <footer className="bg-ink text-paper mt-auto overflow-hidden">
+    <footer className="theme-locked bg-ink text-paper mt-auto overflow-hidden">
 
       {/* ── Corpo ── */}
       <div className="container-shop py-14 border-t border-paper/[0.07]">

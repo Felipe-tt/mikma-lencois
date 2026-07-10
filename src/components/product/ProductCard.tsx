@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { BrandLogo } from '@/components/BrandLogo';
 import type { Product } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { useState } from 'react';
@@ -52,8 +53,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           </>
         ) : (
           <div className="flex h-full items-center justify-center bg-warm">
-            <Image src="/logo-dark.png" alt="" width={800} height={242}
-              className="w-28 h-auto opacity-[0.12]" />
+            <BrandLogo alt="" className="w-28 h-auto opacity-[0.12]" />
           </div>
         )}
 

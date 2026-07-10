@@ -1,6 +1,6 @@
 export const revalidate = 86400;
 import { getSettings } from '@/lib/settings';
-import Image from 'next/image';
+import { BrandLogo } from '@/components/BrandLogo';
 import { BusinessHoursCard } from '@/components/storefront/BusinessHoursCard';
 
 export default async function SobrePage() {
@@ -114,7 +114,7 @@ export default async function SobrePage() {
             </a>
 
             <div className="flex justify-center pt-2 pb-1">
-              <Image src="/logo-dark.png" alt={s.storeName ?? ''} width={600} height={180} className="h-9 w-auto object-contain opacity-15" />
+              <BrandLogo alt={s.storeName ?? ''} className="h-9 w-auto object-contain opacity-15" width={600} height={180} />
             </div>
           </div>
         </div>
