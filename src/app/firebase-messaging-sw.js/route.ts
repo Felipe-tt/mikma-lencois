@@ -37,8 +37,8 @@ const messaging = firebase.messaging();
 
 // Notificação recebida com o navegador em background/fechado (Android).
 messaging.onBackgroundMessage((payload) => {
-  const title = (payload.notification && payload.notification.title) || 'Nova atividade';
-  const body = (payload.notification && payload.notification.body) || '';
+  const title = (payload.data && payload.data.title) || 'Nova atividade';
+  const body = (payload.data && payload.data.body) || '';
   const url = (payload.data && payload.data.url) || '/painel/pedidos';
 
   self.registration.showNotification(title, {

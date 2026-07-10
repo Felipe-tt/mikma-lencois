@@ -56,21 +56,21 @@ export async function notifySeller(payload: SellerPushPayload): Promise<void> {
     console.log(`[notifySeller] enviando para ${tokens.length} token(s) — título: "${payload.title}"`);
     const messaging = getAdminMessaging();
 
+    // IMPORTANTE: não usar o campo `notification` (nem `webpush.notification`) aqui.
+    // Quando o payload tem `notification`, o navegador exibe a notificação
+    // automaticamente via WebPush em background — e o onBackgroundMessage do
+    // service worker (firebase-messaging-sw.js/route.ts) TAMBÉM chama
+    // showNotification manualmente, resultando em 2 notificações no celular.
+    // Enviando só `data`, o service worker vira o único responsável por exibir.
     const response = await messaging.sendEachForMulticast({
       tokens,
-      notification: {
+      data: {
         title: payload.title,
         body: payload.body,
-      },
-      data: {
         ...(payload.url ? { url: payload.url } : {}),
         ...(payload.data ?? {}),
       },
       webpush: {
-        notification: {
-          icon: '/favicon-96.png',
-          badge: '/favicon-96.png',
-        },
         fcmOptions: payload.url ? { link: payload.url } : undefined,
       },
     });
