@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/lib/auth/AuthContext';
+
+// Carregado sob demanda: leaflet só é baixado quando essa página realmente
+// precisa mostrar o mapa, em vez de entrar no bundle inicial da rota.
+const LiveDeliveryMap = dynamic(
+  () => import('@/components/tracking/LiveDeliveryMap').then(m => m.LiveDeliveryMap),
+  { ssr: false }
+);
 import { db } from '@/lib/firebase/client';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/types';
@@ -10,7 +18,6 @@ import { formatCurrency, formatTs, formatTsDateTime } from '@/lib/utils/format';
 import { carrierName, trackingUrl } from '@/lib/carriers';
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
-import { LiveDeliveryMap } from '@/components/tracking/LiveDeliveryMap';
 
 // ─── Status steps ─────────────────────────────────────────────────────────────
 

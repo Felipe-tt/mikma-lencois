@@ -43,7 +43,6 @@ export function getAdminAuth(): Auth {
 // notifySeller e nunca toca adminDb/adminAuth antes).
 export function getAdminMessaging(): Messaging {
   if (!_messaging) {
-    console.log('[getAdminMessaging] init sentinel-v2 — app já registrado?', getApps().length > 0);
     _messaging = getMessaging(getAdminApp());
   }
   return _messaging

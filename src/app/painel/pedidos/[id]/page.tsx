@@ -6,8 +6,15 @@ import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Order, User } from '@/types';
+import dynamic from 'next/dynamic';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
-import { LiveDeliveryMap } from '@/components/tracking/LiveDeliveryMap';
+
+// Carregado sob demanda: leaflet só é baixado quando essa página realmente
+// precisa mostrar o mapa, em vez de entrar no bundle inicial da rota.
+const LiveDeliveryMap = dynamic(
+  () => import('@/components/tracking/LiveDeliveryMap').then(m => m.LiveDeliveryMap),
+  { ssr: false }
+);
 import { carrierNameVendor, trackingUrl } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import {
