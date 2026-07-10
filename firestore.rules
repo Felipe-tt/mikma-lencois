@@ -48,7 +48,17 @@ service cloud.firestore {
     // ── Inventory ────────────────────────────────────────────────────────────
     match /inventory/{sku} {
       allow read: if true;
-      allow write: if isSellerOrAdmin();
+      // 'reserved' é gerido só pelo fluxo de pedidos (Admin SDK, que ignora
+      // estas regras) — o painel de estoque nunca deve poder mexer nele.
+      // 'history' só pode crescer (arrayUnion), nunca ser reduzido/apagado.
+      allow update: if isSellerOrAdmin()
+        && request.resource.data.quantity is number
+        && request.resource.data.lowStockThreshold is number
+        && request.resource.data.lowStockThreshold >= 0
+        && request.resource.data.reserved == resource.data.reserved
+        && request.resource.data.history.size() >= resource.data.history.size();
+      allow create: if isSellerOrAdmin();
+      allow delete: if false;
     }
 
     // ── Carts ────────────────────────────────────────────────────────────────

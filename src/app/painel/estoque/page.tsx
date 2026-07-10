@@ -41,8 +41,10 @@ export default function EstoquePage() {
 
   // Modo dia-a-dia: qual item tem um formulário de ação aberto
   const [actionFor, setActionFor] = useState<{ id: string; kind: 'venda' | 'entrada' | 'correcao' } | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [historyOpenId, setHistoryOpenId] = useState<string | null>(null);
   const [thresholdDraft, setThresholdDraft] = useState<Record<string, number>>({});
+  const [onlyLow, setOnlyLow] = useState(false);
 
   // Modo contagem geral
   const [countDraft, setCountDraft] = useState<Record<string, number>>({});
@@ -75,7 +77,9 @@ export default function EstoquePage() {
 
   const available = (item: InventoryItem) => item.quantity - item.reserved;
   const isLow = (item: InventoryItem) => available(item) <= item.lowStockThreshold;
-  const filtered = items.filter(i => !search || i.productName?.toLowerCase().includes(search.toLowerCase()) || variantLabel(i).toLowerCase().includes(search.toLowerCase()));
+  const filtered = items
+    .filter(i => !search || i.productName?.toLowerCase().includes(search.toLowerCase()) || variantLabel(i).toLowerCase().includes(search.toLowerCase()))
+    .filter(i => !onlyLow || isLow(i));
   const lowCount = items.filter(isLow).length;
 
   function baseLog(type: 'in' | 'out', quantity: number, reason: string): MovementLog {
@@ -95,26 +99,67 @@ export default function EstoquePage() {
         if (!ok) return;
       }
     }
-    await updateDoc(doc(db, 'inventory', item.id), {
-      quantity: increment(type === 'out' ? -qty : qty),
-      history: arrayUnion(baseLog(type, qty, reason)),
-      updatedAt: serverTimestamp(),
-    });
-    setActionFor(null);
-    showToast(type === 'out' ? 'Venda registrada.' : 'Entrada registrada.');
+    setSubmittingId(item.id);
+    try {
+      await updateDoc(doc(db, 'inventory', item.id), {
+        quantity: increment(type === 'out' ? -qty : qty),
+        history: arrayUnion(baseLog(type, qty, reason)),
+        updatedAt: serverTimestamp(),
+      });
+      setActionFor(null);
+      showToast(type === 'out' ? 'Venda registrada.' : 'Entrada registrada.');
+    } catch (err) {
+      console.error('[estoque] falha ao registrar movimentação', err);
+      showToast('Não deu pra salvar — tenta de novo.');
+    } finally {
+      setSubmittingId(null);
+    }
   }
 
   async function applyCorrection(item: InventoryItem, newQty: number, reason: string) {
     if (!Number.isFinite(newQty) || newQty < 0) return;
     const diff = newQty - item.quantity;
     if (diff === 0) { setActionFor(null); return; }
-    await updateDoc(doc(db, 'inventory', item.id), {
-      quantity: newQty,
-      history: arrayUnion(baseLog(diff > 0 ? 'in' : 'out', Math.abs(diff), reason || 'Correção manual de contagem')),
-      updatedAt: serverTimestamp(),
-    });
-    setActionFor(null);
-    showToast('Estoque corrigido.');
+    setSubmittingId(item.id);
+    try {
+      await updateDoc(doc(db, 'inventory', item.id), {
+        quantity: newQty,
+        history: arrayUnion(baseLog(diff > 0 ? 'in' : 'out', Math.abs(diff), reason || 'Correção manual de contagem')),
+        updatedAt: serverTimestamp(),
+      });
+      setActionFor(null);
+      showToast('Estoque corrigido.');
+    } catch (err) {
+      console.error('[estoque] falha ao corrigir', err);
+      showToast('Não deu pra salvar — tenta de novo.');
+    } finally {
+      setSubmittingId(null);
+    }
+  }
+
+  /** Desfaz só a última movimentação de um item, lançando o inverso dela —
+   *  nunca apaga/edita o histórico existente, então a trilha de auditoria
+   *  continua íntegra (dá pra ver que algo foi desfeito, e quando). */
+  async function undoLast(item: InventoryItem) {
+    const last = item.history?.[item.history.length - 1];
+    if (!last) return;
+    const ok = window.confirm(`Desfazer "${last.type === 'out' ? '−' : '+'}${last.quantity} · ${last.reason}"?`);
+    if (!ok) return;
+    const reversedType = last.type === 'out' ? 'in' : 'out';
+    setSubmittingId(item.id);
+    try {
+      await updateDoc(doc(db, 'inventory', item.id), {
+        quantity: increment(reversedType === 'out' ? -last.quantity : last.quantity),
+        history: arrayUnion(baseLog(reversedType, last.quantity, `Desfeito: ${last.reason}`)),
+        updatedAt: serverTimestamp(),
+      });
+      showToast('Última movimentação desfeita.');
+    } catch (err) {
+      console.error('[estoque] falha ao desfazer', err);
+      showToast('Não deu pra desfazer — tenta de novo.');
+    } finally {
+      setSubmittingId(null);
+    }
   }
 
   async function saveThreshold(item: InventoryItem, value: number) {
@@ -137,6 +182,18 @@ export default function EstoquePage() {
   }
 
   async function saveCount() {
+    const bigJumps = items.filter(item => {
+      const v = countDraft[item.id];
+      return v !== undefined && Number.isFinite(v) && Math.abs(v - item.quantity) >= 50;
+    });
+    if (bigJumps.length > 0) {
+      const ok = window.confirm(
+        `${bigJumps.length === 1 ? 'Um item teve' : `${bigJumps.length} itens tiveram`} uma mudança de 50 unidades ou mais ` +
+        `(ex: "${bigJumps[0].productName}" de ${bigJumps[0].quantity} para ${countDraft[bigJumps[0].id]}). ` +
+        `Confere se não foi erro de digitação antes de continuar. Salvar mesmo assim?`
+      );
+      if (!ok) return;
+    }
     setSavingCount(true);
     try {
       const batch = writeBatch(db);
@@ -155,6 +212,9 @@ export default function EstoquePage() {
       if (changed > 0) await batch.commit();
       showToast(changed > 0 ? `Contagem salva — ${changed} ${changed === 1 ? 'item atualizado' : 'itens atualizados'}.` : 'Nada mudou desde a última contagem.');
       setMode('dia');
+    } catch (err) {
+      console.error('[estoque] falha ao salvar contagem', err);
+      showToast('Não deu pra salvar a contagem — tenta de novo.');
     } finally {
       setSavingCount(false);
     }
@@ -176,6 +236,10 @@ export default function EstoquePage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <Link href="/painel/estoque/historico"
+            className="border border-[#E6DFD5] text-[#705A48] text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-[#F0EBE1] transition-colors">
+            Histórico geral
+          </Link>
           {mode === 'dia' ? (
             <button onClick={enterCountMode}
               className="flex items-center gap-1.5 border border-[#1E1208] text-[#1E1208] text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-[#1E1208] hover:text-white transition-colors">
@@ -212,10 +276,18 @@ export default function EstoquePage() {
       )}
 
       {items.length > 3 && (
-        <div className="relative mb-4">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B09C8C]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-          <input type="search" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full border border-[#E6DFD5] bg-[#FAF8F5] pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />
+        <div className="flex items-center gap-3 mb-4">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B09C8C]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <input type="search" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
+              className="w-full border border-[#E6DFD5] bg-[#FAF8F5] pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 focus:border-[#C4714A]/40" />
+          </div>
+          {mode === 'dia' && lowCount > 0 && (
+            <label className="shrink-0 flex items-center gap-1.5 text-[12px] text-[#705A48] cursor-pointer select-none border border-[#E6DFD5] px-3 py-2.5 bg-[#FAF8F5]">
+              <input type="checkbox" checked={onlyLow} onChange={e => setOnlyLow(e.target.checked)} />
+              Só acabando ({lowCount})
+            </label>
+          )}
         </div>
       )}
 
@@ -290,6 +362,7 @@ export default function EstoquePage() {
                     item={item}
                     kind={action}
                     available={avail}
+                    submitting={submittingId === item.id}
                     onCancel={() => setActionFor(null)}
                     onConfirm={(qty, note) => {
                       if (action === 'venda') applyMovement(item, 'out', qty, note);
@@ -299,12 +372,12 @@ export default function EstoquePage() {
                   />
                 ) : (
                   <div className="flex gap-2">
-                    <button onClick={() => setActionFor({ id: item.id, kind: 'venda' })}
-                      className="flex-1 bg-[#1E1208] text-white text-[12px] font-bold py-2.5 hover:bg-[#1E1208]/80 transition-colors flex items-center justify-center gap-1.5">
+                    <button onClick={() => setActionFor({ id: item.id, kind: 'venda' })} disabled={submittingId === item.id}
+                      className="flex-1 bg-[#1E1208] text-white text-[12px] font-bold py-2.5 hover:bg-[#1E1208]/80 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
                       <IconMinusCircle size={13} /> Vendi na loja
                     </button>
-                    <button onClick={() => setActionFor({ id: item.id, kind: 'entrada' })}
-                      className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors flex items-center justify-center gap-1.5">
+                    <button onClick={() => setActionFor({ id: item.id, kind: 'entrada' })} disabled={submittingId === item.id}
+                      className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
                       <IconPlusCircle size={13} /> Chegou mercadoria
                     </button>
                   </div>
@@ -316,8 +389,8 @@ export default function EstoquePage() {
                     {historyOpenId === item.id ? 'Ocultar histórico' : `Ver histórico${item.history?.length ? ` (${item.history.length})` : ''}`}
                   </button>
                   {!action && (
-                    <button onClick={() => setActionFor({ id: item.id, kind: 'correcao' })}
-                      className="text-[11px] text-[#B09C8C] underline hover:text-[#705A48]">
+                    <button onClick={() => setActionFor({ id: item.id, kind: 'correcao' })} disabled={submittingId === item.id}
+                      className="text-[11px] text-[#B09C8C] underline hover:text-[#705A48] disabled:opacity-50">
                       Corrigir número
                     </button>
                   )}
@@ -332,7 +405,15 @@ export default function EstoquePage() {
                         <span className={m.type === 'out' ? 'text-red-600' : 'text-emerald-700'}>
                           {m.type === 'out' ? '−' : '+'}{m.quantity} · {m.reason}{m.by ? ` (${m.by})` : ''}
                         </span>
-                        <span className="text-[#B09C8C] shrink-0 ml-2">{timeAgo(m.date)}</span>
+                        <span className="text-[#B09C8C] shrink-0 ml-2 flex items-center gap-2">
+                          {timeAgo(m.date)}
+                          {i === 0 && (
+                            <button onClick={() => undoLast(item)} disabled={submittingId === item.id}
+                              className="text-red-500 underline disabled:opacity-50">
+                              Desfazer
+                            </button>
+                          )}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -352,8 +433,8 @@ export default function EstoquePage() {
   );
 }
 
-function InlineActionForm({ item, kind, available, onCancel, onConfirm }: {
-  item: InventoryItem; kind: 'venda' | 'entrada' | 'correcao'; available: number;
+function InlineActionForm({ item, kind, available, submitting, onCancel, onConfirm }: {
+  item: InventoryItem; kind: 'venda' | 'entrada' | 'correcao'; available: number; submitting: boolean;
   onCancel: () => void; onConfirm: (qty: number, note: string) => void;
 }) {
   const [qty, setQty] = useState(kind === 'correcao' ? item.quantity : 1);
@@ -372,24 +453,25 @@ function InlineActionForm({ item, kind, available, onCancel, onConfirm }: {
       <div className="flex gap-2">
         <div className="w-24 shrink-0">
           <label className="block text-[10px] font-semibold text-[#705A48] mb-1">{qtyLabel}</label>
-          <input type="number" min={0} value={qty} autoFocus
+          <input type="number" min={0} value={qty} autoFocus disabled={submitting}
             onChange={e => setQty(Number(e.target.value))}
-            className="w-full border border-[#C4714A]/40 text-center py-2 font-bold focus:outline-none" />
+            className="w-full border border-[#C4714A]/40 text-center py-2 font-bold focus:outline-none disabled:opacity-50" />
         </div>
         <div className="flex-1">
           <label className="block text-[10px] font-semibold text-[#705A48] mb-1">Observação</label>
-          <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder={placeholder}
-            className="w-full border border-[#E6DFD5] px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20" />
+          <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder={placeholder} disabled={submitting}
+            className="w-full border border-[#E6DFD5] px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20 disabled:opacity-50" />
         </div>
       </div>
       {kind !== 'correcao' && (
         <p className="text-[11px] text-[#B09C8C]">Disponível hoje: {available} unidade{available === 1 ? '' : 's'}</p>
       )}
       <div className="flex gap-2 mt-0.5">
-        <button onClick={() => onConfirm(qty, note)} className="flex-1 bg-[#1E1208] text-white text-[12px] font-bold py-2.5 hover:bg-[#1E1208]/80 transition-colors flex items-center justify-center gap-1">
-          <IconCheck size={12} /> Confirmar
+        <button onClick={() => onConfirm(qty, note)} disabled={submitting}
+          className="flex-1 bg-[#1E1208] text-white text-[12px] font-bold py-2.5 hover:bg-[#1E1208]/80 transition-colors flex items-center justify-center gap-1 disabled:opacity-50">
+          <IconCheck size={12} /> {submitting ? 'Salvando...' : 'Confirmar'}
         </button>
-        <button onClick={onCancel} className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors">
+        <button onClick={onCancel} disabled={submitting} className="flex-1 border border-[#E6DFD5] text-[#705A48] text-[12px] font-semibold py-2.5 hover:bg-[#F0EBE1] transition-colors disabled:opacity-50">
           Cancelar
         </button>
       </div>
