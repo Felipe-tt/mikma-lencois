@@ -37,7 +37,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
               src={img0} alt={product.name} fill priority={priority}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className={`object-cover transition-all duration-700 ${
-                hovered ? 'scale-[1.04] opacity-0' : 'scale-100 opacity-100'
+                img1 && hovered ? 'scale-[1.04] opacity-0' : 'scale-100 opacity-100'
               }`}
               onError={() => setImgError(true)}
             />
