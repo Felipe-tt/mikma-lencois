@@ -9,6 +9,7 @@ import { notifySeller } from '@/lib/push/notifySeller';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
+import { recordShippingCollected } from '@/lib/shipping-ledger';
 
 const ABACATEPAY_PUBLIC_KEY = process.env.ABACATEPAY_PUBLIC_KEY!;
 
@@ -116,6 +117,15 @@ export async function POST(req: NextRequest) {
     if (!order) {
       console.log('Order not found or already processed:', orderId);
       return;
+    }
+
+    // ── Caixa de frete: registra o que foi de fato cobrado do cliente ─────
+    // Best-effort — nunca deve travar a confirmação do pedido.
+    try {
+      const shippingCollected = (order.shippingCents as number) ?? 0;
+      if (shippingCollected > 0) await recordShippingCollected(shippingCollected);
+    } catch (err) {
+      console.warn(`[shipping-ledger] falha ao registrar coleta do pedido ${orderId}:`, err);
     }
 
     // ── Limpa o carrinho do cliente + notifica vendedor ───────────────────

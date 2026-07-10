@@ -5,6 +5,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getSettings } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
+import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests } from '@/lib/security';
@@ -131,7 +132,8 @@ export async function POST(req: NextRequest) {
     );
 
     // ── Frete — recalculado do zero, nunca confiado do cliente ────────────────
-    const shippingResult = await computeShippingOptions(address.cep, settings, productsCents, totalWeightKg);
+    const ledgerBalanceCents = await getShippingLedgerBalanceCents();
+    const shippingResult = await computeShippingOptions(address.cep, settings, productsCents, totalWeightKg, ledgerBalanceCents);
     const matchedShipping = shippingResult.options.find(o => o.carrier === shipping.carrier);
     if (!matchedShipping) {
       return NextResponse.json(
@@ -235,6 +237,7 @@ export async function POST(req: NextRequest) {
         carrier: matchedShipping.carrier,
         label: matchedShipping.label,
         priceCents: shippingCents,
+        realPriceCents: matchedShipping.realPriceCents ?? shippingCents,
         estimatedDays: matchedShipping.estimatedDays,
         uberSandbox: shippingResult.uberSandbox,
         ...(matchedShipping.quoteId ? { uberQuoteId: matchedShipping.quoteId } : {}),

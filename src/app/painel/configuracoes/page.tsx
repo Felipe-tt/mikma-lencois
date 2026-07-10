@@ -43,6 +43,7 @@ export default function ConfiguracoesPage() {
   const [saved, setSaved]       = useState(false);
   const [tab, setTab]           = useState<Tab>('loja');
   const [preview, setPreview]   = useState<null|'hero'|'featured'|'cta'|'footer'|'sobre'>(null);
+  const [shippingLedger, setShippingLedger] = useState<{ collectedCents: number; spentCents: number; balanceCents: number } | null>(null);
 
   useEffect(() => {
     getDoc(doc(db, 'settings', 'store')).then(snap => {
@@ -50,6 +51,16 @@ export default function ConfiguracoesPage() {
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    user.getIdToken().then(token =>
+      fetch('/api/painel/shipping-ledger', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => data && setShippingLedger(data))
+        .catch(() => {})
+    );
+  }, [user]);
 
   const set = (field: keyof StoreSettings, value: string | number | boolean) =>
     setSettings(s => ({ ...s, [field]: value }));
@@ -342,6 +353,29 @@ export default function ConfiguracoesPage() {
                 ? 'Digite 0 para manter desativado'
                 : `Frete grátis em pedidos acima de R$ ${(settings.freeShippingThresholdCents/100).toFixed(2)}`}
               min={0} />
+          </Card>
+
+          <Card icon="shield" title="Blindagem do frete grátis" desc="Trava automática pra o frete grátis nunca sangrar a sua margem">
+            <Num label="Prejuízo máximo tolerado (R$)"
+              value={settings.freeShippingMaxLossCents / 100}
+              onChange={v => set('freeShippingMaxLossCents', Math.round(v * 100))}
+              hint={settings.freeShippingMaxLossCents === 0
+                ? 'Digite 0 pra desativar o teto (frete grátis sempre vale, sem limite)'
+                : `Se o "caixa de frete" acumular mais de R$ ${(settings.freeShippingMaxLossCents/100).toFixed(2)} de prejuízo, o frete grátis é desligado sozinho até o saldo se recuperar — o cliente nunca vê isso, só deixa de ver a oferta de frete grátis.`}
+              min={0} />
+            {shippingLedger && (
+              <div className="mt-3 flex items-center justify-between rounded-lg bg-[#F0EBE1] px-4 py-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#B09C8C]">Saldo atual do caixa de frete</p>
+                  <p className="text-[10px] text-[#B09C8C] mt-0.5">
+                    Cobrado dos clientes: R$ {(shippingLedger.collectedCents/100).toFixed(2)} · Gasto real: R$ {(shippingLedger.spentCents/100).toFixed(2)}
+                  </p>
+                </div>
+                <p className={`text-[18px] font-bold ${shippingLedger.balanceCents < 0 ? 'text-red-600' : 'text-[#1E1208]'}`}>
+                  R$ {(shippingLedger.balanceCents/100).toFixed(2)}
+                </p>
+              </div>
+            )}
           </Card>
 
           <Card icon="timer" title="Quando você envia?" desc="Horário limite para o pedido sair hoje — depois desse horário vai no próximo dia útil">

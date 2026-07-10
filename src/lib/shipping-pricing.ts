@@ -22,6 +22,15 @@ export interface ShippingOption {
   error?: string;
   /** Uber Direct: quoteId retornado pela API para garantir o preço cotado no despacho */
   quoteId?: string;
+  /**
+   * Custo real do envio, SEMPRE preenchido no retorno de computeShippingOptions()
+   * — mesmo quando priceCents é zerado por frete grátis. É o valor que a loja
+   * de fato paga (ou vai pagar) pra transportadora. Opcional aqui porque é
+   * preenchido de forma centralizada, não em cada função de cotação individual.
+   * Nunca deve ser exposto ao cliente; usado internamente para registrar o
+   * "caixa de frete" e travar despachos sem saldo. Ver src/lib/shipping-ledger.ts.
+   */
+  realPriceCents?: number;
 }
 
 export interface PackageDimensions {
@@ -342,11 +351,23 @@ export async function computeShippingOptions(
   settings: StoreSettings,
   productValueCents: number,
   totalWeightKg: number,
+  // Saldo atual do "caixa de frete" (collectedCents - spentCents já gasto de
+  // verdade nas transportadoras). Opcional — quando omitido, o frete grátis
+  // funciona sem teto (comportamento antigo). Ver src/lib/shipping-ledger.ts.
+  ledgerBalanceCents?: number,
 ): Promise<ShippingQuoteResult> {
   const pkg: PackageDimensions = { weightKg: totalWeightKg, heightCm: 20, widthCm: 40, lengthCm: 50 };
 
   const freeThreshold = settings.freeShippingThresholdCents ?? 0;
-  const freeShipping  = freeThreshold > 0 && productValueCents >= freeThreshold;
+  const thresholdMet  = freeThreshold > 0 && productValueCents >= freeThreshold;
+
+  // Blindagem silenciosa: se o prejuízo acumulado no caixa de frete já
+  // ultrapassou o teto configurado, o frete grátis é desligado nessa
+  // cotação — sem qualquer sinal disso pro cliente (ele só vê o frete
+  // normal, como se o threshold não tivesse sido atingido).
+  const maxLossCents = settings.freeShippingMaxLossCents ?? 0;
+  const withinBudget  = maxLossCents <= 0 || ledgerBalanceCents === undefined || ledgerBalanceCents > -maxLossCents;
+  const freeShipping  = thresholdMet && withinBudget;
 
   const [originCoords, destCoords] = await Promise.all([
     settings.originLat && settings.originLng
@@ -429,7 +450,8 @@ export async function computeShippingOptions(
   }
   const deduped = Array.from(seen.values());
 
-  if (freeShipping) for (const o of deduped) o.priceCents = 0;
+  if (freeShipping) for (const o of deduped) { o.realPriceCents = o.priceCents; o.priceCents = 0; }
+  else for (const o of deduped) o.realPriceCents = o.priceCents;
 
   deduped.sort((a, b) => a.priceCents !== b.priceCents ? a.priceCents - b.priceCents : a.estimatedDays - b.estimatedDays);
 
@@ -437,9 +459,9 @@ export async function computeShippingOptions(
   const hasCarrier = deduped.some(o => o.carrier !== 'pickup');
   if (!hasCarrier) {
     deduped.push(
-      { carrier: 'correios_pac',   label: 'Correios PAC',   priceCents: freeShipping ? 0 : 2500, estimatedDays: 10, available: true, tag: 'economico' },
-      { carrier: 'correios_sedex', label: 'Correios SEDEX', priceCents: freeShipping ? 0 : 4500, estimatedDays: 3,  available: true, tag: 'rapido'    },
-      { carrier: 'jadlog_package', label: 'Jadlog Package', priceCents: freeShipping ? 0 : 3200, estimatedDays: 5,  available: true, tag: 'economico' }
+      { carrier: 'correios_pac',   label: 'Correios PAC',   priceCents: freeShipping ? 0 : 2500, realPriceCents: 2500, estimatedDays: 10, available: true, tag: 'economico' },
+      { carrier: 'correios_sedex', label: 'Correios SEDEX', priceCents: freeShipping ? 0 : 4500, realPriceCents: 4500, estimatedDays: 3,  available: true, tag: 'rapido'    },
+      { carrier: 'jadlog_package', label: 'Jadlog Package', priceCents: freeShipping ? 0 : 3200, realPriceCents: 3200, estimatedDays: 5,  available: true, tag: 'economico' }
     );
   }
 

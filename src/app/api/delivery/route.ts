@@ -19,11 +19,13 @@ import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import {
   meDispatch,
   meCancel,
+  meBalance,
   ME_SERVICES,
   type MEAddress,
   type MEProduct,
   type MEPackage,
 } from '@/lib/melhorenvio';
+import { recordShippingSpent } from '@/lib/shipping-ledger';
 import {
   uberCreateDelivery,
   uberCancelDelivery,
@@ -178,6 +180,10 @@ export async function POST(req: NextRequest) {
         }),
       });
 
+      // Registra o custo real no caixa de frete (best-effort, nunca trava o despacho já feito)
+      try { await recordShippingSpent(uberDelivery.feeCents); }
+      catch (err) { console.warn(`[shipping-ledger] falha ao registrar gasto Uber do pedido ${orderId}:`, err); }
+
       return NextResponse.json({
         carrier:     'uber_direct',
         deliveryId:  uberDelivery.deliveryId,
@@ -290,6 +296,34 @@ export async function POST(req: NextRequest) {
 
     const insuranceValue = order.totalCents / 100;
 
+    // ── Trava de segurança: confere saldo real na Melhor Envio antes de
+    // comprar a etiqueta. Nunca deixa a compra ser tentada sem saldo — evita
+    // conta negativa e falha no meio do fluxo. Isso é 100% interno: o
+    // cliente já pagou, essa checagem não aparece pra ele em nenhum momento,
+    // só bloqueia o botão de despacho no painel do seller.
+    const expectedCostCents = order.delivery?.realPriceCents ?? order.delivery?.priceCents ?? 0;
+    if (expectedCostCents > 0) {
+      try {
+        const balanceCents = await meBalance();
+        // 5% de margem de segurança pra repesagem/variação de tarifa
+        const requiredCents = Math.ceil(expectedCostCents * 1.05);
+        if (balanceCents < requiredCents) {
+          return NextResponse.json(
+            {
+              error: `Saldo insuficiente na Melhor Envio (R$ ${(balanceCents / 100).toFixed(2)} disponível, R$ ${(expectedCostCents / 100).toFixed(2)} necessário). Adicione saldo em melhorenvio.com.br antes de despachar.`,
+            },
+            { status: 402 }
+          );
+        }
+      } catch (err) {
+        console.error('[delivery] falha ao consultar saldo Melhor Envio, bloqueando despacho por segurança:', err);
+        return NextResponse.json(
+          { error: 'Não foi possível confirmar o saldo na Melhor Envio agora. Tente novamente em instantes.' },
+          { status: 502 }
+        );
+      }
+    }
+
     // ── Despacha via Melhor Envio ────────────────────────────────────────────
     const { meOrderId, trackingCode, labelUrl } = await meDispatch({
       serviceId,
@@ -300,6 +334,10 @@ export async function POST(req: NextRequest) {
       volumes,
       insuranceValue,
     });
+
+    // Registra o custo real no caixa de frete (best-effort, nunca desfaz o despacho já feito)
+    try { await recordShippingSpent(expectedCostCents); }
+    catch (err) { console.warn(`[shipping-ledger] falha ao registrar gasto ME do pedido ${orderId}:`, err); }
 
     // ── Atualiza pedido no Firestore ─────────────────────────────────────────
     await adminDb.collection('orders').doc(orderId).update({

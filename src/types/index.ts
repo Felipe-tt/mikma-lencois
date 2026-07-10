@@ -122,6 +122,8 @@ export interface Order {
     uberSandbox?: boolean
     uberQuoteId?: string          // quoteId da cotação — passado no despacho para garantir o preço
     labelUrl?: string
+    priceCents?: number          // valor efetivamente cobrado do cliente (pode ser 0 com frete grátis)
+    realPriceCents?: number      // custo real de despacho — SEMPRE preenchido, mesmo com frete grátis. Nunca exposto ao cliente.
     dispatchedAt?: string
     deliveredAt?: string
     estimatedDelivery?: string

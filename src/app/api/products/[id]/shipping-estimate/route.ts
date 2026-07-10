@@ -7,6 +7,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { tooManyRequests } from '@/lib/security';
 import { getSettings } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
+import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -38,15 +39,18 @@ export async function POST(req: NextRequest, { params }: Params) {
     const product = productSnap.data()!;
     const settings = await getSettings();
 
+    const ledgerBalanceCents = await getShippingLedgerBalanceCents();
     const result = await computeShippingOptions(
       cleanCep,
       settings,
       product.price * quantity,
       (product.weightKg || 0.5) * quantity,
+      ledgerBalanceCents,
     );
 
     return NextResponse.json({
-      options: result.options.filter(o => o.available),
+      // realPriceCents nunca vai pro cliente — só usado internamente.
+      options: result.options.filter(o => o.available).map(({ realPriceCents: _realPriceCents, ...o }) => o),
       isLocal: result.isLocal,
       freeShipping: result.freeShipping,
     });

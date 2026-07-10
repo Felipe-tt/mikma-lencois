@@ -5,6 +5,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { tooManyRequests } from '@/lib/security';
 import { getSettings } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
+import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 
@@ -55,10 +56,13 @@ export async function POST(req: NextRequest) {
     const productValueCents = cartItems.reduce((s, i) => s + (priceMap[i.productId] ?? 0) * i.quantity, 0);
     const totalWeightKg = cartItems.reduce((s, i) => s + (weightMap[i.productId] ?? settings.defaultItemWeightKg ?? 0.8) * i.quantity, 0);
 
-    const result = await computeShippingOptions(destCep, settings, productValueCents, totalWeightKg);
+    const ledgerBalanceCents = await getShippingLedgerBalanceCents();
+    const result = await computeShippingOptions(destCep, settings, productValueCents, totalWeightKg, ledgerBalanceCents);
 
     return NextResponse.json({
-      options: result.options,
+      // realPriceCents é informação interna (custo real de despacho) —
+      // nunca deve ir pro cliente, só é usado server-side pro caixa de frete.
+      options: result.options.map(({ realPriceCents: _realPriceCents, ...o }) => o),
       distKm: Math.round(result.distKm),
       isLocal: result.isLocal,
       freeShipping: result.freeShipping,

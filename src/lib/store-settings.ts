@@ -49,6 +49,10 @@ export type StoreSettings = {
   defaultItemWeightKg: number;
   dispatchCutoffTime: string;
   freeShippingThresholdCents: number;
+  // Teto de prejuízo acumulado (em centavos) que o "caixa de frete" tolera
+  // antes de parar de oferecer frete grátis automaticamente. 0 = sem teto
+  // (frete grátis sempre ativo quando o valor mínimo é atingido).
+  freeShippingMaxLossCents: number;
   lowStockThreshold: number;
   // Horário de funcionamento (JSON serializado — ver src/lib/business-hours.ts)
   businessHours: string;
@@ -127,6 +131,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   defaultItemWeightKg: 0.8,
   dispatchCutoffTime: '17:00',
   freeShippingThresholdCents: 0,
+  freeShippingMaxLossCents: 50000, // R$500 de prejuízo acumulado tolerado por padrão
   lowStockThreshold: 3,
   businessHours: JSON.stringify(DEFAULT_BUSINESS_HOURS),
   businessHoursTimezone: 'America/Sao_Paulo',

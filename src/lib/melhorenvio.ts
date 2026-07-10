@@ -76,6 +76,17 @@ async function meGet<T>(path: string): Promise<T> {
   return JSON.parse(text) as T;
 }
 
+// ── Saldo da conta ────────────────────────────────────────────────────────────
+// Usado como trava de segurança antes de comprar uma etiqueta: se o saldo
+// real na Melhor Envio não cobre o custo do envio, bloqueamos o despacho
+// automático em vez de deixar a compra falhar no meio do fluxo (ou pior,
+// deixar a conta no negativo). Resposta documentada como { balance: number }
+// em reais — convertida para centavos aqui pra bater com o resto do sistema.
+export async function meBalance(): Promise<number> {
+  const data = await meGet<{ balance: number }>('/me/balance');
+  return Math.round((data.balance ?? 0) * 100);
+}
+
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
 export interface MEAddress {
