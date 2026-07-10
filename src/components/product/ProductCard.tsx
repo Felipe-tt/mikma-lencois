@@ -4,9 +4,9 @@ import { BrandLogo } from '@/components/BrandLogo';
 import type { Product } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { NavLink } from '@/components/ui/NavLink';
 import { useWishlist } from '@/lib/hooks/useWishlist';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 
 interface Props {
   product: Product;
@@ -19,19 +19,18 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   const img1 = product.images?.[1] ?? null;
   const [imgError, setImgError] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const router = useRouter();
-  const { isFavorite, toggle, loggedIn } = useWishlist();
+  const { isFavorite, toggle } = useWishlist();
+  const { requireAuth } = useAuthModal();
   const favorite = isFavorite(product.id);
 
   const isNew        = product.tags?.includes('novo') || product.tags?.includes('new');
   const isBestSeller = product.tags?.includes('bestseller') || product.tags?.includes('mais vendido');
   const badge        = isNew ? 'Novo' : isBestSeller ? 'Destaque' : null;
 
-  async function handleFavoriteClick(e: React.MouseEvent) {
+  function handleFavoriteClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (!loggedIn) { router.push('/entrar'); return; }
-    await toggle(product.id);
+    requireAuth(() => toggle(product.id));
   }
 
   return (

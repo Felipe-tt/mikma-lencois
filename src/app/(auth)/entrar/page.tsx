@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
+import { consumeReturnTo } from '@/lib/auth/returnTo';
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -144,7 +145,7 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false);
   const [showForgot, setShowForgot] = useState(false);
 
-  useEffect(() => { if (user) router.push('/'); }, [user, router]);
+  useEffect(() => { if (user) router.push(consumeReturnTo() ?? '/'); }, [user, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -163,7 +164,9 @@ export default function LoginPage() {
 
       // Firebase Auth é a fonte da verdade para a senha
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/');
+      // Redirect fica a cargo do useEffect acima (respeita returnTo, e
+      // evita corrida: se pusesse aqui, sobrescreveria o destino certo
+      // com '/' antes do consumeReturnTo() do effect rodar).
     } catch (err: unknown) {
       if (err instanceof Error) {
         const msg = err.message;

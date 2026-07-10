@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
+import { consumeReturnTo } from '@/lib/auth/returnTo';
 import { maskPhone, maskCpf, isValidCpf, isValidPhone } from '@/lib/masks';
 
 type Step = 'email' | 'awaiting' | 'password' | 'done';
@@ -71,7 +72,10 @@ function RegisterContent() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resent, setResent]     = useState(false);
 
-  useEffect(() => { if (user) router.push('/'); }, [user, router]);
+  // Só redireciona automaticamente fora do fluxo de senha (ex: login via
+  // Google direto na etapa 1). O step 'done' cuida do próprio redirect
+  // com um delay pra mostrar a telinha de sucesso antes de sair.
+  useEffect(() => { if (user && step !== 'password' && step !== 'done') router.push(consumeReturnTo() ?? '/'); }, [user, step, router]);
 
   // Countdown para reenvio
   useEffect(() => {
@@ -154,7 +158,7 @@ function RegisterContent() {
       if (!res.ok) throw new Error(d.error);
       await signInWithEmailAndPassword(auth, email, password);
       setStep('done');
-      setTimeout(() => router.push('/'), 2000);
+      setTimeout(() => router.push(consumeReturnTo() ?? '/'), 2000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta.');
     } finally {
