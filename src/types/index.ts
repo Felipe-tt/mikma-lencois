@@ -58,6 +58,7 @@ export interface MovementLog {
   quantity: number
   reason: string
   date: string
+  by?: string // e-mail de quem registrou a movimentação
 }
 
 export interface InventoryItem {

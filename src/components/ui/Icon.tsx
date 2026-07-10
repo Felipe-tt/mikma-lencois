@@ -70,3 +70,6 @@ export const IconPostOffice = base(<><path d="M22 17a2 2 0 01-2 2H4a2 2 0 01-2-2
 export const IconBolt = base(<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>);
 export const IconComputer = base(<><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></>);
 export const IconMobile = base(<><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></>);
+export const IconMinusCircle = base(<><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></>);
+export const IconPlusCircle = base(<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></>);
+export const IconListCheck = base(<><path d="M3 6h5"/><path d="M3 12h5"/><path d="M3 18h5"/><polyline points="12 6 13.5 7.5 17 4"/><polyline points="12 13 13.5 14.5 17 11"/><polyline points="12 20 13.5 21.5 17 18"/></>);
