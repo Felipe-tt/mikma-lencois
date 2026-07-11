@@ -1,5 +1,5 @@
 'use client';
-import { IconAlert, IconBox, IconCheck, IconMinusCircle, IconPlusCircle, IconListCheck } from '@/components/ui/Icon';
+import { IconAlert, IconBox, IconCheck, IconMinusCircle, IconPlusCircle, IconListCheck, IconEdit, IconImage, IconClock, IconX } from '@/components/ui/Icon';
 import { NovaVendaSheet } from '@/components/painel/NovaVendaSheet';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
@@ -279,29 +279,35 @@ export default function EstoquePage() {
               : 'Lista completa dos produtos, com correção de número e histórico de cada um.'}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {mode === 'dia' && (
-            <button onClick={() => setSubview(v => v === 'grade' ? 'lista' : 'grade')}
-              className="border border-mist text-mid text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-warm transition-colors">
-              {subview === 'grade' ? 'Corrigir número de um item' : 'Voltar pras fotos'}
-            </button>
-          )}
-          <Link href="/painel/estoque/historico"
-            className="border border-mist text-mid text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-warm transition-colors">
-            Histórico geral
-          </Link>
-          {mode === 'dia' ? (
-            <button onClick={enterCountMode}
-              className="flex items-center gap-1.5 border border-ink text-ink text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-ink hover:text-paper transition-colors">
-              <IconListCheck size={13} /> Modo contagem
-            </button>
-          ) : (
-            <button onClick={() => setMode('dia')}
-              className="border border-mist text-mid text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-warm transition-colors">
-              Sair da contagem
-            </button>
-          )}
-          <Link href="/painel/produtos/novo" className="shrink-0 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[12.5px] font-semibold text-mid">
+            {mode === 'dia' && (
+              <button onClick={() => setSubview(v => v === 'grade' ? 'lista' : 'grade')}
+                className="flex items-center gap-1.5 hover:text-ink transition-colors">
+                {subview === 'grade' ? (
+                  <><IconEdit size={13} /> Corrigir número de um item</>
+                ) : (
+                  <><IconImage size={13} /> Voltar pras fotos</>
+                )}
+              </button>
+            )}
+            <span className="w-px h-3.5 bg-mist hidden sm:inline-block" />
+            <Link href="/painel/estoque/historico" className="flex items-center gap-1.5 hover:text-ink transition-colors">
+              <IconClock size={13} /> Histórico geral
+            </Link>
+            <span className="w-px h-3.5 bg-mist hidden sm:inline-block" />
+            {mode === 'dia' ? (
+              <button onClick={enterCountMode} className="flex items-center gap-1.5 hover:text-ink transition-colors">
+                <IconListCheck size={13} /> Modo contagem
+              </button>
+            ) : (
+              <button onClick={() => setMode('dia')} className="flex items-center gap-1.5 font-bold text-ink">
+                <IconX size={13} /> Sair da contagem
+              </button>
+            )}
+          </div>
+          <Link href="/painel/produtos/novo"
+            className="shrink-0 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors">
             + Produto
           </Link>
         </div>

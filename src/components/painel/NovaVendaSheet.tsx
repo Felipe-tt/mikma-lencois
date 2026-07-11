@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { doc, getDoc, writeBatch, increment, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { IconBox, IconCheck, IconX } from '@/components/ui/Icon';
+import { IconBox, IconCheck, IconX, IconSearch, IconInventory } from '@/components/ui/Icon';
 import type { MovementLog } from '@/types';
 
 export type InventoryItem = {
@@ -175,25 +175,28 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         {/* Venda ou Reposição */}
         <div className="grid grid-cols-2 border border-mist p-1 bg-white dark:bg-warm">
           <button onClick={() => setMode('venda')}
-            className={`py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
-            × Vender
+            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
+            <IconX size={14} /> Vender
           </button>
           <button onClick={() => setMode('reposicao')}
-            className={`py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
-            ✓ Chegou mercadoria
+            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
+            <IconCheck size={14} /> Chegou mercadoria
           </button>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <IconSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
             <input type="search" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
               className="w-full border border-mist bg-white dark:bg-warm pl-8 pr-2 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/20" />
           </div>
           <div className="flex items-center shrink-0 border border-mist bg-white dark:bg-warm">
+            <span className="flex items-center pl-2 pr-1 text-faint" title="Quantas fotos por linha">
+              <IconInventory size={13} />
+            </span>
             {COL_OPTIONS.map(n => (
-              <button key={n} onClick={() => changeCols(n)}
-                className={`w-8 h-8 text-[12px] font-bold ${cols === n ? 'bg-ink text-paper' : 'text-mid'}`}>
+              <button key={n} onClick={() => changeCols(n)} title={`${n} fotos por linha`}
+                className={`w-7 h-8 text-[12px] font-bold ${cols === n ? 'bg-ink text-paper' : 'text-mid'}`}>
                 {n}
               </button>
             ))}
