@@ -127,8 +127,17 @@ jobs:
         run: |
           git diff --name-only HEAD~1 HEAD | grep -q '^functions/' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
 
-      - name: Deploy Firestore Rules & Indexes
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules,firestore:indexes --project mikma-lencois
+      - name: Deploy Firestore Rules
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules --project mikma-lencois
+
+      - name: Deploy Firestore Indexes
+        # A service account do CI ainda não tem a permissão de IAM pra gerenciar
+        # índices (403 em collectionGroups/.../indexes). Até isso ser resolvido
+        # no IAM do projeto, não deixamos essa falha travar o deploy do site —
+        # é só um passo a mais de infra, não algo que quebra produção na hora.
+        # Ver nota no fim do arquivo sobre como resolver a permissão.
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:indexes --project mikma-lencois
+        continue-on-error: true
 
       - name: Deploy Storage Rules
         # continue-on-error mantido como rede de segurança: se faltar
@@ -148,3 +157,15 @@ jobs:
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting --force --project mikma-lencois
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
+
+# ── Nota: permissão de índices do Firestore ──────────────────────────────────
+# O passo "Deploy Firestore Indexes" acima falha com 403 porque a service
+# account usada pelo CI (a mesma de FIREBASE_CLIENT_EMAIL/GOOGLE_APPLICATION_
+# CREDENTIALS) não tem a role de IAM pra criar/editar índices compostos.
+# Pra corrigir de vez (e então poder tirar o continue-on-error acima):
+#   1. console.cloud.google.com/iam-admin/iam?project=mikma-lencois
+#   2. Encontre a service account (o e-mail que está em FIREBASE_CLIENT_EMAIL)
+#   3. Edite as permissões e adicione a role "Cloud Datastore Index Admin"
+#      (roles/datastore.indexAdmin) -- ou, mais simples, "Firebase Admin"
+#      (roles/firebase.admin), que já cobre isso e outras operações do CI.
+#   4. Rode o workflow de novo (Actions -> Deploy -> Run workflow).
