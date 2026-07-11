@@ -50,6 +50,15 @@ export default withSentryConfig(nextConfig, {
   // de deixar ligado mesmo antes de criar a conta no Sentry.
   silent: true,
   widenClientFileUpload: true,
+  // Ad-blockers (uBlock, Brave, etc.) bloqueiam por padrão qualquer
+  // request pra *.sentry.io / *.ingest.*, então boa parte dos usuários
+  // reais nunca conseguia mandar erro nenhum (era isso que aparecia
+  // como "blocked by CORS policy" no console — não é CORS de verdade,
+  // é a extensão matando a request antes de sair do navegador).
+  // Com tunnelRoute, o SDK do navegador manda pra uma rota do nosso
+  // próprio domínio (mikma.com.br/monitoring), que o servidor repassa
+  // pro Sentry por trás — invisível pra bloqueadores de anúncio.
+  tunnelRoute: '/monitoring',
   webpack: {
     treeshake: { removeDebugLogging: true },
     reactComponentAnnotation: { enabled: true },

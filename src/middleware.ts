@@ -216,6 +216,7 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
   const isExempt =
     pathname.startsWith('/painel') ||
     pathname.startsWith('/api/') ||
+    pathname.startsWith('/monitoring') ||
     pathname.startsWith('/manutencao') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
