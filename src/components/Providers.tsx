@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import { AuthModalProvider } from '@/lib/auth/AuthModalContext';
 import { NavigationProvider } from '@/lib/NavigationContext';
+import { ChunkErrorReload } from '@/components/ChunkErrorReload';
 
 // ssr: false garante que esses hosts nunca rodem no servidor.
 // createPortal / listeners de DOM dependem de document — não existe no
@@ -23,6 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthModalProvider>
         <NavigationProvider>
           {children}
+          <ChunkErrorReload />
           <ConfirmDialogHost />
           <AuthModal />
         </NavigationProvider>
