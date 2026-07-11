@@ -77,6 +77,7 @@ export interface MovementLog {
   reason: string
   date: string
   by?: string // e-mail de quem registrou a movimentação
+  saleId?: string // agrupa itens vendidos juntos na mesma venda presencial
 }
 
 export interface InventoryItem {

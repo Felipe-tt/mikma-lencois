@@ -1,5 +1,6 @@
 'use client';
 import { IconAlert, IconBox, IconCheck, IconMinusCircle, IconPlusCircle, IconListCheck } from '@/components/ui/Icon';
+import { NovaVendaSheet } from '@/components/painel/NovaVendaSheet';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { collection, onSnapshot, doc, updateDoc, getDoc, increment, arrayUnion, serverTimestamp, writeBatch } from 'firebase/firestore';
@@ -7,12 +8,16 @@ import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Link from 'next/link';
 
-type MovementLog = { type: 'in' | 'out'; quantity: number; reason: string; date: string; by?: string };
+type MovementLog = { type: 'in' | 'out'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
 type InventoryItem = {
   id: string; productId: string; productName?: string; sku: string;
   variant: { size: string; fabric: string; color: string; colorName?: string };
   quantity: number; reserved: number; lowStockThreshold: number; history?: MovementLog[];
 };
+
+function normalize(s: string) {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
 
 function variantLabel(item: InventoryItem) {
   const parts = [item.variant.size, item.variant.fabric, item.variant.colorName || item.variant.color].filter(Boolean);
@@ -45,17 +50,18 @@ export default function EstoquePage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [thresholdDraft, setThresholdDraft] = useState<Record<string, number>>({});
   const [onlyLow, setOnlyLow] = useState(false);
+  const [saleOpen, setSaleOpen] = useState(false);
 
   // Modo contagem geral
   const [countDraft, setCountDraft] = useState<Record<string, number>>({});
   const [savingCount, setSavingCount] = useState(false);
 
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; onUndo?: () => void } | null>(null);
   const nameCache = useRef<Record<string, string>>({});
 
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast((t) => (t === msg ? null : t)), 2600);
+  function showToast(msg: string, onUndo?: () => void) {
+    setToast({ msg, onUndo });
+    setTimeout(() => setToast((t) => (t?.msg === msg ? null : t)), onUndo ? 5000 : 2600);
   }
 
   useEffect(() => {
@@ -80,8 +86,8 @@ export default function EstoquePage() {
   const filtered = items
     .filter(i => {
       if (!search) return true;
-      const q = search.toLowerCase();
-      return i.productName?.toLowerCase().includes(q) || variantLabel(i).toLowerCase().includes(q) || i.sku?.toLowerCase().includes(q);
+      const q = normalize(search);
+      return normalize(i.productName || '').includes(q) || normalize(variantLabel(i)).includes(q) || normalize(i.sku || '').includes(q);
     })
     .filter(i => !onlyLow || isLow(i));
   const lowCount = items.filter(isLow).length;
@@ -107,6 +113,25 @@ export default function EstoquePage() {
     };
   }
 
+  /** Reverte uma movimentação específica já conhecida (nunca "a última do item"
+   *  buscada de novo depois -- isso evitaria desfazer a coisa errada se o
+   *  histórico já tiver mudado). Nunca apaga/edita o histórico original,
+   *  só lança o inverso, então a trilha de auditoria continua íntegra. */
+  async function reverseMovement(itemId: string, log: MovementLog) {
+    const reversedType = log.type === 'out' ? 'in' : 'out';
+    try {
+      await updateDoc(doc(db, 'inventory', itemId), {
+        quantity: increment(reversedType === 'out' ? -log.quantity : log.quantity),
+        history: arrayUnion(baseLog(reversedType, log.quantity, `Desfeito: ${log.reason}`)),
+        updatedAt: serverTimestamp(),
+      });
+      showToast('Desfeito.');
+    } catch (err) {
+      console.error('[estoque] falha ao desfazer', err);
+      showToast('Não deu pra desfazer — tenta de novo.');
+    }
+  }
+
   async function applyMovement(item: InventoryItem, type: 'in' | 'out', qty: number, reason: string) {
     if (!Number.isFinite(qty) || qty <= 0) return;
     if (type === 'out') {
@@ -117,14 +142,15 @@ export default function EstoquePage() {
       }
     }
     setSubmittingId(item.id);
+    const log = baseLog(type, qty, reason);
     try {
       await updateDoc(doc(db, 'inventory', item.id), {
         quantity: increment(type === 'out' ? -qty : qty),
-        history: arrayUnion(baseLog(type, qty, reason)),
+        history: arrayUnion(log),
         updatedAt: serverTimestamp(),
       });
       setActionFor(null);
-      showToast(type === 'out' ? 'Venda registrada.' : 'Entrada registrada.');
+      showToast(type === 'out' ? 'Venda registrada.' : 'Entrada registrada.', () => reverseMovement(item.id, log));
     } catch (err) {
       console.error('[estoque] falha ao registrar movimentação', err);
       showToast('Não deu pra salvar — tenta de novo.');
@@ -138,14 +164,15 @@ export default function EstoquePage() {
     const diff = newQty - item.quantity;
     if (diff === 0) { setActionFor(null); return; }
     setSubmittingId(item.id);
+    const log = baseLog(diff > 0 ? 'in' : 'out', Math.abs(diff), reason || 'Correção manual de contagem');
     try {
       await updateDoc(doc(db, 'inventory', item.id), {
         quantity: newQty,
-        history: arrayUnion(baseLog(diff > 0 ? 'in' : 'out', Math.abs(diff), reason || 'Correção manual de contagem')),
+        history: arrayUnion(log),
         updatedAt: serverTimestamp(),
       });
       setActionFor(null);
-      showToast('Estoque corrigido.');
+      showToast('Estoque corrigido.', () => reverseMovement(item.id, log));
     } catch (err) {
       console.error('[estoque] falha ao corrigir', err);
       showToast('Não deu pra salvar — tenta de novo.');
@@ -162,18 +189,9 @@ export default function EstoquePage() {
     if (!last) return;
     const ok = window.confirm(`Desfazer "${last.type === 'out' ? '−' : '+'}${last.quantity} · ${last.reason}"?`);
     if (!ok) return;
-    const reversedType = last.type === 'out' ? 'in' : 'out';
     setSubmittingId(item.id);
     try {
-      await updateDoc(doc(db, 'inventory', item.id), {
-        quantity: increment(reversedType === 'out' ? -last.quantity : last.quantity),
-        history: arrayUnion(baseLog(reversedType, last.quantity, `Desfeito: ${last.reason}`)),
-        updatedAt: serverTimestamp(),
-      });
-      showToast('Última movimentação desfeita.');
-    } catch (err) {
-      console.error('[estoque] falha ao desfazer', err);
-      showToast('Não deu pra desfazer — tenta de novo.');
+      await reverseMovement(item.id, last);
     } finally {
       setSubmittingId(null);
     }
@@ -260,6 +278,10 @@ export default function EstoquePage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setSaleOpen(true)}
+            className="flex items-center gap-1.5 bg-ink text-paper text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors">
+            <IconMinusCircle size={13} /> Nova venda
+          </button>
           <Link href="/painel/estoque/historico"
             className="border border-mist text-mid text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-warm transition-colors">
             Histórico geral
@@ -334,7 +356,7 @@ export default function EstoquePage() {
                 <div className="flex items-center shrink-0">
                   <button type="button" onClick={() => setCountDraft(d => ({ ...d, [item.id]: Math.max(0, val - 1) }))}
                     className="h-10 w-10 border border-mist bg-white dark:bg-warm text-mid font-bold text-lg flex items-center justify-center active:bg-warm">−</button>
-                  <input type="number" min={0} value={val}
+                  <input type="number" min={0} inputMode="numeric" value={val}
                     onChange={e => setCountDraft(d => ({ ...d, [item.id]: Number(e.target.value) }))}
                     className="w-14 h-10 border-y border-mist bg-white dark:bg-warm text-center font-bold text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20" />
                   <button type="button" onClick={() => setCountDraft(d => ({ ...d, [item.id]: val + 1 }))}
@@ -411,7 +433,7 @@ export default function EstoquePage() {
                       </div>
                       <div className="text-center bg-white dark:bg-warm border border-mist px-3 py-2.5">
                         <p className="text-[9.5px] font-bold uppercase tracking-wide text-faint mb-1">Avisar quando restar</p>
-                        <input type="number" min={0} value={threshold}
+                        <input type="number" min={0} inputMode="numeric" value={threshold}
                           onChange={ev => setThresholdDraft(d => ({ ...d, [item.id]: Number(ev.target.value) }))}
                           onBlur={ev => saveThreshold(item, Number(ev.target.value))}
                           className="w-full bg-transparent border-none text-center text-lg font-bold text-mid py-0 focus:outline-none" />
@@ -485,9 +507,23 @@ export default function EstoquePage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 right-6 bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg flex items-center gap-2 z-50">
-          <IconCheck size={14} /> {toast}
+        <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg flex items-center gap-3 z-50">
+          <IconCheck size={14} className="shrink-0" />
+          <span className="flex-1">{toast.msg}</span>
+          {toast.onUndo && (
+            <button onClick={() => { toast.onUndo!(); setToast(null); }} className="shrink-0 underline decoration-white/50 hover:decoration-white">
+              Desfazer
+            </button>
+          )}
         </div>
+      )}
+
+      {saleOpen && (
+        <NovaVendaSheet
+          items={items}
+          onClose={() => setSaleOpen(false)}
+          onDone={(msg, onUndo) => showToast(msg, onUndo)}
+        />
       )}
     </div>
   );
@@ -513,7 +549,7 @@ function InlineActionForm({ item, kind, available, submitting, onCancel, onConfi
       <div className="flex gap-2">
         <div className="w-24 shrink-0">
           <label className="block text-[10px] font-semibold text-mid mb-1">{qtyLabel}</label>
-          <input type="number" min={0} value={qty} autoFocus disabled={submitting}
+          <input type="number" min={0} inputMode="numeric" value={qty} autoFocus disabled={submitting}
             onChange={e => setQty(Number(e.target.value))}
             className="w-full border border-clay-l/40 text-center py-2 font-bold focus:outline-none disabled:opacity-50" />
         </div>

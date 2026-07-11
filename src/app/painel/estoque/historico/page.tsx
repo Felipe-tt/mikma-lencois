@@ -5,7 +5,7 @@ import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import Link from 'next/link';
 
-type MovementLog = { type: 'in' | 'out'; quantity: number; reason: string; date: string; by?: string };
+type MovementLog = { type: 'in' | 'out'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
 type InventoryItem = {
   id: string; productId: string; productName?: string;
   variant: { size: string; fabric: string; color: string; colorName?: string };
@@ -58,6 +58,22 @@ export default function HistoricoEstoquePage() {
       .slice(0, 300);
   }, [items, search, typeFilter]);
 
+  // Várias peças vendidas juntas (mesma "venda" no carrinho) viram um cartão só, em vez de N linhas soltas
+  const displayRows = useMemo(() => {
+    const rows: Array<{ kind: 'sale'; saleId: string; date: string; lines: FlatMovement[] } | { kind: 'single'; m: FlatMovement }> = [];
+    const seenSale = new Set<string>();
+    for (const m of movements) {
+      if (m.saleId) {
+        if (seenSale.has(m.saleId)) continue;
+        seenSale.add(m.saleId);
+        rows.push({ kind: 'sale', saleId: m.saleId, date: m.date, lines: movements.filter(x => x.saleId === m.saleId) });
+      } else {
+        rows.push({ kind: 'single', m });
+      }
+    }
+    return rows;
+  }, [movements]);
+
   const totals = useMemo(() => {
     const out = movements.filter(m => m.type === 'out').reduce((s, m) => s + m.quantity, 0);
     const inn = movements.filter(m => m.type === 'in').reduce((s, m) => s + m.quantity, 0);
@@ -107,22 +123,36 @@ export default function HistoricoEstoquePage() {
         </select>
       </div>
 
-      {movements.length === 0 ? (
+      {displayRows.length === 0 ? (
         <div className="border border-mist bg-paper py-16 text-center">
           <IconBox size={40} className="text-mist mx-auto mb-3" />
           <p className="text-sm text-faint">Nenhuma movimentação encontrada.</p>
         </div>
       ) : (
         <div className="border border-mist bg-paper divide-y divide-mist">
-          {movements.map((m, i) => (
+          {displayRows.map((row, i) => row.kind === 'single' ? (
             <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-ink truncate">{m.productName} <span className="font-normal text-faint">· {m.variantLabel}</span></p>
-                <p className="text-[11px] text-faint truncate">{m.reason}{m.by ? ` — ${m.by}` : ''}</p>
+                <p className="text-[13px] font-semibold text-ink truncate">{row.m.productName} <span className="font-normal text-faint">· {row.m.variantLabel}</span></p>
+                <p className="text-[11px] text-faint truncate">{row.m.reason}{row.m.by ? ` — ${row.m.by}` : ''}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-[13px] font-bold ${m.type === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>{m.type === 'out' ? '−' : '+'}{m.quantity}</p>
-                <p className="text-[10px] text-faint">{new Date(m.date).toLocaleString('pt-BR')}</p>
+                <p className={`text-[13px] font-bold ${row.m.type === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>{row.m.type === 'out' ? '−' : '+'}{row.m.quantity}</p>
+                <p className="text-[10px] text-faint">{new Date(row.m.date).toLocaleString('pt-BR')}</p>
+              </div>
+            </div>
+          ) : (
+            <div key={i} className="px-4 py-2.5 bg-emerald-50/40">
+              <div className="flex items-center justify-between gap-3 mb-1.5">
+                <p className="text-[12px] font-bold text-emerald-800">🧾 Venda com {row.lines.length} {row.lines.length === 1 ? 'item' : 'itens'}{row.lines[0].by ? ` — ${row.lines[0].by}` : ''}</p>
+                <p className="text-[10px] text-faint shrink-0">{new Date(row.date).toLocaleString('pt-BR')}</p>
+              </div>
+              <div className="flex flex-col gap-0.5 pl-1">
+                {row.lines.map((l, j) => (
+                  <p key={j} className="text-[12px] text-ink">
+                    <span className="text-red-600 font-semibold">−{l.quantity}</span> {l.productName} · {l.variantLabel}
+                  </p>
+                ))}
               </div>
             </div>
           ))}
