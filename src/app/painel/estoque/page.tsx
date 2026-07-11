@@ -43,6 +43,7 @@ export default function EstoquePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [mode, setMode] = useState<'dia' | 'contagem'>('dia');
+  const [subview, setSubview] = useState<'grade' | 'lista'>('grade');
 
   // Modo dia-a-dia: qual item tem um formulário de ação aberto
   const [actionFor, setActionFor] = useState<{ id: string; kind: 'venda' | 'entrada' | 'correcao' } | null>(null);
@@ -50,7 +51,6 @@ export default function EstoquePage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [thresholdDraft, setThresholdDraft] = useState<Record<string, number>>({});
   const [onlyLow, setOnlyLow] = useState(false);
-  const [saleOpen, setSaleOpen] = useState(false);
 
   // Modo contagem geral
   const [countDraft, setCountDraft] = useState<Record<string, number>>({});
@@ -274,14 +274,18 @@ export default function EstoquePage() {
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Estoque</h1>
           <p className="text-[13px] text-faint mt-1">
-            {mode === 'contagem' ? 'Digite quantas peças você tem em mãos de cada item agora.' : 'Registre vendas na loja e chegadas de mercadoria.'}
+            {mode === 'contagem' ? 'Digite quantas peças você tem em mãos de cada item agora.'
+              : subview === 'grade' ? 'Toque nas fotos abaixo pra registrar vendas e chegadas de mercadoria.'
+              : 'Lista completa dos produtos, com correção de número e histórico de cada um.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setSaleOpen(true)}
-            className="flex items-center gap-1.5 bg-ink text-paper text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors">
-            <IconMinusCircle size={13} /> Nova venda
-          </button>
+          {mode === 'dia' && (
+            <button onClick={() => setSubview(v => v === 'grade' ? 'lista' : 'grade')}
+              className="border border-mist text-mid text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-warm transition-colors">
+              {subview === 'grade' ? 'Corrigir número de um item' : 'Voltar pras fotos'}
+            </button>
+          )}
           <Link href="/painel/estoque/historico"
             className="border border-mist text-mid text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-warm transition-colors">
             Histórico geral
@@ -303,6 +307,14 @@ export default function EstoquePage() {
         </div>
       </div>
 
+      {mode === 'dia' && subview === 'grade' && (
+        <NovaVendaSheet
+          embedded
+          items={items}
+          onDone={(msg, onUndo) => showToast(msg, onUndo)}
+        />
+      )}
+
       {mode === 'dia' && lowCount > 0 && (
         <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex items-center gap-3">
           <IconAlert size={18} className="text-amber-600 shrink-0" />
@@ -321,6 +333,8 @@ export default function EstoquePage() {
         </div>
       )}
 
+      {(mode === 'contagem' || subview === 'lista') && (
+      <>
       {items.length > 0 && (
         <div className="flex items-center gap-3 mb-4">
           <div className="relative flex-1">
@@ -505,6 +519,8 @@ export default function EstoquePage() {
           ))}
         </div>
       )}
+      </>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg flex items-center gap-3 z-50">
@@ -516,14 +532,6 @@ export default function EstoquePage() {
             </button>
           )}
         </div>
-      )}
-
-      {saleOpen && (
-        <NovaVendaSheet
-          items={items}
-          onClose={() => setSaleOpen(false)}
-          onDone={(msg, onUndo) => showToast(msg, onUndo)}
-        />
       )}
     </div>
   );

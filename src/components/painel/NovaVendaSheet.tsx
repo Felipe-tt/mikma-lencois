@@ -22,10 +22,12 @@ function variantLabel(item: InventoryItem) {
   return [item.variant.size, item.variant.fabric, item.variant.colorName || item.variant.color].filter(Boolean).join(' · ');
 }
 
-export function NovaVendaSheet({ items, onClose, onDone }: {
+export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
   items: InventoryItem[];
-  onClose: () => void;
+  onClose?: () => void;
   onDone: (msg: string, onUndo?: () => void) => void;
+  /** Se true, renderiza dentro da página normal (sem tela cheia, sem X de fechar). */
+  embedded?: boolean;
 }) {
   const { user } = useAuth();
   const [mode, setMode] = useState<'venda' | 'reposicao'>('venda');
@@ -158,32 +160,34 @@ export function NovaVendaSheet({ items, onClose, onDone }: {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] bg-paper flex flex-col">
+    <div className={embedded ? 'flex flex-col' : 'fixed inset-0 z-[60] bg-paper flex flex-col'}>
       {/* Cabeçalho */}
-      <div className="px-4 py-3 border-b border-mist shrink-0 flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[15px] font-bold text-ink">Registrar movimentação</p>
-          <button onClick={onClose} className="text-faint hover:text-mid p-1.5" aria-label="Fechar">
-            <IconX size={20} />
-          </button>
-        </div>
+      <div className={`px-4 py-3 shrink-0 flex flex-col gap-3 ${embedded ? '' : 'border-b border-mist'}`}>
+        {!embedded && (
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[15px] font-bold text-ink">Registrar movimentação</p>
+            <button onClick={onClose} className="text-faint hover:text-mid p-1.5" aria-label="Fechar">
+              <IconX size={20} />
+            </button>
+          </div>
+        )}
 
-        {/* Toggle Venda / Reposição */}
+        {/* Venda ou Reposição */}
         <div className="grid grid-cols-2 border border-mist p-1 bg-white dark:bg-warm">
           <button onClick={() => setMode('venda')}
-            className={`py-2.5 text-[12px] font-bold uppercase tracking-wide transition-colors ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
-            × Venda
+            className={`py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
+            × Vender
           </button>
           <button onClick={() => setMode('reposicao')}
-            className={`py-2.5 text-[12px] font-bold uppercase tracking-wide transition-colors ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
-            ✓ Reposição
+            className={`py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
+            ✓ Chegou mercadoria
           </button>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-            <input type="search" placeholder="Buscar no grid..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="search" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
               className="w-full border border-mist bg-white dark:bg-warm pl-8 pr-2 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/20" />
           </div>
           <div className="flex items-center shrink-0 border border-mist bg-white dark:bg-warm">
@@ -195,14 +199,16 @@ export function NovaVendaSheet({ items, onClose, onDone }: {
             ))}
           </div>
         </div>
-        <p className="text-[11px] text-faint -mt-1.5">
-          Toque num produto pra {mode === 'venda' ? 'somar 1 venda' : 'somar 1 unidade de reposição'}. Toque de novo pra somar mais.
-          Errou? Muda o toggle e toque no mesmo produto pra tirar 1.
+        <p className="text-[12px] text-faint -mt-1.5">
+          {mode === 'venda'
+            ? 'Toque na foto do produto pra registrar 1 venda. Toque de novo se vendeu mais de 1.'
+            : 'Toque na foto do produto pra registrar 1 chegada. Toque de novo se chegou mais de 1.'}
+          {' '}Tocou errado? Aperta o outro botão aí em cima e toque de novo no mesmo produto pra corrigir.
         </p>
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className={embedded ? 'py-4' : 'flex-1 overflow-y-auto px-4 py-4'}>
         {filteredItems.length === 0 ? (
           <p className="text-[12px] text-faint text-center py-10">Nenhum produto encontrado.</p>
         ) : (
@@ -248,7 +254,7 @@ export function NovaVendaSheet({ items, onClose, onDone }: {
       </div>
 
       {/* Barra de confirmação */}
-      <div className="px-4 py-3 border-t border-mist shrink-0 flex items-center gap-2 bg-paper">
+      <div className={`px-4 py-3 flex items-center gap-2 bg-paper ${embedded ? 'sticky bottom-0 border-t border-mist shadow-[0_-4px_10px_rgba(0,0,0,0.06)]' : 'border-t border-mist shrink-0'}`}>
         {pendingCount > 0 && (
           <button onClick={clearAll} disabled={saving}
             className="shrink-0 border border-mist text-mid text-[12px] font-semibold px-3 py-3 hover:bg-warm disabled:opacity-50">
