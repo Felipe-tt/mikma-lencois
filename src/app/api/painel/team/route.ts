@@ -6,12 +6,12 @@ import { verifyAuth, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 
-const addMemberSchema = z.object({
+export const addMemberSchema = z.object({
   email: z.string().trim().toLowerCase().email('E-mail inválido'),
   role: z.enum(['seller', 'admin'], { errorMap: () => ({ message: 'Role inválida' }) }),
 });
 
-const removeMemberSchema = z.object({
+export const removeMemberSchema = z.object({
   uid: z.string().trim().min(1).max(128),
 });
 

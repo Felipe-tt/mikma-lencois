@@ -29,7 +29,7 @@ import { geocodeCep }                   from '@/lib/shipping-pricing';
 import { fetchRoute }                   from '@/lib/routing';
 import { z }                            from 'zod';
 
-const uberWebhookSchema = z.object({
+export const uberWebhookSchema = z.object({
   event_type: z.string().min(1).max(60).optional(),
   resource_id: z.union([z.string(), z.number()]).optional(),
   data: z.record(z.unknown()).optional(),

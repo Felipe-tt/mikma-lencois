@@ -8,7 +8,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests } from '@/lib/security';
 import { z } from 'zod';
 
-const resendEventSchema = z.object({
+export const resendEventSchema = z.object({
   type: z.string().min(1),
   created_at: z.string(),
   data: z.object({

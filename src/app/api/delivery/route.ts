@@ -17,12 +17,12 @@ import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import { z } from 'zod';
 import type { Order } from '@/types';
 
-const dispatchSchema = z.object({
+export const dispatchSchema = z.object({
   orderId: z.string().trim().min(1).max(80),
   carrier: z.string().trim().min(1).max(60).optional(),
 });
 
-const cancelDeliverySchema = z.object({
+export const cancelDeliverySchema = z.object({
   orderId: z.string().trim().min(1).max(80),
   reason: z.string().trim().min(1).max(500),
 });

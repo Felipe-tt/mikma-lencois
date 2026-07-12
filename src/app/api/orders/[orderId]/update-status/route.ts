@@ -10,7 +10,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import type { Order, OrderStatus, User } from '@/types';
 
-const updateStatusSchema = z.object({
+export const updateStatusSchema = z.object({
   trackingCode: z.string().trim().min(1).max(60).optional(),
 });
 

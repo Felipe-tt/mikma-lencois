@@ -12,7 +12,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { recordShippingCollected } from '@/lib/shipping-ledger';
 import { z } from 'zod';
 
-const webhookSchema = z.object({
+export const webhookSchema = z.object({
   event: z.string().min(1).max(60),
   data: z.object({
     transparent: z.record(z.unknown()).optional(),

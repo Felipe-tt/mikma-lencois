@@ -6,7 +6,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import { z } from 'zod';
 
-const googleVerifySchema = z.object({
+export const googleVerifySchema = z.object({
   idToken: z.string().min(1).max(8192),
 });
 

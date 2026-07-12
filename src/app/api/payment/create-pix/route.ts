@@ -17,7 +17,7 @@ import { computeProductsCents, validateCoupon, computePixDiscountCents, computeP
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 
-const createPixSchema = z.object({
+export const createPixSchema = z.object({
   address: addressSchema,
   shipping: z.object({
     carrier: z.string().trim().min(1).max(60),

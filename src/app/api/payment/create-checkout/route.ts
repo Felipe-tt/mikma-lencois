@@ -17,7 +17,7 @@ import { computeProductsCents, validateCoupon, computeCardTotalCents } from '@/l
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 
-const createCheckoutSchema = z.object({
+export const createCheckoutSchema = z.object({
   address: addressSchema,
   installments: z.coerce.number().int().min(1).max(12).default(1),
   shipping: z.object({

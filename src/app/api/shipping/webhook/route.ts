@@ -26,7 +26,7 @@ import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { z } from 'zod';
 
-const mePayloadSchema = z.object({
+export const mePayloadSchema = z.object({
   event: z.string().min(1).max(60),
   data: z.object({
     id: z.union([z.string(), z.number()]).transform(String),

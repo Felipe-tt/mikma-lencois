@@ -6,7 +6,7 @@ import { extractBearer, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 
-const adminCancelSchema = z.object({
+export const adminCancelSchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 

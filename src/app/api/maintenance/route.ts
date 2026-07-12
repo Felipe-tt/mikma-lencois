@@ -7,7 +7,7 @@ import { extractBearer, tooManyRequests, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 
-const maintenanceActionSchema = z.discriminatedUnion('action', [
+export const maintenanceActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('toggle') }),
   z.object({ action: z.literal('release'), ip: z.string().min(1).max(45) }),
   z.object({ action: z.literal('release_all') }),
