@@ -17,7 +17,7 @@ import { FooterPreview } from '@/components/painel/preview/FooterPreview';
 import { SobrePreview } from '@/components/painel/preview/SobrePreview';
 import { BusinessHoursEditor } from '@/components/painel/BusinessHoursEditor';
 import { parseBusinessHours, serializeBusinessHours } from '@/lib/business-hours';
-import { maskCnpj, isValidCnpj } from '@/lib/masks';
+import { maskCnpj, isValidCnpj, maskPhone, isValidPhone, maskCep, isValidCep } from '@/lib/masks';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 type Tab = 'loja' | 'vitrine' | 'produto' | 'entrega' | 'equipe';
@@ -41,6 +41,7 @@ export default function ConfiguracoesPage() {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [tab, setTab]           = useState<Tab>('loja');
   const [preview, setPreview]   = useState<null|'hero'|'featured'|'cta'|'footer'|'sobre'>(null);
   const [shippingLedger, setShippingLedger] = useState<{ collectedCents: number; spentCents: number; balanceCents: number } | null>(null);
@@ -66,6 +67,26 @@ export default function ConfiguracoesPage() {
     setSettings(s => ({ ...s, [field]: value }));
 
   const handleSave = async () => {
+    // CEP da loja alimenta a geração de etiqueta de envio (Melhor Envio) —
+    // um CEP incompleto aqui só quebra na hora de despachar um pedido,
+    // bem mais tarde e mais difícil de diagnosticar. Bloqueia antes.
+    if (settings.storeCep && !isValidCep(settings.storeCep)) {
+      setSaveError('CEP da loja incompleto — confira antes de salvar.');
+      return;
+    }
+    if (settings.storePhone && !isValidPhone(settings.storePhone)) {
+      setSaveError('Telefone/WhatsApp incompleto — confira antes de salvar.');
+      return;
+    }
+    if (settings.storeEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.storeEmail)) {
+      setSaveError('E-mail da loja inválido — confira antes de salvar.');
+      return;
+    }
+    if (settings.storeCnpj && !isValidCnpj(settings.storeCnpj)) {
+      setSaveError('CNPJ incompleto — confira antes de salvar.');
+      return;
+    }
+    setSaveError('');
     setSaving(true);
     await setDoc(doc(db, 'settings', 'store'), settings, { merge: true });
     // Best-effort: revalida as páginas públicas da loja (ISR) pra mudança
@@ -155,21 +176,25 @@ export default function ConfiguracoesPage() {
             <F label="Complemento (opcional)" value={settings.storeComplement} onChange={v => set('storeComplement', v)} placeholder="Sala 2, fundos, etc." />
             <Row>
               <F label="Bairro" value={settings.storeNeighborhood} onChange={v => set('storeNeighborhood', v)} placeholder="Centro" />
-              <F label="CEP" value={settings.storeCep} onChange={v => set('storeCep', v)} placeholder="89000-000" />
+              <F label="CEP" value={settings.storeCep} onChange={v => set('storeCep', maskCep(v))}
+                placeholder="89000-000" maxLength={9}
+                hint={!settings.storeCep ? undefined : isValidCep(settings.storeCep) ? 'CEP válido' : 'CEP incompleto'} />
             </Row>
             <Row>
               <F label="Cidade" value={settings.storeCity} onChange={v => set('storeCity', v)} placeholder="Blumenau" />
-              <F label="Estado" value={settings.storeState} onChange={v => set('storeState', v)} placeholder="SC" maxLength={2} />
+              <F label="Estado" value={settings.storeState} onChange={v => set('storeState', v.toUpperCase().slice(0, 2))} placeholder="SC" maxLength={2} />
             </Row>
           </Card>
 
           <Card icon="phone" title="Como te chamam?" desc="Formas de contato que aparecem no site" onPreview={() => setPreview('footer')}>
-            <F label="WhatsApp" value={settings.storePhone} onChange={v => set('storePhone', v)}
-              placeholder="(47) 99999-0000" hint="Número principal de atendimento" />
+            <F label="WhatsApp" value={settings.storePhone} onChange={v => set('storePhone', maskPhone(v))}
+              placeholder="(47) 99999-0000" maxLength={15}
+              hint={!settings.storePhone ? 'Número principal de atendimento' : isValidPhone(settings.storePhone) ? 'Número principal de atendimento' : 'Telefone incompleto'} />
             <F label="Link do WhatsApp" value={settings.whatsappUrl ?? ''} onChange={v => set('whatsappUrl', v)}
               placeholder="https://wa.me/5547999990000"
               hint='Cole o link gerado em wa.me — é o botão "Falar no WhatsApp"' />
-            <F label="E-mail" value={settings.storeEmail} onChange={v => set('storeEmail', v)} placeholder="contato@minhaloja.com.br" />
+            <F label="E-mail" value={settings.storeEmail} onChange={v => set('storeEmail', v)} placeholder="contato@minhaloja.com.br"
+              hint={!settings.storeEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.storeEmail) ? undefined : 'E-mail incompleto'} />
             <F label="Instagram (opcional)" value={settings.instagramUrl ?? ''} onChange={v => set('instagramUrl', v)}
               placeholder="https://instagram.com/mikmalencois" hint="Aparece no rodapé" />
           </Card>
@@ -440,6 +465,7 @@ export default function ConfiguracoesPage() {
       {tab !== 'equipe' && (
       <div className="fixed bottom-0 left-0 right-0 z-30 md:relative md:bottom-auto md:mt-8">
         <div className="bg-paper border-t border-mist md:border-0 px-4 py-3 md:px-0 md:py-0">
+          {saveError && <p className="text-center text-[12px] text-red-600 mb-2">{saveError}</p>}
           <button onClick={handleSave} disabled={saving}
             className="w-full bg-ink text-paper text-sm font-semibold py-4 disabled:opacity-50 hover:bg-[#2E2010] transition-colors flex items-center justify-center gap-2"
           >
