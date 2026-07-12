@@ -2,8 +2,13 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { extractBearer, getClientIp } from '@/lib/security';
+import { extractBearer, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { z } from 'zod';
+
+const adminCancelSchema = z.object({
+  reason: z.string().trim().max(500).optional(),
+});
 
 // Statuses que ainda não tiveram o estoque debitado (só reservado)
 const PENDING_STATUSES = new Set(['pending_payment']);
@@ -45,8 +50,9 @@ export async function POST(
     );
   }
 
-  const body = await req.json().catch(() => ({})) as { reason?: string };
-  const reason = (body.reason ?? '').trim() || 'Cancelado pelo lojista';
+  const parsedBody = await validateBody(req, adminCancelSchema);
+  if (!parsedBody.ok) return parsedBody.response;
+  const reason = (parsedBody.data.reason ?? '').trim() || 'Cancelado pelo lojista';
 
   const ref = adminDb.collection('orders').doc(orderId);
   const snap = await ref.get();

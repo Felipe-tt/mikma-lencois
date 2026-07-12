@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 import type { DecodedIdToken } from 'firebase-admin/auth';
+import { z, type ZodType, type ZodError } from 'zod';
 
 /** Extrai o IP real do cliente, respeitando proxies confiáveis (Cloud Run / Vercel). */
 export function getClientIp(req: NextRequest): string {
@@ -43,6 +44,50 @@ export async function safeJson<T = unknown>(
       response: NextResponse.json({ error: 'JSON inválido' }, { status: 400 }),
     };
   }
+}
+
+/** Endereço de entrega — mesmo shape usado no checkout e no pedido salvo no Firestore. */
+export const addressSchema = z.object({
+  cep: z.string().trim().regex(/^\d{5}-?\d{3}$/, 'CEP inválido'),
+  street: z.string().trim().min(1).max(150),
+  number: z.string().trim().min(1).max(20),
+  complement: z.string().trim().max(100).optional(),
+  neighborhood: z.string().trim().min(1).max(100),
+  city: z.string().trim().min(1).max(100),
+  state: z.string().trim().length(2),
+});
+
+interface ValidateBodyOk<T> { ok: true; data: T }
+interface ValidateBodyErr { ok: false; response: NextResponse }
+
+function formatZodError(err: ZodError): string {
+  const first = err.issues[0];
+  if (!first) return 'Dados inválidos';
+  const path = first.path.join('.');
+  return path ? `${path}: ${first.message}` : first.message;
+}
+
+/**
+ * Lê o body JSON (com limite de tamanho) e valida contra um schema zod.
+ * Retorna { ok: true, data } tipado pelo schema, ou { ok: false, response }
+ * já pronto pra dar `return` direto na rota — 400 (JSON/schema inválido) ou 413 (payload grande).
+ */
+export async function validateBody<S extends ZodType>(
+  req: NextRequest,
+  schema: S,
+  maxBytes = 8192
+): Promise<ValidateBodyOk<z.output<S>> | ValidateBodyErr> {
+  const raw = await safeJson<unknown>(req, maxBytes);
+  if (!raw.ok) return raw;
+
+  const parsed = schema.safeParse(raw.data);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 }),
+    };
+  }
+  return { ok: true, data: parsed.data as z.output<S> };
 }
 
 /**

@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { OAuth2Client } from 'google-auth-library';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { getClientIp, safeJson, tooManyRequests } from '@/lib/security';
+import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
+import { z } from 'zod';
+
+const googleVerifySchema = z.object({
+  idToken: z.string().min(1).max(8192),
+});
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
@@ -15,13 +20,9 @@ export async function POST(req: NextRequest) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 
-  const body = await safeJson<{ idToken?: unknown }>(req, 16384);
-  if (!body.ok) return body.response;
-
-  const { idToken } = body.data;
-  if (!idToken || typeof idToken !== 'string' || idToken.length > 8192) {
-    return NextResponse.json({ error: 'Token inválido' }, { status: 400 });
-  }
+  const parsedBody = await validateBody(req, googleVerifySchema, 16384);
+  if (!parsedBody.ok) return parsedBody.response;
+  const { idToken } = parsedBody.data;
 
   try {
     const ticket = await client.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID });

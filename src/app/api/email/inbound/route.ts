@@ -6,6 +6,18 @@ import { adminDb, adminStorage } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests } from '@/lib/security';
+import { z } from 'zod';
+
+const resendEventSchema = z.object({
+  type: z.string().min(1),
+  created_at: z.string(),
+  data: z.object({
+    email_id: z.string().min(1),
+    from: z.string().min(1),
+    to: z.array(z.string()),
+    subject: z.string().optional(),
+  }),
+});
 
 let _resend: Resend | null = null;
 function getResend(): Resend {
@@ -135,9 +147,10 @@ export async function POST(req: NextRequest) {
   let event: ResendInboundEvent;
   try {
     const wh = new Webhook(secret);
-    event = wh.verify(rawBody, svixHeaders) as ResendInboundEvent;
+    const verified = wh.verify(rawBody, svixHeaders);
+    event = resendEventSchema.parse(verified) as ResendInboundEvent;
   } catch {
-    return NextResponse.json({ error: 'Assinatura inválida' }, { status: 400 });
+    return NextResponse.json({ error: 'Assinatura ou payload inválido' }, { status: 400 });
   }
 
   if (event.type !== 'email.received') {

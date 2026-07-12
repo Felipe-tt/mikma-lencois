@@ -24,6 +24,18 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
+import { z } from 'zod';
+
+const mePayloadSchema = z.object({
+  event: z.string().min(1).max(60),
+  data: z.object({
+    id: z.union([z.string(), z.number()]).transform(String),
+    protocol: z.string().optional(),
+    status: z.string().optional(),
+    tracking: z.string().nullable().optional(),
+    tracking_url: z.string().nullable().optional(),
+  }),
+});
 
 interface MEOrderEventData {
   id: string;               // ID do envio no ME (= delivery.melhorEnvioOrderId)
@@ -112,7 +124,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Assinatura inválida' }, { status: 401 });
   }
 
-  const { event, data } = payload as MEWebhookPayload;
+  const validated = mePayloadSchema.safeParse(payload);
+  if (!validated.success) {
+    console.warn('[shipping/webhook] payload inválido:', validated.error.issues[0]?.message);
+    return NextResponse.json({ error: 'Payload inválido' }, { status: 400 });
+  }
+
+  const { event, data } = validated.data;
   const meEvent = event.startsWith('order.') ? event.slice('order.'.length) : event;
   const { id: meOrderId, tracking, tracking_url: trackingUrl } = data;
 

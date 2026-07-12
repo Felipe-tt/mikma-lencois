@@ -13,8 +13,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { getClientIp, tooManyRequests } from '@/lib/security';
+import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
+import { z } from 'zod';
 import type { Order } from '@/types';
+
+const dispatchSchema = z.object({
+  orderId: z.string().trim().min(1).max(80),
+  carrier: z.string().trim().min(1).max(60).optional(),
+});
+
+const cancelDeliverySchema = z.object({
+  orderId: z.string().trim().min(1).max(80),
+  reason: z.string().trim().min(1).max(500),
+});
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import {
   meDispatch,
@@ -56,11 +67,9 @@ export async function POST(req: NextRequest) {
     const rlKey = `delivery:${ip}`;
     if (!rateLimit(rlKey, 30, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(rlKey));
 
-    const body = await req.json().catch(() => null);
-    const orderId: string = body?.orderId;
-    if (!orderId || typeof orderId !== 'string') {
-      return NextResponse.json({ error: 'orderId inválido' }, { status: 400 });
-    }
+    const parsedBody = await validateBody(req, dispatchSchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { orderId, carrier: bodyCarrier } = parsedBody.data;
 
     const [orderSnap, settings] = await Promise.all([
       adminDb.collection('orders').doc(orderId).get(),
@@ -77,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     // Prioridade: body (painel) → selectedShipping (escolha do cliente) → delivery.carrier → fallback
     const orderAny = order as unknown as { selectedShipping?: { carrier?: string } };
-    const carrier = body?.carrier
+    const carrier = bodyCarrier
       ?? orderAny.selectedShipping?.carrier
       ?? order.delivery?.carrier
       ?? 'correios_pac';
@@ -388,15 +397,9 @@ export async function DELETE(req: NextRequest) {
     const rlKey = `delivery-cancel:${ip}`;
     if (!rateLimit(rlKey, 30, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(rlKey));
 
-    const body = await req.json().catch(() => null);
-    const orderId: string = body?.orderId;
-    const reason: string = (body?.reason ?? '').trim();
-    if (!orderId || typeof orderId !== 'string') {
-      return NextResponse.json({ error: 'orderId inválido' }, { status: 400 });
-    }
-    if (!reason) {
-      return NextResponse.json({ error: 'Informe o motivo do cancelamento' }, { status: 400 });
-    }
+    const parsedBody = await validateBody(req, cancelDeliverySchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { orderId, reason } = parsedBody.data;
 
     const orderSnap = await adminDb.collection('orders').doc(orderId).get();
     if (!orderSnap.exists) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });

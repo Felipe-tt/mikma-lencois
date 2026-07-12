@@ -8,13 +8,22 @@ import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
-import { tooManyRequests } from '@/lib/security';
+import { tooManyRequests, addressSchema, validateBody } from '@/lib/security';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { computeProductsCents, validateCoupon, computeCardTotalCents } from '@/lib/orderPricing';
+import { z } from 'zod';
 import type { Coupon } from '@/types';
+
+const createCheckoutSchema = z.object({
+  address: addressSchema,
+  installments: z.coerce.number().int().min(1).max(12).default(1),
+  shipping: z.object({
+    carrier: z.string().trim().min(1).max(60),
+  }).passthrough(),
+});
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -55,7 +64,9 @@ export async function POST(req: NextRequest) {
       return tooManyRequests(rateLimitRetryAfter(`checkout:uid:${uid}`));
     }
 
-    const { address, installments = 1, shipping } = await req.json();
+    const parsedBody = await validateBody(req, createCheckoutSchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { address, installments, shipping } = parsedBody.data;
 
     // NOTA DE SEGURANÇA: nada do frete é confiado do cliente além de QUAL
     // carrier ele escolheu — preço, label, prazo e quoteId são sempre
@@ -63,14 +74,7 @@ export async function POST(req: NextRequest) {
     // /api/shipping/quote), e só aceitamos o carrier se ele aparecer na
     // lista recém-computada para esse endereço/carrinho exatos.
 
-    if (!address?.cep) {
-      return NextResponse.json({ error: 'Endereço obrigatório' }, { status: 400 });
-    }
-    if (!shipping || typeof shipping.carrier !== 'string' || !shipping.carrier) {
-      return NextResponse.json({ error: 'Forma de envio inválida' }, { status: 400 });
-    }
-
-    const parsedInstallments = Math.max(1, Math.min(12, parseInt(installments, 10) || 1));
+    const parsedInstallments = installments;
 
     if (!ABACATEPAY_KEY) {
       console.error('ABACATEPAY_API_KEY not set');

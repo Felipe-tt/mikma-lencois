@@ -2,10 +2,15 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { tooManyRequests } from '@/lib/security';
+import { tooManyRequests, validateBody } from '@/lib/security';
 import { getSettings } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
+import { z } from 'zod';
+
+const quoteSchema = z.object({
+  destCep: z.string().trim().regex(/^\d{5}-?\d{3}$/, 'CEP inválido'),
+});
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 
@@ -27,10 +32,9 @@ export async function POST(req: NextRequest) {
       return tooManyRequests(rateLimitRetryAfter(`shipping:uid:${uid}`));
     }
 
-    const { destCep } = await req.json();
-    if (!destCep || destCep.replace(/\D/g, '').length !== 8) {
-      return NextResponse.json({ error: 'CEP inválido' }, { status: 400 });
-    }
+    const parsedBody = await validateBody(req, quoteSchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { destCep } = parsedBody.data;
 
     const [settings, cartSnap] = await Promise.all([
       getSettings(),

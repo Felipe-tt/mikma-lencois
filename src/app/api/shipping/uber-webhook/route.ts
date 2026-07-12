@@ -27,6 +27,13 @@ import { rateLimit }                    from '@/lib/rateLimit';
 import { getSettings }                  from '@/lib/settings';
 import { geocodeCep }                   from '@/lib/shipping-pricing';
 import { fetchRoute }                   from '@/lib/routing';
+import { z }                            from 'zod';
+
+const uberWebhookSchema = z.object({
+  event_type: z.string().min(1).max(60).optional(),
+  resource_id: z.union([z.string(), z.number()]).optional(),
+  data: z.record(z.unknown()).optional(),
+}).passthrough();
 
 // Status Uber Direct → status interno do pedido
 const STATUS_MAP: Record<string, string> = {
@@ -158,6 +165,13 @@ export async function POST(req: NextRequest) {
   let payload: Record<string, unknown>;
   try { payload = JSON.parse(rawBody.toString('utf-8')); }
   catch { return NextResponse.json({ error: 'invalid json' }, { status: 400 }); }
+
+  const validated = uberWebhookSchema.safeParse(payload);
+  if (!validated.success) {
+    console.warn('[uber-webhook] payload inválido:', validated.error.issues[0]?.message);
+    return NextResponse.json({ error: 'invalid payload' }, { status: 400 });
+  }
+  payload = validated.data;
 
   const eventType  = payload.event_type as string | undefined;
   const data       = payload.data       as Record<string, unknown> | undefined;

@@ -2,12 +2,17 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
-import { getClientIp } from '@/lib/security';
+import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { tooManyRequests } from '@/lib/security';
 import { getSettings } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
+import { z } from 'zod';
+
+const shippingEstimateSchema = z.object({
+  destCep: z.string().trim().regex(/^\d{5}-?\d{3}$/, 'CEP inválido'),
+  qty: z.coerce.number().int().min(1).max(99).default(1),
+});
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -25,12 +30,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   try {
-    const { destCep, qty } = await req.json();
-    const cleanCep = String(destCep ?? '').replace(/\D/g, '');
-    if (cleanCep.length !== 8) {
-      return NextResponse.json({ error: 'CEP inválido' }, { status: 400 });
-    }
-    const quantity = Math.max(1, Math.min(99, Number(qty) || 1));
+    const parsedBody = await validateBody(req, shippingEstimateSchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { destCep, qty } = parsedBody.data;
+    const cleanCep = destCep.replace(/\D/g, '');
+    const quantity = qty;
 
     const productSnap = await adminDb.collection('products').doc(id).get();
     if (!productSnap.exists || !productSnap.data()?.active) {

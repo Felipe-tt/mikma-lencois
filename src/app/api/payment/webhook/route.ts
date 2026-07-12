@@ -10,6 +10,19 @@ import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { recordShippingCollected } from '@/lib/shipping-ledger';
+import { z } from 'zod';
+
+const webhookSchema = z.object({
+  event: z.string().min(1).max(60),
+  data: z.object({
+    transparent: z.record(z.unknown()).optional(),
+    checkout: z.record(z.unknown()).optional(),
+    customer: z.record(z.unknown()).optional(),
+  }),
+}).refine(
+  (v) => !v.event.startsWith('transparent.') || v.data.transparent !== undefined,
+  { message: 'data.transparent ausente para evento transparent.*' }
+);
 
 const ABACATEPAY_PUBLIC_KEY = process.env.ABACATEPAY_PUBLIC_KEY!;
 
@@ -60,8 +73,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
+  const validated = webhookSchema.safeParse(parsed);
+  if (!validated.success) {
+    console.warn('Webhook payload inválido:', validated.error.issues[0]?.message);
+    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+  }
+
   // AbacatePay v2 envelope: { event, apiVersion, data: { transparent: { id, externalId, ... }, customer, ... } }
-  const { event: eventType, data } = parsed as {
+  const { event: eventType, data } = validated.data as {
     event: string;
     data: { transparent: Record<string, unknown>; customer?: Record<string, unknown> };
   };

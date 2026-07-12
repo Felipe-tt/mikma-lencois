@@ -5,9 +5,14 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { carrierName, trackingUrl as getTrackingUrl } from '@/lib/carriers';
 import { sendEmail } from '@/lib/email';
 import { formatCurrency } from '@/lib/utils/format';
-import { extractBearer, getClientIp } from '@/lib/security';
+import { extractBearer, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { z } from 'zod';
 import type { Order, OrderStatus, User } from '@/types';
+
+const updateStatusSchema = z.object({
+  trackingCode: z.string().trim().min(1).max(60).optional(),
+});
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br';
 const STORE = 'Mikma Lençóis';
@@ -210,7 +215,9 @@ export async function POST(
     );
   }
 
-  const body = await req.json().catch(() => ({})) as { trackingCode?: string };
+  const parsedBody = await validateBody(req, updateStatusSchema);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
 
   const ref = adminDb.collection('orders').doc(orderId);
   const snap = await ref.get();

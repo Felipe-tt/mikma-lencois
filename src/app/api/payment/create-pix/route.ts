@@ -8,13 +8,21 @@ import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
-import { tooManyRequests } from '@/lib/security';
+import { tooManyRequests, addressSchema, validateBody } from '@/lib/security';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { computeProductsCents, validateCoupon, computePixDiscountCents, computePixTotalCents } from '@/lib/orderPricing';
+import { z } from 'zod';
 import type { Coupon } from '@/types';
+
+const createPixSchema = z.object({
+  address: addressSchema,
+  shipping: z.object({
+    carrier: z.string().trim().min(1).max(60),
+  }).passthrough(),
+});
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -40,20 +48,15 @@ export async function POST(req: NextRequest) {
       return tooManyRequests(rateLimitRetryAfter(`pix:uid:${uid}`));
     }
 
-    const { address, shipping } = await req.json();
+    const parsedBody = await validateBody(req, createPixSchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { address, shipping } = parsedBody.data;
     // NOTA DE SEGURANÇA: nada do frete é confiado do cliente além de QUAL
     // carrier ele escolheu. O preço, label, prazo e quoteId são sempre
     // recalculados aqui via computeShippingOptions() — a mesma função usada
     // em /api/shipping/quote — e só aceitamos o carrier se ele aparecer na
     // lista recém-computada para esse endereço/carrinho exatos. Isso fecha
     // a brecha de alguém mandar priceCents: 0 direto pela API e não pagar frete.
-
-    if (!address?.cep) {
-      return NextResponse.json({ error: 'Endereço obrigatório' }, { status: 400 });
-    }
-    if (!shipping || typeof shipping.carrier !== 'string' || !shipping.carrier) {
-      return NextResponse.json({ error: 'Opção de frete inválida' }, { status: 400 });
-    }
 
     if (!ABACATEPAY_KEY) {
       console.error('ABACATEPAY_API_KEY not set');

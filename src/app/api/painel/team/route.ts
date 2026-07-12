@@ -2,10 +2,19 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { verifyAuth, safeJson, getClientIp } from '@/lib/security';
+import { verifyAuth, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { z } from 'zod';
 
-const ASSIGNABLE_ROLES = new Set(['seller', 'admin']);
+const addMemberSchema = z.object({
+  email: z.string().trim().toLowerCase().email('E-mail inválido'),
+  role: z.enum(['seller', 'admin'], { errorMap: () => ({ message: 'Role inválida' }) }),
+});
+
+const removeMemberSchema = z.object({
+  uid: z.string().trim().min(1).max(128),
+});
+
 
 // IMPORTANTE: só 'admin' pode gerenciar a equipe, não 'seller'.
 // Se qualquer seller pudesse promover outros sellers, uma única conta
@@ -43,18 +52,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const body = await safeJson<{ email?: string; role?: string }>(req);
-  if (!body.ok) return body.response;
-
-  const email = (body.data.email ?? '').trim().toLowerCase();
-  const role = (body.data.role ?? '').trim();
-
-  if (!email || !email.includes('@')) {
-    return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 });
-  }
-  if (!ASSIGNABLE_ROLES.has(role)) {
-    return NextResponse.json({ error: 'Role inválida' }, { status: 400 });
-  }
+  const parsedBody = await validateBody(req, addMemberSchema);
+  if (!parsedBody.ok) return parsedBody.response;
+  const { email, role } = parsedBody.data;
 
   let targetUser;
   try {
@@ -97,11 +97,9 @@ export async function DELETE(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
-  const body = await safeJson<{ uid?: string }>(req);
-  if (!body.ok) return body.response;
-
-  const uid = (body.data.uid ?? '').trim();
-  if (!uid) return NextResponse.json({ error: 'uid é obrigatório' }, { status: 400 });
+  const parsedBody = await validateBody(req, removeMemberSchema);
+  if (!parsedBody.ok) return parsedBody.response;
+  const { uid } = parsedBody.data;
 
   if (uid === auth.decoded.uid) {
     return NextResponse.json({ error: 'Você não pode remover seu próprio acesso.' }, { status: 400 });

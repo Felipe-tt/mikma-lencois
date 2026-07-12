@@ -3,8 +3,16 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
-import { extractBearer, tooManyRequests } from '@/lib/security';
+import { extractBearer, tooManyRequests, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { z } from 'zod';
+
+const maintenanceActionSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('toggle') }),
+  z.object({ action: z.literal('release'), ip: z.string().min(1).max(45) }),
+  z.object({ action: z.literal('release_all') }),
+  z.object({ action: z.literal('clear_queue') }),
+]);
 
 // Validação simples de IPv4/IPv6 — evita que um valor arbitrário em
 // body.ip vire parte de um ID de documento no Firestore sem checagem
@@ -52,7 +60,9 @@ export async function POST(req: NextRequest) {
     return tooManyRequests(rateLimitRetryAfter(`maintenance:${user.uid}`));
   }
 
-  const body = await req.json();
+  const parsedBody = await validateBody(req, maintenanceActionSchema);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
 
   // toggle manutenção
   if (body.action === 'toggle') {
