@@ -106,6 +106,18 @@ service cloud.firestore {
       allow write: if isSellerOrAdmin();
     }
 
+    // ── Trocas e devoluções ─────────────────────────────────────────────────
+    match /returns/{returnId} {
+      // Cliente lê só as próprias solicitações; vendedor/admin lê todas.
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid || isSellerOrAdmin()
+      );
+      // Registrado sempre pelo vendedor no painel (telefone/WhatsApp com o
+      // cliente ainda é por fora) — sem autoatendimento do cliente por
+      // enquanto, então só seller/admin escreve.
+      allow write: if isSellerOrAdmin();
+    }
+
     // ── Settings ─────────────────────────────────────────────────────────────
     match /settings/{doc} {
       allow read: if true;

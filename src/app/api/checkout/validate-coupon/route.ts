@@ -4,6 +4,7 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { Coupon } from '@/types';
 import { z } from 'zod';
 import { rateLimit } from '@/lib/rateLimit';
+import { validateCoupon } from '@/lib/orderPricing';
 
 const schema = z.object({
   code: z.string().min(1).max(32).regex(/^[A-Z0-9_-]+$/i),
@@ -43,28 +44,12 @@ export async function POST(req: NextRequest) {
     }
 
     const coupon = snap.data() as Coupon;
-    const now = new Date();
-
-    if (!coupon.active) return NextResponse.json({ error: 'Cupom inativo' }, { status: 400 });
-    if (coupon.expiresAt && new Date(coupon.expiresAt) < now) {
-      return NextResponse.json({ error: 'Cupom expirado' }, { status: 400 });
-    }
-    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
-      return NextResponse.json({ error: 'Cupom esgotado' }, { status: 400 });
-    }
-    if (coupon.minOrderCents && orderCents < coupon.minOrderCents) {
-      return NextResponse.json(
-        { error: `Pedido mínimo de R$ ${(coupon.minOrderCents / 100).toFixed(2)}` },
-        { status: 400 }
-      );
+    const result = validateCoupon(coupon, orderCents);
+    if (!result.valid) {
+      return NextResponse.json({ error: result.reason }, { status: 400 });
     }
 
-    const discountCents =
-      coupon.type === 'percent'
-        ? Math.round((orderCents * coupon.value) / 100)
-        : coupon.value;
-
-    return NextResponse.json({ discountCents });
+    return NextResponse.json({ discountCents: result.discountCents });
   } catch {
     return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   }

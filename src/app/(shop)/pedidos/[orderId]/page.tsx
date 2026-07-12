@@ -132,6 +132,87 @@ export default function OrderDetailPage() {
     : (carrier && trackCode ? trackingUrl(carrier, trackCode) : null);
   const timeline = [...(order.timeline ?? [])].reverse();
 
+  // Quando o pedido já foi despachado, rastrear é a informação que o
+  // cliente abriu a página pra ver — não devia ficar escondido depois
+  // da lista de itens e do histórico. Promove pro topo nesses casos.
+  const trackingIsPriority = !!carrier && (order.status === 'shipped' || order.status === 'delivered');
+
+  const trackingSection = (
+    <>
+      {/* Rastreio — Correios/ME via TrackingTimeline, Uber Direct via link em tempo real */}
+      {carrier && carrier !== 'pickup' && carrier !== 'manual' && carrier !== 'uber_direct' && (
+        <section>
+          <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
+            Rastreamento
+          </h2>
+          <div className="border border-mist p-5">
+            <TrackingTimeline orderId={orderId} carrierName={carrierName(carrier)} />
+          </div>
+        </section>
+      )}
+
+      {/* Uber Direct — bloco em tempo real com entregador e link de rastreio */}
+      {carrier === 'uber_direct' && order.status !== 'delivered' && order.status !== 'cancelled' && (
+        <section>
+          <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
+            Acompanhe a entrega
+          </h2>
+          <div className="border border-mist p-5 flex flex-col gap-4">
+            {order.delivery?.courierName ? (
+              <div className="flex items-center gap-3">
+                {order.delivery.courierPhoto ? (
+                  <img
+                    src={order.delivery.courierPhoto}
+                    alt={order.delivery.courierName}
+                    className="w-10 h-10 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <span className="w-10 h-10 rounded-full bg-mist flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#C4714A" strokeWidth="1.8" strokeLinecap="round" className="w-5 h-5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                  </span>
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-ink">{order.delivery.courierName}</p>
+                  {order.delivery.courierVehicle && (
+                    <p className="text-xs text-faint capitalize">{order.delivery.courierVehicle}</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-faint">Procurando entregador…</p>
+            )}
+            {order.delivery?.dropoffEta && (
+              <p className="text-xs text-faint">
+                Previsão de entrega:{' '}
+                <span className="font-semibold text-ink">
+                  {new Date(order.delivery.dropoffEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </p>
+            )}
+            <LiveDeliveryMap
+              routePoints={order.delivery?.routePoints}
+              courierLat={order.delivery?.courierLat}
+              courierLng={order.delivery?.courierLng}
+              courierLocationAt={order.delivery?.courierLocationAt}
+              courierName={order.delivery?.courierName}
+            />
+            {order.delivery?.trackingUrl && (
+              <a
+                href={order.delivery.trackingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-paper text-[13px] font-semibold hover:bg-ink/80 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                Abrir rastreio da Uber em outra aba
+              </a>
+            )}
+          </div>
+        </section>
+      )}
+    </>
+  );
+
   return (
     <div>
       <div className="border-b border-mist">
@@ -187,6 +268,13 @@ export default function OrderDetailPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ── Rastreio em destaque — pedido já a caminho/entregue ──── */}
+        {trackingIsPriority && (
+          <div className="mb-8 flex flex-col gap-6">
+            {trackingSection}
           </div>
         )}
 
@@ -278,77 +366,8 @@ export default function OrderDetailPage() {
               </section>
             )}
 
-            {/* Rastreio — Correios/ME via TrackingTimeline, Uber Direct via link em tempo real */}
-            {carrier && carrier !== 'pickup' && carrier !== 'manual' && carrier !== 'uber_direct' && (
-              <section>
-                <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
-                  Rastreamento
-                </h2>
-                <div className="border border-mist p-5">
-                  <TrackingTimeline orderId={orderId} carrierName={carrierName(carrier)} />
-                </div>
-              </section>
-            )}
-
-            {/* Uber Direct — bloco em tempo real com entregador e link de rastreio */}
-            {carrier === 'uber_direct' && order.status !== 'delivered' && order.status !== 'cancelled' && (
-              <section>
-                <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
-                  Acompanhe a entrega
-                </h2>
-                <div className="border border-mist p-5 flex flex-col gap-4">
-                  {order.delivery?.courierName ? (
-                    <div className="flex items-center gap-3">
-                      {order.delivery.courierPhoto ? (
-                        <img
-                          src={order.delivery.courierPhoto}
-                          alt={order.delivery.courierName}
-                          className="w-10 h-10 rounded-full object-cover shrink-0"
-                        />
-                      ) : (
-                        <span className="w-10 h-10 rounded-full bg-mist flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="#C4714A" strokeWidth="1.8" strokeLinecap="round" className="w-5 h-5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                        </span>
-                      )}
-                      <div>
-                        <p className="text-sm font-semibold text-ink">{order.delivery.courierName}</p>
-                        {order.delivery.courierVehicle && (
-                          <p className="text-xs text-faint capitalize">{order.delivery.courierVehicle}</p>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-faint">Procurando entregador…</p>
-                  )}
-                  {order.delivery?.dropoffEta && (
-                    <p className="text-xs text-faint">
-                      Previsão de entrega:{' '}
-                      <span className="font-semibold text-ink">
-                        {new Date(order.delivery.dropoffEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </p>
-                  )}
-                  <LiveDeliveryMap
-                    routePoints={order.delivery?.routePoints}
-                    courierLat={order.delivery?.courierLat}
-                    courierLng={order.delivery?.courierLng}
-                    courierLocationAt={order.delivery?.courierLocationAt}
-                    courierName={order.delivery?.courierName}
-                  />
-                  {order.delivery?.trackingUrl && (
-                    <a
-                      href={order.delivery.trackingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-paper text-[13px] font-semibold hover:bg-ink/80 transition-colors"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                      Abrir rastreio da Uber em outra aba
-                    </a>
-                  )}
-                </div>
-              </section>
-            )}
+            {/* Rastreio — some daqui quando é prioridade (já foi promovido lá em cima) */}
+            {!trackingIsPriority && trackingSection}
           </div>
 
           {/* ── Sidebar ───────────────────────────────────────────── */}

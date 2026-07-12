@@ -8,13 +8,14 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import {
   IconHome, IconOrders, IconMessages, IconProducts,
-  IconInventory, IconReports, IconCoupons, IconSettings, IconMaintenance,
+  IconInventory, IconReports, IconCoupons, IconSettings, IconMaintenance, IconExchange,
 } from '@/components/ui/Icon';
 import { NotificationBell } from './NotificationBell';
 
 const NAV = [
   { href: '/painel',                label: 'Início',         desc: 'Resumo da loja',             exact: true, Icon: IconHome },
   { href: '/painel/pedidos',        label: 'Pedidos',        desc: 'Ver e separar pedidos',                   Icon: IconOrders },
+  { href: '/painel/trocas',         label: 'Trocas',         desc: 'Trocas e devoluções',                     Icon: IconExchange },
   { href: '/painel/mensagens',      label: 'Mensagens',      desc: 'Conversas com clientes',                  Icon: IconMessages },
   { href: '/painel/produtos',       label: 'Produtos',       desc: 'Cadastrar e editar',                      Icon: IconProducts },
   { href: '/painel/estoque',        label: 'Estoque',        desc: 'Quantidades disponíveis',                 Icon: IconInventory },

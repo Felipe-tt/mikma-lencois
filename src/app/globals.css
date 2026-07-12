@@ -388,3 +388,12 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 .animate-confirm-in { animation: confirm-in 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* ── Impressão (etiqueta de envio, etc.) ─────────────────────────── */
+/* Qualquer elemento de chrome do painel (sidebar, topbar, banners) marcado
+   com data-no-print some ao imprimir — só o conteúdo da página fica na folha. */
+@media print {
+  [data-no-print] { display: none !important; }
+  main { padding: 0 !important; overflow: visible !important; }
+  body, .bg-warm, .bg-paper { background: #fff !important; }
+}

@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { IconBox, IconCheck, IconX, IconSearch, IconInventory, IconReceipt } from '@/components/ui/Icon';
 import type { MovementLog } from '@/types';
+import { nextTapDelta, shouldConfirmRapidTap, applyTapDelta } from '@/lib/inventoryTap';
 
 export type InventoryItem = {
   id: string; productId: string; productName?: string; sku: string;
@@ -65,21 +66,15 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
     window.localStorage.setItem(COLS_KEY, String(n));
   }
 
-  // Acima desse número de toques seguidos no mesmo produto, para e confirma —
-  // evita que um toque sem querer (celular no bolso, dedo escorregou muitas
-  // vezes) vire uma venda de 8 peças por engano sem o vendedor perceber.
-  const RAPID_CONFIRM_THRESHOLD = 5;
-
   function vibrate(pattern: number | number[]) {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(pattern);
   }
 
   function tap(item: InventoryItem) {
     const cur = deltas[item.id] || 0;
-    const next = mode === 'venda' ? cur - 1 : cur + 1;
+    const next = nextTapDelta(mode, cur);
 
-    const crossingUp = Math.abs(next) > Math.abs(cur);
-    if (crossingUp && Math.abs(next) >= RAPID_CONFIRM_THRESHOLD && Math.abs(next) % RAPID_CONFIRM_THRESHOLD === 0) {
+    if (shouldConfirmRapidTap(cur, next)) {
       vibrate([20, 60, 20]);
       const ok = window.confirm(
         `${Math.abs(next)} toques seguidos em "${item.productName}" — confere se não foi sem querer.\n\n` +
@@ -90,10 +85,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
       vibrate(15);
     }
 
-    setDeltas(d => {
-      if (next === 0) { const n = { ...d }; delete n[item.id]; return n; }
-      return { ...d, [item.id]: next };
-    });
+    setDeltas(d => applyTapDelta(d, item.id, next));
   }
 
   const soldToday = useMemo(() => {

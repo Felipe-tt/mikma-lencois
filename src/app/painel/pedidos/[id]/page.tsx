@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -19,9 +20,10 @@ import { carrierNameVendor, trackingUrl } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import {
   IconTruck, IconProducts, IconBox, IconMaintenance, IconUser, IconCard, IconPin, IconClock,
-  IconHourglass, IconCheck, IconMoney, IconTrophy, IconAlert, IconX,
+  IconHourglass, IconCheck, IconMoney, IconTrophy, IconAlert, IconX, IconPrint, IconExchange,
 } from '@/components/ui/Icon';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { RegisterReturnModal } from '@/components/painel/RegisterReturnModal';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending_payment: 'Aguardando Pagamento',
@@ -152,6 +154,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [cancelDeliveryError, setCancelDeliveryError] = useState<string | null>(null);
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [cancelOrderError, setCancelOrderError] = useState<string | null>(null);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnRegistered, setReturnRegistered] = useState(false);
 
   useEffect(() => {
     if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
@@ -680,12 +684,17 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           <Row label="Bairro" value={order.address.neighborhood} />
           <Row label="Cidade" value={`${order.address.city} — ${order.address.state}`} />
           <Row label="CEP" value={order.address.cep} />
-          <div className="py-2.5">
+          <div className="py-2.5 flex flex-col gap-2">
             <button
               onClick={() => copy(`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP ${order.address.cep}`, 'address')}
               className="w-full border border-mist text-mid text-[12px] font-semibold py-2 hover:bg-warm transition-colors">
               {copied === 'address' ? 'Endereço copiado!' : 'Copiar endereço completo'}
             </button>
+            <Link
+              href={`/painel/pedidos/${order.id}/etiqueta`}
+              className="flex items-center justify-center gap-1.5 w-full bg-ink text-paper text-[12px] font-semibold py-2 hover:bg-ink/80 transition-colors">
+              <IconPrint size={13} /> Imprimir etiqueta / nota de separação
+            </Link>
           </div>
         </Card>
 
@@ -777,6 +786,21 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </div>
         </details>
 
+        {/* ── Troca / devolução ── */}
+        {order.status !== 'pending_payment' && order.status !== 'cancelled' && (
+          <div className="flex flex-col gap-2">
+            {returnRegistered && (
+              <p className="text-[12px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2">
+                Registrado. Acompanhe em <a href="/painel/trocas" className="underline font-semibold">Trocas</a>.
+              </p>
+            )}
+            <button onClick={() => setReturnModalOpen(true)}
+              className="flex items-center justify-center gap-1.5 w-full border border-mist text-mid text-[13px] font-semibold py-3 hover:bg-warm transition-colors">
+              <IconExchange size={14} /> Registrar troca ou devolução
+            </button>
+          </div>
+        )}
+
         {/* ── Cancelar pedido (lojista) ── */}
         {order.status !== 'cancelled' && order.status !== 'delivered' && (
           <div className="flex flex-col gap-2">
@@ -798,6 +822,15 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </button>
         )}
       </div>
+
+      {returnModalOpen && (
+        <RegisterReturnModal
+          order={order}
+          customerName={customer?.name}
+          onClose={() => setReturnModalOpen(false)}
+          onDone={() => { setReturnModalOpen(false); setReturnRegistered(true); }}
+        />
+      )}
     </div>
   );
 }

@@ -61,27 +61,28 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-screen bg-warm">
       {/* Sidebar desktop */}
-      <div className="hidden lg:block sticky top-0 h-screen self-start overflow-hidden">
+      <div data-no-print className="hidden lg:block sticky top-0 h-screen self-start overflow-hidden">
         <PainelSidebar />
       </div>
 
       {/* Overlay mobile */}
       {open && (
         <div
+          data-no-print
           className="fixed inset-0 z-40 bg-[rgba(30,18,8,0.5)] backdrop-blur-sm lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
 
       {/* Drawer mobile */}
-      <div className={`fixed top-0 left-0 z-50 h-full lg:hidden transition-transform duration-300 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div data-no-print className={`fixed top-0 left-0 z-50 h-full lg:hidden transition-transform duration-300 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         <PainelSidebar onClose={() => setOpen(false)} />
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile topbar */}
-        <div className="lg:hidden flex items-center gap-3 px-4 h-[60px] border-b border-mist bg-paper sticky top-0 z-30">
+        <div data-no-print className="lg:hidden flex items-center gap-3 px-4 h-[60px] border-b border-mist bg-paper sticky top-0 z-30">
           <button
             onClick={() => setOpen(true)}
             className="p-2 -ml-2 text-mid hover:text-ink hover:bg-warm transition-colors rounded-sm"

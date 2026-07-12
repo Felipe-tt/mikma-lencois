@@ -13,6 +13,8 @@ import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
+import { computeProductsCents, validateCoupon, computePixDiscountCents, computePixTotalCents } from '@/lib/orderPricing';
+import type { Coupon } from '@/types';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
       return { ...ci, unitPrice: prod.price, productName: prod.name };
     });
 
-    const productsCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const productsCents = computeProductsCents(verifiedItems.map(i => ({ unitPrice: i.unitPrice, quantity: i.quantity })));
 
     const settings = await getSettings();
 
@@ -100,9 +102,7 @@ export async function POST(req: NextRequest) {
     );
 
     // ── Desconto PIX (calculado no servidor, lido das configurações) ──────────
-    const pixDiscountCents = settings.pixDiscountThresholdCents > 0 && productsCents >= settings.pixDiscountThresholdCents
-      ? Math.round(productsCents * (settings.pixDiscountPct / 100))
-      : 0;
+    const pixDiscountCents = computePixDiscountCents(productsCents, settings);
 
     // ── Frete — recalculado do zero, nunca confiado do cliente ────────────────
     const ledgerBalanceCents = await getShippingLedgerBalanceCents();
@@ -122,23 +122,15 @@ export async function POST(req: NextRequest) {
     if (cartCouponCode) {
       const couponSnap = await adminDb.collection('coupons').doc(cartCouponCode).get();
       if (couponSnap.exists) {
-        const c = couponSnap.data()!;
-        const now = new Date();
-        const valid =
-          c.active &&
-          (!c.expiresAt || new Date(c.expiresAt) > now) &&
-          (!c.maxUses || (c.usedCount ?? 0) < c.maxUses) &&
-          (!c.minOrderCents || productsCents >= c.minOrderCents);
-        if (valid) {
-          couponDiscountCents = c.type === 'percent'
-            ? Math.round(productsCents * c.value / 100)
-            : c.value;
+        const result = validateCoupon(couponSnap.data()! as Coupon, productsCents);
+        if (result.valid) {
+          couponDiscountCents = result.discountCents;
           couponCode = cartCouponCode;
         }
       }
     }
 
-    const amountCents = Math.max(0, productsCents - pixDiscountCents - couponDiscountCents + shippingCents);
+    const amountCents = computePixTotalCents({ productsCents, pixDiscountCents, couponDiscountCents, shippingCents });
 
     if (amountCents <= 0) {
       return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });

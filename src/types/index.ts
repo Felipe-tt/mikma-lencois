@@ -168,6 +168,35 @@ export interface Order {
   timeline?: OrderTimelineEvent[]
 }
 
+// ─── Trocas e devoluções ─────────────────────────────────────────────────────
+export type ReturnType = 'troca' | 'devolucao'
+export type ReturnStatus = 'solicitada' | 'aprovada' | 'recusada' | 'concluida'
+
+export interface ReturnItem {
+  sku: string
+  productId: string
+  productName: string
+  variant: ProductVariant
+  quantity: number
+}
+
+export interface ReturnRequest {
+  id: string
+  orderId: string
+  userId: string
+  customerName?: string
+  type: ReturnType
+  reason: string
+  items: ReturnItem[]
+  status: ReturnStatus
+  restocked: boolean       // true assim que a devolução ao estoque já foi feita
+  refundCents?: number     // valor devolvido, se for devolução com reembolso
+  note?: string            // observação interna do vendedor
+  createdAt: string
+  updatedAt?: string
+  createdBy?: string       // email de quem registrou no painel
+}
+
 // ─── Cart ────────────────────────────────────────────────────────────────────
 export interface CartItem {
   productId: string

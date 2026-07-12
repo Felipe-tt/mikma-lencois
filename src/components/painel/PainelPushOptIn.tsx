@@ -42,7 +42,7 @@ export function PainelPushOptIn() {
   }
 
   return (
-    <div className="mb-5 flex flex-col sm:flex-row sm:items-center gap-3 justify-between px-4 py-3.5 bg-white dark:bg-warm border border-mist rounded-sm">
+    <div data-no-print className="mb-5 flex flex-col sm:flex-row sm:items-center gap-3 justify-between px-4 py-3.5 bg-white dark:bg-warm border border-mist rounded-sm">
       <div className="flex items-start gap-3">
         <svg className="shrink-0 mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C4714A" strokeWidth="2">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />

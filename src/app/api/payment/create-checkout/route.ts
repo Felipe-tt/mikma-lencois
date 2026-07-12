@@ -13,6 +13,8 @@ import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
+import { computeProductsCents, validateCoupon, computeCardTotalCents } from '@/lib/orderPricing';
+import type { Coupon } from '@/types';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
@@ -110,7 +112,7 @@ export async function POST(req: NextRequest) {
       return { ...ci, unitPrice: prod.price, productName: prod.name };
     });
 
-    const subtotalCents = verifiedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const subtotalCents = computeProductsCents(verifiedItems.map(i => ({ unitPrice: i.unitPrice, quantity: i.quantity })));
     const productsCents = subtotalCents;
 
     if (subtotalCents < creditMinCents) {
@@ -149,17 +151,9 @@ export async function POST(req: NextRequest) {
     if (cartCouponCode) {
       const couponSnap = await adminDb.collection('coupons').doc(cartCouponCode).get();
       if (couponSnap.exists) {
-        const c = couponSnap.data()!;
-        const now2 = new Date();
-        const valid =
-          c.active &&
-          (!c.expiresAt || new Date(c.expiresAt) > now2) &&
-          (!c.maxUses || (c.usedCount ?? 0) < c.maxUses) &&
-          (!c.minOrderCents || productsCents >= c.minOrderCents);
-        if (valid) {
-          couponDiscountCents = c.type === 'percent'
-            ? Math.round(productsCents * c.value / 100)
-            : c.value;
+        const result = validateCoupon(couponSnap.data()! as Coupon, productsCents);
+        if (result.valid) {
+          couponDiscountCents = result.discountCents;
           couponCode = cartCouponCode;
         }
       }
@@ -167,7 +161,7 @@ export async function POST(req: NextRequest) {
 
     // ── Aplica juros de parcelamento (se houver) ──────────────────────────────
     const feeRate = INSTALLMENT_FEES[parsedInstallments] ?? 0;
-    const totalCents = Math.max(0, Math.round((productsCents - couponDiscountCents + shippingCents) * (1 + feeRate)));
+    const totalCents = computeCardTotalCents({ productsCents, couponDiscountCents, shippingCents, feeRate });
     const installmentCents = Math.round(totalCents / parsedInstallments);
 
     // ── Checar e reservar estoque ATOMICAMENTE (evita oversell por concorrência) ──
