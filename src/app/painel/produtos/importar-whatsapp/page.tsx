@@ -64,6 +64,39 @@ function isValid(it: DraftItem): boolean {
 
 const selectInputClass = 'w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]';
 
+/** Redimensiona/comprime uma imagem no navegador antes de mandar pra IA — mais
+ *  rápido de enviar e mais barato de processar, sem perder nitidez pra leitura. */
+function compressImage(file: File, maxDim = 1400, quality = 0.75): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('canvas indisponível')); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não consegui abrir essa imagem')); };
+    img.src = url;
+  });
+}
+
+let draftIdCounter = 0;
+function nextDraftId() {
+  draftIdCounter += 1;
+  return `print-${Date.now()}-${draftIdCounter}`;
+}
+
 // ── Parser do CSV exportado do Meta Commerce Manager ────────────────────────
 // O Commerce Manager exporta no formato padrão de feed de produtos da Meta
 // (mesmo usado pra Facebook/Instagram Shops), mas os nomes exatos das
@@ -178,6 +211,93 @@ export default function ImportarWhatsappPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [items, setItems] = useState<DraftItem[]>([]);
+
+  // ── Fluxo de prints + IA ──
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
+  const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
+  const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState('');
+  const [extractProgress, setExtractProgress] = useState('');
+
+  function handleScreenshotsSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).filter(f => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+    setScreenshotFiles(prev => [...prev, ...files]);
+    setScreenshotPreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+    setExtractError('');
+    e.target.value = '';
+  }
+
+  function removeScreenshot(idx: number) {
+    setScreenshotFiles(prev => prev.filter((_, i) => i !== idx));
+    setScreenshotPreviews(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  async function analyzeScreenshots() {
+    if (screenshotFiles.length === 0 || extracting) return;
+    setExtracting(true);
+    setExtractError('');
+
+    // Manda em lotes de 6 prints por vez — resposta mais rápida e confiável
+    // que um pedido gigante só, e dá pra mostrar progresso de verdade.
+    const BATCH_SIZE = 6;
+    const batches: File[][] = [];
+    for (let i = 0; i < screenshotFiles.length; i += BATCH_SIZE) {
+      batches.push(screenshotFiles.slice(i, i + BATCH_SIZE));
+    }
+
+    const allNew: DraftItem[] = [];
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Sessão expirada. Atualize a página e entre novamente.');
+
+      for (let b = 0; b < batches.length; b++) {
+        setExtractProgress(batches.length > 1 ? `Lendo lote ${b + 1} de ${batches.length}...` : 'Lendo os prints...');
+        const batch = batches[b];
+        const dataUrls = await Promise.all(batch.map(f => compressImage(f)));
+
+        const res = await fetch('/api/painel/whatsapp-catalog/extract-screenshots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ images: dataUrls.map(dataUrl => ({ dataUrl })) }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data?.error) throw new Error(typeof data?.error === 'string' ? data.error : `Erro ao ler os prints (status ${res.status})`);
+
+        const products: { name: string; description: string; priceBRL: number | null; imageIndex: number | null }[] = data.products ?? [];
+        for (const p of products) {
+          const localImageUrl = p.imageIndex && batch[p.imageIndex - 1]
+            ? dataUrls[p.imageIndex - 1]
+            : '';
+          allNew.push(toDraft({
+            id: nextDraftId(),
+            retailerId: nextDraftId(),
+            name: p.name,
+            description: p.description || '',
+            priceBRL: p.priceBRL,
+            currency: 'BRL',
+            available: true,
+            imageUrls: localImageUrl ? [localImageUrl] : [],
+          }));
+        }
+      }
+
+      if (allNew.length === 0) {
+        setExtractError('Não encontrei nenhum produto nesses prints. Tenta prints mais nítidos, mostrando bem o nome e preço.');
+      } else {
+        setItems(prev => [...prev, ...allNew]);
+        setScreenshotFiles([]);
+        setScreenshotPreviews([]);
+      }
+    } catch (err) {
+      setExtractError(err instanceof Error ? err.message : 'Não deu pra ler os prints agora.');
+    } finally {
+      setExtracting(false);
+      setExtractProgress('');
+    }
+  }
+
 
   const [importing, setImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<{ created: number; failed: number } | null>(null);
@@ -371,84 +491,155 @@ export default function ImportarWhatsappPage() {
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Importar catálogo do WhatsApp</h1>
           <p className="text-[13px] text-faint mt-1">
-            Traga os produtos do catálogo do WhatsApp Business — depois é só revisar tamanho, tecido e peso antes de importar pro site.
+            Traga os produtos do catálogo do WhatsApp — depois é só revisar tamanho, tecido e peso antes de importar pro site.
           </p>
         </div>
         <Link href="/painel/produtos" className="text-[12px] font-semibold text-mid hover:text-ink shrink-0 whitespace-nowrap">Voltar</Link>
       </div>
 
-      {/* ── Passo 1 — Exportar do Commerce Manager ── */}
-      <section className="bg-paper border border-mist p-5 mb-5">
+      {/* ── Passo 1 — Prints + IA (opção principal: funciona com catálogo do app, sem CSV) ── */}
+      <section className="bg-paper border border-mist p-5 mb-4">
         <div className="flex items-baseline gap-2.5 mb-3">
           <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">1</span>
-          <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">Exportar o catálogo do Commerce Manager</h2>
+          <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">Mande prints do catálogo</h2>
         </div>
 
-        <ol className="ml-[30px] flex flex-col gap-3 max-w-lg text-[13px] text-ink">
-          <li className="flex gap-2.5">
-            <span className="font-bold text-clay shrink-0">1.</span>
-            <span>
-              Acesse o{' '}
-              <a href="https://business.facebook.com/commerce" target="_blank" rel="noopener noreferrer" className="font-semibold text-clay hover:text-clay-d underline">
-                Meta Commerce Manager
-              </a>{' '}
-              com a conta que administra o catálogo do WhatsApp Business.
-            </span>
-          </li>
-          <li className="flex gap-2.5">
-            <span className="font-bold text-clay shrink-0">2.</span>
-            <span>Selecione o catálogo vinculado ao seu número de WhatsApp.</span>
-          </li>
-          <li className="flex gap-2.5">
-            <span className="font-bold text-clay shrink-0">3.</span>
-            <span>No menu lateral, abra <strong>Itens do catálogo</strong> (ou <em>Data feed / Fontes de dados</em>, dependendo do idioma da conta).</span>
-          </li>
-          <li className="flex gap-2.5">
-            <span className="font-bold text-clay shrink-0">4.</span>
-            <span>Clique em <strong>Baixar</strong> (ou <em>Download</em>) e escolha o formato <strong>CSV</strong>.</span>
-          </li>
-          <li className="flex gap-2.5">
-            <span className="font-bold text-clay shrink-0">5.</span>
-            <span>Envie o arquivo baixado aqui embaixo.</span>
-          </li>
-        </ol>
-
-        <p className="ml-[30px] mt-3 text-[11px] text-faint max-w-lg">
-          Esse caminho usa só a exportação oficial da Meta — sem conectar nem simular nenhum WhatsApp por aqui, então não corre risco de o número ser banido.
+        <p className="ml-[30px] max-w-lg text-[13px] text-ink">
+          Abre o catálogo no app do WhatsApp Business e tira um print de cada produto (ou da lista/grade — pode ser vários produtos por print).
+          Manda todos aqui embaixo de uma vez; a IA lê nome, preço e descrição de cada um e já sugere a foto certa pra cada produto.
+        </p>
+        <p className="ml-[30px] mt-2 text-[11px] text-faint max-w-lg">
+          Não conecta nem simula o WhatsApp de nenhum jeito — só olha as imagens que você mandou, como se fosse uma pessoa olhando print.
+          Zero risco de banir o número.
         </p>
 
-        {csvFileName && !csvError && (
-          <p className="ml-[30px] mt-3 text-[12px] text-faint">Arquivo selecionado: <strong>{csvFileName}</strong></p>
-        )}
-
-        <div className="ml-[30px] mt-4 flex flex-col gap-3 max-w-sm">
+        <div className="ml-[30px] mt-4 flex flex-col gap-3 max-w-lg">
           <input
-            ref={fileInputRef}
+            ref={screenshotInputRef}
             type="file"
-            accept=".csv,text/csv"
-            onChange={handleCsvUpload}
+            accept="image/*"
+            multiple
+            onChange={handleScreenshotsSelected}
             className="hidden"
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="btn-primary py-2.5 px-5 text-[11px] tracking-[0.08em] uppercase self-start"
-          >
-            {items.length > 0 ? 'Enviar outro CSV' : 'Enviar CSV do Commerce Manager'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => screenshotInputRef.current?.click()}
+              className="btn-primary py-2.5 px-5 text-[11px] tracking-[0.08em] uppercase"
+            >
+              {screenshotPreviews.length > 0 ? 'Adicionar mais prints' : 'Escolher prints'}
+            </button>
+            {screenshotPreviews.length > 0 && (
+              <button
+                onClick={analyzeScreenshots}
+                disabled={extracting}
+                className="border border-ink text-ink text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
+              >
+                {extracting ? (extractProgress || 'Lendo...') : `Analisar ${screenshotPreviews.length} print${screenshotPreviews.length !== 1 ? 's' : ''} com IA`}
+              </button>
+            )}
+          </div>
 
-          {csvError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2">
-              <IconAlert size={12} className="shrink-0 mt-0.5" /> {csvError}
+          {screenshotPreviews.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {screenshotPreviews.map((src, i) => (
+                <div key={i} className="relative w-16 h-16 border border-mist overflow-hidden shrink-0">
+                  <img src={src} alt="" className="w-full h-full object-cover" />
+                  {!extracting && (
+                    <button
+                      onClick={() => removeScreenshot(i)}
+                      className="absolute top-0 right-0 w-5 h-5 bg-black/60 text-white text-[11px] flex items-center justify-center"
+                      aria-label="Remover"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 
-          {items.length > 0 && !csvError && (
-            <div className="bg-green-50 border border-green-200 text-green-700 text-[12px] px-3 py-2 flex items-center gap-2">
-              <IconCheck size={12} className="shrink-0" /> {items.length} produto{items.length !== 1 ? 's' : ''} encontrado{items.length !== 1 ? 's' : ''} no arquivo — revise abaixo antes de importar.
+          {extractError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2">
+              <IconAlert size={12} className="shrink-0 mt-0.5" /> {extractError}
             </div>
           )}
         </div>
       </section>
+
+      {/* ── Alternativa — CSV do Commerce Manager (só se o catálogo estiver conectado à Meta) ── */}
+      <details className="mb-5 group">
+        <summary className="cursor-pointer text-[12px] font-semibold text-mid hover:text-ink select-none list-none flex items-center gap-1.5">
+          <span className="inline-block transition-transform group-open:rotate-90">›</span>
+          Ou, se seu catálogo estiver conectado ao Meta Commerce Manager, importar por CSV
+        </summary>
+        <section className="bg-paper border border-mist p-5 mt-2">
+          <ol className="flex flex-col gap-3 max-w-lg text-[13px] text-ink">
+            <li className="flex gap-2.5">
+              <span className="font-bold text-clay shrink-0">1.</span>
+              <span>
+                Acesse o{' '}
+                <a href="https://business.facebook.com/commerce" target="_blank" rel="noopener noreferrer" className="font-semibold text-clay hover:text-clay-d underline">
+                  Meta Commerce Manager
+                </a>{' '}
+                com a conta que administra o catálogo do WhatsApp Business.
+              </span>
+            </li>
+            <li className="flex gap-2.5">
+              <span className="font-bold text-clay shrink-0">2.</span>
+              <span>Selecione o catálogo vinculado ao seu número de WhatsApp.</span>
+            </li>
+            <li className="flex gap-2.5">
+              <span className="font-bold text-clay shrink-0">3.</span>
+              <span>No menu lateral, abra <strong>Itens do catálogo</strong> (ou <em>Data feed / Fontes de dados</em>, dependendo do idioma da conta).</span>
+            </li>
+            <li className="flex gap-2.5">
+              <span className="font-bold text-clay shrink-0">4.</span>
+              <span>Clique em <strong>Baixar</strong> (ou <em>Download</em>) e escolha o formato <strong>CSV</strong>.</span>
+            </li>
+            <li className="flex gap-2.5">
+              <span className="font-bold text-clay shrink-0">5.</span>
+              <span>Envie o arquivo baixado aqui embaixo.</span>
+            </li>
+          </ol>
+
+          <p className="mt-3 text-[11px] text-faint max-w-lg">
+            Só existe catálogo aqui se ele foi criado <em>pelo Commerce Manager</em> e conectado ao número — um catálogo criado direto no app do WhatsApp Business não aparece aqui. Nesse caso, use a opção de prints acima.
+          </p>
+
+          {csvFileName && !csvError && (
+            <p className="mt-3 text-[12px] text-faint">Arquivo selecionado: <strong>{csvFileName}</strong></p>
+          )}
+
+          <div className="mt-4 flex flex-col gap-3 max-w-sm">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleCsvUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="border border-ink text-ink text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 hover:bg-ink hover:text-paper transition-colors self-start"
+            >
+              Enviar CSV do Commerce Manager
+            </button>
+
+            {csvError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2">
+                <IconAlert size={12} className="shrink-0 mt-0.5" /> {csvError}
+              </div>
+            )}
+          </div>
+        </section>
+      </details>
+
+      {items.length > 0 && (
+        <div className="bg-green-50 border border-green-200 text-green-700 text-[12px] px-3 py-2 mb-5 flex items-center gap-2">
+          <IconCheck size={12} className="shrink-0" /> {items.length} produto{items.length !== 1 ? 's' : ''} na lista — revise abaixo antes de importar.
+        </div>
+      )}
 
       {/* ── Passo 2 — Revisar e importar ── */}
       {items.length > 0 && (
