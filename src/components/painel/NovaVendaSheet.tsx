@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { doc, getDoc, writeBatch, increment, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { IconBox, IconCheck, IconX, IconSearch, IconInventory } from '@/components/ui/Icon';
+import { IconBox, IconCheck, IconX, IconSearch, IconInventory, IconReceipt } from '@/components/ui/Icon';
 import type { MovementLog } from '@/types';
 
 export type InventoryItem = {
@@ -65,14 +65,47 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
     window.localStorage.setItem(COLS_KEY, String(n));
   }
 
+  // Acima desse número de toques seguidos no mesmo produto, para e confirma —
+  // evita que um toque sem querer (celular no bolso, dedo escorregou muitas
+  // vezes) vire uma venda de 8 peças por engano sem o vendedor perceber.
+  const RAPID_CONFIRM_THRESHOLD = 5;
+
+  function vibrate(pattern: number | number[]) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(pattern);
+  }
+
   function tap(item: InventoryItem) {
+    const cur = deltas[item.id] || 0;
+    const next = mode === 'venda' ? cur - 1 : cur + 1;
+
+    const crossingUp = Math.abs(next) > Math.abs(cur);
+    if (crossingUp && Math.abs(next) >= RAPID_CONFIRM_THRESHOLD && Math.abs(next) % RAPID_CONFIRM_THRESHOLD === 0) {
+      vibrate([20, 60, 20]);
+      const ok = window.confirm(
+        `${Math.abs(next)} toques seguidos em "${item.productName}" — confere se não foi sem querer.\n\n` +
+        `Continuar como ${mode === 'venda' ? `${Math.abs(next)} vendas` : `${Math.abs(next)} chegadas`}?`
+      );
+      if (!ok) return;
+    } else {
+      vibrate(15);
+    }
+
     setDeltas(d => {
-      const cur = d[item.id] || 0;
-      const next = mode === 'venda' ? cur - 1 : cur + 1;
       if (next === 0) { const n = { ...d }; delete n[item.id]; return n; }
       return { ...d, [item.id]: next };
     });
   }
+
+  const soldToday = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return items.reduce((sum, item) => {
+      const logs = item.history || [];
+      const todayOut = logs
+        .filter(l => l.type === 'out' && new Date(l.date).toDateString() === todayStr)
+        .reduce((s, l) => s + l.quantity, 0);
+      return sum + todayOut;
+    }, 0);
+  }, [items]);
 
   const filteredItems = useMemo(() => {
     if (!search) return items;
@@ -106,57 +139,70 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
     setSaving(true);
     const batchId = `mov_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const logs: { itemId: string; log: MovementLog }[] = [];
-    try {
-      const batch = writeBatch(db);
-      for (const { item, delta } of withItems) {
-        const qty = Math.abs(delta);
-        const type: 'in' | 'out' = delta < 0 ? 'out' : 'in';
-        const log: MovementLog = {
-          type, quantity: qty,
-          reason: type === 'out' ? 'Venda presencial (loja física)' : 'Reposição de estoque',
-          date: new Date().toISOString(), saleId: batchId,
-          ...(user?.email ? { by: user.email } : {}),
-        };
-        logs.push({ itemId: item.id, log });
-        batch.update(doc(db, 'inventory', item.id), {
-          quantity: increment(delta),
-          history: arrayUnion(log),
-          updatedAt: serverTimestamp(),
-        });
-      }
-      await batch.commit();
-
-      const sales = withItems.filter(e => e.delta < 0).length;
-      const restocks = withItems.filter(e => e.delta > 0).length;
-      const parts = [];
-      if (sales > 0) parts.push(`${sales} ${sales === 1 ? 'venda' : 'vendas'}`);
-      if (restocks > 0) parts.push(`${restocks} ${restocks === 1 ? 'reposição' : 'reposições'}`);
-
-      onDone(`Registrado: ${parts.join(' e ')} (${pendingUnits} peças).`, async () => {
-        try {
-          const undoBatch = writeBatch(db);
-          for (const { itemId, log } of logs) {
-            undoBatch.update(doc(db, 'inventory', itemId), {
-              quantity: increment(log.type === 'out' ? log.quantity : -log.quantity),
-              history: arrayUnion({
-                type: log.type === 'out' ? 'in' : 'out', quantity: log.quantity, reason: `Desfeito: ${log.reason}`,
-                date: new Date().toISOString(), saleId: batchId, ...(user?.email ? { by: user.email } : {}),
-              }),
-              updatedAt: serverTimestamp(),
-            });
-          }
-          await undoBatch.commit();
-        } catch (err) {
-          console.error('[nova-venda] falha ao desfazer', err);
-        }
+    const batch = writeBatch(db);
+    for (const { item, delta } of withItems) {
+      const qty = Math.abs(delta);
+      const type: 'in' | 'out' = delta < 0 ? 'out' : 'in';
+      const log: MovementLog = {
+        type, quantity: qty,
+        reason: type === 'out' ? 'Venda presencial (loja física)' : 'Reposição de estoque',
+        date: new Date().toISOString(), saleId: batchId,
+        ...(user?.email ? { by: user.email } : {}),
+      };
+      logs.push({ itemId: item.id, log });
+      batch.update(doc(db, 'inventory', item.id), {
+        quantity: increment(delta),
+        history: arrayUnion(log),
+        updatedAt: serverTimestamp(),
       });
-      setDeltas({});
-    } catch (err) {
-      console.error('[nova-venda] falha ao salvar', err);
-      onDone('Não deu pra salvar — tenta de novo.');
-    } finally {
-      setSaving(false);
     }
+
+    // Não espera o servidor confirmar pra liberar a tela: o Firestore já
+    // aplica a mudança no cache local na hora (é o que o resto do painel
+    // lê pra mostrar o número novo) e guarda o envio numa fila que sincroniza
+    // sozinha quando a internet melhorar. Com wifi ruim de loja, esperar o
+    // "ok" do servidor podia deixar o vendedor com a tela travada minutos —
+    // aqui ele bate, sente a vibração, e já pode atender o próximo cliente.
+    const commitPromise = batch.commit();
+    vibrate([15, 40, 15]);
+
+    const sales = withItems.filter(e => e.delta < 0).length;
+    const restocks = withItems.filter(e => e.delta > 0).length;
+    const parts = [];
+    if (sales > 0) parts.push(`${sales} ${sales === 1 ? 'venda' : 'vendas'}`);
+    if (restocks > 0) parts.push(`${restocks} ${restocks === 1 ? 'reposição' : 'reposições'}`);
+
+    const offlineNote = typeof navigator !== 'undefined' && !navigator.onLine
+      ? ' Sem internet agora — vai sincronizar sozinho assim que voltar.'
+      : '';
+    onDone(`Registrado: ${parts.join(' e ')} (${pendingUnits} peças).${offlineNote}`, async () => {
+      try {
+        const undoBatch = writeBatch(db);
+        for (const { itemId, log } of logs) {
+          undoBatch.update(doc(db, 'inventory', itemId), {
+            quantity: increment(log.type === 'out' ? log.quantity : -log.quantity),
+            history: arrayUnion({
+              type: log.type === 'out' ? 'in' : 'out', quantity: log.quantity, reason: `Desfeito: ${log.reason}`,
+              date: new Date().toISOString(), saleId: batchId, ...(user?.email ? { by: user.email } : {}),
+            }),
+            updatedAt: serverTimestamp(),
+          });
+        }
+        await undoBatch.commit();
+      } catch (err) {
+        console.error('[nova-venda] falha ao desfazer', err);
+      }
+    });
+    setDeltas({});
+    setSaving(false);
+
+    // A tela já seguiu em frente (o vendedor não espera isso). Só se der um
+    // erro de verdade — não simplesmente "ainda sem sincronizar" — que avisa,
+    // porque isso não se resolve sozinho quando a internet voltar.
+    commitPromise.catch(err => {
+      console.error('[nova-venda] falha ao sincronizar', err);
+      onDone('Atenção: uma venda não terminou de salvar (erro, não só rede fraca) — confira o estoque desse produto.');
+    });
   }
 
   return (
@@ -183,6 +229,12 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
             <IconCheck size={14} /> Chegou mercadoria
           </button>
         </div>
+
+        {soldToday > 0 && (
+          <p className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-700 dark:text-emerald-500 -mb-1">
+            <IconReceipt size={13} /> {soldToday} {soldToday === 1 ? 'peça vendida' : 'peças vendidas'} hoje
+          </p>
+        )}
 
         <div className="flex items-center gap-2">
           <div className="relative flex-1">

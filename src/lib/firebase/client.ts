@@ -1,6 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  memoryLocalCache,
+} from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 // __FIREBASE_DEFAULTS__ is injected at runtime by Firebase Hosting / Cloud Run.
@@ -29,6 +34,19 @@ function getConfig() {
 const app = getApps().length ? getApp() : initializeApp(getConfig())
 
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+
+// Cache local persistente (IndexedDB): o app continua funcionando com
+// internet ruim/instável na loja — as vendas ficam guardadas no
+// aparelho e sincronizam sozinhas assim que a conexão volta, sem o
+// vendedor perceber nada nem precisar refazer a venda.
+// IndexedDB só existe no navegador, então no servidor (SSR/build) cai
+// pro cache em memória, que é o suficiente já que não há usuário ali.
+export const db = initializeFirestore(app, {
+  localCache:
+    typeof window !== 'undefined'
+      ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+      : memoryLocalCache(),
+})
+
 export const storage = getStorage(app)
 export default app
