@@ -11,20 +11,20 @@
 import { describe, it, expect } from 'vitest';
 
 import { addressSchema } from '@/lib/security';
-import { webhookSchema } from '@/app/api/payment/webhook/route';
-import { createCheckoutSchema } from '@/app/api/payment/create-checkout/route';
-import { createPixSchema } from '@/app/api/payment/create-pix/route';
-import { quoteSchema } from '@/app/api/shipping/quote/route';
-import { mePayloadSchema } from '@/app/api/shipping/webhook/route';
-import { uberWebhookSchema } from '@/app/api/shipping/uber-webhook/route';
-import { dispatchSchema, cancelDeliverySchema } from '@/app/api/delivery/route';
-import { updateStatusSchema } from '@/app/api/orders/[orderId]/update-status/route';
-import { adminCancelSchema } from '@/app/api/orders/[orderId]/admin-cancel/route';
-import { addMemberSchema, removeMemberSchema } from '@/app/api/painel/team/route';
-import { shippingEstimateSchema } from '@/app/api/products/[id]/shipping-estimate/route';
-import { maintenanceActionSchema } from '@/app/api/maintenance/route';
-import { resendEventSchema } from '@/app/api/email/inbound/route';
-import { googleVerifySchema } from '@/app/api/auth/google-verify/route';
+import { webhookSchema } from '@/app/api/payment/webhook/schema';
+import { createCheckoutSchema } from '@/app/api/payment/create-checkout/schema';
+import { createPixSchema } from '@/app/api/payment/create-pix/schema';
+import { quoteSchema } from '@/app/api/shipping/quote/schema';
+import { mePayloadSchema } from '@/app/api/shipping/webhook/schema';
+import { uberWebhookSchema } from '@/app/api/shipping/uber-webhook/schema';
+import { dispatchSchema, cancelDeliverySchema } from '@/app/api/delivery/schema';
+import { updateStatusSchema } from '@/app/api/orders/[orderId]/update-status/schema';
+import { adminCancelSchema } from '@/app/api/orders/[orderId]/admin-cancel/schema';
+import { addMemberSchema, removeMemberSchema } from '@/app/api/painel/team/schema';
+import { shippingEstimateSchema } from '@/app/api/products/[id]/shipping-estimate/schema';
+import { maintenanceActionSchema } from '@/app/api/maintenance/schema';
+import { resendEventSchema } from '@/app/api/email/inbound/schema';
+import { googleVerifySchema } from '@/app/api/auth/google-verify/schema';
 
 const validAddress = {
   cep: '89010-000',

@@ -5,10 +5,8 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
+import { adminCancelSchema } from './schema';
 
-export const adminCancelSchema = z.object({
-  reason: z.string().trim().max(500).optional(),
-});
 
 // Statuses que ainda não tiveram o estoque debitado (só reservado)
 const PENDING_STATUSES = new Set(['pending_payment']);

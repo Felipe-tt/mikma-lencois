@@ -8,16 +8,6 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests } from '@/lib/security';
 import { z } from 'zod';
 
-export const resendEventSchema = z.object({
-  type: z.string().min(1),
-  created_at: z.string(),
-  data: z.object({
-    email_id: z.string().min(1),
-    from: z.string().min(1),
-    to: z.array(z.string()),
-    subject: z.string().optional(),
-  }),
-});
 
 let _resend: Resend | null = null;
 function getResend(): Resend {
@@ -49,6 +39,7 @@ function conversationIdFor(email: string): string {
 }
 
 import sanitizeHtmlLib from 'sanitize-html';
+import { resendEventSchema } from './schema';
 
 /**
  * Remove conteúdo perigoso do HTML de e-mails recebidos antes de salvar e

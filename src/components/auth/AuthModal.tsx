@@ -9,6 +9,7 @@ import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { BrandLogo } from '@/components/BrandLogo';
 
 type SignupStep = 'form' | 'awaiting';
+type ForgotStep = 'email' | 'sent';
 
 export function AuthModal() {
   const { isOpen, mode, setMode, close } = useAuthModal();
@@ -27,6 +28,13 @@ export function AuthModal() {
   const [signupLoading, setSignupLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
+  // ── Esqueci a senha ──
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStep, setForgotStep] = useState<ForgotStep>('email');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotResendCooldown, setForgotResendCooldown] = useState(0);
+  const [forgotResent, setForgotResent] = useState(false);
+
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Reseta o formulário sempre que o modal fecha, pra não reabrir com lixo do uso anterior.
@@ -34,6 +42,7 @@ export function AuthModal() {
     if (!isOpen) {
       setEmail(''); setPassword(''); setLoginError('');
       setName(''); setSignupEmail(''); setSignupStep('form'); setSignupError('');
+      setForgotEmail(''); setForgotStep('email'); setForgotResent(false);
     }
   }, [isOpen]);
 
@@ -49,6 +58,12 @@ export function AuthModal() {
     const t = setTimeout(() => setResendCooldown(c => c - 1), 1000);
     return () => clearTimeout(t);
   }, [resendCooldown]);
+
+  useEffect(() => {
+    if (forgotResendCooldown <= 0) return;
+    const t = setTimeout(() => setForgotResendCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [forgotResendCooldown]);
 
   if (!isOpen) return null;
 
@@ -123,6 +138,32 @@ export function AuthModal() {
     }
   }
 
+  async function sendForgotLink(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!forgotEmail.trim()) return;
+    setForgotLoading(true); setForgotResent(false);
+    try {
+      await fetch('/api/auth/send-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+      });
+    } finally {
+      // Sempre avança — não revela se o e-mail existe ou não na base.
+      setForgotStep('sent');
+      setForgotResendCooldown(60);
+      setForgotLoading(false);
+    }
+  }
+
+  async function handleForgotResend() {
+    if (forgotResendCooldown > 0) return;
+    setForgotResent(false);
+    await sendForgotLink();
+    setForgotResent(true);
+    setTimeout(() => setForgotResent(false), 4000);
+  }
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
@@ -183,11 +224,15 @@ export function AuthModal() {
             </div>
             <GoogleSignInButton onError={setLoginError} />
 
-            <Link href="/entrar" className="block text-center text-xs text-faint hover:text-mid transition-colors mt-5">
+            <button
+              type="button"
+              onClick={() => { setForgotEmail(email); setForgotStep('email'); setMode('forgot'); }}
+              className="block w-full text-center text-xs text-faint hover:text-mid transition-colors mt-5"
+            >
               Esqueci minha senha
-            </Link>
+            </button>
           </>
-        ) : (
+        ) : mode === 'signup' ? (
           <>
             {signupStep === 'form' && (
               <>
@@ -262,6 +307,60 @@ export function AuthModal() {
                     Usar outro e-mail
                   </button>
                 </div>
+              </>
+            )}
+          </>
+        ) : (
+          // ── Esqueci a senha ──
+          <>
+            {forgotStep === 'email' && (
+              <>
+                <h2 className="font-display font-normal text-ink text-[1.5rem] mb-1">Esqueceu a senha?</h2>
+                <p className="text-[13px] text-mid mb-6 leading-relaxed">
+                  Informe seu e-mail e enviaremos um link com um botão para criar uma nova senha.
+                </p>
+                <form onSubmit={sendForgotLink} className="flex flex-col gap-4">
+                  <div>
+                    <label className="label">Seu e-mail</label>
+                    <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                      className="input" placeholder="seuemail@exemplo.com" autoComplete="email" autoFocus />
+                  </div>
+                  <button type="submit" disabled={forgotLoading}
+                    className="btn-primary w-full h-12 text-[13px] font-semibold tracking-wide flex items-center justify-center gap-2 mt-1">
+                    {forgotLoading ? <><span className="spinner" /> Enviando…</> : 'Enviar link'}
+                  </button>
+                </form>
+                <button type="button" onClick={() => setMode('login')}
+                  className="block mx-auto mt-5 text-xs text-faint hover:text-mid underline underline-offset-2">
+                  Voltar para o login
+                </button>
+              </>
+            )}
+
+            {forgotStep === 'sent' && (
+              <>
+                <div className="w-14 h-14 bg-clay/10 flex items-center justify-center mb-5">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
+                    <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
+                  </svg>
+                </div>
+                <h2 className="font-display font-normal text-ink text-[1.5rem] mb-2">Veja seu e-mail</h2>
+                <p className="text-[13px] text-mid mb-6 leading-relaxed">
+                  Se este e-mail estiver cadastrado, enviamos um link para <strong className="text-ink">{forgotEmail}</strong>. Clique no botão{' '}
+                  <strong className="text-ink">&ldquo;Criar nova senha&rdquo;</strong> no e-mail para continuar.
+                </p>
+                <div className="text-center">
+                  <p className="text-xs text-faint mb-1">Não recebeu? Verifique o spam.</p>
+                  <button onClick={handleForgotResend} disabled={forgotResendCooldown > 0 || forgotLoading}
+                    className="text-sm text-clay font-medium hover:underline disabled:text-faint transition-colors">
+                    {forgotLoading ? 'Enviando…' : forgotResendCooldown > 0 ? `Reenviar em ${forgotResendCooldown}s` : 'Reenviar link'}
+                  </button>
+                  {forgotResent && <p className="text-xs text-green-600 mt-2">E-mail reenviado.</p>}
+                </div>
+                <button type="button" onClick={() => setMode('login')}
+                  className="block mx-auto mt-5 text-xs text-faint hover:text-mid underline underline-offset-2">
+                  Voltar para o login
+                </button>
               </>
             )}
           </>

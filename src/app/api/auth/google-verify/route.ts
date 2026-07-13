@@ -5,10 +5,8 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import { z } from 'zod';
+import { googleVerifySchema } from './schema';
 
-export const googleVerifySchema = z.object({
-  idToken: z.string().min(1).max(8192),
-});
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);

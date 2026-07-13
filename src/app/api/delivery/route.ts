@@ -17,15 +17,7 @@ import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import { z } from 'zod';
 import type { Order } from '@/types';
 
-export const dispatchSchema = z.object({
-  orderId: z.string().trim().min(1).max(80),
-  carrier: z.string().trim().min(1).max(60).optional(),
-});
 
-export const cancelDeliverySchema = z.object({
-  orderId: z.string().trim().min(1).max(80),
-  reason: z.string().trim().min(1).max(500),
-});
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import {
   meDispatch,
@@ -37,6 +29,7 @@ import {
   type MEPackage,
 } from '@/lib/melhorenvio';
 import { recordShippingSpent } from '@/lib/shipping-ledger';
+import { dispatchSchema, cancelDeliverySchema } from './schema';
 import {
   uberCreateDelivery,
   uberCancelDelivery,

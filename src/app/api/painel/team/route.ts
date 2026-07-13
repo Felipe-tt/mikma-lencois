@@ -5,15 +5,9 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { verifyAuth, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
+import { addMemberSchema, removeMemberSchema } from './schema';
 
-export const addMemberSchema = z.object({
-  email: z.string().trim().toLowerCase().email('E-mail inválido'),
-  role: z.enum(['seller', 'admin'], { errorMap: () => ({ message: 'Role inválida' }) }),
-});
 
-export const removeMemberSchema = z.object({
-  uid: z.string().trim().min(1).max(128),
-});
 
 
 // IMPORTANTE: só 'admin' pode gerenciar a equipe, não 'seller'.

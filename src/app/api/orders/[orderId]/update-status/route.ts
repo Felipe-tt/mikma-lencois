@@ -9,10 +9,8 @@ import { extractBearer, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import type { Order, OrderStatus, User } from '@/types';
+import { updateStatusSchema } from './schema';
 
-export const updateStatusSchema = z.object({
-  trackingCode: z.string().trim().min(1).max(60).optional(),
-});
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br';
 const STORE = 'Mikma Lençóis';

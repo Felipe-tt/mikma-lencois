@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 
-type Mode = 'login' | 'signup';
+type Mode = 'login' | 'signup' | 'forgot';
 
 interface AuthModalContextValue {
   isOpen: boolean;

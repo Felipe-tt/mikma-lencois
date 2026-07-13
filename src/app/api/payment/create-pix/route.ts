@@ -16,13 +16,8 @@ import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { computeProductsCents, validateCoupon, computePixDiscountCents, computePixTotalCents } from '@/lib/orderPricing';
 import { z } from 'zod';
 import type { Coupon } from '@/types';
+import { createPixSchema } from './schema';
 
-export const createPixSchema = z.object({
-  address: addressSchema,
-  shipping: z.object({
-    carrier: z.string().trim().min(1).max(60),
-  }).passthrough(),
-});
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
