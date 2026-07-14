@@ -46,6 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       name: draft.name.trim(),
       description: draft.description?.trim() || draft.name.trim(),
       price: priceCents,
+      weightKg: draft.weightKg,
       images: draft.images.map((img) => img.url),
       category: draft.category,
       tags: [],

@@ -34,6 +34,7 @@ export const CatalogDraftPatchSchema = CatalogDraftSchema.partial();
 export function isDraftReadyToPublish(d: Partial<CatalogDraftInput>): string | null {
   if (!d.name || d.name.trim().length < 2) return 'Nome muito curto';
   if (!d.priceBRL || d.priceBRL <= 0) return 'Preço inválido';
+  if (!d.weightKg || d.weightKg <= 0) return 'Peso obrigatório (usado no cálculo de frete)';
   if (!d.category || d.category.trim().length === 0) return 'Categoria obrigatória';
   if (!d.size || !(SIZES as readonly string[]).includes(d.size)) return 'Tamanho inválido';
   if (!d.images || d.images.length === 0) return 'Adicione ao menos uma imagem';

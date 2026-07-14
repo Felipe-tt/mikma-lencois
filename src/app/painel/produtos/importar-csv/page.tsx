@@ -464,6 +464,7 @@ export default function ImportarCsvPage() {
                     <th className="p-2 min-w-[110px]">Tamanho</th>
                     <th className="p-2 min-w-[120px]">Cor</th>
                     <th className="p-2 min-w-[90px]">Preço R$</th>
+                    <th className="p-2 min-w-[80px]">Peso (kg)</th>
                     <th className="p-2 w-8"></th>
                   </tr>
                 </thead>
@@ -490,6 +491,9 @@ export default function ImportarCsvPage() {
                       </td>
                       <td className="p-1.5">
                         <input className={inputSm} value={it.priceInput} onChange={(e) => updateStaging(idx, { priceInput: e.target.value })} placeholder="0,00" />
+                      </td>
+                      <td className="p-1.5">
+                        <input className={inputSm} value={it.weightInput} onChange={(e) => updateStaging(idx, { weightInput: e.target.value })} placeholder="0,800" />
                       </td>
                       <td className="p-1.5 text-center">
                         <button onClick={() => removeStaging(idx)} aria-label="Remover linha" className="text-faint hover:text-red-600">
@@ -578,6 +582,19 @@ export default function ImportarCsvPage() {
                         }}
                         onBlur={() => saveDraftField(d)}
                         placeholder="0,00"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Peso (kg)</label>
+                      <input
+                        className={inputSm}
+                        value={d.weightKg != null ? String(d.weightKg).replace('.', ',') : ''}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value.replace(',', '.'));
+                          updateDraftLocal(d.id, { weightKg: Number.isFinite(v) ? v : null });
+                        }}
+                        onBlur={() => saveDraftField(d)}
+                        placeholder="0,800"
                       />
                     </div>
                     <div>
