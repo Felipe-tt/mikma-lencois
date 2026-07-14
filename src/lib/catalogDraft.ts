@@ -22,6 +22,7 @@ export const CatalogDraftSchema = z.object({
   colorHex: z.string().max(16).default(''),
   priceBRL: z.number().nonnegative().max(100_000).nullable().default(null),
   weightKg: z.number().nonnegative().max(200).nullable().default(null),
+  pieceCount: z.number().int().positive().max(20).nullable().default(null),
   images: z.array(DraftImageSchema).max(20).default([]),
   sourceRaw: z.string().max(1000).default(''), // linha original do CSV, pra conferência
 });
@@ -31,12 +32,18 @@ export type CatalogDraftInput = z.infer<typeof CatalogDraftSchema>;
 // Mesmo schema mas todos os campos opcionais — usado no PATCH parcial.
 export const CatalogDraftPatchSchema = CatalogDraftSchema.partial();
 
+// Fronha não tem "tamanho de cama" — é peça única, então não exigimos
+// (e o publish já força size = 'unico' nesse caso).
+export function isSizeless(category: string): boolean {
+  return category.trim().toLowerCase() === 'fronhas';
+}
+
 export function isDraftReadyToPublish(d: Partial<CatalogDraftInput>): string | null {
   if (!d.name || d.name.trim().length < 2) return 'Nome muito curto';
   if (!d.priceBRL || d.priceBRL <= 0) return 'Preço inválido';
   if (!d.weightKg || d.weightKg <= 0) return 'Peso obrigatório (usado no cálculo de frete)';
   if (!d.category || d.category.trim().length === 0) return 'Categoria obrigatória';
-  if (!d.size || !(SIZES as readonly string[]).includes(d.size)) return 'Tamanho inválido';
+  if (!isSizeless(d.category) && (!d.size || !(SIZES as readonly string[]).includes(d.size))) return 'Tamanho inválido';
   if (!d.images || d.images.length === 0) return 'Adicione ao menos uma imagem';
   return null;
 }

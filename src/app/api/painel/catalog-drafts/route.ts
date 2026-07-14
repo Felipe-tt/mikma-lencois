@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
       colorHex: item.colorHex ?? '',
       priceBRL: item.priceBRL ?? null,
       weightKg: item.weightKg ?? null,
+      pieceCount: item.pieceCount ?? null,
       images: item.images ?? [],
       sourceRaw: item.sourceRaw ?? '',
       status: 'draft',

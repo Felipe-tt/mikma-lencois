@@ -21,6 +21,7 @@ interface StagingItem {
   colorHex: string;
   priceInput: string;
   weightInput: string;
+  pieceCountInput: string;
   sourceRaw: string;
 }
 
@@ -35,10 +36,17 @@ interface SavedDraft {
   colorHex: string;
   priceBRL: number | null;
   weightKg: number | null;
+  pieceCount: number | null;
   images: DraftImage[];
   sourceRaw: string;
   status: 'draft' | 'published';
   publishedProductId?: string;
+}
+
+// Fronha não tem tamanho de cama — é peça única, então escondemos o select
+// de tamanho pra essa categoria (o publish já força 'unico' por trás).
+function isSizelessCategory(category: string): boolean {
+  return category.trim().toLowerCase() === 'fronhas';
 }
 
 // ── CSV genérico: aceita praticamente qualquer cabeçalho, pareando por
@@ -53,6 +61,7 @@ const HEADER_ALIASES: Record<string, string[]> = {
   description: ['observacao', 'observação', 'descricao', 'descrição', 'description', 'desc', 'obs'],
   fabric: ['tecido', 'fabric', 'material'],
   weight: ['peso', 'peso_kg', 'weight', 'weightkg'],
+  pieces: ['pecas', 'peças', 'qtd_pecas', 'quantidade_pecas', 'pieces', 'piececount'],
 };
 
 function findColumn(headers: string[], aliases: string[]): string | null {
@@ -89,6 +98,12 @@ function guessSize(raw: string): string {
   return '';
 }
 
+/** Tenta adivinhar a quantidade de peças a partir de texto tipo "3pçs", "2 pçs". */
+function guessPieceCount(raw: string): string {
+  const m = raw.match(/(\d+)\s*p[çc]s/i);
+  return m ? m[1] : '';
+}
+
 let localIdCounter = 0;
 function nextLocalId() {
   localIdCounter += 1;
@@ -106,6 +121,7 @@ function parseGenericCsv(csvText: string): { items: StagingItem[]; skipped: numb
   const descCol = findColumn(headers, HEADER_ALIASES.description);
   const fabricCol = findColumn(headers, HEADER_ALIASES.fabric);
   const weightCol = findColumn(headers, HEADER_ALIASES.weight);
+  const piecesCol = findColumn(headers, HEADER_ALIASES.pieces);
 
   if (!nameCol) {
     throw new Error('Não encontrei uma coluna de nome/categoria/produto no CSV. Confira o cabeçalho do arquivo.');
@@ -131,6 +147,7 @@ function parseGenericCsv(csvText: string): { items: StagingItem[]; skipped: numb
       colorHex: '',
       priceInput: priceCol ? parsePriceBR(row[priceCol]) : '',
       weightInput: weightCol ? parsePriceBR(row[weightCol]) : '',
+      pieceCountInput: (piecesCol ? (row[piecesCol] ?? '').trim() : '') || guessPieceCount(rawName),
       sourceRaw: JSON.stringify(row),
     });
   });
@@ -259,6 +276,7 @@ export default function ImportarCsvPage() {
         colorHex: it.colorHex,
         priceBRL: it.priceInput ? parseFloat(it.priceInput.replace(',', '.')) : null,
         weightKg: it.weightInput ? parseFloat(it.weightInput.replace(',', '.')) : null,
+        pieceCount: it.pieceCountInput ? parseInt(it.pieceCountInput, 10) : null,
         sourceRaw: it.sourceRaw,
       }));
       await authedFetch('/api/painel/catalog-drafts', {
@@ -301,6 +319,7 @@ export default function ImportarCsvPage() {
           colorHex: draft.colorHex,
           priceBRL: draft.priceBRL,
           weightKg: draft.weightKg,
+          pieceCount: draft.pieceCount,
         }),
       });
     } catch (err) {
@@ -490,6 +509,7 @@ export default function ImportarCsvPage() {
                     <th className="p-2 min-w-[120px]">Cor</th>
                     <th className="p-2 min-w-[90px]">Preço R$</th>
                     <th className="p-2 min-w-[80px]">Peso (kg)</th>
+                    <th className="p-2 min-w-[70px]">Peças</th>
                     <th className="p-2 w-8"></th>
                   </tr>
                 </thead>
@@ -506,10 +526,14 @@ export default function ImportarCsvPage() {
                         </select>
                       </td>
                       <td className="p-1.5">
-                        <select className={selectSm} value={it.size} onChange={(e) => updateStaging(idx, { size: e.target.value })}>
-                          <option value="">Selecione</option>
-                          {SIZES.map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
-                        </select>
+                        {isSizelessCategory(it.category) ? (
+                          <span className="text-[11px] text-faint italic">Único (fronha)</span>
+                        ) : (
+                          <select className={selectSm} value={it.size} onChange={(e) => updateStaging(idx, { size: e.target.value })}>
+                            <option value="">Selecione</option>
+                            {SIZES.filter((s) => s !== 'unico').map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
+                          </select>
+                        )}
                       </td>
                       <td className="p-1.5">
                         <select className={selectSm} value={it.fabric} onChange={(e) => updateStaging(idx, { fabric: e.target.value })}>
@@ -525,6 +549,9 @@ export default function ImportarCsvPage() {
                       </td>
                       <td className="p-1.5">
                         <input className={inputSm} value={it.weightInput} onChange={(e) => updateStaging(idx, { weightInput: e.target.value })} placeholder="0,800" />
+                      </td>
+                      <td className="p-1.5">
+                        <input className={inputSm} value={it.pieceCountInput} onChange={(e) => updateStaging(idx, { pieceCountInput: e.target.value })} placeholder="3" />
                       </td>
                       <td className="p-1.5 text-center">
                         <button onClick={() => removeStaging(idx)} aria-label="Remover linha" className="text-faint hover:text-red-600">
@@ -640,6 +667,19 @@ export default function ImportarCsvPage() {
                       />
                     </div>
                     <div>
+                      <label className="label">Peças</label>
+                      <input
+                        className={inputSm}
+                        value={d.pieceCount != null ? String(d.pieceCount) : ''}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value, 10);
+                          updateDraftLocal(d.id, { pieceCount: Number.isFinite(v) ? v : null });
+                        }}
+                        onBlur={() => saveDraftField(d)}
+                        placeholder="3"
+                      />
+                    </div>
+                    <div>
                       <label className="label">Categoria</label>
                       <select className={selectSm} value={d.category} onChange={(e) => { updateDraftLocal(d.id, { category: e.target.value }); }} onBlur={() => saveDraftField(d)}>
                         <option value="">Selecione</option>
@@ -648,10 +688,14 @@ export default function ImportarCsvPage() {
                     </div>
                     <div>
                       <label className="label">Tamanho</label>
-                      <select className={selectSm} value={d.size} onChange={(e) => { updateDraftLocal(d.id, { size: e.target.value }); }} onBlur={() => saveDraftField(d)}>
-                        <option value="">Selecione</option>
-                        {SIZES.map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
-                      </select>
+                      {isSizelessCategory(d.category) ? (
+                        <p className={`${inputSm} text-faint italic bg-warm`}>Único (fronha não tem tamanho)</p>
+                      ) : (
+                        <select className={selectSm} value={d.size} onChange={(e) => { updateDraftLocal(d.id, { size: e.target.value }); }} onBlur={() => saveDraftField(d)}>
+                          <option value="">Selecione</option>
+                          {SIZES.filter((s) => s !== 'unico').map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
+                        </select>
+                      )}
                     </div>
                     <div>
                       <label className="label">Tecido</label>

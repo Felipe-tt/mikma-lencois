@@ -5,7 +5,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { verifyAuth, tooManyRequests } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { isDraftReadyToPublish, type CatalogDraftInput } from '@/lib/catalogDraft';
+import { isDraftReadyToPublish, isSizeless, type CatalogDraftInput } from '@/lib/catalogDraft';
 import { SIZES } from '@/lib/productOptions';
 
 // Publica um rascunho como produto de verdade (mesma forma que a criação
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const missing = isDraftReadyToPublish(draft);
   if (missing) return NextResponse.json({ error: missing }, { status: 400 });
 
-  const size = draft.size as (typeof SIZES)[number];
+  const size = (isSizeless(draft.category) ? 'unico' : draft.size) as (typeof SIZES)[number];
   const priceCents = Math.round((draft.priceBRL ?? 0) * 100);
 
   const productRef = adminDb.collection('products').doc();
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       description: draft.description?.trim() || draft.name.trim(),
       price: priceCents,
       weightKg: draft.weightKg,
+      ...(draft.pieceCount ? { pieceCount: draft.pieceCount } : {}),
       images: draft.images.map((img) => img.url),
       category: draft.category,
       tags: [],
