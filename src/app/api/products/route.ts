@@ -8,7 +8,7 @@ import { safeJson, tooManyRequests } from '@/lib/security';
 
 const VariantSchema = z.object({
   id: z.string().max(64),
-  size: z.enum(['solteiro', 'casal', 'queen', 'king']),
+  size: z.enum(['solteiro', 'casal', 'queen', 'king', 'berco']),
   color: z.string().max(64).optional().default(''),
   fabric: z.string().max(64).optional().default(''),
 });

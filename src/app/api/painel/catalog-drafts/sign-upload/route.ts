@@ -7,27 +7,29 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { adminStorage } from '@/lib/firebase/admin';
 import crypto from 'node:crypto';
 
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-const MAX_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
+// Só webp — as imagens de rascunho já chegam convertidas pelo navegador
+// (ver compressToWebp no client) antes de pedir a URL assinada.
+const ALLOWED_TYPES = new Set(['image/webp']);
+const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 const RequestSchema = z.object({
   files: z
     .array(
       z.object({
-        contentType: z.string().refine((t) => ALLOWED_TYPES.has(t), 'Tipo não permitido'),
-        sizeBytes: z.number().int().positive().max(MAX_SIZE_BYTES, 'Arquivo muito grande (máx 8MB)'),
+        contentType: z.string().refine((t) => ALLOWED_TYPES.has(t), 'Só aceitamos webp aqui'),
+        sizeBytes: z.number().int().positive().max(MAX_SIZE_BYTES, 'Arquivo muito grande (máx 5MB)'),
       })
     )
     .min(1)
-    .max(50), // até 50 imagens por lote (25 produtos × 2 imgs média)
+    .max(20),
 });
 
 export async function POST(req: NextRequest) {
   const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
   if (!auth.ok) return auth.response;
 
-  const key = `sign-upload:${auth.decoded.uid}`;
-  if (!rateLimit(key, 30, 60 * 60 * 1000)) {
+  const key = `catalog-drafts:sign-upload:${auth.decoded.uid}`;
+  if (!rateLimit(key, 60, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 
@@ -48,25 +50,22 @@ export async function POST(req: NextRequest) {
   const folder = `products/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   const results = await Promise.all(
-    parsed.data.files.map(async ({ contentType }) => {
-      const ext = contentType === 'image/png' ? '.png' : contentType === 'image/webp' ? '.webp' : contentType === 'image/gif' ? '.gif' : '.jpg';
+    parsed.data.files.map(async () => {
       const token = crypto.randomUUID();
-      const destination = `${folder}/wapp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+      const destination = `${folder}/draft_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.webp`;
       const file = bucket.file(destination);
 
-      // URL assinada válida por 15 minutos — tempo suficiente para o upload
       const [signedUrl] = await file.getSignedUrl({
         version: 'v4',
         action: 'write',
         expires: Date.now() + 15 * 60 * 1000,
-        contentType,
+        contentType: 'image/webp',
         extensionHeaders: {
           'x-goog-meta-firebasestoragedownloadtokens': token,
           'x-goog-meta-cache-control': 'public, max-age=31536000, immutable',
         },
       });
 
-      // URL pública permanente que o produto vai usar
       const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destination)}?alt=media&token=${token}`;
 
       return { signedUrl, publicUrl, destination };
