@@ -87,6 +87,23 @@ function parsePriceBR(raw: string | undefined): string {
   return Number.isFinite(value) && value > 0 ? value.toFixed(2).replace('.', ',') : '';
 }
 
+// Peso em kg precisa de até 3 casas decimais (ex.: 0,275 kg = 275 g).
+// Não reusa parsePriceBR aqui porque ela força 2 casas fixas e
+// arredondaria 0,275 pra 0,28 — perdendo a precisão de gramas.
+function parseWeightBR(raw: string | undefined): string {
+  if (!raw) return '';
+  const cleaned = raw.replace(/[^\d.,]/g, '').trim();
+  if (!cleaned) return '';
+  let normalized = cleaned;
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (cleaned.includes(',')) {
+    normalized = cleaned.replace(',', '.');
+  }
+  const value = parseFloat(normalized);
+  return Number.isFinite(value) && value > 0 ? String(value).replace('.', ',') : '';
+}
+
 /** Tenta adivinhar o tamanho (enum da loja) a partir de um texto livre do CSV. */
 function guessSize(raw: string): string {
   const low = raw.toLowerCase();
@@ -146,7 +163,7 @@ function parseGenericCsv(csvText: string): { items: StagingItem[]; skipped: numb
       colorName: colorCol ? (row[colorCol] ?? '').trim() : '',
       colorHex: '',
       priceInput: priceCol ? parsePriceBR(row[priceCol]) : '',
-      weightInput: weightCol ? parsePriceBR(row[weightCol]) : '',
+      weightInput: weightCol ? parseWeightBR(row[weightCol]) : '',
       pieceCountInput: (piecesCol ? (row[piecesCol] ?? '').trim() : '') || guessPieceCount(rawName),
       sourceRaw: JSON.stringify(row),
     });
@@ -204,6 +221,12 @@ export default function ImportarCsvPage() {
   const [rowBusy, setRowBusy] = useState<Record<string, boolean>>({});
   const [rowError, setRowError] = useState<Record<string, string>>({});
   const [deletingAll, setDeletingAll] = useState(false);
+
+  // Buffer de texto "cru" pros campos de preço/peso enquanto o usuário digita.
+  // Sem isso, o input fica preso ao valor numérico já formatado e a vírgula
+  // digitada (ex.: "0,275") some a cada tecla antes de terminar de digitar.
+  const [priceTextById, setPriceTextById] = useState<Record<string, string>>({});
+  const [weightTextById, setWeightTextById] = useState<Record<string, string>>({});
 
   async function authedFetch(url: string, init: RequestInit) {
     const token = await auth.currentUser?.getIdToken();
@@ -322,6 +345,10 @@ export default function ImportarCsvPage() {
           pieceCount: draft.pieceCount,
         }),
       });
+      // Salvou com sucesso: descarta o buffer de digitação pra voltar a
+      // exibir o valor formatado a partir do número já persistido.
+      setPriceTextById((p) => { const { [draft.id]: _omit, ...rest } = p; return rest; });
+      setWeightTextById((p) => { const { [draft.id]: _omit, ...rest } = p; return rest; });
     } catch (err) {
       setErr(draft.id, err instanceof Error ? err.message : 'Não salvou essa alteração.');
     } finally {
@@ -644,12 +671,18 @@ export default function ImportarCsvPage() {
                       <label className="label">Preço (R$)</label>
                       <input
                         className={inputSm}
-                        value={d.priceBRL != null ? d.priceBRL.toFixed(2).replace('.', ',') : ''}
+                        inputMode="decimal"
+                        value={priceTextById[d.id] ?? (d.priceBRL != null ? d.priceBRL.toFixed(2).replace('.', ',') : '')}
                         onChange={(e) => {
-                          const v = parseFloat(e.target.value.replace(',', '.'));
+                          const raw = e.target.value;
+                          setPriceTextById((p) => ({ ...p, [d.id]: raw }));
+                          const v = parseFloat(raw.replace(',', '.'));
                           updateDraftLocal(d.id, { priceBRL: Number.isFinite(v) ? v : null });
                         }}
-                        onBlur={() => saveDraftField(d)}
+                        onBlur={() => {
+                          setPriceTextById((p) => { const { [d.id]: _omit, ...rest } = p; return rest; });
+                          saveDraftField(d);
+                        }}
                         placeholder="0,00"
                       />
                     </div>
@@ -657,13 +690,19 @@ export default function ImportarCsvPage() {
                       <label className="label">Peso (kg)</label>
                       <input
                         className={inputSm}
-                        value={d.weightKg != null ? String(d.weightKg).replace('.', ',') : ''}
+                        inputMode="decimal"
+                        value={weightTextById[d.id] ?? (d.weightKg != null ? String(d.weightKg).replace('.', ',') : '')}
                         onChange={(e) => {
-                          const v = parseFloat(e.target.value.replace(',', '.'));
+                          const raw = e.target.value;
+                          setWeightTextById((p) => ({ ...p, [d.id]: raw }));
+                          const v = parseFloat(raw.replace(',', '.'));
                           updateDraftLocal(d.id, { weightKg: Number.isFinite(v) ? v : null });
                         }}
-                        onBlur={() => saveDraftField(d)}
-                        placeholder="0,800"
+                        onBlur={() => {
+                          setWeightTextById((p) => { const { [d.id]: _omit, ...rest } = p; return rest; });
+                          saveDraftField(d);
+                        }}
+                        placeholder="0,275"
                       />
                     </div>
                     <div>
