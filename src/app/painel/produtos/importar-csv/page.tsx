@@ -486,6 +486,7 @@ export default function ImportarCsvPage() {
                     <th className="p-2 min-w-[180px]">Nome</th>
                     <th className="p-2 min-w-[130px]">Categoria</th>
                     <th className="p-2 min-w-[110px]">Tamanho</th>
+                    <th className="p-2 min-w-[130px]">Tecido</th>
                     <th className="p-2 min-w-[120px]">Cor</th>
                     <th className="p-2 min-w-[90px]">Preço R$</th>
                     <th className="p-2 min-w-[80px]">Peso (kg)</th>
@@ -508,6 +509,12 @@ export default function ImportarCsvPage() {
                         <select className={selectSm} value={it.size} onChange={(e) => updateStaging(idx, { size: e.target.value })}>
                           <option value="">Selecione</option>
                           {SIZES.map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
+                        </select>
+                      </td>
+                      <td className="p-1.5">
+                        <select className={selectSm} value={it.fabric} onChange={(e) => updateStaging(idx, { fabric: e.target.value })}>
+                          <option value="">Selecione</option>
+                          {FABRICS.map((f) => <option key={f} value={f}>{f}</option>)}
                         </select>
                       </td>
                       <td className="p-1.5">
