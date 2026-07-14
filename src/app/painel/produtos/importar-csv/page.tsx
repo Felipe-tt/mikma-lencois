@@ -186,6 +186,7 @@ export default function ImportarCsvPage() {
   const [draftsError, setDraftsError] = useState('');
   const [rowBusy, setRowBusy] = useState<Record<string, boolean>>({});
   const [rowError, setRowError] = useState<Record<string, string>>({});
+  const [deletingAll, setDeletingAll] = useState(false);
 
   async function authedFetch(url: string, init: RequestInit) {
     const token = await auth.currentUser?.getIdToken();
@@ -318,6 +319,29 @@ export default function ImportarCsvPage() {
       setErr(id, err instanceof Error ? err.message : 'Não deu pra apagar.');
       setBusy(id, false);
     }
+  }
+
+  async function deleteAllDrafts() {
+    const targets = drafts.filter((d) => d.status !== 'published');
+    if (targets.length === 0) return;
+    const ok = window.confirm(
+      `Apagar ${targets.length} rascunho${targets.length !== 1 ? 's' : ''} pendente${targets.length !== 1 ? 's' : ''}? Isso também apaga as imagens já enviadas. Rascunhos já publicados não são afetados.`
+    );
+    if (!ok) return;
+
+    setDeletingAll(true);
+    setDraftsError('');
+    const results = await Promise.allSettled(
+      targets.map((d) => authedFetch(`/api/painel/catalog-drafts/${d.id}`, { method: 'DELETE' }))
+    );
+    const failedIds = new Set(
+      targets.filter((_, i) => results[i].status === 'rejected').map((d) => d.id)
+    );
+    setDrafts((prev) => prev.filter((d) => d.status === 'published' || failedIds.has(d.id)));
+    if (failedIds.size > 0) {
+      setDraftsError(`${failedIds.size} rascunho(s) não foram apagados — tente de novo.`);
+    }
+    setDeletingAll(false);
   }
 
   async function publishDraft(id: string) {
@@ -511,11 +535,22 @@ export default function ImportarCsvPage() {
 
       {/* ── Passo 2: rascunhos salvos — editar, adicionar imagens, publicar ── */}
       <section className="mb-10">
-        <div className="flex items-baseline gap-2.5 mb-3">
-          <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">2</span>
-          <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">
-            Rascunhos salvos {pendingDrafts.length > 0 && `(${pendingDrafts.length} pendente${pendingDrafts.length !== 1 ? 's' : ''})`}
-          </h2>
+        <div className="flex items-baseline justify-between gap-2.5 mb-3">
+          <div className="flex items-baseline gap-2.5">
+            <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">2</span>
+            <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">
+              Rascunhos salvos {pendingDrafts.length > 0 && `(${pendingDrafts.length} pendente${pendingDrafts.length !== 1 ? 's' : ''})`}
+            </h2>
+          </div>
+          {pendingDrafts.length > 0 && (
+            <button
+              onClick={deleteAllDrafts}
+              disabled={deletingAll}
+              className="text-[11px] font-semibold text-faint hover:text-red-600 flex items-center gap-1 disabled:opacity-50"
+            >
+              <IconTrash size={12} /> {deletingAll ? 'Apagando...' : 'Apagar todos os rascunhos'}
+            </button>
+          )}
         </div>
 
         {loadingDrafts && <p className="ml-[30px] text-[13px] text-faint">Carregando...</p>}
