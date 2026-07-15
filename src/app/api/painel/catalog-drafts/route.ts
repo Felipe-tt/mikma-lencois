@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 }
 
 const ImportBodySchema = z.object({
-  items: z.array(CatalogDraftSchema.partial()).min(1).max(300),
+  items: z.array(CatalogDraftSchema.partial()).min(1).max(500),
 });
 
 // Importação em lote a partir de um CSV já parseado no browser — cria um
