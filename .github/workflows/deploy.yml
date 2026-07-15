@@ -70,6 +70,23 @@ jobs:
       - name: Rodar testes automatizados
         run: npm test
 
+      - name: "[TEMP] Diagnóstico Sentry (não expõe valores)"
+        run: |
+          check() {
+            local name="$1" val="$2"
+            local len=${#val}
+            if [ -z "$val" ]; then
+              echo "$name: VAZIO"
+            else
+              echo "$name: preenchido (len=$len, prefixo=${val:0:12}...)"
+            fi
+          }
+          check "SENTRY_DSN" "$SENTRY_DSN"
+          check "NEXT_PUBLIC_SENTRY_DSN" "$NEXT_PUBLIC_SENTRY_DSN"
+          check "SENTRY_ORG" "$SENTRY_ORG"
+          check "SENTRY_PROJECT" "$SENTRY_PROJECT"
+          check "SENTRY_AUTH_TOKEN" "$SENTRY_AUTH_TOKEN"
+
       - name: Cache Next.js build cache
         uses: actions/cache@v4
         with:
