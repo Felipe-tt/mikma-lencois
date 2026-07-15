@@ -231,10 +231,15 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
 
   if (!isExempt) {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'mikma-lencois';
-    const ip =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      req.headers.get('x-real-ip') ||
-      '0.0.0.0';
+    // Mesmo cuidado do getClientIp em lib/security.ts: usa o ÚLTIMO IP da
+    // lista (anexado pelo proxy confiável), não o primeiro (forjável pelo
+    // cliente) — evita que alguém entre na fila de manutenção disfarçado
+    // de outro visitante, ou vaze o mesmo IP falso repetidas vezes.
+    const xff = req.headers.get('x-forwarded-for');
+    const xffParts = xff ? xff.split(',').map((p) => p.trim()).filter(Boolean) : [];
+    const ip = xffParts.length > 0
+      ? xffParts[xffParts.length - 1]
+      : req.headers.get('x-real-ip') || '0.0.0.0';
     const docId = ip.replace(/[.:]/g, '_');
 
     const active = await getMaintenanceStatus(projectId);

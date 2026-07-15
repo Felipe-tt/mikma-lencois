@@ -5,6 +5,7 @@ import { Coupon } from '@/types';
 import { z } from 'zod';
 import { rateLimit } from '@/lib/rateLimit';
 import { validateCoupon } from '@/lib/orderPricing';
+import { getClientIp } from '@/lib/security';
 
 const schema = z.object({
   code: z.string().min(1).max(32).regex(/^[A-Z0-9_-]+$/i),
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Rate limit: 20 coupon checks per IP per 10 minutes
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  const ip = getClientIp(req);
   if (!rateLimit(`coupon:${ip}`, 20, 10 * 60 * 1000)) {
     return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 });
   }

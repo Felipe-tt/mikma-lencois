@@ -8,7 +8,7 @@ import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
-import { tooManyRequests, addressSchema, validateBody } from '@/lib/security';
+import { tooManyRequests, addressSchema, validateBody, getClientIp } from '@/lib/security';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
@@ -40,7 +40,7 @@ const INSTALLMENT_FEES: Record<number, number> = {
 };
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  const ip = getClientIp(req);
   if (!rateLimit(`checkout:ip:${ip}`, 20, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`checkout:ip:${ip}`));
   }

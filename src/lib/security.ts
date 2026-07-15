@@ -3,10 +3,21 @@ import { adminAuth } from '@/lib/firebase/admin';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { z, type ZodType, type ZodError } from 'zod';
 
-/** Extrai o IP real do cliente, respeitando proxies confiáveis (Cloud Run / Vercel). */
+/** Extrai o IP real do cliente, respeitando proxies confiáveis (Cloud Run / Vercel).
+ *
+ * IMPORTANTE: usa o ÚLTIMO valor de X-Forwarded-For, não o primeiro.
+ * O proxy confiável (Cloud Run) ANEXA o IP real do cliente no final da
+ * lista — qualquer valor antes disso veio da própria requisição e pode
+ * ser forjado por quem está mandando (ex: "X-Forwarded-For: 1.2.3.4").
+ * Pegar o primeiro item permitia burlar rate limit de login/cadastro/
+ * reset de senha só trocando esse header a cada tentativa.
+ */
 export function getClientIp(req: NextRequest): string {
   const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0].trim();
+  if (fwd) {
+    const parts = fwd.split(',').map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
+  }
   return req.headers.get('x-real-ip') ?? req.headers.get('x-nf-client-connection-ip') ?? 'unknown';
 }
 
