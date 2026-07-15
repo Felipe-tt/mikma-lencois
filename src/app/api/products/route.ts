@@ -4,7 +4,7 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { z } from 'zod';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { safeJson, tooManyRequests } from '@/lib/security';
+import { safeJson, tooManyRequests, productImageUrlSchema } from '@/lib/security';
 
 const VariantSchema = z.object({
   id: z.string().max(64),
@@ -17,7 +17,7 @@ const ProductSchema = z.object({
   name: z.string().min(2).max(200),
   description: z.string().min(10).max(5000),
   price: z.number().int().positive().max(100_000_00), // max R$100.000
-  images: z.array(z.string().url().max(500)).min(1).max(20),
+  images: z.array(productImageUrlSchema).min(1).max(20),
   category: z.string().min(1).max(100),
   tags: z.array(z.string().max(50)).max(20).default([]),
   variants: z.array(VariantSchema).min(1).max(50),

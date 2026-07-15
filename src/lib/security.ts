@@ -153,3 +153,35 @@ export async function verifyAuth(
     return { ok: false, response: NextResponse.json({ error: 'Token inválido' }, { status: 401 }) };
   }
 }
+
+/**
+ * Valida que uma URL de imagem realmente aponta pro bucket/pasta esperados
+ * do Firebase Storage, em vez de aceitar qualquer URL válida.
+ *
+ * Por quê: várias rotas de produto/rascunho apagam do Storage o arquivo
+ * cujo caminho é extraído de uma URL salva anteriormente pelo próprio
+ * cliente (campo "images"). Se qualquer URL fosse aceita, um seller/admin
+ * mal-intencionado (ou com a conta comprometida) poderia salvar a URL de
+ * QUALQUER outro objeto do bucket e fazer o servidor apagá-lo de verdade
+ * na hora de excluir o produto/rascunho — o delete usa o Admin SDK, que
+ * ignora storage.rules.
+ */
+export function isValidProductImageUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.hostname !== 'firebasestorage.googleapis.com') return false;
+    const m = u.pathname.match(/^\/v0\/b\/([^/]+)\/o\/(.+)$/);
+    if (!m) return false;
+    const [, bucket, encodedPath] = m;
+    if (bucket !== (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '')) return false;
+    return decodeURIComponent(encodedPath).startsWith('products/');
+  } catch {
+    return false;
+  }
+}
+
+export const productImageUrlSchema = z
+  .string()
+  .url()
+  .max(500)
+  .refine(isValidProductImageUrl, 'URL de imagem inválida');
