@@ -54,9 +54,42 @@ export function getAdminMessaging(): Messaging {
 
 // Storage admin
 import { getStorage as getAdminStorage } from 'firebase-admin/storage';
+import { Storage as GcsStorage } from '@google-cloud/storage';
+
 export const adminStorage = {
   bucket: () => getAdminStorage(getAdminApp()).bucket(),
 };
+
+// Bucket dedicado só pra assinar URLs (getSignedUrl).
+//
+// O bucket comum (adminStorage.bucket() acima) funciona bem pra tudo que
+// não precisa de assinatura — mas getSignedUrl() precisa de uma chave
+// privada disponível *localmente* pra montar o JWT da assinatura. Rodando
+// em Cloud Run, o client do @google-cloud/storage por trás do
+// firebase-admin não repassa client_email/private_key do cert() pra esse
+// propósito — ele delega a assinatura pra API IAM (signBlob) usando a
+// service account padrão de runtime do Cloud Run, que normalmente NÃO
+// tem a role "Service Account Token Creator" sobre si mesma. Resultado:
+// SigningError "iam.serviceAccounts.signBlob denied" em produção, mesmo
+// com FIREBASE_PRIVATE_KEY configurada.
+//
+// Construindo um client @google-cloud/storage à parte, com credentials
+// explícitas, a assinatura é feita localmente (JWT), sem depender de
+// nenhuma permissão IAM extra — é só usar a mesma chave que já temos.
+let _signingBucket: ReturnType<GcsStorage['bucket']> | null = null;
+export function getSigningBucket() {
+  if (!_signingBucket) {
+    const gcs = new GcsStorage({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      credentials: {
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      },
+    });
+    _signingBucket = gcs.bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '');
+  }
+  return _signingBucket;
+}
 
 // Aliases para compatibilidade com código existente
 export const adminDb = new Proxy({} as Firestore, {

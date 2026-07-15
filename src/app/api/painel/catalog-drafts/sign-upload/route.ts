@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyAuth, tooManyRequests } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { adminStorage } from '@/lib/firebase/admin';
+import { getSigningBucket } from '@/lib/firebase/admin';
 import crypto from 'node:crypto';
 
 // Só webp — as imagens de rascunho já chegam convertidas pelo navegador
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const bucket = adminStorage.bucket();
+  const bucket = getSigningBucket();
   const now = new Date();
   const folder = `products/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
 
