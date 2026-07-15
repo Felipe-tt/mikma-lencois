@@ -215,8 +215,8 @@ export async function POST(req: NextRequest) {
         { status: 'created', at: now, note: 'Pedido criado' },
         { status: 'payment_initiated', at: now, note: 'PIX gerado' },
       ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
 
     // Incrementa usedCount do cupom atomicamente (best-effort)
@@ -307,7 +307,7 @@ export async function POST(req: NextRequest) {
       'payment.pixQrCode': pix.brCodeBase64,
       'payment.pixCopyPaste': pix.brCode,
       'payment.expiresAt': pix.expiresAt ? new Date(pix.expiresAt) : null,
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString(),
     });
 
     return NextResponse.json({

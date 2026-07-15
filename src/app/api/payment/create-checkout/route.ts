@@ -245,8 +245,8 @@ export async function POST(req: NextRequest) {
         { status: 'created', at: now, note: 'Pedido criado' },
         { status: 'payment_initiated', at: now, note: `Checkout cartão iniciado (${parsedInstallments}x)` },
       ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
 
     // Incrementa usedCount do cupom atomicamente (best-effort)
@@ -389,7 +389,7 @@ export async function POST(req: NextRequest) {
       'payment.checkoutId': checkout.id,
       'payment.checkoutUrl': checkout.url,
       'payment.abacateProductId': abacateProduct.id,
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString(),
     });
 
     return NextResponse.json({

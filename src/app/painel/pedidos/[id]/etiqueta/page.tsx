@@ -12,8 +12,19 @@ import { IconArrowRight, IconPrint } from '@/components/ui/Icon';
 const STORE_NAME = 'Mikma Lençóis';
 const STORE_ADDRESS = process.env.NEXT_PUBLIC_STORE_ADDRESS || '';
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+function fmtDate(value: string | { toDate?: () => Date; seconds?: number } | null | undefined) {
+  let d: Date;
+  if (value && typeof value === 'object' && typeof value.toDate === 'function') {
+    d = value.toDate();
+  } else if (value && typeof value === 'object' && typeof value.seconds === 'number') {
+    d = new Date(value.seconds * 1000);
+  } else if (typeof value === 'string') {
+    d = new Date(value);
+  } else {
+    return '—';
+  }
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 export default function EtiquetaPage({ params }: { params: Promise<{ id: string }> }) {

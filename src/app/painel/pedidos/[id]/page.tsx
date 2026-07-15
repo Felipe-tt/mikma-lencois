@@ -693,7 +693,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <Link
               href={`/painel/pedidos/${order.id}/etiqueta`}
               className="flex items-center justify-center gap-1.5 w-full bg-ink text-paper text-[12px] font-semibold py-2 hover:bg-ink/80 transition-colors">
-              <IconPrint size={13} /> Imprimir etiqueta / nota de separação
+              <IconPrint size={13} /> Imprimir nota de separação (uso interno)
             </Link>
           </div>
         </Card>
