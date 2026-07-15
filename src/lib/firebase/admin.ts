@@ -17,6 +17,10 @@ function getAdminApp(): App {
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     }),
+    // Sem isso, adminStorage.bucket() (sign-upload, delete de imagem, etc.)
+    // não sabe em qual bucket operar e lança "Bucket name not specified or
+    // invalid" — é o que causava o 500 no upload de imagem do rascunho.
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   })
 }
 
