@@ -144,16 +144,25 @@ export async function POST(req: NextRequest) {
     const shippingCents = matchedShipping.priceCents;
 
     // ── Validar cupom server-side ─────────────────────────────────────────────
+    // Leitura + checagem de maxUses + incremento de usedCount na MESMA
+    // transação — veja o comentário equivalente em create-pix/route.ts pro
+    // porquê (sem isso, requisições concorrentes conseguiam burlar o
+    // limite de usos de um cupom).
     let couponDiscountCents = 0;
     let couponCode: string | null = null;
     if (cartCouponCode) {
-      const couponSnap = await adminDb.collection('coupons').doc(cartCouponCode).get();
-      if (couponSnap.exists) {
+      const couponRef = adminDb.collection('coupons').doc(cartCouponCode);
+      const discount = await adminDb.runTransaction(async (tx) => {
+        const couponSnap = await tx.get(couponRef);
+        if (!couponSnap.exists) return 0;
         const result = validateCoupon(couponSnap.data()! as Coupon, productsCents);
-        if (result.valid) {
-          couponDiscountCents = result.discountCents;
-          couponCode = cartCouponCode;
-        }
+        if (!result.valid) return 0;
+        tx.update(couponRef, { usedCount: FieldValue.increment(1) });
+        return result.discountCents;
+      }).catch(() => 0);
+      if (discount > 0) {
+        couponDiscountCents = discount;
+        couponCode = cartCouponCode;
       }
     }
 
@@ -249,12 +258,8 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     });
 
-    // Incrementa usedCount do cupom atomicamente (best-effort)
-    if (couponCode) {
-      adminDb.collection('coupons').doc(couponCode).update({
-        usedCount: FieldValue.increment(1),
-      }).catch(() => {});
-    }
+    // usedCount do cupom já foi incrementado atomicamente acima, dentro
+    // da transação de validação — nada a fazer aqui.
 
     // Avisa o vendor que alguém iniciou um pagamento (ainda não confirmado).
     // Best-effort: nunca deve bloquear ou falhar o checkout do cliente.
