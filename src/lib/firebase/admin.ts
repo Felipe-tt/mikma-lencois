@@ -87,9 +87,29 @@ export const adminStorage = {
 // incompatibilidade da versão de google-auth-library empacotada ali,
 // não da chave em si — a mesma chave assina normalmente via crypto puro).
 export function getServiceAccountCredentials() {
+  const raw = process.env.FIREBASE_PRIVATE_KEY;
+  const normalized = normalizePrivateKey(raw) ?? '';
+
+  // Diagnóstico temporário e seguro: nunca loga o corpo da chave (a parte
+  // sensível), só tamanho e o cabeçalho/rodapé PEM (que são texto padrão,
+  // igual em qualquer chave, não segredo nenhum). Isso existe só pra achar
+  // ONDE no pipeline de deploy a chave está sendo cortada/corrompida.
+  if (normalized.length < 500) {
+    const rawLen = raw?.length ?? 0;
+    const hasEscapedNewline = !!raw?.includes('\\n');
+    const hasRealNewline = !!raw?.includes('\n');
+    const realNewlineCount = (raw?.match(/\n/g) || []).length;
+    console.error(
+      `[getServiceAccountCredentials] private key suspeita de estar truncada — ` +
+      `rawLen=${rawLen} normalizedLen=${normalized.length} temEscaped(\\n)=${hasEscapedNewline} ` +
+      `temNewlineReal=${hasRealNewline} qtdNewlineReal=${realNewlineCount} ` +
+      `raw[0:30]=${JSON.stringify(raw?.slice(0, 30))} raw[-30:]=${JSON.stringify(raw?.slice(-30))}`
+    );
+  }
+
   return {
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL ?? '',
-    privateKey: normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY) ?? '',
+    privateKey: normalized,
     bucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
   };
 }

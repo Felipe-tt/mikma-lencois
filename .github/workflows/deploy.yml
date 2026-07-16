@@ -109,6 +109,17 @@ jobs:
 
       - name: Criar .env.production com variáveis server-side
         run: |
+          # FIREBASE_PRIVATE_KEY pode conter quebras de linha REAIS (comum
+          # quando se cola a chave inteira, com \n de verdade, no valor do
+          # secret no GitHub). Um arquivo .env é parseado linha a linha —
+          # se a chave entrar com newlines reais, só a primeira linha
+          # ("-----BEGIN PRIVATE KEY-----") vira o valor de fato, e o resto
+          # vira lixo/linhas soltas no arquivo. Escapamos pra \n literal
+          # aqui (2 caracteres: barra + n) ANTES de escrever; o código que
+          # lê essa env var (normalizePrivateKey em src/lib/firebase/admin.ts)
+          # já espera e converte esse formato de volta pra newline real.
+          FIREBASE_PRIVATE_KEY_SAFE=$(printf '%s' "${{ secrets.FIREBASE_PRIVATE_KEY }}" | awk '{printf "%s\\n", $0}')
+
           cat > .env.production << EOF
           RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
           RESEND_WEBHOOK_SECRET=${{ secrets.RESEND_WEBHOOK_SECRET }}
@@ -116,7 +127,7 @@ jobs:
           EMAIL_CONTATO_ADDRESS=${{ secrets.EMAIL_CONTATO_ADDRESS }}
           FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}
-          FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}
+          FIREBASE_PRIVATE_KEY=$FIREBASE_PRIVATE_KEY_SAFE
           RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
           ABACATEPAY_API_KEY=${{ secrets.ABACATEPAY_API_KEY }}
           ABACATEPAY_PUBLIC_KEY=${{ secrets.ABACATEPAY_PUBLIC_KEY }}
