@@ -10,7 +10,8 @@ import { hexToColorName } from '@/lib/colorNames';
 import { ColorPicker } from './ColorPicker';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
 import { PhotoColorPicker } from './PhotoColorPicker';
-import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS } from '@/lib/productOptions';
+import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, YARN_COUNTS } from '@/lib/productOptions';
+import { formatProductName } from '@/lib/textFormat';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 type Props = {
@@ -54,11 +55,11 @@ export default function ProductForm({ initial }: Props) {
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
 
-  const [threadCount, setThreadCount] = useState(initial?.threadCount ? String(initial.threadCount) : '');
+  const [yarnCount, setYarnCount] = useState(initial?.yarnCount ?? '');
   const [composition, setComposition] = useState(initial?.composition ?? '');
   const [weightGsm, setWeightGsm] = useState(initial?.weightGsm ? String(initial.weightGsm) : '');
   const [certifications, setCertifications] = useState(initial?.certifications?.join(', ') ?? '');
-  const [specsOpen, setSpecsOpen] = useState(!!(initial?.threadCount || initial?.composition || initial?.weightGsm || initial?.certifications?.length));
+  const [specsOpen, setSpecsOpen] = useState(!!(initial?.yarnCount || initial?.composition || initial?.weightGsm || initial?.certifications?.length));
 
   const [images, setImages] = useState<ImgEntry[]>(
     (initial?.images ?? []).map(url => ({ dataUrl: url, url }))
@@ -228,7 +229,7 @@ export default function ProductForm({ initial }: Props) {
       }));
 
       const data = {
-        name: name.trim(),
+        name: formatProductName(name),
         description,
         price: priceCents,
         weightKg: parseFloat(weightKg),
@@ -238,7 +239,7 @@ export default function ProductForm({ initial }: Props) {
         active,
         variants: builtVariants,
         updatedAt: serverTimestamp(),
-        ...(threadCount ? { threadCount: parseInt(threadCount) } : {}),
+        ...(yarnCount ? { yarnCount } : {}),
         ...(composition ? { composition } : {}),
         ...(weightGsm ? { weightGsm: parseInt(weightGsm) } : {}),
         ...(certifications ? { certifications: certifications.split(',').map(s => s.trim()).filter(Boolean) } : {}),
@@ -555,8 +556,11 @@ export default function ProductForm({ initial }: Props) {
             {specsOpen && (
               <div className="border border-mist p-4 grid grid-cols-2 gap-3 rounded-[4px]">
                 <div>
-                  <label className="label">Fio count</label>
-                  <input type="number" min={0} placeholder="400" value={threadCount} onChange={e => setThreadCount(e.target.value)} className="input-sm" />
+                  <label className="label">Espessura do fio <span className="font-normal normal-case text-faint">(malha)</span></label>
+                  <select value={yarnCount} onChange={e => setYarnCount(e.target.value)} className="input-sm">
+                    <option value="">Não informar</option>
+                    {YARN_COUNTS.map(y => <option key={y} value={y}>Fio {y}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="label">Gramatura (g/m²)</label>

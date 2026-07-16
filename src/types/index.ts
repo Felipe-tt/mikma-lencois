@@ -46,7 +46,7 @@ export interface Product {
   active: boolean
   createdAt: string
   // Fabric specs (optional, shown in product detail)
-  threadCount?: number       // e.g. 400
+  yarnCount?: string         // fiação do tecido, ex: "30/1" — mostrado como "Fio 30/1"
   composition?: string       // e.g. "100% Algodão"
   weightGsm?: number         // e.g. 180 g/m²
   certifications?: string[]  // e.g. ["OEKO-TEX", "Fair Trade"]
