@@ -8,6 +8,27 @@ if (typeof process !== 'undefined' && process.setMaxListeners) {
   process.setMaxListeners(25);
 }
 
+// Normaliza a chave privada da service account vinda de env var.
+//
+// O erro "DECODER routines::unsupported" ao assinar (visto em produção,
+// só na rota que usa o bucket de assinatura dedicado abaixo) indica que
+// o OpenSSL do Node não conseguiu interpretar a string como um PEM
+// válido. Duas causas comuns, cobertas aqui:
+//   1) A env var às vezes chega com aspas literais em volta (comum quando
+//      a chave inteira é colada como valor de variável de ambiente em
+//      algum painel/pipeline de deploy) — sem remover, elas viram parte
+//      do "corpo" do PEM e quebram a leitura.
+//   2) \n escapado (2 caracteres: barra + "n") precisa virar quebra de
+//      linha de verdade.
+function normalizePrivateKey(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  let key = raw.trim();
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+  return key.replace(/\\n/g, '\n').trim();
+}
+
 function getAdminApp(): App {
   if (getApps().length > 0) return getApps()[0]
 
@@ -15,7 +36,7 @@ function getAdminApp(): App {
     credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      privateKey: normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
     }),
     // Sem isso, adminStorage.bucket() (sign-upload, delete de imagem, etc.)
     // não sabe em qual bucket operar e lança "Bucket name not specified or
@@ -82,8 +103,17 @@ export function getSigningBucket() {
     const gcs = new GcsStorage({
       projectId: process.env.FIREBASE_PROJECT_ID,
       credentials: {
+        // "type" e "project_id" aqui não são cosméticos: é o formato que o
+        // google-auth-library reconhece como um service account completo
+        // (fromJSON), o que faz ele montar o client de assinatura (JWT)
+        // correto. Passando só client_email/private_key soltos, em algumas
+        // versões ele cai num caminho diferente que não lida bem com o PEM
+        // e o Node acaba estourando "DECODER routines::unsupported" na
+        // hora de assinar.
+        type: 'service_account',
+        project_id: process.env.FIREBASE_PROJECT_ID,
         client_email: process.env.FIREBASE_CLIENT_EMAIL,
-        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        private_key: normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
       },
     });
     _signingBucket = gcs.bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '');
