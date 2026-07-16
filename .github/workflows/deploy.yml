@@ -160,6 +160,11 @@ jobs:
       - name: Write service account key
         run: echo "$GOOGLE_APPLICATION_CREDENTIALS" > $HOME/sa.json
 
+      - name: Configurar CORS do bucket de Storage (upload direto do navegador)
+        run: node scripts/set-bucket-cors.mjs "$HOME/sa.json"
+        env:
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+
       - name: Check if functions changed
         id: functions-changed
         run: |
