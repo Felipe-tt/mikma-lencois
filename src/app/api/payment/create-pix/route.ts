@@ -8,7 +8,7 @@ import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
-import { tooManyRequests, addressSchema, validateBody } from '@/lib/security';
+import { tooManyRequests, addressSchema, validateBody, getClientIp } from '@/lib/security';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
@@ -24,7 +24,7 @@ const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
 
 export async function POST(req: NextRequest) {
   // Rate limit duplo: por IP e por usuário (aplicado após auth)
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  const ip = getClientIp(req);
   if (!rateLimit(`pix:ip:${ip}`, 20, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`pix:ip:${ip}`));
   }
@@ -115,16 +115,31 @@ export async function POST(req: NextRequest) {
     const shippingCents = matchedShipping.priceCents;
 
     // ── Validar cupom server-side (lido do carrinho, nunca do cliente) ────────
+    // IMPORTANTE: leitura + checagem de maxUses + incremento de usedCount
+    // TÊM que acontecer dentro da MESMA transação. Antes, a leitura/checagem
+    // rodava solta aqui e o incremento acontecia bem depois, sem transação
+    // ("best-effort"). Isso é uma race condition clássica: requisições
+    // concorrentes (ex: alguém automatizando cliques, ou só um duplo-clique
+    // rápido) todas liam usedCount desatualizado, todas passavam da checagem
+    // de maxUses, e todas incrementavam — um cupom de uso único podia acabar
+    // sendo aplicado dezenas de vezes. runTransaction serializa isso: só uma
+    // das chamadas concorrentes vence o incremento, as outras recomeçam e já
+    // veem o usedCount atualizado.
     let couponDiscountCents = 0;
     let couponCode: string | null = null;
     if (cartCouponCode) {
-      const couponSnap = await adminDb.collection('coupons').doc(cartCouponCode).get();
-      if (couponSnap.exists) {
+      const couponRef = adminDb.collection('coupons').doc(cartCouponCode);
+      const discount = await adminDb.runTransaction(async (tx) => {
+        const couponSnap = await tx.get(couponRef);
+        if (!couponSnap.exists) return 0;
         const result = validateCoupon(couponSnap.data()! as Coupon, productsCents);
-        if (result.valid) {
-          couponDiscountCents = result.discountCents;
-          couponCode = cartCouponCode;
-        }
+        if (!result.valid) return 0;
+        tx.update(couponRef, { usedCount: FieldValue.increment(1) });
+        return result.discountCents;
+      }).catch(() => 0);
+      if (discount > 0) {
+        couponDiscountCents = discount;
+        couponCode = cartCouponCode;
       }
     }
 
@@ -219,12 +234,8 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     });
 
-    // Incrementa usedCount do cupom atomicamente (best-effort)
-    if (couponCode) {
-      adminDb.collection('coupons').doc(couponCode).update({
-        usedCount: FieldValue.increment(1),
-      }).catch(() => {});
-    }
+    // usedCount do cupom já foi incrementado atomicamente acima, dentro
+    // da transação de validação — nada a fazer aqui.
 
     // Avisa o vendor que alguém iniciou um pagamento PIX (ainda não confirmado).
     // Best-effort: nunca deve bloquear ou falhar o checkout do cliente.

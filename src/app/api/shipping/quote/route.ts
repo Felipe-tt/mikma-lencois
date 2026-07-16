@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { tooManyRequests, validateBody } from '@/lib/security';
+import { tooManyRequests, validateBody, getClientIp } from '@/lib/security';
 import { getSettings } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
@@ -13,7 +13,7 @@ import { quoteSchema } from './schema';
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  const ip = getClientIp(req);
   if (!rateLimit(`shipping:ip:${ip}`, 30, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`shipping:ip:${ip}`));
   }

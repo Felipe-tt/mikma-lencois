@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Papa from 'papaparse';
 import { auth } from '@/lib/firebase/client';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS } from '@/lib/productOptions';
-import { IconAlert, IconCheck, IconTrash, IconX } from '@/components/ui/Icon';
+import { IconAlert, IconCamera, IconCheck, IconTrash, IconX } from '@/components/ui/Icon';
 
 // ── Tipos ────────────────────────────────────────────────────────────────
 interface DraftImage { url: string; path: string }
@@ -227,6 +227,9 @@ export default function ImportarCsvPage() {
   // digitada (ex.: "0,275") some a cada tecla antes de terminar de digitar.
   const [priceTextById, setPriceTextById] = useState<Record<string, string>>({});
   const [weightTextById, setWeightTextById] = useState<Record<string, string>>({});
+  // Id do rascunho sobre o qual um arquivo está sendo arrastado agora —
+  // só usado pra destacar visualmente a área de soltar a imagem.
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   async function authedFetch(url: string, init: RequestInit) {
     const token = await auth.currentUser?.getIdToken();
@@ -631,22 +634,55 @@ export default function ImportarCsvPage() {
             return (
               <div key={d.id} className="border border-mist bg-paper p-4">
                 <div className="flex gap-4">
-                  <div className="flex flex-wrap gap-2 shrink-0" style={{ maxWidth: 220 }}>
+                  <div
+                    className={
+                      'flex flex-wrap gap-2 shrink-0 p-2 border rounded-sm transition-colors ' +
+                      (dragOverId === d.id ? 'border-ink bg-warm' : 'border-transparent')
+                    }
+                    style={{ maxWidth: 240 }}
+                    onDragOver={(e) => { e.preventDefault(); if (!busy) setDragOverId(d.id); }}
+                    onDragLeave={(e) => {
+                      // Só limpa o destaque quando o cursor realmente sai do
+                      // container (não a cada filho sobrevoado, senão pisca).
+                      if (e.currentTarget === e.target) setDragOverId(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverId(null);
+                      if (busy) return;
+                      const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+                      if (files.length === 0) return;
+                      const dt = new DataTransfer();
+                      files.forEach((f) => dt.items.add(f));
+                      handleAddImages(d, dt.files);
+                    }}
+                  >
                     {d.images.map((img, i) => (
-                      <div key={img.path} className="relative w-16 h-16 border border-mist overflow-hidden">
+                      <div key={img.path} className="group relative w-20 h-20 border border-mist rounded-sm overflow-hidden bg-white">
                         <img src={img.url} alt="" className="w-full h-full object-cover" />
                         <button
                           onClick={() => removeImage(d, i)}
                           disabled={busy}
-                          className="absolute top-0 right-0 w-5 h-5 bg-black/60 text-white text-[11px] flex items-center justify-center"
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-[12px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
                           aria-label="Remover imagem"
                         >
                           ×
                         </button>
                       </div>
                     ))}
-                    <label className="w-16 h-16 border border-dashed border-mist flex items-center justify-center text-[10px] text-faint text-center cursor-pointer hover:bg-warm">
-                      + foto
+                    <label
+                      className={
+                        'w-20 h-20 border border-dashed rounded-sm flex flex-col items-center justify-center gap-1 text-[10px] text-faint text-center px-1 transition-colors ' +
+                        (busy ? 'opacity-50 cursor-wait' : 'cursor-pointer hover:bg-warm hover:border-ink') +
+                        (dragOverId === d.id ? ' border-ink' : ' border-mist')
+                      }
+                    >
+                      {busy ? (
+                        <span className="w-4 h-4 border-2 border-mist border-t-ink rounded-full animate-spin" aria-hidden />
+                      ) : (
+                        <IconCamera size={16} className="shrink-0" />
+                      )}
+                      <span>{busy ? 'enviando…' : 'arraste ou clique'}</span>
                       <input
                         type="file"
                         accept="image/*"

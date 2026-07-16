@@ -4,7 +4,7 @@ import { adminDb, adminAuth, adminStorage } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { safeJson, tooManyRequests } from '@/lib/security';
+import { safeJson, tooManyRequests, productImageUrlSchema } from '@/lib/security';
 
 async function getSeller(req: NextRequest) {
   const auth = req.headers.get('authorization');
@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     name: z.string().min(2).max(200).optional(),
     description: z.string().min(10).max(5000).optional(),
     price: z.number().int().positive().max(100_000_00).optional(),
-    images: z.array(z.string().url().max(500)).max(20).optional(),
+    images: z.array(productImageUrlSchema).max(20).optional(),
     category: z.string().max(100).optional(),
     tags: z.array(z.string().max(50)).max(20).optional(),
     active: z.boolean().optional(),

@@ -161,16 +161,16 @@ export default async function ProductPage({ params }: Props) {
               )}
 
               {/* ── Specs table ── */}
-              {(product.threadCount || product.composition || product.weightGsm || specTags.length > 0) && (
+              {(product.yarnCount || product.composition || product.weightGsm || specTags.length > 0) && (
                 <div className="border border-mist max-w-[520px]">
                   <div className="px-4 py-3 bg-warm/50 border-b border-mist">
                     <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Especificações do tecido</p>
                   </div>
                   <div className="divide-y divide-mist">
-                    {product.threadCount && (
+                    {product.yarnCount && (
                       <div className="flex items-center justify-between px-4 py-3">
-                        <span className="text-[12px] text-mid">Fio count</span>
-                        <span className="text-[13px] font-semibold text-ink">{product.threadCount} fios</span>
+                        <span className="text-[12px] text-mid">Espessura do fio</span>
+                        <span className="text-[13px] font-semibold text-ink">Fio {product.yarnCount}</span>
                       </div>
                     )}
                     {product.composition && (

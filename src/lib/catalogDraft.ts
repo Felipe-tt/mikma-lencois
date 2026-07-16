@@ -6,7 +6,17 @@ import { SIZES } from '@/lib/productOptions';
 
 export const DraftImageSchema = z.object({
   url: z.string().url().max(500),
-  path: z.string().max(300), // caminho no Storage, pra permitir apagar depois
+  // Caminho no Storage, pra permitir apagar depois. Restrito ao padrão
+  // exato gerado pela rota sign-upload (products/AAAA/MM/draft_*.webp) —
+  // sem essa validação, o campo aceitava qualquer string, e um seller/
+  // admin mal-intencionado (ou com a conta comprometida) podia colocar
+  // aqui o caminho de QUALQUER outro arquivo do bucket (ex: a imagem de
+  // um produto publicado) e apagá-lo de verdade ao excluir o próprio
+  // rascunho — o delete usa o Admin SDK, que ignora storage.rules.
+  path: z.string().max(300).regex(
+    /^products\/\d{4}\/\d{2}\/draft_\d+_[a-z0-9]+\.webp$/,
+    'Caminho de imagem inválido'
+  ),
 });
 
 // Campos livres na importação (o CSV de origem raramente bate 100% com o
