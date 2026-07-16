@@ -58,8 +58,15 @@ export function generateV4SignedUploadUrl(opts: {
     );
   }
 
-  const host = `${bucket}.storage.googleapis.com`;
-  const canonicalUri = '/' + objectPath.split('/').map(encodeURIComponent).join('/');
+  // Path-style (storage.googleapis.com/BUCKET/objeto), não virtual-hosted
+  // (BUCKET.storage.googleapis.com/objeto): buckets do Firebase Storage
+  // "novos" usam nomes como "projeto.firebasestorage.app", que JÁ TÊM
+  // ponto — colar ".storage.googleapis.com" depois disso gera um host
+  // inexistente tipo "projeto.firebasestorage.app.storage.googleapis.com"
+  // ("Failed to fetch" no navegador). Path-style funciona pra qualquer
+  // nome de bucket, com ou sem ponto.
+  const host = 'storage.googleapis.com';
+  const canonicalUri = '/' + [bucket, ...objectPath.split('/')].map(encodeURIComponent).join('/');
 
   const now = new Date();
   const requestTimestamp = now.toISOString().replace(/[:-]|\.\d{3}/g, ''); // YYYYMMDDTHHMMSSZ
