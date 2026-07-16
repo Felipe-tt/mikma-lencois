@@ -70,31 +70,6 @@ jobs:
       - name: Rodar testes automatizados
         run: npm test
 
-      - name: "[TEMP] Diagnóstico Sentry (não expõe valores)"
-        run: |
-          check() {
-            local name="$1" val="$2"
-            local len=${#val}
-            local desc
-            if [ -z "$val" ]; then
-              desc="VAZIO"
-            else
-              desc="len=$len prefixo=${val:0:14}"
-            fi
-            curl -s -X POST \
-              -H "Authorization: token $GH_PAT" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/Felipe-tt/mikma-lencois/statuses/${{ github.sha }}" \
-              -d "{\"state\":\"success\",\"context\":\"diag/$name\",\"description\":\"$desc\"}" > /dev/null
-          }
-          check "SENTRY_DSN" "$SENTRY_DSN"
-          check "NEXT_PUBLIC_SENTRY_DSN" "$NEXT_PUBLIC_SENTRY_DSN"
-          check "SENTRY_ORG" "$SENTRY_ORG"
-          check "SENTRY_PROJECT" "$SENTRY_PROJECT"
-          check "SENTRY_AUTH_TOKEN" "$SENTRY_AUTH_TOKEN"
-        env:
-          GH_PAT: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Cache Next.js build cache
         uses: actions/cache@v4
         with:
