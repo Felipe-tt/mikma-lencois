@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyAuth, tooManyRequests } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { getSigningBucket } from '@/lib/firebase/admin';
+import { getServiceAccountCredentials } from '@/lib/firebase/admin';
+import { generateV4SignedUploadUrl } from '@/lib/gcsSignedUrl';
 import crypto from 'node:crypto';
 
 // Só webp — as imagens de rascunho já chegam convertidas pelo navegador
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const bucket = getSigningBucket();
+  const { clientEmail, privateKey, bucket } = getServiceAccountCredentials();
   const now = new Date();
   const folder = `products/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -53,20 +54,21 @@ export async function POST(req: NextRequest) {
     parsed.data.files.map(async () => {
       const token = crypto.randomUUID();
       const destination = `${folder}/draft_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.webp`;
-      const file = bucket.file(destination);
 
-      const [signedUrl] = await file.getSignedUrl({
-        version: 'v4',
-        action: 'write',
-        expires: Date.now() + 15 * 60 * 1000,
+      const signedUrl = generateV4SignedUploadUrl({
+        bucket,
+        objectPath: destination,
+        clientEmail,
+        privateKey,
         contentType: 'image/webp',
+        expiresInSeconds: 15 * 60,
         extensionHeaders: {
           'x-goog-meta-firebasestoragedownloadtokens': token,
           'x-goog-meta-cache-control': 'public, max-age=31536000, immutable',
         },
       });
 
-      const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destination)}?alt=media&token=${token}`;
+      const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(destination)}?alt=media&token=${token}`;
 
       return { signedUrl, publicUrl, destination };
     })

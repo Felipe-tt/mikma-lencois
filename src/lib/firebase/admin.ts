@@ -75,50 +75,23 @@ export function getAdminMessaging(): Messaging {
 
 // Storage admin
 import { getStorage as getAdminStorage } from 'firebase-admin/storage';
-import { Storage as GcsStorage } from '@google-cloud/storage';
 
 export const adminStorage = {
   bucket: () => getAdminStorage(getAdminApp()).bucket(),
 };
 
-// Bucket dedicado só pra assinar URLs (getSignedUrl).
-//
-// O bucket comum (adminStorage.bucket() acima) funciona bem pra tudo que
-// não precisa de assinatura — mas getSignedUrl() precisa de uma chave
-// privada disponível *localmente* pra montar o JWT da assinatura. Rodando
-// em Cloud Run, o client do @google-cloud/storage por trás do
-// firebase-admin não repassa client_email/private_key do cert() pra esse
-// propósito — ele delega a assinatura pra API IAM (signBlob) usando a
-// service account padrão de runtime do Cloud Run, que normalmente NÃO
-// tem a role "Service Account Token Creator" sobre si mesma. Resultado:
-// SigningError "iam.serviceAccounts.signBlob denied" em produção, mesmo
-// com FIREBASE_PRIVATE_KEY configurada.
-//
-// Construindo um client @google-cloud/storage à parte, com credentials
-// explícitas, a assinatura é feita localmente (JWT), sem depender de
-// nenhuma permissão IAM extra — é só usar a mesma chave que já temos.
-let _signingBucket: ReturnType<GcsStorage['bucket']> | null = null;
-export function getSigningBucket() {
-  if (!_signingBucket) {
-    const gcs = new GcsStorage({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      credentials: {
-        // "type" e "project_id" aqui não são cosméticos: é o formato que o
-        // google-auth-library reconhece como um service account completo
-        // (fromJSON), o que faz ele montar o client de assinatura (JWT)
-        // correto. Passando só client_email/private_key soltos, em algumas
-        // versões ele cai num caminho diferente que não lida bem com o PEM
-        // e o Node acaba estourando "DECODER routines::unsupported" na
-        // hora de assinar.
-        type: 'service_account',
-        project_id: process.env.FIREBASE_PROJECT_ID,
-        client_email: process.env.FIREBASE_CLIENT_EMAIL,
-        private_key: normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
-      },
-    });
-    _signingBucket = gcs.bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '');
-  }
-  return _signingBucket;
+// Credenciais da service account já normalizadas, pra quem precisa assinar
+// URLs "na mão" (ver src/lib/gcsSignedUrl.ts) em vez de usar
+// @google-cloud/storage's getSignedUrl() — que em produção estourava
+// SigningError "DECODER routines::unsupported" ao tentar assinar (bug/
+// incompatibilidade da versão de google-auth-library empacotada ali,
+// não da chave em si — a mesma chave assina normalmente via crypto puro).
+export function getServiceAccountCredentials() {
+  return {
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL ?? '',
+    privateKey: normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY) ?? '',
+    bucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
+  };
 }
 
 // Aliases para compatibilidade com código existente
