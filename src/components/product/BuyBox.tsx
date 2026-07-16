@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { formatCurrency } from '@/lib/utils/format';
+import { SIZE_LABEL } from '@/lib/productOptions';
 import type { Product, InventoryItem, ProductVariant, CartItem } from '@/types';
 
 interface Props {
@@ -221,7 +222,17 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                       <span className="absolute top-[calc(50%-0.5px)] left-0 w-[141%] h-px bg-mist origin-left rotate-[-27deg] translate-x-[-10%]" />
                     </span>
                   )}
-                  {variant.size}{variant.color ? ` · ${variant.color}` : ''}
+                  <span className="inline-flex items-center gap-2">
+                    {variant.color && (
+                      <span
+                        className="w-3 h-3 rounded-full border border-black/10 shrink-0"
+                        style={{ backgroundColor: variant.color }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    {SIZE_LABEL[variant.size] ?? variant.size}
+                    {variant.colorName ? ` · ${variant.colorName}` : ''}
+                  </span>
                 </button>
               );
             })}

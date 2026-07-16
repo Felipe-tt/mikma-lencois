@@ -27,7 +27,7 @@ export interface User {
 // ─── Products ────────────────────────────────────────────────────────────────
 export interface ProductVariant {
   id: string
-  size: 'solteiro' | 'casal' | 'queen' | 'king'
+  size: 'solteiro' | 'casal' | 'queen' | 'king' | 'berco' | 'unico'
   color: string
   colorName?: string
   fabric: string
