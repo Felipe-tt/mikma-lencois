@@ -1,6 +1,6 @@
-# Mikma Lençóis — Plataforma E-commerce
+# Mikma Lençóis
 
-E-commerce completo de cama, mesa e banho, desenvolvido em Next.js 15 com App Router e Firebase. Inclui loja pública com ISR, painel administrativo, pagamento PIX integrado, frete nacional automatizado via Melhor Envio, importação de catálogo via WhatsApp e sistema de manutenção com fila de liberação por IP.
+E-commerce de cama, mesa e banho construído em Next.js 15 com App Router e Firebase. O projeto cobre loja pública com ISR, painel administrativo completo, pagamento via PIX, frete nacional automatizado com Melhor Envio, importação de catálogo por CSV e sistema de manutenção com fila de liberação por IP.
 
 ---
 
@@ -11,12 +11,12 @@ E-commerce completo de cama, mesa e banho, desenvolvido em Next.js 15 com App Ro
 | Framework | Next.js 15 (App Router, ISR, Edge Middleware) |
 | Linguagem | TypeScript 5 |
 | Estilo | Tailwind CSS 3 |
-| Backend / Banco | Firebase — Firestore, Auth, Storage |
-| Autenticação | Firebase Auth + Google OAuth 2.0 + reCAPTCHA v3 |
+| Backend / Banco | Firebase (Firestore, Auth, Storage) |
+| Autenticação | Firebase Auth, Google OAuth 2.0, reCAPTCHA v3 |
 | Pagamento | AbacatePay (PIX, webhook HMAC-SHA256) |
 | Frete | Melhor Envio v2 (PAC, SEDEX, Jadlog) |
-| E-mail | Resend (transacional) + Webhook inbound (caixa de mensagens) |
-| Deploy | Firebase Hosting + Cloud Run (`southamerica-east1`) |
+| E-mail | Resend (transacional) e webhook inbound (caixa de mensagens) |
+| Deploy | Firebase Hosting e Cloud Run (`southamerica-east1`) |
 | CDN / DNS | Cloudflare |
 
 ---
@@ -41,7 +41,7 @@ E-commerce completo de cama, mesa e banho, desenvolvido em Next.js 15 com App Ro
 - Dashboard com resumo de pedidos e alertas de estoque baixo
 - **Pedidos**: listagem com filtros por status, detalhe completo, atualização de status, geração de etiqueta Melhor Envio (PDF), cancelamento com estorno de reserva
 - **Produtos**: CRUD completo com upload de imagens, variantes (tamanho/cor/tecido), especificações técnicas (fios, composição, gramatura, certificações)
-- **Importação WhatsApp**: importação de catálogo via QR Code / sessão Baileys, com detecção automática de cores em fotos
+- **Importação de catálogo**: upload de CSV, com os itens ficando como rascunho até serem revisados, completados e publicados como produto
 - **Estoque**: controle por SKU, histórico de movimentações, alerta de estoque baixo
 - **Cupons**: CRUD de cupons com validade, uso máximo e valor mínimo de pedido
 - **Mensagens**: caixa de e-mails integrada (inbound webhook + resposta via Resend), com threads por cliente
@@ -56,7 +56,7 @@ E-commerce completo de cama, mesa e banho, desenvolvido em Next.js 15 com App Ro
 - Rate limiting por IP e por usuário (em memória, por instância)
 - Senhas com hash Argon2 (`@node-rs/argon2`)
 - Firestore Rules com controle granular por papel (`buyer`, `seller`, `admin`)
-- Preços nunca lidos do cliente — recalculados no servidor a partir do Firestore
+- Preços nunca lidos do cliente: sempre recalculados no servidor a partir do Firestore
 - Reserva atômica de estoque no momento da criação do pedido
 - ISR nas páginas públicas (revalidação a cada 15 min); `Cache-Control: private, no-store` nas páginas autenticadas
 
@@ -78,7 +78,7 @@ mikma-lencois/
 │   │   │   ├── email/            # inbound webhook (caixa de mensagens) + send
 │   │   │   ├── maintenance/      # toggle de manutenção
 │   │   │   ├── orders/           # CRUD de pedidos, delete-cancelled
-│   │   │   ├── painel/           # whatsapp-catalog (importação via Baileys)
+│   │   │   ├── painel/           # catalog-drafts (upload e publicação de rascunhos de catálogo)
 │   │   │   ├── payment/          # create-pix, create-checkout, webhook AbacatePay
 │   │   │   ├── products/         # CRUD de produtos, image-proxy
 │   │   │   ├── settings/         # settings públicas da loja
@@ -102,8 +102,9 @@ mikma-lencois/
 │   │   ├── hooks/                # useCartCount, useCartTotal
 │   │   ├── services/             # auth.ts
 │   │   ├── utils/                # cn.ts, format.ts, serialize.ts
-│   │   ├── whatsapp/             # catalogClient.ts · firestoreAuthState.ts (Baileys)
-│   │   ├── melhorenvio.ts        # Melhor Envio v2: cotação → carrinho → checkout → etiqueta → rastreio
+│   │   ├── catalogDraft.ts       # Schema e helpers dos rascunhos de catálogo importados por CSV
+│   │   ├── gcsSignedUrl.ts       # Geração de URL assinada para upload direto no Storage
+│   │   ├── melhorenvio.ts        # Melhor Envio v2: cotação, carrinho, checkout, etiqueta e rastreio
 │   │   ├── email.ts              # Resend: send + reply
 │   │   ├── email-templates.ts    # Templates HTML de e-mail transacional
 │   │   ├── business-hours.ts     # Horário de funcionamento
@@ -122,7 +123,8 @@ mikma-lencois/
 ├── tailwind.config.ts            # Design tokens (cores, fontes, animações)
 └── scripts/
     ├── maintenance.js            # Script de manutenção via CLI
-    └── whatsapp-catalog/         # Dados de catálogo importados via WhatsApp
+    ├── set-role.mjs              # Promove um usuário a seller/admin via Admin SDK
+    └── set-bucket-cors.mjs       # Configura CORS do bucket do Storage
 ```
 
 ---
@@ -142,8 +144,7 @@ mikma-lencois/
 | `conversations/{id}/messages` | Mensagens da thread |
 | `maintenance/status` | Flag de manutenção ativa |
 | `maintenance_queue` | Fila de IPs durante manutenção |
-| `whatsappAuth` | Credenciais de sessão Baileys (Admin SDK only) |
-| `whatsappCatalogStatus` | Status da conexão e QR Code atual |
+| `catalogDrafts` | Rascunhos de catálogo importados por CSV, pendentes de revisão e publicação |
 
 ---
 
@@ -181,7 +182,7 @@ npx firebase deploy --only firestore
 
 Crie `.env.local` na raiz com as variáveis abaixo. Em produção, configure-as como secrets no repositório ou no painel do Firebase / Cloud Run.
 
-### Firebase (cliente — prefixo `NEXT_PUBLIC_`)
+### Firebase (cliente, prefixo `NEXT_PUBLIC_`)
 
 | Variável | Descrição |
 |----------|-----------|
@@ -216,7 +217,7 @@ Crie `.env.local` na raiz com as variáveis abaixo. Em produção, configure-as 
 | `ABACATEPAY_API_KEY` | API key da AbacatePay |
 | `ABACATEPAY_PUBLIC_KEY` | Public key para validação HMAC do webhook |
 
-### Frete — Melhor Envio
+### Frete (Melhor Envio)
 
 | Variável | Descrição |
 |----------|-----------|
@@ -334,7 +335,7 @@ await adminAuth.setCustomUserClaims(uid, { role: 'seller' });
 
 2. Seller despacha: POST /api/delivery
    ├── Adiciona ao carrinho ME (meAddToCart)
-   ├── Compra etiqueta (meCheckout — debita saldo ME)
+   ├── Compra etiqueta (meCheckout, debita saldo ME)
    ├── Gera etiqueta PDF (meGenerate)
    └── Obtém URL do PDF (mePrint)
 
