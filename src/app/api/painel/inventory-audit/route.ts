@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   // até 30s de execução) — limite mais apertado que o normal.
   const ip = getClientIp(req);
   const key = `inventory-audit:${auth.decoded.uid}`;
-  if (!rateLimit(key, 6, 60_000) || !rateLimit(`inventory-audit-ip:${ip}`, 12, 60_000)) {
+  if (!await rateLimit(key, 6, 60_000) || !await rateLimit(`inventory-audit-ip:${ip}`, 12, 60_000)) {
     return NextResponse.json(
       { error: 'Muitas tentativas. Aguarde um pouco antes de rodar a auditoria de novo.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }

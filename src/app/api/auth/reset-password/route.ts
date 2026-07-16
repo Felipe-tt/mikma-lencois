@@ -20,7 +20,7 @@ const resetSchema = z.object({
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
   const ipKey = `reset-verify:${ip}`;
-  if (!rateLimit(ipKey, 10, 15 * 60 * 1000)) {
+  if (!await rateLimit(ipKey, 10, 15 * 60 * 1000)) {
     return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 });
   }
 
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   const ipKey = `reset-password:${ip}`;
-  if (!rateLimit(ipKey, 5, 15 * 60 * 1000)) {
+  if (!await rateLimit(ipKey, 5, 15 * 60 * 1000)) {
     const wait = Math.ceil(rateLimitRetryAfter(ipKey) / 60000);
     return NextResponse.json({ error: `Aguarde ${wait} minuto(s).` }, { status: 429 });
   }

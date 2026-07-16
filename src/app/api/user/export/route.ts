@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   // Rate limit: 5 exports por usuário por hora
   const key = `export:${uid}`;
-  if (!rateLimit(key, 5, 60 * 60 * 1000)) {
+  if (!await rateLimit(key, 5, 60 * 60 * 1000)) {
     const retryAfter = Math.ceil(rateLimitRetryAfter(key) / 1000);
     return NextResponse.json(
       { error: 'Muitas tentativas.' },

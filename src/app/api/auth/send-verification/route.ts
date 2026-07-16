@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   // Rate limit: 3 envios por IP por 15 min
   const ipKey = `send-verify:ip:${ip}`;
-  if (!rateLimit(ipKey, 3, 15 * 60 * 1000)) {
+  if (!await rateLimit(ipKey, 3, 15 * 60 * 1000)) {
     const wait = Math.ceil(rateLimitRetryAfter(ipKey) / 60000);
     return NextResponse.json(
       { error: `Muitas tentativas. Aguarde ${wait} minuto(s).` },
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   // Rate limit por e-mail também
   const emailKey = `send-verify:email:${email}`;
-  if (!rateLimit(emailKey, 3, 15 * 60 * 1000)) {
+  if (!await rateLimit(emailKey, 3, 15 * 60 * 1000)) {
     return NextResponse.json(
       { error: 'Já enviamos um link para este e-mail. Aguarde alguns minutos.' },
       { status: 429 }

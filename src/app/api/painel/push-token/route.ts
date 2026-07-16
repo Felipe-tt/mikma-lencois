@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const ip = getClientIp(req);
   const key = `push-token:${auth.decoded.uid}`;
-  if (!rateLimit(key, 15, 60_000) || !rateLimit(`push-token-ip:${ip}`, 30, 60_000)) {
+  if (!await rateLimit(key, 15, 60_000) || !await rateLimit(`push-token-ip:${ip}`, 30, 60_000)) {
     return NextResponse.json(
       { error: 'Muitas tentativas. Aguarde um pouco.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }
@@ -85,7 +85,7 @@ export async function DELETE(req: NextRequest) {
 
   const ip = getClientIp(req);
   const key = `push-token-del:${auth.decoded.uid}`;
-  if (!rateLimit(key, 15, 60_000) || !rateLimit(`push-token-del-ip:${ip}`, 30, 60_000)) {
+  if (!await rateLimit(key, 15, 60_000) || !await rateLimit(`push-token-del-ip:${ip}`, 30, 60_000)) {
     return NextResponse.json(
       { error: 'Muitas tentativas. Aguarde um pouco.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }

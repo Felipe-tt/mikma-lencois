@@ -12,7 +12,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   const ipKey = `login:ip:${ip}`;
-  if (!rateLimit(ipKey, 10, 15 * 60 * 1000)) {
+  if (!await rateLimit(ipKey, 10, 15 * 60 * 1000)) {
     const retryAfter = Math.ceil(rateLimitRetryAfter(ipKey) / 1000);
     return NextResponse.json(
       { error: 'Muitas tentativas. Tente novamente em 15 minutos.' },
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     const { email } = parsed.data;
     const emailKey = `login:email:${email.toLowerCase()}`;
-    if (!rateLimit(emailKey, 8, 15 * 60 * 1000)) {
+    if (!await rateLimit(emailKey, 8, 15 * 60 * 1000)) {
       return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 });
     }
 

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   const user = await verifySeller(req);
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
-  if (!rateLimit(`maintenance:${user.uid}`, 30, 60 * 1000)) {
+  if (!await rateLimit(`maintenance:${user.uid}`, 30, 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`maintenance:${user.uid}`));
   }
 

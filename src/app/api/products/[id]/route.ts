@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!seller) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
   const key = `products:update:${seller.uid}`;
-  if (!rateLimit(key, 60, 60 * 60 * 1000)) {
+  if (!await rateLimit(key, 60, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 
@@ -66,7 +66,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!seller) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
   const key = `products:delete:${seller.uid}`;
-  if (!rateLimit(key, 20, 60 * 60 * 1000)) {
+  if (!await rateLimit(key, 20, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 

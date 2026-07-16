@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!auth.ok) return auth.response;
 
   const key = `catalog-drafts:edit:${auth.decoded.uid}`;
-  if (!rateLimit(key, 300, 60 * 60 * 1000)) {
+  if (!await rateLimit(key, 300, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   // já que não há mais digitação manual sujeita a erro de dedo — só
   // protege contra tentativas de adivinhar/forçar o token).
   const ipKey = `verify-code:${ip}`;
-  if (!rateLimit(ipKey, 10, 15 * 60 * 1000)) {
+  if (!await rateLimit(ipKey, 10, 15 * 60 * 1000)) {
     const wait = Math.ceil(rateLimitRetryAfter(ipKey) / 60000);
     return NextResponse.json(
       { error: `Muitas tentativas. Aguarde ${wait} minuto(s).` },

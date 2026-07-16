@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const ip = getClientIp(req);
   const key = `team-search:${auth.decoded.uid}`;
-  if (!rateLimit(key, 30, 60_000) || !rateLimit(`team-search-ip:${ip}`, 60, 60_000)) {
+  if (!await rateLimit(key, 30, 60_000) || !await rateLimit(`team-search-ip:${ip}`, 60, 60_000)) {
     return NextResponse.json(
       { error: 'Muitas buscas. Aguarde um pouco.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }

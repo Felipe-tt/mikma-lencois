@@ -206,7 +206,7 @@ export async function POST(
 
   const ip = getClientIp(req);
   const key = `update-status:${uid}`;
-  if (!rateLimit(key, 40, 60_000) || !rateLimit(`update-status-ip:${ip}`, 80, 60_000)) {
+  if (!await rateLimit(key, 40, 60_000) || !await rateLimit(`update-status-ip:${ip}`, 80, 60_000)) {
     return NextResponse.json(
       { error: 'Muitas tentativas. Aguarde um pouco.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { id } = await params;
   const ip = getClientIp(req);
 
-  if (!rateLimit(`shipping-estimate:${ip}`, 20, 60 * 1000)) {
+  if (!await rateLimit(`shipping-estimate:${ip}`, 20, 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`shipping-estimate:${ip}`));
   }
 

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   const ip = getClientIp(req);
   const key = `revalidate:${auth.decoded.uid}`;
-  if (!rateLimit(key, 15, 60_000) || !rateLimit(`revalidate-ip:${ip}`, 30, 60_000)) {
+  if (!await rateLimit(key, 15, 60_000) || !await rateLimit(`revalidate-ip:${ip}`, 30, 60_000)) {
     return NextResponse.json(
       { error: 'Muitas tentativas. Aguarde um pouco.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }

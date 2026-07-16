@@ -16,7 +16,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
-  if (!rateLimit(`register:${ip}`, 5, 60 * 60 * 1000)) {
+  if (!await rateLimit(`register:${ip}`, 5, 60 * 60 * 1000)) {
     const wait = Math.ceil(rateLimitRetryAfter(`register:${ip}`) / 60000);
     return NextResponse.json(
       { error: `Muitas tentativas. Tente novamente em ${wait} minuto(s).` },

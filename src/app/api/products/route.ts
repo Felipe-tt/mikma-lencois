@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   // Rate limit: 30 produtos/hora por vendedor
   const key = `products:create:${seller.uid}`;
-  if (!rateLimit(key, 30, 60 * 60 * 1000)) {
+  if (!await rateLimit(key, 30, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 

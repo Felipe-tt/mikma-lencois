@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
   const ip = getClientIp(req);
   const key = `team-add:${auth.decoded.uid}`;
-  if (!rateLimit(key, 10, 60_000) || !rateLimit(`team-add-ip:${ip}`, 20, 60_000)) {
+  if (!await rateLimit(key, 10, 60_000) || !await rateLimit(`team-add-ip:${ip}`, 20, 60_000)) {
     return NextResponse.json(
       { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }

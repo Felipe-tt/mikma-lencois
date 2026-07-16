@@ -41,7 +41,7 @@ const INSTALLMENT_FEES: Record<number, number> = {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  if (!rateLimit(`checkout:ip:${ip}`, 20, 60 * 60 * 1000)) {
+  if (!await rateLimit(`checkout:ip:${ip}`, 20, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`checkout:ip:${ip}`));
   }
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
     const uid = decoded.uid;
 
-    if (!rateLimit(`checkout:uid:${uid}`, 5, 60 * 60 * 1000)) {
+    if (!await rateLimit(`checkout:uid:${uid}`, 5, 60 * 60 * 1000)) {
       return tooManyRequests(rateLimitRetryAfter(`checkout:uid:${uid}`));
     }
 

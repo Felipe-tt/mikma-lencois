@@ -41,7 +41,7 @@ export async function POST(
 
   const ip = getClientIp(req);
   const key = `admin-cancel:${uid}`;
-  if (!rateLimit(key, 20, 60_000) || !rateLimit(`admin-cancel-ip:${ip}`, 40, 60_000)) {
+  if (!await rateLimit(key, 20, 60_000) || !await rateLimit(`admin-cancel-ip:${ip}`, 40, 60_000)) {
     return NextResponse.json(
       { error: 'Muitas tentativas. Aguarde um pouco.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }

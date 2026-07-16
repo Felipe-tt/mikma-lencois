@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   // Rate limit: 20 coupon checks per IP per 10 minutes
   const ip = getClientIp(req);
-  if (!rateLimit(`coupon:${ip}`, 20, 10 * 60 * 1000)) {
+  if (!await rateLimit(`coupon:${ip}`, 20, 10 * 60 * 1000)) {
     return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 });
   }
 

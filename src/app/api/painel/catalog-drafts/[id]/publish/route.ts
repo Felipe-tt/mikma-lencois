@@ -18,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!auth.ok) return auth.response;
 
   const key = `catalog-drafts:publish:${auth.decoded.uid}`;
-  if (!rateLimit(key, 30, 60 * 60 * 1000)) {
+  if (!await rateLimit(key, 30, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 

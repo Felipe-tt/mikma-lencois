@@ -12,7 +12,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   const key = `update-pwd:${ip}`;
-  if (!rateLimit(key, 5, 15 * 60 * 1000)) {
+  if (!await rateLimit(key, 5, 15 * 60 * 1000)) {
     const retryAfter = Math.ceil(rateLimitRetryAfter(key) / 1000);
     return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429, headers: { 'Retry-After': String(retryAfter) } });
   }

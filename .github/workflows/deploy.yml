@@ -40,6 +40,8 @@ jobs:
       NEXT_PUBLIC_APP_URL: https://mikma.com.br
       NEXT_PUBLIC_BASE_URL: https://mikma.com.br
       GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
@@ -118,6 +120,8 @@ jobs:
           UBER_DIRECT_SANDBOX_WEBHOOK_SECRET=${{ secrets.UBER_DIRECT_SANDBOX_WEBHOOK_SECRET }}
           UBER_DIRECT_RADIUS_KM=15
           ORS_API_KEY=${{ secrets.ORS_API_KEY }}
+          UPSTASH_REDIS_REST_URL=${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN=${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           SENTRY_DSN=${{ secrets.SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           SENTRY_ORG=${{ secrets.SENTRY_ORG }}

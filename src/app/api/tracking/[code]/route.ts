@@ -55,7 +55,7 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> }
 ) {
   const ip = getClientIp(req);
-  if (!rateLimit(`tracking:${ip}`, 30, 60_000)) {
+  if (!await rateLimit(`tracking:${ip}`, 30, 60_000)) {
     return tooManyRequests(rateLimitRetryAfter(`tracking:${ip}`));
   }
 

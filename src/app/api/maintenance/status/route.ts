@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
 
   // Rate limit: 20 req/min por IP — cobre um polling de ~5s com folga.
-  if (!rateLimit(`maintenance-status:${ip}`, 20, 60 * 1000)) {
+  if (!await rateLimit(`maintenance-status:${ip}`, 20, 60 * 1000)) {
     // Silencioso: mantém o cliente em manutenção em vez de expor o limite.
     return NextResponse.json({ active: true, released: false });
   }

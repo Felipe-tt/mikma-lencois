@@ -14,7 +14,7 @@ const bodySchema = z.object({
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  if (!rateLimit(`email-send:${ip}`, 20, 60_000)) {
+  if (!await rateLimit(`email-send:${ip}`, 20, 60_000)) {
     return tooManyRequests(rateLimitRetryAfter(`email-send:${ip}`));
   }
 

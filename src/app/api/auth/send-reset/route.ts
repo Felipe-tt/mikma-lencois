@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
   const ipKey = `send-reset:ip:${ip}`;
-  if (!rateLimit(ipKey, 3, 15 * 60 * 1000)) {
+  if (!await rateLimit(ipKey, 3, 15 * 60 * 1000)) {
     const wait = Math.ceil(rateLimitRetryAfter(ipKey) / 60000);
     return NextResponse.json({ error: `Aguarde ${wait} minuto(s) antes de tentar novamente.` }, { status: 429 });
   }
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const { email } = parsed.data;
 
   const emailKey = `send-reset:email:${email}`;
-  if (!rateLimit(emailKey, 3, 15 * 60 * 1000)) return OK; // silencioso
+  if (!await rateLimit(emailKey, 3, 15 * 60 * 1000)) return OK; // silencioso
 
   // Verifica se e-mail existe — mas responde igual de qualquer forma
   let firstName = 'você';

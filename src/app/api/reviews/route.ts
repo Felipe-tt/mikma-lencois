@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
 
-  if (!rateLimit(`reviews:ip:${ip}`, 20, 60 * 60 * 1000) || !rateLimit(`reviews:uid:${uid}`, 10, 60 * 60 * 1000)) {
+  if (!await rateLimit(`reviews:ip:${ip}`, 20, 60 * 60 * 1000) || !await rateLimit(`reviews:uid:${uid}`, 10, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`reviews:uid:${uid}`));
   }
 

@@ -25,7 +25,7 @@ const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
 export async function POST(req: NextRequest) {
   // Rate limit duplo: por IP e por usuário (aplicado após auth)
   const ip = getClientIp(req);
-  if (!rateLimit(`pix:ip:${ip}`, 20, 60 * 60 * 1000)) {
+  if (!await rateLimit(`pix:ip:${ip}`, 20, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`pix:ip:${ip}`));
   }
 
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const uid = decoded.uid;
 
     // Rate limit por usuário (mais restrito — 5 PIX por hora)
-    if (!rateLimit(`pix:uid:${uid}`, 5, 60 * 60 * 1000)) {
+    if (!await rateLimit(`pix:uid:${uid}`, 5, 60 * 60 * 1000)) {
       return tooManyRequests(rateLimitRetryAfter(`pix:uid:${uid}`));
     }
 

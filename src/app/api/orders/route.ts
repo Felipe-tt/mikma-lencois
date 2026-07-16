@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   // Dual rate limit: por IP e por usuário
   const ipKey = `orders:${ip}`;
   const uidKey = `orders:uid:${uid}`;
-  if (!rateLimit(ipKey, 20, 60 * 60 * 1000) || !rateLimit(uidKey, 10, 60 * 60 * 1000)) {
+  if (!await rateLimit(ipKey, 20, 60 * 60 * 1000) || !await rateLimit(uidKey, 10, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(uidKey));
   }
 

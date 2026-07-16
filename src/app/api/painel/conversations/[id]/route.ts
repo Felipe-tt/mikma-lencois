@@ -27,7 +27,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
   // Rate limit: 30 exclusões por hora por usuário
   const key = `delete-conversation:${bearer.token.slice(-8)}`;
-  if (!rateLimit(key, 30, 60 * 60 * 1000)) {
+  if (!await rateLimit(key, 30, 60 * 60 * 1000)) {
     const retryAfter = Math.ceil(rateLimitRetryAfter(key) / 1000);
     return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429, headers: { 'Retry-After': String(retryAfter) } });
   }

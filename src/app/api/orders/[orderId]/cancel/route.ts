@@ -18,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
 
-  if (!rateLimit(`cancel:${uid}`, 10, 60 * 60 * 1000)) {
+  if (!await rateLimit(`cancel:${uid}`, 10, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`cancel:${uid}`));
   }
 

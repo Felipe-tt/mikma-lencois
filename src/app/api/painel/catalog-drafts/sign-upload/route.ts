@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const key = `catalog-drafts:sign-upload:${auth.decoded.uid}`;
-  if (!rateLimit(key, 60, 60 * 60 * 1000)) {
+  if (!await rateLimit(key, 60, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 

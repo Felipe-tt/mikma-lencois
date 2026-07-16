@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
   // Defesa contra flood — a Uber manda poucos eventos por corrida em
   // operação normal; isso só protege contra abuso/DoS na URL pública.
   const ip = getClientIp(req);
-  if (!rateLimit(`uber-webhook-ip:${ip}`, 60, 60_000)) {
+  if (!await rateLimit(`uber-webhook-ip:${ip}`, 60, 60_000)) {
     return NextResponse.json({ error: 'too many requests' }, { status: 429 });
   }
 

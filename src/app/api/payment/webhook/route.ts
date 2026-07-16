@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   // Defesa contra flood — a AbacatePay manda poucos eventos por transação
   // em operação normal; isso só protege contra abuso/DoS na URL pública.
   const ip = getClientIp(req);
-  if (!rateLimit(`payment-webhook-ip:${ip}`, 60, 60_000)) {
+  if (!await rateLimit(`payment-webhook-ip:${ip}`, 60, 60_000)) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 

@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const ip    = getClientIp(req);
     const rlKey = `delivery:${ip}`;
-    if (!rateLimit(rlKey, 30, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(rlKey));
+    if (!await rateLimit(rlKey, 30, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(rlKey));
 
     const parsedBody = await validateBody(req, dispatchSchema);
     if (!parsedBody.ok) return parsedBody.response;
@@ -388,7 +388,7 @@ export async function DELETE(req: NextRequest) {
 
     const ip    = getClientIp(req);
     const rlKey = `delivery-cancel:${ip}`;
-    if (!rateLimit(rlKey, 30, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(rlKey));
+    if (!await rateLimit(rlKey, 30, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(rlKey));
 
     const parsedBody = await validateBody(req, cancelDeliverySchema);
     if (!parsedBody.ok) return parsedBody.response;

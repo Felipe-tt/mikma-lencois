@@ -18,7 +18,7 @@ export async function DELETE(req: NextRequest) {
 
   // Rate limit: 3 tentativas por usuário por hora (evita loop de delete/recriação)
   const key = `delete:${uid}`;
-  if (!rateLimit(key, 3, 60 * 60 * 1000)) {
+  if (!await rateLimit(key, 3, 60 * 60 * 1000)) {
     const retryAfter = Math.ceil(rateLimitRetryAfter(key) / 1000);
     return NextResponse.json(
       { error: 'Muitas tentativas.' },

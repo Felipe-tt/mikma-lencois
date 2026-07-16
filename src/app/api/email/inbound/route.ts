@@ -117,7 +117,7 @@ async function uploadToStorage(
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  if (!rateLimit(`email-inbound:${ip}`, 30, 60_000)) {
+  if (!await rateLimit(`email-inbound:${ip}`, 30, 60_000)) {
     return tooManyRequests(rateLimitRetryAfter(`email-inbound:${ip}`));
   }
 

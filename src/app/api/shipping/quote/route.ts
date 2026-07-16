@@ -14,7 +14,7 @@ import { quoteSchema } from './schema';
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  if (!rateLimit(`shipping:ip:${ip}`, 30, 60 * 60 * 1000)) {
+  if (!await rateLimit(`shipping:ip:${ip}`, 30, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`shipping:ip:${ip}`));
   }
 
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1]);
     const uid = decoded.uid;
 
-    if (!rateLimit(`shipping:uid:${uid}`, 20, 60 * 60 * 1000)) {
+    if (!await rateLimit(`shipping:uid:${uid}`, 20, 60 * 60 * 1000)) {
       return tooManyRequests(rateLimitRetryAfter(`shipping:uid:${uid}`));
     }
 

@@ -22,7 +22,7 @@ const ALLOWED_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.google
  */
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
-  if (!rateLimit(`image-proxy:${ip}`, 60, 60_000)) {
+  if (!await rateLimit(`image-proxy:${ip}`, 60, 60_000)) {
     return tooManyRequests(rateLimitRetryAfter(`image-proxy:${ip}`));
   }
 

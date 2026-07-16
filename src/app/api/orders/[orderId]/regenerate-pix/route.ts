@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   // Dual rate limit: por IP e por usuário (mais restrito)
   const ipKey  = `regen-pix:ip:${ip}`;
   const uidKey = `regen-pix:uid:${uid}`;
-  if (!rateLimit(ipKey, 20, 60 * 60 * 1000) || !rateLimit(uidKey, 5, 60 * 60 * 1000)) {
+  if (!await rateLimit(ipKey, 20, 60 * 60 * 1000) || !await rateLimit(uidKey, 5, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(uidKey));
   }
 

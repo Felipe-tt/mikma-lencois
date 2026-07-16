@@ -14,7 +14,7 @@ const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   const key = `google-verify:${ip}`;
-  if (!rateLimit(key, 10, 15 * 60 * 1000)) {
+  if (!await rateLimit(key, 10, 15 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 

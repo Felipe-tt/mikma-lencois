@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
 
   // Rate limit: 3 req/min por IP — o browser chama uma vez ao carregar /manutencao
-  if (!rateLimit(`geo:${ip}`, 3, 60 * 1000)) {
+  if (!await rateLimit(`geo:${ip}`, 3, 60 * 1000)) {
     return NextResponse.json({ ok: true }); // silencioso — não expõe o rate limit
   }
 
