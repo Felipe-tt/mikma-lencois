@@ -11,7 +11,7 @@
       "memory": "512MiB",
       "cpu": 1,
       "concurrency": 40,
-      "minInstances": 0,
+      "minInstances": 1,
       "maxInstances": 2,
       "timeoutSeconds": 120
     }
