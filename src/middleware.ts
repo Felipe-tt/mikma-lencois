@@ -13,30 +13,27 @@ import type { NextFetchEvent } from 'next/server';
 // revalidatePath('/', 'layout') na API — o pior caso aqui é só um atraso
 // extra de até 15s pra propagar, o que é inofensivo pra uma ação manual e
 // rara do admin.
-const MAINTENANCE_CACHE_TTL_MS = 15_000;
-let maintenanceCache: { active: boolean; expiresAt: number } | null = null;
-
+// SEM cache aqui, de propósito: manutenção precisa valer imediatamente pra
+// TODA requisição a partir do toggle, sem nenhuma janela onde alguém possa
+// ver o site fora do ar. Havia um cache de 15s aqui antes — cada instância
+// do Cloud Run guardava o último status em memória, então por até 15s
+// depois de ativar a manutenção, requisições caindo numa instância com
+// cache desatualizado ainda viam o site normal. Isso é aceitável pra
+// muita coisa, mas não pra manutenção: o pedido explícito é que o
+// visitante NUNCA veja nada além da página de manutenção uma vez que ela
+// esteja ativa. O custo é uma leitura a mais no Firestore por requisição
+// não isenta — pequeno e aceitável frente à garantia de correção.
 async function getMaintenanceStatus(projectId: string): Promise<boolean> {
-  const now = Date.now();
-  if (maintenanceCache && maintenanceCache.expiresAt > now) {
-    return maintenanceCache.active;
-  }
   try {
     const res = await fetch(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`,
       { signal: AbortSignal.timeout(3000), cache: 'no-store' }
     );
-    if (!res.ok) {
-      // Não sobrescreve o cache com falha — mantém o último valor conhecido
-      // (ou false, se nunca resolveu com sucesso) até a próxima tentativa.
-      return maintenanceCache?.active ?? false;
-    }
+    if (!res.ok) return false;
     const data = await res.json();
-    const active = data?.fields?.active?.booleanValue ?? false;
-    maintenanceCache = { active, expiresAt: now + MAINTENANCE_CACHE_TTL_MS };
-    return active;
+    return data?.fields?.active?.booleanValue ?? false;
   } catch {
-    return maintenanceCache?.active ?? false;
+    return false;
   }
 }
 
@@ -231,15 +228,22 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
 
   if (!isExempt) {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'mikma-lencois';
-    // Mesmo cuidado do getClientIp em lib/security.ts: usa o ÚLTIMO IP da
-    // lista (anexado pelo proxy confiável), não o primeiro (forjável pelo
-    // cliente) — evita que alguém entre na fila de manutenção disfarçado
-    // de outro visitante, ou vaze o mesmo IP falso repetidas vezes.
-    const xff = req.headers.get('x-forwarded-for');
-    const xffParts = xff ? xff.split(',').map((p) => p.trim()).filter(Boolean) : [];
-    const ip = xffParts.length > 0
-      ? xffParts[xffParts.length - 1]
-      : req.headers.get('x-real-ip') || '0.0.0.0';
+    // Mesmo cuidado do getClientIp em lib/security.ts: este app fica atrás
+    // do Firebase Hosting (servido pela Fastly), então o ÚLTIMO valor do
+    // X-Forwarded-For é a infraestrutura da Fastly, não o visitante — daí
+    // a fila de manutenção e o "liberar IP" nunca baterem com o IP real de
+    // ninguém. O IP real vem em fastly-client-ip. X-Forwarded-For (último
+    // valor) só como fallback pra quando não tem Firebase Hosting na
+    // frente (ex: emulador local batendo direto no Cloud Run).
+    const fastlyIp = req.headers.get('fastly-client-ip');
+    let ip = fastlyIp?.trim() || '';
+    if (!ip) {
+      const xff = req.headers.get('x-forwarded-for');
+      const xffParts = xff ? xff.split(',').map((p) => p.trim()).filter(Boolean) : [];
+      ip = xffParts.length > 0
+        ? xffParts[xffParts.length - 1]
+        : req.headers.get('x-real-ip') || '0.0.0.0';
+    }
     const docId = ip.replace(/[.:]/g, '_');
 
     const active = await getMaintenanceStatus(projectId);

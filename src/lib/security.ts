@@ -3,16 +3,27 @@ import { adminAuth } from '@/lib/firebase/admin';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { z, type ZodType, type ZodError } from 'zod';
 
-/** Extrai o IP real do cliente, respeitando proxies confiáveis (Cloud Run / Vercel).
+/** Extrai o IP real do cliente.
  *
- * IMPORTANTE: usa o ÚLTIMO valor de X-Forwarded-For, não o primeiro.
- * O proxy confiável (Cloud Run) ANEXA o IP real do cliente no final da
- * lista — qualquer valor antes disso veio da própria requisição e pode
- * ser forjado por quem está mandando (ex: "X-Forwarded-For: 1.2.3.4").
- * Pegar o primeiro item permitia burlar rate limit de login/cadastro/
- * reset de senha só trocando esse header a cada tentativa.
+ * Esse app fica atrás do Firebase Hosting, que por sua vez é servido pela
+ * Fastly (dá pra confirmar pelos headers de resposta, tipo
+ * "x-served-by: cache-cwb-..."). Isso muda a regra normal de "confia no
+ * último IP do X-Forwarded-For": com Firebase Hosting na frente do Cloud
+ * Run, o ÚLTIMO valor do X-Forwarded-For é a própria infraestrutura da
+ * Fastly, não o visitante — o IP real do cliente vem separado, no header
+ * dedicado "fastly-client-ip", que o Firebase Hosting/Fastly define de
+ * forma confiável (não é algo que o navegador do visitante controla).
+ *
+ * Por isso: 1) usa fastly-client-ip quando presente (caminho normal em
+ * produção); 2) cai pro ÚLTIMO valor do X-Forwarded-For só como fallback
+ * (cenário sem Firebase Hosting na frente, ex: emulador local acessando
+ * o Cloud Run direto) — nunca o primeiro valor, que é forjável pelo
+ * próprio cliente.
  */
 export function getClientIp(req: NextRequest): string {
+  const fastlyIp = req.headers.get('fastly-client-ip');
+  if (fastlyIp) return fastlyIp.trim();
+
   const fwd = req.headers.get('x-forwarded-for');
   if (fwd) {
     const parts = fwd.split(',').map((p) => p.trim()).filter(Boolean);
