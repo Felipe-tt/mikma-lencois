@@ -1,8 +1,30 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { rateLimit, rateLimitRetryAfter } from './rateLimit';
 
-// Sem UPSTASH_REDIS_REST_URL/TOKEN no ambiente de teste, rateLimit() sempre
-// cai no fallback em memória — testamos exatamente esse caminho aqui.
+// Estes testes cobrem o fallback em memória, que precisa continuar
+// funcionando de forma 100% determinística mesmo que o Upstash esteja
+// configurado no ambiente (ex: secrets do CI). Sem esse mock, se
+// UPSTASH_REDIS_REST_URL/TOKEN estiverem presentes (como no CI, depois
+// que os secrets foram criados), rateLimit() passaria a fazer chamadas
+// de rede de verdade pro Upstash — lento, não-determinístico, e incompatível
+// com vi.useFakeTimers() (a chamada real de rede não avança com
+// vi.advanceTimersByTime(), causando falhas intermitentes).
+//
+// Mockando o client aqui, toda chamada .incr()/.expire() falha na hora
+// (sem round-trip de rede nenhum), o que faz rateLimit() cair pro
+// fallback em memória sempre — é exatamente esse caminho que este
+// arquivo testa.
+vi.mock('@upstash/redis', () => ({
+  Redis: class {
+    incr() {
+      return Promise.reject(new Error('mock: upstash indisponível em teste'));
+    }
+    expire() {
+      return Promise.reject(new Error('mock: upstash indisponível em teste'));
+    }
+  },
+}));
+
+import { rateLimit, rateLimitRetryAfter } from './rateLimit';
 
 // Cada teste usa uma key única (crypto.randomUUID) pra não interferir com
 // outros testes, já que o store é um Map no nível do módulo (compartilhado
