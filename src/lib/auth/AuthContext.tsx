@@ -23,12 +23,26 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function mapUser(firebaseUser: User): Promise<AuthUser> {
   const tokenResult = await firebaseUser.getIdTokenResult(true);
+  const role = (tokenResult.claims.role as AuthUser['role']) ?? 'buyer';
+
+  // Seller/admin: manda o cookie que o middleware usa só pra pular a
+  // manutenção quando a pessoa está logada como staff. Fire-and-forget —
+  // se falhar, o pior caso é continuar mostrando a manutenção normalmente
+  // (mesmo comportamento de antes de existir esse cookie), nada quebra.
+  if (role === 'seller' || role === 'admin') {
+    const idToken = await firebaseUser.getIdToken();
+    fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${idToken}` },
+    }).catch(() => {});
+  }
+
   return {
     uid: firebaseUser.uid,
     email: firebaseUser.email,
     displayName: firebaseUser.displayName,
     photoURL: firebaseUser.photoURL,
-    role: (tokenResult.claims.role as AuthUser['role']) ?? 'buyer',
+    role,
     getIdToken: () => firebaseUser.getIdToken(),
   };
 }
@@ -52,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await signOut(auth);
     setUser(null);
+    fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
   };
 
   const userData = user ? { name: user.displayName ?? '', email: user.email } : null;

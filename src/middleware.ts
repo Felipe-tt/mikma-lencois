@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { NextFetchEvent } from 'next/server';
+import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
 
@@ -252,19 +253,34 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
     const active = await getMaintenanceStatus(projectId);
 
     if (active) {
-      const released = await isIpReleased(projectId, docId);
+      // Staff logado (seller/admin) sempre vê o site normal, independente
+      // de IP liberado — não faz sentido pedir pra quem está trabalhando
+      // no painel também ficar liberando o próprio IP toda vez que a rede
+      // muda (café, 4G, trabalho remoto etc.). Importante: NÃO retorna
+      // direto aqui — só pula o bloqueio, pra continuar o fluxo normal
+      // (headers de segurança, cache-control etc. aplicados mais abaixo).
+      let staffBypass = false;
+      const staffCookie = req.cookies.get(STAFF_SESSION_COOKIE)?.value;
+      const staffSecret = process.env.STAFF_SESSION_SECRET;
+      if (staffCookie && staffSecret) {
+        staffBypass = !!(await verifyStaffSession(staffCookie, staffSecret));
+      }
 
-      if (!released) {
-        await registerInQueue(projectId, docId, ip, req);
-        // Geo não bloqueia o redirect — ipapi.co pode levar até alguns
-        // segundos, e o visitante não deve esperar isso pra ver a página
-        // de manutenção. waitUntil mantém a isolate viva até o PATCH de
-        // geo terminar, mesmo depois da resposta já ter sido enviada.
-        event.waitUntil(updateGeoInQueue(projectId, docId, ip));
-        const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
-        redirectRes.headers.set('Cache-Control', 'no-store, must-revalidate');
-        applySecurityHeaders(redirectRes);
-        return redirectRes;
+      if (!staffBypass) {
+        const released = await isIpReleased(projectId, docId);
+
+        if (!released) {
+          await registerInQueue(projectId, docId, ip, req);
+          // Geo não bloqueia o redirect — ipapi.co pode levar até alguns
+          // segundos, e o visitante não deve esperar isso pra ver a página
+          // de manutenção. waitUntil mantém a isolate viva até o PATCH de
+          // geo terminar, mesmo depois da resposta já ter sido enviada.
+          event.waitUntil(updateGeoInQueue(projectId, docId, ip));
+          const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
+          redirectRes.headers.set('Cache-Control', 'no-store, must-revalidate');
+          applySecurityHeaders(redirectRes);
+          return redirectRes;
+        }
       }
     }
   }
