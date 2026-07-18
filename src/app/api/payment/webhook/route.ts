@@ -268,34 +268,54 @@ export async function POST(req: NextRequest) {
   }
 
   if (eventType === 'transparent.expired') {
-    // PIX expirou — marca o pedido como payment_expired e libera reserva de estoque
+    // PIX expirou — marca o pedido como payment_expired e libera reserva de
+    // estoque. IMPORTANTE: tudo isso precisa acontecer na MESMA transação
+    // que confere o status atual, pelo mesmo motivo do confirmOrder acima —
+    // sem isso, se esse evento de expiração chegar perto de um evento de
+    // pagamento confirmado (webhook duplicado/atrasado, comum em gateways
+    // de pagamento), dava pra marcar como "expirado" e liberar o estoque de
+    // um pedido que na verdade FOI PAGO — overselling do item liberado, e o
+    // cliente vendo o próprio pedido pago aparecer como expirado.
     const transparent = data.transparent;
     const orderId = transparent.externalId as string | undefined;
     if (orderId) {
       const orderRef = adminDb.collection('orders').doc(orderId);
-      const orderSnap = await orderRef.get();
-      if (orderSnap.exists && orderSnap.data()!.status === 'pending_payment') {
-        const order = orderSnap.data()!;
-        const now = new Date().toISOString();
-        await orderRef.update({
-          status: 'payment_expired',
-          updatedAt: FieldValue.serverTimestamp(),
-          timeline: FieldValue.arrayUnion({
+      const now = new Date().toISOString();
+
+      let order: FirebaseFirestore.DocumentData | null;
+      try {
+        order = await adminDb.runTransaction(async (tx) => {
+          const orderSnap = await tx.get(orderRef);
+          if (!orderSnap.exists) return null;
+          const data = orderSnap.data()!;
+          if (data.status !== 'pending_payment') return null;
+
+          tx.update(orderRef, {
             status: 'payment_expired',
-            at: now,
-            note: 'PIX expirou sem pagamento',
-          }),
-        });
-        // Liberar reserva de estoque para os itens do pedido expirado
-        for (const item of order.items as Array<{ sku: string; quantity: number }>) {
-          const invSnap = await adminDb.collection('inventory').where('sku', '==', item.sku).limit(1).get();
-          if (!invSnap.empty) {
-            adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
+            updatedAt: FieldValue.serverTimestamp(),
+            timeline: FieldValue.arrayUnion({
+              status: 'payment_expired',
+              at: now,
+              note: 'PIX expirou sem pagamento',
+            }),
+          });
+
+          for (const item of data.items as Array<{ sku: string; quantity: number }>) {
+            tx.update(adminDb.collection('inventory').doc(item.sku), {
               reserved: FieldValue.increment(-item.quantity),
               updatedAt: FieldValue.serverTimestamp(),
-            }).catch(() => {});
+            });
           }
-        }
+
+          return data;
+        });
+      } catch (err) {
+        console.error(`Failed to expire order ${orderId}:`, err);
+        Sentry.captureException(err, { tags: { route: 'payment-webhook', step: 'expire-order' }, extra: { orderId } });
+        order = null;
+      }
+
+      if (order) {
         console.log(`Order ${orderId} marked as payment_expired, stock reservation released`);
 
         // ── E-mail: PIX expirou, gere um novo ─────────────────────────────
