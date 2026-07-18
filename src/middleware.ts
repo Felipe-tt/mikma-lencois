@@ -3,38 +3,41 @@ import type { NextFetchEvent } from 'next/server';
 
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
 
-// Cache em memória do status de manutenção. Sem isso, TODA requisição que
-// chega no Cloud Run (inclusive bots/scanners batendo em URLs aleatórias,
-// tipo /wp-login.php, /.env etc.) dispara uma chamada de rede ao Firestore
-// antes mesmo de saber se a página existe — isso custa dinheiro em cada
-// invocação (tempo de CPU do round-trip) e em leituras do Firestore, 24/7,
-// mesmo com o site nunca em manutenção.
-// TTL curto (15s) porque o toggle de manutenção já força um cache-bust via
-// revalidatePath('/', 'layout') na API — o pior caso aqui é só um atraso
-// extra de até 15s pra propagar, o que é inofensivo pra uma ação manual e
-// rara do admin.
-// SEM cache aqui, de propósito: manutenção precisa valer imediatamente pra
+// Fica atrás do Firebase Hosting. Manutenção precisa valer imediatamente pra
 // TODA requisição a partir do toggle, sem nenhuma janela onde alguém possa
-// ver o site fora do ar. Havia um cache de 15s aqui antes — cada instância
-// do Cloud Run guardava o último status em memória, então por até 15s
-// depois de ativar a manutenção, requisições caindo numa instância com
-// cache desatualizado ainda viam o site normal. Isso é aceitável pra
-// muita coisa, mas não pra manutenção: o pedido explícito é que o
-// visitante NUNCA veja nada além da página de manutenção uma vez que ela
-// esteja ativa. O custo é uma leitura a mais no Firestore por requisição
-// não isenta — pequeno e aceitável frente à garantia de correção.
+// ver o site fora do ar — por isso NÃO tem cache aqui: toda requisição não
+// isenta confere o status fresco no Firestore. (Havia um cache de 15s por
+// instância antes; foi removido porque deixava o site visível por alguns
+// segundos depois de ativar a manutenção.)
+//
+// Decisão consciente sobre o que fazer se essa leitura falhar (rede
+// instável, timeout): assume "sem manutenção" (fail-open) em vez de
+// derrubar o site inteiro. Isso é uma loja no ar gerando receita — um
+// soluço passageiro do Firestore tirando o site do ar pra TODO MUNDO,
+// mesmo sem manutenção nenhuma ativada, é pior do que a janela rara de
+// alguém ver o site durante uma falha bem no instante em que a manutenção
+// também estava ativa (duas coisas raras precisando coincidir ao mesmo
+// tempo). Pra encolher ainda mais essa janela, tenta de novo uma vez antes
+// de desistir.
+async function fetchMaintenanceDoc(projectId: string): Promise<Response> {
+  return fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`,
+    { signal: AbortSignal.timeout(3000), cache: 'no-store' }
+  );
+}
+
 async function getMaintenanceStatus(projectId: string): Promise<boolean> {
-  try {
-    const res = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`,
-      { signal: AbortSignal.timeout(3000), cache: 'no-store' }
-    );
-    if (!res.ok) return false;
-    const data = await res.json();
-    return data?.fields?.active?.booleanValue ?? false;
-  } catch {
-    return false;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetchMaintenanceDoc(projectId);
+      if (!res.ok) continue;
+      const data = await res.json();
+      return data?.fields?.active?.booleanValue ?? false;
+    } catch {
+      // tenta mais uma vez antes de desistir
+    }
   }
+  return false;
 }
 
 async function isIpReleased(projectId: string, docId: string): Promise<boolean> {
