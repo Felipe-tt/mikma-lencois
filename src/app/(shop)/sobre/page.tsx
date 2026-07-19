@@ -27,7 +27,7 @@ export default async function SobrePage() {
   return (
     <div>
       {/* ── Hero ── */}
-      <div className="relative overflow-hidden bg-warm">
+      <div className="relative overflow-hidden bg-warm border-b border-mist">
         <div className="absolute inset-0 pointer-events-none select-none">
           <img src="/sobre-bg.jpg" alt="" aria-hidden="true" className="w-full h-full object-cover object-center opacity-[0.18]" />
           <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-warm)_0%,transparent_50%,var(--color-warm)_100%)]" />
@@ -41,18 +41,6 @@ export default async function SobrePage() {
             </h1>
           </div>
         </div>
-      </div>
-
-      {/* Costura — assinatura visual da marca (linens são costurados/arrematados),
-          usada uma única vez como transição entre o hero e o corpo da página. */}
-      <div className="relative z-10 bg-warm text-clay/50" aria-hidden="true">
-        <svg width="100%" height="13" viewBox="0 0 40 13" preserveAspectRatio="none" className="block">
-          <pattern id="mnt-stitch-sobre" width="40" height="13" patternUnits="userSpaceOnUse">
-            <line x1="4" y1="6.5" x2="17" y2="6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="25" y1="6.5" x2="38" y2="6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </pattern>
-          <rect width="100%" height="13" fill="url(#mnt-stitch-sobre)" />
-        </svg>
       </div>
 
       {/* ── Corpo ── */}
@@ -95,9 +83,7 @@ export default async function SobrePage() {
 
           {/* Sidebar */}
           <div className="flex flex-col gap-4 lg:sticky lg:top-24">
-            {/* Faixa de fatos — uma peça só, dividida por linhas finas, em vez
-                de 3 caixas idênticas empilhadas (lia como painel de admin). */}
-            <div className="border border-mist grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-mist">
+            <div className="border border-mist divide-y divide-mist">
               {stats.map(({ label, value }) => (
                 <div key={label} className="px-6 py-5 flex flex-col gap-1.5 hover:bg-warm transition-colors duration-150">
                   <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint">{label}</p>
@@ -106,23 +92,18 @@ export default async function SobrePage() {
               ))}
             </div>
 
-            {/* Horário + endereço num card só, com uma divisória interna em
-                vez de dois blocos soltos com borda repetida cada um. */}
-            <div className="border border-mist divide-y divide-mist">
-              <div className="px-6 py-5">
-                <BusinessHoursCard businessHours={s.businessHours} timezone={s.businessHoursTimezone} variant="bare" />
+            <BusinessHoursCard businessHours={s.businessHours} timezone={s.businessHoursTimezone} />
+
+            {s.storeAddress && (
+              <div className="border border-mist px-6 py-5">
+                <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint mb-3">Endereço</p>
+                <address className="text-[14px] text-mid leading-relaxed not-italic">
+                  {s.storeAddress}{s.storeNumber && `, ${s.storeNumber}`}{s.storeComplement && ` — ${s.storeComplement}`}<br />
+                  {s.storeNeighborhood && <>{s.storeNeighborhood} · </>}{s.storeCity}<br />
+                  {s.storeCep && <>CEP {s.storeCep}</>}
+                </address>
               </div>
-              {s.storeAddress && (
-                <div className="px-6 py-5">
-                  <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint mb-3">Endereço</p>
-                  <address className="text-[14px] text-mid leading-relaxed not-italic">
-                    {s.storeAddress}{s.storeNumber && `, ${s.storeNumber}`}{s.storeComplement && ` — ${s.storeComplement}`}<br />
-                    {s.storeNeighborhood && <>{s.storeNeighborhood} · </>}{s.storeCity}<br />
-                    {s.storeCep && <>CEP {s.storeCep}</>}
-                  </address>
-                </div>
-              )}
-            </div>
+            )}
 
             <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-between px-6 py-4 bg-ink text-paper hover:bg-clay transition-colors duration-200 group">

@@ -6,10 +6,6 @@ import { parseBusinessHours, getOpenStatus, groupConsecutiveDays } from '@/lib/b
 interface Props {
   businessHours: string;
   timezone?: string;
-  /** 'card' (padrão): bloco com borda própria, autônomo.
-   *  'bare': só o conteúdo, sem borda/padding — pra compor dentro de um
-   *  card maior junto com outro bloco (ex: endereço), como na página Sobre. */
-  variant?: 'card' | 'bare';
 }
 
 /**
@@ -18,7 +14,7 @@ interface Props {
  * calculado no servidor ficaria desatualizado por até 24h. Este componente
  * recalcula no navegador a cada minuto para sempre refletir o horário real.
  */
-export function BusinessHoursCard({ businessHours, timezone = 'America/Sao_Paulo', variant = 'card' }: Props) {
+export function BusinessHoursCard({ businessHours, timezone = 'America/Sao_Paulo' }: Props) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -31,7 +27,7 @@ export function BusinessHoursCard({ businessHours, timezone = 'America/Sao_Paulo
   const groups = groupConsecutiveDays(hours);
 
   return (
-    <div className={variant === 'card' ? 'border border-mist px-6 py-5' : ''} data-now={now}>
+    <div className="border border-mist px-6 py-5" data-now={now}>
       <div className="flex items-center justify-between mb-3">
         <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint">Horário de funcionamento</p>
         <span className={`flex items-center gap-1.5 text-[10px] font-bold tracking-wide uppercase px-2 py-1 shrink-0 ${
