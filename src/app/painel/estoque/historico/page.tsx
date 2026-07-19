@@ -81,13 +81,13 @@ export default function HistoricoEstoquePage() {
   }, [movements]);
 
   if (loading) return (
-    <div className="flex flex-col gap-2 max-w-4xl">
+    <div className="flex flex-col gap-2 max-w-6xl">
       {[1, 2, 3, 4].map(i => <div key={i} className="h-[52px] skeleton border border-mist" />)}
     </div>
   );
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-6xl">
       <div className="flex items-start justify-between mb-6 gap-3">
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Histórico de estoque</h1>

@@ -269,7 +269,7 @@ export default function EstoquePage() {
   );
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-6xl">
       <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Estoque</h1>
@@ -279,29 +279,30 @@ export default function EstoquePage() {
               : 'Lista completa dos produtos, com correção de número e histórico de cada um.'}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[12.5px] font-semibold text-mid">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center border border-mist bg-white dark:bg-warm text-[12.5px] font-semibold text-mid divide-x divide-mist">
             {mode === 'dia' && (
               <button onClick={() => setSubview(v => v === 'grade' ? 'lista' : 'grade')}
-                className="flex items-center gap-1.5 hover:text-ink transition-colors">
+                className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors">
                 {subview === 'grade' ? (
-                  <><IconEdit size={13} /> Corrigir número de um item</>
+                  <><IconEdit size={13} /> Corrigir número</>
                 ) : (
-                  <><IconImage size={13} /> Voltar pras fotos</>
+                  <><IconImage size={13} /> Ver fotos</>
                 )}
               </button>
             )}
-            <span className="w-px h-3.5 bg-mist hidden sm:inline-block" />
-            <Link href="/painel/estoque/historico" className="flex items-center gap-1.5 hover:text-ink transition-colors">
+            <Link href="/painel/estoque/historico"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors">
               <IconClock size={13} /> Histórico geral
             </Link>
-            <span className="w-px h-3.5 bg-mist hidden sm:inline-block" />
             {mode === 'dia' ? (
-              <button onClick={enterCountMode} className="flex items-center gap-1.5 hover:text-ink transition-colors">
+              <button onClick={enterCountMode}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors">
                 <IconListCheck size={13} /> Modo contagem
               </button>
             ) : (
-              <button onClick={() => setMode('dia')} className="flex items-center gap-1.5 font-bold text-ink">
+              <button onClick={() => setMode('dia')}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-ink text-paper font-bold">
                 <IconX size={13} /> Sair da contagem
               </button>
             )}
