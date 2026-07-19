@@ -262,11 +262,8 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
       let staffBypass = false;
       const staffCookie = req.cookies.get(STAFF_SESSION_COOKIE)?.value;
       const staffSecret = process.env.STAFF_SESSION_SECRET;
-      let staffDebug = `secret=${!!staffSecret},cookie=${!!staffCookie}`;
       if (staffCookie && staffSecret) {
-        const verified = await verifyStaffSession(staffCookie, staffSecret);
-        staffBypass = !!verified;
-        staffDebug += `,valid=${staffBypass}`;
+        staffBypass = !!(await verifyStaffSession(staffCookie, staffSecret));
       }
 
       if (!staffBypass) {
@@ -281,11 +278,6 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
           event.waitUntil(updateGeoInQueue(projectId, docId, ip));
           const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
           redirectRes.headers.set('Cache-Control', 'no-store, must-revalidate');
-          // DIAGNÓSTICO TEMPORÁRIO — remover depois de confirmar a causa do
-          // bypass de staff não funcionar em produção. Não expõe nada
-          // sensível, só booleanos (se o secret existe no ambiente, se o
-          // cookie chegou na requisição, se a verificação bateu).
-          redirectRes.headers.set('x-staff-bypass-debug', staffDebug);
           applySecurityHeaders(redirectRes);
           return redirectRes;
         }

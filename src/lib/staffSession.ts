@@ -12,7 +12,14 @@
  * de duas implementações.
  */
 
-export const STAFF_SESSION_COOKIE = 'staff_session';
+// IMPORTANTE: o nome precisa ser exatamente "__session". O Firebase Hosting
+// descarta TODOS os cookies da requisição antes de encaminhar pro backend,
+// exceto um único cookie com esse nome exato — é uma limitação conhecida e
+// documentada da própria plataforma (não configurável via firebase.json).
+// Usar qualquer outro nome (ex: "staff_session") faz o cookie nunca chegar
+// no middleware, mesmo o navegador mandando ele certinho — foi exatamente
+// isso que quebrou o bypass antes dessa correção.
+export const STAFF_SESSION_COOKIE = '__session';
 export const STAFF_SESSION_MAX_AGE_SECONDS = 60 * 60; // 1h — mesma janela do
 // ID token do Firebase; o AuthContext no cliente reemite esse cookie a
 // cada refresh de token, então na prática ele nunca fica velho enquanto

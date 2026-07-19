@@ -34,15 +34,7 @@ async function mapUser(firebaseUser: User): Promise<AuthUser> {
     fetch('/api/auth/session', {
       method: 'POST',
       headers: { authorization: `Bearer ${idToken}` },
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          console.warn('[staff-session] falhou ao emitir cookie de bypass de manutenção:', res.status, await res.text().catch(() => ''));
-        }
-      })
-      .catch((err) => {
-        console.warn('[staff-session] erro de rede ao emitir cookie de bypass de manutenção:', err);
-      });
+    }).catch(() => {});
   }
 
   return {
