@@ -4,11 +4,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
+import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 
 // Endpoint público (sem auth) consultado via polling pela página /manutencao
-// para saber quando pode sair de lá sozinha — sem exigir refresh manual do
-// visitante. Não expõe nada sensível: só se a manutenção está ativa e se o
-// IP de quem está perguntando já foi liberado.
+// (pra saber quando sair de lá sozinha) e pelo MaintenanceGate (fallback
+// client-side pra quando uma página cacheada é servida sem passar pelo
+// middleware). Não expõe nada sensível: só se a manutenção está ativa e se
+// quem está perguntando já pode ver o site (IP liberado OU staff logado).
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
 
@@ -23,6 +25,17 @@ export async function GET(req: NextRequest) {
 
   if (!active) {
     return NextResponse.json({ active: false, released: false });
+  }
+
+  // Mesma checagem de bypass do middleware.ts — sem isso, o MaintenanceGate
+  // (que só olha esse endpoint) chutava staff logado pra /manutencao mesmo
+  // com o middleware já deixando a página passar, porque essa rota só
+  // sabia responder com base em IP liberado.
+  const staffCookie = req.cookies.get(STAFF_SESSION_COOKIE)?.value;
+  const staffSecret = process.env.STAFF_SESSION_SECRET;
+  if (staffCookie && staffSecret) {
+    const staff = await verifyStaffSession(staffCookie, staffSecret);
+    if (staff) return NextResponse.json({ active, released: true });
   }
 
   const docId = ip.replace(/[.:]/g, '_');
