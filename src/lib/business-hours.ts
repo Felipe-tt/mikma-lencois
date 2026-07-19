@@ -166,18 +166,25 @@ export function formatDayRanges(day: DayHours): string {
 }
 
 /** Agrupa dias consecutivos com o mesmo horário, ex: "Seg–Sex: 08:00–18:00" */
-export function groupConsecutiveDays(hours: BusinessHours): { label: string; text: string }[] {
-  const groups: { label: string; text: string }[] = [];
+export function groupConsecutiveDays(hours: BusinessHours): { label: string; text: string; ranges: string[] }[] {
+  const groups: { label: string; text: string; ranges: string[] }[] = [];
   let i = 0;
   while (i < WEEKDAYS.length) {
     const day = WEEKDAYS[i];
-    const text = formatDayRanges(hours[day.key]);
+    const dayHours = hours[day.key];
+    const text = formatDayRanges(dayHours);
     let j = i;
     while (j + 1 < WEEKDAYS.length && formatDayRanges(hours[WEEKDAYS[j + 1].key]) === text) {
       j++;
     }
     const label = i === j ? WEEKDAYS[i].short : `${WEEKDAYS[i].short}–${WEEKDAYS[j].short}`;
-    groups.push({ label, text });
+    // Turnos separados (ex: manhã e tarde com intervalo pro almoço) viram
+    // uma linha cada, em vez de um texto só espremido com vírgula — muito
+    // mais legível quando o dia tem 2+ intervalos.
+    const ranges = dayHours.closed || dayHours.ranges.length === 0
+      ? ['Fechado']
+      : dayHours.ranges.map(r => `${r.open}–${r.close}`);
+    groups.push({ label, text, ranges });
     i = j + 1;
   }
   return groups;
