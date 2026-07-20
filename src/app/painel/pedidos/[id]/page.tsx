@@ -362,7 +362,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   }
 
   if (loading) return (
-    <div className="max-w-2xl flex flex-col gap-3">
+    <div className="max-w-4xl flex flex-col gap-3">
       {[1,2,3,4].map(i => <div key={i} className="h-20 skeleton border border-mist" />)}
     </div>
   );
@@ -373,7 +373,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()} className="text-faint hover:text-ink transition-colors p-1 -ml-1">

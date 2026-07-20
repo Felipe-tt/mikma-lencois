@@ -70,7 +70,7 @@ export default function CuponsPage() {
   const desconto = (c: Coupon) => c.type === 'percent' ? `${c.value}% de desconto` : `R$ ${c.value.toFixed(2)} de desconto`;
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Cupons de desconto</h1>

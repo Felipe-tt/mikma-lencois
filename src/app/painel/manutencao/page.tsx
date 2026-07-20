@@ -156,7 +156,7 @@ export default function ManutencaoPage() {
   const currentList = tab === 'ips' ? ipEntries : userEntries;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       <div className="mb-7">
         <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-clay-l mb-1">Painel</p>
         <h1 className="font-display font-normal text-ink text-2xl">Manutenção</h1>

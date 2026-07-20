@@ -72,7 +72,7 @@ export default function PainelProdutosPage() {
   );
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-6xl">
       <div className="mb-6">
         <h1 className="font-display font-normal text-ink text-2xl">Produtos</h1>
         <p className="text-[13px] text-faint mt-1">Gerencie os produtos da sua loja. Produtos visíveis aparecem no site para os clientes.</p>

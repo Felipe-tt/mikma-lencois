@@ -110,13 +110,13 @@ export default function ConfiguracoesPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col gap-3 max-w-2xl">
+    <div className="flex flex-col gap-3 max-w-4xl">
       {[1,2,3].map(i => <div key={i} className="h-24 skeleton border border-mist" />)}
     </div>
   );
 
   return (
-    <div className="max-w-2xl pb-20">
+    <div className="max-w-4xl pb-20">
 
       {/* Título */}
       <div className="mb-6">
