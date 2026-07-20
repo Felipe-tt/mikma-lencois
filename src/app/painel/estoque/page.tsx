@@ -270,7 +270,7 @@ export default function EstoquePage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 mb-6">
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Estoque</h1>
           <p className="text-[13px] text-faint mt-1">
@@ -279,7 +279,7 @@ export default function EstoquePage() {
               : 'Lista completa dos produtos, com correção de número e histórico de cada um.'}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
           <div className="flex items-center border border-mist bg-white dark:bg-warm text-[12.5px] font-semibold text-mid divide-x divide-mist overflow-x-auto">
             {mode === 'dia' && (
               <button onClick={() => setSubview(v => v === 'grade' ? 'lista' : 'grade')}
@@ -308,7 +308,7 @@ export default function EstoquePage() {
             )}
           </div>
           <Link href="/painel/produtos/novo"
-            className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors">
+            className="w-full lg:w-auto shrink-0 flex items-center justify-center gap-1.5 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors">
             + Produto
           </Link>
         </div>
