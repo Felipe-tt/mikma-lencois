@@ -279,11 +279,11 @@ export default function EstoquePage() {
               : 'Lista completa dos produtos, com correção de número e histórico de cada um.'}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center border border-mist bg-white dark:bg-warm text-[12.5px] font-semibold text-mid divide-x divide-mist">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+          <div className="flex items-center border border-mist bg-white dark:bg-warm text-[12.5px] font-semibold text-mid divide-x divide-mist overflow-x-auto">
             {mode === 'dia' && (
               <button onClick={() => setSubview(v => v === 'grade' ? 'lista' : 'grade')}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors">
+                className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors whitespace-nowrap">
                 {subview === 'grade' ? (
                   <><IconEdit size={13} /> Corrigir número</>
                 ) : (
@@ -292,23 +292,23 @@ export default function EstoquePage() {
               </button>
             )}
             <Link href="/painel/estoque/historico"
-              className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors">
+              className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors whitespace-nowrap">
               <IconClock size={13} /> Histórico geral
             </Link>
             {mode === 'dia' ? (
               <button onClick={enterCountMode}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors">
+                className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors whitespace-nowrap">
                 <IconListCheck size={13} /> Modo contagem
               </button>
             ) : (
               <button onClick={() => setMode('dia')}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-ink text-paper font-bold">
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-ink text-paper font-bold whitespace-nowrap">
                 <IconX size={13} /> Sair da contagem
               </button>
             )}
           </div>
           <Link href="/painel/produtos/novo"
-            className="shrink-0 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors">
+            className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors">
             + Produto
           </Link>
         </div>

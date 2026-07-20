@@ -13,7 +13,8 @@ export type InventoryItem = {
   quantity: number; reserved: number; lowStockThreshold: number; history?: MovementLog[];
 };
 
-const COL_OPTIONS = [3, 4, 5, 6];
+const COL_OPTIONS_MOBILE = [2, 3, 4];
+const COL_OPTIONS_DESKTOP = [3, 4, 5, 6, 8];
 const COLS_KEY = 'mikma_estoque_grid_cols';
 
 function normalize(s: string) {
@@ -32,15 +33,28 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
 }) {
   const { user } = useAuth();
   const [mode, setMode] = useState<'venda' | 'reposicao'>('venda');
-  const [cols, setCols] = useState(4);
+  // Em tela pequena, 5-6 colunas deixam a foto minúscula e difícil de tocar
+  // certo — por isso o conjunto de opções (e o padrão) muda conforme o
+  // tamanho da tela, em vez de oferecer sempre as mesmas 3-6 colunas.
+  const [isMobile, setIsMobile] = useState(true);
+  const [cols, setCols] = useState(2);
   const [search, setSearch] = useState('');
   const [deltas, setDeltas] = useState<Record<string, number>>({}); // negativo = venda, positivo = reposição
   const [images, setImages] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const saved = Number(window.localStorage.getItem(COLS_KEY));
-    if (COL_OPTIONS.includes(saved)) setCols(saved);
+    const mq = window.matchMedia('(min-width: 640px)');
+    function applyForViewport(mobile: boolean) {
+      setIsMobile(mobile);
+      const options = mobile ? COL_OPTIONS_MOBILE : COL_OPTIONS_DESKTOP;
+      const saved = Number(window.localStorage.getItem(COLS_KEY));
+      setCols(options.includes(saved) ? saved : (mobile ? 2 : 4));
+    }
+    applyForViewport(!mq.matches);
+    const onChange = (e: MediaQueryListEvent) => applyForViewport(!e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
   }, []);
 
   useEffect(() => {
@@ -238,7 +252,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
             <span className="flex items-center pl-2 pr-1 text-faint" title="Quantas fotos por linha">
               <IconInventory size={13} />
             </span>
-            {COL_OPTIONS.map(n => (
+            {(isMobile ? COL_OPTIONS_MOBILE : COL_OPTIONS_DESKTOP).map(n => (
               <button key={n} onClick={() => changeCols(n)} title={`${n} fotos por linha`}
                 className={`w-7 h-8 text-[12px] font-bold ${cols === n ? 'bg-ink text-paper' : 'text-mid'}`}>
                 {n}
