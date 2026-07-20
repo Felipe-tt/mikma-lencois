@@ -473,7 +473,7 @@ export default function ImportarCsvPage() {
   const publishedDrafts = drafts.filter((d) => d.status === 'published');
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Importar catálogo de um CSV</h1>

@@ -116,7 +116,7 @@ export default function TrocasPage() {
   }
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="font-display font-normal text-ink text-2xl">Trocas e devoluções</h1>
         <p className="text-[13px] text-faint mt-1">

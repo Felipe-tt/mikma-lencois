@@ -269,7 +269,7 @@ export default function EstoquePage() {
   );
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Estoque</h1>

@@ -45,7 +45,7 @@ export default function PainelDashboard() {
   ];
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-8">
         <h1 className="font-display font-normal text-ink text-2xl">Olá!</h1>
         <p className="text-[13px] text-faint mt-1">Aqui está um resumo do que está acontecendo na sua loja.</p>

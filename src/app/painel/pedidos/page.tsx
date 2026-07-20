@@ -173,7 +173,7 @@ export default function PainelPedidos() {
   if (loading) return <PainelSkeleton rows={6} />;
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
