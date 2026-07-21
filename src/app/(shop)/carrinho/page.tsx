@@ -182,9 +182,9 @@ export default function CartPage() {
                     <Link href={`/produtos/${item.productId}`} className="text-sm font-semibold text-ink leading-snug hover:text-clay transition-colors line-clamp-2">
                       {item.productName}
                     </Link>
-                    {(item.variant?.size || item.variant?.fabric || item.variant?.color) && (
+                    {(item.variant?.size || item.variant?.fabric || item.variant?.colorName || item.variant?.color) && (
                       <p className="text-xs text-faint">
-                        {[item.variant.size, item.variant.fabric, item.variant.color].filter(Boolean).join(' · ')}
+                        {[item.variant.size, item.variant.fabric, item.variant.colorName || item.variant.color].filter(Boolean).join(' · ')}
                       </p>
                     )}
                     {(() => {

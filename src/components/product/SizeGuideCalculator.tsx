@@ -2,22 +2,24 @@
 import { useState } from 'react';
 import type { Product } from '@/types';
 import { ProductCard } from '@/components/product/ProductCard';
-import { matchMattressSize, lookupAlias, MATTRESS_SIZES, type MattressSizeKey } from '@/lib/mattressSizeMatch';
+import { matchMattressSize, lookupAlias, type MattressSizeKey, type MattressSizeMap } from '@/lib/mattressSizeMatch';
 
 interface Props {
   products: Product[];
+  /** Medidas de cada tamanho — vêm de settings.mattressSizeSpecs (configs da loja), nunca hardcoded aqui. */
+  sizes: MattressSizeMap;
 }
 
 type Mode = 'medir' | 'nome';
 
-const SIZE_BUTTONS: { key: MattressSizeKey; label: string; desc: string }[] = [
-  { key: 'solteiro', label: 'Solteiro', desc: '~88×188cm' },
-  { key: 'casal',    label: 'Casal',    desc: '~138×188cm' },
-  { key: 'queen',    label: 'Queen',    desc: '~158×198cm' },
-  { key: 'king',     label: 'King',     desc: '~193×203cm' },
-];
+export function SizeGuideCalculator({ products, sizes }: Props) {
+  const SIZE_BUTTONS: { key: MattressSizeKey; label: string; desc: string }[] =
+    (Object.keys(sizes) as MattressSizeKey[]).map(key => ({
+      key,
+      label: sizes[key].label,
+      desc: `~${sizes[key].width}×${sizes[key].length}cm`,
+    }));
 
-export function SizeGuideCalculator({ products }: Props) {
   const [mode, setMode] = useState<Mode>('medir');
   const [width, setWidth] = useState('');
   const [length, setLength] = useState('');
@@ -44,20 +46,20 @@ export function SizeGuideCalculator({ products }: Props) {
       return;
     }
 
-    const r = matchMattressSize(w, l, h);
+    const r = matchMattressSize(sizes, w, l, h);
     setResult(r.size);
     setHeightWarning(r.heightWarning);
 
     if (r.confidence === 'exata') {
-      setConfidenceMsg(`Bateu certinho com o tamanho ${MATTRESS_SIZES[r.size].label}.`);
+      setConfidenceMsg(`Bateu certinho com o tamanho ${sizes[r.size].label}.`);
     } else if (r.confidence === 'proxima') {
       setConfidenceMsg(
         r.runnerUp
-          ? `Ficou entre ${MATTRESS_SIZES[r.size].label} e ${MATTRESS_SIZES[r.runnerUp].label}, mas o mais próximo é ${MATTRESS_SIZES[r.size].label} (diferença de ${r.distanceCm}cm). Se puder, remeça pra confirmar.`
-          : `O mais próximo é ${MATTRESS_SIZES[r.size].label} (diferença de ${r.distanceCm}cm nas duas medidas somadas).`
+          ? `Ficou entre ${sizes[r.size].label} e ${sizes[r.runnerUp].label}, mas o mais próximo é ${sizes[r.size].label} (diferença de ${r.distanceCm}cm). Se puder, remeça pra confirmar.`
+          : `O mais próximo é ${sizes[r.size].label} (diferença de ${r.distanceCm}cm nas duas medidas somadas).`
       );
     } else {
-      setConfidenceMsg(`Suas medidas ficaram bem diferentes de todos os tamanhos que vendemos. O mais próximo seria ${MATTRESS_SIZES[r.size].label}, mas confirma antes de comprar. Pode ser um colchão de tamanho especial.`);
+      setConfidenceMsg(`Suas medidas ficaram bem diferentes de todos os tamanhos que vendemos. O mais próximo seria ${sizes[r.size].label}, mas confirma antes de comprar. Pode ser um colchão de tamanho especial.`);
     }
   }
 
@@ -66,7 +68,7 @@ export function SizeGuideCalculator({ products }: Props) {
     setAliasNote(undefined);
     setHeightWarning(undefined);
     setResult(key);
-    setConfidenceMsg(`Você selecionou ${MATTRESS_SIZES[key].label}.`);
+    setConfidenceMsg(`Você selecionou ${sizes[key].label}.`);
   }
 
   function handleOtherName(e: React.FormEvent) {
@@ -154,7 +156,7 @@ export function SizeGuideCalculator({ products }: Props) {
         <div className="border-t border-mist pt-8 flex flex-col gap-5">
           <div className="text-center">
             <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-2">Recomendação</p>
-            <p className="font-display text-3xl text-ink mb-2">{MATTRESS_SIZES[result].label}</p>
+            <p className="font-display text-3xl text-ink mb-2">{sizes[result].label}</p>
             {confidenceMsg && <p className="text-[13px] text-mid max-w-[48ch] mx-auto leading-relaxed">{confidenceMsg}</p>}
             {aliasNote && <p className="text-[13px] text-clay-l max-w-[48ch] mx-auto leading-relaxed mt-2">{aliasNote}</p>}
             {heightWarning && <p className="text-[13px] text-clay-l max-w-[48ch] mx-auto leading-relaxed mt-2">{heightWarning}</p>}

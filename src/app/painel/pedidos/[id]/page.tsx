@@ -625,7 +625,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-medium text-ink leading-snug">{item.productName}</p>
                   <p className="text-[11px] text-faint mt-0.5">
-                    {item.variant.size}{item.variant.color ? ` · ${item.variant.color}` : ''}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}{' '}
+                    {item.variant.size}{(item.variant.colorName || item.variant.color) ? ` · ${item.variant.colorName || item.variant.color}` : ''}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}{' '}
                     · {item.quantity} {item.quantity === 1 ? 'unidade' : 'unidades'} · {formatCurrency(item.unitPrice)} cada
                   </p>
                   <p className="text-[10px] font-mono text-faint/60 mt-0.5">SKU: {item.sku}</p>

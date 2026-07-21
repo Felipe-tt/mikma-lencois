@@ -316,7 +316,7 @@ export default function OrderDetailPage() {
                       <p className="text-sm font-medium text-ink">{item.productName}</p>
                       <p className="text-xs text-faint mt-0.5">
                         {item.variant.size}
-                        {item.variant.color ? ` · ${item.variant.color}` : ''}
+                        {(item.variant.colorName || item.variant.color) ? ` · ${item.variant.colorName || item.variant.color}` : ''}
                         {item.variant.fabric ? ` · ${item.variant.fabric}` : ''}
                         {' · '}{item.quantity}x
                       </p>

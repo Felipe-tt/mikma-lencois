@@ -2,6 +2,8 @@ import { adminDb } from '@/lib/firebase/admin';
 import type { Product } from '@/types';
 import { serialize } from '@/lib/utils/serialize';
 import { SizeGuideCalculator } from '@/components/product/SizeGuideCalculator';
+import { getSettings } from '@/lib/settings';
+import { parseMattressSizeSpecs } from '@/lib/mattressSizeMatch';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +18,8 @@ export const metadata = {
 };
 
 export default async function GuiaDeTamanhosPage() {
-  const products = await getActiveProducts();
+  const [products, settings] = await Promise.all([getActiveProducts(), getSettings()]);
+  const sizes = parseMattressSizeSpecs(settings.mattressSizeSpecs);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 sm:py-14">
@@ -30,7 +33,7 @@ export default async function GuiaDeTamanhosPage() {
         Meça a largura e o comprimento do colchão (não da cama, do colchão em si) e a gente te diz exatamente qual tamanho comprar, sem chute.
       </p>
 
-      <SizeGuideCalculator products={products} />
+      <SizeGuideCalculator products={products} sizes={sizes} />
     </div>
   );
 }

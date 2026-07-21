@@ -336,6 +336,14 @@ export default function ConfiguracoesPage() {
             />
           </Card>
 
+          <Card icon="ruler" title="Calculadora do /guia-de-tamanhos" desc="Medidas reais (largura × comprimento do colchão, em cm) usadas pra descobrir automaticamente o tamanho certo a partir da medida que o cliente digitar">
+            <Info>Essas medidas alimentam o algoritmo de correspondência — não é texto solto, é o que decide qual tamanho recomendar. Se os fornecedores mudarem o padrão, atualize aqui.</Info>
+            <MattressSizeSpecsEditor
+              json={settings.mattressSizeSpecs}
+              onChange={v => set('mattressSizeSpecs', v)}
+            />
+          </Card>
+
         </div>
       )}
 
@@ -604,6 +612,43 @@ function Num({ label, value, onChange, hint, min, max, step=1 }: {
         min={min} max={max} step={step} inputMode="decimal"
         className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
+    </div>
+  );
+}
+
+/* ── Editor das medidas de colchão (alimenta /guia-de-tamanhos) ─────────── */
+function MattressSizeSpecsEditor({ json, onChange }: { json: string; onChange: (v: string) => void }) {
+  type Spec = { key: string; label: string; widthCm: number; lengthCm: number };
+  const DEFAULTS: Spec[] = [
+    { key: 'solteiro', label: 'Solteiro', widthCm: 88,  lengthCm: 188 },
+    { key: 'casal',    label: 'Casal',    widthCm: 138, lengthCm: 188 },
+    { key: 'queen',    label: 'Queen',    widthCm: 158, lengthCm: 198 },
+    { key: 'king',     label: 'King',     widthCm: 193, lengthCm: 203 },
+  ];
+  let specs: Spec[];
+  try {
+    const parsed = JSON.parse(json || '[]');
+    specs = DEFAULTS.map(d => parsed.find((p: Spec) => p.key === d.key) ?? d);
+  } catch {
+    specs = DEFAULTS;
+  }
+
+  function updateSpec(key: string, field: 'widthCm' | 'lengthCm', value: number) {
+    const next = specs.map(s => s.key === key ? { ...s, [field]: value } : s);
+    onChange(JSON.stringify(next));
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {specs.map(s => (
+        <div key={s.key} className="border border-mist p-3 flex flex-col gap-2">
+          <p className="text-[12px] font-bold text-ink">{s.label}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Num label="Largura (cm)" value={s.widthCm} min={30} max={300} onChange={v => updateSpec(s.key, 'widthCm', v)} />
+            <Num label="Comprimento (cm)" value={s.lengthCm} min={30} max={300} onChange={v => updateSpec(s.key, 'lengthCm', v)} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
