@@ -5,6 +5,7 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import { Select } from '@/components/ui/Select';
 
 type Coupon = {
   id: string; code: string; type: 'percent' | 'fixed'; value: number;
@@ -101,11 +102,15 @@ export default function CuponsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[11px] font-semibold text-mid mb-1.5">Tipo de desconto</label>
-                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as 'percent' | 'fixed' }))}
-                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20">
-                  <option value="percent">Porcentagem (ex: 10% off)</option>
-                  <option value="fixed">Valor fixo (ex: R$ 20 off)</option>
-                </select>
+                <Select
+                  value={form.type}
+                  onChange={v => setForm(f => ({ ...f, type: v as 'percent' | 'fixed' }))}
+                  options={[
+                    { value: 'percent', label: 'Porcentagem (ex: 10% off)' },
+                    { value: 'fixed', label: 'Valor fixo (ex: R$ 20 off)' },
+                  ]}
+                  triggerClassName="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-[2px] flex items-center justify-between gap-2 cursor-pointer hover:border-ink/20 transition-all"
+                />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-mid mb-1.5">

@@ -6,6 +6,7 @@ import Papa from 'papaparse';
 import { auth } from '@/lib/firebase/client';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS } from '@/lib/productOptions';
 import { IconAlert, IconCamera, IconCheck, IconTrash, IconX } from '@/components/ui/Icon';
+import { Select } from '@/components/ui/Select';
 
 // ── Tipos ────────────────────────────────────────────────────────────────
 interface DraftImage { url: string; path: string }
@@ -550,26 +551,32 @@ export default function ImportarCsvPage() {
                         <input className={inputSm} value={it.name} onChange={(e) => updateStaging(idx, { name: e.target.value })} />
                       </td>
                       <td className="p-1.5">
-                        <select className={selectSm} value={it.category} onChange={(e) => updateStaging(idx, { category: e.target.value })}>
-                          <option value="">Selecione</option>
-                          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <Select
+                          triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
+                          value={it.category}
+                          onChange={(v) => updateStaging(idx, { category: v })}
+                          options={[{ value: '', label: 'Selecione' }, ...CATEGORIES.map((c) => ({ value: c, label: c }))]}
+                        />
                       </td>
                       <td className="p-1.5">
                         {isSizelessCategory(it.category) ? (
                           <span className="text-[11px] text-faint italic">Único (fronha)</span>
                         ) : (
-                          <select className={selectSm} value={it.size} onChange={(e) => updateStaging(idx, { size: e.target.value })}>
-                            <option value="">Selecione</option>
-                            {SIZES.filter((s) => s !== 'unico').map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
-                          </select>
+                          <Select
+                            triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
+                            value={it.size}
+                            onChange={(v) => updateStaging(idx, { size: v })}
+                            options={[{ value: '', label: 'Selecione' }, ...SIZES.filter((s) => s !== 'unico').map((s) => ({ value: s, label: SIZE_LABEL[s] }))]}
+                          />
                         )}
                       </td>
                       <td className="p-1.5">
-                        <select className={selectSm} value={it.fabric} onChange={(e) => updateStaging(idx, { fabric: e.target.value })}>
-                          <option value="">Selecione</option>
-                          {FABRICS.map((f) => <option key={f} value={f}>{f}</option>)}
-                        </select>
+                        <Select
+                          triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
+                          value={it.fabric}
+                          onChange={(v) => updateStaging(idx, { fabric: v })}
+                          options={[{ value: '', label: 'Selecione' }, ...FABRICS.map((f) => ({ value: f, label: f }))]}
+                        />
                       </td>
                       <td className="p-1.5">
                         <input className={inputSm} value={it.colorName} onChange={(e) => updateStaging(idx, { colorName: e.target.value })} />
@@ -756,28 +763,34 @@ export default function ImportarCsvPage() {
                     </div>
                     <div>
                       <label className="label">Categoria</label>
-                      <select className={selectSm} value={d.category} onChange={(e) => { updateDraftLocal(d.id, { category: e.target.value }); }} onBlur={() => saveDraftField(d)}>
-                        <option value="">Selecione</option>
-                        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                      <Select
+                        triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
+                        value={d.category}
+                        onChange={(v) => { updateDraftLocal(d.id, { category: v }); saveDraftField({ ...d, category: v }); }}
+                        options={[{ value: '', label: 'Selecione' }, ...CATEGORIES.map((c) => ({ value: c, label: c }))]}
+                      />
                     </div>
                     <div>
                       <label className="label">Tamanho</label>
                       {isSizelessCategory(d.category) ? (
                         <p className={`${inputSm} text-faint italic bg-warm`}>Único (fronha não tem tamanho)</p>
                       ) : (
-                        <select className={selectSm} value={d.size} onChange={(e) => { updateDraftLocal(d.id, { size: e.target.value }); }} onBlur={() => saveDraftField(d)}>
-                          <option value="">Selecione</option>
-                          {SIZES.filter((s) => s !== 'unico').map((s) => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
-                        </select>
+                        <Select
+                          triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
+                          value={d.size}
+                          onChange={(v) => { updateDraftLocal(d.id, { size: v }); saveDraftField({ ...d, size: v }); }}
+                          options={[{ value: '', label: 'Selecione' }, ...SIZES.filter((s) => s !== 'unico').map((s) => ({ value: s, label: SIZE_LABEL[s] }))]}
+                        />
                       )}
                     </div>
                     <div>
                       <label className="label">Tecido</label>
-                      <select className={selectSm} value={d.fabric} onChange={(e) => { updateDraftLocal(d.id, { fabric: e.target.value }); }} onBlur={() => saveDraftField(d)}>
-                        <option value="">Selecione</option>
-                        {FABRICS.map((f) => <option key={f} value={f}>{f}</option>)}
-                      </select>
+                      <Select
+                        triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
+                        value={d.fabric}
+                        onChange={(v) => { updateDraftLocal(d.id, { fabric: v }); saveDraftField({ ...d, fabric: v }); }}
+                        options={[{ value: '', label: 'Selecione' }, ...FABRICS.map((f) => ({ value: f, label: f }))]}
+                      />
                     </div>
                     <div className="col-span-2">
                       <label className="label">Cor <span className="font-normal normal-case text-faint">(opcional)</span></label>

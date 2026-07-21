@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import Link from 'next/link';
+import { Select } from '@/components/ui/Select';
 
 type MovementLog = { type: 'in' | 'out'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
 type InventoryItem = {
@@ -115,12 +116,16 @@ export default function HistoricoEstoquePage() {
           <input type="search" placeholder="Buscar por produto, motivo ou quem registrou..." value={search} onChange={e => setSearch(e.target.value)}
             className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40" />
         </div>
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as 'todos' | 'in' | 'out')}
-          className="border border-mist bg-paper px-3 py-2.5 text-sm focus:outline-none">
-          <option value="todos">Tudo</option>
-          <option value="out">Só saídas</option>
-          <option value="in">Só entradas</option>
-        </select>
+        <Select
+          value={typeFilter}
+          onChange={v => setTypeFilter(v as 'todos' | 'in' | 'out')}
+          options={[
+            { value: 'todos', label: 'Tudo' },
+            { value: 'out', label: 'Só saídas' },
+            { value: 'in', label: 'Só entradas' },
+          ]}
+          triggerClassName="border border-mist bg-paper px-3 py-2.5 text-sm focus:outline-none rounded-[2px] flex items-center justify-between gap-2 cursor-pointer hover:border-ink/20 transition-all min-w-[160px]"
+        />
       </div>
 
       {displayRows.length === 0 ? (

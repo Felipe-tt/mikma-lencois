@@ -9,6 +9,7 @@ import type { Cart, Address } from '@/types';
 import { PIXModal } from '@/components/checkout/PIXModal';
 import { CheckoutSkeleton } from '@/components/ui/Skeleton';
 import { maskCep, maskCpf, maskPhone, onlyDigits, isValidCpf, isValidPhone, isValidCep, BR_STATES } from '@/lib/masks';
+import { Select } from '@/components/ui/Select';
 import type { ShippingOption } from '@/lib/shipping-pricing';
 import Image from 'next/image';
 
@@ -461,14 +462,12 @@ export default function CheckoutPage() {
                   </div>
                   <div>
                     <Label>UF</Label>
-                    <div className="relative">
-                      <select value={addr.state} required onChange={e => setAddr(a => ({ ...a, state: e.target.value }))}
-                        className={`w-full border px-3 py-3 text-sm appearance-none bg-white dark:bg-warm focus:outline-none focus:ring-2 transition-all ${errors.state ? 'border-red-400 focus:ring-red-100' : 'border-mist focus:border-ink/40 focus:ring-ink/5'}`}>
-                        <option value="">--</option>
-                        {BR_STATES.map(uf => <option key={uf}>{uf}</option>)}
-                      </select>
-                      <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-faint" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
-                    </div>
+                    <Select
+                      value={addr.state}
+                      onChange={v => setAddr(a => ({ ...a, state: v }))}
+                      options={[{ value: '', label: '--' }, ...BR_STATES.map(uf => ({ value: uf, label: uf }))]}
+                      triggerClassName={`w-full border px-3 py-3 text-sm bg-white dark:bg-warm focus:outline-none focus:ring-2 transition-all flex items-center justify-between gap-2 rounded-[2px] cursor-pointer ${errors.state ? 'border-red-400 focus:ring-red-100' : 'border-mist hover:border-ink/20 focus:border-ink/40 focus:ring-ink/5'}`}
+                    />
                     <Err msg={errors.state} />
                   </div>
                 </div>

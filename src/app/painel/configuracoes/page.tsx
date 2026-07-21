@@ -12,6 +12,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
+import { Select } from '@/components/ui/Select';
 import { HeroPreview, FeaturedPreview, CtaPreview } from '@/components/painel/preview/HomePreview';
 import { FooterPreview } from '@/components/painel/preview/FooterPreview';
 import { SobrePreview } from '@/components/painel/preview/SobrePreview';
@@ -206,15 +207,17 @@ export default function ConfiguracoesPage() {
             />
             <div>
               <label className="block text-[11px] font-semibold text-mid mb-1.5">Fuso horário</label>
-              <select value={settings.businessHoursTimezone || 'America/Sao_Paulo'}
-                onChange={e => set('businessHoursTimezone', e.target.value)}
-                className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20"
-              >
-                <option value="America/Sao_Paulo">Brasília (GMT-3) — maioria do Brasil</option>
-                <option value="America/Manaus">Manaus (GMT-4)</option>
-                <option value="America/Rio_Branco">Acre (GMT-5)</option>
-                <option value="America/Noronha">Fernando de Noronha (GMT-2)</option>
-              </select>
+              <Select
+                value={settings.businessHoursTimezone || 'America/Sao_Paulo'}
+                onChange={v => set('businessHoursTimezone', v)}
+                options={[
+                  { value: 'America/Sao_Paulo', label: 'Brasília (GMT-3) — maioria do Brasil' },
+                  { value: 'America/Manaus', label: 'Manaus (GMT-4)' },
+                  { value: 'America/Rio_Branco', label: 'Acre (GMT-5)' },
+                  { value: 'America/Noronha', label: 'Fernando de Noronha (GMT-2)' },
+                ]}
+                triggerClassName="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-[2px] flex items-center justify-between gap-2 cursor-pointer hover:border-ink/20 transition-all"
+              />
             </div>
           </Card>
 

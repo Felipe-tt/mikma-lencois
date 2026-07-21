@@ -13,6 +13,9 @@ import { PhotoColorPicker } from './PhotoColorPicker';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, YARN_COUNTS } from '@/lib/productOptions';
 import { formatProductName } from '@/lib/textFormat';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { Select } from '@/components/ui/Select';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { getStaffPrefs, setStaffPref } from '@/lib/staffPrefs';
 
 type Props = {
   initial?: Partial<Product> & { id?: string };
@@ -45,6 +48,7 @@ function FormSection({ step, title, hint, children }: { step: number; title: str
 
 export default function ProductForm({ initial }: Props) {
   const router = useRouter();
+  const { user } = useAuth();
   const isEdit = !!initial?.id;
 
   const [name, setName] = useState(initial?.name ?? '');
@@ -56,6 +60,22 @@ export default function ProductForm({ initial }: Props) {
   const [active, setActive] = useState(initial?.active ?? true);
 
   const [yarnCount, setYarnCount] = useState(initial?.yarnCount ?? '');
+  // Ao criar um produto novo (não em edição), pré-preenche com a última
+  // espessura de fio que ESSE staff escolheu — persistida por UID no
+  // Firestore (users/{uid}.staffPrefs), não localStorage, então segue a
+  // pessoa em qualquer navegador/dispositivo que ela usar pra logar.
+  useEffect(() => {
+    if (isEdit || !user) return;
+    getStaffPrefs(user.uid).then(prefs => {
+      if (prefs.lastYarnCount) setYarnCount(prefs.lastYarnCount);
+    }).catch(() => {});
+  }, [isEdit, user]);
+
+  function handleYarnCountChange(v: string) {
+    setYarnCount(v);
+    if (user) setStaffPref(user.uid, 'lastYarnCount', v).catch(() => {});
+  }
+
   const [composition, setComposition] = useState(initial?.composition ?? '');
   const [weightGsm, setWeightGsm] = useState(initial?.weightGsm ? String(initial.weightGsm) : '');
   const [certifications, setCertifications] = useState(initial?.certifications?.join(', ') ?? '');
@@ -417,9 +437,11 @@ export default function ProductForm({ initial }: Props) {
               </div>
               <div>
                 <label className="label">Categoria</label>
-                <select value={category} onChange={e => setCategory(e.target.value)} className="select">
-                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                </select>
+                <Select
+                  value={category}
+                  onChange={v => setCategory(v as typeof category)}
+                  options={CATEGORIES.map(c => ({ value: c, label: c }))}
+                />
               </div>
             </div>
 
@@ -461,23 +483,21 @@ export default function ProductForm({ initial }: Props) {
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
                       <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Tamanho</label>
-                      <select
+                      <Select
                         value={v.size}
-                        onChange={e => updateVariant(i, 'size', e.target.value)}
-                        className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]"
-                      >
-                        {SIZES.map(s => <option key={s} value={s}>{SIZE_LABEL[s]}</option>)}
-                      </select>
+                        onChange={val => updateVariant(i, 'size', val)}
+                        options={SIZES.map(s => ({ value: s, label: SIZE_LABEL[s] }))}
+                        size="sm"
+                      />
                     </div>
                     <div>
                       <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Tecido</label>
-                      <select
+                      <Select
                         value={v.fabric}
-                        onChange={e => updateVariant(i, 'fabric', e.target.value)}
-                        className="w-full border border-mist bg-paper px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]"
-                      >
-                        {FABRICS.map(f => <option key={f}>{f}</option>)}
-                      </select>
+                        onChange={val => updateVariant(i, 'fabric', val)}
+                        options={FABRICS.map(f => ({ value: f, label: f }))}
+                        size="sm"
+                      />
                     </div>
                   </div>
 
@@ -557,10 +577,15 @@ export default function ProductForm({ initial }: Props) {
               <div className="border border-mist p-4 grid grid-cols-2 gap-3 rounded-[4px]">
                 <div>
                   <label className="label">Espessura do fio <span className="font-normal normal-case text-faint">(malha)</span></label>
-                  <select value={yarnCount} onChange={e => setYarnCount(e.target.value)} className="input-sm">
-                    <option value="">Não informar</option>
-                    {YARN_COUNTS.map(y => <option key={y} value={y}>Fio {y}</option>)}
-                  </select>
+                  <Select
+                    value={yarnCount}
+                    onChange={handleYarnCountChange}
+                    options={[
+                      { value: '', label: 'Não informar' },
+                      ...YARN_COUNTS.map(y => ({ value: y, label: `Fio ${y}` })),
+                    ]}
+                    size="sm"
+                  />
                 </div>
                 <div>
                   <label className="label">Gramatura (g/m²)</label>
