@@ -307,8 +307,12 @@ export default function ConfiguracoesPage() {
             <F label="Garantia 3" value={settings.productTrust3 ?? ''} onChange={v => set('productTrust3', v)} placeholder="Pagamento PIX com confirmação imediata" />
           </Card>
 
-          <Card icon="ruler" title="Guia de medidas" desc="Tabela que abre quando o cliente clica em 'Guia de medidas' na página do produto">
-            <Info>Configure as colunas (separadas por vírgula) e depois preencha as linhas. A primeira coluna é sempre o nome do tamanho.</Info>
+          <Card icon="ruler" title="Guia de medidas" desc="Tabela que abre quando o cliente clica em 'Guia de medidas' na página do produto — dimensões por PEÇA (lençol, fronha, capa de duvet...)">
+            <Info>
+              Diferente da tabela &quot;Guia de tamanhos de cama&quot; logo abaixo: esta aqui é por tipo de peça (uma
+              coluna pra Lençol, outra pra Fronha, outra pra Capa duvet...). Configure as colunas (separadas por
+              vírgula) e depois preencha as linhas. A primeira coluna é sempre o nome do tamanho.
+            </Info>
             <F label="Colunas da tabela"
               value={(() => { try { return JSON.parse(settings.sizeGuideColumns || '[]').join(', '); } catch { return ''; } })()}
               onChange={v => set('sizeGuideColumns', JSON.stringify(v.split(',').map((s: string) => s.trim()).filter(Boolean)))}
@@ -323,8 +327,16 @@ export default function ConfiguracoesPage() {
               placeholder="Medidas podem variar ±2 cm após lavagem. Recomendamos lavar antes do primeiro uso." />
           </Card>
 
-          <Card icon="ruler" title="Guia de tamanhos de cama" desc="Tabela recolhível na página do produto — mostra dimensões de cada tamanho de cama">
-            <Info>Ajuda o cliente a saber qual tamanho pedir conforme o tamanho da cama dele.</Info>
+          <Card icon="ruler" title="Guia de tamanhos de cama" desc="Tabela na página do produto + fonte da largura usada na calculadora do /guia-de-tamanhos">
+            <Info>
+              Uma tabela, dois usos: <strong>1)</strong> aparece na página do produto pra mostrar o tamanho do
+              lençol acabado (ele é maior que o colchão de propósito, pra sobrar pano e prender o elástico —
+              por isso &quot;Comprimento&quot;/&quot;Largura&quot; aqui são maiores que a medida real do colchão). <strong>2)</strong> a
+              coluna <strong>&quot;Cama&quot;</strong> é lida pela calculadora do{' '}
+              <code className="text-[11px] bg-warm px-1 rounded">/guia-de-tamanhos</code> pra descobrir o tamanho a
+              partir da largura que o cliente mede em casa — não existe uma tabela separada pra isso, é sempre
+              este mesmo valor. Se editar a coluna &quot;Cama&quot;, os dois lugares atualizam juntos.
+            </Info>
             <F label="Colunas da tabela"
               value={(() => { try { return JSON.parse(settings.bedSizeColumns || '[]').join(', '); } catch { return ''; } })()}
               onChange={v => set('bedSizeColumns', JSON.stringify(v.split(',').map((s: string) => s.trim()).filter(Boolean)))}
@@ -333,14 +345,6 @@ export default function ConfiguracoesPage() {
               colsJson={settings.bedSizeColumns}
               rowsJson={settings.bedSizeRows}
               onRowsChange={v => set('bedSizeRows', v)}
-            />
-          </Card>
-
-          <Card icon="ruler" title="Calculadora do /guia-de-tamanhos" desc="Medidas reais (largura × comprimento do colchão, em cm) usadas pra descobrir automaticamente o tamanho certo a partir da medida que o cliente digitar">
-            <Info>Essas medidas alimentam o algoritmo de correspondência — não é texto solto, é o que decide qual tamanho recomendar. Se os fornecedores mudarem o padrão, atualize aqui.</Info>
-            <MattressSizeSpecsEditor
-              json={settings.mattressSizeSpecs}
-              onChange={v => set('mattressSizeSpecs', v)}
             />
           </Card>
 
@@ -612,43 +616,6 @@ function Num({ label, value, onChange, hint, min, max, step=1 }: {
         min={min} max={max} step={step} inputMode="decimal"
         className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
-    </div>
-  );
-}
-
-/* ── Editor das medidas de colchão (alimenta /guia-de-tamanhos) ─────────── */
-function MattressSizeSpecsEditor({ json, onChange }: { json: string; onChange: (v: string) => void }) {
-  type Spec = { key: string; label: string; widthCm: number; lengthCm: number };
-  const DEFAULTS: Spec[] = [
-    { key: 'solteiro', label: 'Solteiro', widthCm: 88,  lengthCm: 188 },
-    { key: 'casal',    label: 'Casal',    widthCm: 138, lengthCm: 188 },
-    { key: 'queen',    label: 'Queen',    widthCm: 158, lengthCm: 198 },
-    { key: 'king',     label: 'King',     widthCm: 193, lengthCm: 203 },
-  ];
-  let specs: Spec[];
-  try {
-    const parsed = JSON.parse(json || '[]');
-    specs = DEFAULTS.map(d => parsed.find((p: Spec) => p.key === d.key) ?? d);
-  } catch {
-    specs = DEFAULTS;
-  }
-
-  function updateSpec(key: string, field: 'widthCm' | 'lengthCm', value: number) {
-    const next = specs.map(s => s.key === key ? { ...s, [field]: value } : s);
-    onChange(JSON.stringify(next));
-  }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {specs.map(s => (
-        <div key={s.key} className="border border-mist p-3 flex flex-col gap-2">
-          <p className="text-[12px] font-bold text-ink">{s.label}</p>
-          <div className="grid grid-cols-2 gap-2">
-            <Num label="Largura (cm)" value={s.widthCm} min={30} max={300} onChange={v => updateSpec(s.key, 'widthCm', v)} />
-            <Num label="Comprimento (cm)" value={s.lengthCm} min={30} max={300} onChange={v => updateSpec(s.key, 'lengthCm', v)} />
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

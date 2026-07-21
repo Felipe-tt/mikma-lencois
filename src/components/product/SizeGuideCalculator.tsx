@@ -2,27 +2,26 @@
 import { useState } from 'react';
 import type { Product } from '@/types';
 import { ProductCard } from '@/components/product/ProductCard';
-import { matchMattressSize, lookupAlias, type MattressSizeKey, type MattressSizeMap } from '@/lib/mattressSizeMatch';
+import { matchMattressSize, lookupAlias, type MattressSizeKey, type MattressWidthMap } from '@/lib/mattressSizeMatch';
 
 interface Props {
   products: Product[];
-  /** Medidas de cada tamanho — vêm de settings.mattressSizeSpecs (configs da loja), nunca hardcoded aqui. */
-  sizes: MattressSizeMap;
+  /** Largura de cada tamanho — vem da mesma tabela "Guia de tamanhos de cama" mostrada na página do produto (settings.bedSizeRows), nunca hardcoded aqui. */
+  widths: MattressWidthMap;
 }
 
 type Mode = 'medir' | 'nome';
 
-export function SizeGuideCalculator({ products, sizes }: Props) {
+export function SizeGuideCalculator({ products, widths }: Props) {
   const SIZE_BUTTONS: { key: MattressSizeKey; label: string; desc: string }[] =
-    (Object.keys(sizes) as MattressSizeKey[]).map(key => ({
+    (Object.keys(widths) as MattressSizeKey[]).map(key => ({
       key,
-      label: sizes[key].label,
-      desc: `~${sizes[key].width}×${sizes[key].length}cm`,
+      label: widths[key].label,
+      desc: `~${widths[key].widthCm}cm de largura`,
     }));
 
   const [mode, setMode] = useState<Mode>('medir');
   const [width, setWidth] = useState('');
-  const [length, setLength] = useState('');
   const [height, setHeight] = useState('');
   const [otherName, setOtherName] = useState('');
 
@@ -37,29 +36,28 @@ export function SizeGuideCalculator({ products, sizes }: Props) {
     setError('');
     setAliasNote(undefined);
     const w = parseFloat(width.replace(',', '.'));
-    const l = parseFloat(length.replace(',', '.'));
     const h = height ? parseFloat(height.replace(',', '.')) : undefined;
 
-    if (!w || !l || w < 30 || l < 30 || w > 300 || l > 300) {
-      setError('Confere as medidas: largura e comprimento em centímetros (ex: 138 e 188).');
+    if (!w || w < 30 || w > 300) {
+      setError('Confere a largura: em centímetros, de ponta a ponta do colchão (ex: 138).');
       setResult(null);
       return;
     }
 
-    const r = matchMattressSize(sizes, w, l, h);
+    const r = matchMattressSize(widths, w, undefined, h);
     setResult(r.size);
     setHeightWarning(r.heightWarning);
 
     if (r.confidence === 'exata') {
-      setConfidenceMsg(`Bateu certinho com o tamanho ${sizes[r.size].label}.`);
+      setConfidenceMsg(`Bateu certinho com o tamanho ${widths[r.size].label}.`);
     } else if (r.confidence === 'proxima') {
       setConfidenceMsg(
         r.runnerUp
-          ? `Ficou entre ${sizes[r.size].label} e ${sizes[r.runnerUp].label}, mas o mais próximo é ${sizes[r.size].label} (diferença de ${r.distanceCm}cm). Se puder, remeça pra confirmar.`
-          : `O mais próximo é ${sizes[r.size].label} (diferença de ${r.distanceCm}cm nas duas medidas somadas).`
+          ? `Ficou entre ${widths[r.size].label} e ${widths[r.runnerUp].label}, mas o mais próximo é ${widths[r.size].label} (diferença de ${r.distanceCm}cm). Se puder, remeça pra confirmar.`
+          : `O mais próximo é ${widths[r.size].label} (diferença de ${r.distanceCm}cm).`
       );
     } else {
-      setConfidenceMsg(`Suas medidas ficaram bem diferentes de todos os tamanhos que vendemos. O mais próximo seria ${sizes[r.size].label}, mas confirma antes de comprar. Pode ser um colchão de tamanho especial.`);
+      setConfidenceMsg(`Sua medida ficou bem diferente de todos os tamanhos que vendemos. O mais próximo seria ${widths[r.size].label}, mas confirma antes de comprar. Pode ser um colchão de tamanho especial.`);
     }
   }
 
@@ -68,7 +66,7 @@ export function SizeGuideCalculator({ products, sizes }: Props) {
     setAliasNote(undefined);
     setHeightWarning(undefined);
     setResult(key);
-    setConfidenceMsg(`Você selecionou ${sizes[key].label}.`);
+    setConfidenceMsg(`Você selecionou ${widths[key].label}.`);
   }
 
   function handleOtherName(e: React.FormEvent) {
@@ -82,7 +80,7 @@ export function SizeGuideCalculator({ products, sizes }: Props) {
       setConfidenceMsg('');
     } else {
       setResult(null);
-      setError('Não reconheço esse nome. Tenta usar o modo "Vou medir" com a largura e o comprimento em cm.');
+      setError('Não reconheço esse nome. Tenta usar o modo "Vou medir" com a largura em cm.');
     }
   }
 
@@ -107,17 +105,12 @@ export function SizeGuideCalculator({ products, sizes }: Props) {
       {mode === 'medir' ? (
         <form onSubmit={handleMeasure} className="bg-paper border border-mist p-6 flex flex-col gap-4">
           <p className="text-[12px] text-faint leading-relaxed">
-            Meça o <strong className="text-mid">colchão</strong> (não a cama) com uma trena ou fita métrica, de ponta a ponta. A altura é opcional, mas ajuda se o seu colchão for bem alto ou bem fino.
+            Meça a <strong className="text-mid">largura do colchão</strong> (não da cama, do colchão em si), de ponta a ponta. É a medida que mais diferencia os tamanhos. A altura é opcional, mas ajuda se o seu colchão for bem alto ou bem fino.
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Largura (cm)</label>
               <input value={width} onChange={e => setWidth(e.target.value)} inputMode="decimal" placeholder="138"
-                className="border border-mist px-3 py-2.5 text-[14px] outline-none focus:border-clay-l bg-white dark:bg-warm" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Comprimento (cm)</label>
-              <input value={length} onChange={e => setLength(e.target.value)} inputMode="decimal" placeholder="188"
                 className="border border-mist px-3 py-2.5 text-[14px] outline-none focus:border-clay-l bg-white dark:bg-warm" />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -156,7 +149,7 @@ export function SizeGuideCalculator({ products, sizes }: Props) {
         <div className="border-t border-mist pt-8 flex flex-col gap-5">
           <div className="text-center">
             <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-2">Recomendação</p>
-            <p className="font-display text-3xl text-ink mb-2">{sizes[result].label}</p>
+            <p className="font-display text-3xl text-ink mb-2">{widths[result].label}</p>
             {confidenceMsg && <p className="text-[13px] text-mid max-w-[48ch] mx-auto leading-relaxed">{confidenceMsg}</p>}
             {aliasNote && <p className="text-[13px] text-clay-l max-w-[48ch] mx-auto leading-relaxed mt-2">{aliasNote}</p>}
             {heightWarning && <p className="text-[13px] text-clay-l max-w-[48ch] mx-auto leading-relaxed mt-2">{heightWarning}</p>}

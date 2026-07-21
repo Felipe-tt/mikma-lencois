@@ -82,12 +82,6 @@ export type StoreSettings = {
   sizeGuideNote: string;
   bedSizeRows: string;
   bedSizeColumns: string;
-  // Medidas de colchão (largura/comprimento em cm) usadas pelo algoritmo do
-  // /guia-de-tamanhos pra descobrir o tamanho a partir da medida do
-  // cliente. Chaves fixas (solteiro/casal/queen/king) pra bater com
-  // src/lib/productOptions.ts SIZES — editável em Configurações > Produto,
-  // NUNCA hardcoded no componente.
-  mattressSizeSpecs: string; // JSON: [{key, label, widthCm, lengthCm}]
   productTrust1: string;
   productTrust2: string;
   productTrust3: string;
@@ -172,12 +166,6 @@ export const STORE_DEFAULTS: StoreSettings = {
     { Tamanho: 'Casal',        Cama: '1,38m', Comprimento: '2,28m', Largura: '1,80m' },
     { Tamanho: 'Queen',        Cama: '1,58m', Comprimento: '2,28m', Largura: '2,10m' },
     { Tamanho: 'King',         Cama: '1,93m', Comprimento: '2,28m', Largura: '2,40m' },
-  ]),
-  mattressSizeSpecs: JSON.stringify([
-    { key: 'solteiro', label: 'Solteiro', widthCm: 88,  lengthCm: 188 },
-    { key: 'casal',    label: 'Casal',    widthCm: 138, lengthCm: 188 },
-    { key: 'queen',    label: 'Queen',    widthCm: 158, lengthCm: 198 },
-    { key: 'king',     label: 'King',     widthCm: 193, lengthCm: 203 },
   ]),
   productTrust1: 'Entrega local em Blumenau em até 1h',
   productTrust2: 'Frete para todo o Brasil com rastreio',

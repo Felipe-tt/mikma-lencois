@@ -1,45 +1,79 @@
 // Guia de tamanhos — 100% determinístico, sem chamada a nenhuma API paga.
-// As medidas de cada tamanho (largura × comprimento, em cm) vêm de
-// settings.mattressSizeSpecs (Firestore, editável em
-// Configurações > Produto), NÃO são fixas no código — se o admin mudar o
-// padrão de um fornecedor, o /guia-de-tamanhos reflete na hora.
+//
+// A largura de cada tamanho de colchão vem da MESMA tabela que já existe em
+// Configurações > Produto > "Guia de tamanhos de cama" (settings.bedSizeRows),
+// lendo a coluna "Cama" (ex: Solteiro → 0,88m). Não existe um campo
+// duplicado só pra isso — o admin edita em UM lugar só, e tanto a tabela
+// visível na página do produto quanto esta calculadora usam o mesmo dado.
+//
+// Por que só largura (não largura+comprimento)? A tabela "Guia de tamanhos
+// de cama" guarda o comprimento do LENÇOL, não do colchão (o lençol é
+// maior de propósito, pra sobrar pano e prender o elástico — ex: colchão
+// Solteiro tem 188cm de comprimento, mas o lençol Solteiro sai com 220cm).
+// Comparar a medida real do colchão do cliente com o comprimento do lençol
+// nunca bateria certo. A largura, por outro lado, é a mesma para colchão e
+// pra "tamanho de cama" (0,88m é 0,88m nos dois), e sozinha já separa bem
+// os 4 tamanhos padrão (88 / 138 / 158 / 193cm — nunca ficam a menos de
+// 20cm um do outro), então é a métrica confiável disponível hoje.
 
 export type MattressSizeKey = 'solteiro' | 'casal' | 'queen' | 'king';
 
-export interface MattressSizeSpec {
-  key: MattressSizeKey;
-  label: string;
-  widthCm: number;
-  lengthCm: number;
+export type MattressWidthMap = Record<MattressSizeKey, { widthCm: number; label: string }>;
+
+// Fallback só pra quando a tabela de configurações está vazia/ilegível —
+// mesmos valores que já vêm como default de bedSizeRows em store-settings.ts.
+const FALLBACK_WIDTHS: MattressWidthMap = {
+  solteiro: { widthCm: 88,  label: 'Solteiro' },
+  casal:    { widthCm: 138, label: 'Casal' },
+  queen:    { widthCm: 158, label: 'Queen' },
+  king:     { widthCm: 193, label: 'King' },
+};
+
+const KEY_BY_NAME: Record<string, MattressSizeKey> = {
+  solteiro: 'solteiro',
+  casal: 'casal',
+  queen: 'queen',
+  king: 'king',
+};
+
+function normalize(s: string): string {
+  return s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-export type MattressSizeMap = Record<MattressSizeKey, { width: number; length: number; label: string }>;
+/** "0,88m" | "0.88m" | "88" | "88cm" → 88 (cm). Retorna null se não conseguir ler. */
+function parseMetersOrCm(raw: string): number | null {
+  const cleaned = raw.trim().toLowerCase().replace(',', '.');
+  const num = parseFloat(cleaned);
+  if (!Number.isFinite(num) || num <= 0) return null;
+  // Valores digitados como "0,88" ou "0.88m" são metros; "88" ou "88cm" já é cm.
+  return /m(?!m)/.test(cleaned) || num < 10 ? num * 100 : num;
+}
 
-// Fallback só pra quando o Firestore está inacessível ou o campo ainda não
-// foi salvo (primeira execução) — mesmos valores que já vinham como default
-// em store-settings.ts, não duplica uma segunda "fonte da verdade" real.
-const FALLBACK_SPECS: MattressSizeSpec[] = [
-  { key: 'solteiro', label: 'Solteiro', widthCm: 88,  lengthCm: 188 },
-  { key: 'casal',    label: 'Casal',    widthCm: 138, lengthCm: 188 },
-  { key: 'queen',    label: 'Queen',    widthCm: 158, lengthCm: 198 },
-  { key: 'king',     label: 'King',     widthCm: 193, lengthCm: 203 },
-];
-
-/** Faz o parse de settings.mattressSizeSpecs (JSON) num MattressSizeMap pronto pro matcher. */
-export function parseMattressSizeSpecs(json: string | undefined | null): MattressSizeMap {
-  let specs: MattressSizeSpec[];
+/**
+ * Lê settings.bedSizeRows (a MESMA tabela mostrada na página do produto) e
+ * extrai a largura (coluna "Cama") de cada um dos 4 tamanhos que vendemos.
+ * Linhas com nome desconhecido (ex: "Solteiro Plus") são ignoradas — só
+ * entram solteiro/casal/queen/king, que são os únicos valores válidos de
+ * `size` nas variações de produto (ver src/lib/productOptions.ts SIZES).
+ */
+export function parseMattressWidthsFromBedSizeTable(bedSizeRowsJson: string | undefined | null): MattressWidthMap {
+  const map: MattressWidthMap = { ...FALLBACK_WIDTHS };
   try {
-    const parsed = JSON.parse(json || '[]');
-    specs = Array.isArray(parsed) && parsed.length > 0 ? parsed : FALLBACK_SPECS;
-  } catch {
-    specs = FALLBACK_SPECS;
-  }
+    const rows: Record<string, string>[] = JSON.parse(bedSizeRowsJson || '[]');
+    for (const row of rows) {
+      const nameField = row['Tamanho'] ?? Object.values(row)[0];
+      if (!nameField) continue;
+      const key = KEY_BY_NAME[normalize(nameField)];
+      if (!key) continue; // ex: "Solteiro Plus" não é um dos 4 tamanhos vendidos
 
-  const map = {} as MattressSizeMap;
-  for (const s of FALLBACK_SPECS) {
-    const found = specs.find(x => x.key === s.key);
-    const src = found ?? s;
-    map[s.key] = { width: Number(src.widthCm) || s.widthCm, length: Number(src.lengthCm) || s.lengthCm, label: src.label || s.label };
+      // Aceita a coluna se chamar "Cama" (nome padrão) OU qualquer variação
+      // de maiúscula/acento — colunas são editáveis pelo admin.
+      const widthField = Object.entries(row).find(([col]) => normalize(col) === 'cama')?.[1];
+      const widthCm = widthField ? parseMetersOrCm(widthField) : null;
+      if (widthCm) map[key] = { widthCm, label: nameField };
+    }
+  } catch {
+    // mantém FALLBACK_WIDTHS
   }
   return map;
 }
@@ -49,7 +83,7 @@ export type MatchConfidence = 'exata' | 'proxima' | 'incerta';
 export interface SizeMatchResult {
   size: MattressSizeKey;
   confidence: MatchConfidence;
-  /** Diferença (largura+comprimento) em cm até o tamanho padrão escolhido. */
+  /** Diferença de largura, em cm, até o tamanho escolhido. */
   distanceCm: number;
   /** Segundo colocado, só preenchido quando a decisão foi apertada (ambíguo). */
   runnerUp?: MattressSizeKey;
@@ -57,29 +91,25 @@ export interface SizeMatchResult {
 }
 
 /**
- * Encontra o tamanho de cama padrão mais próximo das medidas informadas.
- * Distância = |Δlargura| + |Δcomprimento| (Manhattan) — simples, previsível,
- * e fácil de explicar pro cliente ("ficou a 4cm do Casal").
- *
- * `sizes` vem sempre das configurações da loja (via parseMattressSizeSpecs),
- * nunca de uma constante fixa no componente.
+ * Encontra o tamanho de cama padrão mais próximo da LARGURA informada.
+ * `widths` vem sempre de parseMattressWidthsFromBedSizeTable (ou seja, das
+ * configurações da loja), nunca de uma constante fixa no componente.
  */
-export function matchMattressSize(sizes: MattressSizeMap, widthCm: number, lengthCm: number, heightCm?: number): SizeMatchResult {
-  const distances = (Object.keys(sizes) as MattressSizeKey[]).map(key => {
-    const std = sizes[key];
-    const d = Math.abs(std.width - widthCm) + Math.abs(std.length - lengthCm);
-    return { key, d };
-  }).sort((a, b) => a.d - b.d);
+export function matchMattressSize(widths: MattressWidthMap, widthCm: number, _lengthCm?: number, heightCm?: number): SizeMatchResult {
+  const distances = (Object.keys(widths) as MattressSizeKey[]).map(key => ({
+    key,
+    d: Math.abs(widths[key].widthCm - widthCm),
+  })).sort((a, b) => a.d - b.d);
 
   const [best, second] = distances;
 
   let confidence: MatchConfidence;
-  if (best.d <= 6) confidence = 'exata';
-  else if (best.d <= 18) confidence = 'proxima';
+  if (best.d <= 4) confidence = 'exata';
+  else if (best.d <= 12) confidence = 'proxima';
   else confidence = 'incerta';
 
   // Ambíguo: segundo colocado quase tão perto quanto o primeiro.
-  const isAmbiguous = second.d - best.d <= 8 && confidence !== 'exata';
+  const isAmbiguous = second.d - best.d <= 6 && confidence !== 'exata';
 
   let heightWarning: string | undefined;
   if (heightCm !== undefined) {
