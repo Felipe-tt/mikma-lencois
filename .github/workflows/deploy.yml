@@ -11,7 +11,7 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build & Deploy
+    name: build-and-deploy
     runs-on: ubuntu-latest
     # Antes este job inteiro só rodava em push/workflow_dispatch para main,
     # o que fazia o check "build-and-deploy" (obrigatório na regra do
