@@ -11,9 +11,15 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build & Deploy
+    name: build-and-deploy
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    # Antes este job inteiro só rodava em push/workflow_dispatch para main,
+    # o que fazia o check "build-and-deploy" (obrigatório na regra do
+    # repositório) aparecer como "skipped" em qualquer PR — inclusive PRs
+    # do Dependabot — tornando impossível satisfazer a regra e mergear.
+    # Agora o job roda em todo evento (build + testes validam o PR), e só
+    # os passos de deploy de fato (a partir de "Install Firebase CLI") são
+    # restritos a push/workflow_dispatch em main via `if` nos próprios passos.
     env:
       NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
       NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -136,22 +142,27 @@ jobs:
         run: npm run build
 
       - name: Install Firebase CLI
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: npm install -g firebase-tools
 
       - name: Write service account key
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: echo "$GOOGLE_APPLICATION_CREDENTIALS" > $HOME/sa.json
 
       - name: Configurar CORS do bucket de Storage (upload direto do navegador)
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: node scripts/set-bucket-cors.mjs "$HOME/sa.json"
         env:
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
 
       - name: Check if functions changed
         id: functions-changed
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           git diff --name-only HEAD~1 HEAD | grep -q '^functions/' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
 
       - name: Deploy Firestore Rules
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules --project mikma-lencois
 
       - name: Deploy Firestore Indexes
@@ -160,6 +171,7 @@ jobs:
         # no IAM do projeto, não deixamos essa falha travar o deploy do site —
         # é só um passo a mais de infra, não algo que quebra produção na hora.
         # Ver nota no fim do arquivo sobre como resolver a permissão.
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:indexes --project mikma-lencois
         continue-on-error: true
 
@@ -167,17 +179,18 @@ jobs:
         # continue-on-error mantido como rede de segurança: se faltar
         # alguma permissão de IAM específica do Storage no futuro, isso
         # não deve travar o deploy do site (que depende só do Firestore).
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only storage --project mikma-lencois
         continue-on-error: true
 
       - name: Deploy hosting + functions
-        if: steps.functions-changed.outputs.changed == 'true'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.functions-changed.outputs.changed == 'true'
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting --force --project mikma-lencois
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
       - name: Deploy hosting only
-        if: steps.functions-changed.outputs.changed == 'false'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.functions-changed.outputs.changed == 'false'
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting --force --project mikma-lencois
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
