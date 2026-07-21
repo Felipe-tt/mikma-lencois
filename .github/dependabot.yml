@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Dependências npm (package.json) — inclui patches de segurança de libs
+  # como firebase-admin, next, etc.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      # Agrupa updates menores num PR só, pra não inundar de PR toda semana.
+      # Majors continuam vindo separados (podem quebrar API).
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Actions usadas nos workflows (.github/workflows/*.yml)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
