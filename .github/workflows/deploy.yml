@@ -83,7 +83,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .next/cache
-          key: nextjs-v2-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.css', 'src/**/*.ts', 'src/**/*.tsx', 'tailwind.config.ts') }}
+          key: nextjs-v3-webpack-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.css', 'src/**/*.ts', 'src/**/*.tsx', 'tailwind.config.ts') }}
           # Sem restore-keys de propósito: um fallback por prefixo pode
           # restaurar um cache de webpack de um commit anterior quando o
           # hash exato não bate, e isso já causou pelo menos um chunk
