@@ -1,13 +1,10 @@
 {
   "name": "mikma-lencois",
   "version": "0.1.0",
-  "engines": {
-    "node": "20"
-  },
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
@@ -27,7 +24,7 @@
     "google-auth-library": "^10.9.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.25.0",
-    "next": "^16.2.10",
+    "next": "^15.3.3",
     "papaparse": "^5.5.4",
     "photoswipe": "^5.4.4",
     "qrcode.react": "^4.2.0",
