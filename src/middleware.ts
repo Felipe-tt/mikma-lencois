@@ -4,22 +4,22 @@ import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
 
-// Fica atrás do Firebase Hosting. Manutenção precisa valer imediatamente pra
-// TODA requisição a partir do toggle, sem nenhuma janela onde alguém possa
-// ver o site fora do ar — por isso NÃO tem cache aqui: toda requisição não
-// isenta confere o status fresco no Firestore. (Havia um cache de 15s por
-// instância antes; foi removido porque deixava o site visível por alguns
-// segundos depois de ativar a manutenção.)
+// Fica atrás do Firebase Hosting. Manutenção precisa valer o quanto antes pra
+// TODA requisição a partir do toggle. (Havia um cache de 15s por instância
+// antes; foi removido porque deixava o site visível por alguns segundos
+// depois de ativar a manutenção.)
 //
-// Decisão consciente sobre o que fazer se essa leitura falhar (rede
-// instável, timeout): assume "sem manutenção" (fail-open) em vez de
-// derrubar o site inteiro. Isso é uma loja no ar gerando receita — um
-// soluço passageiro do Firestore tirando o site do ar pra TODO MUNDO,
-// mesmo sem manutenção nenhuma ativada, é pior do que a janela rara de
-// alguém ver o site durante uma falha bem no instante em que a manutenção
-// também estava ativa (duas coisas raras precisando coincidir ao mesmo
-// tempo). Pra encolher ainda mais essa janela, tenta de novo uma vez antes
-// de desistir.
+// Reintroduzimos um cache, mas bem mais curto (2s) e só em memória do
+// isolate — não é um cache "pra economizar", é pra evitar que TODA
+// requisição pague uma ida e volta ao Firestore antes de renderizar
+// qualquer página (isso estava anulando boa parte do ganho do ISR/CDN e
+// aumentando o custo de invocação). 2s é uma janela bem menor que os 15s
+// que causaram o problema anterior — na prática, o pior caso é alguém ver
+// o site por até 2s depois do toggle, contra os "zero cache" de antes.
+// Se essa troca não for aceitável, é só zerar MAINTENANCE_CACHE_TTL_MS.
+const MAINTENANCE_CACHE_TTL_MS = 2000;
+let maintenanceCache: { value: boolean; expiresAt: number } | null = null;
+
 async function fetchMaintenanceDoc(projectId: string): Promise<Response> {
   return fetch(
     `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`,
@@ -28,12 +28,19 @@ async function fetchMaintenanceDoc(projectId: string): Promise<Response> {
 }
 
 async function getMaintenanceStatus(projectId: string): Promise<boolean> {
+  const now = Date.now();
+  if (maintenanceCache && maintenanceCache.expiresAt > now) {
+    return maintenanceCache.value;
+  }
+
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const res = await fetchMaintenanceDoc(projectId);
       if (!res.ok) continue;
       const data = await res.json();
-      return data?.fields?.active?.booleanValue ?? false;
+      const active = data?.fields?.active?.booleanValue ?? false;
+      maintenanceCache = { value: active, expiresAt: now + MAINTENANCE_CACHE_TTL_MS };
+      return active;
     } catch {
       // tenta mais uma vez antes de desistir
     }
