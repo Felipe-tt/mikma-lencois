@@ -1,12 +1,8 @@
-import * as Sentry from '@sentry/nextjs';
+// Sentry temporariamente desativado (ver next.config.mjs) enquanto
+// investigamos incompatibilidade com o empacotamento do Firebase
+// Hosting para Cloud Run no Next 16. As chamadas Sentry.captureException
+// espalhadas pelo código continuam existindo e não quebram nada — sem
+// Sentry.init() rodar em algum lugar, elas apenas não fazem nada.
+export async function register() {}
 
-export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('../sentry.server.config');
-  }
-  if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('../sentry.edge.config');
-  }
-}
-
-export const onRequestError = Sentry.captureRequestError;
+export function onRequestError() {}
