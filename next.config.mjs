@@ -2,7 +2,7 @@ import { withSentryConfig } from '@sentry/nextjs';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@node-rs/argon2', 'firebase-admin', 'baileys'],
+  serverExternalPackages: ['@node-rs/argon2', 'firebase-admin'],
 
   images: {
     remotePatterns: [
