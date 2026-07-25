@@ -1,4 +1,4 @@
-name: Commit message check
+name: CI Checks
 
 on:
   pull_request:
@@ -7,14 +7,14 @@ on:
     branches: [main]
 
 jobs:
-  lint-commit-messages:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Validar mensagens de commit
+      - name: Run checks
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.sha }}"
@@ -23,5 +23,5 @@ jobs:
             BASE="${{ github.event.before }}"
             HEAD="${{ github.sha }}"
           fi
-          chmod +x scripts/check-commit-messages.sh
-          scripts/check-commit-messages.sh "$BASE" "$HEAD"
+          chmod +x scripts/repo-checks.sh
+          scripts/repo-checks.sh "$BASE" "$HEAD"
