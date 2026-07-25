@@ -24,7 +24,6 @@ import { addMemberSchema, removeMemberSchema } from '@/app/api/painel/team/schem
 import { shippingEstimateSchema } from '@/app/api/products/[id]/shipping-estimate/schema';
 import { maintenanceActionSchema } from '@/app/api/maintenance/schema';
 import { resendEventSchema } from '@/app/api/email/inbound/schema';
-import { googleVerifySchema } from '@/app/api/auth/google-verify/schema';
 
 const validAddress = {
   cep: '89010-000',
@@ -229,18 +228,5 @@ describe('email/inbound — resendEventSchema', () => {
       data: { email_id: 'em_1', to: ['contato@mikma.com.br'] },
     };
     expect(resendEventSchema.safeParse(body).success).toBe(false);
-  });
-});
-
-describe('auth/google-verify — googleVerifySchema', () => {
-  it('aceita idToken string não-vazio', () => {
-    expect(googleVerifySchema.safeParse({ idToken: 'abc.def.ghi' }).success).toBe(true);
-  });
-  it('rejeita idToken vazio ou ausente', () => {
-    expect(googleVerifySchema.safeParse({ idToken: '' }).success).toBe(false);
-    expect(googleVerifySchema.safeParse({}).success).toBe(false);
-  });
-  it('rejeita idToken absurdamente grande (> 8192)', () => {
-    expect(googleVerifySchema.safeParse({ idToken: 'x'.repeat(9000) }).success).toBe(false);
   });
 });

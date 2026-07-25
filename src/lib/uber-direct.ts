@@ -300,35 +300,6 @@ export interface UberDeliveryStatus {
   complete:          boolean;
 }
 
-/** GET /customers/{customer_id}/deliveries/{delivery_id} */
-export async function uberGetDelivery(deliveryId: string, sandbox: boolean): Promise<UberDeliveryStatus> {
-  const { customerId } = credentials(sandbox);
-  if (!customerId) {
-    throw new Error(sandbox ? 'UBER_DIRECT_SANDBOX_CUSTOMER_ID não configurado' : 'UBER_DIRECT_CUSTOMER_ID não configurado');
-  }
-
-  const token = await getUberToken(sandbox);
-  const res   = await fetch(`${apiBase(sandbox)}/customers/${customerId}/deliveries/${deliveryId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    signal:  AbortSignal.timeout(8000),
-  });
-
-  if (!res.ok) throw new Error(`Uber Direct get delivery falhou: ${res.status}`);
-
-  const d = await res.json();
-  // Campos conforme GetDeliveryResp + CourierInfo do OpenAPI
-  return {
-    status:          d.status,
-    trackingUrl:     d.tracking_url ?? '',
-    courierName:     d.courier?.name,
-    courierPhone:    d.courier?.phone_number,
-    courierVehicle:  d.courier?.vehicle_type,  // vehicle_type em CourierInfo
-    pickupEta:       d.pickup_eta,
-    dropoffEta:      d.dropoff_eta,
-    complete:        d.complete ?? false,
-  };
-}
-
 // ── Cancelar ──────────────────────────────────────────────────────────────────
 
 /**
