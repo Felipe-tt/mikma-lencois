@@ -1,5 +1,6 @@
 # Dependências
 node_modules
+scripts/whatsapp-catalog/node_modules/
 /.pnp
 .pnp.js
 
