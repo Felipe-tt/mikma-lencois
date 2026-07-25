@@ -8,10 +8,12 @@ import { getClientIp } from '@/lib/security';
 import { sendEmail } from '@/lib/email';
 import { generateActionToken } from '@/lib/auth-token';
 import { actionButtonEmailHtml } from '@/lib/email-templates';
+import { verifyRecaptcha } from '@/lib/recaptcha';
 
 const schema = z.object({
   name: z.string().min(2).max(100).trim(),
   email: z.string().email().max(256).toLowerCase(),
+  recaptchaToken: z.string().min(1).optional(),
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mikma.com.br';
@@ -39,8 +41,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 });
   }
 
-  const { name, email } = parsed.data;
+  const { name, email, recaptchaToken } = parsed.data;
   const firstName = name.split(' ')[0];
+
+  if (!await verifyRecaptcha(recaptchaToken, 'send_verification')) {
+    return NextResponse.json(
+      { error: 'Verificação de segurança falhou. Recarregue a página e tente novamente.' },
+      { status: 400 }
+    );
+  }
 
   // Rate limit por e-mail também
   const emailKey = `send-verify:email:${email}`;
@@ -51,20 +60,44 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Verifica se e-mail já está cadastrado
+  // Verifica se e-mail já está cadastrado — mas a resposta HTTP é sempre
+  // a mesma independente do resultado (ok:true), pra não permitir
+  // enumerar quais e-mails têm conta. Se já existir, avisamos por e-mail
+  // (que só o dono da caixa de entrada vê), não pela resposta da API.
+  let alreadyRegistered = false;
   try {
     await adminAuth.getUserByEmail(email);
-    // Se chegou aqui, já existe
-    return NextResponse.json(
-      { error: 'Este e-mail já está cadastrado. Clique em "Entrar" para acessar sua conta.' },
-      { status: 409 }
-    );
+    alreadyRegistered = true;
   } catch (e: unknown) {
-    // auth/user-not-found = não existe, pode prosseguir
+    // auth/user-not-found = não existe, pode prosseguir com o cadastro normal
     const code = (e as { errorInfo?: { code?: string } })?.errorInfo?.code;
     if (code !== 'auth/user-not-found') {
       return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
+  }
+
+  if (alreadyRegistered) {
+    const html = actionButtonEmailHtml({
+      greetingName: firstName,
+      introText: `Você tentou criar uma conta na <strong>Mikma Lençóis</strong> com este e-mail, mas já existe uma conta cadastrada com ele. Clique no botão abaixo para entrar:`,
+      buttonLabel: 'Entrar na minha conta',
+      actionUrl: `${APP_URL}/entrar`,
+      expiryNote: 'Esqueceu sua senha? Você pode redefini-la na tela de login.',
+      securityNote: '<strong>Não foi você?</strong> Pode ignorar este e-mail com segurança — ninguém acessará sua conta sem a senha.',
+    });
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Você já tem uma conta — Mikma Lençóis',
+        text: `Olá, ${firstName}!\n\nVocê tentou criar uma conta na Mikma Lençóis com este e-mail, mas já existe uma conta cadastrada.\n\nEntre em: ${APP_URL}/entrar\n\nSe não foi você, ignore este e-mail.\n\nMikma Lençóis`,
+        html,
+        from: 'noreply',
+      });
+    } catch (err) {
+      console.error('[send-verification] falha ao enviar aviso de conta existente', err);
+      // Não propaga o erro para a resposta — resposta continua idêntica ao caso de sucesso
+    }
+    return NextResponse.json({ ok: true });
   }
 
   // Gera token de verificação (substitui o código de 6 dígitos por um

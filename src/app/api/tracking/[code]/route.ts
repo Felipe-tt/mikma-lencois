@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { meTracking } from '@/lib/melhorenvio';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { getClientIp, tooManyRequests } from '@/lib/security';
+import { getClientIp, tooManyRequests, extractBearer } from '@/lib/security';
 
 export interface TrackingEvent {
   date: string;
@@ -68,6 +68,23 @@ export async function GET(
   const isFirestoreOrder = !isCorreiosCode && code.length > 13;
 
   if (isFirestoreOrder) {
+    // IDOR corrigido: rastrear por orderId exige ser o dono do pedido ou
+    // ser seller/admin — sem isso, qualquer pessoa que soubesse (ou
+    // adivinhasse) um orderId conseguia ver status de entrega e
+    // transportadora de pedidos de outras contas, sem estar logada.
+    const bearer = extractBearer(req);
+    if ('response' in bearer) return bearer.response;
+
+    let requesterUid: string;
+    let requesterRole: string | undefined;
+    try {
+      const decoded = await adminAuth.verifyIdToken(bearer.token, true);
+      requesterUid = decoded.uid;
+      requesterRole = decoded.role as string | undefined;
+    } catch {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
     // Busca o pedido no Firestore para pegar o melhorEnvioOrderId e trackingUrl
     try {
       const orderSnap = await adminDb.collection('orders').doc(code).get();
@@ -75,6 +92,11 @@ export async function GET(
         return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
       }
       const order = orderSnap.data()!;
+
+      if (order.userId !== requesterUid && requesterRole !== 'seller' && requesterRole !== 'admin') {
+        return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+      }
+
       const meOrderId = order.delivery?.melhorEnvioOrderId;
       const trackCode = order.delivery?.trackingCode;
 

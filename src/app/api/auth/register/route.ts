@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
+import { verifyRecaptcha } from '@/lib/recaptcha';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -34,7 +35,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
   }
 
-  const { email, password, phone, cpf } = parsed.data;
+  const { email, password, phone, cpf, recaptchaToken } = parsed.data;
+
+  if (!await verifyRecaptcha(recaptchaToken, 'register')) {
+    return NextResponse.json(
+      { error: 'Verificação de segurança falhou. Recarregue a página e tente novamente.' },
+      { status: 400 }
+    );
+  }
 
   // ── Exige verificação prévia do e-mail ──────────────────────────────────
   const verifyRef = adminDb.collection('email_verifications').doc(email);
