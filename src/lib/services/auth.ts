@@ -11,23 +11,13 @@ import type { User } from '@/types'
 
 const googleProvider = new GoogleAuthProvider()
 
-export async function loginWithEmail(email: string, password: string) {
-  // Password is verified server-side (Argon2id). Here we just get the custom token.
-  const res = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
-
-  if (!res.ok) {
-    const { error } = await res.json()
-    throw new Error(error || 'Credenciais inválidas')
-  }
-
-  const { customToken } = await res.json()
-  const { signInWithCustomToken } = await import('firebase/auth')
-  return signInWithCustomToken(auth, customToken)
-}
+// NOTA: login por e-mail/senha não passa mais por uma função helper aqui.
+// O fluxo real é: POST /api/auth/login só para rate limiting, seguido de
+// signInWithEmailAndPassword(auth, email, password) direto nos componentes
+// (Firebase Auth é a fonte da verdade da senha) — ver src/app/(auth)/entrar,
+// AuthModal, cadastro e redefinir-senha. Uma versão antiga desta função
+// (loginWithEmail) documentava um fluxo com customToken que não existe
+// mais e nunca era chamada por nenhum componente; foi removida.
 
 export async function loginWithGoogle() {
   return signInWithPopup(auth, googleProvider)
