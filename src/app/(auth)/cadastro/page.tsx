@@ -280,8 +280,8 @@ function RegisterContent() {
               </div>
               <h1 className="font-display font-normal text-ink text-[2rem] mb-2 text-center">Veja seu e-mail</h1>
               <p className="text-[14px] text-mid mb-8 leading-relaxed text-center">
-                Enviamos um link para <strong className="text-ink">{email}</strong>. Abra o e-mail e clique no botão{' '}
-                <strong className="text-ink">&ldquo;Confirmar meu e-mail&rdquo;</strong> para continuar — sem precisar digitar nada aqui.
+                Enviamos um e-mail para <strong className="text-ink">{email}</strong>. Abra-o e siga as instruções
+                (se já existir uma conta com este e-mail, o e-mail vai te ajudar a entrar nela em vez de criar uma nova).
               </p>
 
               {error && <ErrorBox msg={error} />}
