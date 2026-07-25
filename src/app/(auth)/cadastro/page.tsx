@@ -10,6 +10,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { consumeReturnTo } from '@/lib/auth/returnTo';
 import { maskPhone, maskCpf, isValidCpf, isValidPhone } from '@/lib/masks';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 type Step = 'email' | 'awaiting' | 'password' | 'done';
 
@@ -93,10 +94,11 @@ function RegisterContent() {
 
     setLoading(true);
     try {
+      const recaptchaToken = await getRecaptchaToken('send_verification');
       const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), recaptchaToken }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -115,10 +117,11 @@ function RegisterContent() {
     setError('');
     setResent(false);
     try {
+      const recaptchaToken = await getRecaptchaToken('send_verification');
       const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), recaptchaToken }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -144,6 +147,7 @@ function RegisterContent() {
 
     setLoading(true);
     try {
+      const recaptchaToken = await getRecaptchaToken('register');
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -152,6 +156,7 @@ function RegisterContent() {
           password,
           phone: phone || undefined,
           cpf: cpf.replace(/\D/g,'') || undefined,
+          recaptchaToken,
         }),
       });
       const d = await res.json();

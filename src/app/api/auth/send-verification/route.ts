@@ -8,10 +8,12 @@ import { getClientIp } from '@/lib/security';
 import { sendEmail } from '@/lib/email';
 import { generateActionToken } from '@/lib/auth-token';
 import { actionButtonEmailHtml } from '@/lib/email-templates';
+import { verifyRecaptcha } from '@/lib/recaptcha';
 
 const schema = z.object({
   name: z.string().min(2).max(100).trim(),
   email: z.string().email().max(256).toLowerCase(),
+  recaptchaToken: z.string().min(1).optional(),
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mikma.com.br';
@@ -39,8 +41,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 });
   }
 
-  const { name, email } = parsed.data;
+  const { name, email, recaptchaToken } = parsed.data;
   const firstName = name.split(' ')[0];
+
+  if (!await verifyRecaptcha(recaptchaToken, 'send_verification')) {
+    return NextResponse.json(
+      { error: 'Verificação de segurança falhou. Recarregue a página e tente novamente.' },
+      { status: 400 }
+    );
+  }
 
   // Rate limit por e-mail também
   const emailKey = `send-verify:email:${email}`;
