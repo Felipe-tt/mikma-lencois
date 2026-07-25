@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import type { TrackingResult } from '@/app/api/tracking/[code]/route';
+import { auth } from '@/lib/firebase/client';
 
 interface Props {
   // Passa trackingCode para Correios (via Link&Track)
@@ -57,7 +58,16 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/tracking/${encodeURIComponent(key)}`);
+      // Busca por orderId agora exige autenticação (corrige IDOR: antes,
+      // qualquer pessoa com o orderId via URL conseguia ver o rastreio de
+      // pedidos de outras contas). Busca por trackingCode dos Correios
+      // continua pública, sem exigir token.
+      const headers: HeadersInit = {};
+      if (orderId) {
+        const idToken = await auth.currentUser?.getIdToken();
+        if (idToken) headers.Authorization = `Bearer ${idToken}`;
+      }
+      const res = await fetch(`/api/tracking/${encodeURIComponent(key)}`, { headers });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erro ao buscar rastreio');
       setResult(data);
