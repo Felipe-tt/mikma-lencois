@@ -1,4 +1,4 @@
-// Schema compartilhado dos rascunhos de catálogo — importados de um CSV
+// Schema compartilhado dos rascunhos de catálogo, importados de um CSV
 // qualquer, ficam salvos como rascunho (sem afetar a loja) até alguém
 // terminar de revisar/completar os campos e publicar como produto de verdade.
 import { z } from 'zod';
@@ -7,12 +7,12 @@ import { SIZES } from '@/lib/productOptions';
 export const DraftImageSchema = z.object({
   url: z.string().url().max(500),
   // Caminho no Storage, pra permitir apagar depois. Restrito ao padrão
-  // exato gerado pela rota sign-upload (products/AAAA/MM/draft_*.webp) —
+  // exato gerado pela rota sign-upload (products/AAAA/MM/draft_*.webp) -
   // sem essa validação, o campo aceitava qualquer string, e um seller/
   // admin mal-intencionado (ou com a conta comprometida) podia colocar
   // aqui o caminho de QUALQUER outro arquivo do bucket (ex: a imagem de
   // um produto publicado) e apagá-lo de verdade ao excluir o próprio
-  // rascunho — o delete usa o Admin SDK, que ignora storage.rules.
+  // rascunho, o delete usa o Admin SDK, que ignora storage.rules.
   path: z.string().max(300).regex(
     /^products\/\d{4}\/\d{2}\/draft_\d+_[a-z0-9]+\.webp$/,
     'Caminho de imagem inválido'
@@ -20,7 +20,7 @@ export const DraftImageSchema = z.object({
 });
 
 // Campos livres na importação (o CSV de origem raramente bate 100% com o
-// enum de tamanho/categoria da loja) — size/category ficam como string aberta
+// enum de tamanho/categoria da loja), size/category ficam como string aberta
 // no rascunho, e só são validados contra o enum na hora de publicar.
 export const CatalogDraftSchema = z.object({
   name: z.string().max(200).default(''),
@@ -39,10 +39,10 @@ export const CatalogDraftSchema = z.object({
 
 export type CatalogDraftInput = z.infer<typeof CatalogDraftSchema>;
 
-// Mesmo schema mas todos os campos opcionais — usado no PATCH parcial.
+// Mesmo schema mas todos os campos opcionais, usado no PATCH parcial.
 export const CatalogDraftPatchSchema = CatalogDraftSchema.partial();
 
-// Fronha não tem "tamanho de cama" — é peça única, então não exigimos
+// Fronha não tem "tamanho de cama", é peça única, então não exigimos
 // (e o publish já força size = 'unico' nesse caso).
 export function isSizeless(category: string): boolean {
   return category.trim().toLowerCase() === 'fronhas';

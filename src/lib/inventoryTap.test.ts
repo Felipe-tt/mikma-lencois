@@ -47,7 +47,7 @@ describe('shouldConfirmRapidTap', () => {
   });
 
   it('NÃO confirma quando o toque está corrigindo de volta (desfazendo, não errando de novo)', () => {
-    // tava em 5 (já tinha confirmado), errou o modo e voltou pra 4 — não repergunta
+    // tava em 5 (já tinha confirmado), errou o modo e voltou pra 4, não repergunta
     expect(shouldConfirmRapidTap(5, 4)).toBe(false);
     expect(shouldConfirmRapidTap(-5, -4)).toBe(false);
   });

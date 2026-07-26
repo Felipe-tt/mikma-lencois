@@ -19,7 +19,7 @@ interface InAppNotificationInput {
 /**
  * Grava uma notificação em notifications/seller/items, lida pelo sino no
  * painel (tempo real via onSnapshot). Separado do push (notifySeller) de
- * propósito: o sino é o histórico persistente — dá pra ver de novo depois,
+ * propósito: o sino é o histórico persistente, dá pra ver de novo depois,
  * mesmo se perdeu o push (app fechado, notificação dispensada sem ler,
  * dispositivo sem permissão concedida, etc).
  *

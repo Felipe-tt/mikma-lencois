@@ -10,14 +10,14 @@ import { z, type ZodType, type ZodError } from 'zod';
  * "x-served-by: cache-cwb-..."). Isso muda a regra normal de "confia no
  * último IP do X-Forwarded-For": com Firebase Hosting na frente do Cloud
  * Run, o ÚLTIMO valor do X-Forwarded-For é a própria infraestrutura da
- * Fastly, não o visitante — o IP real do cliente vem separado, no header
+ * Fastly, não o visitante, o IP real do cliente vem separado, no header
  * dedicado "fastly-client-ip", que o Firebase Hosting/Fastly define de
  * forma confiável (não é algo que o navegador do visitante controla).
  *
  * Por isso: 1) usa fastly-client-ip quando presente (caminho normal em
  * produção); 2) cai pro ÚLTIMO valor do X-Forwarded-For só como fallback
  * (cenário sem Firebase Hosting na frente, ex: emulador local acessando
- * o Cloud Run direto) — nunca o primeiro valor, que é forjável pelo
+ * o Cloud Run direto), nunca o primeiro valor, que é forjável pelo
  * próprio cliente.
  */
 export function getClientIp(req: NextRequest): string {
@@ -68,7 +68,7 @@ export async function safeJson<T = unknown>(
   }
 }
 
-/** Endereço de entrega — mesmo shape usado no checkout e no pedido salvo no Firestore. */
+/** Endereço de entrega, mesmo shape usado no checkout e no pedido salvo no Firestore. */
 export const addressSchema = z.object({
   cep: z.string().trim().regex(/^\d{5}-?\d{3}$/, 'CEP inválido'),
   street: z.string().trim().min(1).max(150),
@@ -92,7 +92,7 @@ function formatZodError(err: ZodError): string {
 /**
  * Lê o body JSON (com limite de tamanho) e valida contra um schema zod.
  * Retorna { ok: true, data } tipado pelo schema, ou { ok: false, response }
- * já pronto pra dar `return` direto na rota — 400 (JSON/schema inválido) ou 413 (payload grande).
+ * já pronto pra dar `return` direto na rota, 400 (JSON/schema inválido) ou 413 (payload grande).
  */
 export async function validateBody<S extends ZodType>(
   req: NextRequest,
@@ -174,7 +174,7 @@ export async function verifyAuth(
  * cliente (campo "images"). Se qualquer URL fosse aceita, um seller/admin
  * mal-intencionado (ou com a conta comprometida) poderia salvar a URL de
  * QUALQUER outro objeto do bucket e fazer o servidor apagá-lo de verdade
- * na hora de excluir o produto/rascunho — o delete usa o Admin SDK, que
+ * na hora de excluir o produto/rascunho, o delete usa o Admin SDK, que
  * ignora storage.rules.
  */
 export function isValidProductImageUrl(url: string): boolean {

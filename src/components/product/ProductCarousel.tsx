@@ -10,7 +10,7 @@ interface Props {
 /**
  * Carrossel horizontal de produtos com setas, snap-scroll e fade nas bordas
  * pra indicar que tem mais conteúdo. Scroll nativo (funciona com swipe no
- * touch e trackpad) — as setas só dão um empurrão de "uma tela" por vez.
+ * touch e trackpad), as setas só dão um empurrão de "uma tela" por vez.
  */
 export function ProductCarousel({ products }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -49,7 +49,7 @@ export function ProductCarousel({ products }: Props) {
 
   return (
     <div className="relative">
-      {/* Setas — desktop, alinhadas com o título da seção */}
+      {/* Setas, desktop, alinhadas com o título da seção */}
       <div className="hidden sm:flex absolute -top-[60px] right-0 gap-2">
         <button
           type="button"
@@ -72,7 +72,7 @@ export function ProductCarousel({ products }: Props) {
       </div>
 
       <div className="relative">
-        {/* Fades nas bordas — só aparecem quando há mais conteúdo pra esse lado */}
+        {/* Fades nas bordas, só aparecem quando há mais conteúdo pra esse lado */}
         <div
           aria-hidden
           className={`pointer-events-none absolute left-0 top-0 bottom-0 w-10 sm:w-16 z-10 bg-gradient-to-r from-paper to-transparent transition-opacity duration-200 ${canPrev ? 'opacity-100' : 'opacity-0'}`}

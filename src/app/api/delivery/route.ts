@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
         zipCode:    addr.cep         ?? '',
       });
 
-      // manifest_items é OBRIGATÓRIO — array com cada item do pedido
+      // manifest_items é OBRIGATÓRIO, array com cada item do pedido
       const manifestItems: UberManifestItem[] = order.items.map(i => ({
         name:     `${i.productName}${i.variant ? ` (${i.variant.size} ${i.variant.colorName ?? i.variant.color})` : ''}`.slice(0, 80),
         quantity: i.quantity,
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
         dropoffPhoneNumber:  customerPhone,
         manifestItems,
         manifestTotalValue:  order.totalCents,
-        // Garante o preço cotado — evita divergência se a tarifa mudar entre cotação e despacho
+        // Garante o preço cotado, evita divergência se a tarifa mudar entre cotação e despacho
         quoteId:             order.delivery?.uberQuoteId,
       }, uberSandbox);
 
@@ -299,7 +299,7 @@ export async function POST(req: NextRequest) {
     const insuranceValue = order.totalCents / 100;
 
     // ── Trava de segurança: confere saldo real na Melhor Envio antes de
-    // comprar a etiqueta. Nunca deixa a compra ser tentada sem saldo — evita
+    // comprar a etiqueta. Nunca deixa a compra ser tentada sem saldo, evita
     // conta negativa e falha no meio do fluxo. Isso é 100% interno: o
     // cliente já pagou, essa checagem não aparece pra ele em nenhum momento,
     // só bloqueia o botão de despacho no painel do seller.
@@ -367,7 +367,7 @@ export async function POST(req: NextRequest) {
 /**
  * DELETE /api/delivery
  * Cancela uma entrega já despachada via Melhor Envio.
- * Apenas seller/admin — nunca o cliente.
+ * Apenas seller/admin, nunca o cliente.
  *
  * Cancela a etiqueta no Melhor Envio, reverte o pedido para
  * 'preparing' (volta pra fila de despacho) e limpa os dados de
@@ -408,7 +408,7 @@ export async function DELETE(req: NextRequest) {
 
     const meOrderId           = order.delivery?.melhorEnvioOrderId;
     const uberDirectDeliveryId = order.delivery?.uberDirectDeliveryId;
-    // Usa o ambiente em que a entrega foi DE FATO criada — não as settings
+    // Usa o ambiente em que a entrega foi DE FATO criada, não as settings
     // atuais, que podem ter sido trocadas no painel entre o despacho e agora.
     const uberSandboxAtDispatch = !!order.delivery?.uberSandbox;
 
@@ -425,7 +425,7 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    // ── Melhor Envio — Retirada na loja não tem nada a cancelar ─────────────────────────
+    // ── Melhor Envio, Retirada na loja não tem nada a cancelar ─────────────────────────
     if (meOrderId) {
       try {
         await meCancel(meOrderId, `Cancelado pelo vendedor: ${reason}`);

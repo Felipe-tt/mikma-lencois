@@ -7,7 +7,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   title: string;
-  /** URL/rota real que esse preview representa, ex: "/" ou "/sobre" — mostrado na barra do "navegador" */
+  /** URL/rota real que esse preview representa, ex: "/" ou "/sobre", mostrado na barra do "navegador" */
   routeLabel: string;
   children: React.ReactNode;
 }
@@ -98,7 +98,7 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
 
         {/* ── Footer hint ── */}
         <div className="px-4 py-2.5 bg-paper border-t border-mist flex items-center justify-between shrink-0">
-          <p className="text-[10px] text-faint">Pré-visualização ao vivo — reflete o que você digitou, ainda não salvo</p>
+          <p className="text-[10px] text-faint">Pré-visualização ao vivo, reflete o que você digitou, ainda não salvo</p>
           <button onClick={onClose} className="text-[11px] font-semibold text-mid hover:text-ink transition-colors">
             Fechar
           </button>

@@ -25,7 +25,7 @@ export async function POST(
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
     // IMPORTANTE: role vem do custom claim do token, não do documento
-    // Firestore /users/{uid} — esse campo pode ser escrito pelo próprio
+    // Firestore /users/{uid}, esse campo pode ser escrito pelo próprio
     // usuário (regra allow update: if isSelf(uid)), então usá-lo aqui
     // permitiria qualquer comprador se autopromover e cancelar pedidos
     // de qualquer cliente.
@@ -90,13 +90,13 @@ export async function POST(
       const invRef = invQuery.docs[0].ref;
 
       if (isPending) {
-        // Ainda não debitou quantity — só libera a reserva
+        // Ainda não debitou quantity, só libera a reserva
         batch.update(invRef, {
           reserved: FieldValue.increment(-item.quantity),
           updatedAt: FieldValue.serverTimestamp(),
         });
       } else {
-        // Já debitou quantity (paid, preparing, shipped) — devolve e libera reserved
+        // Já debitou quantity (paid, preparing, shipped), devolve e libera reserved
         // reserved foi decrementado no confirmOrder junto com quantity, então
         // ao reverter precisamos só devolver quantity (reserved já está 0 pra esse item)
         batch.update(invRef, {

@@ -71,7 +71,7 @@ export default function PainelDashboard() {
                 <IconHourglass size={18} className="shrink-0" />
                 <div>
                   <p className="text-[13px] font-bold">{waiting} {waiting === 1 ? 'pedido aguardando' : 'pedidos aguardando'} pagamento</p>
-                  <p className="text-[11px] opacity-70">O cliente ainda não pagou — pode ser normal levar alguns minutos</p>
+                  <p className="text-[11px] opacity-70">O cliente ainda não pagou, pode ser normal levar alguns minutos</p>
                 </div>
               </div>
             </Link>

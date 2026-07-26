@@ -13,7 +13,7 @@ import { shippingEstimateSchema } from './schema';
 
 interface Params { params: Promise<{ id: string }> }
 
-// Estimativa de frete pública (sem login) pra um único produto — usada pelo
+// Estimativa de frete pública (sem login) pra um único produto, usada pelo
 // "Calcule o frete" na página de produto, no mesmo espírito do Amazon/Mercado
 // Livre, que cotam frete antes de qualquer login ou item no carrinho.
 // Reaproveita a mesma computeShippingOptions do checkout: nunca duplica a
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
 
     return NextResponse.json({
-      // realPriceCents nunca vai pro cliente — só usado internamente.
+      // realPriceCents nunca vai pro cliente, só usado internamente.
       options: result.options.filter(o => o.available).map(({ realPriceCents: _realPriceCents, ...o }) => o),
       isLocal: result.isLocal,
       freeShipping: result.freeShipping,

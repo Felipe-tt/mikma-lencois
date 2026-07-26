@@ -9,7 +9,7 @@ Sentry.init({
   environment: process.env.NODE_ENV,
   tracesSampleRate: 0.1,
   sendDefaultPii: false,
-  // Sem session replay — não faz sentido pra esse porte de loja e evita
+  // Sem session replay, não faz sentido pra esse porte de loja e evita
   // capturar sem querer algo sensível digitado em algum formulário.
 });
 

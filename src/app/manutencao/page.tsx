@@ -3,7 +3,7 @@ import { getSettings } from '@/lib/settings';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Em breve — Mikma Lençóis',
+  title: 'Em breve, Mikma Lençóis',
 };
 
 export default async function ManutencaoPage() {
@@ -27,7 +27,7 @@ export default async function ManutencaoPage() {
 
       {/* Polling: assim que a manutenção acabar (ou esse IP for liberado
           manualmente pelo painel), sai sozinho de /manutencao de volta pra
-          "/" — sem precisar que o visitante dê refresh. Checa a cada 5s;
+          "/", sem precisar que o visitante dê refresh. Checa a cada 5s;
           silencioso em caso de erro de rede (só tenta de novo no próximo tick). */}
       <script
         dangerouslySetInnerHTML={{

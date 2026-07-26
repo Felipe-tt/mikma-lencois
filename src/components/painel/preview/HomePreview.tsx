@@ -5,7 +5,7 @@ import type { StoreSettings } from '@/lib/store-settings';
 /**
  * Espelha o markup real de src/components/layout/Header.tsx (topbar)
  * + src/app/(shop)/page.tsx (seção Hero). Mantenha em sincronia se o
- * site real mudar — é só um preview visual, sem lógica de carrinho/auth.
+ * site real mudar, é só um preview visual, sem lógica de carrinho/auth.
  */
 export function HeroPreview({ s }: { s: StoreSettings }) {
   const city = s.storeCity?.split(',')[0] || 'Blumenau';
@@ -24,7 +24,7 @@ export function HeroPreview({ s }: { s: StoreSettings }) {
         </div>
       )}
 
-      {/* Mini header fake — só pra dar contexto visual, sem navegação real */}
+      {/* Mini header fake, só pra dar contexto visual, sem navegação real */}
       <div className="h-[60px] border-b border-[#E4DED5] flex items-center px-6 bg-white dark:bg-warm">
         <div className="h-6 w-28 bg-ink/10 rounded-sm" />
         <div className="flex-1" />
@@ -78,7 +78,7 @@ export function HeroPreview({ s }: { s: StoreSettings }) {
   );
 }
 
-/** Espelha a seção de produtos em destaque (título + link) — só o cabeçalho, sem produtos reais */
+/** Espelha a seção de produtos em destaque (título + link), só o cabeçalho, sem produtos reais */
 export function FeaturedPreview({ s }: { s: StoreSettings }) {
   return (
     <section className="bg-paper">

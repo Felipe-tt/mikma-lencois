@@ -34,7 +34,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
   const { user } = useAuth();
   const [mode, setMode] = useState<'venda' | 'reposicao'>('venda');
   // Em tela pequena, 5-6 colunas deixam a foto minúscula e difícil de tocar
-  // certo — por isso o conjunto de opções (e o padrão) muda conforme o
+  // certo, por isso o conjunto de opções (e o padrão) muda conforme o
   // tamanho da tela, em vez de oferecer sempre as mesmas 3-6 colunas.
   const [isMobile, setIsMobile] = useState(true);
   const [cols, setCols] = useState(2);
@@ -91,7 +91,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
     if (shouldConfirmRapidTap(cur, next)) {
       vibrate([20, 60, 20]);
       const ok = window.confirm(
-        `${Math.abs(next)} toques seguidos em "${item.productName}" — confere se não foi sem querer.\n\n` +
+        `${Math.abs(next)} toques seguidos em "${item.productName}", confere se não foi sem querer.\n\n` +
         `Continuar como ${mode === 'venda' ? `${Math.abs(next)} vendas` : `${Math.abs(next)} chegadas`}?`
       );
       if (!ok) return;
@@ -167,7 +167,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
     // aplica a mudança no cache local na hora (é o que o resto do painel
     // lê pra mostrar o número novo) e guarda o envio numa fila que sincroniza
     // sozinha quando a internet melhorar. Com wifi ruim de loja, esperar o
-    // "ok" do servidor podia deixar o vendedor com a tela travada minutos —
+    // "ok" do servidor podia deixar o vendedor com a tela travada minutos -
     // aqui ele bate, sente a vibração, e já pode atender o próximo cliente.
     const commitPromise = batch.commit();
     vibrate([15, 40, 15]);
@@ -179,7 +179,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
     if (restocks > 0) parts.push(`${restocks} ${restocks === 1 ? 'reposição' : 'reposições'}`);
 
     const offlineNote = typeof navigator !== 'undefined' && !navigator.onLine
-      ? ' Sem internet agora — vai sincronizar sozinho assim que voltar.'
+      ? ' Sem internet agora, vai sincronizar sozinho assim que voltar.'
       : '';
     onDone(`Registrado: ${parts.join(' e ')} (${pendingUnits} peças).${offlineNote}`, async () => {
       try {
@@ -203,11 +203,11 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
     setSaving(false);
 
     // A tela já seguiu em frente (o vendedor não espera isso). Só se der um
-    // erro de verdade — não simplesmente "ainda sem sincronizar" — que avisa,
+    // erro de verdade, não simplesmente "ainda sem sincronizar", que avisa,
     // porque isso não se resolve sozinho quando a internet voltar.
     commitPromise.catch(err => {
       console.error('[nova-venda] falha ao sincronizar', err);
-      onDone('Atenção: uma venda não terminou de salvar (erro, não só rede fraca) — confira o estoque desse produto.');
+      onDone('Atenção: uma venda não terminou de salvar (erro, não só rede fraca), confira o estoque desse produto.');
     });
   }
 

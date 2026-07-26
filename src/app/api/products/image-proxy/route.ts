@@ -16,8 +16,8 @@ const ALLOWED_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.google
  * (precisaria de `gsutil cors set` no bucket, fora do escopo do código).
  * Sem esse header, fetch() é bloqueado pela política de CORS do navegador.
  *
- * Um fetch feito aqui no servidor não tem essa restrição — CORS é uma
- * regra do navegador, não existe entre servidores — então repassamos os
+ * Um fetch feito aqui no servidor não tem essa restrição, CORS é uma
+ * regra do navegador, não existe entre servidores, então repassamos os
  * bytes já prontos para o client, que nunca precisa tocar a URL cross-origin.
  */
 export async function GET(req: NextRequest) {

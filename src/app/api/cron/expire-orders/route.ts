@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
           const authUser = await adminAuth.getUser(order.userId as string);
           customerEmail = authUser.email;
         } catch {
-          // sem email — pula
+          // sem email, pula
         }
       }
 
@@ -161,7 +161,7 @@ export async function GET(req: NextRequest) {
           const freshOrder = freshSnap.data()!;
           if (freshOrder.status !== 'pending_payment') {
             // Mudou de status (pago, já cancelado, etc.) entre a leitura
-            // inicial do cron e agora — não mexe em nada.
+            // inicial do cron e agora, não mexe em nada.
             return false;
           }
 
@@ -181,7 +181,7 @@ export async function GET(req: NextRequest) {
 
         if (!wasCancelled) {
           // Pedido já tinha saído de pending_payment (provavelmente pago
-          // pelo webhook) — pula o e-mail de cancelamento e a liberação
+          // pelo webhook), pula o e-mail de cancelamento e a liberação
           // de estoque, que já foram tratados em outro lugar.
           continue;
         }
@@ -208,7 +208,7 @@ export async function GET(req: NextRequest) {
         if (customerEmail) {
           await sendEmail({
             to: customerEmail,
-            subject: `Pedido #${shortId} cancelado — Mikma Lençóis`,
+            subject: `Pedido #${shortId} cancelado, Mikma Lençóis`,
             text: [
               `Olá, ${customerName}.`,
               '',
@@ -218,7 +218,7 @@ export async function GET(req: NextRequest) {
               '',
               `Se quiser, acesse ${APP_URL}/produtos e faça um novo pedido.`,
               '',
-              '— Mikma Lençóis',
+              'Mikma Lençóis',
             ].join('\n'),
             html: emailHtml({
               title: `Pedido #${shortId} cancelado`,
@@ -231,7 +231,7 @@ export async function GET(req: NextRequest) {
                 </p>
                 <p style="margin:0;font-size:14px;color:#705A48;line-height:1.65;">
                   Os itens foram liberados para outros clientes. Se ainda quiser comprar,
-                  basta fazer um novo pedido — estaremos esperando.
+                  basta fazer um novo pedido, estaremos esperando.
                 </p>
               `,
               ctaText: 'Ver produtos',
@@ -240,7 +240,7 @@ export async function GET(req: NextRequest) {
           }).catch(() => {});
         }
 
-        continue; // já cancelou — não precisa checar o aviso
+        continue; // já cancelou, não precisa checar o aviso
       }
 
       // ── AVISAR: pedido criado há mais de 24h mas ainda não avisado ─────
@@ -255,7 +255,7 @@ export async function GET(req: NextRequest) {
         if (customerEmail) {
           await sendEmail({
             to: customerEmail,
-            subject: `Seu pedido #${shortId} vai ser cancelado em 24h — Mikma Lençóis`,
+            subject: `Seu pedido #${shortId} vai ser cancelado em 24h, Mikma Lençóis`,
             text: [
               `Olá, ${customerName}.`,
               '',
@@ -265,7 +265,7 @@ export async function GET(req: NextRequest) {
               '',
               `Para pagar agora: ${orderUrl}`,
               '',
-              '— Mikma Lençóis',
+              'Mikma Lençóis',
             ].join('\n'),
             html: emailHtml({
               title: `Pedido #${shortId} aguardando pagamento`,

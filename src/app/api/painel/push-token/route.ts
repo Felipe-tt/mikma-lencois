@@ -14,7 +14,7 @@ const deleteSchema = z.object({
   token: z.string().min(20).max(4096),
 });
 
-// Só seller/admin podem se cadastrar para push — essa notificação é
+// Só seller/admin podem se cadastrar para push, essa notificação é
 // exclusivamente para o vendor, nunca para o comprador.
 export async function POST(req: NextRequest) {
   const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   });
   if (hasStale) await batch.commit();
 
-  // Um documento por token (não por uid) — o mesmo vendor pode ter o token
+  // Um documento por token (não por uid), o mesmo vendor pode ter o token
   // trocado ao reinstalar/limpar o navegador; guardamos por token para
   // permitir múltiplos dispositivos por vendor sem duplicar envio.
   await adminDb.collection('pushTokens').doc(token).set({
@@ -105,7 +105,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   const doc = await adminDb.collection('pushTokens').doc(parsed.data.token).get();
-  // Só permite apagar o próprio token — não deixa um vendor apagar o
+  // Só permite apagar o próprio token, não deixa um vendor apagar o
   // token de outro vendor por engano/mal-intencionado.
   if (doc.exists && doc.data()?.uid === auth.decoded.uid) {
     await doc.ref.delete();

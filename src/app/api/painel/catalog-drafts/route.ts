@@ -9,7 +9,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { CatalogDraftSchema } from '@/lib/catalogDraft';
 
 // Lista todos os rascunhos (qualquer seller/admin pode ver e continuar
-// trabalhando neles — não é "por dono", já que a loja é gerida em conjunto).
+// trabalhando neles, não é "por dono", já que a loja é gerida em conjunto).
 export async function GET(req: NextRequest) {
   const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
   if (!auth.ok) return auth.response;
@@ -28,7 +28,7 @@ const ImportBodySchema = z.object({
   items: z.array(CatalogDraftSchema.partial()).min(1).max(500),
 });
 
-// Importação em lote a partir de um CSV já parseado no browser — cria um
+// Importação em lote a partir de um CSV já parseado no browser, cria um
 // rascunho por linha, sem validar campos obrigatórios (a ideia é deixar
 // incompleto e ir completando aos poucos, inclusive com imagens depois).
 export async function POST(req: NextRequest) {
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     return tooManyRequests(rateLimitRetryAfter(key));
   }
 
-  const body = await safeJson(req, 262144); // 256KB — CSVs grandes de catálogo
+  const body = await safeJson(req, 262144); // 256KB, CSVs grandes de catálogo
   if (!body.ok) return body.response;
 
   const parsed = ImportBodySchema.safeParse(body.data);

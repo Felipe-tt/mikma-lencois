@@ -12,7 +12,7 @@ import { getSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 
-// ISR: revalida a cada 5 minutos — reduz leituras no Firestore por visita ao produto
+// ISR: revalida a cada 5 minutos, reduz leituras no Firestore por visita ao produto
 export const revalidate = 300;
 interface Props { params: Promise<{ slug: string }> }
 
@@ -210,7 +210,7 @@ export default async function ProductPage({ params }: Props) {
                 />
               </div>
 
-              {/* Trust signals — vindos das configs */}
+              {/* Trust signals, vindos das configs */}
               {productTrusts.length > 0 && (
                 <div className="flex flex-col gap-2.5 border-t border-mist pt-5 max-w-[520px]">
                   {productTrusts.map((text, i) => (

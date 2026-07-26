@@ -1,5 +1,5 @@
 // Sentry pro runtime Edge (middleware.ts). Mesmas ressalvas do
-// sentry.server.config.ts — no-op sem SENTRY_DSN.
+// sentry.server.config.ts, no-op sem SENTRY_DSN.
 import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({

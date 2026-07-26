@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const result = await computeShippingOptions(destCep, settings, productValueCents, totalWeightKg, ledgerBalanceCents);
 
     return NextResponse.json({
-      // realPriceCents é informação interna (custo real de despacho) —
+      // realPriceCents é informação interna (custo real de despacho) -
       // nunca deve ir pro cliente, só é usado server-side pro caixa de frete.
       options: result.options.map(({ realPriceCents: _realPriceCents, ...o }) => o),
       distKm: Math.round(result.distKm),

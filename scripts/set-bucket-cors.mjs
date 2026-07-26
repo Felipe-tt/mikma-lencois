@@ -4,7 +4,7 @@
  * partir do domínio do site.
  *
  * Sem isso, o upload assinado (URL correta, assinatura correta) ainda
- * falha no navegador com "Failed to fetch" — porque o Storage nunca foi
+ * falha no navegador com "Failed to fetch", porque o Storage nunca foi
  * autorizado a responder com os headers de CORS pra origem do site, e o
  * navegador bloqueia a resposta do preflight/PUT antes mesmo dela chegar
  * no código.

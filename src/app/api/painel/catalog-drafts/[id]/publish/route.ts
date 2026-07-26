@@ -11,7 +11,7 @@ import { SIZES } from '@/lib/productOptions';
 // Publica um rascunho como produto de verdade (mesma forma que a criação
 // manual em /painel/produtos/novo): 1 produto com 1 variante. Se o
 // vendedor quiser um produto com várias variantes (cores/tamanhos), essa
-// junção continua sendo feita à mão no editor de produto por enquanto —
+// junção continua sendo feita à mão no editor de produto por enquanto -
 // a importação só evita redigitar o que já veio do WhatsApp.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });

@@ -11,7 +11,7 @@ interface Props {
 /**
  * Logo da marca que se adapta ao tema. Usa dois <Image> empilhados e
  * `dark:` (classe no <html>, ver ThemeScript/ThemeToggle) pra trocar
- * qual fica visível — sem precisar de JS/estado pra saber o tema atual.
+ * qual fica visível, sem precisar de JS/estado pra saber o tema atual.
  * Use sempre que o logo estiver sobre uma superfície que também troca
  * de cor no dark mode (bg-paper, bg-warm etc). Para superfícies que
  * ficam sempre escuras (ex: footer com `theme-locked`), use direto

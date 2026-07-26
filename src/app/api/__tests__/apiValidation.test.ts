@@ -1,7 +1,7 @@
 /**
  * Testes de validação (zod) das rotas de API que recebem body.
  *
- * Não são testes de integração completos (não sobem Firestore/auth/gateway) —
+ * Não são testes de integração completos (não sobem Firestore/auth/gateway) -
  * o objetivo aqui é garantir que cada schema aceita exatamente o payload que
  * o frontend/webhook legítimo envia, e rejeita as formas malformadas mais
  * prováveis (campo faltando, tipo errado, formato inválido). Isso é a rede
@@ -53,7 +53,7 @@ describe('addressSchema', () => {
   });
 });
 
-describe('payment/webhook — webhookSchema', () => {
+describe('payment/webhook, webhookSchema', () => {
   it('aceita envelope transparent.completed com transparent presente', () => {
     const payload = { event: 'transparent.completed', data: { transparent: { id: 'tx_1', externalId: 'ord_1' } } };
     expect(webhookSchema.safeParse(payload).success).toBe(true);
@@ -71,7 +71,7 @@ describe('payment/webhook — webhookSchema', () => {
   });
 });
 
-describe('payment/create-checkout — createCheckoutSchema', () => {
+describe('payment/create-checkout, createCheckoutSchema', () => {
   it('aceita body válido de cartão', () => {
     const body = { address: validAddress, installments: 3, shipping: { carrier: 'correios_pac' } };
     expect(createCheckoutSchema.safeParse(body).success).toBe(true);
@@ -96,7 +96,7 @@ describe('payment/create-checkout — createCheckoutSchema', () => {
   });
 });
 
-describe('payment/create-pix — createPixSchema', () => {
+describe('payment/create-pix, createPixSchema', () => {
   it('aceita body válido de PIX', () => {
     const body = { address: validAddress, shipping: { carrier: 'uber_direct' } };
     expect(createPixSchema.safeParse(body).success).toBe(true);
@@ -106,7 +106,7 @@ describe('payment/create-pix — createPixSchema', () => {
   });
 });
 
-describe('shipping/quote — quoteSchema', () => {
+describe('shipping/quote, quoteSchema', () => {
   it('aceita CEP válido com e sem hífen', () => {
     expect(quoteSchema.safeParse({ destCep: '89010-000' }).success).toBe(true);
     expect(quoteSchema.safeParse({ destCep: '89010000' }).success).toBe(true);
@@ -116,7 +116,7 @@ describe('shipping/quote — quoteSchema', () => {
   });
 });
 
-describe('shipping/webhook (Melhor Envio) — mePayloadSchema', () => {
+describe('shipping/webhook (Melhor Envio), mePayloadSchema', () => {
   it('aceita evento válido com id numérico ou string', () => {
     expect(mePayloadSchema.safeParse({ event: 'order.posted', data: { id: 123 } }).success).toBe(true);
     expect(mePayloadSchema.safeParse({ event: 'order.posted', data: { id: 'abc' } }).success).toBe(true);
@@ -126,7 +126,7 @@ describe('shipping/webhook (Melhor Envio) — mePayloadSchema', () => {
   });
 });
 
-describe('shipping/uber-webhook — uberWebhookSchema', () => {
+describe('shipping/uber-webhook, uberWebhookSchema', () => {
   it('aceita payload de delivery_status', () => {
     const body = { event_type: 'event.delivery_status', data: { id: 'del_1', status: 'pickup' } };
     expect(uberWebhookSchema.safeParse(body).success).toBe(true);
@@ -136,7 +136,7 @@ describe('shipping/uber-webhook — uberWebhookSchema', () => {
   });
 });
 
-describe('delivery — dispatchSchema / cancelDeliverySchema', () => {
+describe('delivery, dispatchSchema / cancelDeliverySchema', () => {
   it('dispatchSchema aceita orderId sozinho e com carrier opcional', () => {
     expect(dispatchSchema.safeParse({ orderId: 'ord_1' }).success).toBe(true);
     expect(dispatchSchema.safeParse({ orderId: 'ord_1', carrier: 'pickup' }).success).toBe(true);
@@ -150,7 +150,7 @@ describe('delivery — dispatchSchema / cancelDeliverySchema', () => {
   });
 });
 
-describe('orders/update-status — updateStatusSchema', () => {
+describe('orders/update-status, updateStatusSchema', () => {
   it('aceita sem trackingCode (nem todo avanço de status tem um)', () => {
     expect(updateStatusSchema.safeParse({}).success).toBe(true);
   });
@@ -162,7 +162,7 @@ describe('orders/update-status — updateStatusSchema', () => {
   });
 });
 
-describe('orders/admin-cancel — adminCancelSchema', () => {
+describe('orders/admin-cancel, adminCancelSchema', () => {
   it('aceita sem reason (usa fallback no handler)', () => {
     expect(adminCancelSchema.safeParse({}).success).toBe(true);
   });
@@ -171,7 +171,7 @@ describe('orders/admin-cancel — adminCancelSchema', () => {
   });
 });
 
-describe('painel/team — addMemberSchema / removeMemberSchema', () => {
+describe('painel/team, addMemberSchema / removeMemberSchema', () => {
   it('aceita e-mail e role válidos', () => {
     expect(addMemberSchema.safeParse({ email: 'seller@mikma.com.br', role: 'seller' }).success).toBe(true);
   });
@@ -188,7 +188,7 @@ describe('painel/team — addMemberSchema / removeMemberSchema', () => {
   });
 });
 
-describe('products/shipping-estimate — shippingEstimateSchema', () => {
+describe('products/shipping-estimate, shippingEstimateSchema', () => {
   it('aplica default de qty = 1', () => {
     const parsed = shippingEstimateSchema.safeParse({ destCep: '89010-000' });
     expect(parsed.success).toBe(true);
@@ -199,7 +199,7 @@ describe('products/shipping-estimate — shippingEstimateSchema', () => {
   });
 });
 
-describe('maintenance — maintenanceActionSchema (discriminated union)', () => {
+describe('maintenance, maintenanceActionSchema (discriminated union)', () => {
   it('aceita toggle sem campos extras', () => {
     expect(maintenanceActionSchema.safeParse({ action: 'toggle' }).success).toBe(true);
   });
@@ -212,7 +212,7 @@ describe('maintenance — maintenanceActionSchema (discriminated union)', () => 
   });
 });
 
-describe('email/inbound — resendEventSchema', () => {
+describe('email/inbound, resendEventSchema', () => {
   it('aceita evento email.received válido', () => {
     const body = {
       type: 'email.received',

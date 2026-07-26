@@ -81,7 +81,7 @@ export function SobrePreview({ s }: { s: StoreSettings }) {
 
             {[s.aboutPara1, s.aboutPara2, s.aboutPara3].filter(Boolean).length === 0 && timeline.length === 0 && (
               <p className="text-[12px] text-faint italic py-6 text-center border border-dashed border-[#E4DED5]">
-                Nenhum texto ou marco adicionado ainda — preencha ao lado para ver aqui.
+                Nenhum texto ou marco adicionado ainda, preencha ao lado para ver aqui.
               </p>
             )}
           </div>
@@ -131,7 +131,7 @@ export function SobrePreview({ s }: { s: StoreSettings }) {
               <div className="border border-[#E4DED5] px-4 py-3.5">
                 <p className="text-[8px] font-bold tracking-[0.22em] uppercase text-faint mb-2">Endereço</p>
                 <address className="text-[12px] text-mid leading-relaxed not-italic">
-                  {s.storeAddress}{s.storeNumber && `, ${s.storeNumber}`}{s.storeComplement && ` — ${s.storeComplement}`}<br />
+                  {s.storeAddress}{s.storeNumber && `, ${s.storeNumber}`}{s.storeComplement && `, ${s.storeComplement}`}<br />
                   {s.storeNeighborhood && <>{s.storeNeighborhood} · </>}{s.storeCity}<br />
                   {s.storeCep && <>CEP {s.storeCep}</>}
                 </address>

@@ -40,14 +40,14 @@ function drawAndExport(source: ImageBitmap | HTMLImageElement, maxW: number): Pr
  * Comprime e corrige orientação da foto antes de salvar.
  *
  * Fotos tiradas em retrato no celular costumam vir com os pixels em
- * paisagem + uma tag EXIF de orientação dizendo "gire 90°" — é assim que
+ * paisagem + uma tag EXIF de orientação dizendo "gire 90°", é assim que
  * câmeras evitam reprocessar a imagem na hora da captura. canvas.drawImage
  * IGNORA essa tag por padrão, então sem tratamento a foto salva vira de
  * lado mesmo aparecendo reta no preview do seletor de arquivo do sistema.
  *
  * createImageBitmap com imageOrientation: 'from-image' resolve isso nativa-
  * mente (suportado em Chrome/Edge/Firefox/Safari recentes). Em navegadores
- * sem suporte à opção, cai pro método antigo via <img> — sem garantia de
+ * sem suporte à opção, cai pro método antigo via <img>, sem garantia de
  * orientação correta, mas pelo menos não quebra a funcionalidade.
  */
 async function compressImage(file: File, maxW = 900): Promise<{ blob: Blob; dataUrl: string }> {
@@ -59,7 +59,7 @@ async function compressImage(file: File, maxW = 900): Promise<{ blob: Blob; data
       return result;
     } catch {
       // Alguns navegadores aceitam a opção mas falham silenciosamente em
-      // certos formatos — cai pro fallback abaixo.
+      // certos formatos, cai pro fallback abaixo.
     }
   }
 
@@ -75,7 +75,7 @@ async function compressImage(file: File, maxW = 900): Promise<{ blob: Blob; data
 }
 
 /**
- * Modal de captura de foto — só foto, simples e rápida.
+ * Modal de captura de foto, só foto, simples e rápida.
  * Detecção de cor é feita depois, separadamente, sobre a foto já tirada.
  */
 export function PhotoCaptureModal({ onCapture, onClose }: Props) {

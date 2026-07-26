@@ -3,11 +3,11 @@
  * Docs: https://docs.melhorenvio.com.br
  *
  * Fluxo completo para despacho:
- * 1. /me/shipment/calculate  — cotação de frete (feita no checkout)
- * 2. /me/cart                — adiciona envio ao carrinho ME
- * 3. /me/shipment/checkout   — compra o envio (debita saldo ME)
- * 4. /me/shipment/generate   — gera a etiqueta
- * 5. /me/shipment/print      — URL do PDF para imprimir
+ * 1. /me/shipment/calculate , cotação de frete (feita no checkout)
+ * 2. /me/cart               , adiciona envio ao carrinho ME
+ * 3. /me/shipment/checkout  , compra o envio (debita saldo ME)
+ * 4. /me/shipment/generate  , gera a etiqueta
+ * 5. /me/shipment/print     , URL do PDF para imprimir
  * 6. Rastreio via /me/shipment/tracking ou webhook
  *
  * Requer: MELHOR_ENVIO_TOKEN (OAuth token da conta)
@@ -81,7 +81,7 @@ async function meGet<T>(path: string): Promise<T> {
 // real na Melhor Envio não cobre o custo do envio, bloqueamos o despacho
 // automático em vez de deixar a compra falhar no meio do fluxo (ou pior,
 // deixar a conta no negativo). Resposta documentada como { balance: number }
-// em reais — convertida para centavos aqui pra bater com o resto do sistema.
+// em reais, convertida para centavos aqui pra bater com o resto do sistema.
 export async function meBalance(): Promise<number> {
   const data = await meGet<{ balance: number }>('/me/balance');
   return Math.round((data.balance ?? 0) * 100);
@@ -119,7 +119,7 @@ export interface MEPackage {
 }
 
 // ── 1. Calcular frete (cotação) ───────────────────────────────────────────────
-// Já existe em /api/shipping/quote — não duplicar aqui.
+// Já existe em /api/shipping/quote, não duplicar aqui.
 
 // ── 2. Adicionar ao carrinho ME ───────────────────────────────────────────────
 
@@ -149,7 +149,7 @@ export async function meAddToCart(params: {
   return item;
 }
 
-// ── 3. Comprar envio (checkout ME — debita saldo) ─────────────────────────────
+// ── 3. Comprar envio (checkout ME, debita saldo) ─────────────────────────────
 
 export async function meCheckout(cartIds: string[]): Promise<{ purchase: { id: string } }> {
   return mePost('/me/shipment/checkout', {
@@ -184,7 +184,7 @@ export async function meTracking(orderIds: string[]): Promise<MEShipmentStatus[]
 // ── 7. Cancelar envio ─────────────────────────────────────────────────────────
 // reason_id varia conforme a lista atual de motivos do Melhor Envio.
 // Usamos um valor genérico ("outros"/erro operacional) e colocamos o
-// motivo real em texto livre na description — é o que importa de fato
+// motivo real em texto livre na description, é o que importa de fato
 // para qualquer disputa/suporte.
 export async function meCancel(meOrderId: string, description: string): Promise<void> {
   await mePost('/me/shipment/cancel', {

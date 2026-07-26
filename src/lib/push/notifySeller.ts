@@ -5,17 +5,17 @@ interface SellerPushPayload {
   body: string;
   /** Rota relativa pra abrir ao clicar na notificação, ex: /painel/pedidos/ord_123 */
   url?: string;
-  /** Dados extras (ex: orderId) — chegam em event.notification.data no SW */
+  /** Dados extras (ex: orderId), chegam em event.notification.data no SW */
   data?: Record<string, string>;
 }
 
 /**
  * Envia push para TODOS os dispositivos de seller/admin cadastrados.
- * Nunca envia para compradores — os tokens em `pushTokens` só existem
+ * Nunca envia para compradores, os tokens em `pushTokens` só existem
  * porque o endpoint /api/painel/push-token exige role seller/admin.
  *
  * Best-effort: falha de push nunca deve quebrar o fluxo de pagamento/pedido
- * que chamou esta função — por isso todos os erros são apenas logados.
+ * que chamou esta função, por isso todos os erros são apenas logados.
  */
 export async function notifySeller(payload: SellerPushPayload): Promise<void> {
   try {
@@ -27,7 +27,7 @@ export async function notifySeller(payload: SellerPushPayload): Promise<void> {
 
     // Dedupe por uid: mantém só o token mais recente de cada vendor.
     // Isso é uma segunda camada de proteção além do dedupe feito no
-    // cadastro (POST /api/painel/push-token) — cobre o caso de tokens
+    // cadastro (POST /api/painel/push-token), cobre o caso de tokens
     // "zumbis" que já existiam no banco antes daquele fix e continuam
     // válidos, o que causava notificação em duplicidade pro mesmo vendor.
     const latestByUid = new Map<string, { token: string; updatedAtMs: number }>();
@@ -53,12 +53,12 @@ export async function notifySeller(payload: SellerPushPayload): Promise<void> {
       await batch.commit();
     }
 
-    console.log(`[notifySeller] enviando para ${tokens.length} token(s) — título: "${payload.title}"`);
+    console.log(`[notifySeller] enviando para ${tokens.length} token(s), título: "${payload.title}"`);
     const messaging = getAdminMessaging();
 
     // IMPORTANTE: não usar o campo `notification` (nem `webpush.notification`) aqui.
     // Quando o payload tem `notification`, o navegador exibe a notificação
-    // automaticamente via WebPush em background — e o onBackgroundMessage do
+    // automaticamente via WebPush em background, e o onBackgroundMessage do
     // service worker (firebase-messaging-sw.js/route.ts) TAMBÉM chama
     // showNotification manualmente, resultando em 2 notificações no celular.
     // Enviando só `data`, o service worker vira o único responsável por exibir.
@@ -81,7 +81,7 @@ export async function notifySeller(payload: SellerPushPayload): Promise<void> {
     response.responses.forEach((r, i) => {
       if (!r.success) {
         const code = r.error?.code ?? '';
-        console.error(`[notifySeller] falha no token ${tokens[i].slice(0, 12)}...: ${code} — ${r.error?.message ?? ''}`);
+        console.error(`[notifySeller] falha no token ${tokens[i].slice(0, 12)}...: ${code}, ${r.error?.message ?? ''}`);
         if (
           code === 'messaging/registration-token-not-registered' ||
           code === 'messaging/invalid-registration-token'

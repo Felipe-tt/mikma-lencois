@@ -88,7 +88,7 @@ const TIMELINE_LABEL: Record<string, string> = {
   paid:                 'Pagamento confirmado',
   preparing:            'Pedido em preparação',
   shipped:              'Pedido despachado',
-  delivery_cancelled:   'Entrega cancelada — novo envio em breve',
+  delivery_cancelled:   'Entrega cancelada, novo envio em breve',
   delivered:            'Pedido entregue',
   cancelled:            'Pedido cancelado',
 };
@@ -133,13 +133,13 @@ export default function OrderDetailPage() {
   const timeline = [...(order.timeline ?? [])].reverse();
 
   // Quando o pedido já foi despachado, rastrear é a informação que o
-  // cliente abriu a página pra ver — não devia ficar escondido depois
+  // cliente abriu a página pra ver, não devia ficar escondido depois
   // da lista de itens e do histórico. Promove pro topo nesses casos.
   const trackingIsPriority = !!carrier && (order.status === 'shipped' || order.status === 'delivered');
 
   const trackingSection = (
     <>
-      {/* Rastreio — Correios/ME via TrackingTimeline, Uber Direct via link em tempo real */}
+      {/* Rastreio, Correios/ME via TrackingTimeline, Uber Direct via link em tempo real */}
       {carrier && carrier !== 'pickup' && carrier !== 'manual' && carrier !== 'uber_direct' && (
         <section>
           <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
@@ -151,7 +151,7 @@ export default function OrderDetailPage() {
         </section>
       )}
 
-      {/* Uber Direct — bloco em tempo real com entregador e link de rastreio */}
+      {/* Uber Direct, bloco em tempo real com entregador e link de rastreio */}
       {carrier === 'uber_direct' && order.status !== 'delivered' && order.status !== 'cancelled' && (
         <section>
           <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
@@ -271,7 +271,7 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {/* ── Rastreio em destaque — pedido já a caminho/entregue ──── */}
+        {/* ── Rastreio em destaque, pedido já a caminho/entregue ──── */}
         {trackingIsPriority && (
           <div className="mb-8 flex flex-col gap-6">
             {trackingSection}
@@ -366,7 +366,7 @@ export default function OrderDetailPage() {
               </section>
             )}
 
-            {/* Rastreio — some daqui quando é prioridade (já foi promovido lá em cima) */}
+            {/* Rastreio, some daqui quando é prioridade (já foi promovido lá em cima) */}
             {!trackingIsPriority && trackingSection}
           </div>
 

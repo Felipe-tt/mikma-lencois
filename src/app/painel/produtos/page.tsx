@@ -149,10 +149,10 @@ export default function PainelProdutosPage() {
                   <p className="text-[11px] text-faint sm:hidden">{p.category} · {formatCurrency(p.price)}</p>
                 </div>
 
-                {/* Category — desktop */}
+                {/* Category, desktop */}
                 <span className="hidden sm:block text-[12px] text-mid truncate">{p.category}</span>
 
-                {/* Price — desktop */}
+                {/* Price, desktop */}
                 <span className="hidden sm:block font-display text-sm text-ink text-right">{formatCurrency(p.price)}</span>
 
                 {/* Status */}

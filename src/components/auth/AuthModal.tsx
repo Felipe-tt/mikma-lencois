@@ -80,7 +80,7 @@ export function AuthModal() {
 
       await signInWithEmailAndPassword(auth, email, password);
       // O AuthModalProvider detecta o login (via onAuthStateChanged) e
-      // fecha o modal + roda a ação pendente sozinho — nada a fazer aqui.
+      // fecha o modal + roda a ação pendente sozinho, nada a fazer aqui.
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.includes('Muitas tentativas')) setLoginError(msg);
@@ -100,7 +100,7 @@ export function AuthModal() {
 
     setSignupLoading(true);
     try {
-      // Guarda onde a pessoa estava — o link do e-mail leva pra uma página
+      // Guarda onde a pessoa estava, o link do e-mail leva pra uma página
       // cheia (fora do modal), então é lá que usamos isso pra voltar aqui.
       setReturnTo(window.location.pathname + window.location.hash);
       const res = await fetch('/api/auth/send-verification', {
@@ -149,7 +149,7 @@ export function AuthModal() {
         body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
       });
     } finally {
-      // Sempre avança — não revela se o e-mail existe ou não na base.
+      // Sempre avança, não revela se o e-mail existe ou não na base.
       setForgotStep('sent');
       setForgotResendCooldown(60);
       setForgotLoading(false);
@@ -288,7 +288,7 @@ export function AuthModal() {
                 <h2 className="font-display font-normal text-ink text-[1.5rem] mb-2 text-center">Veja seu e-mail</h2>
                 <p className="text-[13px] text-mid mb-5 leading-relaxed text-center">
                   Enviamos um link para <strong className="text-ink">{signupEmail}</strong>. Abra o e-mail e clique no botão{' '}
-                  <strong className="text-ink">&ldquo;Confirmar meu e-mail&rdquo;</strong> — você volta pra cá exatamente de onde saiu.
+                  <strong className="text-ink">&ldquo;Confirmar meu e-mail&rdquo;</strong>, você volta pra cá exatamente de onde saiu.
                 </p>
 
                 {signupError && (

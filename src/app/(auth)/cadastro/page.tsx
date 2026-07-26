@@ -32,7 +32,7 @@ function PasswordStrength({ password }: { password: string }) {
         ))}
       </div>
       <p className={`text-xs ${score===3?'text-green-500':score===2?'text-yellow-500':'text-red-400'}`}>
-        {score===3?'Senha forte':score===2?'Senha média — adicione maiúscula ou número':'Senha fraca'}
+        {score===3?'Senha forte':score===2?'Senha média, adicione maiúscula ou número':'Senha fraca'}
       </p>
     </div>
   );
@@ -288,7 +288,7 @@ function RegisterContent() {
 
               <div className="bg-warm border border-mist px-4 py-3.5 mb-6">
                 <p className="text-xs text-mid leading-relaxed">
-                  Assim que você confirmar pelo e-mail, esta aba pode ser fechada — o link já leva direto para o próximo passo.
+                  Assim que você confirmar pelo e-mail, esta aba pode ser fechada, o link já leva direto para o próximo passo.
                 </p>
               </div>
 

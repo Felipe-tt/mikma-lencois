@@ -51,7 +51,7 @@ export function PainelPushOptIn() {
         <div>
           <p className="text-[13px] font-semibold text-ink">Ativar notificações de novo pedido</p>
           <p className="text-[12px] text-mid mt-0.5">
-            Receba um aviso no celular assim que alguém iniciar o pagamento ou o pedido for confirmado — mesmo com o painel fechado.
+            Receba um aviso no celular assim que alguém iniciar o pagamento ou o pedido for confirmado, mesmo com o painel fechado.
           </p>
           {status === 'error' && (
             <p className="text-[12px] text-red-600 mt-1">Não foi possível ativar. Tente novamente.</p>

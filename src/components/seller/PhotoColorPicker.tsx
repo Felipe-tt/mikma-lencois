@@ -18,7 +18,7 @@ function rgbToHex(r: number, g: number, b: number) {
 
 /**
  * Modal simples: mostra a foto, o usuário toca no produto pra capturar a cor
- * exata do pixel. Sem OCR, sem leitura de rótulo — só amostragem de cor,
+ * exata do pixel. Sem OCR, sem leitura de rótulo, só amostragem de cor,
  * que é rápida e confiável.
  */
 export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, onClose }: Props) {
@@ -29,10 +29,10 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
-  // Canvas off-screen com a imagem já decodificada — criado UMA vez por foto,
+  // Canvas off-screen com a imagem já decodificada, criado UMA vez por foto,
   // não a cada toque. Antes, sample() criava um `new Image()` do zero em
   // cada chamada e esperava o onload (assíncrono); ao arrastar o dedo isso
-  // disparava várias decodificações em paralelo, fora de ordem — quem
+  // disparava várias decodificações em paralelo, fora de ordem, quem
   // terminava de carregar por último "vencia", não necessariamente o último
   // ponto tocado. Resultado: a cor mostrada quase nunca era a do ponto atual.
   // Com o canvas pronto, a leitura de cada toque é síncrona e imediata.
@@ -84,13 +84,13 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
       try {
         // Imagens de produtos já salvos vêm do Firebase Storage (outro
         // domínio). O Storage não envia Access-Control-Allow-Origin por
-        // padrão — buscar a URL direto via fetch() no browser é bloqueado
+        // padrão, buscar a URL direto via fetch() no browser é bloqueado
         // pela política de CORS, e desenhar a <img> cross-origin direto no
         // canvas "contamina" o canvas (getImageData() lança SecurityError).
         //
         // Solução: pedir os bytes pra um proxy no nosso próprio servidor
-        // (/api/products/image-proxy) — fetch servidor-a-servidor não tem
-        // restrição de CORS — e converter a resposta numa data: URL local
+        // (/api/products/image-proxy), fetch servidor-a-servidor não tem
+        // restrição de CORS, e converter a resposta numa data: URL local
         // antes de desenhar. O canvas nunca chega a tocar a URL cross-origin.
         let localDataUrl = imageDataUrl;
         if (imageDataUrl.startsWith('http')) {

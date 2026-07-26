@@ -13,7 +13,7 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  // Require authentication — prevent unauthenticated coupon enumeration
+  // Require authentication, prevent unauthenticated coupon enumeration
   const authHeader = req.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });

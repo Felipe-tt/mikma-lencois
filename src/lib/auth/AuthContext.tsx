@@ -26,7 +26,7 @@ async function mapUser(firebaseUser: User): Promise<AuthUser> {
   const role = (tokenResult.claims.role as AuthUser['role']) ?? 'buyer';
 
   // Seller/admin: manda o cookie que o middleware usa só pra pular a
-  // manutenção quando a pessoa está logada como staff. Fire-and-forget —
+  // manutenção quando a pessoa está logada como staff. Fire-and-forget -
   // se falhar, o pior caso é continuar mostrando a manutenção normalmente
   // (mesmo comportamento de antes de existir esse cookie), nada quebra.
   if (role === 'seller' || role === 'admin') {

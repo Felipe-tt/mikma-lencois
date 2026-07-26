@@ -10,7 +10,7 @@ type Props = {
   options: SelectOption[];
   placeholder?: string;
   className?: string;
-  /** Classe do botão/trigger — por padrão usa o mesmo visual do .select nativo do site */
+  /** Classe do botão/trigger, por padrão usa o mesmo visual do .select nativo do site */
   triggerClassName?: string;
   disabled?: boolean;
   name?: string;
@@ -19,7 +19,7 @@ type Props = {
 
 /**
  * Dropdown com estilo próprio do site (mesmos tokens de cor/borda dos inputs),
- * substituindo o <select> nativo do navegador — que não tem como ser
+ * substituindo o <select> nativo do navegador, que não tem como ser
  * estilizado de forma consistente entre navegadores (a lista de opções em
  * si sempre usa o tema do SO/browser, ex: fundo azul do Chrome no Windows).
  *

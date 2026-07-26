@@ -10,7 +10,7 @@ interface Props {
 }
 
 /**
- * Seletor de cor — 100% local, instantâneo, sem chamadas de rede.
+ * Seletor de cor, 100% local, instantâneo, sem chamadas de rede.
  * Três formas de escolher: clicar num swatch da paleta, digitar o nome
  * (com autocomplete), ou usar o seletor de cor nativo do navegador.
  */
@@ -47,7 +47,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
     setShowSwatches(false);
     clearTimeout(debounceRef.current);
     if (q.length < 1) { setSuggestions([]); setShowSugg(false); return; }
-    // Local — não precisa de debounce de verdade, mas mantém a digitação fluida
+    // Local, não precisa de debounce de verdade, mas mantém a digitação fluida
     debounceRef.current = setTimeout(() => {
       const results = searchColorsByName(q, 8);
       setSuggestions(results);
@@ -71,7 +71,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
       onChange(found.hex, found.name);
       setError('');
     } else {
-      setError('Não encontramos essa cor — escolha uma sugestão ou use a paleta');
+      setError('Não encontramos essa cor, escolha uma sugestão ou use a paleta');
     }
   }
 
@@ -85,7 +85,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
   return (
     <div ref={wrapRef} className="relative flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        {/* Swatch atual — clique abre a paleta rápida */}
+        {/* Swatch atual, clique abre a paleta rápida */}
         <button
           type="button"
           onClick={() => { setShowSwatches(s => !s); setShowSugg(false); }}
@@ -135,7 +135,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
           )}
         </div>
 
-        {/* Seletor nativo — fallback pra cor exata fora da paleta */}
+        {/* Seletor nativo, fallback pra cor exata fora da paleta */}
         <input
           type="color"
           value={value.length === 7 && value.startsWith('#') ? value : '#cccccc'}
@@ -145,7 +145,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
         />
       </div>
 
-      {/* Paleta rápida — grade de swatches */}
+      {/* Paleta rápida, grade de swatches */}
       {showSwatches && (
         <div className="absolute top-11 left-0 right-0 sm:right-auto z-30 bg-white dark:bg-warm border border-mist shadow-card-hover p-3 rounded-[4px] max-w-[264px]">
           <p className="text-[9px] font-bold tracking-[0.14em] uppercase text-faint mb-2">Paleta têxtil</p>

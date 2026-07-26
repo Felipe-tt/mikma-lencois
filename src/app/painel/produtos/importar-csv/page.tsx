@@ -44,7 +44,7 @@ interface SavedDraft {
   publishedProductId?: string;
 }
 
-// Fronha não tem tamanho de cama — é peça única, então escondemos o select
+// Fronha não tem tamanho de cama, é peça única, então escondemos o select
 // de tamanho pra essa categoria (o publish já força 'unico' por trás).
 function isSizelessCategory(category: string): boolean {
   return category.trim().toLowerCase() === 'fronhas';
@@ -90,7 +90,7 @@ function parsePriceBR(raw: string | undefined): string {
 
 // Peso em kg precisa de até 3 casas decimais (ex.: 0,275 kg = 275 g).
 // Não reusa parsePriceBR aqui porque ela força 2 casas fixas e
-// arredondaria 0,275 pra 0,28 — perdendo a precisão de gramas.
+// arredondaria 0,275 pra 0,28, perdendo a precisão de gramas.
 function parseWeightBR(raw: string | undefined): string {
   if (!raw) return '';
   const cleaned = raw.replace(/[^\d.,]/g, '').trim();
@@ -173,7 +173,7 @@ function parseGenericCsv(csvText: string): { items: StagingItem[]; skipped: numb
   return { items, skipped };
 }
 
-/** Converte qualquer imagem pra WebP no navegador — bem menor que JPEG/PNG
+/** Converte qualquer imagem pra WebP no navegador, bem menor que JPEG/PNG
  *  na mesma qualidade visual, então toda imagem de rascunho entra já
  *  otimizada, sem depender de reprocessar no servidor. */
 function compressToWebp(file: File, maxDim = 1600, quality = 0.82): Promise<Blob> {
@@ -228,7 +228,7 @@ export default function ImportarCsvPage() {
   // digitada (ex.: "0,275") some a cada tecla antes de terminar de digitar.
   const [priceTextById, setPriceTextById] = useState<Record<string, string>>({});
   const [weightTextById, setWeightTextById] = useState<Record<string, string>>({});
-  // Id do rascunho sobre o qual um arquivo está sendo arrastado agora —
+  // Id do rascunho sobre o qual um arquivo está sendo arrastado agora -
   // só usado pra destacar visualmente a área de soltar a imagem.
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -389,7 +389,7 @@ export default function ImportarCsvPage() {
     );
     setDrafts((prev) => prev.filter((d) => d.status === 'published' || failedIds.has(d.id)));
     if (failedIds.size > 0) {
-      setDraftsError(`${failedIds.size} rascunho(s) não foram apagados — tente de novo.`);
+      setDraftsError(`${failedIds.size} rascunho(s) não foram apagados, tente de novo.`);
     }
     setDeletingAll(false);
   }
@@ -401,7 +401,7 @@ export default function ImportarCsvPage() {
       const data = await authedFetch(`/api/painel/catalog-drafts/${id}/publish`, { method: 'POST' });
       updateDraftLocal(id, { status: 'published', publishedProductId: data.productId });
     } catch (err) {
-      setErr(id, err instanceof Error ? err.message : 'Não deu pra publicar — confira os campos obrigatórios.');
+      setErr(id, err instanceof Error ? err.message : 'Não deu pra publicar, confira os campos obrigatórios.');
     } finally {
       setBusy(id, false);
     }
@@ -480,7 +480,7 @@ export default function ImportarCsvPage() {
           <h1 className="font-display font-normal text-ink text-2xl">Importar catálogo de um CSV</h1>
           <p className="text-[13px] text-faint mt-1 max-w-2xl">
             Suba qualquer CSV (nome/categoria, tamanho, cor, preço...), revise e edite as linhas, e salve como
-            rascunho. Rascunhos ficam guardados aqui — não viram produto na loja até você adicionar as fotos e
+            rascunho. Rascunhos ficam guardados aqui, não viram produto na loja até você adicionar as fotos e
             clicar em publicar.
           </p>
         </div>
@@ -495,7 +495,7 @@ export default function ImportarCsvPage() {
         </div>
 
         <p className="ml-[30px] text-[13px] text-ink max-w-lg">
-          Aceita qualquer cabeçalho comum (nome, categoria, tamanho, cor, preço, observação, tecido, peso) —
+          Aceita qualquer cabeçalho comum (nome, categoria, tamanho, cor, preço, observação, tecido, peso) -
           não precisa ser um formato específico.
         </p>
 
@@ -604,7 +604,7 @@ export default function ImportarCsvPage() {
         )}
       </section>
 
-      {/* ── Passo 2: rascunhos salvos — editar, adicionar imagens, publicar ── */}
+      {/* ── Passo 2: rascunhos salvos, editar, adicionar imagens, publicar ── */}
       <section className="mb-10">
         <div className="flex items-baseline justify-between gap-2.5 mb-3">
           <div className="flex items-baseline gap-2.5">

@@ -112,7 +112,7 @@ function buildPreparing(order: Order, name: string) {
     </div>
     ${sig()}`);
   return {
-    subject: `Pedido #${id} em separação — ${STORE}`,
+    subject: `Pedido #${id} em separação, ${STORE}`,
     html,
     text: `Olá, ${name}! Seu pedido #${id} está sendo separado. Acompanhe em: ${url}`,
   };
@@ -144,7 +144,7 @@ function buildShipped(order: Order, name: string) {
     </div>
     ${sig()}`);
   return {
-    subject: `Pedido #${id} despachado — ${STORE}`,
+    subject: `Pedido #${id} despachado, ${STORE}`,
     html,
     text: `Olá, ${name}! Pedido #${id} despachado.${code ? ` Rastreio: ${code}` : ''} Veja em: ${url}`,
   };
@@ -161,14 +161,14 @@ function buildDelivered(order: Order, name: string) {
         Olá, <strong>${name}</strong>! Seu pedido chegou. Esperamos que você ame seus novos lençóis!
       </p>
       <p style="margin:0 0 20px;font-size:14px;color:#705A48;line-height:1.65;">
-        Qualquer dúvida, é só responder esse e-mail — estamos aqui.
+        Qualquer dúvida, é só responder esse e-mail, estamos aqui.
       </p>
       ${itemsHtml(order)}
       ${cta('Ver detalhes do pedido', url)}
     </div>
     ${sig()}`);
   return {
-    subject: `Pedido #${id} entregue — ${STORE}`,
+    subject: `Pedido #${id} entregue, ${STORE}`,
     html,
     text: `Olá, ${name}! Pedido #${id} entregue com sucesso. Veja em: ${url}`,
   };
@@ -190,7 +190,7 @@ export async function POST(
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
     // IMPORTANTE: o role vem do custom claim do token (setado via Admin SDK),
-    // NUNCA de um campo do Firestore — o próprio usuário pode escrever no
+    // NUNCA de um campo do Firestore, o próprio usuário pode escrever no
     // próprio documento /users/{uid} (regra allow update: if isSelf(uid)),
     // então ler o role de lá permitiria qualquer comprador se autopromover
     // a seller e alterar status/cancelar pedidos de qualquer cliente.

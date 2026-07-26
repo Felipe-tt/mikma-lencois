@@ -1,9 +1,9 @@
 // Rota real (seguindo as ruas) entre loja e cliente, via OpenRouteService
-// (openrouteservice.org) — mesma família do OpenStreetMap que o projeto já
+// (openrouteservice.org), mesma família do OpenStreetMap que o projeto já
 // usa pra geocodificar CEP. Plano gratuito: 2000 requisições/dia, 40/min.
 //
 // Só é chamado UMA VEZ por entrega (quando o motoboy é atribuído), não a
-// cada atualização de localização — a rota loja→cliente não muda, só a
+// cada atualização de localização, a rota loja→cliente não muda, só a
 // posição do motoboy ao longo dela. Isso mantém o uso bem abaixo do limite
 // gratuito mesmo com muitos pedidos.
 //
@@ -16,7 +16,7 @@ export interface RoutePoint {
   lng: number;
 }
 
-// Uber Direct informa o tipo de veículo do entregador — mapeia pro perfil
+// Uber Direct informa o tipo de veículo do entregador, mapeia pro perfil
 // de roteamento mais parecido que o ORS oferece.
 export function vehicleTypeToProfile(vehicleType?: string): string {
   switch (vehicleType) {
@@ -36,7 +36,7 @@ export function vehicleTypeToProfile(vehicleType?: string): string {
  * Busca a rota entre dois pontos. Retorna a lista de coordenadas
  * [lat, lng] (já convertida do formato [lng, lat] do GeoJSON) pra plotar
  * direto num mapa Leaflet, ou null se a API não estiver configurada ou a
- * requisição falhar (best-effort — nunca lança).
+ * requisição falhar (best-effort, nunca lança).
  */
 export async function fetchRoute(
   origin: RoutePoint,
@@ -74,7 +74,7 @@ export async function fetchRoute(
     const coords: [number, number][] | undefined = data?.features?.[0]?.geometry?.coordinates;
     if (!coords || coords.length === 0) return null;
 
-    // GeoJSON vem como [lng, lat] — Leaflet espera [lat, lng].
+    // GeoJSON vem como [lng, lat], Leaflet espera [lat, lng].
     return coords.map(([lng, lat]) => ({ lat, lng }));
   } catch (err) {
     console.warn('[routing] falha ao buscar rota (best-effort, ignorado):', err);

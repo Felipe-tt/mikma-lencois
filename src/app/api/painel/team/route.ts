@@ -15,12 +15,12 @@ import { addMemberSchema, removeMemberSchema } from './schema';
 // de seller comprometida (senha vazada, sessão roubada) viraria uma
 // porta pra criar contas ilimitadas com acesso ao painel. Restringir a
 // admin mantém a superfície de escalonamento de privilégio pequena e
-// auditável — só quem já é admin pode conceder mais acesso.
+// auditável, só quem já é admin pode conceder mais acesso.
 async function requireAdmin(req: NextRequest) {
   return verifyAuth(req, { roles: ['admin'] });
 }
 
-/** Lista quem hoje tem acesso ao painel (seller/admin). Só pra exibição — a
+/** Lista quem hoje tem acesso ao painel (seller/admin). Só pra exibição, a
  *  autorização de verdade em cada rota sempre vem do custom claim do token,
  *  nunca deste documento Firestore. */
 export async function GET(req: NextRequest) {
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   await adminAuth.setCustomUserClaims(targetUser.uid, { ...existingClaims, role });
 
   // Revoga tokens antigos: a próxima requisição do usuário força refresh
-  // e já vem com a role nova — sem isso a promoção só valeria depois que
+  // e já vem com a role nova, sem isso a promoção só valeria depois que
   // o token dele expirasse sozinho (até 1h).
   await adminAuth.revokeRefreshTokens(targetUser.uid);
 

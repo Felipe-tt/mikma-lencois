@@ -46,7 +46,7 @@ export interface Product {
   active: boolean
   createdAt: string
   // Fabric specs (optional, shown in product detail)
-  yarnCount?: string         // fiação do tecido, ex: "30/1" — mostrado como "Fio 30/1"
+  yarnCount?: string         // fiação do tecido, ex: "30/1", mostrado como "Fio 30/1"
   composition?: string       // e.g. "100% Algodão"
   weightGsm?: number         // e.g. 180 g/m²
   certifications?: string[]  // e.g. ["OEKO-TEX", "Fair Trade"]
@@ -139,15 +139,15 @@ export interface Order {
     melhorEnvioOrderId?: string
     uberDirectDeliveryId?: string
     uberSandbox?: boolean
-    uberQuoteId?: string          // quoteId da cotação — passado no despacho para garantir o preço
+    uberQuoteId?: string          // quoteId da cotação, passado no despacho para garantir o preço
     labelUrl?: string
     priceCents?: number          // valor efetivamente cobrado do cliente (pode ser 0 com frete grátis)
-    realPriceCents?: number      // custo real de despacho — SEMPRE preenchido, mesmo com frete grátis. Nunca exposto ao cliente.
+    realPriceCents?: number      // custo real de despacho, SEMPRE preenchido, mesmo com frete grátis. Nunca exposto ao cliente.
     dispatchedAt?: string
     deliveredAt?: string
     estimatedDelivery?: string
     estimatedDays?: number
-    // Uber Direct — atualizados pelo webhook
+    // Uber Direct, atualizados pelo webhook
     courierName?: string        // Nome do entregador
     courierPhone?: string       // Telefone mascarado do entregador
     courierPhoto?: string       // Foto do entregador (img_href)
@@ -156,7 +156,7 @@ export interface Order {
     pickupEta?: string          // ETA de coleta na loja (ISO)
     courierLat?: number         // Posição ao vivo do entregador (atualizada a cada courier_update)
     courierLng?: number
-    courierLocationAt?: string  // ISO — quando essa posição foi recebida
+    courierLocationAt?: string  // ISO, quando essa posição foi recebida
     routePoints?: { lat: number; lng: number }[]  // rota loja→cliente (calculada 1x quando o motoboy é atribuído)
   }
   address: Address
@@ -211,7 +211,7 @@ export interface CartItem {
 export interface Cart {
   userId: string
   items: CartItem[]
-  reservedUntil?: string // ISO — expira em 15min
+  reservedUntil?: string // ISO, expira em 15min
   updatedAt: string
 }
 
@@ -264,7 +264,7 @@ export interface EmailMessage {
 
 export interface Conversation {
   id: string
-  /** E-mail do cliente — usado para agrupar a thread */
+  /** E-mail do cliente, usado para agrupar a thread */
   customerEmail: string
   customerName?: string
   lastMessagePreview: string

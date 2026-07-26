@@ -11,7 +11,7 @@ interface Props {
 }
 
 // Ícones customizados (círculos simples em SVG inline) em vez dos ícones
-// padrão do Leaflet — evita o problema clássico de bundler não encontrar
+// padrão do Leaflet, evita o problema clássico de bundler não encontrar
 // os arquivos .png dos marcadores padrão, e já sai no estilo da marca.
 function makeDivIcon(L: typeof import('leaflet'), color: string, pulse = false) {
   return L.divIcon({
@@ -48,7 +48,7 @@ export function LiveDeliveryMap({ routePoints, courierLat, courierLng, courierLo
       });
       mapRef.current = map;
 
-      // OpenStreetMap — tiles gratuitos, sem chave de API.
+      // OpenStreetMap, tiles gratuitos, sem chave de API.
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap',

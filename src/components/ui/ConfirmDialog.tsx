@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * ConfirmDialog — substitui confirm(), alert() e prompt() nativos do navegador.
+ * ConfirmDialog, substitui confirm(), alert() e prompt() nativos do navegador.
  *
  * DESIGN: singleton de módulo. Só um diálogo pode estar aberto por vez;
- * isso é intencional — todas as ações que precisam de confirmação são disparadas
+ * isso é intencional, todas as ações que precisam de confirmação são disparadas
  * por um clique do usuário (never em paralelo). Se duas chamadas concorrentes
  * acontecessem (improvável nesse caso de uso), a segunda sobrescreveria a primeira.
  *
@@ -32,7 +32,7 @@ import { createPortal } from 'react-dom';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export type ConfirmOptions = {
-  /** Texto principal — a pergunta ou aviso */
+  /** Texto principal, a pergunta ou aviso */
   message: string;
   /** Subtexto opcional, menor, abaixo do message */
   detail?: string;
@@ -41,8 +41,8 @@ export type ConfirmOptions = {
   /** Label do botão de cancelamento (default: 'Cancelar') */
   cancelLabel?: string;
   /**
-   * 'default' — botão de confirmar na cor da marca (#C4714A)
-   * 'danger'  — botão de confirmar vermelho (ações destrutivas/irreversíveis)
+   * 'default', botão de confirmar na cor da marca (#C4714A)
+   * 'danger' , botão de confirmar vermelho (ações destrutivas/irreversíveis)
    */
   variant?: 'default' | 'danger';
   /** Se true, exibe um campo de texto; result.value terá o que foi digitado */
@@ -51,7 +51,7 @@ export type ConfirmOptions = {
   inputPlaceholder?: string;
   /**
    * Se true, exibe apenas o botão "OK" sem opção de cancelar.
-   * Equivale a um alert() — para avisos sem decisão.
+   * Equivale a um alert(), para avisos sem decisão.
    */
   alertOnly?: boolean;
 };
@@ -78,7 +78,7 @@ export function confirmDialog(options: ConfirmOptions): Promise<ConfirmResult> {
   return new Promise(resolve => {
     if (!pushPending) {
       // ConfirmDialogHost ainda não montou (SSR ou fora do provider).
-      // Fallback para o nativo como último recurso — nunca deve acontecer em produção.
+      // Fallback para o nativo como último recurso, nunca deve acontecer em produção.
       const ok = typeof window !== 'undefined' && window.confirm(options.message);
       resolve({ confirmed: !!ok });
       return;
@@ -87,7 +87,7 @@ export function confirmDialog(options: ConfirmOptions): Promise<ConfirmResult> {
   });
 }
 
-// ── Host Component — monte uma única vez no Providers.tsx ─────────────────────
+// ── Host Component, monte uma única vez no Providers.tsx ─────────────────────
 
 export function ConfirmDialogHost() {
   const [pending, setPending] = useState<PendingDialog | null>(null);

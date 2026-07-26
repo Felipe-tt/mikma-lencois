@@ -6,7 +6,7 @@ import { getSettings } from '@/lib/settings';
 
 // Sem force-dynamic: páginas públicas usam ISR normalmente.
 // A checagem de manutenção "de verdade" acontece no middleware (Edge), sem
-// Cloud Run — MAS isso só roda em cache-miss. Em cache-hit na CDN do
+// Cloud Run, MAS isso só roda em cache-miss. Em cache-hit na CDN do
 // Firebase Hosting (ex.: homepage com revalidate=900), a resposta cacheada
 // é servida direto e o middleware nunca executa. O <MaintenanceGate />
 // cobre esse caso: confere no client, via fetch dinâmico, e redireciona

@@ -1,4 +1,4 @@
-export const revalidate = 86400; // 24h — conteúdo estático
+export const revalidate = 86400; // 24h, conteúdo estático
 
 import { getSettings } from '@/lib/settings';
 

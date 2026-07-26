@@ -3,7 +3,7 @@
 ## Variáveis de ambiente necessárias (.env.local)
 
 ```env
-# Melhor Envio — obrigatório para todas as operações de frete
+# Melhor Envio, obrigatório para todas as operações de frete
 MELHOR_ENVIO_TOKEN=seu_token_aqui
 MELHOR_ENVIO_SANDBOX=false  # true para testes no sandbox
 ```
@@ -13,15 +13,15 @@ MELHOR_ENVIO_SANDBOX=false  # true para testes no sandbox
 1. Acesse https://melhorenvio.com.br/painel/gerenciar/tokens
 2. Clique em **Gerar token de acesso**
 3. Selecione os seguintes escopos:
-   - `cart-read` — verificar itens no carrinho ME
-   - `cart-write` — adicionar envios ao carrinho ME
-   - `shipping-calculate` — cotar fretes
-   - `shipping-checkout` — comprar etiquetas (debita saldo)
-   - `shipping-generate` — gerar etiquetas PDF
-   - `shipping-print` — obter URL de impressão
-   - `shipping-tracking` — consultar status de rastreio
-   - `shipping-cancel` — cancelar etiquetas
-   - `notifications-read` — necessário para receber webhooks
+   - `cart-read`, verificar itens no carrinho ME
+   - `cart-write`, adicionar envios ao carrinho ME
+   - `shipping-calculate`, cotar fretes
+   - `shipping-checkout`, comprar etiquetas (debita saldo)
+   - `shipping-generate`, gerar etiquetas PDF
+   - `shipping-print`, obter URL de impressão
+   - `shipping-tracking`, consultar status de rastreio
+   - `shipping-cancel`, cancelar etiquetas
+   - `notifications-read`, necessário para receber webhooks
 4. Copie o token e cole em `MELHOR_ENVIO_TOKEN` no `.env.local`
 
 > ⚠️ O mesmo token é usado para assinar os webhooks via HMAC-SHA256.
@@ -38,7 +38,7 @@ transportadora registra eventos (postado, em trânsito, entregue etc.).
 2. Preencha:
    - **URL**: `https://mikma.com.br/api/shipping/webhook`
    - **Eventos**: marque todos os eventos de `order.*` disponíveis
-3. Salve — o Melhor Envio vai fazer um ping de teste na URL (vai responder 200 ✅)
+3. Salve, o Melhor Envio vai fazer um ping de teste na URL (vai responder 200 ✅)
 4. **Pronto!** A partir de agora, cada evento de rastreio atualiza o pedido automaticamente
 
 > ⚠️ **Importante**: os webhooks só disparam para etiquetas geradas pelo
@@ -52,7 +52,7 @@ Mantenha saldo suficiente: https://melhorenvio.com.br/painel/saldo
 
 ## Jadlog não aparece na cotação?
 
-Jadlog geralmente **não vem habilitado por padrão** — diferente dos Correios.
+Jadlog geralmente **não vem habilitado por padrão**, diferente dos Correios.
 Para ativar:
 
 1. Acesse o painel do Melhor Envio → **Gerenciar → Transportadoras**
@@ -60,7 +60,7 @@ Para ativar:
 3. Após ativar, a próxima cotação já vai incluir os serviços Jadlog
 
 Se Jadlog aparecer como contratado mas ainda não aparecer na cotação,
-verifique os logs do servidor — o sistema registra o motivo exato do erro
+verifique os logs do servidor, o sistema registra o motivo exato do erro
 que o Melhor Envio retornou por serviço.
 
 ## Fluxo completo de despacho

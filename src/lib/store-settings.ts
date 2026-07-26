@@ -23,28 +23,28 @@ export type StoreSettings = {
   aboutPara1: string;
   aboutPara2: string;
   aboutPara3: string;
-  // Página Sobre — hero
+  // Página Sobre, hero
   aboutHeroLine1: string;
   aboutHeroLine2: string;
-  // Página Sobre — sidebar stats
+  // Página Sobre, sidebar stats
   aboutStat1Label: string;
   aboutStat1Value: string;
   aboutStat2Label: string;
   aboutStat2Value: string;
   aboutStat3Label: string;
   aboutStat3Value: string;
-  // Página Sobre — botão WhatsApp
+  // Página Sobre, botão WhatsApp
   aboutWhatsappLabel: string;
-  // Página Sobre — timeline (array JSON serializado)
+  // Página Sobre, timeline (array JSON serializado)
   aboutTimelineTitle: string;
   aboutTimeline: string; // JSON: [{year, label, desc}]
   originLat: number;
   originLng: number;
   originCep: string;
   localDeliveryRadiusKm: number;
-  // Toggle editável no painel — troca instantaneamente entre credenciais de
+  // Toggle editável no painel, troca instantaneamente entre credenciais de
   // teste e produção do Uber Direct (env vars separadas), sem precisar de
-  // novo deploy. Nunca guarda client_secret aqui — só a flag.
+  // novo deploy. Nunca guarda client_secret aqui, só a flag.
   uberDirectSandboxMode?: boolean;
   defaultItemWeightKg: number;
   dispatchCutoffTime: string;
@@ -54,7 +54,7 @@ export type StoreSettings = {
   // (frete grátis sempre ativo quando o valor mínimo é atingido).
   freeShippingMaxLossCents: number;
   lowStockThreshold: number;
-  // Horário de funcionamento (JSON serializado — ver src/lib/business-hours.ts)
+  // Horário de funcionamento (JSON serializado, ver src/lib/business-hours.ts)
   businessHours: string;
   businessHoursTimezone: string; // IANA, ex: "America/Sao_Paulo"
   // Payment
@@ -75,7 +75,7 @@ export type StoreSettings = {
   ctaSloganLine2: string;
   ctaBtn1: string;
   ctaBtn2: string;
-  // Homepage — título da grade de produtos
+  // Homepage, título da grade de produtos
   featuredTitle: string;
   sizeGuideRows: string;
   sizeGuideColumns: string;

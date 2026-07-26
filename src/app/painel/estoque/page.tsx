@@ -128,7 +128,7 @@ export default function EstoquePage() {
       showToast('Desfeito.');
     } catch (err) {
       console.error('[estoque] falha ao desfazer', err);
-      showToast('Não deu pra desfazer — tenta de novo.');
+      showToast('Não deu pra desfazer, tenta de novo.');
     }
   }
 
@@ -153,7 +153,7 @@ export default function EstoquePage() {
       showToast(type === 'out' ? 'Venda registrada.' : 'Entrada registrada.', () => reverseMovement(item.id, log));
     } catch (err) {
       console.error('[estoque] falha ao registrar movimentação', err);
-      showToast('Não deu pra salvar — tenta de novo.');
+      showToast('Não deu pra salvar, tenta de novo.');
     } finally {
       setSubmittingId(null);
     }
@@ -175,13 +175,13 @@ export default function EstoquePage() {
       showToast('Estoque corrigido.', () => reverseMovement(item.id, log));
     } catch (err) {
       console.error('[estoque] falha ao corrigir', err);
-      showToast('Não deu pra salvar — tenta de novo.');
+      showToast('Não deu pra salvar, tenta de novo.');
     } finally {
       setSubmittingId(null);
     }
   }
 
-  /** Desfaz só a última movimentação de um item, lançando o inverso dela —
+  /** Desfaz só a última movimentação de um item, lançando o inverso dela -
    *  nunca apaga/edita o histórico existente, então a trilha de auditoria
    *  continua íntegra (dá pra ver que algo foi desfeito, e quando). */
   async function undoLast(item: InventoryItem) {
@@ -252,11 +252,11 @@ export default function EstoquePage() {
         });
       }
       if (changed > 0) await batch.commit();
-      showToast(changed > 0 ? `Contagem salva — ${changed} ${changed === 1 ? 'item atualizado' : 'itens atualizados'}.` : 'Nada mudou desde a última contagem.');
+      showToast(changed > 0 ? `Contagem salva, ${changed} ${changed === 1 ? 'item atualizado' : 'itens atualizados'}.` : 'Nada mudou desde a última contagem.');
       setMode('dia');
     } catch (err) {
       console.error('[estoque] falha ao salvar contagem', err);
-      showToast('Não deu pra salvar a contagem — tenta de novo.');
+      showToast('Não deu pra salvar a contagem, tenta de novo.');
     } finally {
       setSavingCount(false);
     }

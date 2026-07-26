@@ -36,7 +36,7 @@ function formatCurrency(cents: number): string {
 }
 
 export async function POST(req: NextRequest) {
-  // Defesa contra flood — a AbacatePay manda poucos eventos por transação
+  // Defesa contra flood, a AbacatePay manda poucos eventos por transação
   // em operação normal; isso só protege contra abuso/DoS na URL pública.
   const ip = getClientIp(req);
   if (!await rateLimit(`payment-webhook-ip:${ip}`, 60, 60_000)) {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get('x-abacatepay-signature') ?? '';
 
   if (!verifySignature(rawBody, signature)) {
-    console.warn('Invalid webhook signature — received:', signature.slice(0, 20));
+    console.warn('Invalid webhook signature, received:', signature.slice(0, 20));
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
     // Transação: lê e escreve o status atomicamente. O cron de expiração
     // (expire-orders) também decide com base em status === 'pending_payment'
-    // — sem essa transação, o cron poderia cancelar e decrementar reserved
+    //, sem essa transação, o cron poderia cancelar e decrementar reserved
     // entre o get() e o commit() daqui, duplicando o decremento e deixando
     // o pedido marcado 'cancelled' por cima de um pagamento real.
     let order: FirebaseFirestore.DocumentData | null;
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
 
         // Decrementa quantity (estoque real, debitado de fato) e reserved
         // (libera a reserva feita em create-checkout/create-pix na criação
-        // do pedido) — ambos pelo mesmo motivo: a venda se concretizou.
+        // do pedido), ambos pelo mesmo motivo: a venda se concretizou.
         for (const item of data.items as Array<{ sku: string; quantity: number }>) {
           const invRef = adminDb.collection('inventory').doc(item.sku);
           tx.update(invRef, {
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Caixa de frete: registra o que foi de fato cobrado do cliente ─────
-    // Best-effort — nunca deve travar a confirmação do pedido.
+    // Best-effort, nunca deve travar a confirmação do pedido.
     try {
       const shippingCollected = (order.shippingCents as number) ?? 0;
       if (shippingCollected > 0) await recordShippingCollected(shippingCollected);
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Limpa o carrinho do cliente + notifica vendedor ───────────────────
-    // Fora da transação (best-effort — não precisa ser atômico com o
+    // Fora da transação (best-effort, não precisa ser atômico com o
     // pagamento em si).
     const batch = adminDb.batch();
     const cartRef = adminDb.collection('carts').doc(order.userId as string);
@@ -158,11 +158,11 @@ export async function POST(req: NextRequest) {
     });
 
     await batch.commit();
-    console.log(`Order ${orderId} confirmed — ${note}`);
+    console.log(`Order ${orderId} confirmed, ${note}`);
 
-    // Push pro vendor (best-effort — nunca deve afetar a confirmação do pedido)
+    // Push pro vendor (best-effort, nunca deve afetar a confirmação do pedido)
     const payMethodLabel = (order.payment as { method: string }).method === 'pix' ? 'PIX' : 'Cartão';
-    // IMPORTANTE: await de propósito — ver nota em create-pix/route.ts
+    // IMPORTANTE: await de propósito, ver nota em create-pix/route.ts
     // sobre CPU throttling do Cloud Run em chamadas fire-and-forget.
     await notifySeller({
       title: 'Pagamento confirmado 🎉',
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
     });
 
     // ── Email de confirmação ao cliente ───────────────────────────────────
-    // Fora do batch (best-effort — falha de email não reverte o pedido)
+    // Fora do batch (best-effort, falha de email não reverte o pedido)
     try {
       const userSnap = await adminDb.collection('users').doc(order.userId as string).get();
       const userData = userSnap.data() ?? {};
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
         const shortId  = orderId.slice(-8).toUpperCase();
         const items    = order.items as Array<{ productName: string; quantity: number; unitPrice: number }>;
         const itemLines = items
-          .map(i => `${i.quantity}x ${i.productName} — ${formatCurrency(i.unitPrice * i.quantity)}`)
+          .map(i => `${i.quantity}x ${i.productName}, ${formatCurrency(i.unitPrice * i.quantity)}`)
           .join('\n');
 
         const payMethod = (order.payment as { method: string }).method === 'pix' ? 'PIX' : 'Cartão de crédito';
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
 
         await sendEmail({
           to: customerEmail,
-          subject: `Pedido #${shortId} confirmado — Mikma Lençóis`,
+          subject: `Pedido #${shortId} confirmado, Mikma Lençóis`,
           text: [
             `Olá, ${customerName}!`,
             '',
@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
             `Acompanhe seu pedido: ${orderUrl}`,
             '',
             'Qualquer dúvida, responda este e-mail.',
-            '— Equipe Mikma Lençóis',
+            'Equipe Mikma Lençóis',
           ].join('\n'),
           html: `
 <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
@@ -259,22 +259,22 @@ export async function POST(req: NextRequest) {
           from: 'noreply',
         });
 
-        console.log(`[webhook] email de confirmação enviado para ${customerEmail} — pedido ${orderId}`);
+        console.log(`[webhook] email de confirmação enviado para ${customerEmail}, pedido ${orderId}`);
       }
     } catch (emailErr) {
-      // Falha de email não deve quebrar o webhook — pedido já foi confirmado
+      // Falha de email não deve quebrar o webhook, pedido já foi confirmado
       console.error('[webhook] falha ao enviar email de confirmação:', emailErr);
     }
   }
 
   if (eventType === 'transparent.expired') {
-    // PIX expirou — marca o pedido como payment_expired e libera reserva de
+    // PIX expirou, marca o pedido como payment_expired e libera reserva de
     // estoque. IMPORTANTE: tudo isso precisa acontecer na MESMA transação
-    // que confere o status atual, pelo mesmo motivo do confirmOrder acima —
+    // que confere o status atual, pelo mesmo motivo do confirmOrder acima -
     // sem isso, se esse evento de expiração chegar perto de um evento de
     // pagamento confirmado (webhook duplicado/atrasado, comum em gateways
     // de pagamento), dava pra marcar como "expirado" e liberar o estoque de
-    // um pedido que na verdade FOI PAGO — overselling do item liberado, e o
+    // um pedido que na verdade FOI PAGO, overselling do item liberado, e o
     // cliente vendo o próprio pedido pago aparecer como expirado.
     const transparent = data.transparent;
     const orderId = transparent.externalId as string | undefined;
@@ -338,19 +338,19 @@ export async function POST(req: NextRequest) {
 
             await sendEmail({
               to: customerEmail,
-              subject: `PIX expirado — gere um novo para o pedido #${shortId}`,
+              subject: `PIX expirado, gere um novo para o pedido #${shortId}`,
               text: [
                 `Olá, ${customerName}.`,
                 '',
                 `O tempo para pagamento do pedido #${shortId} (${total}) expirou.`,
                 '',
-                'Mas não se preocupe — você ainda tem tempo para pagar. Acesse seu pedido e gere um novo código PIX.',
+                'Mas não se preocupe, você ainda tem tempo para pagar. Acesse seu pedido e gere um novo código PIX.',
                 '',
                 `Acessar pedido: ${orderUrl}`,
                 '',
                 'O pedido será cancelado automaticamente se não for pago em 48h após a criação.',
                 '',
-                '— Mikma Lençóis',
+                'Mikma Lençóis',
               ].join('\n'),
               html: `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"></head>
@@ -370,7 +370,7 @@ export async function POST(req: NextRequest) {
       Olá, ${customerName}. O tempo de pagamento do pedido <strong>#${shortId}</strong> (${total}) expirou.
     </p>
     <p style="margin:0 0 28px;font-size:14px;color:#705A48;line-height:1.65;">
-      Sem problemas — você pode gerar um novo código PIX e concluir o pagamento.
+      Sem problemas, você pode gerar um novo código PIX e concluir o pagamento.
       O pedido só será cancelado após <strong>48 horas</strong> da criação.
     </p>
     <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
@@ -404,7 +404,7 @@ export async function POST(req: NextRequest) {
     const orderId = transparent.externalId as string | undefined;
 
     if (!orderId) {
-      console.error('transparent.completed missing externalId — txId:', txId);
+      console.error('transparent.completed missing externalId, txId:', txId);
       return NextResponse.json({ ok: true });
     }
 
@@ -412,13 +412,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (eventType === 'checkout.completed') {
-    // Card checkout — data envelope has { checkout: { id, externalId, ... } }
+    // Card checkout, data envelope has { checkout: { id, externalId, ... } }
     const checkoutData = (data as Record<string, unknown>).checkout as Record<string, unknown> | undefined;
     const txId = (checkoutData?.id ?? '') as string;
     const orderId = checkoutData?.externalId as string | undefined;
 
     if (!orderId) {
-      console.error('checkout.completed missing externalId — txId:', txId);
+      console.error('checkout.completed missing externalId, txId:', txId);
       return NextResponse.json({ ok: true });
     }
 

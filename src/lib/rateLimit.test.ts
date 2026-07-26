@@ -5,13 +5,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 // configurado no ambiente (ex: secrets do CI). Sem esse mock, se
 // UPSTASH_REDIS_REST_URL/TOKEN estiverem presentes (como no CI, depois
 // que os secrets foram criados), rateLimit() passaria a fazer chamadas
-// de rede de verdade pro Upstash — lento, não-determinístico, e incompatível
+// de rede de verdade pro Upstash, lento, não-determinístico, e incompatível
 // com vi.useFakeTimers() (a chamada real de rede não avança com
 // vi.advanceTimersByTime(), causando falhas intermitentes).
 //
 // Mockando o client aqui, toda chamada .incr()/.expire() falha na hora
 // (sem round-trip de rede nenhum), o que faz rateLimit() cair pro
-// fallback em memória sempre — é exatamente esse caminho que este
+// fallback em memória sempre, é exatamente esse caminho que este
 // arquivo testa.
 vi.mock('@upstash/redis', () => ({
   Redis: class {

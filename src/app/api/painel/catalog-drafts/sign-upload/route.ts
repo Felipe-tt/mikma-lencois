@@ -8,7 +8,7 @@ import { getServiceAccountCredentials } from '@/lib/firebase/admin';
 import { generateV4SignedUploadUrl } from '@/lib/gcsSignedUrl';
 import crypto from 'node:crypto';
 
-// Só webp — as imagens de rascunho já chegam convertidas pelo navegador
+// Só webp, as imagens de rascunho já chegam convertidas pelo navegador
 // (ver compressToWebp no client) antes de pedir a URL assinada.
 const ALLOWED_TYPES = new Set(['image/webp']);
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB

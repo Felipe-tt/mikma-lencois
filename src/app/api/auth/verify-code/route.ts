@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
   // Rate limit: 10 tentativas por IP por 15 min (mais generoso que antes,
-  // já que não há mais digitação manual sujeita a erro de dedo — só
+  // já que não há mais digitação manual sujeita a erro de dedo, só
   // protege contra tentativas de adivinhar/forçar o token).
   const ipKey = `verify-code:${ip}`;
   if (!await rateLimit(ipKey, 10, 15 * 60 * 1000)) {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Link expirado. Solicite um novo.' }, { status: 400 });
   }
 
-  // Limite de tentativas por documento (proteção contra força bruta —
+  // Limite de tentativas por documento (proteção contra força bruta -
   // token tem 256 bits de entropia, então isso é só uma rede extra de segurança)
   if (data.attempts >= 10) {
     await ref.delete();
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
   }
 
-  // Token correto — marca como verificado
+  // Token correto, marca como verificado
   await ref.update({ verified: true, verifiedAt: new Date().toISOString(), ip });
 
   return NextResponse.json({ ok: true, name: data.name });

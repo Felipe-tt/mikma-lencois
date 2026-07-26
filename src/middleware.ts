@@ -10,11 +10,11 @@ import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 // depois de ativar a manutenção.)
 //
 // Reintroduzimos um cache, mas bem mais curto (2s) e só em memória do
-// isolate — não é um cache "pra economizar", é pra evitar que TODA
+// isolate, não é um cache "pra economizar", é pra evitar que TODA
 // requisição pague uma ida e volta ao Firestore antes de renderizar
 // qualquer página (isso estava anulando boa parte do ganho do ISR/CDN e
 // aumentando o custo de invocação). 2s é uma janela bem menor que os 15s
-// que causaram o problema anterior — na prática, o pior caso é alguém ver
+// que causaram o problema anterior, na prática, o pior caso é alguém ver
 // o site por até 2s depois do toggle, contra os "zero cache" de antes.
 // Se essa troca não for aceitável, é só zerar MAINTENANCE_CACHE_TTL_MS.
 const MAINTENANCE_CACHE_TTL_MS = 2000;
@@ -69,11 +69,11 @@ async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; 
   }
 
   // ipapi.co bloqueia/rate-limita IPs de cloud providers (GCP, AWS, Azure).
-  // Tentamos múltiplas APIs em sequência — a primeira que responder com sucesso vence.
+  // Tentamos múltiplas APIs em sequência, a primeira que responder com sucesso vence.
   // ip-api.com (HTTP) e freeipapi.com funcionam bem de cloud; ipapi.co fica por último.
   type GeoResult = { city: string; region: string; country: string; isp: string; debugError: string };
   const attempts: Array<() => Promise<GeoResult | null>> = [
-    // 1. ip-api.com — funciona de cloud, sem chave, 45 req/min grátis
+    // 1. ip-api.com, funciona de cloud, sem chave, 45 req/min grátis
     async () => {
       const res = await fetch(
         `http://ip-api.com/json/${ip}?fields=status,city,regionName,country,org`,
@@ -84,7 +84,7 @@ async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; 
       if (d.status !== 'success') return null;
       return { city: d.city ?? '', region: d.regionName ?? '', country: d.country ?? '', isp: d.org ?? '', debugError: '' };
     },
-    // 2. freeipapi.com — funciona de cloud, sem chave
+    // 2. freeipapi.com, funciona de cloud, sem chave
     async () => {
       const res = await fetch(
         `https://freeipapi.com/api/json/${ip}`,
@@ -95,7 +95,7 @@ async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; 
       if (!d.cityName) return null;
       return { city: d.cityName ?? '', region: d.regionName ?? '', country: d.countryName ?? '', isp: '', debugError: '' };
     },
-    // 3. ipapi.co — fallback: funciona de IPs residenciais, mas bloqueia cloud
+    // 3. ipapi.co, fallback: funciona de IPs residenciais, mas bloqueia cloud
     async () => {
       const res = await fetch(
         `https://ipapi.co/${ip}/json/`,
@@ -123,7 +123,7 @@ async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; 
 
 // Atualiza só os campos de geo num documento que já existe (PATCH com
 // updateMask, pra não sobrescrever `released`/`enteredAt`/etc. que podem
-// já ter mudado entre o registro inicial e a geo resolver) — chamada via
+// já ter mudado entre o registro inicial e a geo resolver), chamada via
 // event.waitUntil(), nunca aguardada no caminho do redirect.
 async function updateGeoInQueue(projectId: string, docId: string, ip: string) {
   const geo = await lookupIpGeo(ip);
@@ -145,10 +145,10 @@ async function updateGeoInQueue(projectId: string, docId: string, ip: string) {
       body: JSON.stringify({ fields }),
       signal: AbortSignal.timeout(6000),
     });
-  } catch { /* silencioso — best-effort, não afeta o visitante */ }
+  } catch { /* silencioso, best-effort, não afeta o visitante */ }
 }
 
-// Bots/crawlers que não devem poluir a fila de manutenção — não são
+// Bots/crawlers que não devem poluir a fila de manutenção, não são
 // visitantes reais esperando acesso, e não faz sentido o admin ficar
 // vendo "GoogleBot entrou na fila".
 const BOT_UA_PATTERN = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|whatsapp|telegrambot|discordbot|semrush|ahrefs|mj12bot|dotbot|petalbot|yandex|baidu|duckduckbot|nutch|scrapy|python-requests|curl\/|wget\/|headless|phantomjs|okhttp|libwww-perl|go-http-client/i;
@@ -241,7 +241,7 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'mikma-lencois';
     // Mesmo cuidado do getClientIp em lib/security.ts: este app fica atrás
     // do Firebase Hosting (servido pela Fastly), então o ÚLTIMO valor do
-    // X-Forwarded-For é a infraestrutura da Fastly, não o visitante — daí
+    // X-Forwarded-For é a infraestrutura da Fastly, não o visitante, daí
     // a fila de manutenção e o "liberar IP" nunca baterem com o IP real de
     // ninguém. O IP real vem em fastly-client-ip. X-Forwarded-For (último
     // valor) só como fallback pra quando não tem Firebase Hosting na
@@ -261,10 +261,10 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
 
     if (active) {
       // Staff logado (seller/admin) sempre vê o site normal, independente
-      // de IP liberado — não faz sentido pedir pra quem está trabalhando
+      // de IP liberado, não faz sentido pedir pra quem está trabalhando
       // no painel também ficar liberando o próprio IP toda vez que a rede
       // muda (café, 4G, trabalho remoto etc.). Importante: NÃO retorna
-      // direto aqui — só pula o bloqueio, pra continuar o fluxo normal
+      // direto aqui, só pula o bloqueio, pra continuar o fluxo normal
       // (headers de segurança, cache-control etc. aplicados mais abaixo).
       let staffBypass = false;
       const staffCookie = req.cookies.get(STAFF_SESSION_COOKIE)?.value;
@@ -278,7 +278,7 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
 
         if (!released) {
           await registerInQueue(projectId, docId, ip, req);
-          // Geo não bloqueia o redirect — ipapi.co pode levar até alguns
+          // Geo não bloqueia o redirect, ipapi.co pode levar até alguns
           // segundos, e o visitante não deve esperar isso pra ver a página
           // de manutenção. waitUntil mantém a isolate viva até o PATCH de
           // geo terminar, mesmo depois da resposta já ter sido enviada.
@@ -314,7 +314,7 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
     res.headers.set('Cache-Control', 'private, no-store');
   }
   // Páginas públicas da loja (/, /produtos, /sobre, etc.) NÃO recebem Cache-Control aqui
-  // — o Next.js ISR cuida disso via revalidate nas páginas
+  //, o Next.js ISR cuida disso via revalidate nas páginas
 
   return res;
 }

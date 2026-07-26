@@ -31,7 +31,7 @@ function ConfirmContent() {
         if (!res.ok) throw new Error(d.error);
         setState('ok');
         // Pequena pausa para a pessoa ver a confirmação, depois segue
-        // direto para a etapa de criar senha — sem precisar digitar nada.
+        // direto para a etapa de criar senha, sem precisar digitar nada.
         setTimeout(() => {
           router.push(`/cadastro?step=password&email=${encodeURIComponent(email)}&token=${token}`);
         }, 1200);

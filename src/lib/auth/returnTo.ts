@@ -5,7 +5,7 @@ export function setReturnTo(path: string) {
   try { sessionStorage.setItem(KEY, path); } catch { /* sessionStorage indisponível (ex: modo privado) */ }
 }
 
-/** Lê e apaga o caminho guardado — uso único, senão fica "grudado" em navegações futuras. */
+/** Lê e apaga o caminho guardado, uso único, senão fica "grudado" em navegações futuras. */
 export function consumeReturnTo(): string | null {
   try {
     const v = sessionStorage.getItem(KEY);

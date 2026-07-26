@@ -139,7 +139,7 @@ export default function HistoricoEstoquePage() {
             <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="min-w-0">
                 <p className="text-[13px] font-semibold text-ink truncate">{row.m.productName} <span className="font-normal text-faint">· {row.m.variantLabel}</span></p>
-                <p className="text-[11px] text-faint truncate">{row.m.reason}{row.m.by ? ` — ${row.m.by}` : ''}</p>
+                <p className="text-[11px] text-faint truncate">{row.m.reason}{row.m.by ? `, ${row.m.by}` : ''}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className={`text-[13px] font-bold ${row.m.type === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>{row.m.type === 'out' ? '−' : '+'}{row.m.quantity}</p>
@@ -149,7 +149,7 @@ export default function HistoricoEstoquePage() {
           ) : (
             <div key={i} className="px-4 py-2.5 bg-emerald-50/40">
               <div className="flex items-center justify-between gap-3 mb-1.5">
-                <p className="text-[12px] font-bold text-emerald-800">🧾 Venda com {row.lines.length} {row.lines.length === 1 ? 'item' : 'itens'}{row.lines[0].by ? ` — ${row.lines[0].by}` : ''}</p>
+                <p className="text-[12px] font-bold text-emerald-800">🧾 Venda com {row.lines.length} {row.lines.length === 1 ? 'item' : 'itens'}{row.lines[0].by ? `, ${row.lines[0].by}` : ''}</p>
                 <p className="text-[10px] text-faint shrink-0">{new Date(row.date).toLocaleString('pt-BR')}</p>
               </div>
               <div className="flex flex-col gap-0.5 pl-1">

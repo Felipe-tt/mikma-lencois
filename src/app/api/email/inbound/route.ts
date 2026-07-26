@@ -45,7 +45,7 @@ import { resendEventSchema } from './schema';
  * Remove conteúdo perigoso do HTML de e-mails recebidos antes de salvar e
  * exibir no painel (via dangerouslySetInnerHTML em /painel/mensagens).
  *
- * Esse HTML vem de QUALQUER pessoa que escreva para contato@mikma.com.br —
+ * Esse HTML vem de QUALQUER pessoa que escreva para contato@mikma.com.br -
  * é conteúdo de origem totalmente não confiável. Uma sanitização baseada em
  * regex (substituir <script>, on* etc. manualmente) é conhecidamente
  * contornável (tags malformadas, encodings alternativos, atributos sem
@@ -70,7 +70,7 @@ function sanitizeHtml(html: string): string {
     },
     allowedSchemes: ['http', 'https', 'mailto'],
     allowedSchemesByTag: {
-      // Imagens inline do Resend vêm como data: URI (base64) — restringe
+      // Imagens inline do Resend vêm como data: URI (base64), restringe
       // ainda mais para apenas esse uso, não libera data: em outras tags
       // (em especial não em <a href>, onde data:text/html poderia abrir
       // uma página com HTML/JS arbitrário disfarçada de link legítimo).
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Webhook não configurado' }, { status: 500 });
   }
 
-  // Assinatura exige body BRUTO — não pode usar req.json() antes disso
+  // Assinatura exige body BRUTO, não pode usar req.json() antes disso
   const rawBody = await req.text();
   const svixHeaders = {
     'svix-id': req.headers.get('svix-id') ?? '',
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
 
   // ── 1. Busca conteúdo completo (webhook só traz metadados) ─────────────────
   // html_format=data_uri (padrão): imagens inline já vêm como base64 no HTML
-  // Não precisa substituir CIDs — Resend já faz isso por nós
+  // Não precisa substituir CIDs, Resend já faz isso por nós
   const resendAny = getResend() as AnyResend;
   const { data: fullEmail, error: fetchErr } = await resendAny.emails.receiving.get(email_id);
   if (fetchErr || !fullEmail) {
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (cutPatterns.some(p => p.test(line))) {
-        // Padrão de "Em... escreveu:" pode ser multi-linha — olha linha anterior
+        // Padrão de "Em... escreveu:" pode ser multi-linha, olha linha anterior
         cutAt = i === 0 ? 0 : i;
         break;
       }
@@ -257,7 +257,7 @@ export async function POST(req: NextRequest) {
   // ── 3. Upload de anexos para Firebase Storage (URLs permanentes) ───────────
   const savedAttachments: { filename: string; contentType: string; url: string; isImage: boolean }[] = [];
 
-  // Filtra imagens inline — já estão embutidas no HTML como data URIs, não precisa salvar separado
+  // Filtra imagens inline, já estão embutidas no HTML como data URIs, não precisa salvar separado
   const nonInlineAttachments = attachmentsMeta.filter(
     att => !(att.content_id && rawHtml.includes(`data:${att.content_type}`))
   );
@@ -283,7 +283,7 @@ export async function POST(req: NextRequest) {
   const customerEmail = extractEmail(from);
   const customerName = extractName(from);
   const now = new Date().toISOString();
-  // Preview usa o texto limpo (sem quote) — se vazio (só citação), usa assunto
+  // Preview usa o texto limpo (sem quote), se vazio (só citação), usa assunto
   const preview = text.trim().slice(0, 140) || subject;
 
   const convId = conversationIdFor(customerEmail);

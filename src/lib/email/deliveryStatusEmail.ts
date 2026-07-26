@@ -11,7 +11,7 @@ interface OrderLike {
 /**
  * Manda um e-mail curto pro cliente quando a entrega Uber Direct muda pra
  * um status que ele realmente precisa saber (saiu pra entrega / chegou).
- * Best-effort: nunca lança — falha de e-mail não pode derrubar o webhook
+ * Best-effort: nunca lança, falha de e-mail não pode derrubar o webhook
  * (o Uber reenviaria o evento em loop se recebesse erro 5xx daqui).
  */
 export async function notifyCustomerDeliveryStatus(
@@ -31,7 +31,7 @@ export async function notifyCustomerDeliveryStatus(
         email = authUser.email ?? undefined;
         name = authUser.displayName || name;
       } catch {
-        // conta pode ter sido removida — sem problema, só não manda
+        // conta pode ter sido removida, sem problema, só não manda
       }
     }
     if (!email) return;
@@ -55,13 +55,13 @@ export async function notifyCustomerDeliveryStatus(
       canceled: {
         subject: `Atualização sobre seu pedido #${shortId}`,
         headline: 'Aviso',
-        body: `Houve um imprevisto com o motoboy da sua entrega. Já estamos providenciando um novo despacho — nenhuma ação é necessária da sua parte.`,
+        body: `Houve um imprevisto com o motoboy da sua entrega. Já estamos providenciando um novo despacho, nenhuma ação é necessária da sua parte.`,
         button: 'Ver pedido',
       },
       returned: {
         subject: `Atualização sobre seu pedido #${shortId}`,
         headline: 'Aviso',
-        body: `Seu pedido não pôde ser entregue e voltou para a loja. Vamos entrar em contato para reagendar — nenhuma ação é necessária da sua parte agora.`,
+        body: `Seu pedido não pôde ser entregue e voltou para a loja. Vamos entrar em contato para reagendar, nenhuma ação é necessária da sua parte agora.`,
         button: 'Ver pedido',
       },
     };

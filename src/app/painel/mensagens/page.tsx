@@ -129,7 +129,7 @@ export default function PainelMensagens() {
                   <p className={`text-[11px] truncate pl-8 ${
                     selectedId === conv.id ? 'text-paper/60' : 'text-faint'
                   }`}>
-                    {conv.lastMessagePreview || '—'}
+                    {conv.lastMessagePreview || '-'}
                   </p>
                   <p className={`text-[10px] mt-1 pl-8 ${
                     selectedId === conv.id ? 'text-paper/40' : 'text-faint/60'
@@ -362,7 +362,7 @@ function ConversationThread({
           <div className="border-b border-mist max-h-[280px] overflow-y-auto">
             <div className="flex items-center justify-between px-4 py-2 bg-warm">
               <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-faint">
-                Preview — como o cliente vai receber
+                Preview, como o cliente vai receber
               </p>
               <button onClick={() => setShowPreview(false)} className="text-[11px] text-faint hover:text-ink">
                 Fechar

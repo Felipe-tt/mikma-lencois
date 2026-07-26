@@ -24,7 +24,7 @@ export default function GlobalError({
             Algo deu errado
           </h1>
           <p className="text-[15px] text-mid max-w-[36ch] leading-relaxed mb-10">
-            Nossa equipe já foi avisada. Tenta recarregar a página — se continuar acontecendo, entra em contato com a loja.
+            Nossa equipe já foi avisada. Tenta recarregar a página, se continuar acontecendo, entra em contato com a loja.
           </p>
           <button
             onClick={() => reset()}

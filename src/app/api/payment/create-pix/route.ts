@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true); // checkRevoked
     const uid = decoded.uid;
 
-    // Rate limit por usuário (mais restrito — 5 PIX por hora)
+    // Rate limit por usuário (mais restrito, 5 PIX por hora)
     if (!await rateLimit(`pix:uid:${uid}`, 5, 60 * 60 * 1000)) {
       return tooManyRequests(rateLimitRetryAfter(`pix:uid:${uid}`));
     }
@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
     const { address, shipping } = parsedBody.data;
     // NOTA DE SEGURANÇA: nada do frete é confiado do cliente além de QUAL
     // carrier ele escolheu. O preço, label, prazo e quoteId são sempre
-    // recalculados aqui via computeShippingOptions() — a mesma função usada
-    // em /api/shipping/quote — e só aceitamos o carrier se ele aparecer na
+    // recalculados aqui via computeShippingOptions(), a mesma função usada
+    // em /api/shipping/quote, e só aceitamos o carrier se ele aparecer na
     // lista recém-computada para esse endereço/carrinho exatos. Isso fecha
     // a brecha de alguém mandar priceCents: 0 direto pela API e não pagar frete.
 
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
     // ── Desconto PIX (calculado no servidor, lido das configurações) ──────────
     const pixDiscountCents = computePixDiscountCents(productsCents, settings);
 
-    // ── Frete — recalculado do zero, nunca confiado do cliente ────────────────
+    // ── Frete, recalculado do zero, nunca confiado do cliente ────────────────
     const ledgerBalanceCents = await getShippingLedgerBalanceCents();
     const shippingResult = await computeShippingOptions(address.cep, settings, productsCents, totalWeightKg, ledgerBalanceCents);
     const matchedShipping = shippingResult.options.find(o => o.carrier === shipping.carrier);
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     // ("best-effort"). Isso é uma race condition clássica: requisições
     // concorrentes (ex: alguém automatizando cliques, ou só um duplo-clique
     // rápido) todas liam usedCount desatualizado, todas passavam da checagem
-    // de maxUses, e todas incrementavam — um cupom de uso único podia acabar
+    // de maxUses, e todas incrementavam, um cupom de uso único podia acabar
     // sendo aplicado dezenas de vezes. runTransaction serializa isso: só uma
     // das chamadas concorrentes vence o incremento, as outras recomeçam e já
     // veem o usedCount atualizado.
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Checar e reservar estoque ATOMICAMENTE (evita oversell por concorrência) ──
-    // Antes: check e reserve eram dois passos separados — dois pedidos simultâneos
+    // Antes: check e reserve eram dois passos separados, dois pedidos simultâneos
     // podiam ambos "ver" a última unidade livre e ambos reservarem. Agora tudo
     // acontece dentro de uma única transação do Firestore, que serializa
     // automaticamente escritas concorrentes no mesmo documento (retry interno).
@@ -235,12 +235,12 @@ export async function POST(req: NextRequest) {
     });
 
     // usedCount do cupom já foi incrementado atomicamente acima, dentro
-    // da transação de validação — nada a fazer aqui.
+    // da transação de validação, nada a fazer aqui.
 
     // Avisa o vendor que alguém iniciou um pagamento PIX (ainda não confirmado).
     // Best-effort: nunca deve bloquear ou falhar o checkout do cliente.
     // IMPORTANTE: await de propósito. Em Cloud Run, sem "CPU always
-    // allocated", a CPU é pausada assim que a resposta é enviada — uma
+    // allocated", a CPU é pausada assim que a resposta é enviada, uma
     // chamada "fire and forget" aqui seria interrompida no meio e o push
     // nunca chegaria a ser enviado, sem gerar nenhum log.
     await notifySeller({
@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
     const userSnap = await adminDb.collection('users').doc(uid).get();
     const userData = userSnap.data() ?? {};
 
-    // ── AbacatePay v2 — POST /transparents/create ─────────────────────────────
+    // ── AbacatePay v2, POST /transparents/create ─────────────────────────────
     // Only include customer if we have at least email; metadata must be omitted
     // if not needed (API rejects unknown object shapes with 422)
     // For PIX, customer requires ALL fields (name, email, taxId, cellphone)

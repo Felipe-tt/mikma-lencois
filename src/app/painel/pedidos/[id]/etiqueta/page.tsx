@@ -21,9 +21,9 @@ function fmtDate(value: string | { toDate?: () => Date; seconds?: number } | nul
   } else if (typeof value === 'string') {
     d = new Date(value);
   } else {
-    return '—';
+    return '-';
   }
-  if (isNaN(d.getTime())) return '—';
+  if (isNaN(d.getTime())) return '-';
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
@@ -95,10 +95,10 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
             <p className="text-[14px] font-bold">{customer?.name || 'Cliente'}</p>
             <p className="text-[13px] mt-0.5">
               {order.address.street}, {order.address.number}
-              {order.address.complement ? ` — ${order.address.complement}` : ''}
+              {order.address.complement ? `, ${order.address.complement}` : ''}
             </p>
             <p className="text-[13px]">{order.address.neighborhood}</p>
-            <p className="text-[13px]">{order.address.city} — {order.address.state}</p>
+            <p className="text-[13px]">{order.address.city}, {order.address.state}</p>
             <p className="text-[13px] font-semibold mt-0.5">CEP {order.address.cep}</p>
           </div>
           <div>
@@ -114,7 +114,7 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
         </div>
 
         <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide mb-2">
-          O que embalar — {totalItems} {totalItems === 1 ? 'peça' : 'peças'}
+          O que embalar, {totalItems} {totalItems === 1 ? 'peça' : 'peças'}
         </p>
         <table className="w-full text-[13px] border-t border-b border-neutral-300">
           <thead>
@@ -144,7 +144,7 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
         </div>
 
         <p className="text-[10px] text-neutral-400 mt-8 leading-relaxed">
-          Este documento é uma nota de separação/expedição de uso interno — não é um documento fiscal.
+          Este documento é uma nota de separação/expedição de uso interno, não é um documento fiscal.
         </p>
       </div>
     </div>

@@ -10,7 +10,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
     formats: ['image/avif', 'image/webp'],
-    // Tamanhos usados no app — evita gerar versões desnecessárias
+    // Tamanhos usados no app, evita gerar versões desnecessárias
     deviceSizes: [375, 640, 828, 1080, 1280],
     imageSizes: [64, 128, 256, 384],
     // Cache de imagens otimizadas por 7 dias no CDN
@@ -46,18 +46,18 @@ export default withSentryConfig(nextConfig, {
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
   // Sem org/project/authToken, o plugin simplesmente pula o upload de
-  // sourcemaps (loga um aviso, não falha o build) — então isso é seguro
+  // sourcemaps (loga um aviso, não falha o build), então isso é seguro
   // de deixar ligado mesmo antes de criar a conta no Sentry.
   silent: true,
   widenClientFileUpload: true,
   // Ad-blockers (uBlock, Brave, etc.) bloqueiam por padrão qualquer
   // request pra *.sentry.io / *.ingest.*, então boa parte dos usuários
   // reais nunca conseguia mandar erro nenhum (era isso que aparecia
-  // como "blocked by CORS policy" no console — não é CORS de verdade,
+  // como "blocked by CORS policy" no console, não é CORS de verdade,
   // é a extensão matando a request antes de sair do navegador).
   // Com tunnelRoute, o SDK do navegador manda pra uma rota do nosso
   // próprio domínio (mikma.com.br/monitoring), que o servidor repassa
-  // pro Sentry por trás — invisível pra bloqueadores de anúncio.
+  // pro Sentry por trás, invisível pra bloqueadores de anúncio.
   tunnelRoute: '/monitoring',
   webpack: {
     treeshake: { removeDebugLogging: true },

@@ -39,7 +39,7 @@ export function Footer({
       <div className="container-shop py-14 border-t border-paper/[0.07]">
         <div className="grid grid-cols-2 md:grid-cols-[1.6fr_1fr_1fr_1fr] gap-10 md:gap-8 lg:gap-12 pb-12 border-b border-paper/[0.07]">
 
-          {/* Col 1 — Marca */}
+          {/* Col 1, Marca */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-5">
             <Image
               src="/logo-white.png"
@@ -71,7 +71,7 @@ export function Footer({
             )}
           </div>
 
-          {/* Col 2 — Loja */}
+          {/* Col 2, Loja */}
           <div>
             <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Loja</p>
             <ul className="flex flex-col gap-3.5">
@@ -88,7 +88,7 @@ export function Footer({
             </ul>
           </div>
 
-          {/* Col 3 — Conta */}
+          {/* Col 3, Conta */}
           <div>
             <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Conta</p>
             <ul className="flex flex-col gap-3.5">
@@ -105,7 +105,7 @@ export function Footer({
             </ul>
           </div>
 
-          {/* Col 4 — Legal + contato */}
+          {/* Col 4, Legal + contato */}
           <div>
             <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Contato</p>
             <ul className="flex flex-col gap-3.5">

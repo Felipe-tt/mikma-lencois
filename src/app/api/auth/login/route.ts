@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 });
     }
 
-    // Rate limit ok — o Firebase Auth no cliente faz a validação real da senha
+    // Rate limit ok, o Firebase Auth no cliente faz a validação real da senha
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });

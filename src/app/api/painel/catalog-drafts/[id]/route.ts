@@ -43,7 +43,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const snap = await ref.get();
   if (!snap.exists) return NextResponse.json({ error: 'Rascunho não encontrado' }, { status: 404 });
 
-  // Apaga também as imagens já enviadas pro Storage — senão viram lixo órfão.
+  // Apaga também as imagens já enviadas pro Storage, senão viram lixo órfão.
   const images = (snap.data()?.images ?? []) as Array<{ path?: string }>;
   await Promise.all(
     images.map(async (img) => {

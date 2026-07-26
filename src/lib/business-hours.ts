@@ -1,4 +1,4 @@
-// Modelo de horário de funcionamento — estilo Google Business.
+// Modelo de horário de funcionamento, estilo Google Business.
 // Cada dia pode ter múltiplos intervalos (ex: 07:00–12:00 e 13:00–17:00).
 // Serializado como JSON dentro de StoreSettings.businessHours (string).
 
@@ -40,7 +40,7 @@ export function parseBusinessHours(json: string | undefined | null): BusinessHou
   if (!json) return DEFAULT_BUSINESS_HOURS;
   try {
     const parsed = JSON.parse(json);
-    // Valida estrutura mínima — se algo estiver corrompido, cai pro default
+    // Valida estrutura mínima, se algo estiver corrompido, cai pro default
     const result = {} as BusinessHours;
     for (const { key } of WEEKDAYS) {
       const day = parsed[key];
@@ -76,7 +76,7 @@ function timeToMinutes(t: string): number {
 /**
  * Calcula o status "aberto agora / fechado" considerando o fuso horário
  * informado (IANA, ex: "America/Sao_Paulo"). Sem fuso explícito, usa o
- * horário local do servidor — por isso o fuso deve sempre ser passado
+ * horário local do servidor, por isso o fuso deve sempre ser passado
  * a partir das configurações da loja.
  */
 export interface OpenStatus {
@@ -103,7 +103,7 @@ function nowInTimeZone(timeZone: string): { dow: number; minutes: number } {
   const minuteStr = parts.find(p => p.type === 'minute')?.value ?? '00';
   const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
   const dow = dowMap[weekdayStr] ?? 0;
-  // hour can be "24" at midnight in some environments — normalize
+  // hour can be "24" at midnight in some environments, normalize
   let hour = parseInt(hourStr, 10);
   if (hour === 24) hour = 0;
   const minutes = hour * 60 + parseInt(minuteStr, 10);
@@ -127,7 +127,7 @@ export function getOpenStatus(hours: BusinessHours, timeZone = 'America/Sao_Paul
         };
       }
     }
-    // Ainda não abriu hoje — próximo intervalo do dia
+    // Ainda não abriu hoje, próximo intervalo do dia
     const upcoming = today.ranges
       .filter(r => timeToMinutes(r.open) > minutes)
       .sort((a, b) => timeToMinutes(a.open) - timeToMinutes(b.open))[0];
@@ -179,7 +179,7 @@ export function groupConsecutiveDays(hours: BusinessHours): { label: string; tex
     }
     const label = i === j ? WEEKDAYS[i].short : `${WEEKDAYS[i].short}–${WEEKDAYS[j].short}`;
     // Turnos separados (ex: manhã e tarde com intervalo pro almoço) viram
-    // uma linha cada, em vez de um texto só espremido com vírgula — muito
+    // uma linha cada, em vez de um texto só espremido com vírgula, muito
     // mais legível quando o dia tem 2+ intervalos.
     const ranges = dayHours.closed || dayHours.ranges.length === 0
       ? ['Fechado']

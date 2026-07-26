@@ -69,7 +69,7 @@ export async function GET(
 
   if (isFirestoreOrder) {
     // IDOR corrigido: rastrear por orderId exige ser o dono do pedido ou
-    // ser seller/admin — sem isso, qualquer pessoa que soubesse (ou
+    // ser seller/admin, sem isso, qualquer pessoa que soubesse (ou
     // adivinhasse) um orderId conseguia ver status de entrega e
     // transportadora de pedidos de outras contas, sem estar logada.
     const bearer = extractBearer(req);

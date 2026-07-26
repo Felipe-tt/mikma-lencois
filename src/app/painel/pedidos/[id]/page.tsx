@@ -50,7 +50,7 @@ const TIMELINE_LABEL: Record<string, string> = {
   paid: 'Pagamento recebido',
   preparing: 'Começou a separar o pedido',
   shipped: 'Pedido despachado',
-  delivery_cancelled: 'Entrega cancelada — remetente corrigiu',
+  delivery_cancelled: 'Entrega cancelada, remetente corrigiu',
   delivered: 'Pedido entregue ao cliente',
   cancelled: 'Pedido cancelado',
 };
@@ -82,7 +82,7 @@ function timelineLabel(status: string, order: Order): string {
   if (status === 'payment_initiated') {
     return order.payment.method === 'card'
       ? 'Checkout de cartão iniciado'
-      : 'PIX gerado — cliente viu o QR code';
+      : 'PIX gerado, cliente viu o QR code';
   }
   return TIMELINE_LABEL[status] ?? status;
 }
@@ -102,7 +102,7 @@ function toDate(value: unknown): Date | null {
 
 function formatDateTime(value: unknown): string {
   const d = toDate(value);
-  if (!d) return '—';
+  if (!d) return '-';
   try {
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit', month: '2-digit', year: 'numeric',
@@ -209,7 +209,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             }
           } catch (err) {
             // Não deixa uma falha ao buscar dados do cliente travar a tela
-            // inteira — o pedido em si já carregou e pode ser exibido.
+            // inteira, o pedido em si já carregou e pode ser exibido.
             console.error('Erro ao buscar dados do cliente:', err);
           }
         }
@@ -275,7 +275,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     if (!order) return;
     const { confirmed: hasReason, value: reason } = await confirmDialog({
       message: 'Motivo do cancelamento',
-      detail: 'Obrigatório — aparece no registro do pedido.',
+      detail: 'Obrigatório, aparece no registro do pedido.',
       withInput: true,
       inputPlaceholder: 'Ex: etiqueta gerada com endereço errado',
       confirmLabel: 'Continuar',
@@ -421,7 +421,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <div className="border border-ink/20 bg-ink/5 px-5 py-4 flex flex-col gap-3">
               <p className="text-[13px] font-bold text-ink">Pedido sendo separado</p>
 
-              {/* Forma de envio escolhida pelo cliente — não editável */}
+              {/* Forma de envio escolhida pelo cliente, não editável */}
               <div className="flex items-center justify-between bg-white dark:bg-warm border border-mist px-4 py-3">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-faint mb-0.5">
@@ -600,7 +600,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <Row label="CPF" value={customer.cpf ? customer.cpf : 'Não informado'} />
               <Row label="Cliente desde" value={formatDateTime(customer.createdAt)} />
               {customer.address && (
-                <Row label="Endereço cadastrado" value={`${customer.address.street}, ${customer.address.number} — ${customer.address.city}/${customer.address.state}`} />
+                <Row label="Endereço cadastrado" value={`${customer.address.street}, ${customer.address.number}, ${customer.address.city}/${customer.address.state}`} />
               )}
             </>
           ) : (
@@ -680,9 +680,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {/* ── Endereço de entrega ── */}
         <Card title="Endereço de entrega" icon="pin">
-          <Row label="Rua" value={`${order.address.street}, ${order.address.number}${order.address.complement ? ` — ${order.address.complement}` : ''}`} />
+          <Row label="Rua" value={`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}`} />
           <Row label="Bairro" value={order.address.neighborhood} />
-          <Row label="Cidade" value={`${order.address.city} — ${order.address.state}`} />
+          <Row label="Cidade" value={`${order.address.city}, ${order.address.state}`} />
           <Row label="CEP" value={order.address.cep} />
           <div className="py-2.5 flex flex-col gap-2">
             <button
@@ -730,7 +730,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </Card>
         )}
 
-        {/* ── Rastreamento (Correios/Melhor Envio — Uber Direct já tem o card
+        {/* ── Rastreamento (Correios/Melhor Envio, Uber Direct já tem o card
              próprio "entregador em tempo real" acima, com ETA e link do
              mapa; esse aqui não tem noção de Uber Direct e só mostraria um
              erro confuso de "Melhor Envio" pra esses pedidos) ── */}

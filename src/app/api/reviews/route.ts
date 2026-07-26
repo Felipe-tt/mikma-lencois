@@ -14,7 +14,7 @@ const schema = z.object({
   comment: z.string().trim().max(1000).optional().default(''),
 });
 
-// ── GET /api/reviews?productId=xxx — lista pública de avaliações de um produto ──
+// ── GET /api/reviews?productId=xxx, lista pública de avaliações de um produto ──
 export async function GET(req: NextRequest) {
   const productId = req.nextUrl.searchParams.get('productId');
   if (!productId) return NextResponse.json({ error: 'productId obrigatório' }, { status: 400 });
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ reviews });
 }
 
-// ── POST /api/reviews — cria avaliação (só compra entregue, 1x por pedido+produto) ──
+// ── POST /api/reviews, cria avaliação (só compra entregue, 1x por pedido+produto) ──
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   const bearer = extractBearer(req);
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Este produto não faz parte deste pedido' }, { status: 400 });
     }
 
-    // Um review por (pedido, produto) — evita duplicar se o comprador levou
+    // Um review por (pedido, produto), evita duplicar se o comprador levou
     // mais de uma unidade/variante do mesmo produto no mesmo pedido.
     const existing = await adminDb.collection('reviews')
       .where('orderId', '==', orderId)
