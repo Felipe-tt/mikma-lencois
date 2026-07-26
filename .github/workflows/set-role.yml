@@ -3,7 +3,7 @@ name: Definir role de usuário (bootstrap admin)
 # Só workflow_dispatch: só quem tem acesso de escrita no repo consegue
 # disparar isso. É o único jeito de criar o primeiro admin, já que o
 # painel em si exige ser admin pra promover qualquer pessoa (ver
-# /api/painel/team) — sem isso ninguém conseguiria começar.
+# /api/painel/team), sem isso ninguém conseguiria começar.
 on:
   workflow_dispatch:
     inputs:

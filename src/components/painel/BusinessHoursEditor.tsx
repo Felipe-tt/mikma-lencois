@@ -11,7 +11,7 @@ interface Props {
 }
 
 /**
- * Editor de horário de funcionamento — modelo Google Business.
+ * Editor de horário de funcionamento, modelo Google Business.
  * Cada dia: aberto/fechado + múltiplos intervalos (ex: 07:00–12:00, 13:00–17:00).
  */
 export function BusinessHoursEditor({ value, onChange }: Props) {
@@ -35,7 +35,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
   function toggleClosed(key: WeekdayKey) {
     const day = value[key];
     if (day.closed) {
-      // Reabrindo — sugere um intervalo padrão se não tiver nenhum
+      // Reabrindo, sugere um intervalo padrão se não tiver nenhum
       updateDay(key, {
         closed: false,
         ranges: day.ranges.length > 0 ? day.ranges : [{ open: '08:00', close: '18:00' }],
@@ -149,7 +149,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                 ) : (
                   <div className="flex flex-col gap-2">
                     {day.ranges.length === 0 && (
-                      <span className="text-[11px] text-clay-l">Nenhum horário definido — adicione um intervalo</span>
+                      <span className="text-[11px] text-clay-l">Nenhum horário definido, adicione um intervalo</span>
                     )}
                     {day.ranges.map((range, idx) => (
                       <div key={idx} className="flex items-center gap-1.5 flex-wrap">

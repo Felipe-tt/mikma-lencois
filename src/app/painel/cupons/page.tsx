@@ -33,7 +33,7 @@ export default function CuponsPage() {
     setSaving(true); setError('');
     const code = form.code.toUpperCase().trim();
     try {
-      // IMPORTANTE: o código do cupom precisa ser o ID do documento — é
+      // IMPORTANTE: o código do cupom precisa ser o ID do documento, é
       // assim que /api/checkout/validate-coupon e as rotas de pagamento
       // (create-checkout, create-pix) procuram o cupom. Antes isso usava
       // addDoc (ID aleatório, código só como campo), e por isso nenhum

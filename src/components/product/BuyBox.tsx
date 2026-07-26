@@ -63,7 +63,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     return () => { window.removeEventListener('keydown', handler); document.body.style.overflow = ''; };
   }, [addedOpen, closeAdded]);
 
-  // ── Preço, parcelamento e PIX — mesma lógica do checkout, uma única fonte de verdade visual ──
+  // ── Preço, parcelamento e PIX, mesma lógica do checkout, uma única fonte de verdade visual ──
   const lineTotal = product.price * qty;
   const maxInstall = Math.min(8, Math.max(1, Math.floor(lineTotal / 10000)));
   const installVal = Math.round(lineTotal / maxInstall);
@@ -266,7 +266,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           </div>
         )}
 
-        {/* CTAs — padrão "Comprar agora" + "Adicionar ao carrinho" (Amazon).
+        {/* CTAs, padrão "Comprar agora" + "Adicionar ao carrinho" (Amazon).
             Em mobile essas ações moram só na barra fixa abaixo, pra não duplicar o CTA. */}
         <div className="hidden sm:flex flex-col gap-2 border-t border-mist pt-5">
           <button
@@ -303,7 +303,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           </button>
         </div>
 
-        {/* Calculadora de frete — padrão Amazon/ML "Calcule o frete" */}
+        {/* Calculadora de frete, padrão Amazon/ML "Calcule o frete" */}
         <div className="border-t border-mist pt-5">
           <p className="label mb-2.5">Calcular frete e prazo</p>
           <div className="flex gap-2">
@@ -357,7 +357,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
         </div>
       </div>
 
-      {/* ── Barra fixa mobile — padrão universal de PDP de marketplace ── */}
+      {/* ── Barra fixa mobile, padrão universal de PDP de marketplace ── */}
       <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-paper border-t border-mist px-4 py-3 flex items-center gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-ink leading-none">{formatCurrency(product.price)}</p>

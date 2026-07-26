@@ -1,6 +1,6 @@
 // Define a custom claim "role" de um usuário já cadastrado.
 // Rodado só via GitHub Actions (workflow_dispatch), nunca em produção
-// automaticamente — é o mecanismo de bootstrap pra criar o primeiro admin,
+// automaticamente, é o mecanismo de bootstrap pra criar o primeiro admin,
 // já que o app não tem (por design) nenhuma forma de auto-promoção.
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';

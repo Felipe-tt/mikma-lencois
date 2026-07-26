@@ -1,12 +1,12 @@
 /**
- * Cálculo de preço do pedido — PIX, cartão e cupons.
+ * Cálculo de preço do pedido, PIX, cartão e cupons.
  *
  * Extraído das rotas /api/payment/create-pix, /api/payment/create-checkout e
  * /api/checkout/validate-coupon, que antes reimplementavam essa mesma conta
  * cada uma do seu jeito (risco real: as três podiam divergir sutilmente e
  * cobrar valores diferentes pro mesmo pedido). Agora é uma fonte só, testada.
  *
- * Tudo aqui é puro — sem Firestore, sem fetch, sem side-effect. Os valores já
+ * Tudo aqui é puro, sem Firestore, sem fetch, sem side-effect. Os valores já
  * chegam prontos (é a rota que busca no Firestore e chama essas funções).
  */
 
@@ -27,7 +27,7 @@ export interface CouponResult {
   discountCents: number
 }
 
-/** Soma preço unitário × quantidade de cada item — o "subtotal" antes de qualquer desconto/frete. */
+/** Soma preço unitário × quantidade de cada item, o "subtotal" antes de qualquer desconto/frete. */
 export function computeProductsCents(items: { unitPrice: number; quantity: number }[]): number {
   return items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 }
@@ -54,7 +54,7 @@ export function validateCoupon(coupon: CouponLike, productsCents: number, now: D
   return { valid: true, discountCents };
 }
 
-/** Desconto automático por pagar em PIX — só se o subtotal bater o piso configurado. */
+/** Desconto automático por pagar em PIX, só se o subtotal bater o piso configurado. */
 export function computePixDiscountCents(
   productsCents: number,
   settings: { pixDiscountThresholdCents: number; pixDiscountPct: number }
@@ -75,7 +75,7 @@ export function computePixTotalCents(args: {
   return Math.max(0, productsCents - pixDiscountCents - couponDiscountCents + shippingCents);
 }
 
-/** Total final de um pedido pago via cartão — sem desconto PIX, com taxa da adquirente embutida. */
+/** Total final de um pedido pago via cartão, sem desconto PIX, com taxa da adquirente embutida. */
 export function computeCardTotalCents(args: {
   productsCents: number
   couponDiscountCents: number

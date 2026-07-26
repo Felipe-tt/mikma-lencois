@@ -1,5 +1,5 @@
 /**
- * "Caixa" de frete — registra quanto foi realmente COBRADO do cliente em
+ * "Caixa" de frete, registra quanto foi realmente COBRADO do cliente em
  * frete (shippingCents, já com frete grátis aplicado quando for o caso) vs.
  * quanto foi de fato GASTO nas transportadoras (Melhor Envio / Uber Direct)
  * no momento do despacho.
@@ -23,7 +23,7 @@ export interface ShippingLedger {
   updatedAt?: string;
 }
 
-/** Lê o saldo atual do caixa de frete. Nunca lança — retorna saldo 0 em caso de erro (fail-open pra não travar cotações). */
+/** Lê o saldo atual do caixa de frete. Nunca lança, retorna saldo 0 em caso de erro (fail-open pra não travar cotações). */
 export async function getShippingLedgerBalanceCents(): Promise<number> {
   try {
     const snap = await LEDGER_REF().get();

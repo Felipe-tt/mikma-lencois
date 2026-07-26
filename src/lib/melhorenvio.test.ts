@@ -91,7 +91,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('ME_SERVICES — mapeamento de transportadoras', () => {
+describe('ME_SERVICES, mapeamento de transportadoras', () => {
   it('tem o service_id certo pra cada transportadora suportada', () => {
     expect(ME_SERVICES.correios_pac).toBe(1);
     expect(ME_SERVICES.correios_sedex).toBe(2);
@@ -100,7 +100,7 @@ describe('ME_SERVICES — mapeamento de transportadoras', () => {
   });
 });
 
-describe('meDispatch — despacho completo por transportadora', () => {
+describe('meDispatch, despacho completo por transportadora', () => {
   const carriers: Array<keyof typeof ME_SERVICES> = [
     'correios_pac',
     'correios_sedex',
@@ -194,7 +194,7 @@ describe('meDispatch — despacho completo por transportadora', () => {
       insuranceValue: 103,
     });
 
-    // Etiqueta e compra já aconteceram — não podemos perder isso por causa
+    // Etiqueta e compra já aconteceram, não podemos perder isso por causa
     // do rastreio, que pode demorar a ficar disponível na ME.
     expect(result.labelUrl).toBe('https://melhorenvio.com.br/etiqueta/cart-item-999.pdf');
     expect(result.trackingCode).toBeNull();

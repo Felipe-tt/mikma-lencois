@@ -8,7 +8,7 @@
  * pra pegar o token de uma ação específica.
  *
  * Se NEXT_PUBLIC_RECAPTCHA_SITE_KEY não estiver configurada neste
- * ambiente, retorna undefined silenciosamente — o backend
+ * ambiente, retorna undefined silenciosamente, o backend
  * (verifyRecaptcha em src/lib/recaptcha.ts) trata token ausente como
  * "não bloqueia" (fail-open), então build/dev sem reCAPTCHA configurado
  * continuam funcionando normalmente.
@@ -53,6 +53,6 @@ export async function getRecaptchaToken(action: string): Promise<string | undefi
       });
     });
   } catch {
-    return undefined; // não bloqueia o fluxo — backend trata token ausente como fail-open
+    return undefined; // não bloqueia o fluxo, backend trata token ausente como fail-open
   }
 }

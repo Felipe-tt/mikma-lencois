@@ -4,7 +4,7 @@ import { adminAuth } from '@/lib/firebase/admin';
 import { verifyAuth, getClientIp } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 
-// Admin SDK não tem "buscar por texto" nativo — lista até 1000 contas
+// Admin SDK não tem "buscar por texto" nativo, lista até 1000 contas
 // (suficiente pra uma loja pequena/média) e filtra em memória por
 // e-mail/nome. Nunca expõe nada além de uid/e-mail/nome/foto/role.
 const MAX_USERS_SCANNED = 1000;

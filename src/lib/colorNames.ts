@@ -1,5 +1,5 @@
 // Paleta de cores em português, curada para produtos têxteis (lençóis, fronhas,
-// edredons). Resolução 100% local — sem chamadas de rede, sem dependência de
+// edredons). Resolução 100% local, sem chamadas de rede, sem dependência de
 // tradução automática instável. ~80 cores cobrem o universo real de tons
 // vendidos numa loja de cama/banho, muito mais úteis que as ~30 mil entradas
 // genéricas do color-name-list (a maioria delas nomes de tinta industrial
@@ -11,7 +11,7 @@ export interface NamedColor {
 }
 
 export const TEXTILE_COLORS: NamedColor[] = [
-  // Neutros — o grosso do catálogo de cama
+  // Neutros, o grosso do catálogo de cama
   { name: 'Branco',          hex: '#FFFFFF' },
   { name: 'Branco Gelo',     hex: '#F8F8F6' },
   { name: 'Off-White',       hex: '#F2EDE4' },
@@ -88,7 +88,7 @@ export const TEXTILE_COLORS: NamedColor[] = [
   { name: 'Estampado',       hex: '#A89B8C' },
 ];
 
-/** Distância euclidiana entre duas cores RGB — quanto menor, mais parecidas */
+/** Distância euclidiana entre duas cores RGB, quanto menor, mais parecidas */
 function colorDistance(hex1: string, hex2: string): number {
   const c1 = hexToRgb(hex1);
   const c2 = hexToRgb(hex2);

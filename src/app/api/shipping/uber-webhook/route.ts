@@ -8,7 +8,7 @@
  *
  * UBER_DIRECT_WEBHOOK_SECRET configurada como variável de ambiente
  * (painel do Uber Direct → Webhooks → Signing key). Nunca hardcode
- * o valor real aqui — se precisar rotacionar, gere um novo no painel
+ * o valor real aqui, se precisar rotacionar, gere um novo no painel
  * do Uber e atualize a env var no Cloud Run.
  */
 
@@ -52,7 +52,7 @@ const STATUS_NOTE: Record<string, string> = {
   returned:        'Pacote devolvido pelo Uber Direct',
 };
 
-// Nem todo status vira notificação — só os que exigem atenção/ação do
+// Nem todo status vira notificação, só os que exigem atenção/ação do
 // seller (chegou pra coletar, terminou, ou deu problema). "pickup_complete"
 // e "dropoff" ficam só no histórico pra não empilhar push demais no
 // celular pra cada micro-atualização da corrida.
@@ -71,18 +71,18 @@ const PUSH_ON_STATUS: Record<string, (itemsSummary: string) => { title: string; 
   }),
   returned: (itemsSummary) => ({
     title: 'Pacote devolvido pelo Uber Direct ⚠️',
-    body: `${itemsSummary} voltou pra loja — confira o pedido.`,
+    body: `${itemsSummary} voltou pra loja, confira o pedido.`,
   }),
 };
 
 function verifySignature(rawBody: Buffer, header: string): boolean {
-  // Testa contra os dois secrets configurados (produção e sandbox) — o
+  // Testa contra os dois secrets configurados (produção e sandbox), o
   // toggle de ambiente é por pedido (delivery.uberSandbox), não global, então
   // um webhook de qualquer um dos dois apps pode legitimamente chegar aqui.
   const secrets = [process.env.UBER_DIRECT_WEBHOOK_SECRET, process.env.UBER_DIRECT_SANDBOX_WEBHOOK_SECRET]
     .filter((s): s is string => !!s);
   if (secrets.length === 0) {
-    console.error('[uber-webhook] nenhum UBER_DIRECT_WEBHOOK_SECRET configurado — rejeitando (fail-closed)');
+    console.error('[uber-webhook] nenhum UBER_DIRECT_WEBHOOK_SECRET configurado, rejeitando (fail-closed)');
     return false;
   }
   const received = header.replace(/^sha256=/, '');
@@ -105,11 +105,11 @@ function verifySignature(rawBody: Buffer, header: string): boolean {
 
 /**
  * Calcula a rota loja→cliente (seguindo as ruas) e salva no pedido, mas só
- * na primeira vez — a rota em si não muda durante a entrega, só a posição
+ * na primeira vez, a rota em si não muda durante a entrega, só a posição
  * do motoboy ao longo dela. Chamado tanto no primeiro courier_update quanto
  * na primeira mudança de status pra "pickup", o que vier primeiro.
  * Best-effort: se a geocodificação ou o ORS falhar, simplesmente não seta
- * routePoints — o mapa cai pro fallback de linha reta.
+ * routePoints, o mapa cai pro fallback de linha reta.
  */
 async function ensureRoutePoints(
   orderRef: FirebaseFirestore.DocumentReference,
@@ -142,7 +142,7 @@ async function ensureRoutePoints(
 }
 
 export async function POST(req: NextRequest) {
-  // Defesa contra flood — a Uber manda poucos eventos por corrida em
+  // Defesa contra flood, a Uber manda poucos eventos por corrida em
   // operação normal; isso só protege contra abuso/DoS na URL pública.
   const ip = getClientIp(req);
   if (!await rateLimit(`uber-webhook-ip:${ip}`, 60, 60_000)) {
@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
     if (pushBuilder) {
       const items = (orderData.items ?? []) as { productName: string; quantity: number }[];
       const { title, body } = pushBuilder(summarizeOrderItems(items));
-      // Best-effort — notifySeller nunca lança, só loga falha internamente.
+      // Best-effort, notifySeller nunca lança, só loga falha internamente.
       await notifySeller({
         title,
         body,
@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Cliente só precisa saber quando sai pra entrega, chega, ou dá problema
-    // — "pending"/"pickup"/"dropoff" ainda estão dentro do fluxo esperado e
+    //, "pending"/"pickup"/"dropoff" ainda estão dentro do fluxo esperado e
     // encher a caixa de entrada dele com cada micro-status não ajuda.
     if (uberStatus === 'pickup_complete' || uberStatus === 'delivered' || uberStatus === 'canceled' || uberStatus === 'returned') {
       await notifyCustomerDeliveryStatus(orderRef.id, orderData as { userId?: string; customerName?: string; customerEmail?: string }, uberStatus);
@@ -281,7 +281,7 @@ export async function POST(req: NextRequest) {
     if (courier.img_href)     update['delivery.courierPhoto'] = courier.img_href; // img_href conforme OpenAPI CourierInfo
     if (courier.vehicle_type) update['delivery.courierVehicle'] = courier.vehicle_type;
 
-    // Posição ao vivo — chega a cada ~20s enquanto o motoboy está a
+    // Posição ao vivo, chega a cada ~20s enquanto o motoboy está a
     // caminho. É o que alimenta o pino que se move no mapa embutido.
     const location = courier.location as { lat?: number; lng?: number } | undefined;
     if (typeof location?.lat === 'number' && typeof location?.lng === 'number') {
@@ -290,18 +290,18 @@ export async function POST(req: NextRequest) {
       update['delivery.courierLocationAt'] = new Date().toISOString();
     }
 
-    // ETAs atualizados — em courier_update o ETA vem no top-level do objeto data
+    // ETAs atualizados, em courier_update o ETA vem no top-level do objeto data
     if (data?.dropoff_eta) update['delivery.dropoffEta'] = data.dropoff_eta;
     if (data?.pickup_eta)  update['delivery.pickupEta']  = data.pickup_eta;
 
     await orderRef.update(update);
-    console.log(`[uber-webhook] ${orderRef.id}: courier_update — ${courier.name ?? '?'}`);
+    console.log(`[uber-webhook] ${orderRef.id}: courier_update, ${courier.name ?? '?'}`);
 
     await ensureRoutePoints(orderRef, orderData, courier.vehicle_type as string | undefined);
 
     return NextResponse.json({ ok: true });
   }
 
-  // Evento desconhecido — retorna 200 para o Uber não retentar
+  // Evento desconhecido, retorna 200 para o Uber não retentar
   return NextResponse.json({ ok: true });
 }

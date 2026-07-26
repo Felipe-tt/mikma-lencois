@@ -1,4 +1,4 @@
-export const revalidate = 86400; // 24h — conteúdo estático
+export const revalidate = 86400; // 24h, conteúdo estático
 
 import { getSettings } from '@/lib/settings';
 
@@ -26,7 +26,7 @@ export default async function PrivacidadePage() {
           <section>
             <h2 className="font-display font-normal text-ink text-2xl mb-4">1. Quem somos</h2>
             <p className="text-[15px] text-mid leading-relaxed">
-              {name} é responsável pelo tratamento dos seus dados pessoais coletados neste site, nos termos da Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).
+              {name} é responsável pelo tratamento dos seus dados pessoais coletados neste site, nos termos da Lei Geral de Proteção de Dados (LGPD, Lei nº 13.709/2018).
               {email && ` Dúvidas: ${email}.`}
             </p>
           </section>
@@ -34,7 +34,7 @@ export default async function PrivacidadePage() {
           <section>
             <h2 className="font-display font-normal text-ink text-2xl mb-4">2. Dados coletados</h2>
             <p className="text-[15px] text-mid leading-relaxed">
-              Coletamos apenas os dados necessários para processar seus pedidos: nome, e-mail, endereço de entrega e CPF (para emissão de nota fiscal). Não coletamos dados de cartão de crédito — pagamentos são realizados via PIX.
+              Coletamos apenas os dados necessários para processar seus pedidos: nome, e-mail, endereço de entrega e CPF (para emissão de nota fiscal). Não coletamos dados de cartão de crédito, pagamentos são realizados via PIX.
             </p>
           </section>
 

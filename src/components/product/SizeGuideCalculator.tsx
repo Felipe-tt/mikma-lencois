@@ -6,7 +6,7 @@ import { matchMattressSize, lookupAlias, type MattressSizeKey, type MattressWidt
 
 interface Props {
   products: Product[];
-  /** Largura de cada tamanho — vem da mesma tabela "Guia de tamanhos de cama" mostrada na página do produto (settings.bedSizeRows), nunca hardcoded aqui. */
+  /** Largura de cada tamanho, vem da mesma tabela "Guia de tamanhos de cama" mostrada na página do produto (settings.bedSizeRows), nunca hardcoded aqui. */
   widths: MattressWidthMap;
 }
 

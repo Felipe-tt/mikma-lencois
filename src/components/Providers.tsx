@@ -7,8 +7,8 @@ import { NavigationProvider } from '@/lib/NavigationContext';
 import { ChunkErrorReload } from '@/components/ChunkErrorReload';
 
 // ssr: false garante que esses hosts nunca rodem no servidor.
-// createPortal / listeners de DOM dependem de document — não existe no
-// SSR — causaria hydration mismatch (React error #418) se carregado normalmente.
+// createPortal / listeners de DOM dependem de document, não existe no
+// SSR, causaria hydration mismatch (React error #418) se carregado normalmente.
 const ConfirmDialogHost = dynamic(
   () => import('@/components/ui/ConfirmDialog').then(m => m.ConfirmDialogHost),
   { ssr: false }

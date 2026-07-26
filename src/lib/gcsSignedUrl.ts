@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 /**
  * Gera uma signed URL V4 do Google Cloud Storage "na mão", seguindo o
  * algoritmo oficial (https://cloud.google.com/storage/docs/access-control/signing-urls-manually),
- * usando só o módulo crypto nativo do Node — sem passar pelo
+ * usando só o módulo crypto nativo do Node, sem passar pelo
  * @google-cloud/storage / google-auth-library.
  *
  * Por quê: o caminho padrão (bucket.file().getSignedUrl()) delega a
@@ -61,7 +61,7 @@ export function generateV4SignedUploadUrl(opts: {
   // Path-style (storage.googleapis.com/BUCKET/objeto), não virtual-hosted
   // (BUCKET.storage.googleapis.com/objeto): buckets do Firebase Storage
   // "novos" usam nomes como "projeto.firebasestorage.app", que JÁ TÊM
-  // ponto — colar ".storage.googleapis.com" depois disso gera um host
+  // ponto, colar ".storage.googleapis.com" depois disso gera um host
   // inexistente tipo "projeto.firebasestorage.app.storage.googleapis.com"
   // ("Failed to fetch" no navegador). Path-style funciona pra qualquer
   // nome de bucket, com ou sem ponto.
@@ -74,7 +74,7 @@ export function generateV4SignedUploadUrl(opts: {
   const credentialScope = `${datestamp}/auto/storage/goog4_request`;
   const credential = `${clientEmail}/${credentialScope}`;
 
-  // Cabeçalhos que farão parte da assinatura — precisam ser enviados
+  // Cabeçalhos que farão parte da assinatura, precisam ser enviados
   // exatamente assim no PUT de upload que vai usar essa URL.
   const headers: Record<string, string> = {
     host,

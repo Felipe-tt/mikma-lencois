@@ -7,7 +7,7 @@ import { signStaffSession, STAFF_SESSION_COOKIE, STAFF_SESSION_MAX_AGE_SECONDS }
  * Chamada pelo AuthContext no cliente sempre que o estado de auth do
  * Firebase muda (login, refresh de token) e a pessoa é seller/admin.
  * Emite um cookie HttpOnly enxuto que o middleware usa só pra decidir se
- * pula a tela de manutenção — não concede nenhum acesso a rota de API,
+ * pula a tela de manutenção, não concede nenhum acesso a rota de API,
  * essas continuam exigindo o Bearer token normalmente.
  */
 export async function POST(req: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const secret = process.env.STAFF_SESSION_SECRET;
   if (!secret) {
     // Sem o secret configurado no ambiente, não tem como assinar com
-    // segurança — melhor não emitir cookie nenhum do que emitir um sem
+    // segurança, melhor não emitir cookie nenhum do que emitir um sem
     // proteção de verdade contra forjar.
     return NextResponse.json({ ok: false, reason: 'not_configured' });
   }

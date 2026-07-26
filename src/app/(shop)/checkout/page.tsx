@@ -637,7 +637,7 @@ export default function CheckoutPage() {
                     <div className="flex justify-between text-mid">
                       <span>Frete</span>
                       <span className={selectedShipping?.priceCents === 0 ? 'text-emerald-600 font-semibold' : ''}>
-                        {selectedShipping ? (selectedShipping.priceCents === 0 ? 'Grátis' : formatCurrency(selectedShipping.priceCents)) : '—'}
+                        {selectedShipping ? (selectedShipping.priceCents === 0 ? 'Grátis' : formatCurrency(selectedShipping.priceCents)) : '-'}
                       </span>
                     </div>
                     <div className="flex justify-between font-bold text-ink pt-2 border-t border-mist mt-1">
@@ -649,9 +649,9 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* CTA — Trust signals adjacent */}
+                {/* CTA, Trust signals adjacent */}
                 <div className="flex flex-col gap-3">
-                  {/* Trust inline — 18% higher completion rate (Baymard) */}
+                  {/* Trust inline, 18% higher completion rate (Baymard) */}
                   <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[11px] text-faint">
                     <span>PIX confirmado em segundos</span>
                     <span>Troca em até 7 dias</span>
@@ -756,7 +756,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Info objetiva — prazo e política */}
+              {/* Info objetiva, prazo e política */}
               <div className="px-5 pb-5 border-t border-mist pt-4 flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-[11px] text-faint">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>

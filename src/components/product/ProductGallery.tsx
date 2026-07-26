@@ -7,7 +7,7 @@ interface Props { images: string[]; name: string; tag?: string; }
 
 // Tamanho usado como "fallback" pra abrir na hora, sem esperar carregar as
 // dimensões reais da imagem. Assim que a imagem real carrega, o PhotoSwipe
-// já reajusta sozinho — na prática o usuário nunca percebe.
+// já reajusta sozinho, na prática o usuário nunca percebe.
 const FALLBACK_SIZE = { w: 1600, h: 1600 };
 
 export function ProductGallery({ images, name, tag }: Props) {
@@ -16,7 +16,7 @@ export function ProductGallery({ images, name, tag }: Props) {
   const dimsRef = useRef<Record<string, { w: number; h: number }>>({});
 
   // Descobre a dimensão real de cada foto em segundo plano (só um <img> na
-  // memória, não vai pra tela) — o PhotoSwipe usa isso pra calcular até
+  // memória, não vai pra tela), o PhotoSwipe usa isso pra calcular até
   // onde dá pra ampliar e não deixar a foto "vazando" da tela.
   useEffect(() => {
     images.forEach(src => {
@@ -27,7 +27,7 @@ export function ProductGallery({ images, name, tag }: Props) {
     });
   }, [images]);
 
-  // PhotoSwipe só existe no navegador (mexe com DOM/touch direto) — import
+  // PhotoSwipe só existe no navegador (mexe com DOM/touch direto), import
   // dinâmico dentro do useEffect garante que nunca roda no servidor.
   useEffect(() => {
     if (images.length === 0) return;
@@ -50,7 +50,7 @@ export function ProductGallery({ images, name, tag }: Props) {
       });
 
       // Mantém a foto ativa da página sincronizada com a que tá aberta no
-      // visualizador — se o usuário navegar lá dentro e fechar, a miniatura
+      // visualizador, se o usuário navegar lá dentro e fechar, a miniatura
       // certa continua selecionada por trás.
       lightbox.on('change', () => {
         const idx = lightbox.pswp?.currIndex;
@@ -78,7 +78,7 @@ export function ProductGallery({ images, name, tag }: Props) {
 
   return (
     <div className="flex gap-3 sm:gap-4">
-      {/* Trilha de miniaturas — desktop */}
+      {/* Trilha de miniaturas, desktop */}
       {images.length > 1 && (
         <div className="hidden sm:flex flex-col gap-2 w-[64px] shrink-0 max-h-[560px] overflow-y-auto scrollbar-none">
           {images.slice(0, 10).map((img, i) => (
@@ -106,7 +106,7 @@ export function ProductGallery({ images, name, tag }: Props) {
               <div className="relative w-full h-full">
                 <Image
                   src={images[active]}
-                  alt={`${name} — foto ${active + 1}`}
+                  alt={`${name}, foto ${active + 1}`}
                   fill
                   priority
                   sizes="(max-width: 1024px) 100vw, 45vw"

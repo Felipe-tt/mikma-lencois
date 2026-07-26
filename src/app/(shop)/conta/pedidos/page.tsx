@@ -139,7 +139,7 @@ export default function PedidosPage() {
                       <p className="text-[11px] text-faint font-mono mb-1">#{order.id.slice(-10).toUpperCase()}</p>
                       <p className="font-display text-xl sm:text-2xl text-ink">{formatCurrency(order.totalCents)}</p>
                       <p className="text-[11px] text-faint mt-1">
-                        {order.createdAt ? formatTsDateTime(order.createdAt) : '—'}
+                        {order.createdAt ? formatTsDateTime(order.createdAt) : '-'}
                       </p>
                     </div>
                   </div>
@@ -158,7 +158,7 @@ export default function PedidosPage() {
                   ))}
                 </div>
 
-                {/* CTA de avaliação — só em pedidos entregues */}
+                {/* CTA de avaliação, só em pedidos entregues */}
                 {order.status === 'delivered' && (
                   <div className="border-t border-mist px-5 sm:px-6 py-3 flex flex-wrap gap-x-4 gap-y-1.5">
                     {order.items.map(item => (

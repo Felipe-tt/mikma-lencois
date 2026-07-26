@@ -15,7 +15,7 @@
  *
  * O Melhor Envio faz uma requisição de teste ao cadastrar o webhook para
  * confirmar que a URL responde 2xx. Esse ping pode chegar sem payload
- * real ou sem assinatura — respondemos 200 sem processar nada.
+ * real ou sem assinatura, respondemos 200 sem processar nada.
  */
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
@@ -58,7 +58,7 @@ const STATUS_MAP: Record<string, string> = {
 const EVENT_LABEL: Record<string, string> = {
   created:     'Envio criado',
   pending:     'Aguardando pagamento',
-  released:    'Etiqueta paga — aguardando postagem',
+  released:    'Etiqueta paga, aguardando postagem',
   generated:   'Etiqueta gerada',
   posted:      'Postado na transportadora',
   received:    'Recebido em centro de distribuição',
@@ -85,7 +85,7 @@ function verifySignature(rawBody: string, signature: string | null): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  // Defesa contra flood — o Melhor Envio manda poucos eventos por minuto
+  // Defesa contra flood, o Melhor Envio manda poucos eventos por minuto
   // em operação normal; isso só protege contra abuso/DoS na URL pública.
   const ip = getClientIp(req);
   if (!await rateLimit(`me-webhook-ip:${ip}`, 60, 60_000)) {
@@ -95,21 +95,21 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const signature = req.headers.get('x-me-signature');
 
-  // Tenta parsear — ping de teste pode chegar vazio ou como "{}"
+  // Tenta parsear, ping de teste pode chegar vazio ou como "{}"
   let payload: Partial<MEWebhookPayload> = {};
   try {
     payload = rawBody ? JSON.parse(rawBody) : {};
   } catch {
-    // JSON inválido: provavelmente ping de cadastro — responde 200
+    // JSON inválido: provavelmente ping de cadastro, responde 200
     return NextResponse.json({ ok: true, note: 'invalid-json' });
   }
 
-  // Ping de teste: sem event ou sem data.id — responde 200 sem processar
+  // Ping de teste: sem event ou sem data.id, responde 200 sem processar
   if (!payload.event || !payload.data?.id) {
     return NextResponse.json({ ok: true, note: 'no-op' });
   }
 
-  // Evento real — valida assinatura
+  // Evento real, valida assinatura
   if (!verifySignature(rawBody, signature)) {
     console.warn('[shipping/webhook] assinatura inválida ou ausente', { signature: signature?.slice(0, 20) });
     return NextResponse.json({ error: 'Assinatura inválida' }, { status: 401 });
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
       .get();
 
     if (snap.empty) {
-      // Etiqueta gerada fora do sistema ou em sandbox — ignora silenciosamente
+      // Etiqueta gerada fora do sistema ou em sandbox, ignora silenciosamente
       console.warn(`[shipping/webhook] meOrderId=${meOrderId} não encontrado nos pedidos`);
       return NextResponse.json({ ok: true, note: 'order not found' });
     }

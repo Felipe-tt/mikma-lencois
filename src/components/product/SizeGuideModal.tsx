@@ -37,7 +37,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
         Guia de medidas
       </button>
 
-      {/* Backdrop — portal pro body para evitar bug com transform de ancestral */}
+      {/* Backdrop, portal pro body para evitar bug com transform de ancestral */}
       {open && createPortal(
         <div
           className="fixed inset-0 z-[80] bg-[rgba(30,18,8,0.5)] backdrop-blur-sm flex items-end sm:items-center justify-center"

@@ -7,7 +7,7 @@
  * pode ficar sem proteção nenhuma (falhar aberto) nem travar rotas de
  * auth/checkout por causa de uma instabilidade externa (falhar fechado).
  * O fallback local já era o que existia antes do Upstash e é suficiente
- * como rede de segurança — pior caso é reset por instância, mas o site
+ * como rede de segurança, pior caso é reset por instância, mas o site
  * nunca para de funcionar.
  */
 
@@ -56,7 +56,7 @@ function memoryRateLimit(key: string, maxRequests: number, windowMs: number): bo
 }
 
 // Mantém uma estimativa local de resetAt mesmo quando quem decidiu foi o
-// Upstash — só pra rateLimitRetryAfter() ter algo razoável pra reportar
+// Upstash, só pra rateLimitRetryAfter() ter algo razoável pra reportar
 // (ex: no header Retry-After), sem precisar de round-trip extra ao Redis.
 function trackResetEstimate(key: string, windowMs: number) {
   const now = Date.now();
@@ -104,7 +104,7 @@ export async function rateLimit(key: string, maxRequests: number, windowMs: numb
     try {
       return await upstashRateLimit(key, maxRequests, windowMs);
     } catch {
-      // Upstash falhou (quota, rede, timeout etc.) — fallback silencioso.
+      // Upstash falhou (quota, rede, timeout etc.), fallback silencioso.
       return memoryRateLimit(key, maxRequests, windowMs);
     }
   }
@@ -114,7 +114,7 @@ export async function rateLimit(key: string, maxRequests: number, windowMs: numb
 
 /**
  * Retorna quanto tempo (ms) falta para o rate limit resetar.
- * Baseado na estimativa local — suficiente pro header Retry-After, mesmo
+ * Baseado na estimativa local, suficiente pro header Retry-After, mesmo
  * quando quem decidiu o bloqueio foi o Upstash.
  */
 export function rateLimitRetryAfter(key: string): number {

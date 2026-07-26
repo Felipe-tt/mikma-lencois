@@ -42,7 +42,7 @@ const CARRIERS: Record<string, CarrierInfo> = {
     name: 'Entrega expressa',
     nameVendor: 'Uber Direct',
     // Para Uber Direct, o code é a URL real de rastreio em tempo real (tracking_url da API)
-    // não um código postal — passamos ela diretamente
+    // não um código postal, passamos ela diretamente
     trackingUrl: code => code?.startsWith('http') ? code : null,
   },
   disk_tenha: {

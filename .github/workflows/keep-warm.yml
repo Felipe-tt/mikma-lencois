@@ -4,7 +4,7 @@ name: Keep Site Warm
 # instância do Cloud Run/Functions (minInstances: 0) durma e cause
 # cold start de vários segundos na próxima visita de um cliente real.
 #
-# Isso NÃO substitui "minInstances: 1" — se o GitHub atrasar o cron
+# Isso NÃO substitui "minInstances: 1", se o GitHub atrasar o cron
 # (comum em horários de pico, o agendamento do GitHub Actions não é
 # garantido no minuto exato) ou se ninguém bater no site por mais
 # tempo que o TTL de idle do Cloud Run, ainda pode acontecer cold

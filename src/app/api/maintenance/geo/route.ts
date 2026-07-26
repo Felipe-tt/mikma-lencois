@@ -7,7 +7,7 @@ import { rateLimit } from '@/lib/rateLimit';
 
 // Chamado pelo browser do visitante quando a página /manutencao carrega.
 // Por rodar durante um request HTTP ativo (não via event.waitUntil/after),
-// tem garantia de completar — Cloud Run não congela instâncias mid-request.
+// tem garantia de completar, Cloud Run não congela instâncias mid-request.
 // Ao contrário do middleware (Edge Runtime), aqui temos Node.js e o Admin
 // SDK, então a escrita no Firestore é direta via SDK (sem REST autenticado).
 
@@ -31,7 +31,7 @@ async function lookupIpGeo(ip: string): Promise<GeoResult> {
 
   type Attempt = () => Promise<GeoResult | null>;
   const attempts: Attempt[] = [
-    // 1. ip-api.com — funciona de cloud, sem chave, 45 req/min grátis
+    // 1. ip-api.com, funciona de cloud, sem chave, 45 req/min grátis
     async () => {
       const res = await fetch(
         `http://ip-api.com/json/${ip}?fields=status,city,regionName,country,org`,
@@ -48,7 +48,7 @@ async function lookupIpGeo(ip: string): Promise<GeoResult> {
         debugError: '',
       };
     },
-    // 2. freeipapi.com — funciona de cloud, sem chave
+    // 2. freeipapi.com, funciona de cloud, sem chave
     async () => {
       const res = await fetch(`https://freeipapi.com/api/json/${ip}`, {
         signal: AbortSignal.timeout(4000),
@@ -65,7 +65,7 @@ async function lookupIpGeo(ip: string): Promise<GeoResult> {
         debugError: '',
       };
     },
-    // 3. ipapi.co — fallback (funciona de IPs residenciais, bloqueia cloud)
+    // 3. ipapi.co, fallback (funciona de IPs residenciais, bloqueia cloud)
     async () => {
       const res = await fetch(`https://ipapi.co/${ip}/json/`, {
         signal: AbortSignal.timeout(5000),
@@ -104,15 +104,15 @@ async function lookupIpGeo(ip: string): Promise<GeoResult> {
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
 
-  // Rate limit: 3 req/min por IP — o browser chama uma vez ao carregar /manutencao
+  // Rate limit: 3 req/min por IP, o browser chama uma vez ao carregar /manutencao
   if (!await rateLimit(`geo:${ip}`, 3, 60 * 1000)) {
-    return NextResponse.json({ ok: true }); // silencioso — não expõe o rate limit
+    return NextResponse.json({ ok: true }); // silencioso, não expõe o rate limit
   }
 
   const docId = ip.replace(/[.:]/g, '_');
   const ref = adminDb.doc(`maintenance_queue/${docId}`);
 
-  // Só atualiza se o documento existe e ainda está pending — evita
+  // Só atualiza se o documento existe e ainda está pending, evita
   // sobrescrever um geo que já foi resolvido por outra instância.
   const snap = await ref.get();
   if (!snap.exists) {

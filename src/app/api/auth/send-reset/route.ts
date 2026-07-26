@@ -14,7 +14,7 @@ const schema = z.object({
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mikma.com.br';
 
-// Resposta sempre igual — não revela se e-mail existe
+// Resposta sempre igual, não revela se e-mail existe
 const OK = NextResponse.json({ ok: true });
 
 export async function POST(req: NextRequest) {
@@ -37,14 +37,14 @@ export async function POST(req: NextRequest) {
   const emailKey = `send-reset:email:${email}`;
   if (!await rateLimit(emailKey, 3, 15 * 60 * 1000)) return OK; // silencioso
 
-  // Verifica se e-mail existe — mas responde igual de qualquer forma
+  // Verifica se e-mail existe, mas responde igual de qualquer forma
   let firstName = 'você';
   try {
     const user = await adminAuth.getUserByEmail(email);
     if (user.disabled) return OK;
     firstName = (user.displayName || '').split(' ')[0] || 'você';
   } catch {
-    // não existe — retorna OK mesmo assim (não revela)
+    // não existe, retorna OK mesmo assim (não revela)
     return OK;
   }
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   try {
     await sendEmail({
       to: email,
-      subject: 'Redefinir sua senha — Mikma Lençóis',
+      subject: 'Redefinir sua senha, Mikma Lençóis',
       text: `Olá, ${firstName}!\n\nRecebemos um pedido para redefinir a senha da sua conta.\n\nClique no link abaixo para criar uma nova senha (válido por 15 minutos):\n${actionUrl}\n\nSe não pediu isso, ignore este e-mail.\n\nMikma Lençóis`,
       html,
       from: 'noreply',

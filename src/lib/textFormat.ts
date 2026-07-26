@@ -1,4 +1,4 @@
-// Formatação de nome de produto — usada tanto no cadastro manual
+// Formatação de nome de produto, usada tanto no cadastro manual
 // (ProductForm) quanto na publicação de rascunhos importados do CSV/WhatsApp
 // (catalog-drafts). Garante que não importa como o usuário digitou
 // ("LENÇO QUEEN 3PÇS", "jogo   casal  padrão"), o que fica salvo e visível

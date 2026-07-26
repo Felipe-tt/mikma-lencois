@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
 
   // Transação: lê e escreve o status atomicamente. Sem isso, o pagamento
   // confirmado pelo webhook poderia chegar entre o get() e o update()
-  // abaixo — o cliente cancelaria um pedido que acabou de ser pago, e
+  // abaixo, o cliente cancelaria um pedido que acabou de ser pago, e
   // reserved seria decrementado duas vezes (uma aqui, outra em
   // confirmOrder no webhook).
   let order: FirebaseFirestore.DocumentData;
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     throw err;
   }
 
-  // Pedido pendente sempre tem estoque reservado (reservado na criação do PIX/checkout) — liberar agora
+  // Pedido pendente sempre tem estoque reservado (reservado na criação do PIX/checkout), liberar agora
   const items = (order.items ?? []) as Array<{ sku: string; quantity: number }>;
   for (const item of items) {
     const invSnap = await adminDb.collection('inventory').where('sku', '==', item.sku).limit(1).get();

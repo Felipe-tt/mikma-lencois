@@ -76,7 +76,7 @@ export default function PainelPedidos() {
     );
   }, []);
 
-  // Busca os dados de cliente (nome/e-mail) dos pedidos atuais — Order só
+  // Busca os dados de cliente (nome/e-mail) dos pedidos atuais, Order só
   // guarda userId, então carrega em lote a cada mudança no conjunto de
   // usuários referenciados, em vez de 1 leitura por pedido a cada render.
   useEffect(() => {
@@ -296,7 +296,7 @@ export default function PainelPedidos() {
               <div className="mt-3 flex items-center gap-3 p-3 bg-clay-l/5 border border-clay-l/20">
                 <IconArrowRight size={16} className="shrink-0 text-clay-l" />
                 <div className="flex-1">
-                  <p className="text-[12px] font-semibold text-ink">Pagamento confirmado — separe o pedido!</p>
+                  <p className="text-[12px] font-semibold text-ink">Pagamento confirmado, separe o pedido!</p>
                   <p className="text-[11px] text-faint">Clique quando começar a preparar.</p>
                 </div>
                 <button onClick={() => markPreparing(order.id)} disabled={updating === order.id}

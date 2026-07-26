@@ -6,14 +6,14 @@ import { useEffect } from 'react';
  * Fallback client-side para o middleware.
  *
  * Páginas públicas usam ISR (revalidate) e o Firebase Hosting pode servir
- * a resposta direto da CDN em cache-hit — nesse caso a requisição nunca
+ * a resposta direto da CDN em cache-hit, nesse caso a requisição nunca
  * chega no Cloud Run, e o middleware.ts (que roda lá) nunca é executado.
  * Resultado: um visitante pode carregar "/" já em manutenção, mas a página
  * estática antiga (pré-manutenção) ainda em cache é servida sem redirect.
  *
  * Esse componente cobre esse buraco: assim que a página carrega no
  * browser, ele confirma via /api/maintenance/status (sempre dinâmico, sem
- * cache) se a manutenção está ativa e se esse IP não está liberado — se
+ * cache) se a manutenção está ativa e se esse IP não está liberado, se
  * for o caso, redireciona pra /manutencao mesmo que o HTML cacheado
  * tenha sido servido normalmente.
  */
@@ -30,7 +30,7 @@ export function MaintenanceGate() {
         }
       })
       .catch(() => {
-        /* silencioso — se a checagem falhar, não bloqueia a navegação */
+        /* silencioso, se a checagem falhar, não bloqueia a navegação */
       });
 
     return () => {

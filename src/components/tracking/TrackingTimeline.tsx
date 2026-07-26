@@ -12,7 +12,7 @@ interface Props {
   carrierName?: string;
 }
 
-// SVG inline — sem emojis
+// SVG inline, sem emojis
 function StatusIcon({ status, active }: { status: string; active: boolean }) {
   const s = status.toLowerCase();
   const cls = `w-4 h-4 ${active ? 'stroke-white' : 'stroke-faint'}`;

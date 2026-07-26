@@ -10,7 +10,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
  *
  * Sem isso, mudanças salvas direto no Firestore pelo client SDK (sem
  * passar por uma rota de API) nunca disparam a regeneração das páginas
- * estáticas — o site continua servindo a versão antiga até o intervalo
+ * estáticas, o site continua servindo a versão antiga até o intervalo
  * de revalidate de cada página expirar sozinho (15min na home, até 24h
  * em /sobre, /termos, /privacidade). Pro admin, isso parecia "a
  * mudança nunca aparece no site".
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 'layout' revalida a rota e tudo abaixo dela — cobre páginas dinâmicas
+  // 'layout' revalida a rota e tudo abaixo dela, cobre páginas dinâmicas
   // (ex: /produtos/[slug]) sem precisar listar cada uma individualmente.
   revalidatePath('/', 'layout');
 

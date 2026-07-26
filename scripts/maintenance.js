@@ -8,7 +8,7 @@
 //   node scripts/maintenance.js status         → mostra status + fila
 //
 // Autenticação: pede seu e-mail e senha de vendedor (os mesmos que você
-// usa pra entrar no painel em /painel) e chama a API do próprio site —
+// usa pra entrar no painel em /painel) e chama a API do próprio site -
 // exatamente como o botão "Ativar manutenção" no painel faz. Não precisa
 // de gcloud, nem de service account, nem de .env.local: só do login que
 // você já tem.
@@ -97,7 +97,7 @@ async function login() {
     { method: 'POST' },
     { email, password, returnSecureToken: true }
   ).catch(err => {
-    throw new Error(`Login falhou — confira e-mail/senha e a API key. (${err.message})`);
+    throw new Error(`Login falhou, confira e-mail/senha e a API key. (${err.message})`);
   });
 
   return result.idToken;
@@ -177,14 +177,14 @@ Site alvo: ${SITE_URL}  (mude com a variável de ambiente SITE_URL)
     }
 
     if (cmd === 'on' || cmd === 'off') {
-      // O endpoint só tem "toggle" — busca o status atual primeiro pra
+      // O endpoint só tem "toggle", busca o status atual primeiro pra
       // saber se já está no estado desejado (evita inverter sem querer).
       const { status } = await getStatus(idToken);
       const currentlyActive = status?.active ?? false;
       const wantActive = cmd === 'on';
 
       if (currentlyActive === wantActive) {
-        console.log(`\n${wantActive ? '🔧 Manutenção já estava ATIVADA' : '✅ Site já estava DESATIVADO (sem manutenção)'} — nada a fazer.\n`);
+        console.log(`\n${wantActive ? '🔧 Manutenção já estava ATIVADA' : '✅ Site já estava DESATIVADO (sem manutenção)'}, nada a fazer.\n`);
         return;
       }
 

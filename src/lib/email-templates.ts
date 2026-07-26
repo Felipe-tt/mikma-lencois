@@ -58,7 +58,7 @@ export function deliveryStatusEmailHtml({
         </td></tr>
         <tr><td style="background:#FAF8F5;border-top:1px solid #E6DFD5;padding:20px 36px;text-align:center;">
           <p style="margin:0;font-size:12px;color:#B09C8C;">Mikma Lençóis · Blumenau, SC</p>
-          <p style="margin:4px 0 0;font-size:11px;color:#C8BAB0;">Este é um e-mail automático — não responda.</p>
+          <p style="margin:4px 0 0;font-size:11px;color:#C8BAB0;">Este é um e-mail automático, não responda.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -68,7 +68,7 @@ export function deliveryStatusEmailHtml({
 }
 
 /**
- * E-mail com botão de ação central — usado tanto para confirmar e-mail no
+ * E-mail com botão de ação central, usado tanto para confirmar e-mail no
  * cadastro quanto para redefinir senha. Em vez de pedir para o usuário
  * digitar um código de 6 dígitos, o botão já leva para a página certa com
  * o token de verificação na URL, sem nenhuma digitação manual.
@@ -127,7 +127,7 @@ export function actionButtonEmailHtml({
         <!-- Footer -->
         <tr><td style="background:#FAF8F5;border-top:1px solid #E6DFD5;padding:20px 36px;text-align:center;">
           <p style="margin:0;font-size:12px;color:#B09C8C;">Mikma Lençóis · Blumenau, SC</p>
-          <p style="margin:4px 0 0;font-size:11px;color:#C8BAB0;">Este é um e-mail automático — não responda.</p>
+          <p style="margin:4px 0 0;font-size:11px;color:#C8BAB0;">Este é um e-mail automático, não responda.</p>
         </td></tr>
       </table>
     </td></tr>

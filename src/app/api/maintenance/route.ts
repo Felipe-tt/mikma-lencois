@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { maintenanceActionSchema } from './schema';
 
 
-// Validação simples de IPv4/IPv6 — evita que um valor arbitrário em
+// Validação simples de IPv4/IPv6, evita que um valor arbitrário em
 // body.ip vire parte de um ID de documento no Firestore sem checagem
 // (o .replace(/[.:]/g,'_') sozinho não neutraliza "/", por exemplo).
 const IPV4_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
@@ -30,7 +30,7 @@ async function verifySeller(req: NextRequest) {
   } catch { return null; }
 }
 
-// GET — retorna status atual + queue
+// GET, retorna status atual + queue
 export async function GET(req: NextRequest) {
   const user = await verifySeller(req);
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ status, queue });
 }
 
-// POST — toggle manutenção ou liberar IP
+// POST, toggle manutenção ou liberar IP
 export async function POST(req: NextRequest) {
   const user = await verifySeller(req);
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     // Sem isso, páginas já cacheadas pela CDN do Firebase Hosting
     // (homepage 15min, produtos 10min, sobre/termos/privacidade 24h)
     // continuam sendo servidas direto da CDN sem nunca invocar o
-    // Cloud Run — e é lá que este middleware checa a manutenção.
+    // Cloud Run, e é lá que este middleware checa a manutenção.
     // Resultado sem isso: toggle fica "ativo" no Firestore mas o
     // visitante continua vendo o site normal até o cache expirar.
     revalidatePath('/', 'layout');
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'IP inválido' }, { status: 400 });
     }
     // Precisa bater EXATAMENTE com a regex usada em src/middleware.ts
-    // (substitui '.' E ':'  — IPv6 tem ':', então usar [./] aqui fazia o
+    // (substitui '.' E ':' , IPv6 tem ':', então usar [./] aqui fazia o
     // release nunca encontrar o documento certo pra IPs IPv6).
     await adminDb.collection('maintenance_queue').doc(body.ip.replace(/[.:]/g, '_')).set({
       ip: body.ip,

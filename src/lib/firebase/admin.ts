@@ -16,7 +16,7 @@ if (typeof process !== 'undefined' && process.setMaxListeners) {
 // válido. Duas causas comuns, cobertas aqui:
 //   1) A env var às vezes chega com aspas literais em volta (comum quando
 //      a chave inteira é colada como valor de variável de ambiente em
-//      algum painel/pipeline de deploy) — sem remover, elas viram parte
+//      algum painel/pipeline de deploy), sem remover, elas viram parte
 //      do "corpo" do PEM e quebram a leitura.
 //   2) \n escapado (2 caracteres: barra + "n") precisa virar quebra de
 //      linha de verdade.
@@ -40,12 +40,12 @@ function getAdminApp(): App {
     }),
     // Sem isso, adminStorage.bucket() (sign-upload, delete de imagem, etc.)
     // não sabe em qual bucket operar e lança "Bucket name not specified or
-    // invalid" — é o que causava o 500 no upload de imagem do rascunho.
+    // invalid", é o que causava o 500 no upload de imagem do rascunho.
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   })
 }
 
-// Lazy getters — só inicializa quando chamado em runtime, não no build
+// Lazy getters, só inicializa quando chamado em runtime, não no build
 let _db: Firestore | null = null
 let _auth: Auth | null = null
 let _messaging: Messaging | null = null
@@ -61,7 +61,7 @@ export function getAdminAuth(): Auth {
 }
 
 // getMessaging() sem argumento depende do app default já estar
-// inicializado antes de ser chamado — como a inicialização aqui é lazy,
+// inicializado antes de ser chamado, como a inicialização aqui é lazy,
 // passar getAdminApp() explicitamente evita o erro
 // "The default Firebase app does not exist" quando esta é a primeira
 // coisa a tocar o firebase-admin numa invocação (ex: rota que só usa
@@ -82,10 +82,10 @@ export const adminStorage = {
 
 // Credenciais da service account já normalizadas, pra quem precisa assinar
 // URLs "na mão" (ver src/lib/gcsSignedUrl.ts) em vez de usar
-// @google-cloud/storage's getSignedUrl() — que em produção estourava
+// @google-cloud/storage's getSignedUrl(), que em produção estourava
 // SigningError "DECODER routines::unsupported" ao tentar assinar (bug/
 // incompatibilidade da versão de google-auth-library empacotada ali,
-// não da chave em si — a mesma chave assina normalmente via crypto puro).
+// não da chave em si, a mesma chave assina normalmente via crypto puro).
 export function getServiceAccountCredentials() {
   const raw = process.env.FIREBASE_PRIVATE_KEY;
   const normalized = normalizePrivateKey(raw) ?? '';
@@ -100,7 +100,7 @@ export function getServiceAccountCredentials() {
     const hasRealNewline = !!raw?.includes('\n');
     const realNewlineCount = (raw?.match(/\n/g) || []).length;
     console.error(
-      `[getServiceAccountCredentials] private key suspeita de estar truncada — ` +
+      `[getServiceAccountCredentials] private key suspeita de estar truncada, ` +
       `rawLen=${rawLen} normalizedLen=${normalized.length} temEscaped(\\n)=${hasEscapedNewline} ` +
       `temNewlineReal=${hasRealNewline} qtdNewlineReal=${realNewlineCount} ` +
       `raw[0:30]=${JSON.stringify(raw?.slice(0, 30))} raw[-30:]=${JSON.stringify(raw?.slice(-30))}`

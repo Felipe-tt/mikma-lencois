@@ -62,7 +62,7 @@ export default function ManutencaoPage() {
         setQueue(data.queue ?? []);
       }
     } catch {
-      // network error — show empty state instead of stuck skeleton
+      // network error, show empty state instead of stuck skeleton
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export default function ManutencaoPage() {
   // Carga inicial via API (já autenticada/verificada no backend)
   useEffect(() => { load(); }, [load]);
 
-  // Realtime listeners — only set up after initial load succeeds
+  // Realtime listeners, only set up after initial load succeeds
   useEffect(() => {
     const unsubStatus = onSnapshot(
       doc(db, 'maintenance', 'status'),
@@ -141,7 +141,7 @@ export default function ManutencaoPage() {
     setQueue([]);
   };
 
-  // Bots/crawlers não entram na fila de IPs visível pro admin — não são
+  // Bots/crawlers não entram na fila de IPs visível pro admin, não são
   // visitantes reais aguardando acesso.
   const ipEntries = queue.filter(e => !e.uid && !e.isBot);
   const userEntries = queue.filter(e => !!e.uid);
@@ -206,7 +206,7 @@ export default function ManutencaoPage() {
             node scripts/maintenance.js allow
           </code>
           <p className="text-[10px] text-faint">
-            Rode dentro da pasta do projeto. Vai pedir seu e-mail e senha de vendedor (os mesmos deste painel) — não precisa de Firebase CLI nem de nenhuma configuração extra. O comando <strong>allow</strong> detecta e libera seu IP automaticamente.
+            Rode dentro da pasta do projeto. Vai pedir seu e-mail e senha de vendedor (os mesmos deste painel), não precisa de Firebase CLI nem de nenhuma configuração extra. O comando <strong>allow</strong> detecta e libera seu IP automaticamente.
           </p>
         </div>
       </div>

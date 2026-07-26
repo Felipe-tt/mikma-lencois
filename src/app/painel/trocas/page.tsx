@@ -71,7 +71,7 @@ export default function TrocasPage() {
     }
   }
 
-  /** Marca como concluída e, se pedido, devolve as peças pro estoque —
+  /** Marca como concluída e, se pedido, devolve as peças pro estoque -
    *  procurando o item de inventário pelo SKU (mesmo padrão do resto do
    *  painel de estoque). Item que não existir mais no catálogo é ignorado
    *  silenciosamente ali, mas avisa no final. */
@@ -90,7 +90,7 @@ export default function TrocasPage() {
             quantity: increment(item.quantity),
             history: arrayUnion({
               type: 'in', quantity: item.quantity,
-              reason: `Troca/devolução — pedido #${r.orderId.slice(-8).toUpperCase()}`,
+              reason: `Troca/devolução, pedido #${r.orderId.slice(-8).toUpperCase()}`,
               date: new Date().toISOString(),
               ...(user?.email ? { by: user.email } : {}),
             }),
@@ -120,7 +120,7 @@ export default function TrocasPage() {
       <div className="mb-6">
         <h1 className="font-display font-normal text-ink text-2xl">Trocas e devoluções</h1>
         <p className="text-[13px] text-faint mt-1">
-          Registradas a partir de um pedido — acompanhe e conclua por aqui.
+          Registradas a partir de um pedido, acompanhe e conclua por aqui.
         </p>
       </div>
 
@@ -165,7 +165,7 @@ export default function TrocasPage() {
                   <Link href={`/painel/pedidos/${r.orderId}`} className="text-[13px] font-semibold text-clay-l hover:text-clay-d mt-1 inline-block">
                     Pedido #{r.orderId.slice(-8).toUpperCase()}
                   </Link>
-                  {r.customerName && <span className="text-[13px] text-mid"> — {r.customerName}</span>}
+                  {r.customerName && <span className="text-[13px] text-mid">, {r.customerName}</span>}
                 </div>
                 <span className="text-[11px] text-faint shrink-0">{formatDateTime(r.createdAt)}</span>
               </div>
@@ -175,7 +175,7 @@ export default function TrocasPage() {
               <ul className="text-[12px] text-mid mb-3">
                 {r.items.map((it, i) => (
                   <li key={i}>
-                    {it.quantity}× {it.productName} — {it.variant.size} · {it.variant.fabric}
+                    {it.quantity}× {it.productName}, {it.variant.size} · {it.variant.fabric}
                     {it.variant.colorName ? ` · ${it.variant.colorName}` : ''}
                   </li>
                 ))}

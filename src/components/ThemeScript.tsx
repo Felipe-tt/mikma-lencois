@@ -5,7 +5,7 @@ export function ThemeScript() {
 (function() {
   try {
     var saved = localStorage.getItem('mikma-theme');
-    // Default sempre light — ignora prefers-color-scheme do SO
+    // Default sempre light, ignora prefers-color-scheme do SO
     if (saved === 'dark') {
       document.documentElement.classList.add('dark');
     }

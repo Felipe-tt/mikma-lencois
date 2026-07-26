@@ -24,7 +24,7 @@ function PasswordStrength({ password }: { password: string }) {
         ))}
       </div>
       <p className={`text-xs ${score===3?'text-green-500':score===2?'text-yellow-500':'text-red-400'}`}>
-        {score===3?'Senha forte':score===2?'Senha média':'Senha fraca — adicione maiúscula e número'}
+        {score===3?'Senha forte':score===2?'Senha média':'Senha fraca, adicione maiúscula e número'}
       </p>
     </div>
   );
@@ -50,7 +50,7 @@ function ResetForm() {
     if (!emailParam || !tokenParam) { router.replace('/entrar'); return; }
   }, [emailParam, tokenParam, router]);
 
-  // Valida o token assim que a página carrega — sem o usuário digitar nada,
+  // Valida o token assim que a página carrega, sem o usuário digitar nada,
   // o próprio clique no botão do e-mail já trouxe tudo que é necessário.
   useEffect(() => {
     if (!emailParam || !tokenParam) return;
@@ -89,7 +89,7 @@ function ResetForm() {
       try {
         await signInWithEmailAndPassword(auth, emailParam, password);
       } catch (loginErr) {
-        // Troca de senha já aconteceu com sucesso — se o login automático
+        // Troca de senha já aconteceu com sucesso, se o login automático
         // falhar por qualquer motivo, a pessoa ainda consegue entrar
         // manualmente com a senha nova na tela de login.
         console.error('[redefinir-senha] login automático falhou', loginErr);

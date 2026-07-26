@@ -59,7 +59,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
       setStep('sent');
       setResendCooldown(60);
     } catch {
-      // Sempre avança — não revela se e-mail existe
+      // Sempre avança, não revela se e-mail existe
       setStep('sent');
       setResendCooldown(60);
     } finally {
@@ -199,7 +199,7 @@ export default function LoginPage() {
       )}
 
       <div className="min-h-screen bg-paper flex">
-        {/* Painel esquerdo — logo em destaque */}
+        {/* Painel esquerdo, logo em destaque */}
         <div className="hidden lg:flex w-[45%] xl:w-1/2 flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist relative overflow-hidden">
           <Image
             src="/logo-moon-transparent.png"

@@ -17,7 +17,7 @@ export function PainelGuard({ children }: { children: React.ReactNode }) {
 
   // onAuthStateChanged dispara loading=true não só na primeira carga, mas
   // toda vez que o Firebase revalida/reconecta a sessão (ex: voltar à aba
-  // depois de alguns minutos parados) — então essa tela aparece com
+  // depois de alguns minutos parados), então essa tela aparece com
   // frequência, não só uma vez. Por isso usa o skeleton animado em vez de
   // texto estático: sem isso parece que o painel travou, quando na
   // verdade está só esperando o refresh do token.

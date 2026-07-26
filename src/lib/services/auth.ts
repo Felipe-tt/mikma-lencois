@@ -14,7 +14,7 @@ const googleProvider = new GoogleAuthProvider()
 // NOTA: login por e-mail/senha não passa mais por uma função helper aqui.
 // O fluxo real é: POST /api/auth/login só para rate limiting, seguido de
 // signInWithEmailAndPassword(auth, email, password) direto nos componentes
-// (Firebase Auth é a fonte da verdade da senha) — ver src/app/(auth)/entrar,
+// (Firebase Auth é a fonte da verdade da senha), ver src/app/(auth)/entrar,
 // AuthModal, cadastro e redefinir-senha. Uma versão antiga desta função
 // (loginWithEmail) documentava um fluxo com customToken que não existe
 // mais e nunca era chamada por nenhum componente; foi removida.

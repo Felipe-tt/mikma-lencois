@@ -27,7 +27,7 @@ export async function enablePush(getIdToken: () => Promise<string>): Promise<Pus
     const messaging = getMessaging(app);
 
     // Força descartar qualquer subscription antiga em cache antes de pedir
-    // uma nova — sem isso, o SDK pode reaproveitar uma subscription criada
+    // uma nova, sem isso, o SDK pode reaproveitar uma subscription criada
     // com uma VAPID key antiga/incompatível, gerando um token que o
     // navegador acha válido mas o FCM já considera morto (NotRegistered).
     await deleteToken(messaging).catch(() => {});
@@ -60,7 +60,7 @@ export function getPushPermissionState(): NotificationPermission | 'unsupported'
   return Notification.permission;
 }
 
-/** Desativa push neste navegador — remove o token local e no backend. */
+/** Desativa push neste navegador, remove o token local e no backend. */
 export async function disablePush(getIdToken: () => Promise<string>): Promise<void> {
   try {
     if (!(await isSupported())) return;

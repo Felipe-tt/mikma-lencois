@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     const { address, installments, shipping } = parsedBody.data;
 
     // NOTA DE SEGURANÇA: nada do frete é confiado do cliente além de QUAL
-    // carrier ele escolheu — preço, label, prazo e quoteId são sempre
+    // carrier ele escolheu, preço, label, prazo e quoteId são sempre
     // recalculados via computeShippingOptions() (mesma fonte usada em
     // /api/shipping/quote), e só aceitamos o carrier se ele aparecer na
     // lista recém-computada para esse endereço/carrinho exatos.
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
       0
     );
 
-    // ── Frete — recalculado do zero, nunca confiado do cliente ────────────────
+    // ── Frete, recalculado do zero, nunca confiado do cliente ────────────────
     const ledgerBalanceCents = await getShippingLedgerBalanceCents();
     const shippingResult = await computeShippingOptions(address.cep, settings, productsCents, totalWeightKg, ledgerBalanceCents);
     const matchedShipping = shippingResult.options.find(o => o.carrier === shipping.carrier);
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
 
     // ── Validar cupom server-side ─────────────────────────────────────────────
     // Leitura + checagem de maxUses + incremento de usedCount na MESMA
-    // transação — veja o comentário equivalente em create-pix/route.ts pro
+    // transação, veja o comentário equivalente em create-pix/route.ts pro
     // porquê (sem isso, requisições concorrentes conseguiam burlar o
     // limite de usos de um cupom).
     let couponDiscountCents = 0;
@@ -259,11 +259,11 @@ export async function POST(req: NextRequest) {
     });
 
     // usedCount do cupom já foi incrementado atomicamente acima, dentro
-    // da transação de validação — nada a fazer aqui.
+    // da transação de validação, nada a fazer aqui.
 
     // Avisa o vendor que alguém iniciou um pagamento (ainda não confirmado).
     // Best-effort: nunca deve bloquear ou falhar o checkout do cliente.
-    // IMPORTANTE: await de propósito — ver nota em create-pix/route.ts
+    // IMPORTANTE: await de propósito, ver nota em create-pix/route.ts
     // sobre CPU throttling do Cloud Run em chamadas fire-and-forget.
     await notifySeller({
       title: 'Pagamento iniciado',
@@ -340,7 +340,7 @@ export async function POST(req: NextRequest) {
           customerId = custData?.id;
         }
       } catch {
-        // customer optional — continue without it
+        // customer optional, continue without it
       }
     }
 

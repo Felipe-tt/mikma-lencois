@@ -51,7 +51,7 @@ export async function DELETE(req: NextRequest) {
 
     await batch.commit();
 
-    // Revoga tokens antes de deletar — evita uso de token após exclusão
+    // Revoga tokens antes de deletar, evita uso de token após exclusão
     await adminAuth.revokeRefreshTokens(uid);
     await adminAuth.deleteUser(uid);
 

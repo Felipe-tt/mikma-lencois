@@ -2,7 +2,7 @@
  * src/lib/uber-direct.ts
  * Cliente Uber Direct baseado no OpenAPI oficial (openapi.json).
  *
- * CREDENCIAIS (configurar como GitHub Secrets — nunca no Firestore, que tem
+ * CREDENCIAIS (configurar como GitHub Secrets, nunca no Firestore, que tem
  * leitura pública em /settings):
  *   Produção:
  *     UBER_DIRECT_CLIENT_ID / UBER_DIRECT_CLIENT_SECRET / UBER_DIRECT_CUSTOMER_ID
@@ -10,7 +10,7 @@
  *     UBER_DIRECT_SANDBOX_CLIENT_ID / UBER_DIRECT_SANDBOX_CLIENT_SECRET / UBER_DIRECT_SANDBOX_CUSTOMER_ID
  *
  * Qual ambiente é usado em cada chamada é decidido pelo toggle
- * settings.uberDirectSandboxMode (editável em /painel/configuracoes) — cada
+ * settings.uberDirectSandboxMode (editável em /painel/configuracoes), cada
  * função abaixo recebe `sandbox: boolean` explicitamente, não lê de env var
  * fixa, pra poder trocar sem novo deploy.
  */
@@ -18,7 +18,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 
 // Auth URL conforme securitySchemes.direct_auth.flows.clientCredentials.tokenUrl
-// do OpenAPI — a Uber usa o MESMO endpoint de auth para teste e produção;
+// do OpenAPI, a Uber usa o MESMO endpoint de auth para teste e produção;
 // só o app (client_id/secret) e a API_BASE mudam por ambiente.
 const AUTH_URL = 'https://auth.uber.com/oauth/v2/token';
 
@@ -58,7 +58,7 @@ export async function getUberToken(sandbox: boolean): Promise<string> {
     );
   }
 
-  // Cache separado por ambiente — nunca reaproveita token de teste em
+  // Cache separado por ambiente, nunca reaproveita token de teste em
   // produção nem vice-versa.
   const cacheDoc = sandbox ? 'uber_token_sandbox' : 'uber_token_prod';
 
@@ -85,11 +85,11 @@ export async function getUberToken(sandbox: boolean): Promise<string> {
   if (!res.ok) {
     const err = await res.text().catch(() => '');
     // Log completo pra abrir chamado em https://t.uber.com/integration-support
-    // (developer.uber.com/docs/deliveries/support) — a Uber pede o request-id
+    // (developer.uber.com/docs/deliveries/support), a Uber pede o request-id
     // e o horário exatos da chamada que falhou, sem isso o suporte não acha
     // o log deles do lado de lá.
     const requestId = res.headers.get('x-uber-trace-id') ?? res.headers.get('x-request-id') ?? 'n/a';
-    console.warn('[uber-direct] OAuth falhou — detalhes p/ chamado de suporte Uber:', {
+    console.warn('[uber-direct] OAuth falhou, detalhes p/ chamado de suporte Uber:', {
       status:     res.status,
       requestId,
       timestamp:  new Date().toISOString(),
@@ -110,7 +110,7 @@ export async function getUberToken(sandbox: boolean): Promise<string> {
 
 // ── Formato de endereço ───────────────────────────────────────────────────────
 // A API Uber Direct exige um JSON STRING escapado no campo pickup_address /
-// dropoff_address — NÃO uma string de texto puro.
+// dropoff_address, NÃO uma string de texto puro.
 // Exemplo: "{\"street_address\":[\"Rua XV de Novembro, 234\"],\"city\":\"Blumenau\",
 //            \"state\":\"SC\",\"zip_code\":\"89010400\",\"country\":\"BR\"}"
 
@@ -149,7 +149,7 @@ export interface UberQuoteResult {
   quoteId:      string;
   feeCents:     number;  // sempre em centavos (integer)
   expiresAt:    string;  // ISO
-  dropoffEta?:  string;  // ISO — previsão de entrega
+  dropoffEta?:  string;  // ISO, previsão de entrega
   durationMin?: number;  // minutos estimados
 }
 
@@ -213,7 +213,7 @@ export interface UberCreateParams {
   dropoffPhoneNumber:   string;  // E.164
   dropoffNotes?:        string;
   manifestItems:        UberManifestItem[];
-  manifestTotalValue?:  number;  // centavos — valor total dos itens
+  manifestTotalValue?:  number;  // centavos, valor total dos itens
 }
 
 export interface UberCreateResult {
@@ -240,21 +240,21 @@ export async function uberCreateDelivery(params: UberCreateParams, sandbox: bool
   const token = await getUberToken(sandbox);
 
   const body: Record<string, unknown> = {
-    // Pickup — OBRIGATÓRIOS
+    // Pickup, OBRIGATÓRIOS
     pickup_name:         params.pickupName,
     pickup_address:      params.pickupAddress,
     pickup_phone_number: params.pickupPhoneNumber,
-    // Dropoff — OBRIGATÓRIOS
+    // Dropoff, OBRIGATÓRIOS
     dropoff_name:         params.dropoffName,
     dropoff_address:      params.dropoffAddress,
     dropoff_phone_number: params.dropoffPhoneNumber,
-    // Manifest — OBRIGATÓRIO (array de itens)
+    // Manifest, OBRIGATÓRIO (array de itens)
     manifest_items:       params.manifestItems,
     // Referência do pedido (visível para o entregador no app)
     manifest_reference:   params.orderId,
-    // external_id: mesma referência — torna o pedido pesquisável no dashboard Uber
+    // external_id: mesma referência, torna o pedido pesquisável no dashboard Uber
     external_id:          params.orderId,
-    // Chave de idempotência — previne entregas duplicadas se o request for repetido
+    // Chave de idempotência, previne entregas duplicadas se o request for repetido
     // Combinado com manifest_reference, external_id deve ser único (per spec)
     idempotency_key:      params.orderId,
   };
@@ -304,7 +304,7 @@ export interface UberDeliveryStatus {
 
 /**
  * POST /customers/{customer_id}/deliveries/{delivery_id}/cancel
- * Body: CancelDeliveryReq — cancelation_reason (obrigatório se reason=other) + additional_description
+ * Body: CancelDeliveryReq, cancelation_reason (obrigatório se reason=other) + additional_description
  * Valores válidos: out_of_items | store_closed | customer_called_to_cancel | store_too_busy |
  *                  courier_delayed_en_route_to_pickup | too_expensive |
  *                  customer_changed_order_requirements | delivery_vehicle_too_small |

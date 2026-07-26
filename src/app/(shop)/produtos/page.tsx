@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import type { Product } from '@/types';
 import { serialize } from '@/lib/utils/serialize';
 
-// ISR: revalida a cada 5 minutos — reduz invocações de Cloud Functions e leituras Firestore
+// ISR: revalida a cada 5 minutos, reduz invocações de Cloud Functions e leituras Firestore
 export const revalidate = 600;
 
 interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string }> }

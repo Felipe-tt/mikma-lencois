@@ -1,26 +1,26 @@
-// Guia de tamanhos — 100% determinístico, sem chamada a nenhuma API paga.
+// Guia de tamanhos, 100% determinístico, sem chamada a nenhuma API paga.
 //
 // A largura de cada tamanho de colchão vem da MESMA tabela que já existe em
 // Configurações > Produto > "Guia de tamanhos de cama" (settings.bedSizeRows),
 // lendo a coluna "Cama" (ex: Solteiro → 0,88m). Não existe um campo
-// duplicado só pra isso — o admin edita em UM lugar só, e tanto a tabela
+// duplicado só pra isso, o admin edita em UM lugar só, e tanto a tabela
 // visível na página do produto quanto esta calculadora usam o mesmo dado.
 //
 // Por que só largura (não largura+comprimento)? A tabela "Guia de tamanhos
 // de cama" guarda o comprimento do LENÇOL, não do colchão (o lençol é
-// maior de propósito, pra sobrar pano e prender o elástico — ex: colchão
+// maior de propósito, pra sobrar pano e prender o elástico, ex: colchão
 // Solteiro tem 188cm de comprimento, mas o lençol Solteiro sai com 220cm).
 // Comparar a medida real do colchão do cliente com o comprimento do lençol
 // nunca bateria certo. A largura, por outro lado, é a mesma para colchão e
 // pra "tamanho de cama" (0,88m é 0,88m nos dois), e sozinha já separa bem
-// os 4 tamanhos padrão (88 / 138 / 158 / 193cm — nunca ficam a menos de
+// os 4 tamanhos padrão (88 / 138 / 158 / 193cm, nunca ficam a menos de
 // 20cm um do outro), então é a métrica confiável disponível hoje.
 
 export type MattressSizeKey = 'solteiro' | 'casal' | 'queen' | 'king';
 
 export type MattressWidthMap = Record<MattressSizeKey, { widthCm: number; label: string }>;
 
-// Fallback só pra quando a tabela de configurações está vazia/ilegível —
+// Fallback só pra quando a tabela de configurações está vazia/ilegível -
 // mesmos valores que já vêm como default de bedSizeRows em store-settings.ts.
 const FALLBACK_WIDTHS: MattressWidthMap = {
   solteiro: { widthCm: 88,  label: 'Solteiro' },
@@ -52,7 +52,7 @@ function parseMetersOrCm(raw: string): number | null {
 /**
  * Lê settings.bedSizeRows (a MESMA tabela mostrada na página do produto) e
  * extrai a largura (coluna "Cama") de cada um dos 4 tamanhos que vendemos.
- * Linhas com nome desconhecido (ex: "Solteiro Plus") são ignoradas — só
+ * Linhas com nome desconhecido (ex: "Solteiro Plus") são ignoradas, só
  * entram solteiro/casal/queen/king, que são os únicos valores válidos de
  * `size` nas variações de produto (ver src/lib/productOptions.ts SIZES).
  */
@@ -67,7 +67,7 @@ export function parseMattressWidthsFromBedSizeTable(bedSizeRowsJson: string | un
       if (!key) continue; // ex: "Solteiro Plus" não é um dos 4 tamanhos vendidos
 
       // Aceita a coluna se chamar "Cama" (nome padrão) OU qualquer variação
-      // de maiúscula/acento — colunas são editáveis pelo admin.
+      // de maiúscula/acento, colunas são editáveis pelo admin.
       const widthField = Object.entries(row).find(([col]) => normalize(col) === 'cama')?.[1];
       const widthCm = widthField ? parseMetersOrCm(widthField) : null;
       if (widthCm) map[key] = { widthCm, label: nameField };
@@ -132,7 +132,7 @@ export function matchMattressSize(widths: MattressWidthMap, widthCm: number, _le
 /**
  * Tenta reconhecer nomes populares (ex: "viúva", "solteirão") que não são
  * um dos 4 tamanhos vendidos, pra dar uma explicação melhor em vez de só
- * "não encontrado". Isso é nomenclatura de mercado, não medida — fica fixo
+ * "não encontrado". Isso é nomenclatura de mercado, não medida, fica fixo
  * mesmo (não faz sentido virar configuração editável).
  */
 const KNOWN_ALIASES: Record<string, { closest: MattressSizeKey; note: string }> = {

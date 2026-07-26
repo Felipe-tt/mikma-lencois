@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     # Antes este job inteiro só rodava em push/workflow_dispatch para main,
     # o que fazia o check "build-and-deploy" (obrigatório na regra do
-    # repositório) aparecer como "skipped" em qualquer PR — inclusive PRs
-    # do Dependabot — tornando impossível satisfazer a regra e mergear.
+    # repositório) aparecer como "skipped" em qualquer PR, inclusive PRs
+    # do Dependabot, tornando impossível satisfazer a regra e mergear.
     # Agora o job roda em todo evento (build + testes validam o PR), e só
     # os passos de deploy de fato (a partir de "Install Firebase CLI") são
     # restritos a push/workflow_dispatch em main via `if` nos próprios passos.
@@ -95,7 +95,7 @@ jobs:
         run: |
           # FIREBASE_PRIVATE_KEY pode conter quebras de linha REAIS (comum
           # quando se cola a chave inteira, com \n de verdade, no valor do
-          # secret no GitHub). Um arquivo .env é parseado linha a linha —
+          # secret no GitHub). Um arquivo .env é parseado linha a linha -
           # se a chave entrar com newlines reais, só a primeira linha
           # ("-----BEGIN PRIVATE KEY-----") vira o valor de fato, e o resto
           # vira lixo/linhas soltas no arquivo. Escapamos pra \n literal
@@ -168,7 +168,7 @@ jobs:
       - name: Deploy Firestore Indexes
         # A service account do CI ainda não tem a permissão de IAM pra gerenciar
         # índices (403 em collectionGroups/.../indexes). Até isso ser resolvido
-        # no IAM do projeto, não deixamos essa falha travar o deploy do site —
+        # no IAM do projeto, não deixamos essa falha travar o deploy do site -
         # é só um passo a mais de infra, não algo que quebra produção na hora.
         # Ver nota no fim do arquivo sobre como resolver a permissão.
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')

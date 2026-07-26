@@ -1,7 +1,7 @@
 /**
  * Cookie de sessão bem enxuto, cuja ÚNICA finalidade é o middleware (Edge
  * Runtime, sem Firebase Admin SDK) saber que quem está navegando é um
- * seller/admin autenticado — usado só pra decidir se pula a tela de
+ * seller/admin autenticado, usado só pra decidir se pula a tela de
  * manutenção. NÃO é usado como mecanismo de autorização de verdade em
  * nenhuma rota de API: essas continuam exigindo o Bearer token do Firebase
  * + verifyIdToken normalmente, sem mudança nenhuma.
@@ -14,13 +14,13 @@
 
 // IMPORTANTE: o nome precisa ser exatamente "__session". O Firebase Hosting
 // descarta TODOS os cookies da requisição antes de encaminhar pro backend,
-// exceto um único cookie com esse nome exato — é uma limitação conhecida e
+// exceto um único cookie com esse nome exato, é uma limitação conhecida e
 // documentada da própria plataforma (não configurável via firebase.json).
 // Usar qualquer outro nome (ex: "staff_session") faz o cookie nunca chegar
-// no middleware, mesmo o navegador mandando ele certinho — foi exatamente
+// no middleware, mesmo o navegador mandando ele certinho, foi exatamente
 // isso que quebrou o bypass antes dessa correção.
 export const STAFF_SESSION_COOKIE = '__session';
-export const STAFF_SESSION_MAX_AGE_SECONDS = 60 * 60; // 1h — mesma janela do
+export const STAFF_SESSION_MAX_AGE_SECONDS = 60 * 60; // 1h, mesma janela do
 // ID token do Firebase; o AuthContext no cliente reemite esse cookie a
 // cada refresh de token, então na prática ele nunca fica velho enquanto
 // a pessoa continua logada e usando o site.

@@ -14,7 +14,7 @@ import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
 
-  // Rate limit: 20 req/min por IP — cobre um polling de ~5s com folga.
+  // Rate limit: 20 req/min por IP, cobre um polling de ~5s com folga.
   if (!await rateLimit(`maintenance-status:${ip}`, 20, 60 * 1000)) {
     // Silencioso: mantém o cliente em manutenção em vez de expor o limite.
     return NextResponse.json({ active: true, released: false });
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ active: false, released: false });
   }
 
-  // Mesma checagem de bypass do middleware.ts — sem isso, o MaintenanceGate
+  // Mesma checagem de bypass do middleware.ts, sem isso, o MaintenanceGate
   // (que só olha esse endpoint) chutava staff logado pra /manutencao mesmo
   // com o middleware já deixando a página passar, porque essa rota só
   // sabia responder com base em IP liberado.

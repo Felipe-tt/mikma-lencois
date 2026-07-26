@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Dependências npm (package.json) — inclui patches de segurança de libs
+  # Dependências npm (package.json), inclui patches de segurança de libs
   # como firebase-admin, next, etc.
   - package-ecosystem: "npm"
     directory: "/"

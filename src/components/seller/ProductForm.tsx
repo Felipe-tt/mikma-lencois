@@ -22,7 +22,7 @@ type Props = {
 };
 
 function makeVariantId(size: string, fabric: string) {
-  // SKU usa apenas size+fabric — cor não inclusa para evitar quebrar inventário ao trocar foto
+  // SKU usa apenas size+fabric, cor não inclusa para evitar quebrar inventário ao trocar foto
   return `${size}_${fabric}`.toLowerCase().replace(/\s+/g, '_');
 }
 
@@ -61,7 +61,7 @@ export default function ProductForm({ initial }: Props) {
 
   const [yarnCount, setYarnCount] = useState(initial?.yarnCount ?? '');
   // Ao criar um produto novo (não em edição), pré-preenche com a última
-  // espessura de fio que ESSE staff escolheu — persistida por UID no
+  // espessura de fio que ESSE staff escolheu, persistida por UID no
   // Firestore (users/{uid}.staffPrefs), não localStorage, então segue a
   // pessoa em qualquer navegador/dispositivo que ela usar pra logar.
   useEffect(() => {
@@ -167,7 +167,7 @@ export default function ProductForm({ initial }: Props) {
   // SKUs que o form atual vai gerar (com base nas variações de agora)
   const currentSkuSet = new Set(variants.map(v => makeVariantId(v.size, v.fabric)));
   // SKUs que existiam no inventário antes e não aparecem mais nas variações atuais
-  // (variação removida, ou tamanho/tecido mudou — o que gera um SKU diferente)
+  // (variação removida, ou tamanho/tecido mudou, o que gera um SKU diferente)
   const orphanedSkus = isEdit
     ? Object.keys(existingSkus).filter(sku => !currentSkuSet.has(sku.replace(`${initial?.id}_`, '')))
     : [];
@@ -177,7 +177,7 @@ export default function ProductForm({ initial }: Props) {
   });
 
   // Duas variações com o mesmo tamanho+tecido geram o mesmo SKU e se sobrescrevem
-  // silenciosamente no inventário — detecta isso pra avisar antes de salvar.
+  // silenciosamente no inventário, detecta isso pra avisar antes de salvar.
   const variantIdCounts = new Map<string, number>();
   for (const v of variants) {
     const id = makeVariantId(v.size, v.fabric);
@@ -197,7 +197,7 @@ export default function ProductForm({ initial }: Props) {
     if (!weightKgValid) { setError('Informe o peso do produto em kg (ex: 1.2).'); return; }
     if (images.length === 0) { setError('Adicione pelo menos uma foto.'); return; }
     if (variants.length === 0) { setError('Adicione pelo menos uma variação (tamanho/tecido/cor).'); return; }
-    if (hasDuplicateVariants) { setError('Há variações repetidas com o mesmo tamanho e tecido — ajuste antes de salvar.'); return; }
+    if (hasDuplicateVariants) { setError('Há variações repetidas com o mesmo tamanho e tecido, ajuste antes de salvar.'); return; }
 
     setSaving(true);
     setError('');
@@ -215,7 +215,7 @@ export default function ProductForm({ initial }: Props) {
         );
       }
 
-      // Upload em paralelo — muito mais rápido que sequencial
+      // Upload em paralelo, muito mais rápido que sequencial
       const now = new Date();
       const folder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
       const uploadedUrls: string[] = (
@@ -269,7 +269,7 @@ export default function ProductForm({ initial }: Props) {
         const productId = initial!.id!;
 
         // Bloqueia o salvamento se isso for apagar SKUs com estoque restante
-        // sem confirmação — evita perder quantidade rastreada por acidente.
+        // sem confirmação, evita perder quantidade rastreada por acidente.
         if (orphanedWithStock.length > 0) {
           const count = orphanedWithStock.length;
           const { confirmed: ok } = await confirmDialog({
@@ -563,7 +563,7 @@ export default function ProductForm({ initial }: Props) {
           </FormSection>
 
           {/* ── 4. Especificações do tecido (colapsável) ── */}
-          <FormSection step={4} title="Especificações do tecido" hint="Opcional — aparece na página do produto">
+          <FormSection step={4} title="Especificações do tecido" hint="Opcional, aparece na página do produto">
             <button
               type="button"
               onClick={() => setSpecsOpen(o => !o)}

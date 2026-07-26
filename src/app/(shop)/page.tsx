@@ -39,7 +39,7 @@ export default async function HomePage() {
 
   const city      = s.storeCity?.split(',')[0] || 'Blumenau';
 
-  // Hero lines — fallback vazio para forçar admin a preencher nas configs
+  // Hero lines, fallback vazio para forçar admin a preencher nas configs
   const heroLine1 = s.heroLine1 || 'O conforto';
   const heroLine2 = s.heroLine2 || 'que acompanha';
   const heroLine3 = s.heroLine3 || 'seus sonhos.';
@@ -58,7 +58,7 @@ export default async function HomePage() {
   return (
     <>
       {/* ═══════════════════════════════════════════════════════════
-          HERO — tipografia como protagonista
+          HERO, tipografia como protagonista
           Branco absoluto. Headline enorme. Nada mais.
       ═══════════════════════════════════════════════════════════ */}
       <section className="border-b border-mist relative overflow-hidden bg-paper">
@@ -67,12 +67,12 @@ export default async function HomePage() {
         </div>
         <div className="container-shop pt-16 sm:pt-24 pb-14 sm:pb-20 relative z-[2]">
 
-          {/* Origem — linha de contexto, não eyebrow decorativo */}
+          {/* Origem, linha de contexto, não eyebrow decorativo */}
           <p className="font-mono text-[11px] tracking-[0.22em] uppercase text-faint mb-10 sm:mb-14">
             {city}, SC · Fábrica própria · {new Date().getFullYear()}
           </p>
 
-          {/* Headline — ocupa toda a largura disponível */}
+          {/* Headline, ocupa toda a largura disponível */}
           <h1
             className="font-display font-normal text-ink leading-[0.96] tracking-[-0.025em] text-[clamp(3.8rem,9.5vw,9rem)]"
           >
@@ -81,7 +81,7 @@ export default async function HomePage() {
             <span className="block">{heroLine3}</span>
           </h1>
 
-          {/* Copy + CTA — linha única embaixo do headline */}
+          {/* Copy + CTA, linha única embaixo do headline */}
           <div className="mt-10 sm:mt-14 flex flex-col sm:flex-row sm:items-end justify-between gap-8">
             <p className="text-[15px] text-mid leading-relaxed max-w-[38ch] font-light">
               {heroSubtitle}
@@ -98,7 +98,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Trust strip — 4 pilares com ícone + separador */}
+          {/* Trust strip, 4 pilares com ícone + separador */}
           {trustItems.length > 0 && (
             <div className="mt-12 pt-8 border-t border-faint-l/60">
               <div className="flex flex-wrap gap-y-4 gap-x-0">
@@ -141,11 +141,11 @@ export default async function HomePage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
-          PRODUTOS — imediatamente após o hero
+          PRODUTOS, imediatamente após o hero
           Sem seção intermediária. O produto fala por si.
       ═══════════════════════════════════════════════════════════ */}
       <section className="bg-paper">
-        {/* Header da seção — minimal */}
+        {/* Header da seção, minimal */}
         <div className="container-shop pt-14 sm:pt-20 pb-8 flex items-baseline justify-between gap-6">
           <h2 className="font-display font-normal text-ink text-2xl sm:text-3xl">
             {s.featuredTitle || 'Destaques'}
@@ -156,7 +156,7 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        {/* Categorias — se existirem */}
+        {/* Categorias, se existirem */}
         {categories.length > 1 && (
           <div className="container-shop pb-8 flex flex-wrap gap-2">
             {categories.map(cat => (
@@ -194,7 +194,7 @@ export default async function HomePage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
-          PROPOSTA — uma frase e dois botões. Sem stats, sem grade.
+          PROPOSTA, uma frase e dois botões. Sem stats, sem grade.
           Fundo escuro como ponto final da página.
       ═══════════════════════════════════════════════════════════ */}
       <section className="theme-locked bg-ink">

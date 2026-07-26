@@ -24,12 +24,12 @@ service cloud.firestore {
       allow create: if isSelf(uid);
       // isSelf só pode atualizar o próprio doc SE o campo role não mudar
       // (senão um comprador poderia se autopromover a seller/admin no
-      // Firestore — o custom claim do token continuaria 'buyer', mas
+      // Firestore, o custom claim do token continuaria 'buyer', mas
       // qualquer código que ler o role daqui em vez do claim seria
       // enganado). Só admin pode alterar o role de alguém.
       // .get(key, default) em vez de acesso direto por ponto: a maioria
       // dos compradores nunca teve campo "role" no Firestore (só existe
-      // via custom claim do token) — acesso direto a um campo ausente
+      // via custom claim do token), acesso direto a um campo ausente
       // lança erro de avaliação, e regra com erro = negada por padrão.
       // Isso quebrava QUALQUER usuário sem o campo salvando o próprio
       // perfil (ex: endereço no checkout) com "Missing or insufficient
@@ -49,7 +49,7 @@ service cloud.firestore {
     match /inventory/{sku} {
       allow read: if true;
       // 'reserved' é gerido só pelo fluxo de pedidos (Admin SDK, que ignora
-      // estas regras) — o painel de estoque nunca deve poder mexer nele.
+      // estas regras), o painel de estoque nunca deve poder mexer nele.
       // 'history' só pode crescer (arrayUnion), nunca ser reduzido/apagado.
       allow update: if isSellerOrAdmin()
         && request.resource.data.quantity is number
@@ -73,7 +73,7 @@ service cloud.firestore {
 
     // ── Reviews ──────────────────────────────────────────────────────────────
     // Leitura pública (mostrado na página do produto). Criação só via API
-    // route (Admin SDK) — precisa validar que o pedido é do usuário, está
+    // route (Admin SDK), precisa validar que o pedido é do usuário, está
     // 'delivered' e contém o produto, o que não dá pra expressar com
     // segurança só em regra do Firestore. Edição/exclusão: só admin
     // (moderação de conteúdo abusivo).
@@ -90,7 +90,7 @@ service cloud.firestore {
       allow read: if isAuth() && (
         resource.data.userId == request.auth.uid || isSellerOrAdmin()
       );
-      // Criação via API route (Admin SDK) — cliente nunca escreve direto
+      // Criação via API route (Admin SDK), cliente nunca escreve direto
       allow create: if false;
       // Atualização de status só por vendedor/admin (via Admin SDK de preferência)
       allow update: if isSellerOrAdmin();
@@ -113,7 +113,7 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid || isSellerOrAdmin()
       );
       // Registrado sempre pelo vendedor no painel (telefone/WhatsApp com o
-      // cliente ainda é por fora) — sem autoatendimento do cliente por
+      // cliente ainda é por fora), sem autoatendimento do cliente por
       // enquanto, então só seller/admin escreve.
       allow write: if isSellerOrAdmin();
     }
@@ -135,7 +135,7 @@ service cloud.firestore {
       allow write: if isSellerOrAdmin();
     }
 
-    // ── Push tokens (FCM) — só o backend (Admin SDK) acessa; nunca o client ──
+    // ── Push tokens (FCM), só o backend (Admin SDK) acessa; nunca o client ──
     // Tokens são vinculados a seller/admin pelo endpoint /api/painel/push-token
     // (que valida a role via verifyAuth). Não expor leitura/escrita direta:
     // um vendor não deve ver ou apagar o token de outro vendor pelo client.
@@ -143,7 +143,7 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // ── Maintenance — leitura pública (status), escrita só admin/seller ───────
+    // ── Maintenance, leitura pública (status), escrita só admin/seller ───────
     match /maintenance/{doc} {
       allow read: if true;
       allow write: if isSellerOrAdmin();
@@ -151,7 +151,7 @@ service cloud.firestore {
     match /maintenance_queue/{doc} {
       allow read: if true;        // middleware precisa checar
       // O middleware roda sem autenticação (Edge Runtime) e precisa
-      // conseguir registrar visitantes na fila — só permite CRIAR um
+      // conseguir registrar visitantes na fila, só permite CRIAR um
       // documento novo com released=false (não dá pra um visitante
       // anônimo se auto-liberar nem sobrescrever um registro existente).
       allow create: if request.resource.data.released == false;
@@ -164,7 +164,7 @@ service cloud.firestore {
     match /conversations/{convId} {
       allow read: if isSellerOrAdmin();
       // Criação/escrita normal só via Admin SDK (webhook inbound, rota de
-      // envio). O client só pode marcar como lida (unread: false) — não
+      // envio). O client só pode marcar como lida (unread: false), não
       // pode alterar nenhum outro campo nem criar/deletar a conversa.
       allow create, delete: if false;
       allow update: if isSellerOrAdmin()
@@ -178,7 +178,7 @@ service cloud.firestore {
     }
 
     // ── WhatsApp catalog import ──────────────────────────────────────────────
-    // Sessão do WhatsApp (credenciais Baileys) — equivale a estar logado na
+    // Sessão do WhatsApp (credenciais Baileys), equivale a estar logado na
     // conta. Acesso SOMENTE pelo Admin SDK (que ignora estas regras). Client
     // nunca lê nem escreve, nem seller/admin.
     match /whatsappAuth/{doc} {
@@ -187,7 +187,7 @@ service cloud.firestore {
     match /whatsappAuthKeys/{doc} {
       allow read, write: if false;
     }
-    // Status da conexão + QR code atual — não é sensível por si só (QR
+    // Status da conexão + QR code atual, não é sensível por si só (QR
     // expira em segundos), seller/admin pode ler em tempo real pra exibir
     // na tela de importação. Escrita só pelo Admin SDK.
     match /whatsappCatalogStatus/{doc} {
@@ -197,7 +197,7 @@ service cloud.firestore {
 
     // ── Equipe (quem tem acesso ao painel) ───────────────────────────────────
     // Só existe pra exibição na tela de configurações. A autorização de
-    // verdade nunca vem daqui — sempre do custom claim do token (ver
+    // verdade nunca vem daqui, sempre do custom claim do token (ver
     // /api/painel/team). Acesso exclusivo pelo Admin SDK, direto do client
     // (mesmo admin) não lê nem escreve, pra não abrir brecha de alguém
     // editar a própria role aqui direto.

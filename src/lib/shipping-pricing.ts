@@ -1,7 +1,7 @@
 /**
  * src/lib/shipping-pricing.ts
  *
- * Cálculo de frete — ÚNICA fonte de verdade de preço, usada tanto por
+ * Cálculo de frete, ÚNICA fonte de verdade de preço, usada tanto por
  * /api/shipping/quote (pra exibir as opções) quanto pelos endpoints de
  * pagamento (create-pix, create-checkout). NUNCA confie num priceCents
  * vindo do navegador: sempre recalcule aqui e use o valor retornado.
@@ -24,7 +24,7 @@ export interface ShippingOption {
   quoteId?: string;
   /**
    * Custo real do envio, SEMPRE preenchido no retorno de computeShippingOptions()
-   * — mesmo quando priceCents é zerado por frete grátis. É o valor que a loja
+   *, mesmo quando priceCents é zerado por frete grátis. É o valor que a loja
    * de fato paga (ou vai pagar) pra transportadora. Opcional aqui porque é
    * preenchido de forma centralizada, não em cada função de cotação individual.
    * Nunca deve ser exposto ao cliente; usado internamente para registrar o
@@ -93,7 +93,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 /**
  * Monta string de endereço para a API do Uber Direct a partir dos dados do ViaCEP.
  * O número da casa não está disponível na etapa de cotação (só temos o CEP),
- * então usamos o logradouro sem número — suficiente para estimativa de preço.
+ * então usamos o logradouro sem número, suficiente para estimativa de preço.
  * Na criação real da entrega (delivery/route.ts) usamos o endereço completo do pedido.
  */
 async function buildDropoffAddress(cep: string): Promise<string> {
@@ -344,7 +344,7 @@ async function quoteCorreiosDireto(
   return results;
 }
 
-// ── Função principal — fonte única de verdade de preço de frete ─────────────
+// ── Função principal, fonte única de verdade de preço de frete ─────────────
 
 export async function computeShippingOptions(
   destCep: string,
@@ -352,7 +352,7 @@ export async function computeShippingOptions(
   productValueCents: number,
   totalWeightKg: number,
   // Saldo atual do "caixa de frete" (collectedCents - spentCents já gasto de
-  // verdade nas transportadoras). Opcional — quando omitido, o frete grátis
+  // verdade nas transportadoras). Opcional, quando omitido, o frete grátis
   // funciona sem teto (comportamento antigo). Ver src/lib/shipping-ledger.ts.
   ledgerBalanceCents?: number,
 ): Promise<ShippingQuoteResult> {
@@ -363,7 +363,7 @@ export async function computeShippingOptions(
 
   // Blindagem silenciosa: se o prejuízo acumulado no caixa de frete já
   // ultrapassou o teto configurado, o frete grátis é desligado nessa
-  // cotação — sem qualquer sinal disso pro cliente (ele só vê o frete
+  // cotação, sem qualquer sinal disso pro cliente (ele só vê o frete
   // normal, como se o threshold não tivesse sido atingido).
   const maxLossCents = settings.freeShippingMaxLossCents ?? 0;
   const withinBudget  = maxLossCents <= 0 || ledgerBalanceCents === undefined || ledgerBalanceCents > -maxLossCents;
@@ -380,7 +380,7 @@ export async function computeShippingOptions(
     ? haversineKm(originCoords.lat, originCoords.lng, destCoords.lat, destCoords.lng)
     : 9999;
 
-  // O painel (settings.localDeliveryRadiusKm) é a fonte de verdade — a env var
+  // O painel (settings.localDeliveryRadiusKm) é a fonte de verdade, a env var
   // UBER_DIRECT_RADIUS_KM só serve de fallback caso o documento de settings não
   // tenha o campo definido (nunca deve sobrepor o valor salvo no painel).
   const radiusKm = settings.localDeliveryRadiusKm || parseInt(process.env.UBER_DIRECT_RADIUS_KM ?? '0') || 10;
@@ -442,7 +442,7 @@ export async function computeShippingOptions(
     options.push(...correiosOptions, ...jadlogOptions);
   }
 
-  // Remove duplicatas (mesmo carrier) — mantém o mais barato
+  // Remove duplicatas (mesmo carrier), mantém o mais barato
   const seen = new Map<string, ShippingOption>();
   for (const o of options) {
     const existing = seen.get(o.carrier);

@@ -8,7 +8,7 @@ import { NotificationBell } from './NotificationBell';
 // um toque acidental ou scroll vertical.
 const SWIPE_THRESHOLD = 60;
 // Só considera abrir o menu se o toque começar perto da borda esquerda
-// da tela — evita conflito com swipes de conteúdo (carrossel, etc).
+// da tela, evita conflito com swipes de conteúdo (carrossel, etc).
 const EDGE_ZONE = 24;
 
 export function PainelSidebarWrapper({ children }: { children: React.ReactNode }) {

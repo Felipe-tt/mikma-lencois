@@ -14,7 +14,7 @@ export function GoogleSignInButton({ onError }: Props) {
       await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (e: unknown) {
       if (e instanceof Error && e.message.includes('popup-closed-by-user')) {
-        // usuário fechou — ignora
+        // usuário fechou, ignora
       } else {
         onError?.(e instanceof Error ? e.message : 'Erro ao entrar com Google');
       }

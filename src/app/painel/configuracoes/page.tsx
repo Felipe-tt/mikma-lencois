@@ -30,7 +30,7 @@ const TABS: { id: Tab; icon: string; label: string; sub: string }[] = [
   { id: 'entrega', icon: 'entrega', label: 'Entrega',       sub: 'Frete e pagamento' },
 ];
 
-// Só admin vê essa aba — sellers não gerenciam quem tem acesso ao painel.
+// Só admin vê essa aba, sellers não gerenciam quem tem acesso ao painel.
 const EQUIPE_TAB: { id: Tab; icon: string; label: string; sub: string } =
   { id: 'equipe', icon: 'shield', label: 'Equipe', sub: 'Quem acessa o painel' };
 
@@ -68,23 +68,23 @@ export default function ConfiguracoesPage() {
     setSettings(s => ({ ...s, [field]: value }));
 
   const handleSave = async () => {
-    // CEP da loja alimenta a geração de etiqueta de envio (Melhor Envio) —
+    // CEP da loja alimenta a geração de etiqueta de envio (Melhor Envio) -
     // um CEP incompleto aqui só quebra na hora de despachar um pedido,
     // bem mais tarde e mais difícil de diagnosticar. Bloqueia antes.
     if (settings.storeCep && !isValidCep(settings.storeCep)) {
-      setSaveError('CEP da loja incompleto — confira antes de salvar.');
+      setSaveError('CEP da loja incompleto, confira antes de salvar.');
       return;
     }
     if (settings.storePhone && !isValidPhone(settings.storePhone)) {
-      setSaveError('Telefone/WhatsApp incompleto — confira antes de salvar.');
+      setSaveError('Telefone/WhatsApp incompleto, confira antes de salvar.');
       return;
     }
     if (settings.storeEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.storeEmail)) {
-      setSaveError('E-mail da loja inválido — confira antes de salvar.');
+      setSaveError('E-mail da loja inválido, confira antes de salvar.');
       return;
     }
     if (settings.storeCnpj && !isValidCnpj(settings.storeCnpj)) {
-      setSaveError('CNPJ incompleto — confira antes de salvar.');
+      setSaveError('CNPJ incompleto, confira antes de salvar.');
       return;
     }
     setSaveError('');
@@ -93,7 +93,7 @@ export default function ConfiguracoesPage() {
     // Best-effort: revalida as páginas públicas da loja (ISR) pra mudança
     // aparecer na hora, sem depender do intervalo de revalidate de cada
     // página (até 24h em /sobre, /termos, /privacidade). Falha aqui nunca
-    // deve impedir o salvamento — a config já está no Firestore de
+    // deve impedir o salvamento, a config já está no Firestore de
     // qualquer jeito, só o cache demoraria mais pra atualizar sozinho.
     try {
       const token = await user?.getIdToken();
@@ -104,7 +104,7 @@ export default function ConfiguracoesPage() {
         });
       }
     } catch {
-      /* ignora — cache expira sozinho de qualquer forma */
+      /* ignora, cache expira sozinho de qualquer forma */
     }
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -169,7 +169,7 @@ export default function ConfiguracoesPage() {
               placeholder="00.000.000/0000-00" maxLength={18} />
           </Card>
 
-          <Card icon="pin" title="Onde você fica" desc="Endereço físico da sua loja — usado também para gerar etiquetas de envio">
+          <Card icon="pin" title="Onde você fica" desc="Endereço físico da sua loja, usado também para gerar etiquetas de envio">
             <Row>
               <F label="Rua" value={settings.storeAddress} onChange={v => set('storeAddress', v)} placeholder="Rua das Flores" />
               <F label="Número" value={settings.storeNumber} onChange={v => set('storeNumber', v)} placeholder="123" />
@@ -193,14 +193,14 @@ export default function ConfiguracoesPage() {
               hint={!settings.storePhone ? 'Número principal de atendimento' : isValidPhone(settings.storePhone) ? 'Número principal de atendimento' : 'Telefone incompleto'} />
             <F label="Link do WhatsApp" value={settings.whatsappUrl ?? ''} onChange={v => set('whatsappUrl', v)}
               placeholder="https://wa.me/5547999990000"
-              hint='Cole o link gerado em wa.me — é o botão "Falar no WhatsApp"' />
+              hint='Cole o link gerado em wa.me, é o botão "Falar no WhatsApp"' />
             <F label="E-mail" value={settings.storeEmail} onChange={v => set('storeEmail', v)} placeholder="contato@minhaloja.com.br"
               hint={!settings.storeEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.storeEmail) ? undefined : 'E-mail incompleto'} />
             <F label="Instagram (opcional)" value={settings.instagramUrl ?? ''} onChange={v => set('instagramUrl', v)}
               placeholder="https://instagram.com/mikmalencois" hint="Aparece no rodapé" />
           </Card>
 
-          <Card icon="clock" title="Horário de funcionamento" desc="Quando sua loja está aberta — aparece no site com indicador 'aberto agora'" onPreview={() => setPreview('sobre')}>
+          <Card icon="clock" title="Horário de funcionamento" desc="Quando sua loja está aberta, aparece no site com indicador 'aberto agora'" onPreview={() => setPreview('sobre')}>
             <BusinessHoursEditor
               value={parseBusinessHours(settings.businessHours)}
               onChange={next => set('businessHours', serializeBusinessHours(next))}
@@ -211,7 +211,7 @@ export default function ConfiguracoesPage() {
                 value={settings.businessHoursTimezone || 'America/Sao_Paulo'}
                 onChange={v => set('businessHoursTimezone', v)}
                 options={[
-                  { value: 'America/Sao_Paulo', label: 'Brasília (GMT-3) — maioria do Brasil' },
+                  { value: 'America/Sao_Paulo', label: 'Brasília (GMT-3), maioria do Brasil' },
                   { value: 'America/Manaus', label: 'Manaus (GMT-4)' },
                   { value: 'America/Rio_Branco', label: 'Acre (GMT-5)' },
                   { value: 'America/Noronha', label: 'Fernando de Noronha (GMT-2)' },
@@ -228,21 +228,21 @@ export default function ConfiguracoesPage() {
       {tab === 'vitrine' && (
         <div className="flex flex-col gap-5">
 
-          <Card icon="megaphone" title="Faixa de aviso" desc='Barra no topo do site — ótima para promoções ("Frete grátis acima de R$ 199")' onPreview={() => setPreview('hero')}>
+          <Card icon="megaphone" title="Faixa de aviso" desc='Barra no topo do site, ótima para promoções ("Frete grátis acima de R$ 199")' onPreview={() => setPreview('hero')}>
             <F label="Texto do aviso"
               value={settings.topbarText} onChange={v => set('topbarText', v)}
               placeholder="Entrega grátis acima de R$ 199 · Blumenau em 1h"
               hint="Deixe em branco para ocultar" />
           </Card>
 
-          <Card icon="frame" title="Banner principal" desc="A primeira coisa que o cliente vê — título grande e destaque da sua loja" onPreview={() => setPreview('hero')}>
-            <Info>O título aparece em 3 linhas. A linha do meio fica em laranja — use para a parte mais impactante.</Info>
+          <Card icon="frame" title="Banner principal" desc="A primeira coisa que o cliente vê, título grande e destaque da sua loja" onPreview={() => setPreview('hero')}>
+            <Info>O título aparece em 3 linhas. A linha do meio fica em laranja, use para a parte mais impactante.</Info>
             <F label="Linha 1" value={settings.heroLine1 ?? ''} onChange={v => set('heroLine1', v)} placeholder="O conforto" />
             <F label="Linha 2 (laranja)" value={settings.heroLine2 ?? ''} onChange={v => set('heroLine2', v)} placeholder="que acompanha" />
             <F label="Linha 3" value={settings.heroLine3 ?? ''} onChange={v => set('heroLine3', v)} placeholder="seus sonhos." />
           </Card>
 
-          <Card icon="check" title="Selos de confiança" desc="4 frases curtas que aparecem abaixo do banner — transmite segurança ao cliente" onPreview={() => setPreview('hero')}>
+          <Card icon="check" title="Selos de confiança" desc="4 frases curtas que aparecem abaixo do banner, transmite segurança ao cliente" onPreview={() => setPreview('hero')}>
             <Info>Frases objetivas que respondem: por que comprar aqui? Ex: entrega rápida, PIX, frete grátis.</Info>
             {[1,2,3,4].map(n => (
               <F key={n} label={`Selo ${n}`}
@@ -271,7 +271,7 @@ export default function ConfiguracoesPage() {
               <F label="Título (linha laranja)" value={settings.aboutHeroLine1} onChange={v => set('aboutHeroLine1', v)} placeholder={settings.storeName || 'Mikma Lençóis'} />
               <F label="Título (linha cinza)" value={settings.aboutHeroLine2} onChange={v => set('aboutHeroLine2', v)} placeholder={`em ${settings.storeCity || 'Blumenau'}, SC.`} />
             </Row>
-            <TA label="Parágrafo 1 — apresentação" rows={4}
+            <TA label="Parágrafo 1, apresentação" rows={4}
               value={settings.aboutPara1} onChange={v => set('aboutPara1', v)}
               placeholder="Conte como a loja nasceu e o que você vende..." />
             <TA label="Parágrafo 2 (opcional)" rows={3} value={settings.aboutPara2} onChange={v => set('aboutPara2', v)} />
@@ -283,8 +283,8 @@ export default function ConfiguracoesPage() {
               { lf:'aboutStat3Label', vf:'aboutStat3Value', pl:'Cobertura', pv:'Todo o Brasil' },
             ] as const).map((r, i) => (
               <Row key={i}>
-                <F label={`Card ${i+1} — título`} value={(settings as unknown as Record<string,string>)[r.lf]} onChange={v => set(r.lf as keyof StoreSettings, v)} placeholder={r.pl} />
-                <F label={`Card ${i+1} — valor`} value={(settings as unknown as Record<string,string>)[r.vf]} onChange={v => set(r.vf as keyof StoreSettings, v)} placeholder={r.pv} />
+                <F label={`Card ${i+1}, título`} value={(settings as unknown as Record<string,string>)[r.lf]} onChange={v => set(r.lf as keyof StoreSettings, v)} placeholder={r.pl} />
+                <F label={`Card ${i+1}, valor`} value={(settings as unknown as Record<string,string>)[r.vf]} onChange={v => set(r.vf as keyof StoreSettings, v)} placeholder={r.pv} />
               </Row>
             ))}
             <F label="Texto do botão WhatsApp" value={settings.aboutWhatsappLabel} onChange={v => set('aboutWhatsappLabel', v)} placeholder="Falar no WhatsApp" />
@@ -300,14 +300,14 @@ export default function ConfiguracoesPage() {
       {tab === 'produto' && (
         <div className="flex flex-col gap-5">
 
-          <Card icon="shield" title="Garantias do produto" desc="3 frases que aparecem na página de cada produto abaixo do botão de comprar — reforça confiança">
+          <Card icon="shield" title="Garantias do produto" desc="3 frases que aparecem na página de cada produto abaixo do botão de comprar, reforça confiança">
             <Info>Use frases curtas e diretas. Ex: entrega, pagamento, suporte.</Info>
             <F label="Garantia 1" value={settings.productTrust1 ?? ''} onChange={v => set('productTrust1', v)} placeholder="Entrega local em Blumenau em até 1h" />
             <F label="Garantia 2" value={settings.productTrust2 ?? ''} onChange={v => set('productTrust2', v)} placeholder="Frete para todo o Brasil com rastreio" />
             <F label="Garantia 3" value={settings.productTrust3 ?? ''} onChange={v => set('productTrust3', v)} placeholder="Pagamento PIX com confirmação imediata" />
           </Card>
 
-          <Card icon="ruler" title="Guia de medidas" desc="Tabela que abre quando o cliente clica em 'Guia de medidas' na página do produto — dimensões por PEÇA (lençol, fronha, capa de duvet...)">
+          <Card icon="ruler" title="Guia de medidas" desc="Tabela que abre quando o cliente clica em 'Guia de medidas' na página do produto, dimensões por PEÇA (lençol, fronha, capa de duvet...)">
             <Info>
               Diferente da tabela &quot;Guia de tamanhos de cama&quot; logo abaixo: esta aqui é por tipo de peça (uma
               coluna pra Lençol, outra pra Fronha, outra pra Capa duvet...). Configure as colunas (separadas por
@@ -330,11 +330,11 @@ export default function ConfiguracoesPage() {
           <Card icon="ruler" title="Guia de tamanhos de cama" desc="Tabela na página do produto + fonte da largura usada na calculadora do /guia-de-tamanhos">
             <Info>
               Uma tabela, dois usos: <strong>1)</strong> aparece na página do produto pra mostrar o tamanho do
-              lençol acabado (ele é maior que o colchão de propósito, pra sobrar pano e prender o elástico —
+              lençol acabado (ele é maior que o colchão de propósito, pra sobrar pano e prender o elástico -
               por isso &quot;Comprimento&quot;/&quot;Largura&quot; aqui são maiores que a medida real do colchão). <strong>2)</strong> a
               coluna <strong>&quot;Cama&quot;</strong> é lida pela calculadora do{' '}
               <code className="text-[11px] bg-warm px-1 rounded">/guia-de-tamanhos</code> pra descobrir o tamanho a
-              partir da largura que o cliente mede em casa — não existe uma tabela separada pra isso, é sempre
+              partir da largura que o cliente mede em casa, não existe uma tabela separada pra isso, é sempre
               este mesmo valor. Se editar a coluna &quot;Cama&quot;, os dois lugares atualizam juntos.
             </Info>
             <F label="Colunas da tabela"
@@ -355,7 +355,7 @@ export default function ConfiguracoesPage() {
       {tab === 'entrega' && (
         <div className="flex flex-col gap-5">
 
-          <Card icon="produto" title="De onde você envia?" desc="Endereço de onde seus produtos saem — usado para calcular o frete automaticamente">
+          <Card icon="produto" title="De onde você envia?" desc="Endereço de onde seus produtos saem, usado para calcular o frete automaticamente">
             <F label="CEP de envio" value={settings.originCep} onChange={v => set('originCep', v)}
               placeholder="89000-000" hint="CEP do seu estoque ou loja física" />
             <Num label="Raio de entrega rápida (km)"
@@ -364,7 +364,7 @@ export default function ConfiguracoesPage() {
               min={1} max={100} />
             <details className="border border-mist">
               <summary className="px-3 py-2.5 text-[12px] text-faint cursor-pointer select-none">
-                Coordenadas GPS (avançado — só mexa se souber)
+                Coordenadas GPS (avançado, só mexa se souber)
               </summary>
               <div className="px-3 pb-3 pt-2 flex flex-col gap-3">
                 <Row>
@@ -375,13 +375,13 @@ export default function ConfiguracoesPage() {
             </details>
           </Card>
 
-          <Card icon="produto" title="Uber Direct — ambiente" desc="Alterna instantaneamente entre teste e produção, sem precisar de novo deploy">
+          <Card icon="produto" title="Uber Direct, ambiente" desc="Alterna instantaneamente entre teste e produção, sem precisar de novo deploy">
             <Toggle
               label="Usar ambiente de teste (sandbox)"
               checked={!!settings.uberDirectSandboxMode}
               onChange={v => set('uberDirectSandboxMode', v)}
-              hint="Ligado: usa as credenciais de teste do Uber Direct — cotações funcionam normalmente, mas nenhuma entrega real é criada nem cobrada. Desligado: usa as credenciais de produção (entregas reais, motoboy de verdade)."
-              warn="TESTE ATIVO — o checkout mostra 'Uber Direct (TESTE)' e nenhuma entrega será despachada de verdade. Desligue antes de vender de verdade."
+              hint="Ligado: usa as credenciais de teste do Uber Direct, cotações funcionam normalmente, mas nenhuma entrega real é criada nem cobrada. Desligado: usa as credenciais de produção (entregas reais, motoboy de verdade)."
+              warn="TESTE ATIVO, o checkout mostra 'Uber Direct (TESTE)' e nenhuma entrega será despachada de verdade. Desligue antes de vender de verdade."
             />
           </Card>
 
@@ -401,7 +401,7 @@ export default function ConfiguracoesPage() {
               onChange={v => set('freeShippingMaxLossCents', Math.round(v * 100))}
               hint={settings.freeShippingMaxLossCents === 0
                 ? 'Digite 0 pra desativar o teto (frete grátis sempre vale, sem limite)'
-                : `Se o "caixa de frete" acumular mais de R$ ${(settings.freeShippingMaxLossCents/100).toFixed(2)} de prejuízo, o frete grátis é desligado sozinho até o saldo se recuperar — o cliente nunca vê isso, só deixa de ver a oferta de frete grátis.`}
+                : `Se o "caixa de frete" acumular mais de R$ ${(settings.freeShippingMaxLossCents/100).toFixed(2)} de prejuízo, o frete grátis é desligado sozinho até o saldo se recuperar, o cliente nunca vê isso, só deixa de ver a oferta de frete grátis.`}
               min={0} />
             {shippingLedger && (
               <div className="mt-3 flex items-center justify-between rounded-lg bg-[#F0EBE1] px-4 py-3">
@@ -418,13 +418,13 @@ export default function ConfiguracoesPage() {
             )}
           </Card>
 
-          <Card icon="timer" title="Quando você envia?" desc="Horário limite para o pedido sair hoje — depois desse horário vai no próximo dia útil">
+          <Card icon="timer" title="Quando você envia?" desc="Horário limite para o pedido sair hoje, depois desse horário vai no próximo dia útil">
             <F label="Horário de corte" value={settings.dispatchCutoffTime}
               onChange={v => set('dispatchCutoffTime', v)} type="time"
               hint={`Pedidos feitos após ${settings.dispatchCutoffTime} são enviados no próximo dia útil`} />
             <Num label="Peso médio de cada produto embalado (kg)"
               value={settings.defaultItemWeightKg} onChange={v => set('defaultItemWeightKg', v)}
-              step={0.1} hint="Usado para calcular o frete — peso do lençol já dentro da embalagem" />
+              step={0.1} hint="Usado para calcular o frete, peso do lençol já dentro da embalagem" />
           </Card>
 
           <Card icon="bell" title="Alerta de estoque baixo" desc="Quando o sistema avisa que um produto está quase acabando">
@@ -434,17 +434,17 @@ export default function ConfiguracoesPage() {
               hint={`O produto aparecerá como "Últimas unidades" quando restar ${settings.lowStockThreshold} ou menos`} />
           </Card>
 
-          <Card icon="card" title="Pagamento por cartão" desc="Habilite cartão de crédito a partir de um valor mínimo — 0 desativa">
+          <Card icon="card" title="Pagamento por cartão" desc="Habilite cartão de crédito a partir de um valor mínimo, 0 desativa">
             <Num label="Valor mínimo para cartão (R$)"
               value={settings.creditMinOrderCents / 100}
               onChange={v => set('creditMinOrderCents', Math.round(v * 100))}
               min={0}
               hint={settings.creditMinOrderCents === 0
-                ? 'Cartão desativado — apenas PIX disponível'
+                ? 'Cartão desativado, apenas PIX disponível'
                 : `Cartão habilitado para pedidos acima de R$ ${(settings.creditMinOrderCents/100).toFixed(2)}`} />
           </Card>
 
-          <Card icon="tag" title="Desconto PIX" desc="Ofereça desconto percentual para pagamentos via PIX acima de um valor mínimo — 0 desativa">
+          <Card icon="tag" title="Desconto PIX" desc="Ofereça desconto percentual para pagamentos via PIX acima de um valor mínimo, 0 desativa">
             <Row>
               <Num label="Valor mínimo para desconto (R$)"
                 value={(settings.pixDiscountThresholdCents ?? 0) / 100}
@@ -460,7 +460,7 @@ export default function ConfiguracoesPage() {
                 min={0}
                 max={100}
                 hint={(settings.pixDiscountThresholdCents ?? 0) === 0
-                  ? '—'
+                  ? '-'
                   : `Cliente economiza ${settings.pixDiscountPct ?? 10}% pagando com PIX`}
               />
             </Row>
@@ -676,7 +676,7 @@ function TimelineEditor({ value, onChange }: { value:string; onChange:(v:string)
     <div className="flex flex-col gap-3">
       {items.length===0 && (
         <p className="text-[12px] text-faint text-center py-4 border border-dashed border-mist">
-          Nenhum marco ainda — clique abaixo para adicionar
+          Nenhum marco ainda, clique abaixo para adicionar
         </p>
       )}
       {items.map((item,i) => (
@@ -706,7 +706,7 @@ function TimelineEditor({ value, onChange }: { value:string; onChange:(v:string)
 /* ── Equipe (admin only) ──────────────────────────────────────────────────
  * Promove/revoga acesso ao painel pra contas que já existem (já fizeram
  * login/cadastro no site pelo menos uma vez). A autorização de verdade é
- * sempre checada no servidor via custom claim — esta tela é só a interface.
+ * sempre checada no servidor via custom claim, esta tela é só a interface.
  */
 type TeamMember = { uid: string; email: string; displayName: string | null; role: 'seller' | 'admin' };
 type SearchUser = { uid: string; email: string | null; displayName: string | null; photoURL: string | null; role: string };
@@ -744,7 +744,7 @@ function TeamPanel() {
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Busca com debounce — só dispara 300ms depois que a pessoa para de digitar
+  // Busca com debounce, só dispara 300ms depois que a pessoa para de digitar
   useEffect(() => {
     setSelected(null);
     if (query.trim().length < 2) { setResults([]); return; }
@@ -797,8 +797,8 @@ function TeamPanel() {
 
   return (
     <>
-      <Card icon="shield" title="Adicionar à equipe" desc="Busque por nome ou e-mail entre as contas que já existem no site — não precisa digitar o e-mail inteiro certinho.">
-        <Info>Só admins conseguem gerenciar a equipe. Sellers têm acesso ao painel, mas não podem adicionar ou remover outras pessoas — assim uma conta de seller comprometida não vira uma porta pra criar acessos ilimitados.</Info>
+      <Card icon="shield" title="Adicionar à equipe" desc="Busque por nome ou e-mail entre as contas que já existem no site, não precisa digitar o e-mail inteiro certinho.">
+        <Info>Só admins conseguem gerenciar a equipe. Sellers têm acesso ao painel, mas não podem adicionar ou remover outras pessoas, assim uma conta de seller comprometida não vira uma porta pra criar acessos ilimitados.</Info>
         <form onSubmit={handleAdd} className="flex flex-col gap-3">
           <div className="relative flex flex-col gap-1.5">
             <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Buscar pessoa</label>

@@ -12,7 +12,7 @@ interface AuthModalContextValue {
   setMode: (mode: Mode) => void;
   /** Se já logado, roda `action` na hora. Senão, abre o modal e roda
    *  `action` automaticamente assim que o login/cadastro for concluído
-   *  — sem sair da página onde a pessoa estava. */
+   * , sem sair da página onde a pessoa estava. */
   requireAuth: (action: () => void) => void;
 }
 
@@ -34,7 +34,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   }, [user, open]);
 
   // Assim que o usuário loga (com o modal aberto e uma ação pendente),
-  // executa a ação e fecha o modal — a pessoa nunca sai de onde estava.
+  // executa a ação e fecha o modal, a pessoa nunca sai de onde estava.
   useEffect(() => {
     if (user && isOpen && pendingAction.current) {
       const action = pendingAction.current;

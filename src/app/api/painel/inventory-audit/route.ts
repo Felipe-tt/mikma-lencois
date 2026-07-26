@@ -14,7 +14,7 @@ import { adminDb } from '@/lib/firebase/admin';
  * pagamento, cancelamento manual, cron de expiração). Antes da correção
  * de concorrência nesses pontos, uma corrida entre o cron de expiração e
  * o webhook de pagamento podia decrementar reserved duas vezes para o
- * mesmo pedido — essa rota não corrige nada, só calcula o valor "correto"
+ * mesmo pedido, essa rota não corrige nada, só calcula o valor "correto"
  * de reserved a partir da fonte da verdade (pedidos pending_payment) e
  * mostra a diferença, para decidir o que fazer manualmente.
  */
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   // Rota cara (varre todos os pedidos pending_payment + todo o inventário,
-  // até 30s de execução) — limite mais apertado que o normal.
+  // até 30s de execução), limite mais apertado que o normal.
   const ip = getClientIp(req);
   const key = `inventory-audit:${auth.decoded.uid}`;
   if (!await rateLimit(key, 6, 60_000) || !await rateLimit(`inventory-audit-ip:${ip}`, 12, 60_000)) {

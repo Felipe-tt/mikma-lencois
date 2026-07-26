@@ -5,12 +5,12 @@ import { useEffect, useState } from 'react';
  * Detecta quando a aba volta de um período parado em segundo plano (ex:
  * usuário trocou de aba/app e voltou minutos depois) e por quanto tempo
  * ficou assim. É nesse momento que o Firebase Auth força refresh do token
- * e os listeners do Firestore (onSnapshot) precisam reconectar — processo
+ * e os listeners do Firestore (onSnapshot) precisam reconectar, processo
  * que pode levar alguns segundos e, sem nenhum indicador, parece que o
  * painel travou (a página antiga continua na tela, parada, sem skeleton,
  * porque cada onSnapshot já tinha resolvido `loading` uma vez antes).
  *
- * Limiar de 60s: trocas rápidas de aba não devem mostrar nada — só vale a
+ * Limiar de 60s: trocas rápidas de aba não devem mostrar nada, só vale a
  * pena avisar quando o tempo parado é grande o suficiente pra justificar
  * uma reconexão real.
  */
@@ -37,7 +37,7 @@ export function usePainelReconnecting() {
     }
 
     function handleOnline() {
-      // Voltou a ter rede depois de ter caído — mesmo cenário de
+      // Voltou a ter rede depois de ter caído, mesmo cenário de
       // reconexão silenciosa do Firestore.
       setReconnecting(true);
       setTimeout(() => setReconnecting(false), MAX_BANNER_MS);
