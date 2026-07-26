@@ -8,6 +8,12 @@ FAIL=0
 
 while IFS= read -r sha; do
   [ -z "$sha" ] && continue
+
+  author_email="$(git log -1 --pretty=%ae "$sha")"
+  case "$author_email" in
+    *dependabot*) continue ;;
+  esac
+
   msg="$(git log -1 --pretty=%B "$sha")"
   subject="$(printf '%s' "$msg" | head -n1)"
   subject_len=${#subject}
