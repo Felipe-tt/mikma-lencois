@@ -1,8 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@config '../../tailwind.config.ts';
 
 /* ── Paleta de cores (light / dark) ──────────────────────────────────
    Cada token de cor do tailwind.config aponta pra uma dessas variáveis
@@ -67,16 +66,25 @@ html.dark {
   }
 }
 
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2
+         font-sans text-[13px] font-medium tracking-[0.03em]
+         border transition-all duration-150
+         disabled:opacity-40 disabled:pointer-events-none
+         whitespace-nowrap select-none;
+}
+
+@utility badge {
+  @apply inline-flex items-center px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.08em] uppercase;
+}
+
+@utility chip {
+  @apply inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer;
+}
+
 @layer components {
 
   /* ─── Buttons ────────────────────────────────────────────────── */
-  .btn {
-    @apply inline-flex items-center justify-center gap-2
-           font-sans text-[13px] font-medium tracking-[0.03em]
-           border transition-all duration-150
-           disabled:opacity-40 disabled:pointer-events-none
-           whitespace-nowrap select-none;
-  }
   .btn-primary {
     @apply btn px-6 py-3 bg-ink text-paper border-ink
            hover:bg-clay hover:border-clay
@@ -189,7 +197,6 @@ html.dark {
   }
 
   /* ─── Badges ──────────────────────────────────────────────────── */
-  .badge           { @apply inline-flex items-center px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.08em] uppercase; }
   .badge-pending   { @apply badge bg-amber-50   text-amber-700  border border-amber-200/80  dark:bg-amber-500/10   dark:text-amber-300  dark:border-amber-500/30; }
   .badge-paid      { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30; }
   .badge-preparing { @apply badge bg-blue-50    text-blue-700   border border-blue-200/80   dark:bg-blue-500/10    dark:text-blue-300   dark:border-blue-500/30; }
@@ -197,7 +204,6 @@ html.dark {
   .badge-delivered { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30; }
   .badge-cancelled { @apply badge text-faint; }
 
-  .chip        { @apply inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer; }
   .chip-active { @apply chip bg-ink text-paper border-ink; }
   .chip-idle   { @apply chip bg-paper text-mid border-mist hover:border-ink/40 hover:text-ink hover:bg-warm; }
 

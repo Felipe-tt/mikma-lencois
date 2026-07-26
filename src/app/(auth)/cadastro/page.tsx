@@ -378,7 +378,7 @@ function RegisterContent() {
                 <label className="flex items-start gap-3 cursor-pointer group">
                   <div
                     onClick={() => setLgpd(p => !p)}
-                    className={`mt-0.5 w-5 h-5 rounded-sm border flex-shrink-0 flex items-center justify-center transition-colors
+                    className={`mt-0.5 w-5 h-5 rounded-sm border shrink-0 flex items-center justify-center transition-colors
                       ${lgpd ? 'bg-clay border-clay' : 'border-mist group-hover:border-clay/60'}`}
                   >
                     {lgpd && <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2.5"><polyline points="2 6 5 9 10 3"/></svg>}
