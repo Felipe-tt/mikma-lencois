@@ -5,8 +5,9 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { timingSafeEqual } from 'crypto';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
+import { hexToColorName } from '@/lib/colorNames';
 
-// Não reavisa do mesmo SKU antes desse tempo, mesmo que continue baixo —
+// Não reavisa do mesmo SKU antes desse tempo, mesmo que continue baixo -
 // senão vira ruído (ex: roda de hora em hora e o estoque não mudou nesse
 // meio-tempo). Reavisa se: passou o cooldown, OU piorou desde o último
 // aviso (ex: foi de "baixo" pra "zerado").
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
   }
   results.low = lowItems.length;
 
-  // Recupera alertas anteriores pra decidir quem já foi avisado e quando —
+  // Recupera alertas anteriores pra decidir quem já foi avisado e quando -
   // um get por SKU seria N chamadas; como o volume de SKUs baixos costuma
   // ser pequeno numa loja desse porte, tudo bem.
   for (const low of lowItems) {
@@ -69,8 +70,9 @@ export async function GET(req: NextRequest) {
 
       if (cooldownPassed || gotWorse) {
         const productName = await getProductName(low.productId);
-        const variant = low.variant as { size?: string; fabric?: string; color?: string } | undefined;
-        const variantLabel = variant ? [variant.size, variant.fabric, variant.color].filter(Boolean).join(' · ') : '';
+        const variant = low.variant as { size?: string; fabric?: string; color?: string; colorName?: string } | undefined;
+        const colorLabel = variant?.colorName || (variant?.color ? hexToColorName(variant.color) : undefined);
+        const variantLabel = variant ? [variant.size, variant.fabric, colorLabel].filter(Boolean).join(' · ') : '';
         const label = variantLabel ? `${productName} (${variantLabel})` : productName;
         const statusWord = low.available <= 0 ? 'Zerou' : 'Estoque baixo';
 
@@ -82,7 +84,7 @@ export async function GET(req: NextRequest) {
         });
         await notifyInApp({
           type: 'low_stock',
-          message: `${statusWord}: ${label} — restam ${low.available} unidade(s)`,
+          message: `${statusWord}: ${label}, restam ${low.available} unidade(s)`,
           url: '/painel/estoque',
         });
 
