@@ -1,0 +1,42 @@
+name: App Hosting - deploy de teste
+
+# So roda quando disparado manualmente. Nao afeta o hosting classico
+# (frameworksBackend) que serve producao hoje - usa "local source deploy"
+# (Firebase CLI >= 14.4.0), sem precisar de conexao com o GitHub.
+#
+# Pre-requisito: o backend precisa ja existir (criado uma vez via
+# `firebase apphosting:backends:create`, comando manual - ver
+# migracao-app-hosting.md) e o firebase.json precisa ter o backendId
+# real no lugar do placeholder.
+on:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  deploy-apphosting-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Autenticar no Google Cloud
+        run: echo "$GOOGLE_APPLICATION_CREDENTIALS" > "$HOME/sa.json"
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
+      - name: Instalar Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Deploy (local source) para o backend de teste do App Hosting
+        run: |
+          GOOGLE_APPLICATION_CREDENTIALS="$HOME/sa.json" \
+            firebase deploy --only apphosting --project mikma-lencois --non-interactive
