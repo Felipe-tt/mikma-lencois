@@ -105,9 +105,6 @@ env:
   - variable: UPSTASH_REDIS_REST_TOKEN
     secret: UPSTASH_REDIS_REST_TOKEN
     availability: [RUNTIME]
-  - variable: ANTHROPIC_API_KEY
-    secret: ANTHROPIC_API_KEY
-    availability: [RUNTIME]
   - variable: STAFF_SESSION_SECRET
     secret: STAFF_SESSION_SECRET
     availability: [RUNTIME]
