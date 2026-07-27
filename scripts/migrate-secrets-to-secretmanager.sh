@@ -52,6 +52,8 @@ SECRET_NAMES=(
   UBER_DIRECT_SANDBOX_WEBHOOK_SECRET
 )
 
+FAILED=0
+
 for name in "${SECRET_NAMES[@]}"; do
   value="${!name:-}"
   if [ -z "$value" ]; then
@@ -63,10 +65,22 @@ for name in "${SECRET_NAMES[@]}"; do
     echo "$name ja existe, adicionando nova versao"
   else
     echo "criando $name"
-    gcloud secrets create "$name" --project="$PROJECT_ID" --replication-policy=automatic
+    if ! gcloud secrets create "$name" --project="$PROJECT_ID" --replication-policy=automatic; then
+      echo "ERRO ao criar $name"
+      FAILED=$((FAILED+1))
+      continue
+    fi
   fi
 
-  printf '%s' "$value" | gcloud secrets versions add "$name" --project="$PROJECT_ID" --data-file=-
+  if ! printf '%s' "$value" | gcloud secrets versions add "$name" --project="$PROJECT_ID" --data-file=-; then
+    echo "ERRO ao adicionar versao de $name"
+    FAILED=$((FAILED+1))
+  fi
 done
+
+if [ "$FAILED" -gt 0 ]; then
+  echo "concluido com $FAILED falha(s) de ${#SECRET_NAMES[@]} secrets"
+  exit 1
+fi
 
 echo "concluido: ${#SECRET_NAMES[@]} secrets processados"
