@@ -1,0 +1,147 @@
+# Config do Firebase App Hosting. Só é lido pelo *backend do App Hosting*
+# quando ele existir — não afeta o hosting clássico (frameworksBackend) que
+# roda em produção hoje. Ver migracao-app-hosting.md para o plano completo.
+
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 40
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  # ── Públicas, precisam estar disponíveis no BUILD (Next.js inlina no bundle do client) ──
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    secret: NEXT_PUBLIC_FIREBASE_APP_ID
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    secret: NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    secret: NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    secret: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_SENTRY_DSN
+    secret: NEXT_PUBLIC_SENTRY_DSN
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_APP_URL
+    value: "https://mikma.com.br"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_BASE_URL
+    value: "https://mikma.com.br"
+    availability: [BUILD, RUNTIME]
+
+  # ── Só de build (Sentry sourcemap upload, config do webpack plugin) ──
+  - variable: SENTRY_ORG
+    secret: SENTRY_ORG
+    availability: [BUILD]
+  - variable: SENTRY_PROJECT
+    secret: SENTRY_PROJECT
+    availability: [BUILD]
+  - variable: SENTRY_AUTH_TOKEN
+    secret: SENTRY_AUTH_TOKEN
+    availability: [BUILD]
+
+  # ── Servidor, só runtime ──
+  - variable: FIREBASE_PROJECT_ID
+    secret: FIREBASE_PROJECT_ID
+    availability: [RUNTIME]
+  - variable: FIREBASE_CLIENT_EMAIL
+    secret: FIREBASE_CLIENT_EMAIL
+    availability: [RUNTIME]
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
+    availability: [RUNTIME]
+  - variable: SENTRY_DSN
+    secret: SENTRY_DSN
+    availability: [RUNTIME]
+  - variable: RECAPTCHA_SECRET_KEY
+    secret: RECAPTCHA_SECRET_KEY
+    availability: [RUNTIME]
+  - variable: ABACATEPAY_API_KEY
+    secret: ABACATEPAY_API_KEY
+    availability: [RUNTIME]
+  - variable: ABACATEPAY_PUBLIC_KEY
+    secret: ABACATEPAY_PUBLIC_KEY
+    availability: [RUNTIME]
+  - variable: MELHOR_ENVIO_TOKEN
+    secret: MELHOR_ENVIO_TOKEN
+    availability: [RUNTIME]
+  - variable: MELHOR_ENVIO_CLIENT_SECRET
+    secret: MELHOR_ENVIO_CLIENT_SECRET
+    availability: [RUNTIME]
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+    availability: [RUNTIME]
+  - variable: RESEND_WEBHOOK_SECRET
+    secret: RESEND_WEBHOOK_SECRET
+    availability: [RUNTIME]
+  - variable: RESEND_FROM_EMAIL
+    secret: RESEND_FROM_EMAIL
+    availability: [RUNTIME]
+  - variable: EMAIL_CONTATO_ADDRESS
+    secret: EMAIL_CONTATO_ADDRESS
+    availability: [RUNTIME]
+  - variable: UPSTASH_REDIS_REST_URL
+    secret: UPSTASH_REDIS_REST_URL
+    availability: [RUNTIME]
+  - variable: UPSTASH_REDIS_REST_TOKEN
+    secret: UPSTASH_REDIS_REST_TOKEN
+    availability: [RUNTIME]
+  - variable: ANTHROPIC_API_KEY
+    secret: ANTHROPIC_API_KEY
+    availability: [RUNTIME]
+  - variable: STAFF_SESSION_SECRET
+    secret: STAFF_SESSION_SECRET
+    availability: [RUNTIME]
+  - variable: CRON_SECRET
+    secret: CRON_SECRET
+    availability: [RUNTIME]
+  - variable: ORS_API_KEY
+    secret: ORS_API_KEY
+    availability: [RUNTIME]
+  - variable: UBER_DIRECT_CLIENT_ID
+    secret: UBER_DIRECT_CLIENT_ID
+    availability: [RUNTIME]
+  - variable: UBER_DIRECT_CLIENT_SECRET
+    secret: UBER_DIRECT_CLIENT_SECRET
+    availability: [RUNTIME]
+  - variable: UBER_DIRECT_CUSTOMER_ID
+    secret: UBER_DIRECT_CUSTOMER_ID
+    availability: [RUNTIME]
+  - variable: UBER_DIRECT_WEBHOOK_SECRET
+    secret: UBER_DIRECT_WEBHOOK_SECRET
+    availability: [RUNTIME]
+  - variable: UBER_DIRECT_SANDBOX_CLIENT_ID
+    secret: UBER_DIRECT_SANDBOX_CLIENT_ID
+    availability: [RUNTIME]
+  - variable: UBER_DIRECT_SANDBOX_CLIENT_SECRET
+    secret: UBER_DIRECT_SANDBOX_CLIENT_SECRET
+    availability: [RUNTIME]
+  - variable: UBER_DIRECT_SANDBOX_CUSTOMER_ID
+    secret: UBER_DIRECT_SANDBOX_CUSTOMER_ID
+    availability: [RUNTIME]
+  - variable: UBER_DIRECT_SANDBOX_WEBHOOK_SECRET
+    secret: UBER_DIRECT_SANDBOX_WEBHOOK_SECRET
+    availability: [RUNTIME]
+
+# NAO incluído aqui (nao sao secrets de app, sao credenciais do proprio
+# processo de CI/deploy, nao devem ir para dentro do backend rodando):
+#   GOOGLE_APPLICATION_CREDENTIALS
