@@ -111,9 +111,6 @@ env:
   - variable: CRON_SECRET
     secret: CRON_SECRET
     availability: [RUNTIME]
-  - variable: ORS_API_KEY
-    secret: ORS_API_KEY
-    availability: [RUNTIME]
   - variable: UBER_DIRECT_CLIENT_ID
     secret: UBER_DIRECT_CLIENT_ID
     availability: [RUNTIME]
