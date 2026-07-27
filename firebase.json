@@ -20,7 +20,7 @@
     "rules": "storage.rules"
   },
   "apphosting": {
-    "backendId": "SUBSTITUIR-PELO-ID-CRIADO-NO-CLOUD-SHELL",
+    "backendId": "mikma-lencois-test",
     "rootDir": "/",
     "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log"]
   }
