@@ -155,12 +155,6 @@ jobs:
         env:
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
 
-      - name: Check if functions changed
-        id: functions-changed
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        run: |
-          git diff --name-only HEAD~1 HEAD | grep -q '^functions/' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
-
       - name: Deploy Firestore Rules
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules --project mikma-lencois
@@ -183,17 +177,14 @@ jobs:
         run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only storage --project mikma-lencois
         continue-on-error: true
 
-      - name: Deploy hosting + functions
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.functions-changed.outputs.changed == 'true'
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting --force --project mikma-lencois
-        env:
-          FIREBASE_CLI_EXPERIMENTS: webframeworks
-
-      - name: Deploy hosting only
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.functions-changed.outputs.changed == 'false'
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only hosting --force --project mikma-lencois
-        env:
-          FIREBASE_CLI_EXPERIMENTS: webframeworks
+# ── Nota: migração para o Firebase App Hosting ───────────────────────────────
+# O deploy do site em si (hosting classico, "frameworksBackend") foi removido
+# deste workflow. O App Hosting já está conectado direto ao GitHub e faz
+# rollout automático a cada push nesta branch, de forma independente deste
+# workflow (ver console do Firebase → App Hosting, ou migracao-app-hosting.md
+# para o histórico completo da migração). Firestore rules/indexes e Storage
+# rules continuam sendo deployados aqui, já que são serviços separados do
+# hosting e não mudam com essa migração.
 
 # ── Nota: permissão de índices do Firestore ──────────────────────────────────
 # O passo "Deploy Firestore Indexes" acima falha com 403 porque a service
