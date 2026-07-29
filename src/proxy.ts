@@ -218,7 +218,7 @@ function applySecurityHeaders(res: NextResponse): void {
 
 // ── Middleware principal ──────────────────────────────────────────────────────
 
-export async function middleware(req: NextRequest, event: NextFetchEvent) {
+export async function proxy(req: NextRequest, event: NextFetchEvent) {
   const { pathname } = req.nextUrl;
 
   const isExempt =
