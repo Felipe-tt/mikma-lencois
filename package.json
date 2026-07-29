@@ -21,7 +21,7 @@
     "firebase-admin": "^14.2.0",
     "google-auth-library": "^10.9.0",
     "leaflet": "^1.9.4",
-    "next": "^15.5.22",
+    "next": "^16.2.12",
     "papaparse": "^5.5.4",
     "photoswipe": "^5.4.4",
     "react": "^19.1.0",
@@ -50,5 +50,6 @@
   },
   "engines": {
     "node": "22"
-  }
+  },
+  "type": "module"
 }
