@@ -2,41 +2,22 @@
 
 > Levantamento do que precisa mudar neste projeto especificamente para sair do `frameworksBackend` (atual, congelado) para o Firebase App Hosting (sucessor oficial, com o novo Adapter API estabilizado a partir do Next.js 16.2).
 
-## Status: o que já está pronto neste repositório
+## Status: já concluído
 
-- `apphosting.yaml` — config de runtime + todas as ~35 variáveis mapeadas (como referência a secrets do Secret Manager).
-- `firebase.json` — bloco `apphosting` adicionado (aditivo, não mexe no `hosting` clássico que serve produção hoje).
-- `.github/workflows/apphosting-migrate-secrets.yml` — workflow manual (`workflow_dispatch`) que copia as secrets do GitHub Actions pro Cloud Secret Manager. Idempotente, pode rodar mais de uma vez.
-- `.github/workflows/apphosting-deploy-test.yml` — workflow manual que builda e faz deploy via "local source deploy" (sem precisar conectar o GitHub App) pro backend de teste do App Hosting.
+- Backend de teste criado: `mikma-lencois-test` (região `us-east4` — `southamerica-east1` não está disponível pro App Hosting ainda).
+- Deploy contínuo conectado ao GitHub, branch `main`.
+- `apphosting.yaml` com runtime config + variáveis mapeadas (2 removidas por não serem usadas de fato: `ANTHROPIC_API_KEY` e `ORS_API_KEY`, nenhuma delas tinha valor real configurado).
+- Secrets migrados pro Cloud Secret Manager, com acesso concedido ao backend.
+- **Next.js 16.2.12 testado com sucesso no App Hosting** (com Sentry ativo no servidor — o mesmo cenário que quebrou 4 vezes no `frameworksBackend` antigo). Confirmado visualmente por captura de tela: home, header, dark mode, carrinho, tudo renderizando certo.
+- `deploy.yml`: removido o deploy pro hosting clássico (`--only hosting`). Firestore rules/indexes e Storage rules continuam sendo deployados por ali, já que são serviços independentes do hosting.
 
-## O que só você consegue fazer (acesso que eu não tenho)
+## O que só você consegue fazer a partir daqui
 
-**Passo 1 — criar o backend (uma vez só), no Cloud Shell:**
-```bash
-firebase apphosting:backends:create --project mikma-lencois
-```
-Isso pede pra escolher região (recomendo `southamerica-east1` se disponível, ou a mais próxima) e se quer conectar um repositório do GitHub — **responda que não quer conectar o GitHub agora** (vamos usar deploy manual via CLI, não o auto-deploy). Anote o `backendId` escolhido.
-
-**Passo 2 — colar o backendId real no `firebase.json`:**
-Troque `"SUBSTITUIR-PELO-ID-CRIADO-NO-CLOUD-SHELL"` pelo valor real (posso fazer essa parte eu mesmo assim que você me passar o ID).
-
-**Passo 3 — rodar o workflow de migração de secrets:**
-Aba Actions → "App Hosting - migrar secrets" → Run workflow. (Automatizado, você só clica.)
-
-**Passo 4 — dar acesso do backend aos secrets, no Cloud Shell (um comando por secret, ou em lote):**
-```bash
-for s in $(gcloud secrets list --project=mikma-lencois --format="value(name)"); do
-  firebase apphosting:secrets:grantaccess "$s" --backend BACKEND_ID --project mikma-lencois
-done
-```
-(Troque `BACKEND_ID` pelo valor do passo 1. Esse comando resolve sozinho qual service account o backend usa — por isso não dá pra eu simplesmente adivinhar e fazer via `gcloud` puro.)
-
-**Passo 5 — disparar o deploy de teste:**
-Aba Actions → "App Hosting - deploy de teste" → Run workflow. (Automatizado.)
-
-**Passo 6 — testar na URL temporária** (formato `BACKEND_ID--mikma-lencois.REGIAO.hosted.app`) por alguns dias, validando cache/imagens/Sentry (ver seção 4 abaixo).
-
-**Passo 7 — corte de domínio** (só depois de validar tudo): reapontar DNS de `mikma.com.br`, no seu registrador.
+**Corte de domínio — o único passo que falta:**
+1. No **Firebase Console → Hosting → App Hosting → mikma-lencois-test → Custom domains**, adicionar `mikma.com.br` e seguir as instruções pra apontar o DNS (a Firebase mostra os registros TXT/A/CNAME exatos a adicionar no seu registrador).
+2. A propagação de DNS pode levar de minutos a algumas horas, dependendo do TTL atual.
+3. **Recomendo manter os dois no ar em paralelo por um tempo**: o hosting clássico continua respondendo em `mikma-lencois.web.app` (ou domínio parecido) até você decidir desativar de vez — não precisa desligar nada às pressas.
+4. Depois de confirmar que `mikma.com.br` está respondendo pelo App Hosting: os workflows `keep-warm.yml`, `expire-orders.yml`, `low-stock.yml` (que batem direto em `https://mikma.com.br/...`) continuam funcionando sem nenhuma mudança, já que só dependem da URL, não de qual sistema está atrás dela.
 
 ---
 
