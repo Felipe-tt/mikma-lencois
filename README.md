@@ -3,7 +3,7 @@
 
   # Mikma Lençóis
 
-  E-commerce de cama, mesa e banho — Next.js 16 + Firebase, com pagamento em PIX, frete automatizado e painel administrativo completo.
+  E-commerce de lençóis e fronhas, feito em Next.js 16 + Firebase, com pagamento em PIX, frete automatizado e painel administrativo completo.
 
   [![CI](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/ci-checks.yml/badge.svg)](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/ci-checks.yml)
   ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
@@ -15,7 +15,7 @@
 
 ## Sobre
 
-Loja de cama, mesa e banho, em produção. Catálogo com variantes de tamanho, cor e tecido, checkout com frete calculado na hora, pagamento em PIX e um painel próprio pra gerenciar pedido, estoque e cupom — sem Shopify, sem Nuvemshop.
+Loja de lençóis e fronhas, em produção. Catálogo com variantes de tamanho, cor e tecido, checkout com frete calculado na hora, pagamento em PIX e um painel próprio pra gerenciar pedido, estoque e cupom, sem Shopify, sem Nuvemshop.
 
 Feito pra rodar sozinho: preço e estoque validados no servidor, importação de catálogo em massa por CSV e integração direta com as transportadoras.
 
@@ -57,7 +57,7 @@ Feito pra rodar sozinho: preço e estoque validados no servidor, importação de
 
 **Segurança**
 - Headers de segurança (CSP, HSTS) e rate limiting nas rotas sensíveis
-- Preço e estoque sempre validados no servidor — nunca confiando no cliente
+- Preço e estoque sempre validados no servidor, nunca confiando no cliente
 - Firestore Rules com controle de acesso por papel (`buyer`, `seller`, `admin`)
 
 ## Rodando localmente
@@ -114,7 +114,7 @@ Guia completo de configuração do frete em [`MELHOR_ENVIO_SETUP.md`](./MELHOR_E
 ```
 src/
 ├─ app/
-│  ├─ (shop)/        # loja pública — produtos, carrinho, checkout, conta
+│  ├─ (shop)/        # loja pública: produtos, carrinho, checkout, conta
 │  ├─ (auth)/         # cadastro, login, redefinição de senha
 │  ├─ painel/          # painel administrativo
 │  └─ api/             # rotas de API (pedidos, pagamento, frete, e-mail...)
