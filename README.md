@@ -25,10 +25,18 @@ Feito pra rodar sozinho: preço e estoque validados no servidor, importação de
 |---|---|
 | Framework | Next.js 16 (App Router), React 19, TypeScript |
 | Estilo | Tailwind CSS 4 |
-| Dados | Firebase (Firestore, Auth, Storage) |
+| Estado | Context API (auth, modal de login, navegação) |
+| Dados | Firebase (Firestore, Auth, Storage) + Google Cloud Storage (URL assinada para upload) |
+| Auth server-side | Firebase Admin + `google-auth-library` |
+| Senha | `@node-rs/argon2` (hash) |
 | Pagamento | AbacatePay (PIX) |
 | Frete | Melhor Envio v2 · Uber Direct |
-| E-mail | Resend |
+| E-mail | Resend (transacional) · Svix (verificação de assinatura de webhook) |
+| Rate limiting | Upstash Redis |
+| Validação | Zod (schemas de API) · `sanitize-html` (conteúdo rico do painel) |
+| Importação | PapaParse (CSV) |
+| Mapa & galeria | Leaflet (rastreio ao vivo) · PhotoSwipe (galeria de produto) |
+| Contato | WhatsApp (link direto) |
 | Observabilidade | Sentry |
 | Testes | Vitest |
 | Deploy | Firebase App Hosting (Cloud Run, `southamerica-east1`) |
@@ -97,7 +105,7 @@ Push na branch `main` dispara o deploy automaticamente via GitHub Actions. Um `C
 |---|---|---|
 | AbacatePay (PIX) | `/api/payment/webhook` | HMAC-SHA256 |
 | Melhor Envio (rastreio) | `/api/shipping/webhook` | HMAC-SHA256 |
-| E-mail inbound (Resend) | `/api/email/inbound` | Secret no header |
+| E-mail inbound (Resend) | `/api/email/inbound` | Assinatura Svix |
 
 Guia completo de configuração do frete em [`MELHOR_ENVIO_SETUP.md`](./MELHOR_ENVIO_SETUP.md).
 
