@@ -15,9 +15,9 @@
 
 ## Sobre
 
-Loja online real, em produção, com catálogo por variantes (tamanho, cor, tecido), checkout com frete calculado em tempo real, pagamento via PIX e um painel administrativo próprio para gerenciar pedidos, estoque, cupons e conteúdo — sem depender de plataformas como Shopify ou Nuvemshop.
+Loja de cama, mesa e banho, em produção. Catálogo com variantes de tamanho, cor e tecido, checkout com frete calculado na hora, pagamento em PIX e um painel próprio pra gerenciar pedido, estoque e cupom — sem Shopify, sem Nuvemshop.
 
-O projeto nasceu para resolver um problema concreto: dar a uma loja de cama, mesa e banho uma operação self-service, com preço e estoque sempre validados no servidor, importação de catálogo em massa por CSV e integração direta com transportadoras.
+Feito pra rodar sozinho: preço e estoque validados no servidor, importação de catálogo em massa por CSV e integração direta com as transportadoras.
 
 ## Stack
 
