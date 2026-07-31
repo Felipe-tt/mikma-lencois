@@ -1,15 +1,45 @@
-# Mikma Lençóis
+<div align="center">
+  <img src="public/logo-clay.png" alt="Mikma Lençóis" width="180" />
 
-E-commerce de cama, mesa e banho construído em Next.js 15 (App Router) e Firebase. Loja pública com ISR, painel administrativo, pagamento via PIX, frete automatizado com Melhor Envio e importação de catálogo por CSV.
+  # Mikma Lençóis
+
+  E-commerce de cama, mesa e banho — Next.js 16 + Firebase, com pagamento em PIX, frete automatizado e painel administrativo completo.
+
+  [![CI](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/ci-checks.yml/badge.svg)](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/ci-checks.yml)
+  ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+  ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+  ![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth%20%7C%20Storage-orange?logo=firebase)
+</div>
+
+---
+
+## Sobre
+
+Loja de cama, mesa e banho, em produção. Catálogo com variantes de tamanho, cor e tecido, checkout com frete calculado na hora, pagamento em PIX e um painel próprio pra gerenciar pedido, estoque e cupom — sem Shopify, sem Nuvemshop.
+
+Feito pra rodar sozinho: preço e estoque validados no servidor, importação de catálogo em massa por CSV e integração direta com as transportadoras.
 
 ## Stack
 
-- **Framework**: Next.js 15, TypeScript, Tailwind CSS
-- **Backend**: Firebase (Firestore, Auth, Storage)
-- **Pagamento**: AbacatePay (PIX)
-- **Frete**: Melhor Envio v2
-- **E-mail**: Resend
-- **Deploy**: Firebase Hosting + Cloud Run (`southamerica-east1`)
+| Camada | Tecnologia |
+|---|---|
+| Framework | Next.js 16 (App Router), React 19, TypeScript |
+| Estilo | Tailwind CSS 4 |
+| Estado | Context API (auth, modal de login, navegação) |
+| Dados | Firebase (Firestore, Auth, Storage) + Google Cloud Storage (URL assinada para upload) |
+| Auth server-side | Firebase Admin + `google-auth-library` |
+| Senha | `@node-rs/argon2` (hash) |
+| Pagamento | AbacatePay (PIX) |
+| Frete | Melhor Envio v2 · Uber Direct |
+| E-mail | Resend (transacional) · Svix (verificação de assinatura de webhook) |
+| Rate limiting | Upstash Redis |
+| Validação | Zod (schemas de API) · `sanitize-html` (conteúdo rico do painel) |
+| Importação | PapaParse (CSV) |
+| Mapa & galeria | Leaflet (rastreio ao vivo) · PhotoSwipe (galeria de produto) |
+| Contato | WhatsApp (link direto) |
+| Observabilidade | Sentry |
+| Testes | Vitest |
+| Deploy | Firebase App Hosting (Cloud Run, `southamerica-east1`) |
 
 ## Funcionalidades
 
@@ -19,18 +49,20 @@ E-commerce de cama, mesa e banho construído em Next.js 15 (App Router) e Fireba
 - Pagamento via PIX com confirmação automática por webhook
 - Cupons de desconto, rastreio de pedidos e área do cliente
 
-**Painel (`/painel`)**
-- Pedidos, produtos, estoque e cupons (CRUD completo)
-- Importação de catálogo via CSV (fica como rascunho até publicar)
-- Mensagens, relatórios e configurações da loja
-- Modo de manutenção com fila de liberação por IP
+**Painel administrativo** (`/painel`)
+- CRUD completo de pedidos, produtos, estoque e cupons
+- Importação de catálogo via CSV, com fila de rascunho até publicar
+- Central de mensagens, relatórios de vendas e configurações da loja
+- Modo de manutenção com liberação de acesso por IP
 
 **Segurança**
-- Headers de segurança (CSP, HSTS, entre outros) e rate limiting
-- Preços e estoque sempre validados no servidor, nunca no cliente
-- Firestore Rules com controle por papel (`buyer`, `seller`, `admin`)
+- Headers de segurança (CSP, HSTS) e rate limiting nas rotas sensíveis
+- Preço e estoque sempre validados no servidor — nunca confiando no cliente
+- Firestore Rules com controle de acesso por papel (`buyer`, `seller`, `admin`)
 
 ## Rodando localmente
+
+Pré-requisitos: Node 24 e um projeto Firebase (Firestore, Auth, Storage) configurado.
 
 ```bash
 git clone https://github.com/Felipe-tt/mikma-lencois.git
@@ -40,13 +72,23 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Requer um projeto Firebase (Firestore, Auth e Storage) e contas em AbacatePay, Melhor Envio e Resend. Preencha as chaves correspondentes no `.env.local`.
+Preencha o `.env.local` com as chaves do Firebase e das integrações que for usar (AbacatePay, Melhor Envio, Resend, reCAPTCHA, Uber Direct). Cada bloco do `.env.example` explica onde gerar a chave correspondente.
 
-Deploy das regras do Firestore:
+Publicar as regras do Firestore:
 
 ```bash
 npx firebase deploy --only firestore
 ```
+
+## Scripts
+
+| Comando | Descrição |
+|---|---|
+| `npm run dev` | Ambiente de desenvolvimento |
+| `npm run build` | Build de produção |
+| `npm run start` | Serve o build de produção |
+| `npm run lint` | ESLint |
+| `npm test` | Testes (Vitest) |
 
 ## Deploy
 
@@ -55,17 +97,31 @@ npm run build
 npx firebase deploy
 ```
 
-Push na branch `main` dispara o deploy automaticamente via CI.
+Push na branch `main` dispara o deploy automaticamente via GitHub Actions. Um `CI Checks` roda em toda PR, validando mensagens de commit antes do merge.
 
 ## Webhooks
 
 | Serviço | Endpoint | Autenticação |
-|---------|----------|---------------|
+|---|---|---|
 | AbacatePay (PIX) | `/api/payment/webhook` | HMAC-SHA256 |
 | Melhor Envio (rastreio) | `/api/shipping/webhook` | HMAC-SHA256 |
-| E-mail inbound | `/api/email/inbound` | Secret no header |
+| E-mail inbound (Resend) | `/api/email/inbound` | Assinatura Svix |
 
-Guia completo do Melhor Envio em [`MELHOR_ENVIO_SETUP.md`](./MELHOR_ENVIO_SETUP.md).
+Guia completo de configuração do frete em [`MELHOR_ENVIO_SETUP.md`](./MELHOR_ENVIO_SETUP.md).
+
+## Estrutura
+
+```
+src/
+├─ app/
+│  ├─ (shop)/        # loja pública — produtos, carrinho, checkout, conta
+│  ├─ (auth)/         # cadastro, login, redefinição de senha
+│  ├─ painel/          # painel administrativo
+│  └─ api/             # rotas de API (pedidos, pagamento, frete, e-mail...)
+├─ components/
+├─ lib/
+└─ types/
+```
 
 ## Licença
 
