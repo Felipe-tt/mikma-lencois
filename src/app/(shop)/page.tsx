@@ -3,6 +3,7 @@ import { getSettings } from '@/lib/settings';
 import { ProductCard } from '@/components/product/ProductCard';
 import type { Product } from '@/types';
 import Link from 'next/link';
+import Image from 'next/image';
 import { serialize } from '@/lib/utils/serialize';
 
 export const revalidate = 900; // ISR: revalida a cada 5 minutos
@@ -63,7 +64,15 @@ export default async function HomePage() {
       ═══════════════════════════════════════════════════════════ */}
       <section className="border-b border-mist relative overflow-hidden bg-paper">
         <div className="absolute inset-0 pointer-events-none select-none z-0">
-          <img src="/hero-bg.jpg" alt="" className="w-full h-full object-cover object-center opacity-[0.22]" aria-hidden="true" />
+          <Image
+            src="/hero-bg.jpg"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center opacity-[0.22]"
+            aria-hidden="true"
+          />
         </div>
         <div className="container-shop pt-16 sm:pt-24 pb-14 sm:pb-20 relative z-[2]">
 

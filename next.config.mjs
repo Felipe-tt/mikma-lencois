@@ -20,6 +20,14 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Assets estáticos com hash: cache de 1 ano (imutáveis). Reaplicado
+        // porque o App Hosting não herda o cache automático de 1 ano que um
+        // Next.js "puro" aplicaria — sem isso, medimos só 1h de TTL real em
+        // produção (visto no relatório do PageSpeed Insights).
+        source: '/_next/static/(.*)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
         // Logos e favicons: 7 dias
         source: '/(logo.*|favicon.*|apple-touch-icon.*|hero-bg.*)',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=2592000' }],
