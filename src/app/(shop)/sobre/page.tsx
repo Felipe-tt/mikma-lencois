@@ -2,6 +2,7 @@ export const revalidate = 86400;
 import { getSettings } from '@/lib/settings';
 import { BrandLogo } from '@/components/BrandLogo';
 import { BusinessHoursCard } from '@/components/storefront/BusinessHoursCard';
+import Image from 'next/image';
 
 export default async function SobrePage() {
   const s = await getSettings();
@@ -29,7 +30,7 @@ export default async function SobrePage() {
       {/* ── Hero ── */}
       <div className="relative overflow-hidden bg-warm border-b border-mist">
         <div className="absolute inset-0 pointer-events-none select-none">
-          <img src="/sobre-bg.jpg" alt="" aria-hidden="true" className="w-full h-full object-cover object-center opacity-[0.18]" />
+          <Image src="/sobre-bg.jpg" alt="" aria-hidden="true" fill sizes="100vw" className="object-cover object-center opacity-[0.18]" />
           <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-warm)_0%,transparent_50%,var(--color-warm)_100%)]" />
         </div>
         <div className="container-shop py-20 sm:py-28 relative z-10">

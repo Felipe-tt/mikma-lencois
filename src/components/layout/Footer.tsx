@@ -48,7 +48,7 @@ export function Footer({
               height={242}
               className="h-7 w-auto object-contain object-left opacity-80 self-start"
             />
-            <p className="text-[13px] text-paper/45 leading-relaxed max-w-[20ch]">
+            <p className="text-[13px] text-paper/60 leading-relaxed max-w-[20ch]">
               {tagline}
             </p>
 
@@ -57,13 +57,13 @@ export function Footer({
               <div className="flex items-center gap-4 mt-1">
                 {instagramUrl && (
                   <a href={instagramUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/40 hover:text-paper transition-colors duration-150">
+                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/60 hover:text-paper transition-colors duration-150">
                     Instagram
                   </a>
                 )}
                 {wa && (
                   <a href={wa} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/40 hover:text-paper transition-colors duration-150">
+                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/60 hover:text-paper transition-colors duration-150">
                     WhatsApp
                   </a>
                 )}
@@ -73,7 +73,7 @@ export function Footer({
 
           {/* Col 2, Loja */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Loja</p>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Loja</p>
             <ul className="flex flex-col gap-3.5">
               {[
                 { href: '/produtos', label: 'Produtos' },
@@ -90,7 +90,7 @@ export function Footer({
 
           {/* Col 3, Conta */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Conta</p>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Conta</p>
             <ul className="flex flex-col gap-3.5">
               {[
                 { href: '/conta/pedidos', label: 'Meus pedidos' },
@@ -107,7 +107,7 @@ export function Footer({
 
           {/* Col 4, Legal + contato */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/30 mb-5">Contato</p>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Contato</p>
             <ul className="flex flex-col gap-3.5">
               {status && (
                 <li className="flex items-center gap-1.5">
@@ -148,14 +148,14 @@ export function Footer({
 
         {/* ── Rodapé legal ── */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-7">
-          <p className="text-[11px] text-paper/35">
+          <p className="text-[11px] text-paper/55">
             © {year} {storeName} · Todos os direitos reservados
           </p>
           <div className="flex items-center gap-4">
             {/* Trust seals */}            <span className="text-paper/10">·</span>
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/25 uppercase">PIX</span>
+            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/55 uppercase">PIX</span>
             <span className="text-paper/10">·</span>
-            <span className="text-[10px] text-paper/25 tracking-[0.16em] uppercase">{storeCity.toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
+            <span className="text-[10px] text-paper/55 tracking-[0.16em] uppercase">{storeCity.toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
           </div>
         </div>
       </div>
