@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getSettings } from '@/lib/settings';
@@ -330,7 +329,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('create-pix error:', err);
-    Sentry.captureException(err, { tags: { route: 'create-pix' } });
+    console.error('[create-pix]', err);
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }
