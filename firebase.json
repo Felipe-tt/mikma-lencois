@@ -3,19 +3,6 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "hosting": {
-    "source": ".",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "frameworksBackend": {
-      "region": "southamerica-east1",
-      "memory": "512MiB",
-      "cpu": 1,
-      "concurrency": 40,
-      "minInstances": 0,
-      "maxInstances": 2,
-      "timeoutSeconds": 120
-    }
-  },
   "storage": {
     "rules": "storage.rules"
   },
