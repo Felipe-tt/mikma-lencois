@@ -6,8 +6,8 @@ import { ThemeScript } from '@/components/ThemeScript';
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br'),
   title: { default: 'Mikma Lençóis · Blumenau SC', template: '%s | Mikma Lençóis' },
-  description: 'Lençóis, jogos de cama e toalhas direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
-  keywords: ['lençóis', 'jogos de cama', 'cama mesa banho', 'blumenau', 'mikma'],
+  description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
+  keywords: ['lençóis', 'fronhas', 'jogos de cama', 'blumenau', 'mikma'],
   icons: {
     icon: [
       // Ícone pequeno (aba do navegador): mantido transparente, como já estava.
@@ -28,13 +28,13 @@ export const metadata: Metadata = {
     url: 'https://mikma.com.br',
     siteName: 'Mikma Lençóis',
     title: 'Mikma Lençóis · Blumenau SC',
-    description: 'Lençóis, jogos de cama e toalhas direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
+    description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
     images: [{ url: '/og-image.jpg', width: 1200, height: 630, alt: 'Mikma Lençóis · Lençóis e jogos de cama' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Mikma Lençóis · Blumenau SC',
-    description: 'Lençóis, jogos de cama e toalhas direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
+    description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
     images: ['/og-image.jpg'],
   },
 };
