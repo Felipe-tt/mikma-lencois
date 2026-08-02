@@ -1,7 +1,7 @@
 // Paleta de cores em português, curada para produtos têxteis (lençóis, fronhas,
 // edredons). Resolução 100% local, sem chamadas de rede, sem dependência de
 // tradução automática instável. ~80 cores cobrem o universo real de tons
-// vendidos numa loja de cama/banho, muito mais úteis que as ~30 mil entradas
+// vendidos numa loja de cama, muito mais úteis que as ~30 mil entradas
 // genéricas do color-name-list (a maioria delas nomes de tinta industrial
 // sem nenhum sentido pra esse catálogo).
 
