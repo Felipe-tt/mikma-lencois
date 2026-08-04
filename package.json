@@ -19,7 +19,7 @@
     "@upstash/redis": "^1.38.0",
     "firebase": "^12.16.0",
     "firebase-admin": "^14.2.0",
-    "google-auth-library": "^10.9.0",
+    "google-auth-library": "^11.0.0",
     "leaflet": "^1.9.4",
     "next": "^16.2.12",
     "papaparse": "^5.5.4",
