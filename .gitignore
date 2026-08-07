@@ -36,3 +36,6 @@ next-env.d.ts
 
 # Firebase deploy cache
 .firebase/
+
+# Backup local de secrets/config antes de apagar recursos do GCP — nunca comitar
+backup-apphosting-*/
