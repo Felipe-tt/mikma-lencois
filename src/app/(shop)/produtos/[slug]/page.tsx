@@ -169,7 +169,7 @@ export default async function ProductPage({ params }: Props) {
                   <div className="divide-y divide-mist">
                     {product.yarnCount && (
                       <div className="flex items-center justify-between px-4 py-3">
-                        <span className="text-[12px] text-mid">Espessura do fio</span>
+                        <span className="text-[12px] text-mid">Título do fio</span>
                         <span className="text-[13px] font-semibold text-ink">Fio {product.yarnCount}</span>
                       </div>
                     )}
