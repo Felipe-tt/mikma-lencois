@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { consumeReturnTo } from '@/lib/auth/returnTo';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -49,10 +50,11 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
     if (!email.trim()) return;
     setLoading(true); setError(''); setResent(false);
     try {
+      const recaptchaToken = await getRecaptchaToken('send_reset');
       const res = await fetch('/api/auth/send-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), recaptchaToken }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -152,10 +154,11 @@ export default function LoginPage() {
     setLoading(true); setError('');
     try {
       // Rate limit check primeiro
+      const recaptchaToken = await getRecaptchaToken('login');
       const rl = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, recaptchaToken }),
       });
       if (rl.status === 429) {
         const d = await rl.json();
