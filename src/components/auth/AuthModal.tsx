@@ -7,6 +7,7 @@ import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { BrandLogo } from '@/components/BrandLogo';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 type SignupStep = 'form' | 'awaiting';
 type ForgotStep = 'email' | 'sent';
@@ -71,10 +72,11 @@ export function AuthModal() {
     e.preventDefault();
     setLoginLoading(true); setLoginError('');
     try {
+      const recaptchaToken = await getRecaptchaToken('login');
       const rl = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, recaptchaToken }),
       });
       if (rl.status === 429) throw new Error((await rl.json()).error);
 
@@ -143,10 +145,11 @@ export function AuthModal() {
     if (!forgotEmail.trim()) return;
     setForgotLoading(true); setForgotResent(false);
     try {
+      const recaptchaToken = await getRecaptchaToken('send_reset');
       await fetch('/api/auth/send-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase(), recaptchaToken }),
       });
     } finally {
       // Sempre avança, não revela se o e-mail existe ou não na base.
