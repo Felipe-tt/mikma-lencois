@@ -199,22 +199,7 @@ function applySecurityHeaders(res: NextResponse): void {
   res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   res.headers.set('Content-Security-Policy', [
     "default-src 'self'",
-    // 'unsafe-inline' fica só como fallback pra navegadores muito antigos
-    // (CSP1) sem suporte a hash de script; browsers modernos (CSP2+)
-    // ignoram 'unsafe-inline' quando pelo menos um 'sha256-...' está
-    // presente, então na prática só os 3 scripts inline abaixo (conteúdo
-    // fixo, sem dado de usuário) rodam. Preferimos hash a nonce aqui de
-    // propósito: nonce exigiria ler headers() nos Server Components que
-    // renderizam esses scripts, o que forçaria renderização dinâmica em
-    // TODAS as páginas (o root layout envolve o site inteiro), quebrando
-    // o ISR. Hash não tem esse custo, mas PRECISA ser recalculado sempre
-    // que o texto de um desses scripts mudar (ver componentes citados),
-    // senão o script para de rodar silenciosamente em produção.
-    "script-src 'self' 'unsafe-inline' " +
-      "'sha256-2KYVKfkCKTVb2pfXQyY4sdPlIOUjo5sLu0lHScLp7Ls=' " + // ThemeScript (src/components/ThemeScript.tsx)
-      "'sha256-R5vFbyVx4iVqtHXJt0SekTzhi6oqGvLx1rzm2T5w3GY=' " + // geo lookup (src/app/manutencao/page.tsx)
-      "'sha256-XF0kEnGuA5fPuA+ufLFzgWIunmkaMmnOsBm3vKkPlmk=' " + // polling de status (src/app/manutencao/page.tsx)
-      "https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://accounts.google.com",
+    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://accounts.google.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://d1w2poirtb3as9.cloudfront.net https://*.tile.openstreetmap.org",

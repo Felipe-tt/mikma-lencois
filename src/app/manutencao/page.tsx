@@ -18,8 +18,7 @@ export default async function ManutencaoPage() {
     <>
       {/* Dispara o geo lookup assim que a página carrega.
           Roda durante um request HTTP ativo → Cloud Run não congela a instância.
-          É isso que garante que o geo deixe de ficar "pending" no painel.
-          Conteúdo fixo, liberado na CSP via hash SHA-256 (ver src/proxy.ts). */}
+          É isso que garante que o geo deixe de ficar "pending" no painel. */}
       <script
         dangerouslySetInnerHTML={{
           __html: `fetch('/api/maintenance/geo').catch(function(){});`,
@@ -29,8 +28,7 @@ export default async function ManutencaoPage() {
       {/* Polling: assim que a manutenção acabar (ou esse IP for liberado
           manualmente pelo painel), sai sozinho de /manutencao de volta pra
           "/", sem precisar que o visitante dê refresh. Checa a cada 5s;
-          silencioso em caso de erro de rede (só tenta de novo no próximo tick).
-          Conteúdo fixo, liberado na CSP via hash SHA-256 (ver src/proxy.ts). */}
+          silencioso em caso de erro de rede (só tenta de novo no próximo tick). */}
       <script
         dangerouslySetInnerHTML={{
           __html: `
