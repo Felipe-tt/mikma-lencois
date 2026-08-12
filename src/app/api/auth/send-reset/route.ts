@@ -7,9 +7,11 @@ import { getClientIp } from '@/lib/security';
 import { sendEmail } from '@/lib/email';
 import { generateActionToken } from '@/lib/auth-token';
 import { actionButtonEmailHtml } from '@/lib/email-templates';
+import { verifyRecaptcha } from '@/lib/recaptcha';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
+  recaptchaToken: z.string().min(1).optional(),
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mikma.com.br';
@@ -32,7 +34,9 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return OK; // não revela erro
 
-  const { email } = parsed.data;
+  const { email, recaptchaToken } = parsed.data;
+
+  if (!await verifyRecaptcha(recaptchaToken, 'send_reset')) return OK; // não revela erro
 
   const emailKey = `send-reset:email:${email}`;
   if (!await rateLimit(emailKey, 3, 15 * 60 * 1000)) return OK; // silencioso
