@@ -1,5 +1,6 @@
 import { adminDb } from '@/lib/firebase/admin';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { ProductCard } from '@/components/product/ProductCard';
 import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
 import { SortSelect } from '@/components/product/SortSelect';
@@ -11,6 +12,23 @@ import { serialize } from '@/lib/utils/serialize';
 export const revalidate = 600;
 
 interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string }> }
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const { categoria, q } = await searchParams;
+  const title = categoria
+    ? `${categoria} | Produtos`
+    : q
+      ? `Busca por "${q}"`
+      : 'Todos os produtos';
+  const description = categoria
+    ? `Confira nossa linha de ${categoria.toLowerCase()}: lençóis, edredons e enxoval de cama com qualidade e conforto.`
+    : 'Explore nosso catálogo completo de lençóis, edredons e enxoval de cama.';
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: 'website' },
+  };
+}
 
 // Cache em memória para categorias: evita query full-scan a cada request dentro do mesmo container
 let _categoriesCache: { data: { name: string; count: number }[]; at: number } | null = null;

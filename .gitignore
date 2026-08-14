@@ -37,5 +37,10 @@ next-env.d.ts
 # Firebase deploy cache
 .firebase/
 
+# Logs de debug do emulador (gerados por `npm run test:rules`)
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
 # Backup local de secrets/config antes de apagar recursos do GCP — nunca comitar
 backup-apphosting-*/

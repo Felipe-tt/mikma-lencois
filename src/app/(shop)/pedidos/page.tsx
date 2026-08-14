@@ -83,7 +83,7 @@ export default function MyOrdersPage() {
                   <div className="flex items-start gap-4">
                     {order.items[0]?.image && (
                       <div className="w-10 h-[52px] shrink-0 overflow-hidden bg-warm border border-mist/60">
-                        <img src={order.items[0].image} alt="" className="w-full h-full object-cover" />
+                        <img src={order.items[0].image} alt={order.items[0].productName} className="w-full h-full object-cover" />
                       </div>
                     )}
                     <div className="flex flex-col gap-0.5">
