@@ -79,6 +79,15 @@ jobs:
       - name: Rodar testes automatizados
         run: npm test
 
+      - name: Instalar JDK (exigido pelo emulador do Firestore)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Rodar testes das Firestore Rules
+        run: npm run test:rules
+
       - name: Cache Next.js build cache
         uses: actions/cache@v6
         with:
