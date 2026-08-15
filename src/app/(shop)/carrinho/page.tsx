@@ -56,17 +56,17 @@ export default function CartPage() {
     }).catch(() => {});
   }, [cart]);
 
-  async function removeItem(sku: string) {
+  async function removeItem(sku: string, note?: string) {
     if (!user || !cart) return;
-    setRemoving(sku);
-    await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.filter(i => i.sku !== sku) });
+    setRemoving(note ? `${sku}::${note}` : sku);
+    await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.filter(i => !(i.sku === sku && i.note === note)) });
     setRemoving(null);
   }
-  async function updateQty(sku: string, qty: number) {
+  async function updateQty(sku: string, qty: number, note?: string) {
     if (!user || !cart) return;
-    if (qty < 1) { await removeItem(sku); return; }
+    if (qty < 1) { await removeItem(sku, note); return; }
     await updateDoc(doc(db, 'carts', user.uid), {
-      items: cart.items.map(i => i.sku === sku ? { ...i, quantity: qty } : i),
+      items: cart.items.map(i => (i.sku === sku && i.note === note) ? { ...i, quantity: qty } : i),
     });
   }
 
@@ -164,10 +164,12 @@ export default function CartPage() {
           {/* ── Itens ── */}
           <div>
             <div className="divide-y divide-mist/70">
-              {items.map(item => (
+              {items.map(item => {
+                const lineKey = item.note ? `${item.sku}::${item.note}` : item.sku;
+                return (
                 <div
-                  key={item.sku}
-                  className={`flex gap-4 sm:gap-5 py-6 transition-opacity ${removing === item.sku ? 'opacity-40 pointer-events-none' : ''}`}
+                  key={lineKey}
+                  className={`flex gap-4 sm:gap-5 py-6 transition-opacity ${removing === lineKey ? 'opacity-40 pointer-events-none' : ''}`}
                 >
                   {/* Imagem */}
                   <Link href={`/produtos/${item.productId}`} className="relative shrink-0 w-20 h-24 sm:w-24 sm:h-28 bg-warm overflow-hidden border border-mist/60 block">
@@ -187,6 +189,9 @@ export default function CartPage() {
                         {[item.variant.size, item.variant.fabric, item.variant.colorName || item.variant.color].filter(Boolean).join(' · ')}
                       </p>
                     )}
+                    {item.note && (
+                      <p className="text-xs text-clay font-medium">{item.note}</p>
+                    )}
                     {(() => {
                       const avail = stockMap[item.sku];
                       if (avail === 0) return <p className="text-xs text-red-500 font-semibold">Fora de estoque, remova do carrinho</p>;
@@ -199,14 +204,14 @@ export default function CartPage() {
                   {/* Qtd + remove */}
                   <div className="flex flex-col items-end justify-between shrink-0">
                     <button
-                      onClick={() => removeItem(item.sku)}
+                      onClick={() => removeItem(item.sku, item.note)}
                       className="text-xs text-faint hover:text-red-500 transition-colors font-medium"
                     >
                       Remover
                     </button>
                     <div className="flex items-center border border-mist">
                       <button
-                        onClick={() => updateQty(item.sku, item.quantity - 1)}
+                        onClick={() => updateQty(item.sku, item.quantity - 1, item.note)}
                         className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
                         aria-label="Diminuir"
                       >
@@ -214,7 +219,7 @@ export default function CartPage() {
                       </button>
                       <span className="w-9 text-center text-sm font-semibold text-ink tabular-nums">{item.quantity}</span>
                       <button
-                        onClick={() => { const avail = stockMap[item.sku] ?? 99; if (item.quantity < avail) updateQty(item.sku, item.quantity + 1); }}
+                        onClick={() => { const avail = stockMap[item.sku] ?? 99; if (item.quantity < avail) updateQty(item.sku, item.quantity + 1, item.note); }}
                         disabled={(stockMap[item.sku] ?? 99) <= item.quantity}
                         className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         aria-label="Aumentar"
@@ -224,7 +229,7 @@ export default function CartPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
 
             {/* Cupom */}

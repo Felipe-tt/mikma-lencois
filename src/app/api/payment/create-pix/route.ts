@@ -9,6 +9,7 @@ import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests, addressSchema, validateBody, getClientIp } from '@/lib/security';
+import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
     }
     const cartData = cartSnap.data()!;
-    const cartItems: Array<{ sku: string; productId: string; quantity: number }> = cartData.items;
+    const cartItems: Array<{ sku: string; productId: string; quantity: number; note?: string }> = cartData.items;
     const cartCouponCode: string | null = cartData.couponCode ?? null;
 
     // ── Load product prices/pesos from Firestore (nunca confia no cliente) ───
@@ -84,10 +85,11 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Build verified order items ────────────────────────────────────────────
-    const verifiedItems = cartItems.map(ci => {
+    const verifiedItems = cartItems.map(({ note: rawNote, ...ci }) => {
       const prod = productMap[ci.productId];
       if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
-      return { ...ci, unitPrice: prod.price, productName: prod.name };
+      const note = rawNote?.trim().slice(0, 120) || undefined;
+      return { ...ci, unitPrice: prod.price, productName: prod.name, ...(note ? { note } : {}) };
     });
 
     const productsCents = computeProductsCents(verifiedItems.map(i => ({ unitPrice: i.unitPrice, quantity: i.quantity })));
@@ -210,6 +212,8 @@ export async function POST(req: NextRequest) {
       couponDiscountCents,
       ...(couponCode ? { couponCode } : {}),
       totalCents: amountCents,
+      clientIp: ip,
+      addressKey: normalizeAddressKey(address),
       payment: { method: 'pix' },
       delivery: {
         carrier: matchedShipping.carrier,

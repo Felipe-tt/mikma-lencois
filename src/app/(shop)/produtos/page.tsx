@@ -21,8 +21,8 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       ? `Busca por "${q}"`
       : 'Todos os produtos';
   const description = categoria
-    ? `Confira nossa linha de ${categoria.toLowerCase()}: lençóis, edredons e enxoval de cama com qualidade e conforto.`
-    : 'Explore nosso catálogo completo de lençóis, edredons e enxoval de cama.';
+    ? `Confira nossa linha de ${categoria.toLowerCase()}: lençóis e fronhas com qualidade e conforto.`
+    : 'Explore nosso catálogo completo de lençóis e fronhas.';
   return {
     title,
     description,

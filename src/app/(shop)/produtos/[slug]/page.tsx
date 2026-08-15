@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Product, InventoryItem, Review } from '@/types';
 import { BuyBox } from '@/components/product/BuyBox';
+import { JogoDeCamaBuyBox } from '@/components/product/JogoDeCamaBuyBox';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCarousel } from '@/components/product/ProductCarousel';
 import { ProductReviews } from '@/components/product/ProductReviews';
@@ -65,6 +66,21 @@ async function getReviews(productId: string): Promise<Review[]> {
   } catch { return []; }
 }
 
+// Só pra produtos "Jogos de cama" (já vêm com fronha inclusa): lista as
+// Fronhas ativas do catálogo, pro cliente trocar a fronha padrão por
+// outra cor/estampa na hora de comprar.
+async function getFronhaOptions(product: Product): Promise<Product[]> {
+  if (product.category !== 'Jogos de cama') return [];
+  try {
+    const snap = await adminDb.collection('products')
+      .where('active', '==', true)
+      .where('category', '==', 'Fronhas')
+      .limit(30)
+      .get();
+    return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
+  } catch { return []; }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = await getProduct(slug);
@@ -89,7 +105,7 @@ export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const [product, inventory, s] = await Promise.all([getProduct(slug), getInventory(slug), getSettings()]);
   if (!product) notFound();
-  const [related, reviews] = await Promise.all([getRelated(product), getReviews(product.id)]);
+  const [related, reviews, fronhaOptions] = await Promise.all([getRelated(product), getReviews(product.id), getFronhaOptions(product)]);
 
   // Extract specs from tags (thread count, fabric composition, etc.)
   // Size guide data from settings
@@ -231,12 +247,22 @@ export default async function ProductPage({ params }: Props) {
 
           {/* ── Coluna direita: buy box fixa, padrão marketplace ── */}
           <FadeIn className="lg:sticky lg:top-24" delay={100}>
-            <BuyBox
-              product={product}
-              inventory={inventory}
-              pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
-              pixDiscountPct={s.pixDiscountPct ?? 0}
-            />
+            {product.category === 'Jogos de cama' && fronhaOptions.length > 0 ? (
+              <JogoDeCamaBuyBox
+                product={product}
+                inventory={inventory}
+                pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
+                pixDiscountPct={s.pixDiscountPct ?? 0}
+                fronhaOptions={fronhaOptions}
+              />
+            ) : (
+              <BuyBox
+                product={product}
+                inventory={inventory}
+                pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
+                pixDiscountPct={s.pixDiscountPct ?? 0}
+              />
+            )}
           </FadeIn>
         </div>
       </div>

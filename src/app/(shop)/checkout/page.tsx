@@ -695,7 +695,7 @@ export default function CheckoutPage() {
               {/* Items */}
               <div className="px-5 py-4 flex flex-col gap-4">
                 {items.map(item => (
-                  <div key={item.sku} className="flex items-start gap-3">
+                  <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex items-start gap-3">
                     <div className="relative shrink-0 w-12 h-14 bg-paper border border-mist overflow-hidden">
                       {item.image
                         ? <Image src={item.image} alt={item.productName} fill sizes="48px" className="object-cover" />
@@ -708,6 +708,7 @@ export default function CheckoutPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-ink leading-snug line-clamp-2">{item.productName}</p>
                       {item.variant?.size && <p className="text-[11px] text-faint mt-0.5">{item.variant.size}</p>}
+                      {item.note && <p className="text-[11px] text-clay font-medium mt-0.5">{item.note}</p>}
                     </div>
                     <span className="text-xs font-semibold text-ink shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
                   </div>

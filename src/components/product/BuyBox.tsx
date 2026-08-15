@@ -16,6 +16,7 @@ interface Props {
   inventory: InventoryItem[];
   pixDiscountThresholdCents: number;
   pixDiscountPct: number;
+  note?: string; // ex: "Fronha trocada: Floral Rosa", escolhida no JogoDeCamaFronhaPicker acima
 }
 
 interface ShipOption {
@@ -26,7 +27,7 @@ interface ShipOption {
   tag?: 'local' | 'economico' | 'rapido';
 }
 
-export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct }: Props) {
+export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note }: Props) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(product.variants[0]?.id ?? null);
@@ -74,10 +75,14 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   async function addItemToCart(finalQty: number): Promise<boolean> {
     if (!user || !selectedVariant) return false;
     const sku = `${product.id}_${selectedVariant.id}`;
+    // Uma escolha de fronha diferente vira uma linha separada no carrinho,
+    // mesmo pro mesmo produto/variante — combinar quantidade ali juntaria
+    // pedidos com trocas diferentes numa linha só, perdendo a informação.
+    const lineKey = note ? `${sku}::${note}` : sku;
     const cartRef = doc(db, 'carts', user.uid);
     const cartSnap = await getDoc(cartRef);
     const existingItems: CartItem[] = cartSnap.exists() ? (cartSnap.data().items ?? []) : [];
-    const existing = existingItems.find(i => i.sku === sku);
+    const existing = existingItems.find(i => (i.note ? `${i.sku}::${i.note}` : i.sku) === lineKey);
     const newQty = Math.min(availableStock, (existing?.quantity ?? 0) + finalQty);
 
     const newItem: CartItem = {
@@ -88,10 +93,11 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       quantity: newQty,
       unitPrice: product.price,
       image: product.images[0] ?? '',
+      ...(note ? { note } : {}),
     };
 
     const updatedItems = existing
-      ? existingItems.map(i => i.sku === sku ? newItem : i)
+      ? existingItems.map(i => ((i.note ? `${i.sku}::${i.note}` : i.sku) === lineKey ? newItem : i))
       : [...existingItems, newItem];
 
     await setDoc(cartRef, { userId: user.uid, items: updatedItems, updatedAt: serverTimestamp() }, { merge: true });

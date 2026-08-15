@@ -108,6 +108,7 @@ export interface OrderItem {
   quantity: number
   unitPrice: number // centavos
   image?: string
+  note?: string // ex: "Fronha trocada: Floral Rosa" — visível pro vendedor no painel
 }
 
 export interface OrderTimelineEvent {
@@ -163,6 +164,8 @@ export interface Order {
   totalCents: number
   discountCents?: number
   couponCode?: string
+  clientIp?: string   // IP de quem finalizou a compra, só pra sinalização de fraude no painel (nunca exposto ao cliente)
+  addressKey?: string // hash normalizado do endereço, indexável, usado só pra cruzar pedidos no /api/painel/pedidos/[orderId]/fraud-signals
   createdAt: string
   updatedAt?: string
   timeline?: OrderTimelineEvent[]
@@ -206,6 +209,7 @@ export interface CartItem {
   quantity: number
   unitPrice: number
   image: string
+  note?: string // ex: troca de fronha escolhida num Jogo de Cama
 }
 
 export interface Cart {
