@@ -9,6 +9,7 @@ import { notifySeller } from '@/lib/push/notifySeller';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
+import { expandStockLines } from '@/lib/orderStockLines';
 import { recordShippingCollected } from '@/lib/shipping-ledger';
 import { z } from 'zod';
 import { webhookSchema } from './schema';
@@ -106,11 +107,12 @@ export async function POST(req: NextRequest) {
         // Decrementa quantity (estoque real, debitado de fato) e reserved
         // (libera a reserva feita em create-checkout/create-pix na criação
         // do pedido), ambos pelo mesmo motivo: a venda se concretizou.
-        for (const item of data.items as Array<{ sku: string; quantity: number }>) {
-          const invRef = adminDb.collection('inventory').doc(item.sku);
+        // expandStockLines inclui a fronha trocada (Jogo de Cama) junto.
+        for (const line of expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQty?: number }>)) {
+          const invRef = adminDb.collection('inventory').doc(line.sku);
           tx.update(invRef, {
-            quantity: FieldValue.increment(-item.quantity),
-            reserved: FieldValue.increment(-item.quantity),
+            quantity: FieldValue.increment(-line.quantity),
+            reserved: FieldValue.increment(-line.quantity),
             updatedAt: FieldValue.serverTimestamp(),
           });
         }

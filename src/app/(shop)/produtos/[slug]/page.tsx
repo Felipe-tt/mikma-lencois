@@ -81,6 +81,19 @@ async function getFronhaOptions(product: Product): Promise<Product[]> {
   } catch { return []; }
 }
 
+// Estoque de cada Fronha candidata à troca, pra não deixar escolher uma
+// que já está esgotada.
+async function getFronhaInventory(fronhaIds: string[]): Promise<InventoryItem[]> {
+  if (fronhaIds.length === 0) return [];
+  try {
+    const snap = await adminDb.collection('inventory')
+      .where('productId', 'in', fronhaIds.slice(0, 30))
+      .select('variant', 'quantity', 'reserved', 'lowStockThreshold', 'productId')
+      .get();
+    return snap.docs.map(d => serialize<InventoryItem>({ sku: d.id, ...d.data() }));
+  } catch { return []; }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = await getProduct(slug);
@@ -106,6 +119,7 @@ export default async function ProductPage({ params }: Props) {
   const [product, inventory, s] = await Promise.all([getProduct(slug), getInventory(slug), getSettings()]);
   if (!product) notFound();
   const [related, reviews, fronhaOptions] = await Promise.all([getRelated(product), getReviews(product.id), getFronhaOptions(product)]);
+  const fronhaInventory = await getFronhaInventory(fronhaOptions.map(f => f.id));
 
   // Extract specs from tags (thread count, fabric composition, etc.)
   // Size guide data from settings
@@ -254,6 +268,7 @@ export default async function ProductPage({ params }: Props) {
                 pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
                 pixDiscountPct={s.pixDiscountPct ?? 0}
                 fronhaOptions={fronhaOptions}
+                fronhaInventory={fronhaInventory}
               />
             ) : (
               <BuyBox

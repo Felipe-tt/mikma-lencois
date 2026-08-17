@@ -109,6 +109,8 @@ export interface OrderItem {
   unitPrice: number // centavos
   image?: string
   note?: string // ex: "Fronha trocada: Floral Rosa" — visível pro vendedor no painel
+  swapSku?: string  // SKU da Fronha escolhida no lugar da padrão, teve estoque reservado junto
+  swapQty?: number
 }
 
 export interface OrderTimelineEvent {
@@ -210,6 +212,8 @@ export interface CartItem {
   unitPrice: number
   image: string
   note?: string // ex: troca de fronha escolhida num Jogo de Cama
+  swapSku?: string  // SKU da Fronha escolhida no lugar da padrão, pra reservar estoque dela também
+  swapQty?: number  // quantas fronhas o Jogo de Cama inclui (reservado da fronha trocada)
 }
 
 export interface Cart {

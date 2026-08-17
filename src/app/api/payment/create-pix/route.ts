@@ -10,6 +10,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests, addressSchema, validateBody, getClientIp } from '@/lib/security';
 import { normalizeAddressKey } from '@/lib/fraudSignals';
+import { expandStockLines } from '@/lib/orderStockLines';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
@@ -156,9 +157,14 @@ export async function POST(req: NextRequest) {
     // podiam ambos "ver" a última unidade livre e ambos reservarem. Agora tudo
     // acontece dentro de uma única transação do Firestore, que serializa
     // automaticamente escritas concorrentes no mesmo documento (retry interno).
+    //
+    // expandStockLines soma as linhas de estoque de fronha trocada (Jogo de
+    // Cama) às linhas normais, pra reservar a fronha escolhida junto e não
+    // deixar vender ela duas vezes sem perceber.
+    const stockLines = expandStockLines(cartItems);
     const inventoryQueries = await Promise.all(
-      cartItems.map(ci =>
-        adminDb.collection('inventory').where('sku', '==', ci.sku).limit(1).get()
+      stockLines.map(line =>
+        adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get()
       )
     );
     const invDocRefs = inventoryQueries.map(snap => snap.docs[0]?.ref ?? null);
@@ -169,22 +175,21 @@ export async function POST(req: NextRequest) {
         const invSnaps = await Promise.all(
           invDocRefs.map(ref => (ref ? tx.get(ref) : null))
         );
-        for (let i = 0; i < cartItems.length; i++) {
+        for (let i = 0; i < stockLines.length; i++) {
           const snap = invSnaps[i];
           if (!snap) continue; // item sem controle de estoque passa
           const inv = snap.data()!;
           const available = (inv.quantity ?? 0) - (inv.reserved ?? 0);
-          if (available < cartItems[i].quantity) {
-            const ci = cartItems[i];
-            const name = productMap[ci.productId]?.name ?? ci.sku;
+          if (available < stockLines[i].quantity) {
+            const name = productMap[stockLines[i].productId]?.name ?? stockLines[i].sku;
             throw new StockError(`"${name}" não tem estoque suficiente. Disponível: ${available}`);
           }
         }
-        for (let i = 0; i < cartItems.length; i++) {
+        for (let i = 0; i < stockLines.length; i++) {
           const ref = invDocRefs[i];
           if (!ref) continue;
           tx.update(ref, {
-            reserved: FieldValue.increment(cartItems[i].quantity),
+            reserved: FieldValue.increment(stockLines[i].quantity),
             updatedAt: FieldValue.serverTimestamp(),
           });
         }
@@ -304,11 +309,11 @@ export async function POST(req: NextRequest) {
     if (!pixRes.ok) {
       await orderRef.delete();
       // Liberar reserva de estoque
-      for (let i = 0; i < cartItems.length; i++) {
+      for (let i = 0; i < stockLines.length; i++) {
         const ref = invDocRefs[i];
         if (!ref) continue;
         ref.update({
-          reserved: FieldValue.increment(-cartItems[i].quantity),
+          reserved: FieldValue.increment(-stockLines[i].quantity),
           updatedAt: FieldValue.serverTimestamp(),
         }).catch(() => {});
       }

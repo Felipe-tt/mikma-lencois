@@ -17,6 +17,8 @@ interface Props {
   pixDiscountThresholdCents: number;
   pixDiscountPct: number;
   note?: string; // ex: "Fronha trocada: Floral Rosa", escolhida no JogoDeCamaFronhaPicker acima
+  swapSku?: string; // SKU da fronha trocada, pra reservar estoque dela junto (ver JogoDeCamaBuyBox)
+  swapQty?: number;
 }
 
 interface ShipOption {
@@ -27,7 +29,7 @@ interface ShipOption {
   tag?: 'local' | 'economico' | 'rapido';
 }
 
-export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note }: Props) {
+export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapQty }: Props) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(product.variants[0]?.id ?? null);
@@ -94,6 +96,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       unitPrice: product.price,
       image: product.images[0] ?? '',
       ...(note ? { note } : {}),
+      ...(swapSku && swapQty ? { swapSku, swapQty } : {}),
     };
 
     const updatedItems = existing

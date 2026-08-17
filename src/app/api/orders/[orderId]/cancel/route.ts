@@ -4,6 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { extractBearer, tooManyRequests } from '@/lib/security';
+import { expandStockLines } from '@/lib/orderStockLines';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
@@ -58,12 +59,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   }
 
   // Pedido pendente sempre tem estoque reservado (reservado na criação do PIX/checkout), liberar agora
-  const items = (order.items ?? []) as Array<{ sku: string; quantity: number }>;
-  for (const item of items) {
-    const invSnap = await adminDb.collection('inventory').where('sku', '==', item.sku).limit(1).get();
+  const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQty?: number }>;
+  for (const line of expandStockLines(items)) {
+    const invSnap = await adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get();
     if (!invSnap.empty) {
       adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
-        reserved: FieldValue.increment(-item.quantity),
+        reserved: FieldValue.increment(-line.quantity),
         updatedAt: FieldValue.serverTimestamp(),
       }).catch(() => {});
     }
