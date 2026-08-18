@@ -10,7 +10,7 @@ describe('expandStockLines', () => {
 
   it('item com fronha trocada vira duas linhas', () => {
     const lines = expandStockLines([
-      { productId: 'jogo1', sku: 'jogo1_v1', quantity: 1, swapSku: 'fronha2_v1', swapQty: 2 },
+      { productId: 'jogo1', sku: 'jogo1_v1', quantity: 1, swapSku: 'fronha2_v1', swapQtyPerUnit: 2 },
     ]);
     expect(lines).toEqual([
       { productId: 'jogo1', sku: 'jogo1_v1', quantity: 1 },
@@ -18,7 +18,16 @@ describe('expandStockLines', () => {
     ]);
   });
 
-  it('swapSku sem swapQty não gera linha extra (dado incompleto, ignora)', () => {
+  it('CRÍTICO: swapQtyPerUnit escala com a quantidade do item, não fica fixo', () => {
+    // 2 Jogos de Cama, cada um com 2 fronhas -> precisa reservar 4 fronhas, não 2
+    const lines = expandStockLines([
+      { productId: 'jogo1', sku: 'jogo1_v1', quantity: 2, swapSku: 'fronha2_v1', swapQtyPerUnit: 2 },
+    ]);
+    const fronhaLine = lines.find(l => l.sku === 'fronha2_v1');
+    expect(fronhaLine?.quantity).toBe(4);
+  });
+
+  it('swapSku sem swapQtyPerUnit não gera linha extra (dado incompleto, ignora)', () => {
     const lines = expandStockLines([
       { productId: 'jogo1', sku: 'jogo1_v1', quantity: 1, swapSku: 'fronha2_v1' },
     ]);
@@ -28,7 +37,7 @@ describe('expandStockLines', () => {
   it('mistura itens com e sem troca', () => {
     const lines = expandStockLines([
       { productId: 'lencol1', sku: 'lencol1_v1', quantity: 1 },
-      { productId: 'jogo1', sku: 'jogo1_v1', quantity: 1, swapSku: 'fronha2_v1', swapQty: 2 },
+      { productId: 'jogo1', sku: 'jogo1_v1', quantity: 1, swapSku: 'fronha2_v1', swapQtyPerUnit: 2 },
       { productId: 'fronha1', sku: 'fronha1_v1', quantity: 3 },
     ]);
     expect(lines.map(l => l.sku).sort()).toEqual(['fronha1_v1', 'fronha2_v1', 'jogo1_v1', 'lencol1_v1']);
@@ -36,8 +45,8 @@ describe('expandStockLines', () => {
 
   it('CRÍTICO: dois Jogos de Cama diferentes trocados pela mesma fronha mesclam numa linha só, quantidade somada', () => {
     const lines = expandStockLines([
-      { productId: 'jogo1', sku: 'jogo1_v1', quantity: 1, swapSku: 'fronhaX_v1', swapQty: 2 },
-      { productId: 'jogo2', sku: 'jogo2_v1', quantity: 1, swapSku: 'fronhaX_v1', swapQty: 2 },
+      { productId: 'jogo1', sku: 'jogo1_v1', quantity: 1, swapSku: 'fronhaX_v1', swapQtyPerUnit: 2 },
+      { productId: 'jogo2', sku: 'jogo2_v1', quantity: 1, swapSku: 'fronhaX_v1', swapQtyPerUnit: 2 },
     ]);
     const fronhaLine = lines.find(l => l.sku === 'fronhaX_v1');
     expect(fronhaLine?.quantity).toBe(4);

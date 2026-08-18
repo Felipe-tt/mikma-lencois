@@ -11,6 +11,7 @@ import { randomBytes } from 'crypto';
 import { tooManyRequests, addressSchema, validateBody, getClientIp } from '@/lib/security';
 import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { expandStockLines } from '@/lib/orderStockLines';
+import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
@@ -66,27 +67,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
     }
     const cartData = cartSnap.data()!;
-    const cartItems: Array<{ sku: string; productId: string; quantity: number; note?: string }> = cartData.items;
+    const cartItems: Array<{ sku: string; productId: string; quantity: number; note?: string; swapSku?: string; swapQtyPerUnit?: number }> = cartData.items;
     const cartCouponCode: string | null = cartData.couponCode ?? null;
 
     // ── Load product prices/pesos from Firestore (nunca confia no cliente) ───
-    const productIds = Array.from(new Set(cartItems.map(i => i.productId)));
+    // Inclui também os produtos referenciados só via swapSku (troca de
+    // fronha em Jogo de Cama) — precisa deles pra validar o swap abaixo,
+    // não só pra preço/peso do item principal.
+    const swapProductIds = cartItems
+      .map(i => i.swapSku?.split('_')[0])
+      .filter((id): id is string => !!id);
+    const productIds = Array.from(new Set([...cartItems.map(i => i.productId), ...swapProductIds]));
     const productDocs = await Promise.all(
       productIds.map(id => adminDb.collection('products').doc(id).get())
     );
-    const productMap: Record<string, { price: number; name: string; weightKg?: number }> = {};
+    const productMap: Record<string, { price: number; name: string; weightKg?: number; active: boolean; category: string }> = {};
     for (const snap of productDocs) {
       if (snap.exists) {
         productMap[snap.id] = {
           price: snap.data()!.price as number,
           name: snap.data()!.name as string,
           weightKg: snap.data()!.weightKg as number | undefined,
+          active: snap.data()!.active as boolean,
+          category: snap.data()!.category as string,
         };
       }
     }
 
+    // ── Nunca confia no swapSku/swapQtyPerUnit vindo do carrinho (escrito
+    // direto pelo client SDK, sem passar por API) ─────────────────────────
+    const productLookup = new Map<string, ProductLookup>(
+      Object.entries(productMap).map(([id, p]) => [id, { id, active: p.active, category: p.category }])
+    );
+    const sanitizedCartItems = sanitizeSwaps(cartItems, productLookup);
+
     // ── Build verified order items ────────────────────────────────────────────
-    const verifiedItems = cartItems.map(({ note: rawNote, ...ci }) => {
+    const verifiedItems = sanitizedCartItems.map(({ note: rawNote, ...ci }) => {
       const prod = productMap[ci.productId];
       if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
       const note = rawNote?.trim().slice(0, 120) || undefined;
@@ -161,7 +177,7 @@ export async function POST(req: NextRequest) {
     // expandStockLines soma as linhas de estoque de fronha trocada (Jogo de
     // Cama) às linhas normais, pra reservar a fronha escolhida junto e não
     // deixar vender ela duas vezes sem perceber.
-    const stockLines = expandStockLines(cartItems);
+    const stockLines = expandStockLines(sanitizedCartItems);
     const inventoryQueries = await Promise.all(
       stockLines.map(line =>
         adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get()

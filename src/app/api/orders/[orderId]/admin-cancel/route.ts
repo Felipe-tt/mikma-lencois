@@ -78,7 +78,7 @@ export async function POST(
   });
 
   const isPending = PENDING_STATUSES.has(order.status);
-  const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQty?: number }>;
+  const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>;
 
   for (const line of expandStockLines(items)) {
     const invQuery = await adminDb

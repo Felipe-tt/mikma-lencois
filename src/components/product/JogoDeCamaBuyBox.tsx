@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { BuyBox } from './BuyBox';
+import { FRONHAS_POR_JOGO } from '@/lib/fronhaSwap';
 import type { Product, InventoryItem } from '@/types';
 
 interface Props {
@@ -14,17 +15,17 @@ interface Props {
   fronhaInventory: InventoryItem[];  // estoque dessas fronhas, pra não deixar escolher uma esgotada
 }
 
-// Todos os 3 Jogos de Cama hoje são queen com 2 fronhas cada. Se um jogo
-// diferente (ex: solteiro, 1 fronha) for cadastrado no futuro, esse valor
-// fixo vai reservar fronha a mais/a menos — ajustar aqui se isso mudar.
-const FRONHAS_POR_JOGO = 2;
-
 // Jogos de Cama já vêm com fronha inclusa (fixa). Esse componente deixa o
 // cliente escolher, opcionalmente, uma Fronha diferente do catálogo pra
 // vir no lugar da padrão. A escolha reserva estoque da fronha trocada de
 // verdade (mesma transação da compra, ver expandStockLines em
 // create-pix/create-checkout) e fica anotada como `note` no
 // carrinho/pedido, pro vendedor ver qual fronha embalar.
+//
+// IMPORTANTE: FRONHAS_POR_JOGO (o "2") é só o valor ENVIADO — quem decide
+// se aceita é o backend (src/lib/fronhaSwap.ts, sanitizeSwaps), que
+// rejeita qualquer swapQtyPerUnit diferente do esperado. O carrinho é
+// escrito direto pelo client SDK, então nada aqui é confiável sozinho.
 export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, fronhaOptions, fronhaInventory }: Props) {
   const [chosenFronhaId, setChosenFronhaId] = useState<string>('default');
 
@@ -38,8 +39,11 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
 
   const chosenFronha = fronhaOptions.find(f => f.id === chosenFronhaId);
   const chosenVariant = chosenFronha?.variants[0];
-  const note = chosenFronha ? `Fronha trocada: ${chosenFronha.name}` : undefined;
+  // note e swapSku sempre juntos ou nenhum dos dois — uma fronha sem
+  // nenhuma variante cadastrada (dado incompleto) não pode gerar um aviso
+  // de troca sem reserva de estoque correspondente por trás dele.
   const swapSku = chosenFronha && chosenVariant ? `${chosenFronha.id}_${chosenVariant.id}` : undefined;
+  const note = swapSku ? `Fronha trocada: ${chosenFronha!.name}` : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -88,7 +92,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
             );
           })}
 
-          {chosenFronha && (
+          {note && (
             <p className="text-[11px] text-faint">
               A fronha escolhida fica reservada junto com sua compra.
             </p>
@@ -103,7 +107,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
         pixDiscountPct={pixDiscountPct}
         note={note}
         swapSku={swapSku}
-        swapQty={swapSku ? FRONHAS_POR_JOGO : undefined}
+        swapQtyPerUnit={swapSku ? FRONHAS_POR_JOGO : undefined}
       />
     </div>
   );

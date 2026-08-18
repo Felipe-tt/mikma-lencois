@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   }
 
   // Pedido pendente sempre tem estoque reservado (reservado na criação do PIX/checkout), liberar agora
-  const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQty?: number }>;
+  const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>;
   for (const line of expandStockLines(items)) {
     const invSnap = await adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get();
     if (!invSnap.empty) {

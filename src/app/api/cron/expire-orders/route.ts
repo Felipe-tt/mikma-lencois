@@ -188,7 +188,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Libera reserva de estoque
-        const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQty?: number }>;
+        const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>;
         for (const line of expandStockLines(items)) {
           const invSnap = await adminDb
             .collection('inventory')

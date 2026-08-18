@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         // (libera a reserva feita em create-checkout/create-pix na criação
         // do pedido), ambos pelo mesmo motivo: a venda se concretizou.
         // expandStockLines inclui a fronha trocada (Jogo de Cama) junto.
-        for (const line of expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQty?: number }>)) {
+        for (const line of expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>)) {
           const invRef = adminDb.collection('inventory').doc(line.sku);
           tx.update(invRef, {
             quantity: FieldValue.increment(-line.quantity),
@@ -302,9 +302,9 @@ export async function POST(req: NextRequest) {
             }),
           });
 
-          for (const item of data.items as Array<{ sku: string; quantity: number }>) {
-            tx.update(adminDb.collection('inventory').doc(item.sku), {
-              reserved: FieldValue.increment(-item.quantity),
+          for (const line of expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>)) {
+            tx.update(adminDb.collection('inventory').doc(line.sku), {
+              reserved: FieldValue.increment(-line.quantity),
               updatedAt: FieldValue.serverTimestamp(),
             });
           }

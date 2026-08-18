@@ -110,7 +110,7 @@ export interface OrderItem {
   image?: string
   note?: string // ex: "Fronha trocada: Floral Rosa" — visível pro vendedor no painel
   swapSku?: string  // SKU da Fronha escolhida no lugar da padrão, teve estoque reservado junto
-  swapQty?: number
+  swapQtyPerUnit?: number  // fronhas por UNIDADE deste item (multiplica por quantity na hora de reservar/liberar, ver src/lib/orderStockLines.ts). Validado server-side em src/lib/fronhaSwap.ts, nunca confia no valor do carrinho.
 }
 
 export interface OrderTimelineEvent {
@@ -213,7 +213,7 @@ export interface CartItem {
   image: string
   note?: string // ex: troca de fronha escolhida num Jogo de Cama
   swapSku?: string  // SKU da Fronha escolhida no lugar da padrão, pra reservar estoque dela também
-  swapQty?: number  // quantas fronhas o Jogo de Cama inclui (reservado da fronha trocada)
+  swapQtyPerUnit?: number  // fronhas por UNIDADE deste item — escala com quantity, não é um total fixo
 }
 
 export interface Cart {
