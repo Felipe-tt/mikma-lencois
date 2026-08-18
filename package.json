@@ -12,7 +12,7 @@
     "test:rules": "firebase emulators:exec --only firestore --project mikma-rules-test \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {
-    "@google-cloud/storage": "^7.21.0",
+    "@google-cloud/storage": "^8.0.0",
     "@node-rs/argon2": "^2.0.2",
     "@sentry/nextjs": "^10.69.0",
     "@tailwindcss/postcss": "^4.3.3",
