@@ -47,6 +47,7 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
         return {
           sku: it.sku, productId: it.productId, productName: it.productName,
           variant: it.variant, quantity: selected[i],
+          ...(it.swapSku && it.swapQtyPerUnit ? { swapSku: it.swapSku, swapQtyPerUnit: it.swapQtyPerUnit } : {}),
         };
       });
       await addDoc(collection(db, 'returns'), {

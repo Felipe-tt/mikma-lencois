@@ -183,6 +183,8 @@ export interface ReturnItem {
   productName: string
   variant: ProductVariant
   quantity: number
+  swapSku?: string          // fronha trocada nesse item (Jogo de Cama), pra reestocar ela também na devolução
+  swapQtyPerUnit?: number
 }
 
 export interface ReturnRequest {
