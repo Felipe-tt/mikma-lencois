@@ -212,6 +212,36 @@ export async function POST(req: NextRequest) {
     const totalCents = computeCardTotalCents({ productsCents, couponDiscountCents, shippingCents, feeRate });
     const installmentCents = Math.round(totalCents / parsedInstallments);
 
+    // ── Idempotência: evita pedido duplicado por duplo-clique/duas abas ──────
+    // Ver mesmo mecanismo em create-pix/route.ts. Só reaproveita se: mesmo
+    // usuário, cartão, criado há pouco, e com o MESMO valor calculado agora.
+    {
+      const recentCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const existingSnap = await adminDb.collection('orders')
+        .where('userId', '==', uid)
+        .where('status', '==', 'pending_payment')
+        .where('payment.method', '==', 'card')
+        .orderBy('createdAt', 'desc')
+        .limit(1)
+        .get();
+      const existing = existingSnap.docs[0]?.data();
+      if (
+        existing &&
+        existing.createdAt > recentCutoff &&
+        existing.totalCents === totalCents &&
+        existing.payment?.installments === parsedInstallments &&
+        existing.payment?.checkoutUrl
+      ) {
+        return NextResponse.json({
+          orderId: existingSnap.docs[0].id,
+          checkoutUrl: existing.payment.checkoutUrl,
+          totalCents: existing.totalCents,
+          installments: existing.payment.installments,
+          installmentCents: existing.payment.installmentCents,
+        });
+      }
+    }
+
     // ── Checar e reservar estoque ATOMICAMENTE (evita oversell por concorrência) ──
     // Ver mesmo fix em create-pix/route.ts: check e reserve unidos numa transação
     // do Firestore em vez de dois passos separados (que permitiam duas compras

@@ -190,6 +190,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
     }
 
+    // ── Idempotência: evita pedido duplicado por duplo-clique/duas abas ──────
+    // Sem isso, dois cliques rápidos geravam dois pedidos "pending_payment"
+    // independentes, cada um reservando estoque do mesmo carrinho — o
+    // segundo só seria liberado quando o cron de expiração rodasse.
+    // Só reaproveita se: mesmo usuário, PIX, criado há pouco (evita reusar
+    // um pedido antigo esquecido) E com o MESMO valor calculado agora
+    // (evita devolver um PIX de valor desatualizado se o carrinho mudou
+    // entre as duas tentativas).
+    {
+      const recentCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const existingSnap = await adminDb.collection('orders')
+        .where('userId', '==', uid)
+        .where('status', '==', 'pending_payment')
+        .where('payment.method', '==', 'pix')
+        .orderBy('createdAt', 'desc')
+        .limit(1)
+        .get();
+      const existing = existingSnap.docs[0]?.data();
+      if (
+        existing &&
+        existing.createdAt > recentCutoff &&
+        existing.totalCents === amountCents &&
+        existing.payment?.pixQrCode
+      ) {
+        return NextResponse.json({
+          orderId: existingSnap.docs[0].id,
+          txId: existing.payment.txId,
+          qrCode: existing.payment.pixQrCode,
+          copyPaste: existing.payment.pixCopyPaste,
+          expiresAt: existing.payment.expiresAt,
+        });
+      }
+    }
+
     // ── Checar e reservar estoque ATOMICAMENTE (evita oversell por concorrência) ──
     // Antes: check e reserve eram dois passos separados, dois pedidos simultâneos
     // podiam ambos "ver" a última unidade livre e ambos reservarem. Agora tudo
