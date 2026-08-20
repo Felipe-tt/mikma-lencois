@@ -196,3 +196,29 @@ export const productImageUrlSchema = z
   .url()
   .max(500)
   .refine(isValidProductImageUrl, 'URL de imagem inválida');
+
+// Limite generoso pra loja de lençóis/fronhas — ninguém legitimamente
+// compra 50+ unidades da mesma peça pelo site. Existe só como teto de
+// sanidade, a proteção real é rejeitar não-inteiro/zero/negativo/NaN.
+const MAX_CART_ITEM_QUANTITY = 50;
+
+/**
+ * O carrinho (`carts/{uid}`) é escrito direto pelo client SDK do Firestore,
+ * sem passar por nenhuma API — `quantity` é dado NÃO CONFIÁVEL, do mesmo
+ * jeito que preço, produto e swapSku/swapQtyPerUnit já não são (ver
+ * create-pix/create-checkout e src/lib/fronhaSwap.ts).
+ *
+ * Sem essa validação, um item de carrinho com quantity negativa passava
+ * ileso pela checagem de estoque ("disponível < quantidade" é sempre
+ * falso pra quantidade negativa) e ainda por cima DIMINUÍA o preço total
+ * do pedido (quantidade negativa × preço = valor negativo somado ao
+ * total) — um vetor real de fraude de pagamento, não só de estoque.
+ */
+export function isValidCartQuantity(quantity: unknown): quantity is number {
+  return (
+    typeof quantity === 'number' &&
+    Number.isInteger(quantity) &&
+    quantity >= 1 &&
+    quantity <= MAX_CART_ITEM_QUANTITY
+  );
+}

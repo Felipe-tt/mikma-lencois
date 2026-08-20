@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { formatCurrency } from '@/lib/utils/format';
@@ -17,6 +17,7 @@ export default function CartPage() {
   const [cart, setCart] = useState<Cart | null>(null);
   const [cartLoading, setCartLoading] = useState(true);
   const [stockMap, setStockMap] = useState<Record<string, number>>({}); // sku → disponível
+  const [activeMap, setActiveMap] = useState<Record<string, boolean>>({}); // productId → ativo
   const [couponCode, setCouponCode] = useState('');
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
@@ -55,6 +56,24 @@ export default function CartPage() {
       setStockMap(Object.fromEntries(results.map(r => [r.sku, r.available])));
     }).catch(() => {});
   }, [cart]);
+
+  // Produto pode ter sido desativado (removido do catálogo) depois de já
+  // estar no carrinho de alguém — sem checar isso aqui, a pessoa só
+  // descobriria no checkout (ou, sem essa validação, nem descobriria:
+  // era possível comprar um produto desativado que ficou esquecido no
+  // carrinho). Busca em paralelo com o estoque, por productId.
+  useEffect(() => {
+    const items: CartItem[] = cart?.items ?? [];
+    if (items.length === 0) { setActiveMap({}); return; }
+    const productIds = Array.from(new Set(items.map(i => i.productId)));
+    Promise.all(
+      productIds.map(id => getDoc(doc(db, 'products', id)).then(snap => ({ id, active: snap.exists() ? snap.data().active !== false : false })))
+    ).then(results => {
+      setActiveMap(Object.fromEntries(results.map(r => [r.id, r.active])));
+    }).catch(() => {});
+  }, [cart]);
+
+  const hasUnavailableItem = (cart?.items ?? []).some(item => activeMap[item.productId] === false);
 
   async function removeItem(sku: string, note?: string) {
     if (!user || !cart) return;
@@ -193,6 +212,9 @@ export default function CartPage() {
                       <p className="text-xs text-clay font-medium">{item.note}</p>
                     )}
                     {(() => {
+                      if (activeMap[item.productId] === false) {
+                        return <p className="text-xs text-red-500 font-semibold">Produto não está mais disponível, remova do carrinho</p>;
+                      }
                       const avail = stockMap[item.sku];
                       if (avail === 0) return <p className="text-xs text-red-500 font-semibold">Fora de estoque, remova do carrinho</p>;
                       if (avail !== undefined && avail <= 5) return <p className="text-xs text-amber-600 font-semibold">Apenas {avail} {avail === 1 ? 'unidade disponível' : 'unidades disponíveis'}</p>;
@@ -318,15 +340,25 @@ export default function CartPage() {
               </div>
 
               <div className="px-5 pb-5">
-                <Link
-                  href="/checkout"
-                  className="flex items-center justify-center w-full h-14 bg-ink text-paper text-sm font-semibold tracking-[0.05em] hover:bg-clay transition-colors duration-200 active:scale-[0.99]"
-                >
-                  Finalizar compra
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-2 opacity-60">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </Link>              </div>
+                {hasUnavailableItem ? (
+                  <div
+                    className="flex items-center justify-center w-full h-14 bg-mist text-faint text-sm font-semibold tracking-[0.05em] cursor-not-allowed"
+                    title="Remova os itens indisponíveis pra continuar"
+                  >
+                    Remova os itens indisponíveis
+                  </div>
+                ) : (
+                  <Link
+                    href="/checkout"
+                    className="flex items-center justify-center w-full h-14 bg-ink text-paper text-sm font-semibold tracking-[0.05em] hover:bg-clay transition-colors duration-200 active:scale-[0.99]"
+                  >
+                    Finalizar compra
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-2 opacity-60">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </Link>
+                )}
+              </div>
             </div>
 
             {/* Selos mini */}

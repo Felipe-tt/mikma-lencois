@@ -8,7 +8,7 @@ import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
-import { tooManyRequests, addressSchema, validateBody, getClientIp } from '@/lib/security';
+import { tooManyRequests, addressSchema, validateBody, getClientIp, isValidCartQuantity } from '@/lib/security';
 import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
@@ -70,6 +70,12 @@ export async function POST(req: NextRequest) {
     const cartItems: Array<{ sku: string; productId: string; quantity: number; note?: string; swapSku?: string; swapQtyPerUnit?: number }> = cartData.items;
     const cartCouponCode: string | null = cartData.couponCode ?? null;
 
+    // Carrinho é escrito direto pelo client SDK, quantity é dado não
+    // confiável — quantidade negativa passaria ilesa pela checagem de
+    // estoque e ainda diminuiria o total pago (ver isValidCartQuantity).
+    if (cartItems.length === 0 || !cartItems.every(ci => isValidCartQuantity(ci.quantity))) {
+      return NextResponse.json({ error: 'Carrinho inválido' }, { status: 400 });
+    }
     // ── Load product prices/pesos from Firestore (nunca confia no cliente) ───
     // Inclui também os produtos referenciados só via swapSku (troca de
     // fronha em Jogo de Cama) — precisa deles pra validar o swap abaixo,
@@ -94,20 +100,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Nunca confia no swapSku/swapQtyPerUnit vindo do carrinho (escrito
-    // direto pelo client SDK, sem passar por API) ─────────────────────────
+    // ── Nunca confia no swapSku/swapQtyPerUnit/note vindo do carrinho
+    // (escrito direto pelo client SDK, sem passar por API) ─────────────────
     const productLookup = new Map<string, ProductLookup>(
-      Object.entries(productMap).map(([id, p]) => [id, { id, active: p.active, category: p.category }])
+      Object.entries(productMap).map(([id, p]) => [id, { id, name: p.name, active: p.active, category: p.category }])
     );
     const sanitizedCartItems = sanitizeSwaps(cartItems, productLookup);
 
     // ── Build verified order items ────────────────────────────────────────────
-    const verifiedItems = sanitizedCartItems.map(({ note: rawNote, ...ci }) => {
-      const prod = productMap[ci.productId];
-      if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
-      const note = rawNote?.trim().slice(0, 120) || undefined;
-      return { ...ci, unitPrice: prod.price, productName: prod.name, ...(note ? { note } : {}) };
-    });
+    // note já vem confiável de sanitizeSwaps (gerada pelo servidor a
+    // partir do produto validado, ou removida) — não precisa mais
+    // sanitizar aqui, só repassar.
+    let verifiedItems: Array<{ sku: string; productId: string; quantity: number; note?: string; swapSku?: string; swapQtyPerUnit?: number; unitPrice: number; productName: string }>;
+    try {
+      verifiedItems = sanitizedCartItems.map(ci => {
+        const prod = productMap[ci.productId];
+        if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
+        // Produto pode ter sido desativado depois de já estar no carrinho de
+        // alguém (removido do catálogo pelo vendedor) — sem essa checagem,
+        // dava pra comprar um produto que não deveria mais estar à venda.
+        if (!prod.active) {
+          throw new StockError(`"${prod.name}" não está mais disponível. Remova do carrinho e tente novamente.`);
+        }
+        return { ...ci, unitPrice: prod.price, productName: prod.name };
+      });
+    } catch (err) {
+      if (err instanceof StockError) {
+        return NextResponse.json({ error: err.message }, { status: 409 });
+      }
+      throw err;
+    }
 
     const productsCents = computeProductsCents(verifiedItems.map(i => ({ unitPrice: i.unitPrice, quantity: i.quantity })));
 
