@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
@@ -85,17 +85,19 @@ async function lookupIpGeo(ip: string): Promise<GeoResult> {
     },
   ];
 
+  // Antes era sequencial (tentativa 1 -> espera timeout -> tentativa 2 ->
+  // espera timeout -> tentativa 3), o que podia levar até ~13s no pior caso
+  // (uma API lenta ou fora do ar segurando a invocação inteira, faturada
+  // por tempo de compute). Rodando em paralelo, o pior caso vira o maior
+  // timeout individual (5s) em vez da soma de todos.
+  const results = await Promise.allSettled(attempts.map((attempt) => attempt()));
+
   const errors: string[] = [];
-  for (let i = 0; i < attempts.length; i++) {
-    try {
-      const result = await attempts[i]();
-      if (result) return result;
-      errors.push(`attempt_${i + 1}_no_data`);
-    } catch (err) {
-      errors.push(
-        `attempt_${i + 1}_${err instanceof Error ? err.message.slice(0, 40) : 'err'}`
-      );
-    }
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    if (r.status === 'fulfilled' && r.value) return r.value;
+    if (r.status === 'fulfilled') errors.push(`attempt_${i + 1}_no_data`);
+    else errors.push(`attempt_${i + 1}_${r.reason instanceof Error ? r.reason.message.slice(0, 40) : 'err'}`);
   }
 
   return { city: '', region: '', country: '', isp: '', debugError: errors.join('|') };
@@ -124,18 +126,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true }); // já resolvido
   }
 
-  const geo = await lookupIpGeo(ip);
-
-  await ref.set(
-    {
-      geoCity: geo.city,
-      geoRegion: geo.region,
-      geoCountry: geo.country,
-      isp: geo.isp,
-      geoDebug: geo.debugError,
-    },
-    { merge: true }
-  );
+  // Responde ao cliente na hora (ele não faz nada com esse resultado, é só
+  // um fetch disparado no carregamento da página) e faz o lookup + escrita
+  // depois de a resposta já ter sido enviada. Antes, a invocação inteira
+  // ficava faturada (compute) pelo tempo das chamadas às APIs externas de
+  // geo, que não afeta em nada a experiência de quem está vendo a tela de
+  // manutenção.
+  after(async () => {
+    const geo = await lookupIpGeo(ip);
+    await ref.set(
+      {
+        geoCity: geo.city,
+        geoRegion: geo.region,
+        geoCountry: geo.country,
+        isp: geo.isp,
+        geoDebug: geo.debugError,
+      },
+      { merge: true }
+    );
+  });
 
   return NextResponse.json({ ok: true });
 }

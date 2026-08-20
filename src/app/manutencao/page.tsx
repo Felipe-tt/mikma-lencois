@@ -1,6 +1,14 @@
 import { getSettings } from '@/lib/settings';
 
-export const dynamic = 'force-dynamic';
+// Antes era 'force-dynamic': cada visita (incluindo bots/scanners) virava
+// uma invocação de compute sem cache, gerando custo constante em "Non-Firebase
+// Services" mesmo sem tráfego real. O conteúdo desta página (Instagram/
+// WhatsApp vindos de getSettings()) é igual pra todo mundo — a lógica de
+// "quem pode ver o site de verdade" (IP liberado, staff logado) já é
+// resolvida à parte, no client, via /api/maintenance/status (que continua
+// dinâmico). 30s de revalidação é uma defasagem aceitável pra esse conteúdo
+// estático da tela, e corta a maior parte do custo de compute por visita.
+export const revalidate = 30;
 
 export const metadata = {
   title: 'Em breve, Mikma Lençóis',
@@ -27,8 +35,11 @@ export default async function ManutencaoPage() {
 
       {/* Polling: assim que a manutenção acabar (ou esse IP for liberado
           manualmente pelo painel), sai sozinho de /manutencao de volta pra
-          "/", sem precisar que o visitante dê refresh. Checa a cada 5s;
-          silencioso em caso de erro de rede (só tenta de novo no próximo tick). */}
+          "/", sem precisar que o visitante dê refresh. Checa a cada 20s
+          (antes era 5s - gerava volume alto de invocações de compute sem
+          necessidade real, já que "sair da manutenção" não é uma ação que
+          precisa de reação em tempo real); silencioso em caso de erro de
+          rede (só tenta de novo no próximo tick). */}
       <script
         dangerouslySetInnerHTML={{
           __html: `
@@ -47,7 +58,7 @@ export default async function ManutencaoPage() {
                   .catch(function () {})
                   .finally(function () { checking = false; });
               }
-              setInterval(checkMaintenanceStatus, 5000);
+              setInterval(checkMaintenanceStatus, 20000);
             })();
           `,
         }}
