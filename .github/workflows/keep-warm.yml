@@ -12,7 +12,9 @@ name: Keep Site Warm
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # a cada 10 minutos
+    - cron: '0 * * * *' # a cada 1 hora (era a cada 10 min - gerava ~144
+                         # invocações/dia à toa; 1x/hora ainda evita a
+                         # instância dormir por longos períodos)
   workflow_dispatch: {} # permite rodar manualmente pelo GitHub
 
 jobs:
