@@ -157,6 +157,13 @@ function isBotUserAgent(ua: string): boolean {
   return BOT_UA_PATTERN.test(ua);
 }
 
+// Paths que só existem em varreduras automáticas de vulnerabilidade (não
+// tem WordPress, PHP, ou XML-RPC nesse projeto). Rejeitar aqui, antes de
+// qualquer leitura/escrita no Firestore ou lookup de geo, corta o custo
+// desses scans a praticamente zero: é só um 404 estático, sem tocar em
+// nada além do próprio isolate.
+const SCANNER_PATH_PATTERN = /^\/(wp-admin|wp-login|wp-content|wp-includes|wp-json|xmlrpc\.php|\.env|\.git|phpmyadmin|admin\.php|config\.php|_ignition|actuator|\.well-known\/traffic-advice)/i;
+
 async function registerInQueue(projectId: string, docId: string, ip: string, req: NextRequest) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
   const userAgent = req.headers.get('user-agent') ?? '';
@@ -221,6 +228,15 @@ function applySecurityHeaders(res: NextResponse): void {
 export async function proxy(req: NextRequest, event: NextFetchEvent) {
   const { pathname } = req.nextUrl;
 
+  // Scanners de vulnerabilidade (procurando WordPress/PHP que não existe
+  // aqui) batem constantemente em qualquer domínio público na internet,
+  // 24h por dia, independente de tráfego real. Sem essa checagem, cada
+  // uma dessas tentativas passava pelo fluxo completo de manutenção
+  // (Firestore + geo lookup) só pra no fim dar 404 de qualquer forma.
+  if (SCANNER_PATH_PATTERN.test(pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   const isExempt =
     pathname.startsWith('/painel') ||
     pathname.startsWith('/api/') ||
@@ -277,12 +293,25 @@ export async function proxy(req: NextRequest, event: NextFetchEvent) {
         const released = await isIpReleased(projectId, docId);
 
         if (!released) {
-          await registerInQueue(projectId, docId, ip, req);
-          // Geo não bloqueia o redirect, ipapi.co pode levar até alguns
-          // segundos, e o visitante não deve esperar isso pra ver a página
-          // de manutenção. waitUntil mantém a isolate viva até o PATCH de
-          // geo terminar, mesmo depois da resposta já ter sido enviada.
-          event.waitUntil(updateGeoInQueue(projectId, docId, ip));
+          const userAgent = req.headers.get('user-agent') ?? '';
+          const isBot = isBotUserAgent(userAgent);
+
+          // Bots reconhecidos (crawlers, monitoramento, ferramentas de
+          // scraping) não precisam entrar na fila de "quem está esperando
+          // acesso" nem ter IP geolocalizado - isso só existe pra dar
+          // visibilidade de visitante real esperando no painel. Pular
+          // esse trabalho pra bots corta a maior fonte de custo: cada
+          // hit de bot deixa de gerar uma escrita no Firestore + até 3
+          // chamadas a APIs externas de geo.
+          if (!isBot) {
+            await registerInQueue(projectId, docId, ip, req);
+            // Geo não bloqueia o redirect, ipapi.co pode levar até alguns
+            // segundos, e o visitante não deve esperar isso pra ver a página
+            // de manutenção. waitUntil mantém a isolate viva até o PATCH de
+            // geo terminar, mesmo depois da resposta já ter sido enviada.
+            event.waitUntil(updateGeoInQueue(projectId, docId, ip));
+          }
+
           const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
           redirectRes.headers.set('Cache-Control', 'no-store, must-revalidate');
           applySecurityHeaders(redirectRes);
