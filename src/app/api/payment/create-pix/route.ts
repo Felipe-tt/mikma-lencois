@@ -8,7 +8,10 @@ import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
-import { tooManyRequests, addressSchema, validateBody, getClientIp } from '@/lib/security';
+import { tooManyRequests, addressSchema, validateBody, getClientIp, isValidCartQuantity } from '@/lib/security';
+import { normalizeAddressKey } from '@/lib/fraudSignals';
+import { expandStockLines } from '@/lib/orderStockLines';
+import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { StockError } from '@/lib/errors';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
@@ -64,31 +67,69 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
     }
     const cartData = cartSnap.data()!;
-    const cartItems: Array<{ sku: string; productId: string; quantity: number }> = cartData.items;
+    const cartItems: Array<{ sku: string; productId: string; quantity: number; note?: string; swapSku?: string; swapQtyPerUnit?: number }> = cartData.items;
     const cartCouponCode: string | null = cartData.couponCode ?? null;
 
+    // Carrinho é escrito direto pelo client SDK, quantity é dado não
+    // confiável — quantidade negativa passaria ilesa pela checagem de
+    // estoque e ainda diminuiria o total pago (ver isValidCartQuantity).
+    if (cartItems.length === 0 || !cartItems.every(ci => isValidCartQuantity(ci.quantity))) {
+      return NextResponse.json({ error: 'Carrinho inválido' }, { status: 400 });
+    }
     // ── Load product prices/pesos from Firestore (nunca confia no cliente) ───
-    const productIds = Array.from(new Set(cartItems.map(i => i.productId)));
+    // Inclui também os produtos referenciados só via swapSku (troca de
+    // fronha em Jogo de Cama) — precisa deles pra validar o swap abaixo,
+    // não só pra preço/peso do item principal.
+    const swapProductIds = cartItems
+      .map(i => i.swapSku?.split('_')[0])
+      .filter((id): id is string => !!id);
+    const productIds = Array.from(new Set([...cartItems.map(i => i.productId), ...swapProductIds]));
     const productDocs = await Promise.all(
       productIds.map(id => adminDb.collection('products').doc(id).get())
     );
-    const productMap: Record<string, { price: number; name: string; weightKg?: number }> = {};
+    const productMap: Record<string, { price: number; name: string; weightKg?: number; active: boolean; category: string }> = {};
     for (const snap of productDocs) {
       if (snap.exists) {
         productMap[snap.id] = {
           price: snap.data()!.price as number,
           name: snap.data()!.name as string,
           weightKg: snap.data()!.weightKg as number | undefined,
+          active: snap.data()!.active as boolean,
+          category: snap.data()!.category as string,
         };
       }
     }
 
+    // ── Nunca confia no swapSku/swapQtyPerUnit/note vindo do carrinho
+    // (escrito direto pelo client SDK, sem passar por API) ─────────────────
+    const productLookup = new Map<string, ProductLookup>(
+      Object.entries(productMap).map(([id, p]) => [id, { id, name: p.name, active: p.active, category: p.category }])
+    );
+    const sanitizedCartItems = sanitizeSwaps(cartItems, productLookup);
+
     // ── Build verified order items ────────────────────────────────────────────
-    const verifiedItems = cartItems.map(ci => {
-      const prod = productMap[ci.productId];
-      if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
-      return { ...ci, unitPrice: prod.price, productName: prod.name };
-    });
+    // note já vem confiável de sanitizeSwaps (gerada pelo servidor a
+    // partir do produto validado, ou removida) — não precisa mais
+    // sanitizar aqui, só repassar.
+    let verifiedItems: Array<{ sku: string; productId: string; quantity: number; note?: string; swapSku?: string; swapQtyPerUnit?: number; unitPrice: number; productName: string }>;
+    try {
+      verifiedItems = sanitizedCartItems.map(ci => {
+        const prod = productMap[ci.productId];
+        if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
+        // Produto pode ter sido desativado depois de já estar no carrinho de
+        // alguém (removido do catálogo pelo vendedor) — sem essa checagem,
+        // dava pra comprar um produto que não deveria mais estar à venda.
+        if (!prod.active) {
+          throw new StockError(`"${prod.name}" não está mais disponível. Remova do carrinho e tente novamente.`);
+        }
+        return { ...ci, unitPrice: prod.price, productName: prod.name };
+      });
+    } catch (err) {
+      if (err instanceof StockError) {
+        return NextResponse.json({ error: err.message }, { status: 409 });
+      }
+      throw err;
+    }
 
     const productsCents = computeProductsCents(verifiedItems.map(i => ({ unitPrice: i.unitPrice, quantity: i.quantity })));
 
@@ -149,14 +190,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
     }
 
+    // ── Idempotência: evita pedido duplicado por duplo-clique/duas abas ──────
+    // Sem isso, dois cliques rápidos geravam dois pedidos "pending_payment"
+    // independentes, cada um reservando estoque do mesmo carrinho — o
+    // segundo só seria liberado quando o cron de expiração rodasse.
+    // Só reaproveita se: mesmo usuário, PIX, criado há pouco (evita reusar
+    // um pedido antigo esquecido) E com o MESMO valor calculado agora
+    // (evita devolver um PIX de valor desatualizado se o carrinho mudou
+    // entre as duas tentativas).
+    {
+      const recentCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const existingSnap = await adminDb.collection('orders')
+        .where('userId', '==', uid)
+        .where('status', '==', 'pending_payment')
+        .where('payment.method', '==', 'pix')
+        .orderBy('createdAt', 'desc')
+        .limit(1)
+        .get();
+      const existing = existingSnap.docs[0]?.data();
+      if (
+        existing &&
+        existing.createdAt > recentCutoff &&
+        existing.totalCents === amountCents &&
+        existing.payment?.pixQrCode
+      ) {
+        return NextResponse.json({
+          orderId: existingSnap.docs[0].id,
+          txId: existing.payment.txId,
+          qrCode: existing.payment.pixQrCode,
+          copyPaste: existing.payment.pixCopyPaste,
+          expiresAt: existing.payment.expiresAt,
+        });
+      }
+    }
+
     // ── Checar e reservar estoque ATOMICAMENTE (evita oversell por concorrência) ──
     // Antes: check e reserve eram dois passos separados, dois pedidos simultâneos
     // podiam ambos "ver" a última unidade livre e ambos reservarem. Agora tudo
     // acontece dentro de uma única transação do Firestore, que serializa
     // automaticamente escritas concorrentes no mesmo documento (retry interno).
+    //
+    // expandStockLines soma as linhas de estoque de fronha trocada (Jogo de
+    // Cama) às linhas normais, pra reservar a fronha escolhida junto e não
+    // deixar vender ela duas vezes sem perceber.
+    const stockLines = expandStockLines(sanitizedCartItems);
     const inventoryQueries = await Promise.all(
-      cartItems.map(ci =>
-        adminDb.collection('inventory').where('sku', '==', ci.sku).limit(1).get()
+      stockLines.map(line =>
+        adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get()
       )
     );
     const invDocRefs = inventoryQueries.map(snap => snap.docs[0]?.ref ?? null);
@@ -167,22 +247,21 @@ export async function POST(req: NextRequest) {
         const invSnaps = await Promise.all(
           invDocRefs.map(ref => (ref ? tx.get(ref) : null))
         );
-        for (let i = 0; i < cartItems.length; i++) {
+        for (let i = 0; i < stockLines.length; i++) {
           const snap = invSnaps[i];
           if (!snap) continue; // item sem controle de estoque passa
           const inv = snap.data()!;
           const available = (inv.quantity ?? 0) - (inv.reserved ?? 0);
-          if (available < cartItems[i].quantity) {
-            const ci = cartItems[i];
-            const name = productMap[ci.productId]?.name ?? ci.sku;
+          if (available < stockLines[i].quantity) {
+            const name = productMap[stockLines[i].productId]?.name ?? stockLines[i].sku;
             throw new StockError(`"${name}" não tem estoque suficiente. Disponível: ${available}`);
           }
         }
-        for (let i = 0; i < cartItems.length; i++) {
+        for (let i = 0; i < stockLines.length; i++) {
           const ref = invDocRefs[i];
           if (!ref) continue;
           tx.update(ref, {
-            reserved: FieldValue.increment(cartItems[i].quantity),
+            reserved: FieldValue.increment(stockLines[i].quantity),
             updatedAt: FieldValue.serverTimestamp(),
           });
         }
@@ -210,6 +289,8 @@ export async function POST(req: NextRequest) {
       couponDiscountCents,
       ...(couponCode ? { couponCode } : {}),
       totalCents: amountCents,
+      clientIp: ip,
+      addressKey: normalizeAddressKey(address),
       payment: { method: 'pix' },
       delivery: {
         carrier: matchedShipping.carrier,
@@ -300,11 +381,11 @@ export async function POST(req: NextRequest) {
     if (!pixRes.ok) {
       await orderRef.delete();
       // Liberar reserva de estoque
-      for (let i = 0; i < cartItems.length; i++) {
+      for (let i = 0; i < stockLines.length; i++) {
         const ref = invDocRefs[i];
         if (!ref) continue;
         ref.update({
-          reserved: FieldValue.increment(-cartItems[i].quantity),
+          reserved: FieldValue.increment(-stockLines[i].quantity),
           updatedAt: FieldValue.serverTimestamp(),
         }).catch(() => {});
       }

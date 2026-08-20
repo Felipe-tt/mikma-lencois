@@ -108,6 +108,9 @@ export interface OrderItem {
   quantity: number
   unitPrice: number // centavos
   image?: string
+  note?: string // ex: "Fronha trocada: Floral Rosa" — visível pro vendedor no painel
+  swapSku?: string  // SKU da Fronha escolhida no lugar da padrão, teve estoque reservado junto
+  swapQtyPerUnit?: number  // fronhas por UNIDADE deste item (multiplica por quantity na hora de reservar/liberar, ver src/lib/orderStockLines.ts). Validado server-side em src/lib/fronhaSwap.ts, nunca confia no valor do carrinho.
 }
 
 export interface OrderTimelineEvent {
@@ -163,6 +166,8 @@ export interface Order {
   totalCents: number
   discountCents?: number
   couponCode?: string
+  clientIp?: string   // IP de quem finalizou a compra, só pra sinalização de fraude no painel (nunca exposto ao cliente)
+  addressKey?: string // hash normalizado do endereço, indexável, usado só pra cruzar pedidos no /api/painel/pedidos/[orderId]/fraud-signals
   createdAt: string
   updatedAt?: string
   timeline?: OrderTimelineEvent[]
@@ -178,6 +183,8 @@ export interface ReturnItem {
   productName: string
   variant: ProductVariant
   quantity: number
+  swapSku?: string          // fronha trocada nesse item (Jogo de Cama), pra reestocar ela também na devolução
+  swapQtyPerUnit?: number
 }
 
 export interface ReturnRequest {
@@ -206,6 +213,9 @@ export interface CartItem {
   quantity: number
   unitPrice: number
   image: string
+  note?: string // ex: troca de fronha escolhida num Jogo de Cama
+  swapSku?: string  // SKU da Fronha escolhida no lugar da padrão, pra reservar estoque dela também
+  swapQtyPerUnit?: number  // fronhas por UNIDADE deste item — escala com quantity, não é um total fixo
 }
 
 export interface Cart {

@@ -6,6 +6,7 @@ import { extractBearer, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { adminCancelSchema } from './schema';
+import { expandStockLines } from '@/lib/orderStockLines';
 
 
 // Statuses que ainda não tiveram o estoque debitado (só reservado)
@@ -77,12 +78,12 @@ export async function POST(
   });
 
   const isPending = PENDING_STATUSES.has(order.status);
-  const items = (order.items ?? []) as Array<{ sku: string; quantity: number }>;
+  const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>;
 
-  for (const item of items) {
+  for (const line of expandStockLines(items)) {
     const invQuery = await adminDb
       .collection('inventory')
-      .where('sku', '==', item.sku)
+      .where('sku', '==', line.sku)
       .limit(1)
       .get();
 
@@ -92,7 +93,7 @@ export async function POST(
       if (isPending) {
         // Ainda não debitou quantity, só libera a reserva
         batch.update(invRef, {
-          reserved: FieldValue.increment(-item.quantity),
+          reserved: FieldValue.increment(-line.quantity),
           updatedAt: FieldValue.serverTimestamp(),
         });
       } else {
@@ -100,7 +101,7 @@ export async function POST(
         // reserved foi decrementado no confirmOrder junto com quantity, então
         // ao reverter precisamos só devolver quantity (reserved já está 0 pra esse item)
         batch.update(invRef, {
-          quantity: FieldValue.increment(item.quantity),
+          quantity: FieldValue.increment(line.quantity),
           updatedAt: FieldValue.serverTimestamp(),
         });
       }

@@ -5,6 +5,7 @@ import { collection, onSnapshot, doc, updateDoc, query as fsQuery, where, limit,
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { ReturnRequest, ReturnStatus } from '@/types';
+import { expandStockLines } from '@/lib/orderStockLines';
 import { formatDateTime } from '@/lib/utils/format';
 import { IconExchange, IconCheck, IconX, IconBox } from '@/components/ui/Icon';
 
@@ -73,23 +74,27 @@ export default function TrocasPage() {
 
   /** Marca como concluída e, se pedido, devolve as peças pro estoque -
    *  procurando o item de inventário pelo SKU (mesmo padrão do resto do
-   *  painel de estoque). Item que não existir mais no catálogo é ignorado
-   *  silenciosamente ali, mas avisa no final. */
+   *  painel de estoque). expandStockLines inclui a fronha trocada (Jogo
+   *  de Cama) na reposição também, senão o estoque dela nunca voltaria
+   *  numa devolução (foi debitado junto na venda, ver src/lib/orderStockLines.ts).
+   *  Item que não existir mais no catálogo é ignorado silenciosamente
+   *  ali, mas avisa no final. */
   async function concludeAndRestock(r: ReturnRequest, restock: boolean) {
     setBusyId(r.id);
     try {
       let missing = 0;
       if (restock) {
         const batch = writeBatch(db);
-        for (const item of r.items) {
-          const q = fsQuery(collection(db, 'inventory'), where('sku', '==', item.sku), limit(1));
+        const lines = expandStockLines(r.items);
+        for (const line of lines) {
+          const q = fsQuery(collection(db, 'inventory'), where('sku', '==', line.sku), limit(1));
           const snap = await getDocs(q);
           if (snap.empty) { missing++; continue; }
           const invDoc = snap.docs[0];
           batch.update(invDoc.ref, {
-            quantity: increment(item.quantity),
+            quantity: increment(line.quantity),
             history: arrayUnion({
-              type: 'in', quantity: item.quantity,
+              type: 'in', quantity: line.quantity,
               reason: `Troca/devolução, pedido #${r.orderId.slice(-8).toUpperCase()}`,
               date: new Date().toISOString(),
               ...(user?.email ? { by: user.email } : {}),

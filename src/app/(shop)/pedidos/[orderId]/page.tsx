@@ -311,7 +311,7 @@ export default function OrderDetailPage() {
               <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Itens</h2>
               <div className="flex flex-col divide-y divide-mist border border-mist">
                 {order.items.map(item => (
-                  <div key={item.sku} className="flex justify-between items-center px-5 py-4 gap-4">
+                  <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex justify-between items-center px-5 py-4 gap-4">
                     <div>
                       <p className="text-sm font-medium text-ink">{item.productName}</p>
                       <p className="text-xs text-faint mt-0.5">
@@ -320,6 +320,7 @@ export default function OrderDetailPage() {
                         {item.variant.fabric ? ` · ${item.variant.fabric}` : ''}
                         {' · '}{item.quantity}x
                       </p>
+                      {item.note && <p className="text-xs text-clay font-medium mt-0.5">{item.note}</p>}
                     </div>
                     <span className="text-sm font-semibold text-ink shrink-0">
                       {formatCurrency(item.unitPrice * item.quantity)}

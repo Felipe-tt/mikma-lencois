@@ -4,6 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email';
 import { timingSafeEqual } from 'crypto';
+import { expandStockLines } from '@/lib/orderStockLines';
 
 // ── Timings ────────────────────────────────────────────────────────────────────
 // Pedido sem pagamento por WARN_AFTER_MS → envia aviso "vai cancelar em 24h"
@@ -187,16 +188,16 @@ export async function GET(req: NextRequest) {
         }
 
         // Libera reserva de estoque
-        const items = (order.items ?? []) as Array<{ sku: string; quantity: number }>;
-        for (const item of items) {
+        const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>;
+        for (const line of expandStockLines(items)) {
           const invSnap = await adminDb
             .collection('inventory')
-            .where('sku', '==', item.sku)
+            .where('sku', '==', line.sku)
             .limit(1)
             .get();
           if (!invSnap.empty) {
             adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
-              reserved: FieldValue.increment(-item.quantity),
+              reserved: FieldValue.increment(-line.quantity),
               updatedAt: FieldValue.serverTimestamp(),
             }).catch(() => {});
           }
