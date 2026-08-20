@@ -33,7 +33,7 @@ while IFS= read -r sha; do
     echo "check failed on $sha"
     FAIL=1
   fi
-done < <(git rev-list "$BASE".."$HEAD")
+done < <(git rev-list --no-merges "$BASE".."$HEAD")
 
 if [ "$FAIL" -ne 0 ]; then
   exit 1
