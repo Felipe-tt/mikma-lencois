@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { expandStockLines } from '@/lib/orderStockLines';
 
 export async function DELETE(req: NextRequest) {
   const token = req.headers.get('authorization')?.split('Bearer ')[1];
@@ -50,6 +51,24 @@ export async function DELETE(req: NextRequest) {
     for (const d of notifSnap.docs) batch.delete(d.ref);
 
     await batch.commit();
+
+    // Libera o estoque reservado dos pedidos que acabaram de virar
+    // 'cancelled' — IMPORTANTE fazer isso, senão fica preso pra sempre:
+    // o cron de expiração só olha pedidos 'pending_payment', e esse
+    // pedido já não é mais isso a partir daqui. expandStockLines inclui
+    // a fronha trocada (Jogo de Cama) na liberação também.
+    for (const orderDoc of pendingOrders.docs) {
+      const items = (orderDoc.data().items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>;
+      for (const line of expandStockLines(items)) {
+        const invSnap = await adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get();
+        if (!invSnap.empty) {
+          adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
+            reserved: FieldValue.increment(-line.quantity),
+            updatedAt: FieldValue.serverTimestamp(),
+          }).catch(() => {});
+        }
+      }
+    }
 
     // Revoga tokens antes de deletar, evita uso de token após exclusão
     await adminAuth.revokeRefreshTokens(uid);
