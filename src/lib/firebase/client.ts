@@ -1,5 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import {
+  initializeAuth,
+  getAuth,
+  indexedDBLocalPersistence,
+  browserLocalPersistence,
+  inMemoryPersistence,
+} from 'firebase/auth'
 import {
   initializeFirestore,
   persistentLocalCache,
@@ -33,7 +39,26 @@ function getConfig() {
 
 const app = getApps().length ? getApp() : initializeApp(getConfig())
 
-export const auth = getAuth(app)
+// Auth: em alguns navegadores mobile (ex.: Chrome Android com a aba em
+// segundo plano/oculta durante o load) a conexão IndexedDB é fechada pelo
+// navegador no meio da inicialização do SDK, e o firebase/auth lança
+// "Error: Database is closing/hidden" como unhandled rejection.
+// Damos ao SDK uma cadeia de fallback: se indexedDB falhar, ele tenta
+// localStorage e, em último caso, mantém a sessão só em memória — o login
+// não quebra a página, só pode não persistir entre reloads nesse caso raro.
+function createAuth() {
+  if (typeof window === 'undefined') return getAuth(app)
+  try {
+    return initializeAuth(app, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence, inMemoryPersistence],
+    })
+  } catch {
+    // initializeAuth já foi chamado para este app (ex.: hot-reload em dev)
+    return getAuth(app)
+  }
+}
+
+export const auth = createAuth()
 
 // Cache local persistente (IndexedDB): o app continua funcionando com
 // internet ruim/instável na loja, as vendas ficam guardadas no
