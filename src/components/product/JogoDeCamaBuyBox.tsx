@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { BuyBox } from './BuyBox';
-import { FRONHAS_POR_JOGO } from '@/lib/fronhaSwap';
+import { getFronhaCount } from '@/lib/fronhaSwap';
 import type { Product, InventoryItem } from '@/types';
 
 interface Props {
@@ -22,12 +22,17 @@ interface Props {
 // create-pix/create-checkout) e fica anotada como `note` no
 // carrinho/pedido, pro vendedor ver qual fronha embalar.
 //
-// IMPORTANTE: FRONHAS_POR_JOGO (o "2") é só o valor ENVIADO — quem decide
-// se aceita é o backend (src/lib/fronhaSwap.ts, sanitizeSwaps), que
-// rejeita qualquer swapQtyPerUnit diferente do esperado. O carrinho é
-// escrito direto pelo client SDK, então nada aqui é confiável sozinho.
+// IMPORTANTE: a contagem de fronhas é POR PRODUTO (getFronhaCount), não
+// um número fixo — solteiro normalmente é 1 fronha, casal/queen/king
+// geralmente é 2. O que é enviado aqui é só o valor PROPOSTO — quem
+// decide se aceita é o backend (src/lib/fronhaSwap.ts, sanitizeSwaps),
+// que rejeita qualquer swapQtyPerUnit diferente do esperado pra ESSE
+// produto específico. O carrinho é escrito direto pelo client SDK,
+// então nada aqui é confiável sozinho.
 export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, fronhaOptions, fronhaInventory }: Props) {
   const [chosenFronhaId, setChosenFronhaId] = useState<string>('default');
+
+  const fronhaCount = getFronhaCount({ fronhaCount: product.fronhaCount, variantSize: product.variants[0]?.size });
 
   function availableStock(fronha: Product): number {
     const variant = fronha.variants[0];
@@ -51,7 +56,9 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
         <div className="border border-mist p-5 flex flex-col gap-3">
           <div>
             <p className="eyebrow text-clay mb-1">Fronha</p>
-            <p className="text-[13px] text-faint">Esse jogo vem com fronha inclusa. Quer trocar por outra estampa?</p>
+            <p className="text-[13px] text-faint">
+              Esse jogo vem com {fronhaCount === 1 ? 'fronha inclusa' : `${fronhaCount} fronhas inclusas`}. Quer trocar por outra estampa?
+            </p>
           </div>
 
           <label className="flex items-center gap-2.5 cursor-pointer">
@@ -67,7 +74,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
 
           {fronhaOptions.map(f => {
             const stock = availableStock(f);
-            const outOfStock = stock < FRONHAS_POR_JOGO;
+            const outOfStock = stock < fronhaCount;
             return (
               <label
                 key={f.id}
@@ -107,7 +114,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
         pixDiscountPct={pixDiscountPct}
         note={note}
         swapSku={swapSku}
-        swapQtyPerUnit={swapSku ? FRONHAS_POR_JOGO : undefined}
+        swapQtyPerUnit={swapSku ? fronhaCount : undefined}
       />
     </div>
   );
