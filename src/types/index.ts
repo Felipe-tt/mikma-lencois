@@ -50,6 +50,7 @@ export interface Product {
   composition?: string       // e.g. "100% Algodão"
   weightGsm?: number         // e.g. 180 g/m²
   certifications?: string[]  // e.g. ["OEKO-TEX", "Fair Trade"]
+  fronhaCount?: number       // só pra category "Jogos de cama": quantas fronhas vêm no jogo (solteiro geralmente 1, casal/queen/king geralmente 2). Ver src/lib/fronhaSwap.ts getFronhaCount() pro fallback quando ausente.
 }
 
 // ─── Reviews ─────────────────────────────────────────────────────────────────

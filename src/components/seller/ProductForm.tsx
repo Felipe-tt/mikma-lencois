@@ -56,6 +56,7 @@ export default function ProductForm({ initial }: Props) {
   const [price, setPrice] = useState(initial?.price ? (initial.price / 100).toFixed(2) : '');
   const [weightKg, setWeightKg] = useState(initial?.weightKg ? String(initial.weightKg) : '');
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0]);
+  const [fronhaCount, setFronhaCount] = useState(initial?.fronhaCount ?? 2);
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
 
@@ -263,6 +264,7 @@ export default function ProductForm({ initial }: Props) {
         ...(composition ? { composition } : {}),
         ...(weightGsm ? { weightGsm: parseInt(weightGsm) } : {}),
         ...(certifications ? { certifications: certifications.split(',').map(s => s.trim()).filter(Boolean) } : {}),
+        ...(category === 'Jogos de cama' ? { fronhaCount } : {}),
       };
 
       if (isEdit) {
@@ -444,6 +446,25 @@ export default function ProductForm({ initial }: Props) {
                 />
               </div>
             </div>
+
+            {category === 'Jogos de cama' && (
+              <div>
+                <label className="label">
+                  Quantas fronhas vêm no jogo? <span className="font-normal normal-case text-faint">(solteiro/berço geralmente 1, casal/queen/king geralmente 2)</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={fronhaCount}
+                  onChange={e => setFronhaCount(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="input-sm w-24"
+                />
+                <p className="text-[11px] text-faint mt-1">
+                  Usado pra reservar a quantidade certa de estoque quando o cliente troca a fronha padrão do jogo por outra do catálogo.
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="label">Tags <span className="font-normal normal-case text-faint">(separadas por vírgula)</span></label>
