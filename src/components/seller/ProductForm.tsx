@@ -119,20 +119,26 @@ export default function ProductForm({ initial }: Props) {
     }).catch(() => {});
   }, [isEdit, initial?.id]);
 
-  // Sugere o nome (categoria + tamanho da 1ª variação + peças, se Jogo de
-  // Cama) enquanto o vendedor não tiver digitado nada no campo Nome. Só
-  // atualiza quando a sugestão realmente muda algo (evita ficar limpando
-  // o campo quando a sugestão ainda não tem dado suficiente, tipo antes
-  // de adicionar a primeira variação).
+  // Sugestão de nome pra categoria/tamanho/fronhas atuais — recalculada a
+  // cada render (string simples, sem custo real). Usada tanto pra
+  // preencher o campo automaticamente (efeito abaixo) quanto pro botão
+  // "Usar sugestão automática" voltar a ela depois de uma edição manual.
+  const currentNameSuggestion = suggestProductName({
+    category: category as typeof CATEGORIES[number],
+    size: variants[0]?.size,
+    fronhaCount: category === 'Jogos de cama' ? fronhaCount : undefined,
+  });
+
+  // Enquanto o vendedor não tiver digitado nada no campo Nome, mantém ele
+  // sempre igual à sugestão atual — inclusive limpando de volta se o
+  // vendedor remover a variação e a sugestão deixar de fazer sentido
+  // (evita mostrar um nome com um tamanho que não existe mais no
+  // produto). Assim que ele digita algo, para de mexer (nameEditedManually).
   useEffect(() => {
     if (nameEditedManually) return;
-    const suggested = suggestProductName({
-      category: category as typeof CATEGORIES[number],
-      size: variants[0]?.size,
-      fronhaCount: category === 'Jogos de cama' ? fronhaCount : undefined,
-    });
-    if (suggested) setName(suggested);
-  }, [category, variants[0]?.size, fronhaCount, nameEditedManually]);
+    setName(currentNameSuggestion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentNameSuggestion, nameEditedManually]);
 
   function handlePhotoTaken(dataUrl: string, blob: Blob) {
     setShowCamera(false);
@@ -411,13 +417,46 @@ export default function ProductForm({ initial }: Props) {
           {/* ── 2. Informações básicas ── */}
           <FormSection step={2} title="Informações básicas">
             <div>
-              <label className="label">Nome do produto</label>
-              <input
-                value={name}
-                onChange={e => { setName(e.target.value); setNameEditedManually(true); }}
-                placeholder="Jogo de cama queen algodão"
-                className="input"
-              />
+              <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-1 mb-1">
+                <label className="label mb-0">Nome do produto</label>
+                {nameEditedManually && currentNameSuggestion && name !== currentNameSuggestion && (
+                  <button
+                    type="button"
+                    onClick={() => { setName(currentNameSuggestion); setNameEditedManually(false); }}
+                    className="flex items-center gap-1 text-[11px] text-clay hover:text-ink transition-colors font-medium"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>
+                      <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>
+                    </svg>
+                    Usar sugestão automática
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  value={name}
+                  onChange={e => { setName(e.target.value); setNameEditedManually(true); }}
+                  placeholder="Jogo de cama queen algodão"
+                  className={`input ${!nameEditedManually && name ? 'pr-9' : ''}`}
+                />
+                {!nameEditedManually && name && (
+                  <span
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
+                    title="Preenchido automaticamente"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
+                      <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
+                    </svg>
+                  </span>
+                )}
+              </div>
+              {!nameEditedManually && name && (
+                <p className="text-[11px] text-faint mt-1">
+                  Preenchido automaticamente a partir da categoria{category === 'Jogos de cama' ? ', tamanho e fronhas' : ' e tamanho'}. Pode editar à vontade.
+                </p>
+              )}
             </div>
 
             <div>
