@@ -10,7 +10,7 @@ import { hexToColorName } from '@/lib/colorNames';
 import { ColorPicker } from './ColorPicker';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
 import { PhotoColorPicker } from './PhotoColorPicker';
-import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, YARN_COUNTS } from '@/lib/productOptions';
+import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, YARN_COUNTS, suggestProductName } from '@/lib/productOptions';
 import { formatProductName } from '@/lib/textFormat';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { Select } from '@/components/ui/Select';
@@ -52,6 +52,11 @@ export default function ProductForm({ initial }: Props) {
   const isEdit = !!initial?.id;
 
   const [name, setName] = useState(initial?.name ?? '');
+  // Nome sugerido automaticamente (categoria + tamanho + peças) até o
+  // vendedor digitar algo no campo — a partir daí, respeita o que ele
+  // escreveu e para de sobrescrever. Editando um produto já existente,
+  // nunca mexe sozinho (o produto já tem nome de verdade, não é rascunho).
+  const [nameEditedManually, setNameEditedManually] = useState(isEdit);
   const [description, setDescription] = useState(initial?.description ?? '');
   const [price, setPrice] = useState(initial?.price ? (initial.price / 100).toFixed(2) : '');
   const [weightKg, setWeightKg] = useState(initial?.weightKg ? String(initial.weightKg) : '');
@@ -113,6 +118,21 @@ export default function ProductForm({ initial }: Props) {
       setExistingSkus(map);
     }).catch(() => {});
   }, [isEdit, initial?.id]);
+
+  // Sugere o nome (categoria + tamanho da 1ª variação + peças, se Jogo de
+  // Cama) enquanto o vendedor não tiver digitado nada no campo Nome. Só
+  // atualiza quando a sugestão realmente muda algo (evita ficar limpando
+  // o campo quando a sugestão ainda não tem dado suficiente, tipo antes
+  // de adicionar a primeira variação).
+  useEffect(() => {
+    if (nameEditedManually) return;
+    const suggested = suggestProductName({
+      category: category as typeof CATEGORIES[number],
+      size: variants[0]?.size,
+      fronhaCount: category === 'Jogos de cama' ? fronhaCount : undefined,
+    });
+    if (suggested) setName(suggested);
+  }, [category, variants[0]?.size, fronhaCount, nameEditedManually]);
 
   function handlePhotoTaken(dataUrl: string, blob: Blob) {
     setShowCamera(false);
@@ -394,7 +414,7 @@ export default function ProductForm({ initial }: Props) {
               <label className="label">Nome do produto</label>
               <input
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={e => { setName(e.target.value); setNameEditedManually(true); }}
                 placeholder="Jogo de cama queen algodão"
                 className="input"
               />
