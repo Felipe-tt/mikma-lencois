@@ -129,14 +129,17 @@ export default function ProductForm({ initial }: Props) {
     fronhaCount: category === 'Jogos de cama' ? fronhaCount : undefined,
   });
 
-  // Enquanto o vendedor não tiver digitado nada no campo Nome, mantém ele
-  // sempre igual à sugestão atual — inclusive limpando de volta se o
-  // vendedor remover a variação e a sugestão deixar de fazer sentido
-  // (evita mostrar um nome com um tamanho que não existe mais no
-  // produto). Assim que ele digita algo, para de mexer (nameEditedManually).
+  // Sincroniza nome + dispara um destaque breve no campo (justAutoUpdated),
+  // já que o vendedor normalmente está mexendo em Categoria/Variações mais
+  // abaixo na tela quando o nome muda sozinho lá em cima — sem algum sinal
+  // visual, a mudança passaria despercebida.
+  const [justAutoUpdated, setJustAutoUpdated] = useState(false);
   useEffect(() => {
     if (nameEditedManually) return;
     setName(currentNameSuggestion);
+    setJustAutoUpdated(true);
+    const t = setTimeout(() => setJustAutoUpdated(false), 900);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentNameSuggestion, nameEditedManually]);
 
@@ -438,12 +441,13 @@ export default function ProductForm({ initial }: Props) {
                   value={name}
                   onChange={e => { setName(e.target.value); setNameEditedManually(true); }}
                   placeholder="Jogo de cama queen algodão"
-                  className={`input ${!nameEditedManually && name ? 'pr-9' : ''}`}
+                  className={`input ${!nameEditedManually && name ? 'pr-9' : ''} ${justAutoUpdated ? 'bg-clay/[0.06] border-clay/40' : ''}`}
                 />
                 {!nameEditedManually && name && (
                   <span
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
                     title="Preenchido automaticamente"
+                    aria-hidden="true"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
@@ -453,7 +457,7 @@ export default function ProductForm({ initial }: Props) {
                 )}
               </div>
               {!nameEditedManually && name && (
-                <p className="text-[11px] text-faint mt-1">
+                <p className="text-[11px] text-faint mt-1" aria-live="polite">
                   Preenchido automaticamente a partir da categoria{category === 'Jogos de cama' ? ', tamanho e fronhas' : ' e tamanho'}. Pode editar à vontade.
                 </p>
               )}
