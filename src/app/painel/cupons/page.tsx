@@ -99,7 +99,7 @@ export default function CuponsPage() {
               <p className="text-[11px] text-faint mt-1">Este é o código que o cliente vai digitar na hora de comprar.</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[11px] font-semibold text-mid mb-1.5">Tipo de desconto</label>
                 <Select
@@ -121,7 +121,7 @@ export default function CuponsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[11px] font-semibold text-mid mb-1.5">Valor mínimo do pedido (R$)</label>
                 <input type="number" min={0} value={form.minOrderCents} onChange={e => setForm(f => ({ ...f, minOrderCents: Number(e.target.value) }))}

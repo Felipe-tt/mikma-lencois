@@ -82,7 +82,7 @@ export default function RelatoriosPage() {
 
       {loading ? (
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-3 gap-3">{[1,2,3].map(i => <div key={i} className="h-24 skeleton border border-mist" />)}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{[1,2,3].map(i => <div key={i} className="h-24 skeleton border border-mist" />)}</div>
           <div className="h-48 skeleton border border-mist" />
         </div>
       ) : !stats ? null : (
