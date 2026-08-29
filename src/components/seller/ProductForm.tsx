@@ -474,7 +474,7 @@ export default function ProductForm({ initial }: Props) {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="label">Preço (R$)</label>
                 <input
@@ -564,7 +564,7 @@ export default function ProductForm({ initial }: Props) {
                       Mesma combinação de tamanho e tecido de outra variação
                     </p>
                   )}
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
                       <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Tamanho</label>
                       <Select
@@ -658,7 +658,7 @@ export default function ProductForm({ initial }: Props) {
             </button>
 
             {specsOpen && (
-              <div className="border border-mist p-4 grid grid-cols-2 gap-3 rounded-[4px]">
+              <div className="border border-mist p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-[4px]">
                 <div>
                   <label className="label">Espessura do fio <span className="font-normal normal-case text-faint">(malha)</span></label>
                   <Select
