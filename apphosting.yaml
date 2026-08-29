@@ -10,36 +10,44 @@ runConfig:
   memoryMiB: 512
 
 env:
-  # ── Públicas, precisam estar disponíveis no BUILD (Next.js inlina no bundle do client) ──
+  # ── Públicas, precisam estar disponíveis no BUILD (Next.js inlina no bundle
+  # do client). NAO sao "secret" no Secret Manager de proposito: qualquer
+  # NEXT_PUBLIC_* ja vai parar no JS que roda no navegador de quem visita o
+  # site (da pra ver no "Ver codigo-fonte"), entao criptografar isso no
+  # Secret Manager nao protege nada - so gera custo de acesso a toa (cada
+  # cold start do App Hosting buscava os 10 aqui embaixo do Secret Manager
+  # sem necessidade, foi boa parte do custo em "Non-Firebase Services").
+  # "value:" e a forma correta pra dado nao-sensivel: fica so no
+  # apphosting.yaml, sem custo de Secret Manager.
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    secret: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyDLrxG2vBbHf77UuTE7tFu_dKoHIFa8W9k"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "mikma-lencois.firebaseapp.com"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "mikma-lencois"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "mikma-lencois.firebasestorage.app"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "915579306587"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    secret: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:915579306587:web:12ff909a08105b75eb757e"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_FIREBASE_VAPID_KEY
-    secret: NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    value: "BMPHE3UA4YtvLAerqiSK6FEE0v4laVG4wGhTGqvQ2DttgTO0lh9RjNBZTLaxmLPjJmSXaxBCo9ilESUYmEzPKS0"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_GOOGLE_CLIENT_ID
-    secret: NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    value: "915579306587-nil2egqv0d6n5mhki11a4cdhn29dfr46.apps.googleusercontent.com"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-    secret: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    value: "6Lc-ehMtAAAAALcFa9kjxdxqXmXJi-VfYKzqjgXD"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_SENTRY_DSN
-    secret: NEXT_PUBLIC_SENTRY_DSN
+    value: "https://79c7607bec5f121b2c57e38c25f80ec7@o4511700453556224.ingest.us.sentry.io/4511700455653376"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_APP_URL
     value: "https://mikma.com.br"
