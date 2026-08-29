@@ -46,11 +46,32 @@ const app = getApps().length ? getApp() : initializeApp(getConfig())
 // Damos ao SDK uma cadeia de fallback: se indexedDB falhar, ele tenta
 // localStorage e, em último caso, mantém a sessão só em memória — o login
 // não quebra a página, só pode não persistir entre reloads nesse caso raro.
+//
+// IMPORTANTE: em ambientes onde IndexedDB existe pela metade (ex.: bots/
+// scanners com UA de Chrome mas faltando `IDBRequest`), a própria lógica
+// de detecção do firebase/auth quebra com "Cannot read properties of
+// undefined (reading 'toLowerCase')" — um bug interno do SDK, não do
+// nosso código (visto em produção, Sentry JAVASCRIPT-NEXTJS-B). Como
+// isso acontece de forma assíncrona dentro do SDK, o try/catch abaixo
+// (só cobre a chamada síncrona de initializeAuth) não pega esse erro.
+// A defesa real é nem deixar o Firebase tentar: só incluímos
+// indexedDBLocalPersistence na cadeia quando o ambiente realmente tem
+// as duas APIs que o SDK espera.
+export function supportsIndexedDbPersistence(): boolean {
+  try {
+    return typeof indexedDB !== 'undefined' && typeof IDBRequest !== 'undefined';
+  } catch {
+    return false;
+  }
+}
+
 function createAuth() {
   if (typeof window === 'undefined') return getAuth(app)
   try {
     return initializeAuth(app, {
-      persistence: [indexedDBLocalPersistence, browserLocalPersistence, inMemoryPersistence],
+      persistence: supportsIndexedDbPersistence()
+        ? [indexedDBLocalPersistence, browserLocalPersistence, inMemoryPersistence]
+        : [browserLocalPersistence, inMemoryPersistence],
     })
   } catch {
     // initializeAuth já foi chamado para este app (ex.: hot-reload em dev)
@@ -66,9 +87,12 @@ export const auth = createAuth()
 // vendedor perceber nada nem precisar refazer a venda.
 // IndexedDB só existe no navegador, então no servidor (SSR/build) cai
 // pro cache em memória, que é o suficiente já que não há usuário ali.
+// Mesma checagem defensiva do Auth acima: ambiente com IndexedDB pela
+// metade cai pro cache em memória em vez de arriscar o mesmo tipo de
+// bug interno do SDK.
 export const db = initializeFirestore(app, {
   localCache:
-    typeof window !== 'undefined'
+    typeof window !== 'undefined' && supportsIndexedDbPersistence()
       ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
       : memoryLocalCache(),
 })
