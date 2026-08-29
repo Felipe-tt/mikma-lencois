@@ -27,6 +27,7 @@ import { rateLimit }                    from '@/lib/rateLimit';
 import { getSettings }                  from '@/lib/settings';
 import { geocodeCep }                   from '@/lib/shipping-pricing';
 import { fetchRoute }                   from '@/lib/routing';
+import { uberDirectWebhookSecret }      from '@/lib/uber-direct';
 import { z }                            from 'zod';
 import { uberWebhookSchema } from './schema';
 
@@ -79,7 +80,9 @@ function verifySignature(rawBody: Buffer, header: string): boolean {
   // Testa contra os dois secrets configurados (produção e sandbox), o
   // toggle de ambiente é por pedido (delivery.uberSandbox), não global, então
   // um webhook de qualquer um dos dois apps pode legitimamente chegar aqui.
-  const secrets = [process.env.UBER_DIRECT_WEBHOOK_SECRET, process.env.UBER_DIRECT_SANDBOX_WEBHOOK_SECRET]
+  // uberDirectWebhookSecret le do secret consolidado UBER_DIRECT_CREDS/
+  // UBER_DIRECT_SANDBOX_CREDS (JSON), com fallback pras vars antigas.
+  const secrets = [uberDirectWebhookSecret(false), uberDirectWebhookSecret(true)]
     .filter((s): s is string => !!s);
   if (secrets.length === 0) {
     console.error('[uber-webhook] nenhum UBER_DIRECT_WEBHOOK_SECRET configurado, rejeitando (fail-closed)');

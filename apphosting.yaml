@@ -119,6 +119,16 @@ env:
   - variable: CRON_SECRET
     secret: CRON_SECRET
     availability: [RUNTIME]
+  - variable: UBER_DIRECT_CREDS
+    secret: UBER_DIRECT_CREDS
+    availability: [RUNTIME]
+  - variable: UBER_DIRECT_SANDBOX_CREDS
+    secret: UBER_DIRECT_SANDBOX_CREDS
+    availability: [RUNTIME]
+  # ── Antigas (8 vars), mantidas por enquanto so como fallback em
+  # src/lib/uber-direct.ts caso o secret consolidado acima falhe. Remover
+  # daqui (e apagar do Secret Manager) depois de confirmar que o site
+  # funciona normal com as duas de cima. ──
   - variable: UBER_DIRECT_CLIENT_ID
     secret: UBER_DIRECT_CLIENT_ID
     availability: [RUNTIME]
