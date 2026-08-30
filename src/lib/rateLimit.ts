@@ -13,8 +13,22 @@
 
 import { Redis } from '@upstash/redis';
 
-const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
-const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+// UPSTASH_REDIS_CREDS: 1 secret JSON com { url, token } em vez de 2
+// separados, reduz busca no Secret Manager por cold start. Fallback pras
+// vars antigas caso o JSON nao exista/falhe (ex: rollback de deploy).
+function upstashCreds(): { url?: string; token?: string } {
+  const raw = process.env.UPSTASH_REDIS_CREDS;
+  if (raw) {
+    try {
+      return JSON.parse(raw) as { url?: string; token?: string };
+    } catch {
+      console.error('UPSTASH_REDIS_CREDS: JSON invalido, usando fallback');
+    }
+  }
+  return { url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN };
+}
+
+const { url: UPSTASH_URL, token: UPSTASH_TOKEN } = upstashCreds();
 
 const redis =
   UPSTASH_URL && UPSTASH_TOKEN
