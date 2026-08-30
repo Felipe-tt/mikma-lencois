@@ -86,8 +86,8 @@ env:
   - variable: ABACATEPAY_API_KEY
     secret: ABACATEPAY_API_KEY
     availability: [RUNTIME]
-  - variable: ABACATEPAY_PUBLIC_KEY
-    secret: ABACATEPAY_PUBLIC_KEY
+  - variable: ABACATEPAY_WEBHOOK_SECRET
+    secret: ABACATEPAY_WEBHOOK_SECRET
     availability: [RUNTIME]
   - variable: MELHOR_ENVIO_TOKEN
     secret: MELHOR_ENVIO_TOKEN

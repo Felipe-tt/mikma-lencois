@@ -15,12 +15,12 @@ import { z } from 'zod';
 import { webhookSchema } from './schema';
 
 
-const ABACATEPAY_PUBLIC_KEY = process.env.ABACATEPAY_PUBLIC_KEY!;
+const ABACATEPAY_WEBHOOK_SECRET = process.env.ABACATEPAY_WEBHOOK_SECRET!;
 
 function verifySignature(payload: string, signature: string): boolean {
-  if (!ABACATEPAY_PUBLIC_KEY) return false;
+  if (!ABACATEPAY_WEBHOOK_SECRET) return false;
   try {
-    const expected = createHmac('sha256', ABACATEPAY_PUBLIC_KEY)
+    const expected = createHmac('sha256', ABACATEPAY_WEBHOOK_SECRET)
       .update(Buffer.from(payload, 'utf8'))
       .digest('base64');
     const a = Buffer.from(expected);
