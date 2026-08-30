@@ -16,6 +16,9 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { getStaffPrefs, setStaffPref } from '@/lib/staffPrefs';
+import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
+import { getDoc } from 'firebase/firestore';
+import { DefaultWeightsModal } from './DefaultWeightsModal';
 
 type Props = {
   initial?: Partial<Product> & { id?: string };
@@ -60,20 +63,35 @@ export default function ProductForm({ initial }: Props) {
   const [description, setDescription] = useState(initial?.description ?? '');
   const [price, setPrice] = useState(initial?.price ? (initial.price / 100).toFixed(2) : '');
   const [weightKg, setWeightKg] = useState(initial?.weightKg ? String(initial.weightKg) : '');
+  // Peso preenchido manualmente pelo admin trava o auto-preenchimento por
+  // tamanho (igual ao nome do produto acima) — nunca sobrescreve algo que
+  // a pessoa já digitou. Editando produto existente, nunca mexe sozinho.
+  const [weightEditedManually, setWeightEditedManually] = useState(isEdit || !!initial?.weightKg);
+  const [justAutoUpdatedWeight, setJustAutoUpdatedWeight] = useState(false);
+  const [defaultWeightsBySize, setDefaultWeightsBySize] = useState<StoreSettings['defaultWeightsBySize']>(STORE_DEFAULTS.defaultWeightsBySize);
+  const [weightsModalOpen, setWeightsModalOpen] = useState(false);
+  useEffect(() => {
+    getDoc(doc(db, 'settings', 'store')).then(snap => {
+      const data = snap.exists() ? snap.data() : {};
+      if (data.defaultWeightsBySize) setDefaultWeightsBySize({ ...STORE_DEFAULTS.defaultWeightsBySize, ...data.defaultWeightsBySize });
+    }).catch(() => {});
+  }, []);
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0]);
   const [fronhaCount, setFronhaCount] = useState(initial?.fronhaCount ?? 2);
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
 
   const [yarnCount, setYarnCount] = useState(initial?.yarnCount ?? '');
+  const [lastFabric, setLastFabric] = useState<string>(FABRICS[0]);
   // Ao criar um produto novo (não em edição), pré-preenche com a última
-  // espessura de fio que ESSE staff escolheu, persistida por UID no
+  // espessura de fio/tecido que ESSE staff escolheu, persistida por UID no
   // Firestore (users/{uid}.staffPrefs), não localStorage, então segue a
   // pessoa em qualquer navegador/dispositivo que ela usar pra logar.
   useEffect(() => {
     if (isEdit || !user) return;
     getStaffPrefs(user.uid).then(prefs => {
       if (prefs.lastYarnCount) setYarnCount(prefs.lastYarnCount);
+      if (prefs.lastFabric) setLastFabric(prefs.lastFabric);
     }).catch(() => {});
   }, [isEdit, user]);
 
@@ -143,6 +161,22 @@ export default function ProductForm({ initial }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentNameSuggestion, nameEditedManually]);
 
+  // Auto-preenche o peso a partir do padrão configurado pro tamanho da 1ª
+  // variação — mesmo padrão do nome automático acima: só enquanto o admin
+  // não tiver digitado nada no campo, e com destaque visual passageiro pra
+  // não passar despercebido (o campo fica visível na tela quando a
+  // variação muda, então o feedback aqui é mais sutil que o do nome).
+  const primarySize = variants[0]?.size;
+  useEffect(() => {
+    if (weightEditedManually || !primarySize) return;
+    const suggested = defaultWeightsBySize[primarySize as keyof typeof defaultWeightsBySize];
+    if (!suggested) return;
+    setWeightKg(String(suggested));
+    setJustAutoUpdatedWeight(true);
+    const t = setTimeout(() => setJustAutoUpdatedWeight(false), 900);
+    return () => clearTimeout(t);
+  }, [primarySize, weightEditedManually, defaultWeightsBySize]);
+
   function handlePhotoTaken(dataUrl: string, blob: Blob) {
     setShowCamera(false);
     setImages(prev => [...prev, { dataUrl, blob }]);
@@ -165,7 +199,18 @@ export default function ProductForm({ initial }: Props) {
 
   function addVariant() {
     const fallbackHex = '#E8DCC8';
-    setVariants(v => [...v, { size: SIZES[0], fabric: FABRICS[0], color: fallbackHex, colorName: hexToColorName(fallbackHex), qty: 1 }]);
+    // Usa o mesmo tamanho e tecido da última variação adicionada (se
+    // houver), senão cai no último tecido lembrado do staff — a maioria
+    // dos cadastros só varia a cor entre uma variação e outra do mesmo
+    // produto, então repetir tamanho/tecido evita re-selecionar sempre.
+    const last = variants[variants.length - 1];
+    setVariants(v => [...v, {
+      size: last?.size ?? SIZES[0],
+      fabric: last?.fabric ?? lastFabric,
+      color: fallbackHex,
+      colorName: hexToColorName(fallbackHex),
+      qty: 1,
+    }]);
   }
 
   function removeVariant(i: number) {
@@ -174,6 +219,10 @@ export default function ProductForm({ initial }: Props) {
 
   function updateVariant(i: number, field: keyof VariantEntry, value: string | number) {
     setVariants(v => v.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
+    if (field === 'fabric' && typeof value === 'string') {
+      setLastFabric(value);
+      if (user) setStaffPref(user.uid, 'lastFabric', value).catch(() => {});
+    }
   }
 
   function openColorFromPhoto(variantIdx: number) {
@@ -360,6 +409,22 @@ export default function ProductForm({ initial }: Props) {
       {showCamera && (
         <PhotoCaptureModal onCapture={handlePhotoTaken} onClose={() => setShowCamera(false)} />
       )}
+      {weightsModalOpen && (
+        <DefaultWeightsModal
+          current={defaultWeightsBySize}
+          onClose={() => setWeightsModalOpen(false)}
+          onSaved={next => {
+            setDefaultWeightsBySize(next);
+            // Se o admin acabou de editar o padrão e o campo ainda não foi
+            // tocado manualmente, aplica o novo valor na hora — evita ter
+            // que trocar o tamanho de novo só pra puxar o padrão atualizado.
+            if (!weightEditedManually && primarySize) {
+              const updated = next[primarySize as keyof typeof next];
+              if (updated) setWeightKg(String(updated));
+            }
+          }}
+        />
+      )}
       {colorPickerImageIndex !== null && (
         <PhotoColorPicker
           images={images.map(img => img.dataUrl)}
@@ -486,19 +551,45 @@ export default function ProductForm({ initial }: Props) {
                 />
               </div>
               <div>
-                <label className="label">
-                  Peso por unidade (kg) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={weightKg}
-                  onChange={e => setWeightKg(e.target.value)}
-                  placeholder="1.20"
-                  inputMode="decimal"
-                  className={`input ${weightKg && !weightKgValid ? 'border-red-400' : ''}`}
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label mb-0">
+                    Peso por unidade (kg) <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setWeightsModalOpen(true)}
+                    className="text-[10px] font-semibold text-clay hover:text-clay-d whitespace-nowrap"
+                  >
+                    Editar padrões
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={weightKg}
+                    onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); }}
+                    placeholder="1.20"
+                    inputMode="decimal"
+                    className={`input ${weightKg && !weightKgValid ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
+                  />
+                  {!weightEditedManually && weightKg && (
+                    <span
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
+                      title="Preenchido a partir do padrão desse tamanho"
+                      aria-hidden="true"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
+                        <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
+                      </svg>
+                    </span>
+                  )}
+                </div>
+                {!weightEditedManually && weightKg && (
+                  <p className="text-[11px] text-faint mt-1">Padrão do tamanho selecionado</p>
+                )}
               </div>
               <div>
                 <label className="label">Categoria</label>
