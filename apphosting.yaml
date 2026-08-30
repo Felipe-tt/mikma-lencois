@@ -58,10 +58,10 @@ env:
 
   # ── Só de build (Sentry sourcemap upload, config do webpack plugin) ──
   - variable: SENTRY_ORG
-    secret: SENTRY_ORG
+    value: "mikma"
     availability: [BUILD]
   - variable: SENTRY_PROJECT
-    secret: SENTRY_PROJECT
+    value: "javascript-nextjs"
     availability: [BUILD]
   - variable: SENTRY_AUTH_TOKEN
     secret: SENTRY_AUTH_TOKEN
@@ -69,7 +69,7 @@ env:
 
   # ── Servidor, só runtime ──
   - variable: FIREBASE_PROJECT_ID
-    secret: FIREBASE_PROJECT_ID
+    value: "mikma-lencois"
     availability: [RUNTIME]
   - variable: FIREBASE_CLIENT_EMAIL
     secret: FIREBASE_CLIENT_EMAIL
@@ -78,7 +78,7 @@ env:
     secret: FIREBASE_PRIVATE_KEY
     availability: [RUNTIME]
   - variable: SENTRY_DSN
-    secret: SENTRY_DSN
+    value: "https://79c7607bec5f121b2c57e38c25f80ec7@o4511700453556224.ingest.us.sentry.io/4511700455653376"
     availability: [RUNTIME]
   - variable: RECAPTCHA_SECRET_KEY
     secret: RECAPTCHA_SECRET_KEY
@@ -92,9 +92,6 @@ env:
   - variable: MELHOR_ENVIO_TOKEN
     secret: MELHOR_ENVIO_TOKEN
     availability: [RUNTIME]
-  - variable: MELHOR_ENVIO_CLIENT_SECRET
-    secret: MELHOR_ENVIO_CLIENT_SECRET
-    availability: [RUNTIME]
   - variable: RESEND_API_KEY
     secret: RESEND_API_KEY
     availability: [RUNTIME]
@@ -102,16 +99,13 @@ env:
     secret: RESEND_WEBHOOK_SECRET
     availability: [RUNTIME]
   - variable: RESEND_FROM_EMAIL
-    secret: RESEND_FROM_EMAIL
+    value: "noreply@mikma.com.br"
     availability: [RUNTIME]
   - variable: EMAIL_CONTATO_ADDRESS
-    secret: EMAIL_CONTATO_ADDRESS
+    value: "contato@mikma.com.br"
     availability: [RUNTIME]
-  - variable: UPSTASH_REDIS_REST_URL
-    secret: UPSTASH_REDIS_REST_URL
-    availability: [RUNTIME]
-  - variable: UPSTASH_REDIS_REST_TOKEN
-    secret: UPSTASH_REDIS_REST_TOKEN
+  - variable: UPSTASH_REDIS_CREDS
+    secret: UPSTASH_REDIS_CREDS
     availability: [RUNTIME]
   - variable: STAFF_SESSION_SECRET
     secret: STAFF_SESSION_SECRET
