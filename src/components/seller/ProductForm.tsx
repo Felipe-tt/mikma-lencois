@@ -22,6 +22,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -30,9 +31,6 @@ import type { Product } from '@/types';
 import { hexToColorName } from '@/lib/colorNames';
 import { ColorPicker } from './ColorPicker';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
-import { PhotoColorPicker } from './PhotoColorPicker';
-import { DefaultWeightsModal } from './DefaultWeightsModal';
-import { DuplicateProductModal } from './DuplicateProductModal';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, YARN_COUNTS, suggestProductName, type Size } from '@/lib/productOptions';
 import { formatProductName } from '@/lib/textFormat';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
@@ -41,6 +39,24 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { getStaffPrefs, setStaffPref } from '@/lib/staffPrefs';
 import { getDoc } from 'firebase/firestore';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
+
+// Carregados só quando abertos de verdade — PhotoColorPicker,
+// DefaultWeightsModal e DuplicateProductModal não são usados na maioria
+// das visitas à tela (a maior parte dos cadastros nem chega a abrir
+// esses popups). Em celular Android de entrada, cada KB de JS executado
+// no carregamento inicial conta; adiar isso pra quando a pessoa realmente
+// clica deixa a tela principal do cadastro pronta mais rápido.
+const PhotoColorPicker = dynamic(() => import('./PhotoColorPicker').then(m => m.PhotoColorPicker), { ssr: false });
+const DefaultWeightsModal = dynamic(() => import('./DefaultWeightsModal').then(m => m.DefaultWeightsModal), { ssr: false });
+const DuplicateProductModal = dynamic(() => import('./DuplicateProductModal').then(m => m.DuplicateProductModal), { ssr: false });
+
+/** Vibração tátil curta, só existe no Android (iOS Safari não implementa a
+ * Vibration API) — confirma uma ação sem precisar checar a tela, útil
+ * segurando o celular numa mão e cadastrando com a outra. Puramente
+ * decorativo: se o navegador não suportar, simplesmente não faz nada. */
+function tap(pattern: number | number[] = 12) {
+  try { navigator.vibrate?.(pattern); } catch { /* ignora */ }
+}
 
 type Props = {
   initial?: Partial<Product> & { id?: string };
@@ -166,6 +182,7 @@ export default function ProductForm({ initial }: Props) {
   const rowMemory = useRef<Map<string, FabricRow>>(new Map(initialRows.map(r => [r.fabric, r])));
 
   function toggleFabric(fabric: string) {
+    tap();
     setRows(prev => {
       const exists = prev.some(r => r.fabric === fabric);
       if (exists) {
@@ -327,9 +344,8 @@ export default function ProductForm({ initial }: Props) {
     setDuplicateModalOpen(false);
   }
 
-  function handlePhotoTaken(dataUrl: string, blob: Blob) {
-    setShowCamera(false);
-    setImages(prev => [...prev, { dataUrl, blob }]);
+  function handlePhotosCaptured(photos: { dataUrl: string; blob: Blob }[]) {
+    setImages(prev => [...prev, ...photos]);
   }
 
   function removeImage(i: number) {
@@ -373,7 +389,9 @@ export default function ProductForm({ initial }: Props) {
     return s && (s.quantity > 0 || s.reserved > 0);
   });
 
-  async function handleSubmit() {
+  const [successToast, setSuccessToast] = useState('');
+
+  async function handleSubmit(mode: 'list' | 'another' = 'list') {
     if (!name.trim()) { setError('Dê um nome para o produto.'); return; }
     if (!priceValid) { setError('Informe um preço válido.'); return; }
     if (!weightKgValid) { setError('Informe o peso do produto em kg (ex: 1.2).'); return; }
@@ -492,7 +510,28 @@ export default function ProductForm({ initial }: Props) {
         }
       }
       clearDraft();
-      router.push('/painel/produtos');
+      if (mode === 'another' && !isEdit) {
+        // Cadastro em lote: mantém categoria/tamanho/tecidos/especificações
+        // (o que costuma se repetir entre produtos parecidos cadastrados
+        // em sequência), limpa só o que é específico deste item — nome,
+        // fotos, preço, cores e quantidades.
+        tap([12, 40, 12]);
+        setSuccessToast(`"${data.name}" criado!`);
+        setTimeout(() => setSuccessToast(''), 3000);
+        setName(''); setNameEditedManually(false);
+        setDescription('');
+        setPrice('');
+        setImages([]);
+        setRemovedUrls([]);
+        const resetRows = rows.map(r => ({ fabric: r.fabric, color: '#E8DCC8', colorName: hexToColorName('#E8DCC8'), qty: 1 }));
+        setRows(resetRows);
+        rowMemory.current = new Map(resetRows.map(r => [r.fabric, r]));
+        setTags('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        tap();
+        router.push('/painel/produtos');
+      }
     } catch (e) {
       console.error(e);
       setError('Erro ao salvar. Tente novamente.');
@@ -521,7 +560,7 @@ export default function ProductForm({ initial }: Props) {
   return (
     <>
       {showCamera && (
-        <PhotoCaptureModal onCapture={handlePhotoTaken} onClose={() => setShowCamera(false)} />
+        <PhotoCaptureModal onDone={handlePhotosCaptured} onClose={() => setShowCamera(false)} />
       )}
       {colorPickerImageIndex !== null && (
         <PhotoColorPicker
@@ -549,7 +588,7 @@ export default function ProductForm({ initial }: Props) {
         <DuplicateProductModal onPick={applyDuplicateSource} onClose={() => setDuplicateModalOpen(false)} />
       )}
 
-      <div className="max-w-xl mx-auto px-4 sm:px-0 pb-32">
+      <div className="max-w-xl mx-auto px-4 sm:px-0 pb-40">
         {!isEdit && pendingDraft && !draftBannerDismissed && (
           <div className="mb-5 border border-clay/30 bg-clay/5 px-4 py-3 rounded-[4px] flex items-center justify-between gap-3 flex-wrap">
             <p className="text-[12px] text-ink">
@@ -943,16 +982,37 @@ export default function ProductForm({ initial }: Props) {
         </div>
       </div>
 
+      {/* Toast de sucesso — só aparece no fluxo "cadastrar outro", já que
+          não há navegação de página que sirva de confirmação nesse caso */}
+      {successToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-ink text-paper px-4 py-2.5 rounded-full text-[13px] font-medium shadow-lg flex items-center gap-2 transition-opacity duration-200">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+          {successToast}
+        </div>
+      )}
+
       {/* ── Barra de ação fixa — sempre visível, sem precisar rolar até o fim ── */}
       <div className="fixed bottom-0 left-0 right-0 bg-paper/95 backdrop-blur border-t border-mist z-40 pb-[env(safe-area-inset-bottom)]">
-        <div className="max-w-xl mx-auto px-4 py-3 flex gap-3 items-center">
-          <button onClick={handleSubmit} disabled={saving} className="btn-primary flex-1 py-3.5 sm:py-3 text-[15px]">
-            {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
-          </button>
-          <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-4 py-3.5 sm:py-3 text-sm font-medium text-mid hover:bg-warm transition-colors rounded-[4px] shrink-0">
-            Cancelar
-          </button>
-          <span className="hidden sm:inline text-[10px] text-faint whitespace-nowrap">⌘/Ctrl + Enter</span>
+        <div className="max-w-xl mx-auto px-4 py-3 flex flex-col gap-2">
+          <div className="flex gap-3 items-center">
+            <button onClick={() => handleSubmit('list')} disabled={saving} className="btn-primary flex-1 py-3.5 sm:py-3 text-[15px]">
+              {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
+            </button>
+            <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-4 py-3.5 sm:py-3 text-sm font-medium text-mid hover:bg-warm transition-colors rounded-[4px] shrink-0">
+              Cancelar
+            </button>
+            <span className="hidden sm:inline text-[10px] text-faint whitespace-nowrap">⌘/Ctrl + Enter</span>
+          </div>
+          {!isEdit && (
+            <button
+              onClick={() => handleSubmit('another')}
+              disabled={saving}
+              className="text-[12.5px] font-semibold text-clay hover:text-clay-d py-1 flex items-center justify-center gap-1.5"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              Criar e cadastrar outro produto
+            </button>
+          )}
         </div>
       </div>
     </>

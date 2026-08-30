@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 
 interface Props {
-  onCapture: (dataUrl: string, blob: Blob) => void;
+  onDone: (photos: { dataUrl: string; blob: Blob }[]) => void;
   onClose: () => void;
 }
 
@@ -75,33 +75,79 @@ async function compressImage(file: File, maxW = 900): Promise<{ blob: Blob; data
 }
 
 /**
- * Modal de captura de foto, só foto, simples e rápida.
- * Detecção de cor é feita depois, separadamente, sobre a foto já tirada.
+ * Modal de captura de foto — captura contínua.
+ *
+ * Em vez de abrir/fechar esse modal pra cada foto (o fluxo antigo: tirar
+ * 1 foto fechava o modal, precisava reabrir pra próxima — péssimo pra
+ * quem cadastra muitos produtos e tira 3-5 fotos de cada), agora o modal
+ * fica aberto entre capturas: tira, aparece na tirinha, tira de novo,
+ * só fecha quando a pessoa decidir ("Concluir"). O loop de câmera nativa
+ * do Android é rápido, é só a gente que não devia interromper ele a
+ * cada foto.
  */
-export function PhotoCaptureModal({ onCapture, onClose }: Props) {
+export function PhotoCaptureModal({ onDone, onClose }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [captured, setCaptured] = useState<{ dataUrl: string; blob: Blob }[]>([]);
 
-  async function handleFile(file: File) {
+  async function handleFiles(files: FileList) {
     setBusy(true);
     setError('');
     try {
-      const { blob, dataUrl } = await compressImage(file, 800);
-      onCapture(dataUrl, blob);
+      const results = await Promise.all(Array.from(files).map(f => compressImage(f, 800)));
+      setCaptured(prev => [...prev, ...results]);
+      // Vibração curta confirma a captura sem precisar olhar pra tela —
+      // útil segurando o celular na mão apontado pro produto. Só existe
+      // no Android (iOS Safari não implementa Vibration API), sem problema
+      // já que é só um toque extra, não uma dependência funcional.
+      navigator.vibrate?.(15);
     } catch {
       setError('Não foi possível processar essa foto. Tente outra.');
     } finally {
       setBusy(false);
+      // Permite tirar a mesma foto/arquivo de novo depois (o browser não
+      // dispara onChange se o valor não mudar).
+      if (fileRef.current) fileRef.current.value = '';
+      if (galleryRef.current) galleryRef.current.value = '';
     }
+  }
+
+  function removeCaptured(i: number) {
+    setCaptured(prev => prev.filter((_, idx) => idx !== i));
+  }
+
+  function finish() {
+    if (captured.length > 0) onDone(captured);
+    onClose();
   }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black/95">
       <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
-        <span className="text-sm font-semibold">Foto do produto</span>
+        <span className="text-sm font-semibold">
+          Foto do produto {captured.length > 0 && `· ${captured.length}`}
+        </span>
         <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
+
+      {captured.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto px-4 pb-3 shrink-0">
+          {captured.map((c, i) => (
+            <div key={i} className="relative shrink-0">
+              <img src={c.dataUrl} alt="" className="w-16 h-16 object-cover rounded-[4px] border border-white/20" />
+              <button
+                onClick={() => removeCaptured(i)}
+                className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow"
+                aria-label="Remover"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
         {busy ? (
@@ -123,27 +169,37 @@ export function PhotoCaptureModal({ onCapture, onClose }: Props) {
                 accept="image/*"
                 capture="environment"
                 className="hidden"
-                onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
+                onChange={e => e.target.files && e.target.files.length > 0 && handleFiles(e.target.files)}
               />
               <div className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/30 rounded-2xl py-14 px-6 text-white/80 active:border-white/60">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span className="text-base font-semibold text-center">Tirar foto</span>
+                <span className="text-base font-semibold text-center">{captured.length > 0 ? 'Tirar mais uma' : 'Tirar foto'}</span>
                 <span className="text-xs text-white/50 text-center">Aponte para o produto</span>
               </div>
             </label>
 
             <label className="cursor-pointer text-xs text-white/40 hover:text-white/70 underline underline-offset-2">
               <input
+                ref={galleryRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
-                onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
+                onChange={e => e.target.files && e.target.files.length > 0 && handleFiles(e.target.files)}
               />
-              Escolher da galeria
+              Escolher da galeria (várias de uma vez)
             </label>
           </div>
         )}
       </div>
+
+      {captured.length > 0 && !busy && (
+        <div className="p-4 shrink-0">
+          <button onClick={finish} className="w-full bg-white text-black rounded-full py-3.5 text-sm font-bold">
+            Concluir · {captured.length} foto{captured.length > 1 ? 's' : ''}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
