@@ -29,39 +29,17 @@ function apiBase(sandbox: boolean): string {
 type UberDirectCreds = { clientId?: string; clientSecret?: string; customerId?: string; webhookSecret?: string };
 
 // Le do secret consolidado (UBER_DIRECT_CREDS / UBER_DIRECT_SANDBOX_CREDS,
-// 1 JSON por ambiente) com fallback pras 4 variaveis separadas antigas
-// (UBER_DIRECT_CLIENT_ID etc), caso o secret novo ainda nao exista ou
-// tenha dado algum problema no parse. Reduz de 8 secrets pra 2 buscados
-// por cold start do App Hosting.
-function parseCredsJson(raw: string | undefined): UberDirectCreds | null {
-  if (!raw) return null;
+// 1 JSON por ambiente). As 8 vars separadas antigas (UBER_DIRECT_CLIENT_ID
+// etc) foram apagadas do Secret Manager, nao existe mais fallback pra elas.
+function credentials(sandbox: boolean): UberDirectCreds {
+  const raw = sandbox ? process.env.UBER_DIRECT_SANDBOX_CREDS : process.env.UBER_DIRECT_CREDS;
+  if (!raw) return {};
   try {
     return JSON.parse(raw) as UberDirectCreds;
   } catch {
-    console.error('UBER_DIRECT_CREDS/SANDBOX: JSON invalido, usando fallback');
-    return null;
+    console.error('UBER_DIRECT_CREDS/SANDBOX: JSON invalido');
+    return {};
   }
-}
-
-function credentials(sandbox: boolean): UberDirectCreds {
-  const fromJson = sandbox
-    ? parseCredsJson(process.env.UBER_DIRECT_SANDBOX_CREDS)
-    : parseCredsJson(process.env.UBER_DIRECT_CREDS);
-  if (fromJson) return fromJson;
-
-  return sandbox
-    ? {
-        clientId:     process.env.UBER_DIRECT_SANDBOX_CLIENT_ID,
-        clientSecret: process.env.UBER_DIRECT_SANDBOX_CLIENT_SECRET,
-        customerId:   process.env.UBER_DIRECT_SANDBOX_CUSTOMER_ID,
-        webhookSecret: process.env.UBER_DIRECT_SANDBOX_WEBHOOK_SECRET,
-      }
-    : {
-        clientId:     process.env.UBER_DIRECT_CLIENT_ID,
-        clientSecret: process.env.UBER_DIRECT_CLIENT_SECRET,
-        customerId:   process.env.UBER_DIRECT_CUSTOMER_ID,
-        webhookSecret: process.env.UBER_DIRECT_WEBHOOK_SECRET,
-      };
 }
 
 /** Webhook secret do ambiente pedido (usado por uber-webhook/route.ts) */
