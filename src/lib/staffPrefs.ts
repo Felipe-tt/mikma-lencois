@@ -14,7 +14,9 @@ import { db } from '@/lib/firebase/client';
  */
 export interface StaffPrefs {
   lastYarnCount?: string;
-  lastFabric?: string;
+  lastCategory?: string;
+  lastSize?: string;
+  lastFabrics?: string[];
 }
 
 export async function getStaffPrefs(uid: string): Promise<StaffPrefs> {

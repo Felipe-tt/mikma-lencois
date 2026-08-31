@@ -156,13 +156,30 @@ export default function ProductForm({ initial }: Props) {
   }, [category, size, isEdit]);
 
   const [yarnCount, setYarnCount] = useState(initial?.yarnCount ?? '');
-  const [lastFabric, setLastFabric] = useState<string>(FABRICS[0]);
   useEffect(() => {
     if (isEdit || !user) return;
     getStaffPrefs(user.uid).then(prefs => {
       if (prefs.lastYarnCount) setYarnCount(prefs.lastYarnCount);
-      if (prefs.lastFabric) setLastFabric(prefs.lastFabric);
+      // Pré-carrega categoria, tamanho e tecidos do último produto
+      // cadastrado por essa pessoa — não só dentro do mesmo lote (isso já
+      // existia via "cadastrar outro"), mas também ao abrir a tela do
+      // zero em outro dia. A maioria de quem cadastra em volume trabalha
+      // em rajadas do mesmo tipo de produto, então começar já perto do
+      // que a pessoa provavelmente quer poupa a repetição inteira dessas
+      // escolhas — só ajusta o que muda (foto, nome, preço, cor).
+      if (prefs.lastCategory && (CATEGORIES as readonly string[]).includes(prefs.lastCategory)) {
+        setCategory(prefs.lastCategory as typeof CATEGORIES[number]);
+      }
+      if (prefs.lastSize && (SIZES as readonly string[]).includes(prefs.lastSize)) {
+        setSize(prefs.lastSize as Size);
+      }
+      if (prefs.lastFabrics?.length) {
+        const initRows = prefs.lastFabrics.map(f => ({ fabric: f, color: '#E8DCC8', colorName: hexToColorName('#E8DCC8'), qty: 1 }));
+        setRows(initRows);
+        rowMemory.current = new Map(initRows.map(r => [r.fabric, r]));
+      }
     }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, user]);
 
   function handleYarnCountChange(v: string) {
@@ -391,8 +408,21 @@ export default function ProductForm({ initial }: Props) {
     setDuplicateModalOpen(false);
   }
 
+  const priceInputRef = useRef<HTMLInputElement>(null);
   function handlePhotosCaptured(photos: { dataUrl: string; blob: Blob }[]) {
+    const isFirstPhoto = images.length === 0;
     setImages(prev => [...prev, ...photos]);
+    // Depois da(s) primeira(s) foto(s), leva direto pro próximo campo que
+    // realmente precisa de atenção — nome já vem sugerido sozinho, então
+    // o que sobra é o preço. Só faz isso na primeira foto: se a pessoa já
+    // tá preenchendo o resto e volta pra adicionar mais uma foto depois,
+    // puxar o foco de volta seria mais irritante que útil.
+    if (isFirstPhoto) {
+      setTimeout(() => {
+        priceInputRef.current?.focus();
+        priceInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 350);
+    }
   }
 
   function removeImage(i: number) {
@@ -567,6 +597,15 @@ export default function ProductForm({ initial }: Props) {
         }
       }
       clearDraft();
+      if (!isEdit && user) {
+        // Grava categoria/tamanho/tecidos como padrão pro próximo cadastro
+        // dessa pessoa — mesmo em outro dia/sessão, não só dentro deste
+        // lote. Fire-and-forget, não trava o fluxo de salvar por causa
+        // disso.
+        setStaffPref(user.uid, 'lastCategory', category).catch(() => {});
+        setStaffPref(user.uid, 'lastSize', size).catch(() => {});
+        setStaffPref(user.uid, 'lastFabrics', rows.map(r => r.fabric)).catch(() => {});
+      }
       if (mode === 'another' && !isEdit) {
         // Cadastro em lote: mantém categoria/tamanho/tecidos/especificações
         // (o que costuma se repetir entre produtos parecidos cadastrados
@@ -808,6 +847,7 @@ export default function ProductForm({ initial }: Props) {
               <div>
                 <label className="label">Preço (R$)</label>
                 <input
+                  ref={priceInputRef}
                   value={price}
                   onChange={e => setPrice(e.target.value)}
                   placeholder="49,90"
@@ -835,56 +875,66 @@ export default function ProductForm({ initial }: Props) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="label">Tamanho</label>
-                <Select
-                  value={size}
-                  onChange={v => setSize(v as Size)}
-                  options={SIZES.map(s => ({ value: s, label: SIZE_LABEL[s] }))}
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="label mb-0">
-                    Peso por unidade (kg) <span className="text-red-500">*</span>
-                  </label>
+            <div>
+              <label className="label">Tamanho</label>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {SIZES.map(s => (
                   <button
+                    key={s}
                     type="button"
-                    onClick={() => setWeightsModalOpen(true)}
-                    className="text-[10px] font-semibold text-clay hover:text-clay-d whitespace-nowrap"
+                    onClick={() => { tap(); setSize(s); }}
+                    className={`py-3 rounded-[6px] border text-[13px] font-semibold transition-colors ${
+                      size === s
+                        ? 'bg-ink text-paper border-ink'
+                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
+                    }`}
                   >
-                    Editar padrões
+                    {SIZE_LABEL[s]}
                   </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={weightKg}
-                    onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); }}
-                    placeholder="1.20"
-                    inputMode="decimal"
-                    className={`input ${weightKg && !weightKgValid ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
-                  />
-                  {!weightEditedManually && weightKg && (
-                    <span
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
-                      title="Preenchido a partir do padrão desse tamanho"
-                      aria-hidden="true"
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
-                        <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
-                      </svg>
-                    </span>
-                  )}
-                </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="label mb-0">
+                  Peso por unidade (kg) <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setWeightsModalOpen(true)}
+                  className="text-[10px] font-semibold text-clay hover:text-clay-d whitespace-nowrap"
+                >
+                  Editar padrões
+                </button>
+              </div>
+              <div className="relative max-w-[10rem]">
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={weightKg}
+                  onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); }}
+                  placeholder="1.20"
+                  inputMode="decimal"
+                  className={`input ${weightKg && !weightKgValid ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
+                />
                 {!weightEditedManually && weightKg && (
-                  <p className="text-[11px] text-faint mt-1">Padrão do tamanho selecionado</p>
+                  <span
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
+                    title="Preenchido a partir do padrão desse tamanho"
+                    aria-hidden="true"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
+                      <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
+                    </svg>
+                  </span>
                 )}
               </div>
+              {!weightEditedManually && weightKg && (
+                <p className="text-[11px] text-faint mt-1">Padrão do tamanho selecionado</p>
+              )}
             </div>
 
             {category === 'Jogos de cama' && (
