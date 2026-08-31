@@ -137,3 +137,48 @@ export function resolveColorName(name: string): NamedColor | null {
 function normalize(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
+
+/**
+ * Amostra a cor dominante de uma foto — usado pra sugerir a cor do
+ * tecido sozinho assim que a pessoa marca um tecido, sem precisar
+ * descobrir/clicar em "pegar da foto" manualmente. Pra quem não é técnico,
+ * um passo a menos importa bastante.
+ *
+ * Amostra uma grade de pontos numa janela central (evita fundo/bordas,
+ * que costumam ser mais claros que o produto em fotos de still simples) e
+ * tira a média — mais estável que um único pixel, que pode cair bem numa
+ * dobra de tecido, sombra ou reflexo.
+ */
+export function sampleDominantColor(imageDataUrl: string): Promise<string | null> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const size = 64; // pequeno o bastante pra ser instantâneo
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(null);
+        ctx.drawImage(img, 0, 0, size, size);
+
+        let r = 0, g = 0, b = 0, n = 0;
+        // Janela central 50%–50% (de 25% a 75% da largura/altura)
+        const from = Math.round(size * 0.25);
+        const to = Math.round(size * 0.75);
+        const data = ctx.getImageData(from, from, to - from, to - from).data;
+        for (let i = 0; i < data.length; i += 4) {
+          r += data[i]; g += data[i + 1]; b += data[i + 2];
+          n++;
+        }
+        if (n === 0) return resolve(null);
+        const hex = '#' + [r, g, b].map(v => Math.round(v / n).toString(16).padStart(2, '0')).join('');
+        resolve(hex);
+      } catch {
+        resolve(null); // canvas "tainted" por CORS, foto ainda não carregou etc — sem problema, cai no cinza padrão
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = imageDataUrl;
+  });
+}

@@ -24,15 +24,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, limit as fbLimit, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase/client';
 import type { Product } from '@/types';
-import { hexToColorName } from '@/lib/colorNames';
+import { hexToColorName, sampleDominantColor } from '@/lib/colorNames';
 import { ColorPicker } from './ColorPicker';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, YARN_COUNTS, suggestProductName, type Size } from '@/lib/productOptions';
 import { formatProductName } from '@/lib/textFormat';
+import { formatCurrency } from '@/lib/utils/format';
+import { BrandLogo } from '@/components/BrandLogo';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -122,6 +124,37 @@ export default function ProductForm({ initial }: Props) {
   const [size, setSize] = useState<Size>((initial?.variants?.[0]?.size as Size) ?? SIZES[0]);
   const hasMixedLegacySizes = isEdit && initialSizes.size > 1;
 
+  // ── Sugestão de preço: tira a maior dúvida de quem não é do ramo ──
+  // "quanto eu cobro?" — olha produtos parecidos (mesma categoria, de
+  // preferência mesmo tamanho) já cadastrados e sugere a média. Só uma
+  // sugestão clicável, nunca preenche sozinho — preço é decisão de
+  // negócio, não algo pra automatizar sem confirmação.
+  const [priceSuggestion, setPriceSuggestion] = useState<number | null>(null);
+  useEffect(() => {
+    if (isEdit || !category) { setPriceSuggestion(null); return; }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        // Só filtro de igualdade (categoria), sem orderBy misto — não
+        // precisa de índice composto novo no Firestore.
+        const snap = await getDocs(query(collection(db, 'products'), where('category', '==', category), fbLimit(40)));
+        if (cancelled) return;
+        const sameSizePrices: number[] = [];
+        const anyPrices: number[] = [];
+        snap.forEach(d => {
+          const data = d.data();
+          if (typeof data.price !== 'number' || data.price <= 0) return;
+          anyPrices.push(data.price);
+          if (data.variants?.[0]?.size === size) sameSizePrices.push(data.price);
+        });
+        const pool = sameSizePrices.length > 0 ? sameSizePrices : anyPrices;
+        if (pool.length === 0) { setPriceSuggestion(null); return; }
+        setPriceSuggestion(Math.round(pool.reduce((a, b) => a + b, 0) / pool.length));
+      } catch { if (!cancelled) setPriceSuggestion(null); }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [category, size, isEdit]);
+
   const [yarnCount, setYarnCount] = useState(initial?.yarnCount ?? '');
   const [lastFabric, setLastFabric] = useState<string>(FABRICS[0]);
   useEffect(() => {
@@ -180,6 +213,7 @@ export default function ProductForm({ initial }: Props) {
   }));
   const [rows, setRows] = useState<FabricRow[]>(initialRows);
   const rowMemory = useRef<Map<string, FabricRow>>(new Map(initialRows.map(r => [r.fabric, r])));
+  const [autoColoredFabrics, setAutoColoredFabrics] = useState<Set<string>>(new Set());
 
   function toggleFabric(fabric: string) {
     tap();
@@ -199,12 +233,25 @@ export default function ProductForm({ initial }: Props) {
         colorName: hexToColorName(fallbackHex),
         qty: 1,
       };
+      // Se não tinha memória (tecido novo pra essa sessão) e já existe
+      // foto, tenta adivinhar a cor sozinho a partir da capa — a pessoa
+      // não precisa saber que existe um jeito de "pegar cor da foto",
+      // já vem pronto, só ajusta se não bater.
+      if (!remembered && images[0]) {
+        sampleDominantColor(images[0].dataUrl).then(hex => {
+          if (!hex) return;
+          const name = hexToColorName(hex);
+          setRows(cur => cur.map(r => r.fabric === fabric && r.color === fallbackHex ? { ...r, color: hex, colorName: name } : r));
+          setAutoColoredFabrics(cur => new Set(cur).add(fabric));
+        }).catch(() => {});
+      }
       return [...prev, newRow];
     });
   }
 
   function updateRow(fabric: string, patch: Partial<FabricRow>) {
     setRows(prev => prev.map(r => r.fabric === fabric ? { ...r, ...patch } : r));
+    if (patch.color) setAutoColoredFabrics(cur => { const next = new Set(cur); next.delete(fabric); return next; });
   }
 
   const [showCamera, setShowCamera] = useState(false);
@@ -379,6 +426,16 @@ export default function ProductForm({ initial }: Props) {
 
   const priceValid = !!price && !isNaN(parseFloat(price.replace(',', '.')));
   const weightKgValid = !!weightKg && !isNaN(parseFloat(weightKg)) && parseFloat(weightKg) > 0;
+
+  // ── Checklist de progresso: orienta quem não conhece o formulário sobre
+  // onde está e quanto falta, sem precisar rolar a tela pra descobrir o
+  // que ainda não preencheu. Aparece fixo no topo.
+  const steps = [
+    { label: 'Fotos', done: images.length > 0 },
+    { label: 'Informações', done: !!name.trim() && priceValid && weightKgValid },
+    { label: 'Tecidos', done: rows.length > 0 },
+  ];
+  const stepsDone = steps.filter(s => s.done).length;
 
   const currentSkuSet = new Set(rows.map(r => makeVariantId(size, r.fabric)));
   const orphanedSkus = isEdit
@@ -589,6 +646,30 @@ export default function ProductForm({ initial }: Props) {
       )}
 
       <div className="max-w-xl mx-auto px-4 sm:px-0 pb-40">
+        {/* ── Checklist de progresso — orienta quem não conhece o formulário ── */}
+        {!isEdit && (
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-1">
+            {steps.map((s, i) => (
+              <div key={s.label} className="flex items-center gap-2 flex-1">
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors ${
+                    s.done ? 'bg-clay text-paper' : 'bg-mist text-faint'
+                  }`}>
+                    {s.done ? (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
+                    ) : (i + 1)}
+                  </span>
+                  <span className={`text-[11px] font-medium whitespace-nowrap ${s.done ? 'text-ink' : 'text-faint'}`}>{s.label}</span>
+                </div>
+                {i < steps.length - 1 && <div className={`h-[2px] flex-1 rounded-full ${s.done ? 'bg-clay/40' : 'bg-mist'}`} />}
+              </div>
+            ))}
+            </div>
+            <span className="text-[10px] text-faint font-mono shrink-0">{stepsDone}/{steps.length}</span>
+          </div>
+        )}
+
         {!isEdit && pendingDraft && !draftBannerDismissed && (
           <div className="mb-5 border border-clay/30 bg-clay/5 px-4 py-3 rounded-[4px] flex items-center justify-between gap-3 flex-wrap">
             <p className="text-[12px] text-ink">
@@ -733,6 +814,16 @@ export default function ProductForm({ initial }: Props) {
                   inputMode="decimal"
                   className={`input ${price && !priceValid ? 'border-red-400' : ''}`}
                 />
+                {priceSuggestion !== null && !price && (
+                  <button
+                    type="button"
+                    onClick={() => setPrice((priceSuggestion / 100).toFixed(2))}
+                    className="text-[11px] text-clay hover:text-clay-d font-medium mt-1 flex items-center gap-1"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    Sugestão: R$ {(priceSuggestion / 100).toFixed(2)} <span className="text-faint font-normal">(baseado em produtos parecidos)</span>
+                  </button>
+                )}
               </div>
               <div>
                 <label className="label">Categoria</label>
@@ -824,6 +915,35 @@ export default function ProductForm({ initial }: Props) {
                 className="input"
               />
             </div>
+
+            {/* ── Prévia ao vivo — pra quem não é técnico, ver como vai
+                aparecer pro cliente é mais confiável que confiar nos
+                campos abstratos do formulário. Atualiza junto com o
+                preenchimento, sem precisar publicar pra conferir. ── */}
+            {(images[0] || name || price) && (
+              <div>
+                <p className="text-[10px] text-faint font-semibold tracking-[0.12em] uppercase mb-2">É assim que vai aparecer na loja</p>
+                <div className="border border-mist bg-paper w-40 rounded-[4px] overflow-hidden shadow-sm">
+                  <div className="relative aspect-[3/4] bg-warm">
+                    {images[0] ? (
+                      <img src={images[0].dataUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <BrandLogo alt="" className="w-14 h-auto opacity-[0.12]" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-2.5 pt-2.5 pb-3">
+                    <p className="text-[10.5px] font-medium text-ink leading-snug line-clamp-2 mb-1.5 min-h-[2.4em]">
+                      {name || 'Nome do produto'}
+                    </p>
+                    <p className="font-display text-[0.95rem] text-ink font-normal leading-none tracking-[-0.01em]">
+                      {priceValid ? formatCurrency(Math.round(parseFloat(price.replace(',', '.')) * 100)) : 'R$ —'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </FormSection>
 
           {/* ── 3. Tecidos e cores ── */}
@@ -890,6 +1010,12 @@ export default function ProductForm({ initial }: Props) {
                         colorName={r.colorName}
                         onChange={(hex, colorName) => updateRow(r.fabric, { color: hex, colorName })}
                       />
+                      {autoColoredFabrics.has(r.fabric) && (
+                        <p className="text-[10.5px] text-clay/80 mt-1 flex items-center gap-1">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                          Cor detectada da foto — ajuste se não bateu
+                        </p>
+                      )}
                     </div>
 
                     {!isEdit && (
