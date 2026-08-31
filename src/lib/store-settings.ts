@@ -47,6 +47,10 @@ export type StoreSettings = {
   // novo deploy. Nunca guarda client_secret aqui, só a flag.
   uberDirectSandboxMode?: boolean;
   defaultItemWeightKg: number;
+  // Peso padrão (kg) sugerido no cadastro de produto conforme o tamanho da
+  // 1ª variação, editável no popup "Pesos padrão" e sempre sobrescrevível
+  // por produto — só acelera o cadastro repetitivo, não trava nada.
+  defaultWeightsBySize: Partial<Record<'solteiro' | 'casal' | 'queen' | 'king' | 'berco' | 'unico', number>>;
   dispatchCutoffTime: string;
   freeShippingThresholdCents: number;
   // Teto de prejuízo acumulado (em centavos) que o "caixa de frete" tolera
@@ -129,6 +133,14 @@ export const STORE_DEFAULTS: StoreSettings = {
   localDeliveryRadiusKm: 10,
   uberDirectSandboxMode: false,
   defaultItemWeightKg: 0.8,
+  defaultWeightsBySize: {
+    solteiro: 0.6,
+    casal: 1.0,
+    queen: 1.2,
+    king: 1.5,
+    berco: 0.4,
+    unico: 0.8,
+  },
   dispatchCutoffTime: '17:00',
   freeShippingThresholdCents: 0,
   freeShippingMaxLossCents: 50000, // R$500 de prejuízo acumulado tolerado por padrão
