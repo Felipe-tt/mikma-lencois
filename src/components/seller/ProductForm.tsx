@@ -412,12 +412,31 @@ export default function ProductForm({ initial }: Props) {
   function handlePhotosCaptured(photos: { dataUrl: string; blob: Blob }[]) {
     const isFirstPhoto = images.length === 0;
     setImages(prev => [...prev, ...photos]);
-    // Depois da(s) primeira(s) foto(s), leva direto pro próximo campo que
-    // realmente precisa de atenção — nome já vem sugerido sozinho, então
-    // o que sobra é o preço. Só faz isso na primeira foto: se a pessoa já
-    // tá preenchendo o resto e volta pra adicionar mais uma foto depois,
-    // puxar o foco de volta seria mais irritante que útil.
     if (isFirstPhoto) {
+      // Tecidos pré-carregados do cadastro anterior (via staffPrefs) já
+      // viram linha antes de existir qualquer foto, então a detecção
+      // automática de cor (que só dispara ao marcar um tecido novo) nunca
+      // rodou pra eles. Agora que a primeira foto chegou, tenta de novo
+      // pra qualquer linha que ainda esteja na cor placeholder — sem isso,
+      // o cadastro mais comum (categoria/tamanho/tecidos repetidos) nunca
+      // se beneficiaria da cor automática.
+      const cover = photos[0]?.dataUrl;
+      if (cover) {
+        const stillPlaceholder = new Set(rows.filter(r => r.color === '#E8DCC8').map(r => r.fabric));
+        if (stillPlaceholder.size > 0) {
+          sampleDominantColor(cover).then(hex => {
+            if (!hex) return;
+            const name = hexToColorName(hex);
+            setRows(cur => cur.map(r => stillPlaceholder.has(r.fabric) ? { ...r, color: hex, colorName: name } : r));
+            setAutoColoredFabrics(cur => new Set([...cur, ...stillPlaceholder]));
+          }).catch(() => {});
+        }
+      }
+      // Depois da(s) primeira(s) foto(s), leva direto pro próximo campo que
+      // realmente precisa de atenção — nome já vem sugerido sozinho, então
+      // o que sobra é o preço. Só faz isso na primeira foto: se a pessoa já
+      // tá preenchendo o resto e volta pra adicionar mais uma foto depois,
+      // puxar o foco de volta seria mais irritante que útil.
       setTimeout(() => {
         priceInputRef.current?.focus();
         priceInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -488,39 +507,43 @@ export default function ProductForm({ initial }: Props) {
     setSaving(true);
     setError('');
     try {
-      if (removedUrls.length > 0) {
-        await Promise.allSettled(
-          removedUrls.map(url => {
-            try {
-              const m = url.match(/\/o\/(.+?)\?/);
-              if (!m) return Promise.resolve();
-              return deleteObject(ref(storage, decodeURIComponent(m[1])));
-            } catch { return Promise.resolve(); }
-          })
-        );
-      }
+      // Apaga fotos removidas E sobe as novas ao mesmo tempo — antes a
+      // exclusão rodava toda antes de começar o upload, atrasando o
+      // salvamento à toa (uma coisa não depende da outra pra completar).
+      const deleteOldPhotos = removedUrls.length > 0
+        ? Promise.allSettled(
+            removedUrls.map(url => {
+              try {
+                const m = url.match(/\/o\/(.+?)\?/);
+                if (!m) return Promise.resolve();
+                return deleteObject(ref(storage, decodeURIComponent(m[1])));
+              } catch { return Promise.resolve(); }
+            })
+          )
+        : Promise.resolve();
 
       const now = new Date();
       const folder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const uploadedUrls: string[] = (
-        await Promise.all(
-          images.map(async (img, i) => {
-            if (img.url) return img.url;
-            if (!img.blob) return null;
-            const ext = img.blob.type === 'image/webp' ? 'webp'
-                      : img.blob.type === 'image/avif' ? 'avif'
-                      : 'jpg';
-            const fname = `${Date.now()}_${i}.${ext}`;
-            const storageRef = ref(storage, `products/${folder}/${fname}`);
-            await uploadBytes(storageRef, img.blob, {
-              contentType: img.blob.type || 'image/webp',
-              cacheControl: 'public, max-age=31536000, immutable',
-              customMetadata: { index: String(i) },
-            });
-            return getDownloadURL(storageRef);
-          })
-        )
-      ).filter((u): u is string => !!u);
+      const uploadNewPhotos = Promise.all(
+        images.map(async (img, i) => {
+          if (img.url) return img.url;
+          if (!img.blob) return null;
+          const ext = img.blob.type === 'image/webp' ? 'webp'
+                    : img.blob.type === 'image/avif' ? 'avif'
+                    : 'jpg';
+          const fname = `${Date.now()}_${i}.${ext}`;
+          const storageRef = ref(storage, `products/${folder}/${fname}`);
+          await uploadBytes(storageRef, img.blob, {
+            contentType: img.blob.type || 'image/webp',
+            cacheControl: 'public, max-age=31536000, immutable',
+            customMetadata: { index: String(i) },
+          });
+          return getDownloadURL(storageRef);
+        })
+      );
+
+      const [, uploaded] = await Promise.all([deleteOldPhotos, uploadNewPhotos]);
+      const uploadedUrls: string[] = uploaded.filter((u): u is string => !!u);
 
       const priceCents = Math.round(parseFloat(price.replace(',', '.')) * 100);
       const tagArr = tags.split(',').map(t => t.trim()).filter(Boolean);
@@ -564,37 +587,36 @@ export default function ProductForm({ initial }: Props) {
           if (!ok) { setSaving(false); return; }
         }
 
-        await updateDoc(doc(db, 'products', productId), data);
-
-        for (const sku of orphanedSkus) {
-          await deleteDoc(doc(db, 'inventory', sku)).catch(() => {});
-        }
-
-        for (const r of rows) {
-          const variantId = makeVariantId(size, r.fabric);
-          const sku = `${productId}_${variantId}`;
-          if (!existingSkus[sku]) {
-            await setDoc(doc(db, 'inventory', sku), {
-              productId, sku,
+        // Grava tudo em paralelo — antes eram writes sequenciais (1 por
+        // tecido + 1 por SKU removido, um de cada vez), o que somava
+        // segundos numa conexão de celular pra produtos com vários
+        // tecidos. Promise.all despacha todas as escritas de uma vez.
+        await Promise.all([
+          updateDoc(doc(db, 'products', productId), data),
+          ...orphanedSkus.map(sku => deleteDoc(doc(db, 'inventory', sku)).catch(() => {})),
+          ...rows
+            .map(r => ({ variantId: makeVariantId(size, r.fabric), r }))
+            .filter(({ variantId }) => !existingSkus[`${productId}_${variantId}`])
+            .map(({ variantId, r }) => setDoc(doc(db, 'inventory', `${productId}_${variantId}`), {
+              productId, sku: `${productId}_${variantId}`,
               variant: { id: variantId, size, fabric: r.fabric, color: r.color },
               quantity: 0, reserved: 0, lowStockThreshold: 3, history: [],
               updatedAt: serverTimestamp(),
-            });
-          }
-        }
+            })),
+        ]);
       } else {
         const newRef = doc(collection(db, 'products'));
         await setDoc(newRef, { ...data, createdAt: serverTimestamp() });
-        for (const r of rows) {
+        await Promise.all(rows.map(r => {
           const variantId = makeVariantId(size, r.fabric);
           const sku = `${newRef.id}_${variantId}`;
-          await setDoc(doc(db, 'inventory', sku), {
+          return setDoc(doc(db, 'inventory', sku), {
             productId: newRef.id, sku,
             variant: { id: variantId, size, fabric: r.fabric, color: r.color },
             quantity: r.qty, reserved: 0, lowStockThreshold: 3, history: [],
             updatedAt: serverTimestamp(),
           });
-        }
+        }));
       }
       clearDraft();
       if (!isEdit && user) {
