@@ -5,6 +5,7 @@ import {
   indexedDBLocalPersistence,
   browserLocalPersistence,
   inMemoryPersistence,
+  browserPopupRedirectResolver,
 } from 'firebase/auth'
 import {
   initializeFirestore,
@@ -72,6 +73,10 @@ function createAuth() {
       persistence: supportsIndexedDbPersistence()
         ? [indexedDBLocalPersistence, browserLocalPersistence, inMemoryPersistence]
         : [browserLocalPersistence, inMemoryPersistence],
+      // getAuth() inclui um popupRedirectResolver por padrão; initializeAuth()
+      // não. Sem isso, signInWithPopup/signInWithRedirect (login com Google)
+      // lança "auth/argument-error" ao tentar resolver o fluxo OAuth.
+      popupRedirectResolver: browserPopupRedirectResolver,
     })
   } catch {
     // initializeAuth já foi chamado para este app (ex.: hot-reload em dev)
