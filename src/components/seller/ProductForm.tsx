@@ -989,8 +989,17 @@ export default function ProductForm({ initial }: Props) {
                   type="number"
                   min={1}
                   max={10}
-                  value={fronhaCount}
-                  onChange={e => setFronhaCount(Math.max(1, parseInt(e.target.value) || 1))}
+                  value={fronhaCount === 0 ? '' : fronhaCount}
+                  onChange={e => {
+                    const raw = e.target.value;
+                    if (raw === '') { setFronhaCount(0); return; } // 0 é só estado transitório de "campo vazio", nunca é salvo
+                    const n = parseInt(raw, 10);
+                    if (!isNaN(n)) setFronhaCount(n);
+                  }}
+                  onBlur={() => { if (!fronhaCount || fronhaCount < 1) setFronhaCount(1); }}
+                  onFocus={e => e.target.select()}
+                  placeholder="2"
+                  inputMode="numeric"
                   className="input-sm w-24"
                 />
                 <p className="text-[11px] text-faint mt-1">
@@ -1117,8 +1126,21 @@ export default function ProductForm({ initial }: Props) {
                         <input
                           type="number"
                           min={0}
-                          value={r.qty}
-                          onChange={e => updateRow(r.fabric, { qty: Number(e.target.value) })}
+                          // Nunca mostra "0" literal na caixa — um número
+                          // controlado que vira 0 ao ser esvaziado (pra
+                          // digitar outro valor) travava a pessoa num "0"
+                          // que o teclado numérico do Android inseria
+                          // ANTES do dígito novo (virava "01" e nunca
+                          // saía disso). Em branco + placeholder resolve
+                          // na raiz: nunca tem um zero ali pra atrapalhar.
+                          value={r.qty === 0 ? '' : r.qty}
+                          onChange={e => {
+                            const raw = e.target.value;
+                            const n = raw === '' ? 0 : parseInt(raw, 10);
+                            updateRow(r.fabric, { qty: isNaN(n) ? 0 : n });
+                          }}
+                          onFocus={e => e.target.select()}
+                          placeholder="0"
                           inputMode="numeric"
                           className="w-full border border-mist px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]"
                         />
