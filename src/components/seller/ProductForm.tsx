@@ -78,7 +78,7 @@ type DraftShape = {
   name: string; nameEditedManually: boolean; description: string; price: string;
   category: string; size: Size; fronhaCount: number; tags: string; active: boolean;
   yarnCount: string; composition: string; weightGsm: string; certifications: string; specsOpen: boolean;
-  weightKg: string; weightEditedManually: boolean;
+  weightKg: string; weightEditedManually: boolean; weightTypedByHand: boolean;
   images: string[]; // só dataUrl, blob é reconstruído a partir daqui
   rows: FabricRow[];
   savedAt: number;
@@ -193,8 +193,19 @@ export default function ProductForm({ initial }: Props) {
   const [specsOpen, setSpecsOpen] = useState(!!(initial?.yarnCount || initial?.composition || initial?.weightGsm || initial?.certifications?.length));
 
   // ── Peso: auto-preenchido pelo tamanho selecionado (padrão configurável) ──
+  // weightEditedManually trava o auto-preenchimento (usado tanto quando o
+  // peso veio de uma FONTE — produto existente sendo editado, ou copiado
+  // via "duplicar" — quanto quando a pessoa digitou o valor na mão).
+  // weightTypedByHand distingue os dois casos: só fica true quando alguém
+  // realmente digita no campo. Isso importa porque, ao trocar o tamanho de
+  // propósito depois de carregar/copiar um peso de origem, faz sentido
+  // voltar a seguir o padrão do tamanho novo — mas se a pessoa digitou o
+  // peso na mão, esse valor é respeitado pra sempre, não importa o que
+  // aconteça com o tamanho depois.
+  const initialSizeForWeight = useRef<Size>((initial?.variants?.[0]?.size as Size) ?? SIZES[0]).current;
   const [weightKg, setWeightKg] = useState(initial?.weightKg ? String(initial.weightKg) : '');
   const [weightEditedManually, setWeightEditedManually] = useState(isEdit || !!initial?.weightKg);
+  const [weightTypedByHand, setWeightTypedByHand] = useState(false);
   const [justAutoUpdatedWeight, setJustAutoUpdatedWeight] = useState(false);
   const [defaultWeightsBySize, setDefaultWeightsBySize] = useState<StoreSettings['defaultWeightsBySize']>(STORE_DEFAULTS.defaultWeightsBySize);
   const [weightsModalOpen, setWeightsModalOpen] = useState(false);
@@ -204,6 +215,16 @@ export default function ProductForm({ initial }: Props) {
       if (data.defaultWeightsBySize) setDefaultWeightsBySize({ ...STORE_DEFAULTS.defaultWeightsBySize, ...data.defaultWeightsBySize });
     }).catch(() => {});
   }, []);
+  // Trocar o tamanho de propósito, com um peso que veio de origem (não
+  // digitado), destrava o auto-preenchimento pro tamanho novo — sem isso,
+  // duplicar um produto ou editar um já existente e depois mudar o
+  // tamanho deixava o peso preso pra sempre no valor antigo.
+  useEffect(() => {
+    if (weightEditedManually && !weightTypedByHand && size !== initialSizeForWeight) {
+      setWeightEditedManually(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size]);
   useEffect(() => {
     if (weightEditedManually) return;
     const suggested = defaultWeightsBySize[size as keyof typeof defaultWeightsBySize];
@@ -334,7 +355,7 @@ export default function ProductForm({ initial }: Props) {
     setFronhaCount(d.fronhaCount); setTags(d.tags); setActive(d.active);
     setYarnCount(d.yarnCount); setComposition(d.composition);
     setWeightGsm(d.weightGsm); setCertifications(d.certifications); setSpecsOpen(d.specsOpen);
-    setWeightKg(d.weightKg); setWeightEditedManually(d.weightEditedManually);
+    setWeightKg(d.weightKg); setWeightEditedManually(d.weightEditedManually); setWeightTypedByHand(d.weightTypedByHand);
     setRows(d.rows);
     // dataURL -> Blob de novo, pra poder subir pro Storage no submit
     const restoredImages = await Promise.all(d.images.map(async dataUrl => {
@@ -366,14 +387,14 @@ export default function ProductForm({ initial }: Props) {
       const draft: DraftShape = {
         name, nameEditedManually, description, price, category, size, fronhaCount, tags, active,
         yarnCount, composition, weightGsm, certifications, specsOpen,
-        weightKg, weightEditedManually,
+        weightKg, weightEditedManually, weightTypedByHand,
         images: images.map(i => i.dataUrl),
         rows, savedAt: Date.now(),
       };
       try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch { /* quota cheia ou indisponível, ignora silenciosamente */ }
     }, 600);
     return () => clearTimeout(t);
-  }, [isEdit, pendingDraft, name, nameEditedManually, description, price, category, size, fronhaCount, tags, active, yarnCount, composition, weightGsm, certifications, specsOpen, weightKg, weightEditedManually, images, rows]);
+  }, [isEdit, pendingDraft, name, nameEditedManually, description, price, category, size, fronhaCount, tags, active, yarnCount, composition, weightGsm, certifications, specsOpen, weightKg, weightEditedManually, weightTypedByHand, images, rows]);
 
   function clearDraft() {
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignora */ }
@@ -936,7 +957,7 @@ export default function ProductForm({ initial }: Props) {
                   min="0.01"
                   step="0.01"
                   value={weightKg}
-                  onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); }}
+                  onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); setWeightTypedByHand(true); }}
                   placeholder="1.20"
                   inputMode="decimal"
                   className={`input ${weightKg && !weightKgValid ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
