@@ -149,7 +149,7 @@ export default function ManutencaoPage() {
 
   if (loading) return (
     <div className="flex flex-col gap-3">
-      {[1, 2, 3].map(i => <div key={i} className="h-12 skeleton border border-mist" />)}
+      {[1, 2, 3].map(i => <div key={i} className="h-12 skeleton border border-mist rounded-xl" />)}
     </div>
   );
 
@@ -196,7 +196,7 @@ export default function ManutencaoPage() {
       </div>
 
       {/* CLI hint */}
-      <div className="border border-mist bg-paper px-5 py-4 mb-6">
+      <div className="border border-mist bg-paper px-5 py-4 mb-6 rounded-xl">
         <p className="text-[11px] font-bold text-mid mb-2 tracking-[0.1em] uppercase">Pelo terminal</p>
         <div className="flex flex-col gap-1.5">
           <code className="text-[11px] bg-ink text-paper px-3 py-2 block font-mono">
@@ -212,7 +212,7 @@ export default function ManutencaoPage() {
       </div>
 
       {/* Queue */}
-      <div className="border border-mist bg-white dark:bg-warm">
+      <div className="border border-mist bg-white dark:bg-warm rounded-xl">
         <div className="px-5 py-4 border-b border-mist bg-paper">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -230,7 +230,7 @@ export default function ManutencaoPage() {
               )}
               {queue.length > 0 && (
                 <button onClick={clearQueue}
-                  className="px-3 py-1.5 text-[11px] font-semibold border border-mist text-mid hover:bg-warm transition-colors">
+                  className="px-3 py-1.5 text-[11px] font-semibold border border-mist text-mid hover:bg-warm transition-colors rounded-xl">
                   Limpar fila
                 </button>
               )}

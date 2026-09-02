@@ -396,6 +396,151 @@ html.dark ::-webkit-scrollbar-thumb { background: #3C3028; }
 html.dark ::-webkit-scrollbar-thumb:hover { background: #5A4838; }
 html.dark * { scrollbar-color: #3C3028 transparent; }
 
+/* ── Painel (admin) — rework visual ──────────────────────────────────
+   Tudo aqui vive dentro de `.painel-scope` (aplicado no wrapper raiz do
+   painel) de propósito: a loja pública mantém a estética quadrada/reta
+   original, só o admin fica mais "tecnológico" (cantos arredondados,
+   profundidade em camadas, glass blur, glow sutil no accent clay).
+   Nenhuma cor nova — só os tokens --c-* já existentes, com raio,
+   sombra e blur aplicados de forma consistente. */
+
+.painel-scope {
+  --panel-radius-sm: 0.625rem;
+  --panel-radius: 0.875rem;
+  --panel-radius-lg: 1.25rem;
+}
+
+/* Os componentes compartilhados (.btn-*, .input, .select, .badge, .chip)
+   são usados também na loja pública, então não mudamos a classe base —
+   só arredondamos quando aparecem dentro do painel. */
+.painel-scope .btn-primary,
+.painel-scope .btn-outline,
+.painel-scope .btn-clay,
+.painel-scope .btn-icon,
+.painel-scope .input,
+.painel-scope .input-sm,
+.painel-scope .select {
+  border-radius: var(--panel-radius-sm);
+}
+.painel-scope .btn-primary-lg,
+.painel-scope .btn-outline-lg,
+.painel-scope .btn-clay-lg {
+  border-radius: var(--panel-radius);
+}
+.painel-scope .badge {
+  border-radius: 999px;
+}
+.painel-scope .chip {
+  border-radius: var(--panel-radius-sm);
+}
+
+/* Qualquer bloco com borda cheia (cards, inputs, thumbs, tabelas) ganha
+   cantos suaves em vez de retos — a mudança de maior impacto pro
+   "parece tudo quadrado". Bordas parciais (divisórias border-t/border-b
+   dentro de um card já arredondado) ficam retas de propósito: é o
+   padrão de tabela/lista moderna, linha reta separando itens dentro de
+   um contêiner arredondado. */
+.painel-scope .border.border-mist {
+  border-radius: var(--panel-radius-sm);
+}
+
+/* Cartão padrão do painel: substitui `bg-paper border border-mist`
+   espalhado pelas páginas. Camadas suaves (borda 1px + sombra rasa)
+   em vez de contorno duro. */
+.panel-card {
+  @apply relative bg-paper border border-mist/80 rounded-2xl shadow-card;
+}
+.panel-card-hover {
+  @apply relative bg-paper border border-mist/80 rounded-2xl shadow-card
+         transition-all duration-200 hover:shadow-card-hover hover:border-clay-l/30;
+}
+
+/* Cabeçalho de card: mesma função do antigo "px-5 py-3.5 border-b
+   border-mist bg-warm", com o canto superior acompanhando o card. */
+.panel-card-header {
+  @apply flex items-center gap-2 px-5 py-3.5 border-b border-mist/70 bg-warm/60 rounded-t-2xl;
+}
+
+/* Linha de lista/tabela dentro de um panel-card — reta de propósito
+   (ver nota acima), só o hover ganha um leve glow lateral do accent. */
+.panel-row {
+  @apply relative px-5 py-3.5 transition-colors duration-150 hover:bg-warm/70;
+}
+.panel-row::before {
+  content: '';
+  @apply absolute left-0 top-0 bottom-0 w-0.5 bg-clay-l scale-y-0 transition-transform duration-150 origin-center;
+}
+.panel-row:hover::before {
+  transform: scaleY(1);
+}
+
+/* Tile de KPI: profundidade em camada (gradiente muito sutil + borda +
+   sombra), não um retângulo plano. */
+.panel-stat {
+  @apply relative overflow-hidden bg-paper border border-mist/70 rounded-2xl p-4
+         shadow-card transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5;
+}
+.panel-stat::after {
+  content: '';
+  @apply absolute inset-0 pointer-events-none opacity-[0.05];
+  background: radial-gradient(120px 80px at 100% 0%, rgb(var(--c-clay)), transparent 70%);
+}
+.panel-stat-icon {
+  @apply inline-flex items-center justify-center w-9 h-9 rounded-xl bg-clay/10 text-clay-l;
+}
+
+/* Pílula de status "ao vivo" — ponto pulsante, usada em vez de texto
+   plano quando algo precisa de atenção imediata (pedido novo etc). */
+.panel-live-dot {
+  @apply relative inline-flex w-2 h-2 rounded-full bg-clay-l;
+}
+.panel-live-dot::after {
+  content: '';
+  @apply absolute inset-0 rounded-full bg-clay-l animate-ping;
+}
+
+/* Topbar mobile e desktop: vidro fosco (glass), gruda no topo com blur,
+   não é mais uma barra sólida reta. */
+.panel-topbar {
+  @apply sticky top-0 z-30 backdrop-blur-xl bg-paper/80 border-b border-mist/70;
+}
+
+/* Item de navegação da sidebar: pílula arredondada com glow quando
+   ativo, em vez do antigo bloco reto preto. */
+.panel-nav-item {
+  @apply relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200;
+}
+.panel-nav-item.is-active {
+  @apply bg-ink text-paper shadow-card;
+}
+.panel-nav-item.is-active::before {
+  content: '';
+  @apply absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-clay-l;
+}
+.panel-nav-item:not(.is-active) {
+  @apply text-mid hover:text-ink hover:bg-warm;
+}
+
+/* Barra de navegação inferior (mobile) — âncora fixa tipo app nativo,
+   com o item ativo flutuando um pouco acima da linha. */
+.panel-tabbar {
+  @apply fixed bottom-0 inset-x-0 z-40 flex items-stretch justify-around
+         backdrop-blur-xl bg-paper/85 border-t border-mist/70
+         pb-[env(safe-area-inset-bottom)];
+}
+.panel-tabbar-item {
+  @apply flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-mid transition-all duration-200;
+}
+.panel-tabbar-item.is-active {
+  @apply text-clay-l;
+}
+.panel-tabbar-item.is-active .panel-tabbar-dot {
+  @apply opacity-100 scale-100;
+}
+.panel-tabbar-dot {
+  @apply block w-1 h-1 rounded-full bg-clay-l opacity-0 scale-0 transition-all duration-200;
+}
+
 /* ── Email HTML body (painel mensagens) ──────────────────────────── */
 .email-html-body img { max-width: 100%; height: auto; }
 .email-html-body a { color: #C4714A; text-decoration: underline; }

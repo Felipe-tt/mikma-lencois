@@ -157,7 +157,7 @@ export function DashboardSkeleton() {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         {[1,2,3,4,5].map(i => (
-          <div key={i} className="bg-warm border border-mist px-4 py-4 flex flex-col gap-3">
+          <div key={i} className="bg-warm border border-mist px-4 py-4 flex flex-col gap-3 rounded-xl">
             <Skeleton className="h-4 w-4" />
             <div className="flex flex-col gap-1.5">
               <Skeleton className="h-2.5 w-20" />
@@ -172,7 +172,7 @@ export function DashboardSkeleton() {
         <Skeleton className="h-3 w-16" />
       </div>
       {/* Table */}
-      <div className="bg-warm border border-mist overflow-hidden">
+      <div className="bg-warm border border-mist overflow-hidden rounded-xl">
         <div className="bg-warm-d px-5 py-3 border-b border-mist">
           <Skeleton className="h-2.5 w-48" />
         </div>

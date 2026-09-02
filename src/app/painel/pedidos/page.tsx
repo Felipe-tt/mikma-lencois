@@ -208,11 +208,7 @@ export default function PainelPedidos() {
             if (f.id !== 'todos' && count === 0) return null;
             return (
               <button key={f.id} onClick={() => setFilter(f.id)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border transition-colors ${
-                  filter === f.id
-                    ? 'bg-ink text-paper border-ink'
-                    : 'bg-paper text-mid border-mist hover:bg-warm'
-                }`}>
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border transition-colors ${ filter === f.id ? 'bg-ink text-paper border-ink' : 'bg-paper text-mid border-mist hover:bg-warm' } rounded-xl`}>
                 {f.Icon && <f.Icon size={11} className="shrink-0" />}
                 {f.label}
                 <span className={`text-[9px] font-bold ${filter === f.id ? 'opacity-40' : 'opacity-50'}`}>{count}</span>
@@ -231,13 +227,13 @@ export default function PainelPedidos() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nome, e-mail ou ID do pedido…"
-            className="w-full pl-9 pr-4 py-2.5 text-sm border border-mist bg-white dark:bg-warm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60"
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-mist bg-white dark:bg-warm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
           />
         </div>
       </div>
 
       {/* Lista */}
-      <div className="border border-mist overflow-hidden divide-y divide-mist">
+      <div className="border border-mist overflow-hidden divide-y divide-mist rounded-xl">
         {filtered.length === 0 ? (
           <div className="py-16 text-center">
             <IconSearch size={32} className="text-mist mx-auto mb-3" />
@@ -326,7 +322,7 @@ export default function PainelPedidos() {
 
       {/* Limpar cancelados */}
       {cancelledCount > 0 && (
-        <div className="mt-4 flex items-center justify-between bg-paper border border-mist px-4 py-3">
+        <div className="mt-4 flex items-center justify-between bg-paper border border-mist px-4 py-3 rounded-xl">
           <p className="text-[12px] text-faint">
             {cancelledCount} pedido{cancelledCount > 1 ? 's' : ''} cancelado{cancelledCount > 1 ? 's' : ''} na lista.
           </p>

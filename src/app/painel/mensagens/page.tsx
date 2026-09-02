@@ -82,7 +82,7 @@ export default function PainelMensagens() {
         </p>
       </div>
 
-      <div className="bg-paper border border-mist flex h-[calc(100vh-220px)] min-h-[500px] overflow-hidden">
+      <div className="bg-paper border border-mist flex h-[calc(100vh-220px)] min-h-[500px] overflow-hidden rounded-xl">
         {/* ── Lista de conversas ── */}
         <div className={`w-full sm:w-[300px] shrink-0 border-r border-mist flex flex-col overflow-hidden ${selected ? 'hidden sm:flex' : ''}`}>
           <div className="px-4 py-3 border-b border-mist bg-warm shrink-0">
@@ -388,7 +388,7 @@ function ConversationThread({
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
                 placeholder="Re: contato Mikma Lençóis"
-                className="flex-1 border border-mist bg-white dark:bg-warm px-2.5 py-1.5 text-[12px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60"
+                className="flex-1 border border-mist bg-white dark:bg-warm px-2.5 py-1.5 text-[12px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
               />
               <button onClick={() => { setShowSubject(false); setSubject(''); }} className="text-[10px] text-faint hover:text-ink">
                 Remover
@@ -403,7 +403,7 @@ function ConversationThread({
             onKeyDown={handleKeyDown}
             placeholder="Escreva sua resposta… (Ctrl+Enter para enviar)"
             rows={3}
-            className="w-full resize-none border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint-l"
+            className="w-full resize-none border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint-l rounded-xl"
           />
 
           {/* Barra de ações */}
@@ -472,10 +472,10 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
       )}
 
       {/* Corpo */}
-      <div className={`text-[13px] leading-relaxed ${
+      <div className={`text-[13px] leading-relaxed rounded-2xl ${
         isOut
-          ? 'bg-ink text-paper px-4 py-3 rounded-tl rounded-bl'
-          : 'bg-white dark:bg-warm border border-mist text-ink px-4 py-3 rounded-tr rounded-br'
+          ? 'bg-ink text-paper px-4 py-3 rounded-tl-2xl rounded-bl-md'
+          : 'bg-white dark:bg-warm border border-mist text-ink px-4 py-3 rounded-tr-2xl rounded-br-md'
       }`}>
         {showHtml ? (
           <div
@@ -495,7 +495,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
               <img
                 src={att.url}
                 alt={att.filename}
-                className="max-w-[200px] max-h-[160px] object-cover border border-mist hover:opacity-90 transition-opacity"
+                className="max-w-[200px] max-h-[160px] object-cover border border-mist hover:opacity-90 transition-opacity rounded-xl"
               />
             </a>
           ))}
@@ -511,7 +511,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
               href={att.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 border border-mist bg-white dark:bg-warm hover:bg-warm transition-colors text-[12px] text-mid font-medium"
+              className="flex items-center gap-2 px-3 py-2 border border-mist bg-white dark:bg-warm hover:bg-warm transition-colors text-[12px] text-mid font-medium rounded-xl"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>

@@ -86,7 +86,7 @@ export default function CuponsPage() {
       </div>
 
       {showForm && (
-        <div className="bg-paper border border-mist p-5 mb-6">
+        <div className="bg-paper border border-mist p-5 mb-6 rounded-xl">
           <h2 className="text-[14px] font-bold text-ink mb-4">Novo cupom</h2>
           {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-1"><IconAlert size={11} />{error}</div>}
 
@@ -95,7 +95,7 @@ export default function CuponsPage() {
               <label className="block text-[11px] font-semibold text-mid mb-1.5">Código do cupom</label>
               <input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
                 placeholder="Ex: VERAO20, BEMVINDO10"
-                className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-clay-l/20 placeholder:normal-case placeholder:font-sans" />
+                className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-clay-l/20 placeholder:normal-case placeholder:font-sans rounded-xl" />
               <p className="text-[11px] text-faint mt-1">Este é o código que o cliente vai digitar na hora de comprar.</p>
             </div>
 
@@ -117,7 +117,7 @@ export default function CuponsPage() {
                   {form.type === 'percent' ? 'Quantos % de desconto?' : 'Quantos R$ de desconto?'}
                 </label>
                 <input type="number" min={0} value={form.value} onChange={e => setForm(f => ({ ...f, value: Number(e.target.value) }))}
-                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20" />
+                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
               </div>
             </div>
 
@@ -126,20 +126,20 @@ export default function CuponsPage() {
                 <label className="block text-[11px] font-semibold text-mid mb-1.5">Valor mínimo do pedido (R$)</label>
                 <input type="number" min={0} value={form.minOrderCents} onChange={e => setForm(f => ({ ...f, minOrderCents: Number(e.target.value) }))}
                   placeholder="0 = sem mínimo"
-                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 placeholder:text-faint-l" />
+                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 placeholder:text-faint-l rounded-xl" />
                 <p className="text-[11px] text-faint mt-1">Coloque 0 se não quiser exigir valor mínimo.</p>
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-mid mb-1.5">Quantas vezes pode ser usado?</label>
                 <input type="number" min={1} value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: Number(e.target.value) }))}
-                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20" />
+                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
               </div>
             </div>
 
             <div>
               <label className="block text-[11px] font-semibold text-mid mb-1.5">Data de validade (opcional)</label>
               <input type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
-                className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20" />
+                className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
               <p className="text-[11px] text-faint mt-1">Deixe em branco para o cupom nunca expirar.</p>
             </div>
 
@@ -164,7 +164,7 @@ export default function CuponsPage() {
       )}
 
       {coupons.length === 0 ? (
-        <div className="border border-mist bg-paper py-16 text-center">
+        <div className="border border-mist bg-paper py-16 text-center rounded-xl">
           <IconCoupons size={40} className="text-mist mx-auto mb-3" />
           <p className="text-sm text-faint">Nenhum cupom criado ainda.<br />Crie seu primeiro cupom clicando no botão acima!</p>
         </div>

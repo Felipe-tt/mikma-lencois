@@ -768,7 +768,7 @@ export default function ProductForm({ initial }: Props) {
           <button
             type="button"
             onClick={() => setDuplicateModalOpen(true)}
-            className="mb-5 w-full border border-dashed border-mist hover:border-clay/50 hover:bg-clay/5 transition-colors rounded-[4px] px-4 py-2.5 flex items-center justify-center gap-2 text-[12px] font-semibold text-mid hover:text-clay"
+            className="mb-5 w-full border border-dashed border-mist hover:border-clay/50 hover:bg-clay/5 transition-colors px-4 py-2.5 flex items-center justify-center gap-2 text-[12px] font-semibold text-mid hover:text-clay rounded-xl"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             Duplicar de um produto existente
@@ -797,7 +797,7 @@ export default function ProductForm({ initial }: Props) {
             <div className="flex flex-wrap gap-2">
               {images.map((img, i) => (
                 <div key={i} className="relative group">
-                  <img src={img.dataUrl} alt="" className="h-20 w-20 border border-mist object-cover rounded-[4px]" />
+                  <img src={img.dataUrl} alt="" className="h-20 w-20 border border-mist object-cover rounded-xl" />
                   {i === 0 ? (
                     <span className="absolute bottom-1 left-1 bg-ink/80 text-paper text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm">Capa</span>
                   ) : (
@@ -1025,7 +1025,7 @@ export default function ProductForm({ initial }: Props) {
             {(images[0] || name || price) && (
               <div>
                 <p className="text-[10px] text-faint font-semibold tracking-[0.12em] uppercase mb-2">É assim que vai aparecer na loja</p>
-                <div className="border border-mist bg-paper w-40 rounded-[4px] overflow-hidden shadow-sm">
+                <div className="border border-mist bg-paper w-40 overflow-hidden shadow-sm rounded-xl">
                   <div className="relative aspect-[3/4] bg-warm">
                     {images[0] ? (
                       <img src={images[0].dataUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -1073,14 +1073,14 @@ export default function ProductForm({ initial }: Props) {
             </div>
 
             {rows.length === 0 && (
-              <p className="text-[12px] text-faint border border-dashed border-mist px-4 py-4 text-center rounded-[4px]">
+              <p className="text-[12px] text-faint border border-dashed border-mist px-4 py-4 text-center rounded-xl">
                 Marque ao menos um tecido acima pra continuar
               </p>
             )}
 
             <div className="flex flex-col gap-2.5">
               {rows.map(r => (
-                <div key={r.fabric} className="border border-mist bg-warm/40 p-3.5 flex flex-col gap-3 rounded-[4px]">
+                <div key={r.fabric} className="border border-mist bg-warm/40 p-3.5 flex flex-col gap-3 rounded-xl">
                   <div className="flex items-center justify-between">
                     <span className="text-[13px] font-bold text-ink">{r.fabric}</span>
                     <button
@@ -1142,7 +1142,7 @@ export default function ProductForm({ initial }: Props) {
                           onFocus={e => e.target.select()}
                           placeholder="0"
                           inputMode="numeric"
-                          className="w-full border border-mist px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-[4px]"
+                          className="w-full border border-mist px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-xl"
                         />
                       </div>
                     )}
@@ -1167,7 +1167,7 @@ export default function ProductForm({ initial }: Props) {
             </button>
 
             {specsOpen && (
-              <div className="border border-mist p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-[4px]">
+              <div className="border border-mist p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl">
                 <div>
                   <label className="label">Espessura do fio <span className="font-normal normal-case text-faint">(malha)</span></label>
                   <Select
@@ -1239,7 +1239,7 @@ export default function ProductForm({ initial }: Props) {
             <button onClick={() => handleSubmit('list')} disabled={saving} className="btn-primary flex-1 py-3.5 sm:py-3 text-[15px]">
               {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
             </button>
-            <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-4 py-3.5 sm:py-3 text-sm font-medium text-mid hover:bg-warm transition-colors rounded-[4px] shrink-0">
+            <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-4 py-3.5 sm:py-3 text-sm font-medium text-mid hover:bg-warm transition-colors shrink-0 rounded-xl">
               Cancelar
             </button>
             <span className="hidden sm:inline text-[10px] text-faint whitespace-nowrap">⌘/Ctrl + Enter</span>
