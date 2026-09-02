@@ -66,7 +66,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
                   className={`panel-nav-item ${active ? 'is-active' : ''}`}
                 >
                   <span className={`shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
-                    active ? 'bg-paper/15 text-paper' : 'text-mid'
+                    active ? 'bg-clay/15 text-clay-l' : 'text-mid'
                   }`}>
                     <Icon size={15} />
                   </span>
@@ -79,7 +79,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
                         </span>
                       )}
                     </span>
-                    <span className={`text-[10px] leading-tight truncate ${active ? 'text-paper/55' : 'text-faint'}`}>{desc}</span>
+                    <span className="text-[10px] leading-tight truncate text-faint">{desc}</span>
                   </span>
                 </Link>
               </li>
