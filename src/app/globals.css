@@ -511,7 +511,7 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
   @apply relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200;
 }
 .panel-nav-item.is-active {
-  @apply bg-ink text-paper shadow-card;
+  @apply bg-clay/10 text-ink shadow-none;
 }
 .panel-nav-item.is-active::before {
   content: '';
