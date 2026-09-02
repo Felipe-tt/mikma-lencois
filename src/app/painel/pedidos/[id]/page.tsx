@@ -128,7 +128,7 @@ const CARD_ICONS: Record<string, React.FC<{ size?: number; className?: string }>
 function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   const IconComp = CARD_ICONS[icon];
   return (
-    <div className="bg-paper border border-mist">
+    <div className="bg-paper border border-mist rounded-xl">
       <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
         {IconComp && <IconComp size={13} className="text-mid" />}
         <p className="text-[12px] font-bold text-ink tracking-wide uppercase">{title}</p>
@@ -385,7 +385,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   if (loading) return (
     <div className="max-w-5xl mx-auto flex flex-col gap-3">
-      {[1,2,3,4].map(i => <div key={i} className="h-20 skeleton border border-mist" />)}
+      {[1,2,3,4].map(i => <div key={i} className="h-20 skeleton border border-mist rounded-xl" />)}
     </div>
   );
 
@@ -459,7 +459,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <p className="text-[13px] font-bold text-ink">Pedido sendo separado</p>
 
               {/* Forma de envio escolhida pelo cliente, não editável */}
-              <div className="flex items-center justify-between bg-white dark:bg-warm border border-mist px-4 py-3">
+              <div className="flex items-center justify-between bg-white dark:bg-warm border border-mist px-4 py-3 rounded-xl">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-faint mb-0.5">
                     Envio escolhido pelo cliente
@@ -513,12 +513,12 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         })()}
 
         {order.status === 'shipped' && (
-          <div className="border border-mist px-5 py-4 flex flex-col gap-3">
+          <div className="border border-mist px-5 py-4 flex flex-col gap-3 rounded-xl">
             <p className="text-[13px] font-bold text-ink flex items-center gap-1.5"><IconTruck size={13} className="text-clay-l" /> Pedido despachado</p>
 
             {/* ── Uber Direct: entregador em tempo real ─────────────────── */}
             {order.delivery?.carrier === 'uber_direct' && (
-              <div className="bg-[#F5F1EB] border border-mist px-4 py-3 flex flex-col gap-3">
+              <div className="bg-[#F5F1EB] border border-mist px-4 py-3 flex flex-col gap-3 rounded-xl">
                 <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-faint">Uber Direct</p>
 
                 {/* Entregador */}
@@ -609,7 +609,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             )}
             {order.delivery?.labelUrl && (
               <a href={order.delivery.labelUrl} target="_blank" rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors">
+                className="w-full flex items-center justify-center gap-2 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors rounded-xl">
                 Reimprimir etiqueta
               </a>
             )}
@@ -646,7 +646,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </Card>
 
         {/* ── Itens ── */}
-        <div className="bg-paper border border-mist">
+        <div className="bg-paper border border-mist rounded-xl">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
             <IconProducts size={14} className="text-mid shrink-0" />
             <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Itens do pedido</p>
@@ -655,7 +655,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             {order.items.map((item, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-3.5">
                 {item.image && (
-                  <div className="w-10 h-[52px] shrink-0 overflow-hidden bg-warm border border-mist">
+                  <div className="w-10 h-[52px] shrink-0 overflow-hidden bg-warm border border-mist rounded-xl">
                     <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -727,7 +727,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           <div className="py-2.5 flex flex-col gap-2">
             <button
               onClick={() => copy(`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP ${order.address.cep}`, 'address')}
-              className="w-full border border-mist text-mid text-[12px] font-semibold py-2 hover:bg-warm transition-colors">
+              className="w-full border border-mist text-mid text-[12px] font-semibold py-2 hover:bg-warm transition-colors rounded-xl">
               {copied === 'address' ? 'Endereço copiado!' : 'Copiar endereço completo'}
             </button>
             <Link
@@ -775,7 +775,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
              mapa; esse aqui não tem noção de Uber Direct e só mostraria um
              erro confuso de "Melhor Envio" pra esses pedidos) ── */}
         {order.delivery?.carrier && order.delivery.carrier !== 'pickup' && order.delivery.carrier !== 'manual' && order.delivery.carrier !== 'uber_direct' && (
-          <div className="bg-paper border border-mist">
+          <div className="bg-paper border border-mist rounded-xl">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
               <IconBox size={16} className="text-mid shrink-0" />
               <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Rastreamento</p>
@@ -813,7 +813,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </Card>
 
         {/* ── Info técnica ── */}
-        <details className="bg-paper border border-mist">
+        <details className="bg-paper border border-mist rounded-xl">
           <summary className="flex items-center gap-2 px-5 py-3.5 cursor-pointer select-none bg-warm border-b border-mist">
             <IconMaintenance size={14} className="text-mid shrink-0" />
             <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Informações técnicas</p>
@@ -835,7 +835,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               </p>
             )}
             <button onClick={() => setReturnModalOpen(true)}
-              className="flex items-center justify-center gap-1.5 w-full border border-mist text-mid text-[13px] font-semibold py-3 hover:bg-warm transition-colors">
+              className="flex items-center justify-center gap-1.5 w-full border border-mist text-mid text-[13px] font-semibold py-3 hover:bg-warm transition-colors rounded-xl">
               <IconExchange size={14} /> Registrar troca ou devolução
             </button>
           </div>

@@ -67,7 +67,7 @@ export default function PainelProdutosPage() {
 
   if (loading) return (
     <div className="flex flex-col gap-2">
-      {[1,2,3,4].map(i => <div key={i} className="h-[72px] skeleton border border-mist" />)}
+      {[1,2,3,4].map(i => <div key={i} className="h-[72px] skeleton border border-mist rounded-xl" />)}
     </div>
   );
 
@@ -90,12 +90,12 @@ export default function PainelProdutosPage() {
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Digite o nome do produto..."
-            className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40"
+            className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40 rounded-xl"
           />
         </div>
         <Link
           href="/painel/produtos/importar-csv"
-          className="shrink-0 border border-mist text-ink text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-warm transition-colors"
+          className="shrink-0 border border-mist text-ink text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-warm transition-colors rounded-xl"
         >
           Importar de CSV
         </Link>
@@ -108,13 +108,13 @@ export default function PainelProdutosPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="border border-mist py-16 text-center bg-paper">
+        <div className="border border-mist py-16 text-center bg-paper rounded-xl">
           {search ? <IconSearch size={36} className="text-mist mx-auto mb-3" /> : <IconProducts size={36} className="text-mist mx-auto mb-3" />}
           <p className="text-sm text-faint">{search ? 'Nenhum produto encontrado com esse nome.' : 'Você ainda não cadastrou nenhum produto.'}</p>
           {!search && <p className="text-[12px] text-clay-l mt-2 font-semibold">Clique em &quot;+ Novo produto&quot; para começar!</p>}
         </div>
       ) : (
-        <div className="bg-paper border border-mist overflow-hidden">
+        <div className="bg-paper border border-mist overflow-hidden rounded-xl">
           {/* Header */}
           <div className="hidden sm:grid grid-cols-[56px_1fr_100px_80px_90px_130px] gap-4 px-4 py-3 border-b border-mist bg-warm">
             <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint"></span>
@@ -133,7 +133,7 @@ export default function PainelProdutosPage() {
                 className={`grid grid-cols-[56px_1fr_auto] sm:grid-cols-[56px_1fr_100px_80px_90px_130px] gap-4 px-4 py-3 items-center hover:bg-warm transition-colors ${idx < filtered.length - 1 ? 'border-b border-mist' : ''}`}
               >
                 {/* Thumb */}
-                <div className="relative w-10 h-10 bg-warm border border-mist shrink-0 overflow-hidden">
+                <div className="relative w-10 h-10 bg-warm border border-mist shrink-0 overflow-hidden rounded-xl">
                   {p.images?.[0] ? (
                     <Image src={p.images[0]} alt={p.name} fill className="object-cover" sizes="40px" />
                   ) : (

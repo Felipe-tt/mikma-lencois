@@ -264,7 +264,7 @@ export default function EstoquePage() {
 
   if (loading) return (
     <div className="flex flex-col gap-2">
-      {[1, 2, 3, 4].map(i => <div key={i} className="h-[72px] skeleton border border-mist" />)}
+      {[1, 2, 3, 4].map(i => <div key={i} className="h-[72px] skeleton border border-mist rounded-xl" />)}
     </div>
   );
 
@@ -280,7 +280,7 @@ export default function EstoquePage() {
           </p>
         </div>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
-          <div className="flex items-center border border-mist bg-white dark:bg-warm text-[12.5px] font-semibold text-mid divide-x divide-mist overflow-x-auto">
+          <div className="flex items-center border border-mist bg-white dark:bg-warm text-[12.5px] font-semibold text-mid divide-x divide-mist overflow-x-auto rounded-xl">
             {mode === 'dia' && (
               <button onClick={() => setSubview(v => v === 'grade' ? 'lista' : 'grade')}
                 className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors whitespace-nowrap">
@@ -347,10 +347,10 @@ export default function EstoquePage() {
           <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
             <input type="search" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40" />
+              className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40 rounded-xl" />
           </div>
           {mode === 'dia' && lowCount > 0 && (
-            <label className="shrink-0 flex items-center gap-1.5 text-[12px] text-mid cursor-pointer select-none border border-mist px-3 py-2.5 bg-paper">
+            <label className="shrink-0 flex items-center gap-1.5 text-[12px] text-mid cursor-pointer select-none border border-mist px-3 py-2.5 bg-paper rounded-xl">
               <input type="checkbox" checked={onlyLow} onChange={e => setOnlyLow(e.target.checked)} />
               Só acabando ({lowCount})
             </label>
@@ -359,13 +359,13 @@ export default function EstoquePage() {
       )}
 
       {filtered.length === 0 ? (
-        <div className="border border-mist bg-paper py-16 text-center">
+        <div className="border border-mist bg-paper py-16 text-center rounded-xl">
           <IconBox size={40} className="text-mist mx-auto mb-3" />
           <p className="text-sm text-faint">{search ? 'Nenhum resultado.' : 'Nenhum produto no estoque ainda.'}</p>
           {!search && <Link href="/painel/produtos/novo" className="mt-3 inline-block text-[12px] text-clay-l font-semibold">Adicionar produto</Link>}
         </div>
       ) : mode === 'contagem' ? (
-        <div className="border border-mist bg-paper">
+        <div className="border border-mist bg-paper rounded-xl">
           {filtered.map((item, idx) => {
             const val = countDraft[item.id] ?? item.quantity;
             return (
@@ -376,12 +376,12 @@ export default function EstoquePage() {
                 </div>
                 <div className="flex items-center shrink-0">
                   <button type="button" onClick={() => setCountDraft(d => ({ ...d, [item.id]: Math.max(0, val - 1) }))}
-                    className="h-10 w-10 border border-mist bg-white dark:bg-warm text-mid font-bold text-lg flex items-center justify-center active:bg-warm">−</button>
+                    className="h-10 w-10 border border-mist bg-white dark:bg-warm text-mid font-bold text-lg flex items-center justify-center active:bg-warm rounded-xl">−</button>
                   <input type="number" min={0} inputMode="numeric" value={val}
                     onChange={e => setCountDraft(d => ({ ...d, [item.id]: Number(e.target.value) }))}
                     className="w-14 h-10 border-y border-mist bg-white dark:bg-warm text-center font-bold text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20" />
                   <button type="button" onClick={() => setCountDraft(d => ({ ...d, [item.id]: val + 1 }))}
-                    className="h-10 w-10 border border-mist bg-white dark:bg-warm text-mid font-bold text-lg flex items-center justify-center active:bg-warm">+</button>
+                    className="h-10 w-10 border border-mist bg-white dark:bg-warm text-mid font-bold text-lg flex items-center justify-center active:bg-warm rounded-xl">+</button>
                 </div>
               </div>
             );
@@ -436,11 +436,11 @@ export default function EstoquePage() {
                     <IconMinusCircle size={15} /> Vendi 1
                   </button>
                   <button onClick={() => quickRestock(item)} disabled={busy}
-                    className="h-11 w-11 shrink-0 border border-mist text-mid hover:bg-warm transition-colors flex items-center justify-center disabled:opacity-50" aria-label="Chegou 1 unidade">
+                    className="h-11 w-11 shrink-0 border border-mist text-mid hover:bg-warm transition-colors flex items-center justify-center disabled:opacity-50 rounded-xl" aria-label="Chegou 1 unidade">
                     <IconPlusCircle size={17} />
                   </button>
                   <button onClick={() => setExpandedId(item.id)} disabled={busy}
-                    className="h-11 px-3 shrink-0 border border-mist text-mid text-[12px] font-semibold hover:bg-warm transition-colors disabled:opacity-50">
+                    className="h-11 px-3 shrink-0 border border-mist text-mid text-[12px] font-semibold hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
                     Outra qtd. / mais
                   </button>
                 </div>
@@ -448,11 +448,11 @@ export default function EstoquePage() {
                 {expanded && (
                   <div className="px-4 pb-4 border-t border-dashed border-mist pt-3.5 flex flex-col gap-3.5">
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center bg-white dark:bg-warm border border-mist px-3 py-2.5">
+                      <div className="text-center bg-white dark:bg-warm border border-mist px-3 py-2.5 rounded-xl">
                         <p className="text-[9.5px] font-bold uppercase tracking-wide text-faint mb-1">Reservado (pedidos)</p>
                         <p className="text-lg font-bold text-mid">{item.reserved}</p>
                       </div>
-                      <div className="text-center bg-white dark:bg-warm border border-mist px-3 py-2.5">
+                      <div className="text-center bg-white dark:bg-warm border border-mist px-3 py-2.5 rounded-xl">
                         <p className="text-[9.5px] font-bold uppercase tracking-wide text-faint mb-1">Avisar quando restar</p>
                         <input type="number" min={0} inputMode="numeric" value={threshold}
                           onChange={ev => setThresholdDraft(d => ({ ...d, [item.id]: Number(ev.target.value) }))}
@@ -477,15 +477,15 @@ export default function EstoquePage() {
                     ) : (
                       <div className="flex gap-2">
                         <button onClick={() => setActionFor({ id: item.id, kind: 'venda' })} disabled={busy}
-                          className="flex-1 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors disabled:opacity-50">
+                          className="flex-1 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
                           Vender + de 1
                         </button>
                         <button onClick={() => setActionFor({ id: item.id, kind: 'entrada' })} disabled={busy}
-                          className="flex-1 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors disabled:opacity-50">
+                          className="flex-1 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
                           Entrada + de 1
                         </button>
                         <button onClick={() => setActionFor({ id: item.id, kind: 'correcao' })} disabled={busy}
-                          className="flex-1 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors disabled:opacity-50">
+                          className="flex-1 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
                           Corrigir número
                         </button>
                       </div>
@@ -571,7 +571,7 @@ function InlineActionForm({ item, kind, available, submitting, onCancel, onConfi
         <div className="flex-1">
           <label className="block text-[10px] font-semibold text-mid mb-1">Observação</label>
           <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder={placeholder} disabled={submitting}
-            className="w-full border border-mist px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 disabled:opacity-50" />
+            className="w-full border border-mist px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 disabled:opacity-50 rounded-xl" />
         </div>
       </div>
       {kind !== 'correcao' && (
@@ -582,7 +582,7 @@ function InlineActionForm({ item, kind, available, submitting, onCancel, onConfi
           className="flex-1 bg-ink text-paper text-[12px] font-bold py-2.5 hover:bg-ink/80 transition-colors flex items-center justify-center gap-1 disabled:opacity-50">
           <IconCheck size={12} /> {submitting ? 'Salvando...' : 'Confirmar'}
         </button>
-        <button onClick={onCancel} disabled={submitting} className="flex-1 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors disabled:opacity-50">
+        <button onClick={onCancel} disabled={submitting} className="flex-1 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
           Cancelar
         </button>
       </div>

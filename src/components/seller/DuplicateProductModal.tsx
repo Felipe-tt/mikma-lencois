@@ -68,7 +68,7 @@ export function DuplicateProductModal({ onPick, onClose }: Props) {
               className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-warm transition-colors text-left border-b border-mist/50 last:border-0"
             >
               {p.images?.[0] ? (
-                <img src={p.images[0]} alt="" className="w-10 h-10 object-cover rounded-[4px] shrink-0 border border-mist" />
+                <img src={p.images[0]} alt="" className="w-10 h-10 object-cover shrink-0 border border-mist rounded-xl" />
               ) : (
                 <div className="w-10 h-10 bg-mist/40 rounded-[4px] shrink-0" />
               )}
@@ -85,7 +85,7 @@ export function DuplicateProductModal({ onPick, onClose }: Props) {
         </div>
 
         <div className="p-3 border-t border-mist shrink-0">
-          <button onClick={onClose} className="w-full border border-mist px-4 py-2.5 text-[13px] font-medium text-mid hover:bg-warm transition-colors rounded-[4px]">
+          <button onClick={onClose} className="w-full border border-mist px-4 py-2.5 text-[13px] font-medium text-mid hover:bg-warm transition-colors rounded-xl">
             Cancelar
           </button>
         </div>

@@ -83,7 +83,7 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
         </div>
 
         <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto">
-          <div className="grid grid-cols-2 border border-mist p-1">
+          <div className="grid grid-cols-2 border border-mist p-1 rounded-xl">
             <button onClick={() => setType('troca')}
               className={`py-2 text-[12px] font-bold uppercase tracking-wide transition-colors ${type === 'troca' ? 'bg-ink text-paper' : 'text-mid'}`}>
               Troca
@@ -98,7 +98,7 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
             <p className="text-[11px] font-bold text-faint uppercase tracking-wide mb-2">Quais itens</p>
             <div className="flex flex-col gap-2">
               {order.items.map((it, i) => (
-                <label key={i} className="flex items-center gap-2.5 border border-mist px-3 py-2.5 cursor-pointer">
+                <label key={i} className="flex items-center gap-2.5 border border-mist px-3 py-2.5 cursor-pointer rounded-xl">
                   <input type="checkbox" checked={i in selected} onChange={() => toggleItem(i, it.quantity)} className="shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-medium text-ink truncate">{it.productName}</p>
@@ -111,7 +111,7 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
                       type="number" min={1} max={it.quantity} value={selected[i]}
                       onChange={e => setQty(i, Number(e.target.value), it.quantity)}
                       onClick={e => e.stopPropagation()}
-                      className="w-14 border border-mist px-1.5 py-1 text-[12px] text-center shrink-0"
+                      className="w-14 border border-mist px-1.5 py-1 text-[12px] text-center shrink-0 rounded-xl"
                     />
                   )}
                 </label>
@@ -124,7 +124,7 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
             <textarea
               value={reason} onChange={e => setReason(e.target.value)} rows={3}
               placeholder="Ex: cliente pediu tamanho errado, veio com defeito de costura..."
-              className="w-full border border-mist bg-white dark:bg-warm px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 resize-none"
+              className="w-full border border-mist bg-white dark:bg-warm px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 resize-none rounded-xl"
             />
           </div>
 

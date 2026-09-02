@@ -117,7 +117,7 @@ export function DefaultWeightsModal({ current, onClose, onSaved }: Props) {
           <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 py-2.5 text-[13px]">
             {saving ? 'Salvando…' : 'Salvar padrões'}
           </button>
-          <button onClick={onClose} className="border border-mist px-4 py-2.5 text-[13px] font-medium text-mid hover:bg-warm transition-colors rounded-[4px]">
+          <button onClick={onClose} className="border border-mist px-4 py-2.5 text-[13px] font-medium text-mid hover:bg-warm transition-colors rounded-xl">
             Cancelar
           </button>
         </div>

@@ -82,8 +82,8 @@ export default function RelatoriosPage() {
 
       {loading ? (
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{[1,2,3].map(i => <div key={i} className="h-24 skeleton border border-mist" />)}</div>
-          <div className="h-48 skeleton border border-mist" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{[1,2,3].map(i => <div key={i} className="h-24 skeleton border border-mist rounded-xl" />)}</div>
+          <div className="h-48 skeleton border border-mist rounded-xl" />
         </div>
       ) : !stats ? null : (
         <div className="flex flex-col gap-4">
@@ -95,7 +95,7 @@ export default function RelatoriosPage() {
               { Icon: IconBox, label: 'Pedidos entregues', value: String(stats.orders), desc: 'pedidos concluídos no período' },
               { Icon: IconReceipt, label: 'Valor médio por pedido', value: fmt(stats.avgTicket), desc: 'quanto cada cliente gastou em média' },
             ].map(k => (
-              <div key={k.label} className="bg-paper border border-mist px-5 py-4">
+              <div key={k.label} className="bg-paper border border-mist px-5 py-4 rounded-xl">
                 <k.Icon size={20} className="text-clay-l mb-2" />
                 <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-faint mb-1">{k.label}</p>
                 <p className="font-display text-2xl text-ink leading-none">{k.value}</p>
@@ -105,7 +105,7 @@ export default function RelatoriosPage() {
           </div>
 
           {/* Top produtos */}
-          <div className="bg-paper border border-mist">
+          <div className="bg-paper border border-mist rounded-xl">
             <div className="px-5 py-4 border-b border-mist">
               <p className="text-[13px] font-bold text-ink flex items-center gap-2"><IconTrophy size={14} className="text-clay-l" /> Produtos mais vendidos</p>
               <p className="text-[11px] text-faint mt-0.5">Os produtos que mais geraram receita no período</p>
@@ -137,7 +137,7 @@ export default function RelatoriosPage() {
 
           {/* Por transportadora */}
           {stats.byCarrier.length > 0 && (
-            <div className="bg-paper border border-mist">
+            <div className="bg-paper border border-mist rounded-xl">
               <div className="px-5 py-4 border-b border-mist">
                 <p className="text-[13px] font-bold text-ink flex items-center gap-2"><IconTruck size={14} className="text-clay-l" /> Como os pedidos foram entregues</p>
                 <p className="text-[11px] text-faint mt-0.5">Qual método de entrega foi mais usado</p>
@@ -152,7 +152,7 @@ export default function RelatoriosPage() {
           )}
 
           {stats.orders === 0 && (
-            <div className="bg-paper border border-mist py-12 text-center">
+            <div className="bg-paper border border-mist py-12 text-center rounded-xl">
               <IconReports size={40} className="text-mist mx-auto mb-3" />
               <p className="text-[13px] text-faint">Não houve vendas nos {period === '7d' ? '7' : period === '30d' ? '30' : '90'} dias selecionados.<br />Experimente selecionar um período maior.</p>
             </div>

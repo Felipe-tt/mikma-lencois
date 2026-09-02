@@ -157,14 +157,14 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                           type="time"
                           value={range.open}
                           onChange={e => setRange(key, idx, 'open', e.target.value)}
-                          className="border border-mist px-2 py-1.5 text-[12px] tabular-nums w-[108px] sm:w-[92px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60"
+                          className="border border-mist px-2 py-1.5 text-[12px] tabular-nums w-[108px] sm:w-[92px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
                         />
                         <span className="text-faint-l text-[11px] shrink-0">até</span>
                         <input
                           type="time"
                           value={range.close}
                           onChange={e => setRange(key, idx, 'close', e.target.value)}
-                          className="border border-mist px-2 py-1.5 text-[12px] tabular-nums w-[108px] sm:w-[92px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60"
+                          className="border border-mist px-2 py-1.5 text-[12px] tabular-nums w-[108px] sm:w-[92px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
                         />
                         <button
                           type="button"
@@ -215,7 +215,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                 {copyMenuOpen === key && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setCopyMenuOpen(null)} />
-                    <div className="absolute right-0 top-9 z-20 bg-white dark:bg-warm border border-mist shadow-lg py-1 w-52">
+                    <div className="absolute right-0 top-9 z-20 bg-white dark:bg-warm border border-mist shadow-lg py-1 w-52 rounded-xl">
                       <button
                         type="button"
                         onClick={() => copyToAll(key)}

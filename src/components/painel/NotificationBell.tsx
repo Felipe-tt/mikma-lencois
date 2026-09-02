@@ -121,7 +121,7 @@ export function NotificationBell() {
         ref={btnRef}
         onClick={toggleOpen}
         aria-label="Notificações"
-        className="relative p-2 text-mid hover:text-ink hover:bg-warm transition-colors rounded-sm"
+        className="relative p-2 text-mid hover:text-ink hover:bg-warm transition-colors rounded-xl"
       >
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -138,9 +138,9 @@ export function NotificationBell() {
         <div
           ref={panelRef}
           style={{ position: 'fixed', top: pos.top, left: pos.left, width: PANEL_WIDTH }}
-          className="max-w-[calc(100vw-24px)] bg-white dark:bg-warm border border-mist shadow-lg z-[100] max-h-[70vh] flex flex-col"
+          className="max-w-[calc(100vw-24px)] bg-white dark:bg-warm border border-mist/80 shadow-modal z-[100] max-h-[70vh] flex flex-col overflow-hidden rounded-xl"
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-mist">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-mist bg-warm/50">
             <p className="text-[12px] font-bold text-ink uppercase tracking-wide">Notificações</p>
             {unread.length > 0 && (
               <button onClick={markAllRead} className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">

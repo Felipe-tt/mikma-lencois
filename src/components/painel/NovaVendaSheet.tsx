@@ -225,7 +225,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         )}
 
         {/* Venda ou Reposição */}
-        <div className="grid grid-cols-2 border border-mist p-1 bg-white dark:bg-warm">
+        <div className="grid grid-cols-2 border border-mist p-1 bg-white dark:bg-warm rounded-xl">
           <button onClick={() => setMode('venda')}
             className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
             <IconX size={14} /> Vender
@@ -246,9 +246,9 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
           <div className="relative flex-1">
             <IconSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
             <input type="search" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full border border-mist bg-white dark:bg-warm pl-8 pr-2 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/20" />
+              className="w-full border border-mist bg-white dark:bg-warm pl-8 pr-2 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
           </div>
-          <div className="flex items-center shrink-0 border border-mist bg-white dark:bg-warm">
+          <div className="flex items-center shrink-0 border border-mist bg-white dark:bg-warm rounded-xl">
             <span className="flex items-center pl-2 pr-1 text-faint" title="Quantas fotos por linha">
               <IconInventory size={13} />
             </span>
@@ -318,7 +318,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
       <div className={`px-4 py-3 flex items-center gap-2 bg-paper ${embedded ? 'sticky bottom-0 border-t border-mist shadow-[0_-4px_10px_rgba(0,0,0,0.06)]' : 'border-t border-mist shrink-0'}`}>
         {pendingCount > 0 && (
           <button onClick={clearAll} disabled={saving}
-            className="shrink-0 border border-mist text-mid text-[12px] font-semibold px-3 py-3 hover:bg-warm disabled:opacity-50">
+            className="shrink-0 border border-mist text-mid text-[12px] font-semibold px-3 py-3 hover:bg-warm disabled:opacity-50 rounded-xl">
             Limpar
           </button>
         )}

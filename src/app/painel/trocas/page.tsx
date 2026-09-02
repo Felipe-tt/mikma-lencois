@@ -146,14 +146,14 @@ export default function TrocasPage() {
       {loading ? (
         <p className="text-[13px] text-faint">Carregando…</p>
       ) : filtered.length === 0 ? (
-        <div className="border border-mist bg-paper py-16 text-center">
+        <div className="border border-mist bg-paper py-16 text-center rounded-xl">
           <IconExchange size={32} className="text-mist mx-auto mb-3" />
           <p className="text-sm text-faint">Nenhuma solicitação {filter !== 'todas' ? `no status "${STATUS_LABEL[filter as ReturnStatus]}"` : 'ainda'}.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           {filtered.map(r => (
-            <div key={r.id} className="border border-mist bg-paper p-4">
+            <div key={r.id} className="border border-mist bg-paper p-4 rounded-xl">
               <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -193,7 +193,7 @@ export default function TrocasPage() {
                     <IconCheck size={12} /> Aprovar
                   </button>
                   <button onClick={() => setStatus(r, 'recusada')} disabled={busyId === r.id}
-                    className="flex items-center gap-1.5 border border-mist text-mid text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-warm transition-colors disabled:opacity-50">
+                    className="flex items-center gap-1.5 border border-mist text-mid text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
                     <IconX size={12} /> Recusar
                   </button>
                 </div>
@@ -206,7 +206,7 @@ export default function TrocasPage() {
                     <IconBox size={12} /> {busyId === r.id ? 'Concluindo...' : 'Concluir e repor estoque'}
                   </button>
                   <button onClick={() => concludeAndRestock(r, false)} disabled={busyId === r.id}
-                    className="border border-mist text-mid text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-warm transition-colors disabled:opacity-50">
+                    className="border border-mist text-mid text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
                     Concluir sem repor (item com defeito)
                   </button>
                 </div>

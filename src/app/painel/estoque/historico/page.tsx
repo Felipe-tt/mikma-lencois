@@ -83,7 +83,7 @@ export default function HistoricoEstoquePage() {
 
   if (loading) return (
     <div className="flex flex-col gap-2 max-w-6xl mx-auto">
-      {[1, 2, 3, 4].map(i => <div key={i} className="h-[52px] skeleton border border-mist" />)}
+      {[1, 2, 3, 4].map(i => <div key={i} className="h-[52px] skeleton border border-mist rounded-xl" />)}
     </div>
   );
 
@@ -94,17 +94,17 @@ export default function HistoricoEstoquePage() {
           <h1 className="font-display font-normal text-ink text-2xl">Histórico de estoque</h1>
           <p className="text-[13px] text-faint mt-1">Todas as movimentações registradas, dos itens mais recentes.</p>
         </div>
-        <Link href="/painel/estoque" className="shrink-0 border border-mist text-mid text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-warm transition-colors">
+        <Link href="/painel/estoque" className="shrink-0 border border-mist text-mid text-[11px] font-bold tracking-[0.08em] uppercase px-4 py-2.5 hover:bg-warm transition-colors rounded-xl">
           Voltar ao estoque
         </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="text-center bg-paper border border-mist px-3 py-3">
+        <div className="text-center bg-paper border border-mist px-3 py-3 rounded-xl">
           <p className="text-[10px] font-bold uppercase tracking-wide text-faint mb-1">Saídas (no filtro atual)</p>
           <p className="text-2xl font-bold text-red-600">{totals.out}</p>
         </div>
-        <div className="text-center bg-paper border border-mist px-3 py-3">
+        <div className="text-center bg-paper border border-mist px-3 py-3 rounded-xl">
           <p className="text-[10px] font-bold uppercase tracking-wide text-faint mb-1">Entradas (no filtro atual)</p>
           <p className="text-2xl font-bold text-emerald-700">{totals.inn}</p>
         </div>
@@ -114,7 +114,7 @@ export default function HistoricoEstoquePage() {
         <div className="relative flex-1">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
           <input type="search" placeholder="Buscar por produto, motivo ou quem registrou..." value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40" />
+            className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40 rounded-xl" />
         </div>
         <Select
           value={typeFilter}
@@ -129,12 +129,12 @@ export default function HistoricoEstoquePage() {
       </div>
 
       {displayRows.length === 0 ? (
-        <div className="border border-mist bg-paper py-16 text-center">
+        <div className="border border-mist bg-paper py-16 text-center rounded-xl">
           <IconBox size={40} className="text-mist mx-auto mb-3" />
           <p className="text-sm text-faint">Nenhuma movimentação encontrada.</p>
         </div>
       ) : (
-        <div className="border border-mist bg-paper divide-y divide-mist">
+        <div className="border border-mist bg-paper divide-y divide-mist rounded-xl">
           {displayRows.map((row, i) => row.kind === 'single' ? (
             <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="min-w-0">

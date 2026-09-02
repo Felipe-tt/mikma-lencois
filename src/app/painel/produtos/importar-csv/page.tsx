@@ -488,7 +488,7 @@ export default function ImportarCsvPage() {
       </div>
 
       {/* ── Passo 1: upload + edição antes de salvar ── */}
-      <section className="bg-paper border border-mist p-5 mb-6">
+      <section className="bg-paper border border-mist p-5 mb-6 rounded-xl">
         <div className="flex items-baseline gap-2.5 mb-3">
           <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">1</span>
           <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">Suba o CSV</h2>
@@ -529,7 +529,7 @@ export default function ImportarCsvPage() {
                 {savingBatch ? 'Salvando...' : `Salvar ${staging.length} como rascunho`}
               </button>
             </div>
-            <div className="overflow-x-auto border border-mist">
+            <div className="overflow-x-auto border border-mist rounded-xl">
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="bg-warm text-left text-faint uppercase text-[10px] tracking-wide">
@@ -639,7 +639,7 @@ export default function ImportarCsvPage() {
             const busy = !!rowBusy[d.id];
             const err = rowError[d.id];
             return (
-              <div key={d.id} className="border border-mist bg-paper p-4">
+              <div key={d.id} className="border border-mist bg-paper p-4 rounded-xl">
                 <div className="flex gap-4">
                   <div
                     className={
@@ -665,7 +665,7 @@ export default function ImportarCsvPage() {
                     }}
                   >
                     {d.images.map((img, i) => (
-                      <div key={img.path} className="group relative w-20 h-20 border border-mist rounded-sm overflow-hidden bg-white">
+                      <div key={img.path} className="group relative w-20 h-20 border border-mist overflow-hidden bg-white rounded-xl">
                         <img src={img.url} alt="" className="w-full h-full object-cover" />
                         <button
                           onClick={() => removeImage(d, i)}
@@ -822,7 +822,7 @@ export default function ImportarCsvPage() {
                   {d.sourceRaw && (
                     <details className="text-[11px] text-faint">
                       <summary className="cursor-pointer select-none">Ver linha original do CSV</summary>
-                      <pre className="mt-1 whitespace-pre-wrap break-all bg-warm p-2 border border-mist">{d.sourceRaw}</pre>
+                      <pre className="mt-1 whitespace-pre-wrap break-all bg-warm p-2 border border-mist rounded-xl">{d.sourceRaw}</pre>
                     </details>
                   )}
                 </div>
@@ -840,7 +840,7 @@ export default function ImportarCsvPage() {
           </div>
           <div className="flex flex-col gap-2">
             {publishedDrafts.map((d) => (
-              <div key={d.id} className="border border-mist bg-warm/40 p-3 flex items-center justify-between text-[12px]">
+              <div key={d.id} className="border border-mist bg-warm/40 p-3 flex items-center justify-between text-[12px] rounded-xl">
                 <span className="flex items-center gap-2 text-ink"><IconCheck size={12} className="text-green-600" /> {d.name}</span>
                 {d.publishedProductId && (
                   <Link href="/painel/produtos" className="font-semibold text-clay hover:text-clay-d">Ver na lista de produtos</Link>

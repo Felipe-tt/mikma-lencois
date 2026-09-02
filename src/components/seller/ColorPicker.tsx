@@ -94,7 +94,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
           title="Escolher da paleta"
           aria-label="Abrir paleta de cores"
         >
-          <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-white dark:bg-warm border border-mist rounded-full flex items-center justify-center">
+          <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-white dark:bg-warm border border-mist flex items-center justify-center rounded-xl">
             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-faint"><path d="M6 9l6 6 6-6"/></svg>
           </span>
         </button>
@@ -119,7 +119,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
           />
 
           {showSugg && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-30 bg-white dark:bg-warm border border-mist shadow-card-hover mt-1 max-h-52 overflow-y-auto rounded-[4px]">
+            <div className="absolute top-full left-0 right-0 z-30 bg-white dark:bg-warm border border-mist shadow-card-hover mt-1 max-h-52 overflow-y-auto rounded-xl">
               {suggestions.map(s => (
                 <button
                   key={s.hex}
@@ -127,7 +127,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
                   onMouseDown={() => pickSuggestion(s)}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-warm text-left transition-colors"
                 >
-                  <span className="w-4 h-4 border border-mist shrink-0 rounded-[3px] bg-[var(--color)]" style={{ '--color': s.hex } as React.CSSProperties} />
+                  <span className="w-4 h-4 border border-mist shrink-0 bg-[var(--color)] rounded-xl" style={{ '--color': s.hex } as React.CSSProperties} />
                   <span className="text-sm text-ink">{s.name}</span>
                 </button>
               ))}
@@ -140,14 +140,14 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
           type="color"
           value={value.length === 7 && value.startsWith('#') ? value : '#cccccc'}
           onChange={e => pickHex(e.target.value)}
-          className="w-9 h-9 border border-mist cursor-pointer p-0.5 shrink-0 bg-paper rounded-[4px]"
+          className="w-9 h-9 border border-mist cursor-pointer p-0.5 shrink-0 bg-paper rounded-xl"
           title="Cor exata (seletor do navegador)"
         />
       </div>
 
       {/* Paleta rápida, grade de swatches */}
       {showSwatches && (
-        <div className="absolute top-11 left-0 right-0 sm:right-auto z-30 bg-white dark:bg-warm border border-mist shadow-card-hover p-3 rounded-[4px] max-w-[264px]">
+        <div className="absolute top-11 left-0 right-0 sm:right-auto z-30 bg-white dark:bg-warm border border-mist shadow-card-hover p-3 max-w-[264px] rounded-xl">
           <p className="text-[9px] font-bold tracking-[0.14em] uppercase text-faint mb-2">Paleta têxtil</p>
           <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto pr-1">
             {TEXTILE_COLORS.map(c => (

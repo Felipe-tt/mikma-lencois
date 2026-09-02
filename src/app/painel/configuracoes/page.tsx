@@ -112,7 +112,7 @@ export default function ConfiguracoesPage() {
 
   if (loading) return (
     <div className="flex flex-col gap-3 max-w-5xl mx-auto">
-      {[1,2,3].map(i => <div key={i} className="h-24 skeleton border border-mist" />)}
+      {[1,2,3].map(i => <div key={i} className="h-24 skeleton border border-mist rounded-xl" />)}
     </div>
   );
 
@@ -362,7 +362,7 @@ export default function ConfiguracoesPage() {
               value={settings.localDeliveryRadiusKm} onChange={v => set('localDeliveryRadiusKm', v)}
               hint={`Pedidos dentro de ${settings.localDeliveryRadiusKm} km recebem opção de entrega em 1h`}
               min={1} max={100} />
-            <details className="border border-mist">
+            <details className="border border-mist rounded-xl">
               <summary className="px-3 py-2.5 text-[12px] text-faint cursor-pointer select-none">
                 Coordenadas GPS (avançado, só mexa se souber)
               </summary>
@@ -522,7 +522,7 @@ function Card({ icon, title, desc, children, onPreview }: {
 }) {
   const IconComp = CARD_ICON_MAP[icon];
   return (
-    <div className="border border-mist bg-white dark:bg-warm overflow-hidden">
+    <div className="border border-mist bg-white dark:bg-warm overflow-hidden rounded-xl">
       <div className="flex items-start justify-between gap-3 px-5 py-4 bg-paper border-b border-mist">
         <div className="flex items-start gap-3">
           {IconComp ? <IconComp size={16} className="text-mid mt-0.5 shrink-0" /> : null}
@@ -566,7 +566,7 @@ function F({ label, value, onChange, hint, placeholder, maxLength, type='text' }
       <label className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
       <input type={type} value={value} onChange={e=>onChange(e.target.value)}
         placeholder={placeholder} maxLength={maxLength}
-        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint-l" />
+        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint-l rounded-xl" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>
   );
@@ -578,7 +578,7 @@ function TA({ label, value, onChange, rows=3, placeholder, hint }: {
     <div>
       <label className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
       <textarea value={value} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={placeholder}
-        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 resize-y placeholder:text-faint-l" />
+        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 resize-y placeholder:text-faint-l rounded-xl" />
       {hint && <p className="mt-1.5 text-[11px] text-faint">{hint}</p>}
     </div>
   );
@@ -614,7 +614,7 @@ function Num({ label, value, onChange, hint, min, max, step=1 }: {
       <label className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
       <input type="number" value={value} onChange={e=>onChange(parseFloat(e.target.value)||0)}
         min={min} max={max} step={step} inputMode="decimal"
-        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60" />
+        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>
   );
@@ -648,7 +648,7 @@ function TableEditor({ colsJson, rowsJson, onRowsChange }: {
                   const next = [...rows]; next[i]={...next[i],[col]:e.target.value};
                   onRowsChange(JSON.stringify(next));
                 }}
-                className="w-full border border-mist bg-white dark:bg-warm px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay-l/30" />
+                className="w-full border border-mist bg-white dark:bg-warm px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay-l/30 rounded-xl" />
             ))}
           </div>
           <button onClick={() => onRowsChange(JSON.stringify(rows.filter((_,idx)=>idx!==i)))}
@@ -675,12 +675,12 @@ function TimelineEditor({ value, onChange }: { value:string; onChange:(v:string)
   return (
     <div className="flex flex-col gap-3">
       {items.length===0 && (
-        <p className="text-[12px] text-faint text-center py-4 border border-dashed border-mist">
+        <p className="text-[12px] text-faint text-center py-4 border border-dashed border-mist rounded-xl">
           Nenhum marco ainda, clique abaixo para adicionar
         </p>
       )}
       {items.map((item,i) => (
-        <div key={i} className="border border-mist p-4 flex flex-col gap-3">
+        <div key={i} className="border border-mist p-4 flex flex-col gap-3 rounded-xl">
           <div className="flex items-center justify-between">
             <p className="text-[12px] font-bold text-ink">Marco {i+1}</p>
             <button onClick={()=>upd(items.filter((_,idx)=>idx!==i))}
@@ -806,10 +806,10 @@ function TeamPanel() {
               value={selected ? (selected.displayName || selected.email || '') : query}
               onChange={e => { setQuery(e.target.value); setSelected(null); }}
               placeholder="Nome ou e-mail…"
-              className="border border-mist px-3 py-2.5 text-[13px] outline-none focus:border-clay-l bg-white dark:bg-warm"
+              className="border border-mist px-3 py-2.5 text-[13px] outline-none focus:border-clay-l bg-white dark:bg-warm rounded-xl"
             />
             {!selected && query.trim().length >= 2 && (
-              <div className="border border-mist bg-white dark:bg-warm max-h-64 overflow-y-auto shadow-sm">
+              <div className="border border-mist bg-white dark:bg-warm max-h-64 overflow-y-auto shadow-sm rounded-xl">
                 {searching ? (
                   <p className="px-3 py-2.5 text-[12px] text-faint">Buscando…</p>
                 ) : results.length === 0 ? (
@@ -860,7 +860,7 @@ function TeamPanel() {
         ) : (
           <div className="flex flex-col gap-2">
             {members.map(m => (
-              <div key={m.uid} className="flex items-center justify-between border border-mist px-3 py-2.5">
+              <div key={m.uid} className="flex items-center justify-between border border-mist px-3 py-2.5 rounded-xl">
                 <div>
                   <p className="text-[13px] font-semibold text-ink">{m.displayName || m.email}</p>
                   <p className="text-[11px] text-faint">{m.email} · {m.role === 'admin' ? 'Admin' : 'Seller'}</p>
