@@ -37,7 +37,7 @@ export function DuplicateProductModal({ onPick, onClose }: Props) {
     : products;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] h-[100dvh] flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
       <div
         className="bg-paper w-full max-w-md rounded-[6px] shadow-xl flex flex-col max-h-[80vh]"
         onClick={e => e.stopPropagation()}

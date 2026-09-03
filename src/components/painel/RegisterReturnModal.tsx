@@ -72,7 +72,7 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
   }
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div
         className="bg-paper w-full sm:max-w-md sm:border sm:border-mist max-h-[90vh] flex flex-col animate-fade-in"
         onClick={e => e.stopPropagation()}
@@ -135,7 +135,7 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
           <button
             onClick={submit}
             disabled={saving}
-            className="w-full bg-ink text-paper text-[12px] font-bold uppercase tracking-[0.08em] py-3 hover:bg-ink/80 transition-colors disabled:opacity-50"
+            className="w-full bg-ink text-paper text-[12px] font-bold uppercase tracking-[0.08em] py-3 hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-xl"
           >
             {saving ? 'Registrando...' : 'Registrar'}
           </button>

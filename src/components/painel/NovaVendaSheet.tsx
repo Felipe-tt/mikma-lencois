@@ -212,7 +212,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
   }
 
   return (
-    <div className={embedded ? 'flex flex-col' : 'fixed inset-0 z-[60] bg-paper flex flex-col'}>
+    <div className={embedded ? 'flex flex-col' : 'fixed inset-0 z-[60] h-[100dvh] bg-paper flex flex-col'}>
       {/* Cabeçalho */}
       <div className={`px-4 py-3 shrink-0 flex flex-col gap-3 ${embedded ? '' : 'border-b border-mist'}`}>
         {!embedded && (

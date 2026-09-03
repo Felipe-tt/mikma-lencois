@@ -430,7 +430,7 @@ function ConversationThread({
             <button
               onClick={handleSend}
               disabled={!reply.trim() || sending}
-              className="flex items-center gap-2 px-5 py-2.5 text-[12px] font-bold uppercase tracking-wide bg-clay-l text-paper hover:bg-clay-d transition-colors disabled:opacity-40"
+              className="flex items-center gap-2 px-5 py-2.5 text-[12px] font-bold uppercase tracking-wide bg-clay-l text-paper hover:bg-clay-d transition-colors disabled:opacity-40 rounded-full"
             >
               {sending ? (
                 <>

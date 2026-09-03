@@ -72,9 +72,7 @@ export default function RelatoriosPage() {
       <div className="flex gap-2 mb-6">
         {PERIODS.map(p => (
           <button key={p.id} onClick={() => setPeriod(p.id)}
-            className={`flex-1 sm:flex-none px-4 py-2.5 text-[12px] font-semibold border transition-colors ${
-              period === p.id ? 'bg-ink text-paper border-ink' : 'border-mist text-mid bg-paper hover:bg-warm'
-            }`}>
+            className={`flex-1 sm:flex-none px-4 py-2.5 text-[12px] font-semibold border transition-colors ${ period === p.id ? 'bg-ink text-paper border-ink' : 'border-mist text-mid bg-paper hover:bg-warm' } rounded-lg`}>
             {p.label}
           </button>
         ))}

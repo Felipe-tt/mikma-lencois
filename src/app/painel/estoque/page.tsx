@@ -302,13 +302,13 @@ export default function EstoquePage() {
               </button>
             ) : (
               <button onClick={() => setMode('dia')}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-ink text-paper font-bold whitespace-nowrap">
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-ink text-paper font-bold whitespace-nowrap rounded-lg">
                 <IconX size={13} /> Sair da contagem
               </button>
             )}
           </div>
           <Link href="/painel/produtos/novo"
-            className="w-full lg:w-auto shrink-0 flex items-center justify-center gap-1.5 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors">
+            className="w-full lg:w-auto shrink-0 flex items-center justify-center gap-1.5 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors rounded-lg">
             + Produto
           </Link>
         </div>
@@ -323,7 +323,7 @@ export default function EstoquePage() {
       )}
 
       {mode === 'dia' && lowCount > 0 && (
-        <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex items-center gap-3">
+        <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex items-center gap-3 rounded-xl">
           <IconAlert size={18} className="text-amber-600 shrink-0" />
           <p className="text-[13px] text-amber-800">
             <strong>{lowCount} {lowCount === 1 ? 'produto está' : 'produtos estão'} quase acabando!</strong>
@@ -333,7 +333,7 @@ export default function EstoquePage() {
       )}
 
       {mode === 'contagem' && (
-        <div className="bg-blue-50 border border-blue-100 px-4 py-3 mb-5 text-[13px] text-blue-900">
+        <div className="bg-blue-50 border border-blue-100 px-4 py-3 mb-5 text-[13px] text-blue-900 rounded-xl">
           Percorra a lista e digite quantas peças você tem <strong>fisicamente em mãos agora</strong> de cada item
           (inclua as já vendidas no site que ainda não saíram pra entrega). Só o que você mudar vai ser salvo, e fica
           registrado no histórico de cada item.
@@ -388,7 +388,7 @@ export default function EstoquePage() {
           })}
           <div className="sticky bottom-4 flex justify-end px-4 py-3">
             <button onClick={saveCount} disabled={savingCount}
-              className="bg-ink text-paper text-[12px] font-bold tracking-[0.05em] uppercase px-6 py-3 shadow-lg hover:bg-ink/80 transition-colors disabled:opacity-50">
+              className="bg-ink text-paper text-[12px] font-bold tracking-[0.05em] uppercase px-6 py-3 shadow-lg hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-full">
               {savingCount ? 'Salvando...' : `Salvar contagem${changedCount > 0 ? ` (${changedCount})` : ''}`}
             </button>
           </div>
@@ -457,7 +457,7 @@ export default function EstoquePage() {
                         <input type="number" min={0} inputMode="numeric" value={threshold}
                           onChange={ev => setThresholdDraft(d => ({ ...d, [item.id]: Number(ev.target.value) }))}
                           onBlur={ev => saveThreshold(item, Number(ev.target.value))}
-                          className="w-full bg-transparent border-none text-center text-lg font-bold text-mid py-0 focus:outline-none" />
+                          className="w-full bg-transparent border-none text-center text-lg font-bold text-mid py-0 focus:outline-none rounded-xl" />
                       </div>
                     </div>
 
@@ -530,7 +530,7 @@ export default function EstoquePage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg flex items-center gap-3 z-50">
+        <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg flex items-center gap-3 z-50 rounded-lg">
           <IconCheck size={14} className="shrink-0" />
           <span className="flex-1">{toast.msg}</span>
           {toast.onUndo && (
@@ -559,14 +559,14 @@ function InlineActionForm({ item, kind, available, submitting, onCancel, onConfi
     : 'Ex: recontagem de terça-feira (opcional)';
 
   return (
-    <div className="border border-clay-l/30 bg-white dark:bg-warm p-3 flex flex-col gap-2.5">
+    <div className="border border-clay-l/30 bg-white dark:bg-warm p-3 flex flex-col gap-2.5 rounded-xl">
       <p className="text-[12px] font-bold text-ink">{title}</p>
       <div className="flex gap-2">
         <div className="w-24 shrink-0">
           <label className="block text-[10px] font-semibold text-mid mb-1">{qtyLabel}</label>
           <input type="number" min={0} inputMode="numeric" value={qty} autoFocus disabled={submitting}
             onChange={e => setQty(Number(e.target.value))}
-            className="w-full border border-clay-l/40 text-center py-2 font-bold focus:outline-none disabled:opacity-50" />
+            className="w-full border border-clay-l/40 text-center py-2 font-bold focus:outline-none disabled:opacity-50 rounded-xl" />
         </div>
         <div className="flex-1">
           <label className="block text-[10px] font-semibold text-mid mb-1">Observação</label>
@@ -579,7 +579,7 @@ function InlineActionForm({ item, kind, available, submitting, onCancel, onConfi
       )}
       <div className="flex gap-2 mt-0.5">
         <button onClick={() => onConfirm(qty, note)} disabled={submitting}
-          className="flex-1 bg-ink text-paper text-[12px] font-bold py-2.5 hover:bg-ink/80 transition-colors flex items-center justify-center gap-1 disabled:opacity-50">
+          className="flex-1 bg-ink text-paper text-[12px] font-bold py-2.5 hover:bg-ink/80 transition-colors flex items-center justify-center gap-1 disabled:opacity-50 rounded-xl">
           <IconCheck size={12} /> {submitting ? 'Salvando...' : 'Confirmar'}
         </button>
         <button onClick={onCancel} disabled={submitting} className="flex-1 border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">

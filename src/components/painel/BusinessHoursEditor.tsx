@@ -103,7 +103,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
         </p>
       </div>
       {justCopied && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 text-green-700 text-[12px] font-medium">
+        <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 text-green-700 text-[12px] font-medium rounded-xl">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           Horário copiado
         </div>

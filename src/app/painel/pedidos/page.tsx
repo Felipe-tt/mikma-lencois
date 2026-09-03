@@ -188,13 +188,13 @@ export default function PainelPedidos() {
 
       {/* Alerta de ação necessária */}
       {needActionCount > 0 && (
-        <div className="bg-clay-l/10 border border-clay-l/30 px-4 py-3.5 mb-5 flex items-center gap-3">
+        <div className="bg-clay-l/10 border border-clay-l/30 px-4 py-3.5 mb-5 flex items-center gap-3 rounded-xl">
           <IconAlert size={18} className="shrink-0 text-clay-l" />
           <p className="text-[13px] text-ink flex-1">
             <strong>{needActionCount} pedido{needActionCount > 1 ? 's' : ''} pago{needActionCount > 1 ? 's' : ''}</strong> esperando você separar.
           </p>
           <button onClick={() => setFilter('paid')}
-            className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 bg-clay-l text-paper hover:bg-clay-d transition-colors">
+            className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 bg-clay-l text-paper hover:bg-clay-d transition-colors rounded-full">
             Ver agora
           </button>
         </div>
@@ -248,7 +248,7 @@ export default function PainelPedidos() {
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[11px] font-mono text-faint bg-warm px-1.5 py-0.5">
+                  <span className="text-[11px] font-mono text-faint bg-warm px-1.5 py-0.5 rounded-md">
                     #{order.id.slice(-8).toUpperCase()}
                   </span>
                   <span className={BADGE[order.status] ?? 'badge'}>
@@ -282,21 +282,21 @@ export default function PainelPedidos() {
               </div>
 
               <Link href={`/painel/pedidos/${order.id}`}
-                className="shrink-0 text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors border border-clay-l/30 px-3 py-1.5 hover:bg-clay-l/5">
+                className="shrink-0 text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors border border-clay-l/30 px-3 py-1.5 hover:bg-clay-l/5 rounded-lg">
                 Ver detalhes
               </Link>
             </div>
 
             {/* CTA pago */}
             {order.status === 'paid' && (
-              <div className="mt-3 flex items-center gap-3 p-3 bg-clay-l/5 border border-clay-l/20">
+              <div className="mt-3 flex items-center gap-3 p-3 bg-clay-l/5 border border-clay-l/20 rounded-xl">
                 <IconArrowRight size={16} className="shrink-0 text-clay-l" />
                 <div className="flex-1">
                   <p className="text-[12px] font-semibold text-ink">Pagamento confirmado, separe o pedido!</p>
                   <p className="text-[11px] text-faint">Clique quando começar a preparar.</p>
                 </div>
                 <button onClick={() => markPreparing(order.id)} disabled={updating === order.id}
-                  className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-clay-l text-paper hover:bg-clay-d transition-colors disabled:opacity-50">
+                  className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-clay-l text-paper hover:bg-clay-d transition-colors disabled:opacity-50 rounded-full">
                   {updating === order.id ? 'Atualizando…' : 'Comecei a separar'}
                 </button>
               </div>
@@ -304,14 +304,14 @@ export default function PainelPedidos() {
 
             {/* CTA separando */}
             {order.status === 'preparing' && (
-              <div className="mt-3 flex items-center gap-3 p-3 bg-ink/5 border border-ink/10">
+              <div className="mt-3 flex items-center gap-3 p-3 bg-ink/5 border border-ink/10 rounded-xl">
                 <IconBox size={16} className="shrink-0" />
                 <div className="flex-1">
                   <p className="text-[12px] font-semibold text-ink">Separando o pedido</p>
                   <p className="text-[11px] text-faint">Quando embalado e pronto para sair, clique em Despachar.</p>
                 </div>
                 <button onClick={() => dispatch(order.id)} disabled={dispatching === order.id}
-                  className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50">
+                  className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-full">
                   {dispatching === order.id ? 'Enviando…' : 'Despachar agora'}
                 </button>
               </div>

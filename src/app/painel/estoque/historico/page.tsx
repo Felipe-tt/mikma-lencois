@@ -147,7 +147,7 @@ export default function HistoricoEstoquePage() {
               </div>
             </div>
           ) : (
-            <div key={i} className="px-4 py-2.5 bg-emerald-50/40">
+            <div key={i} className="px-4 py-2.5 bg-emerald-50/40 rounded-xl">
               <div className="flex items-center justify-between gap-3 mb-1.5">
                 <p className="text-[12px] font-bold text-emerald-800">🧾 Venda com {row.lines.length} {row.lines.length === 1 ? 'item' : 'itens'}{row.lines[0].by ? `, ${row.lines[0].by}` : ''}</p>
                 <p className="text-[10px] text-faint shrink-0">{new Date(row.date).toLocaleString('pt-BR')}</p>

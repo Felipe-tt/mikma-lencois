@@ -78,9 +78,7 @@ export default function CuponsPage() {
           <p className="text-[13px] text-faint mt-1">Crie códigos para seus clientes usarem na hora de comprar.</p>
         </div>
         <button onClick={() => { setShowForm(s => !s); setError(''); }}
-          className={`text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2.5 border transition-colors ${
-            showForm ? 'border-mist text-mid hover:bg-warm' : 'bg-ink text-paper border-ink hover:bg-ink/80'
-          }`}>
+          className={`text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2.5 border transition-colors ${ showForm ? 'border-mist text-mid hover:bg-warm' : 'bg-ink text-paper border-ink hover:bg-ink/80' } rounded-full`}>
           {showForm ? 'Cancelar' : '+ Criar cupom'}
         </button>
       </div>
@@ -88,7 +86,7 @@ export default function CuponsPage() {
       {showForm && (
         <div className="bg-paper border border-mist p-5 mb-6 rounded-xl">
           <h2 className="text-[14px] font-bold text-ink mb-4">Novo cupom</h2>
-          {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-1"><IconAlert size={11} />{error}</div>}
+          {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-1 rounded-lg"><IconAlert size={11} />{error}</div>}
 
           <div className="flex flex-col gap-4">
             <div>
@@ -144,7 +142,7 @@ export default function CuponsPage() {
             </div>
 
             {form.code && form.value > 0 && (
-              <div className="bg-clay-l/5 border border-clay-l/20 px-4 py-3">
+              <div className="bg-clay-l/5 border border-clay-l/20 px-4 py-3 rounded-xl">
                 <p className="text-[12px] text-ink">
                   <IconInfo size={13} className="text-mid" /> <strong>Resumo:</strong> O cupom <strong className="font-mono">{form.code || '...'}</strong> vai dar{' '}
                   <strong>{form.type === 'percent' ? `${form.value}%` : `R$ ${form.value.toFixed(2)}`} de desconto</strong>
@@ -157,7 +155,7 @@ export default function CuponsPage() {
           </div>
 
           <button onClick={handleCreate} disabled={saving}
-            className="mt-5 w-full bg-ink text-paper text-sm font-semibold py-3.5 disabled:opacity-50 hover:bg-ink/80 transition-colors">
+            className="mt-5 w-full bg-ink text-paper text-sm font-semibold py-3.5 disabled:opacity-50 hover:bg-ink/80 transition-colors rounded-xl">
             {saving ? 'Criando…' : 'Criar cupom'}
           </button>
         </div>
@@ -171,16 +169,14 @@ export default function CuponsPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {coupons.map(c => (
-            <div key={c.id} className={`border bg-paper px-5 py-4 ${!c.active ? 'opacity-50' : 'border-mist'}`}>
+            <div key={c.id} className={`border bg-paper px-5 py-4 rounded-2xl ${!c.active ? 'opacity-50' : 'border-mist'}`}>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
                   <span className="font-mono font-bold text-ink text-lg tracking-wider">{c.code}</span>
                   <p className="text-[13px] text-mid mt-0.5">{desconto(c)}{c.minOrderCents > 0 && ` em pedidos acima de R$ ${(c.minOrderCents/100).toFixed(2)}`}</p>
                 </div>
                 <button onClick={() => toggleActive(c.id, c.active)}
-                  className={`shrink-0 text-[11px] font-bold px-3 py-1.5 border transition-colors ${
-                    c.active ? 'border-clay-l text-clay-l hover:bg-clay-l hover:text-paper' : 'border-mist text-faint hover:bg-warm'
-                  }`}>
+                  className={`shrink-0 text-[11px] font-bold px-3 py-1.5 border transition-colors ${ c.active ? 'border-clay-l text-clay-l hover:bg-clay-l hover:text-paper' : 'border-mist text-faint hover:bg-warm' } rounded-lg`}>
                   {c.active ? 'Ativo' : 'Pausado'}
                 </button>
               </div>

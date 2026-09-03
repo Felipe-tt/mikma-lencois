@@ -482,7 +482,7 @@ export default function ConfiguracoesPage() {
         <div className="bg-paper border-t border-mist md:border-0 px-4 py-3 md:px-0 md:py-0">
           {saveError && <p className="text-center text-[12px] text-red-600 mb-2">{saveError}</p>}
           <button onClick={handleSave} disabled={saving}
-            className="w-full bg-ink text-paper text-sm font-semibold py-4 disabled:opacity-50 hover:bg-[#2E2010] transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-ink text-paper text-sm font-semibold py-4 disabled:opacity-50 hover:bg-[#2E2010] transition-colors flex items-center justify-center gap-2 rounded-xl"
           >
             {saving
               ? <><span className="spinner" />Salvando…</>
@@ -836,9 +836,7 @@ function TeamPanel() {
             <div className="flex gap-2">
               {(['seller', 'admin'] as const).map(r => (
                 <button type="button" key={r} onClick={() => setRole(r)}
-                  className={`flex-1 py-2.5 text-[12px] font-semibold border transition-colors ${
-                    role === r ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm'
-                  }`}>
+                  className={`flex-1 py-2.5 text-[12px] font-semibold border transition-colors ${ role === r ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm' } rounded-xl`}>
                   {r === 'seller' ? 'Seller (gerencia loja)' : 'Admin (gerencia loja + equipe)'}
                 </button>
               ))}

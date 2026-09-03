@@ -163,7 +163,7 @@ export default function ManutencaoPage() {
       </div>
 
       {/* Toggle */}
-      <div className={`border p-6 mb-6 ${status.active ? 'border-amber-300 bg-amber-50' : 'border-mist bg-white dark:bg-warm'}`}>
+      <div className={`border p-6 mb-6 rounded-2xl ${status.active ? 'border-amber-300 bg-amber-50' : 'border-mist bg-white dark:bg-warm'}`}>
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[14px] font-bold text-ink mb-0.5">
@@ -199,10 +199,10 @@ export default function ManutencaoPage() {
       <div className="border border-mist bg-paper px-5 py-4 mb-6 rounded-xl">
         <p className="text-[11px] font-bold text-mid mb-2 tracking-[0.1em] uppercase">Pelo terminal</p>
         <div className="flex flex-col gap-1.5">
-          <code className="text-[11px] bg-ink text-paper px-3 py-2 block font-mono">
+          <code className="text-[11px] bg-ink text-paper px-3 py-2 block font-mono rounded-lg">
             node scripts/maintenance.js on
           </code>
-          <code className="text-[11px] bg-ink text-paper px-3 py-2 block font-mono">
+          <code className="text-[11px] bg-ink text-paper px-3 py-2 block font-mono rounded-lg">
             node scripts/maintenance.js allow
           </code>
           <p className="text-[10px] text-faint">
@@ -224,7 +224,7 @@ export default function ManutencaoPage() {
             <div className="flex gap-2">
               {waiting.length > 0 && (
                 <button onClick={releaseAll}
-                  className="px-3 py-1.5 text-[11px] font-semibold bg-ink text-paper hover:bg-ink/80 transition-colors">
+                  className="px-3 py-1.5 text-[11px] font-semibold bg-ink text-paper hover:bg-ink/80 transition-colors rounded-lg">
                   Liberar todos
                 </button>
               )}
@@ -241,9 +241,7 @@ export default function ManutencaoPage() {
           <div className="flex gap-2">
             {(['ips', 'users'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                className={`px-3 py-1.5 text-[11px] font-semibold transition-colors ${
-                  tab === t ? 'bg-ink text-paper' : 'border border-mist text-mid hover:bg-warm'
-                }`}>
+                className={`px-3 py-1.5 text-[11px] font-semibold transition-colors ${ tab === t ? 'bg-ink text-paper' : 'border border-mist text-mid hover:bg-warm' } rounded-lg`}>
                 {t === 'ips' ? `IPs (${ipEntries.length})` : `Usuários (${userEntries.length})`}
               </button>
             ))}
@@ -330,7 +328,7 @@ export default function ManutencaoPage() {
                     <button
                       onClick={() => releaseEntry(entry)}
                       disabled={releasing === (entry.uid ?? entry.ip)}
-                      className="shrink-0 px-3 py-1 text-[11px] font-semibold bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50">
+                      className="shrink-0 px-3 py-1 text-[11px] font-semibold bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-lg">
                       {releasing === (entry.uid ?? entry.ip) ? '…' : 'Liberar'}
                     </button>
                   ) : (
