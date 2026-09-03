@@ -184,7 +184,7 @@ export default function ManutencaoPage() {
           <button
             onClick={toggle}
             disabled={toggling}
-            className={`shrink-0 px-5 py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-50 ${
+            className={`shrink-0 px-5 py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-50 rounded-xl ${
               status.active
                 ? 'bg-green-600 text-white hover:bg-green-700'
                 : 'bg-amber-500 text-white hover:bg-amber-600'
@@ -212,7 +212,7 @@ export default function ManutencaoPage() {
       </div>
 
       {/* Queue */}
-      <div className="border border-mist bg-white dark:bg-warm rounded-xl">
+      <div className="border border-mist bg-white dark:bg-warm rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-mist bg-paper">
           <div className="flex items-center justify-between mb-3">
             <div>

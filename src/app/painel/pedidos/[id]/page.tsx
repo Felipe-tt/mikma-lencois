@@ -128,7 +128,7 @@ const CARD_ICONS: Record<string, React.FC<{ size?: number; className?: string }>
 function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   const IconComp = CARD_ICONS[icon];
   return (
-    <div className="bg-paper border border-mist rounded-xl">
+    <div className="bg-paper border border-mist rounded-xl overflow-hidden">
       <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
         {IconComp && <IconComp size={13} className="text-mid" />}
         <p className="text-[12px] font-bold text-ink tracking-wide uppercase">{title}</p>
@@ -646,7 +646,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </Card>
 
         {/* ── Itens ── */}
-        <div className="bg-paper border border-mist rounded-xl">
+        <div className="bg-paper border border-mist rounded-xl overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
             <IconProducts size={14} className="text-mid shrink-0" />
             <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Itens do pedido</p>
@@ -775,7 +775,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
              mapa; esse aqui não tem noção de Uber Direct e só mostraria um
              erro confuso de "Melhor Envio" pra esses pedidos) ── */}
         {order.delivery?.carrier && order.delivery.carrier !== 'pickup' && order.delivery.carrier !== 'manual' && order.delivery.carrier !== 'uber_direct' && (
-          <div className="bg-paper border border-mist rounded-xl">
+          <div className="bg-paper border border-mist rounded-xl overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
               <IconBox size={16} className="text-mid shrink-0" />
               <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Rastreamento</p>
@@ -813,7 +813,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </Card>
 
         {/* ── Info técnica ── */}
-        <details className="bg-paper border border-mist rounded-xl">
+        <details className="bg-paper border border-mist rounded-xl overflow-hidden">
           <summary className="flex items-center gap-2 px-5 py-3.5 cursor-pointer select-none bg-warm border-b border-mist">
             <IconMaintenance size={14} className="text-mid shrink-0" />
             <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Informações técnicas</p>
