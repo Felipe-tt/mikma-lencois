@@ -511,7 +511,7 @@ export default function ImportarCsvPage() {
             <p className="text-[12px] text-faint">Arquivo: <strong>{csvFileName}</strong></p>
           )}
           {csvError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2">
+            <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2 rounded-xl">
               <IconAlert size={12} className="shrink-0 mt-0.5" /> {csvError}
             </div>
           )}
@@ -626,7 +626,7 @@ export default function ImportarCsvPage() {
 
         {loadingDrafts && <p className="ml-[30px] text-[13px] text-faint">Carregando...</p>}
         {draftsError && (
-          <div className="ml-[30px] bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2 max-w-lg">
+          <div className="ml-[30px] bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2 max-w-lg rounded-xl">
             <IconAlert size={12} className="shrink-0 mt-0.5" /> {draftsError}
           </div>
         )}

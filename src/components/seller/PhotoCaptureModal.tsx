@@ -124,7 +124,7 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95">
+    <div className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black/95">
       <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
         <span className="text-sm font-semibold">
           Foto do produto {captured.length > 0 && `· ${captured.length}`}

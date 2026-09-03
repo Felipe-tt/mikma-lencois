@@ -1232,8 +1232,11 @@ export default function ProductForm({ initial }: Props) {
         </div>
       )}
 
-      {/* ── Barra de ação fixa — sempre visível, sem precisar rolar até o fim ── */}
-      <div className="fixed bottom-0 left-0 right-0 bg-paper/95 backdrop-blur border-t border-mist z-40 pb-[env(safe-area-inset-bottom)]">
+      {/* Barra de ação fixa — sempre visível, sem precisar rolar até o fim.
+          No mobile ela fica ACIMA da barra de navegação inferior do painel
+          (que tem ~64px + safe-area), senão as duas disputam o bottom:0 e
+          ficam sobrepostas. */}
+      <div className="fixed bottom-[64px] lg:bottom-0 left-0 right-0 bg-paper/95 backdrop-blur border-t border-mist z-40 rounded-t-2xl lg:rounded-none shadow-modal lg:shadow-none pb-[env(safe-area-inset-bottom)] lg:pb-0">
         <div className="max-w-xl mx-auto px-4 py-3 flex flex-col gap-2">
           <div className="flex gap-3 items-center">
             <button onClick={() => handleSubmit('list')} disabled={saving} className="btn-primary flex-1 py-3.5 sm:py-3 text-[15px]">

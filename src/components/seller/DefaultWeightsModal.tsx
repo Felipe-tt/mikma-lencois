@@ -74,7 +74,7 @@ export function DefaultWeightsModal({ current, onClose, onSaved }: Props) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] h-[100dvh] flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
       <div
         className="bg-paper w-full max-w-sm rounded-[6px] shadow-xl p-5 flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}

@@ -416,7 +416,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {/* ── Sinais de fraude leve (endereço/IP repetido em outra conta) ── */}
         {fraudSignals.length > 0 && (
-          <div className="border-2 border-red-400 bg-red-50 px-5 py-4">
+          <div className="border-2 border-red-400 bg-red-50 px-5 py-4 rounded-xl">
             <p className="text-[14px] font-bold text-ink mb-1">⚠️ Revisar antes de despachar</p>
             <ul className="text-[13px] text-ink/80 list-disc pl-5 space-y-0.5">
               {fraudSignals.map((s, i) => (
@@ -431,11 +431,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {/* ── Alerta de ação necessária ── */}
         {order.status === 'paid' && (
-          <div className="border-2 border-clay-l bg-clay-l/5 px-5 py-4">
+          <div className="border-2 border-clay-l bg-clay-l/5 px-5 py-4 rounded-xl">
             <p className="text-[14px] font-bold text-ink mb-1">Este pedido foi pago e está esperando você!</p>
             <p className="text-[12px] text-mid mb-3">Comece a separar os itens e clique no botão abaixo quando terminar.</p>
             <button onClick={advanceStatus} disabled={updating}
-              className="w-full bg-clay-l text-paper text-[13px] font-bold py-3 hover:bg-clay-d disabled:opacity-50 transition-colors">
+              className="w-full bg-clay-l text-paper text-[13px] font-bold py-3 hover:bg-clay-d disabled:opacity-50 transition-colors rounded-xl">
               {updating ? 'Salvando…' : 'Comecei a separar o pedido'}
             </button>
           </div>
@@ -455,7 +455,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             uber_direct:     'Uber Direct',
           };
           return (
-            <div className="border border-ink/20 bg-ink/5 px-5 py-4 flex flex-col gap-3">
+            <div className="border border-ink/20 bg-ink/5 px-5 py-4 flex flex-col gap-3 rounded-xl">
               <p className="text-[13px] font-bold text-ink">Pedido sendo separado</p>
 
               {/* Forma de envio escolhida pelo cliente, não editável */}
@@ -496,13 +496,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               )}
 
               {dispatchError && (
-                <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2">{dispatchError}</p>
+                <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{dispatchError}</p>
               )}
 
               <button
                 onClick={dispatchDelivery}
                 disabled={updating}
-                className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors"
+                className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
               >
                 {updating
                   ? (isPickup ? 'Salvando…' : isUberDirect ? 'Solicitando motoboy…' : 'Gerando etiqueta…')
@@ -580,7 +580,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 {/* Link rastreio em tempo real */}
                 {order.delivery.trackingUrl && (
                   <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 w-full py-2 bg-ink text-paper text-[12px] font-bold hover:bg-ink/80 transition-colors">
+                    className="flex items-center justify-center gap-1.5 w-full py-2 bg-ink text-paper text-[12px] font-bold hover:bg-ink/80 transition-colors rounded-xl">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
                     Abrir rastreio da Uber em outra aba
                   </a>
@@ -590,7 +590,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
             {/* Código de rastreio (Melhor Envio / Correios) */}
             {order.delivery?.trackingCode && (
-              <div className="flex items-center justify-between bg-warm px-3 py-2.5">
+              <div className="flex items-center justify-between bg-warm px-3 py-2.5 rounded-xl">
                 <div>
                   <p className="text-[10px] text-faint mb-0.5">Código de rastreio</p>
                   <p className="text-[13px] font-mono font-bold text-ink">{order.delivery.trackingCode}</p>
@@ -614,12 +614,12 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               </a>
             )}
             <button onClick={advanceStatus} disabled={updating}
-              className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors">
+              className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl">
               {updating ? 'Salvando…' : 'Confirmar entrega ao cliente'}
             </button>
 
             {cancelDeliveryError && (
-              <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2">{cancelDeliveryError}</p>
+              <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{cancelDeliveryError}</p>
             )}
             <button onClick={cancelDelivery} disabled={cancellingDelivery}
               className="w-full text-[12px] font-semibold text-red-600 hover:text-red-700 disabled:opacity-50 transition-colors py-1">
@@ -711,7 +711,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   {copied === 'pix' ? 'Copiado!' : 'Copiar'}
                 </button>
               </div>
-              <p className="text-[10px] font-mono text-faint break-all bg-warm px-2 py-1.5 leading-relaxed">
+              <p className="text-[10px] font-mono text-faint break-all bg-warm px-2 py-1.5 leading-relaxed rounded-md">
                 {order.payment.pixCopyPaste.slice(0, 80)}…
               </p>
             </div>
@@ -732,7 +732,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             </button>
             <Link
               href={`/painel/pedidos/${order.id}/etiqueta`}
-              className="flex items-center justify-center gap-1.5 w-full bg-ink text-paper text-[12px] font-semibold py-2 hover:bg-ink/80 transition-colors">
+              className="flex items-center justify-center gap-1.5 w-full bg-ink text-paper text-[12px] font-semibold py-2 hover:bg-ink/80 transition-colors rounded-xl">
               <IconPrint size={13} /> Imprimir nota de separação (uso interno)
             </Link>
           </div>
@@ -830,7 +830,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {order.status !== 'pending_payment' && order.status !== 'cancelled' && (
           <div className="flex flex-col gap-2">
             {returnRegistered && (
-              <p className="text-[12px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2">
+              <p className="text-[12px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
                 Registrado. Acompanhe em <a href="/painel/trocas" className="underline font-semibold">Trocas</a>.
               </p>
             )}
@@ -845,10 +845,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {order.status !== 'cancelled' && order.status !== 'delivered' && (
           <div className="flex flex-col gap-2">
             {cancelOrderError && (
-              <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2">{cancelOrderError}</p>
+              <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{cancelOrderError}</p>
             )}
             <button onClick={handleCancelOrder} disabled={cancellingOrder}
-              className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors">
+              className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-xl">
               {cancellingOrder ? 'Cancelando…' : 'Cancelar este pedido'}
             </button>
           </div>
@@ -857,7 +857,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {/* ── Apagar se cancelado ── */}
         {order.status === 'cancelled' && (
           <button onClick={handleDelete} disabled={deleting}
-            className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors">
+            className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-xl">
             {deleting ? 'Apagando…' : 'Apagar este pedido cancelado'}
           </button>
         )}

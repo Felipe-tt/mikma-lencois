@@ -79,7 +79,7 @@ export default function PainelProdutosPage() {
       </div>
 
       {errorMsg && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-2">
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-2 rounded-lg">
           <IconAlert size={12} className="shrink-0" /> {errorMsg}
         </div>
       )}
@@ -101,7 +101,7 @@ export default function PainelProdutosPage() {
         </Link>
         <Link
           href="/painel/produtos/novo"
-          className="shrink-0 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors"
+          className="shrink-0 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors rounded-full"
         >
           + Novo produto
         </Link>
@@ -160,11 +160,7 @@ export default function PainelProdutosPage() {
                   <button
                     onClick={() => toggleActive(p.id, p.active)}
                     disabled={isBusy}
-                    className={`text-[10px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 border transition-colors disabled:opacity-50 disabled:cursor-wait ${
-                      p.active
-                        ? 'border-clay-l text-clay-l hover:bg-clay-l hover:text-paper'
-                        : 'border-mist text-faint hover:bg-warm'
-                    }`}
+                    className={`text-[10px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 border transition-colors disabled:opacity-50 disabled:cursor-wait ${ p.active ? 'border-clay-l text-clay-l hover:bg-clay-l hover:text-paper' : 'border-mist text-faint hover:bg-warm' } rounded-full`}
                   >
                     {isBusy ? '…' : p.active ? 'Visível' : 'Oculto'}
                   </button>
@@ -175,11 +171,7 @@ export default function PainelProdutosPage() {
                   <button
                     onClick={() => toggleActive(p.id, p.active)}
                     disabled={isBusy}
-                    className={`sm:hidden text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-1 border transition-colors disabled:opacity-50 ${
-                      p.active
-                        ? 'border-clay-l text-clay-l'
-                        : 'border-mist text-faint'
-                    }`}
+                    className={`sm:hidden text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-1 border transition-colors disabled:opacity-50 ${ p.active ? 'border-clay-l text-clay-l' : 'border-mist text-faint' } rounded-full`}
                   >
                     {isBusy ? '…' : p.active ? 'Visível' : 'Oculto'}
                   </button>
@@ -189,7 +181,7 @@ export default function PainelProdutosPage() {
                       <button
                         onClick={() => deleteProduct(p.id)}
                         disabled={isBusy}
-                        className="text-[10px] font-bold uppercase px-2 py-1 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        className="text-[10px] font-bold uppercase px-2 py-1 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors rounded-full"
                       >
                         {isBusy ? 'Apagando…' : 'Confirmar'}
                       </button>

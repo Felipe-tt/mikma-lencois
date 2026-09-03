@@ -134,9 +134,7 @@ export default function TrocasPage() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`text-[11px] font-bold uppercase tracking-[0.06em] px-3.5 py-2 border transition-colors ${
-              filter === f.key ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm'
-            }`}
+            className={`text-[11px] font-bold uppercase tracking-[0.06em] px-3.5 py-2 border transition-colors ${ filter === f.key ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm' } rounded-full`}
           >
             {f.label} {counts[f.key] ? <span className="opacity-60">({counts[f.key]})</span> : null}
           </button>
@@ -189,7 +187,7 @@ export default function TrocasPage() {
               {r.status === 'solicitada' && (
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => setStatus(r, 'aprovada')} disabled={busyId === r.id}
-                    className="flex items-center gap-1.5 border border-ink text-ink text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-ink hover:text-paper transition-colors disabled:opacity-50">
+                    className="flex items-center gap-1.5 border border-ink text-ink text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-ink hover:text-paper transition-colors disabled:opacity-50 rounded-full">
                     <IconCheck size={12} /> Aprovar
                   </button>
                   <button onClick={() => setStatus(r, 'recusada')} disabled={busyId === r.id}
@@ -202,7 +200,7 @@ export default function TrocasPage() {
               {r.status === 'aprovada' && (
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => concludeAndRestock(r, true)} disabled={busyId === r.id}
-                    className="flex items-center gap-1.5 bg-ink text-paper text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-ink/80 transition-colors disabled:opacity-50">
+                    className="flex items-center gap-1.5 bg-ink text-paper text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-full">
                     <IconBox size={12} /> {busyId === r.id ? 'Concluindo...' : 'Concluir e repor estoque'}
                   </button>
                   <button onClick={() => concludeAndRestock(r, false)} disabled={busyId === r.id}
@@ -217,7 +215,7 @@ export default function TrocasPage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg z-50">
+        <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg z-50 rounded-lg">
           {toast}
         </div>
       )}
