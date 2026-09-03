@@ -85,11 +85,11 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
         <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto">
           <div className="grid grid-cols-2 border border-mist p-1 rounded-xl">
             <button onClick={() => setType('troca')}
-              className={`py-2 text-[12px] font-bold uppercase tracking-wide transition-colors ${type === 'troca' ? 'bg-ink text-paper' : 'text-mid'}`}>
+              className={`py-2 text-[12px] font-bold uppercase tracking-wide transition-colors rounded-lg ${type === 'troca' ? 'bg-ink text-paper' : 'text-mid'}`}>
               Troca
             </button>
             <button onClick={() => setType('devolucao')}
-              className={`py-2 text-[12px] font-bold uppercase tracking-wide transition-colors ${type === 'devolucao' ? 'bg-ink text-paper' : 'text-mid'}`}>
+              className={`py-2 text-[12px] font-bold uppercase tracking-wide transition-colors rounded-lg ${type === 'devolucao' ? 'bg-ink text-paper' : 'text-mid'}`}>
               Devolução
             </button>
           </div>

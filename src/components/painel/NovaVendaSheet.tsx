@@ -227,11 +227,11 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         {/* Venda ou Reposição */}
         <div className="grid grid-cols-2 border border-mist p-1 bg-white dark:bg-warm rounded-xl">
           <button onClick={() => setMode('venda')}
-            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
+            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
             <IconX size={14} /> Vender
           </button>
           <button onClick={() => setMode('reposicao')}
-            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
+            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
             <IconCheck size={14} /> Chegou mercadoria
           </button>
         </div>
@@ -323,7 +323,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
           </button>
         )}
         <button onClick={confirmAll} disabled={pendingCount === 0 || saving}
-          className="flex-1 h-12 bg-ink text-paper text-[13px] font-bold flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-ink/80 transition-colors">
+          className="flex-1 h-12 bg-ink text-paper text-[13px] font-bold flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-ink/80 transition-colors rounded-xl">
           <IconCheck size={15} />
           {saving ? 'Salvando...' : pendingCount === 0 ? 'Toque nos produtos acima' : `Confirmar (${pendingCount} ${pendingCount === 1 ? 'produto' : 'produtos'} · ${pendingUnits} ${pendingUnits === 1 ? 'peça' : 'peças'})`}
         </button>
