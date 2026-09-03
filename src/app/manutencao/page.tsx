@@ -1,4 +1,5 @@
 import { getSettings } from '@/lib/settings';
+import { MaintenanceAdminRedirect } from '@/components/layout/MaintenanceAdminRedirect';
 
 // Antes era 'force-dynamic': cada visita (incluindo bots/scanners) virava
 // uma invocação de compute sem cache, gerando custo constante em "Non-Firebase
@@ -24,6 +25,7 @@ export default async function ManutencaoPage() {
 
   return (
     <>
+      <MaintenanceAdminRedirect />
       {/* Dispara o geo lookup assim que a página carrega.
           Roda durante um request HTTP ativo → Cloud Run não congela a instância.
           É isso que garante que o geo deixe de ficar "pending" no painel. */}
