@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { hexToColorName } from '@/lib/colorNames';
 import { auth } from '@/lib/firebase/client';
 
@@ -142,15 +143,15 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
     sampleAt(fx, fy);
   }, [sampleAt]);
 
-  return (
-    <div className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black/95">
+  return createPortal(
+    <div className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black/95" onClick={onClose}>
       <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
         <span className="text-sm font-semibold">Toque para escolher a cor</span>
-        <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <span className="text-[11px] text-white/40">Toque fora para fechar</span>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4 overflow-y-auto pb-6">
-        <div className="flex flex-col items-center gap-4 w-full max-w-sm">
+        <div className="flex flex-col items-center gap-4 w-full max-w-sm" onClick={e => e.stopPropagation()}>
 
           {images.length > 1 && (
             <div className="flex items-center gap-2 w-full overflow-x-auto pb-1">
@@ -215,6 +216,7 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
