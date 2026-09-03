@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   onDone: (photos: { dataUrl: string; blob: Blob }[]) => void;
@@ -123,17 +124,17 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
     onClose();
   }
 
-  return (
-    <div className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black/95">
+  return createPortal(
+    <div className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black/95" onClick={onClose}>
       <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
         <span className="text-sm font-semibold">
           Foto do produto {captured.length > 0 && `· ${captured.length}`}
         </span>
-        <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <span className="text-[11px] text-white/40">Toque fora para fechar</span>
       </div>
 
       {captured.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto px-4 pb-3 shrink-0">
+        <div className="flex gap-2 overflow-x-auto px-4 pb-3 shrink-0" onClick={e => e.stopPropagation()}>
           {captured.map((c, i) => (
             <div key={i} className="relative shrink-0">
               <img src={c.dataUrl} alt="" className="w-16 h-16 object-cover rounded-[4px] border border-white/20" />
@@ -156,7 +157,7 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
             <span className="text-sm">Processando foto…</span>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-4 w-full max-w-xs">
+          <div className="flex flex-col items-center gap-4 w-full max-w-xs" onClick={e => e.stopPropagation()}>
             {error && (
               <p className="text-xs text-red-300 bg-red-950/40 border border-red-800/50 rounded-lg px-3 py-2 text-center w-full">
                 {error}
@@ -194,12 +195,13 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
       </div>
 
       {captured.length > 0 && !busy && (
-        <div className="p-4 shrink-0">
+        <div className="p-4 shrink-0" onClick={e => e.stopPropagation()}>
           <button onClick={finish} className="w-full bg-white text-black rounded-full py-3.5 text-sm font-bold">
             Concluir · {captured.length} foto{captured.length > 1 ? 's' : ''}
           </button>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
