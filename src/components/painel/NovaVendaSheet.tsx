@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { IconBox, IconCheck, IconX, IconSearch, IconInventory, IconReceipt } from '@/components/ui/Icon';
 import type { MovementLog } from '@/types';
 import { nextTapDelta, shouldConfirmRapidTap, applyTapDelta } from '@/lib/inventoryTap';
+import { useFullscreenOverlay } from '@/lib/hooks/useFullscreenOverlay';
 
 export type InventoryItem = {
   id: string; productId: string; productName?: string; sku: string;
@@ -33,6 +34,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
 }) {
   const { user } = useAuth();
   const [mode, setMode] = useState<'venda' | 'reposicao'>('venda');
+  const viewportHeight = useFullscreenOverlay(!embedded);
   // Em tela pequena, 5-6 colunas deixam a foto minúscula e difícil de tocar
   // certo, por isso o conjunto de opções (e o padrão) muda conforme o
   // tamanho da tela, em vez de oferecer sempre as mesmas 3-6 colunas.
@@ -212,7 +214,10 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
   }
 
   return (
-    <div className={embedded ? 'flex flex-col' : 'fixed inset-0 z-[60] h-[100dvh] bg-paper flex flex-col'}>
+    <div
+      className={embedded ? 'flex flex-col' : 'fixed inset-0 z-[60] h-[100dvh] bg-paper flex flex-col'}
+      style={!embedded && viewportHeight ? { height: viewportHeight } : undefined}
+    >
       {/* Cabeçalho */}
       <div className={`px-4 py-3 shrink-0 flex flex-col gap-3 ${embedded ? '' : 'border-b border-mist'}`}>
         {!embedded && (
