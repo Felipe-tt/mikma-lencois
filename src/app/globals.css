@@ -416,6 +416,31 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
   --panel-radius-sm: 0.625rem;
   --panel-radius: 0.875rem;
   --panel-radius-lg: 1.25rem;
+  /* Altura aproximada da barra de navegação inferior mobile (ver
+     .panel-tabbar mais abaixo), usada por qualquer elemento fixo que
+     precise ficar ACIMA dela em vez de por baixo/por cima. */
+  --panel-tabbar-h: 4rem;
+}
+
+/* Qualquer elemento fixo no rodapé (botão salvar, toast, barra de ação)
+   usa esta classe pra nunca ficar embaixo/por cima da tabbar mobile —
+   em vez de cada tela inventar seu próprio "bottom-[64px]" na mão. No
+   desktop a tabbar some, então volta pro bottom:0 normal. */
+.above-panel-tabbar {
+  bottom: calc(var(--panel-tabbar-h) + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .above-panel-tabbar { bottom: 0; }
+}
+
+/* Mesma ideia, mas pra toasts flutuantes que já tinham uma folga própria
+   da borda (ex.: bottom-6) — mantém essa folga, só soma a altura da
+   tabbar no mobile em vez de flutuar por cima dela. */
+.above-panel-tabbar-toast {
+  bottom: calc(var(--panel-tabbar-h) + env(safe-area-inset-bottom) + 1rem);
+}
+@media (min-width: 1024px) {
+  .above-panel-tabbar-toast { bottom: 1.5rem; }
 }
 
 /* Os componentes compartilhados (.btn-*, .input, .select, .badge, .chip)

@@ -530,7 +530,7 @@ export default function EstoquePage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg flex items-center gap-3 z-50 rounded-lg">
+        <div className="fixed above-panel-tabbar-toast left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg flex items-center gap-3 z-50 rounded-lg">
           <IconCheck size={14} className="shrink-0" />
           <span className="flex-1">{toast.msg}</span>
           {toast.onUndo && (

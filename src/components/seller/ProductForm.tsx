@@ -1234,9 +1234,9 @@ export default function ProductForm({ initial }: Props) {
 
       {/* Barra de ação fixa — sempre visível, sem precisar rolar até o fim.
           No mobile ela fica ACIMA da barra de navegação inferior do painel
-          (que tem ~64px + safe-area), senão as duas disputam o bottom:0 e
-          ficam sobrepostas. */}
-      <div className="fixed bottom-[64px] lg:bottom-0 left-0 right-0 lg:left-64 bg-paper/95 backdrop-blur border-t border-mist z-40 rounded-t-2xl lg:rounded-none shadow-modal lg:shadow-none pb-[env(safe-area-inset-bottom)] lg:pb-0">
+          via .above-panel-tabbar (ver globals.css), senão as duas disputam
+          o bottom:0 e ficam sobrepostas. */}
+      <div className="fixed above-panel-tabbar left-0 right-0 lg:left-64 bg-paper/95 backdrop-blur border-t border-mist z-40 rounded-t-2xl lg:rounded-none shadow-modal lg:shadow-none lg:pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-xl mx-auto px-4 py-3 flex flex-col gap-2">
           <div className="flex gap-3 items-center">
             <button onClick={() => handleSubmit('list')} disabled={saving} className="btn-primary flex-1 py-3.5 sm:py-3 text-[15px]">
