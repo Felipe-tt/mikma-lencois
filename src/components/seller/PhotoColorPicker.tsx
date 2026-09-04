@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { hexToColorName } from '@/lib/colorNames';
 import { auth } from '@/lib/firebase/client';
+import { useFullscreenOverlay } from '@/lib/hooks/useFullscreenOverlay';
 
 interface Props {
   images: string[];
@@ -29,6 +30,7 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
   const [pickedName, setPickedName] = useState('');
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const viewportHeight = useFullscreenOverlay();
 
   // Canvas off-screen com a imagem já decodificada, criado UMA vez por foto,
   // não a cada toque. Antes, sample() criava um `new Image()` do zero em
@@ -144,7 +146,11 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
   }, [sampleAt]);
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black/95" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black"
+      style={viewportHeight ? { height: viewportHeight } : undefined}
+      onClick={onClose}
+    >
       <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
         <span className="text-sm font-semibold">Toque para escolher a cor</span>
         <span className="text-[11px] text-white/40">Toque fora para fechar</span>

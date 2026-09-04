@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useFullscreenOverlay } from '@/lib/hooks/useFullscreenOverlay';
 
 interface Props {
   onDone: (photos: { dataUrl: string; blob: Blob }[]) => void;
@@ -92,6 +93,7 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [captured, setCaptured] = useState<{ dataUrl: string; blob: Blob }[]>([]);
+  const viewportHeight = useFullscreenOverlay();
 
   async function handleFiles(files: FileList) {
     setBusy(true);
@@ -125,7 +127,11 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black/95" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black"
+      style={viewportHeight ? { height: viewportHeight } : undefined}
+      onClick={onClose}
+    >
       <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
         <span className="text-sm font-semibold">
           Foto do produto {captured.length > 0 && `· ${captured.length}`}
