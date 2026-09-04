@@ -402,7 +402,15 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
    original, só o admin fica mais "tecnológico" (cantos arredondados,
    profundidade em camadas, glass blur, glow sutil no accent clay).
    Nenhuma cor nova — só os tokens --c-* já existentes, com raio,
-   sombra e blur aplicados de forma consistente. */
+   sombra e blur aplicados de forma consistente.
+
+   IMPORTANTE: precisa estar dentro de @layer components. CSS fora de
+   qualquer @layer sempre vence CSS dentro de @layer na cascata, não
+   importa a ordem no arquivo — sem isso, classes tipo .panel-tabbar
+   (que tem display:flex) venciam a utility lg:hidden do Tailwind (que
+   vive em @layer utilities), e a barra de navegação mobile continuava
+   aparecendo até no desktop. */
+@layer components {
 
 .painel-scope {
   --panel-radius-sm: 0.625rem;
@@ -540,6 +548,8 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
 .panel-tabbar-dot {
   @apply block w-1 h-1 rounded-full bg-clay-l opacity-0 scale-0 transition-all duration-200;
 }
+
+} /* fim @layer components (painel admin rework) */
 
 /* ── Email HTML body (painel mensagens) ──────────────────────────── */
 .email-html-body img { max-width: 100%; height: auto; }
