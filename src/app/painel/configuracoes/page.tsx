@@ -478,7 +478,7 @@ export default function ConfiguracoesPage() {
 
       {/* Botão salvar fixo */}
       {tab !== 'equipe' && (
-      <div className="fixed bottom-0 left-0 right-0 z-30 md:relative md:bottom-auto md:mt-8">
+      <div className="fixed above-panel-tabbar left-0 right-0 z-30 md:relative md:bottom-auto md:mt-8">
         <div className="bg-paper border-t border-mist md:border-0 px-4 py-3 md:px-0 md:py-0">
           {saveError && <p className="text-center text-[12px] text-red-600 mb-2">{saveError}</p>}
           <button onClick={handleSave} disabled={saving}

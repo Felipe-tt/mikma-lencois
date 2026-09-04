@@ -106,7 +106,7 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
           </div>
         </div>
 
-        <main className="flex-1 p-5 sm:p-8 pb-24 lg:pb-8 overflow-y-auto animate-fade-in">
+        <main className="flex-1 p-5 sm:p-8 pb-[calc(var(--panel-tabbar-h)+env(safe-area-inset-bottom)+1rem)] lg:pb-8 overflow-y-auto animate-fade-in">
           {children}
         </main>
 

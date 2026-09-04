@@ -215,7 +215,7 @@ export default function TrocasPage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg z-50 rounded-lg">
+        <div className="fixed above-panel-tabbar-toast left-4 right-4 sm:left-auto sm:right-6 sm:w-auto bg-ink text-paper text-[13px] font-semibold px-5 py-3 shadow-lg z-50 rounded-lg">
           {toast}
         </div>
       )}
