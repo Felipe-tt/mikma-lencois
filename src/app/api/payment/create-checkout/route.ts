@@ -137,7 +137,13 @@ export async function POST(req: NextRequest) {
     try {
       verifiedItems = sanitizedCartItems.map(ci => {
         const prod = productMap[ci.productId];
-        if (!prod) throw new Error(`Produto ${ci.productId} não encontrado`);
+        // Produto pode ter sido excluído de verdade do catálogo (não só
+        // desativado) depois de já estar no carrinho de alguém — sem essa
+        // checagem, virava um erro 500 não tratado em vez de avisar o
+        // cliente pra remover o item.
+        if (!prod) {
+          throw new StockError('Um dos produtos do seu carrinho não existe mais. Remova-o do carrinho e tente novamente.');
+        }
         // Produto pode ter sido desativado depois de já estar no carrinho de
         // alguém (removido do catálogo pelo vendedor) — sem essa checagem,
         // dava pra comprar um produto que não deveria mais estar à venda.

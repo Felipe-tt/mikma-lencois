@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc, collection, query, where, getDocs, documentId } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { formatCurrency } from '@/lib/utils/format';
@@ -236,6 +236,27 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (isValidCep(addr.cep) && !quotedCep) quoteShipping(addr.cep);
   }, [addr.cep, quotedCep, quoteShipping]);
+
+  // Produto pode ter sido desativado ou excluído do catálogo depois de já
+  // estar no carrinho — sem essa checagem aqui, a pessoa preenchia o
+  // checkout inteiro (endereço, entrega) só pra falhar no ultimo passo
+  // (geração do pagamento). A pagina /carrinho ja bloqueia isso, então
+  // só reenvia pra lá quando detecta um item indisponível.
+  useEffect(() => {
+    const items = cart?.items ?? [];
+    if (items.length === 0) return;
+    const productIds = Array.from(new Set(items.map(i => i.productId)));
+    let cancelled = false;
+    getDocs(query(collection(db, 'products'), where(documentId(), 'in', productIds.slice(0, 30))))
+      .then(snap => {
+        if (cancelled) return;
+        const foundActive = new Set(snap.docs.filter(d => d.data().active !== false).map(d => d.id));
+        const hasUnavailable = productIds.some(id => !foundActive.has(id));
+        if (hasUnavailable) router.push('/carrinho');
+      })
+      .catch(() => { /* falha na checagem não deve travar o checkout */ });
+    return () => { cancelled = true; };
+  }, [cart, router]);
 
   async function lookupCep(raw: string) {
     const c = onlyDigits(raw);
