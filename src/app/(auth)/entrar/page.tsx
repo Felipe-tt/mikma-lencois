@@ -147,12 +147,60 @@ export default function LoginPage() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  // Quando o reCAPTCHA vem com score "suspeito, mas não claramente bot",
+  // a API pede confirmação extra por e-mail antes de liberar o login
+  // (ver checkRecaptchaScore em src/lib/recaptcha.ts). Essa tela some
+  // sozinha assim que a pessoa clica no link do e-mail, via polling.
+  const [awaitingChallenge, setAwaitingChallenge] = useState(false);
+  const [challengeExpired, setChallengeExpired] = useState(false);
 
   useEffect(() => { if (user) router.push(consumeReturnTo() ?? '/'); }, [user, router]);
 
+  // Poll pra saber se a pessoa já confirmou pelo link do e-mail. Assim
+  // que confirmar, completa o login de verdade com a senha que já está
+  // em memória nesta aba (este projeto não usa createCustomToken, ver
+  // comentário em reset-password/route.ts — quem autentica de fato é
+  // sempre o client, via signInWithEmailAndPassword).
+  useEffect(() => {
+    if (!awaitingChallenge) return;
+    let cancelled = false;
+    const startedAt = Date.now();
+
+    const interval = setInterval(async () => {
+      if (cancelled) return;
+      if (Date.now() - startedAt > 10 * 60 * 1000) {
+        setChallengeExpired(true);
+        setAwaitingChallenge(false);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/auth/login-challenge-status?email=${encodeURIComponent(email)}`);
+        const d = await res.json();
+        if (cancelled) return;
+        if (d.expired) {
+          setChallengeExpired(true);
+          setAwaitingChallenge(false);
+          return;
+        }
+        if (d.confirmed) {
+          setAwaitingChallenge(false);
+          try {
+            await signInWithEmailAndPassword(auth, email, password);
+          } catch {
+            setError('Confirmado, mas não foi possível concluir o login. Tente novamente.');
+          }
+        }
+      } catch {
+        // soluço de rede num poll não deve derrubar a espera, só tenta de novo no próximo tick
+      }
+    }, 3000);
+
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [awaitingChallenge, email, password]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setChallengeExpired(false);
     try {
       // Rate limit check primeiro
       const recaptchaToken = await getRecaptchaToken('login');
@@ -161,9 +209,14 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, recaptchaToken }),
       });
-      if (rl.status === 429) {
-        const d = await rl.json();
-        throw new Error(d.error);
+      const rlData = await rl.json().catch(() => ({}));
+      if (!rl.ok) {
+        throw new Error(rlData.error || 'Erro ao entrar');
+      }
+      if (rlData.requiresEmailChallenge) {
+        setAwaitingChallenge(true);
+        setLoading(false);
+        return;
       }
 
       // Firebase Auth é a fonte da verdade para a senha
@@ -241,6 +294,13 @@ export default function LoginPage() {
               <Link href="/cadastro" className="text-clay font-medium hover:text-clay-d transition-colors">Criar conta grátis</Link>
             </p>
 
+            {challengeExpired && (
+              <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 text-sm text-amber-700 flex items-center gap-2 rounded-sm">
+                <IconAlert size={16} className="shrink-0" />
+                O link de confirmação expirou. Tente entrar novamente.
+              </div>
+            )}
+
             {error && (
               <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-center gap-2 rounded-sm">
                 <IconAlert size={16} className="shrink-0" />
@@ -248,6 +308,32 @@ export default function LoginPage() {
               </div>
             )}
 
+            {awaitingChallenge ? (
+              <div className="border border-mist bg-warm px-6 py-8 text-center">
+                <div className="w-14 h-14 bg-clay/10 flex items-center justify-center mx-auto mb-5">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
+                    <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
+                  </svg>
+                </div>
+                <p className="font-display text-xl text-ink mb-1">Confirme por e-mail</p>
+                <p className="text-sm text-mid mb-6 leading-relaxed">
+                  Por segurança, enviamos um link de confirmação para{' '}
+                  <strong className="text-ink">{email}</strong>. Clique nele — esta tela
+                  continua sozinha assim que você confirmar.
+                </p>
+                <div className="flex items-center justify-center gap-2 text-xs text-faint mb-4">
+                  <span className="spinner-dark" style={{ width: 14, height: 14 }} />
+                  Aguardando confirmação…
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setAwaitingChallenge(false); setError(''); }}
+                  className="text-sm text-clay font-medium hover:underline"
+                >
+                  Cancelar e voltar
+                </button>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               <div>
                 <label className="label">E-mail</label>
@@ -280,14 +366,19 @@ export default function LoginPage() {
                 {loading ? <><span className="spinner" /><span>Entrando...</span></> : 'Entrar na minha conta'}
               </button>
             </form>
+            )}
 
-            <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 divider" />
-              <span className="text-xs text-faint uppercase tracking-wider">ou</span>
-              <div className="flex-1 divider" />
-            </div>
+            {!awaitingChallenge && (
+              <>
+                <div className="flex items-center gap-3 my-6">
+                  <div className="flex-1 divider" />
+                  <span className="text-xs text-faint uppercase tracking-wider">ou</span>
+                  <div className="flex-1 divider" />
+                </div>
 
-            <GoogleSignInButton onError={setError} />
+                <GoogleSignInButton onError={setError} />
+              </>
+            )}
           </div>
         </div>
       </div>

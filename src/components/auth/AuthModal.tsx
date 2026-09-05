@@ -21,6 +21,8 @@ export function AuthModal() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [awaitingChallenge, setAwaitingChallenge] = useState(false);
+  const [challengeExpired, setChallengeExpired] = useState(false);
 
   // ── Signup ──
   const [name, setName] = useState('');
@@ -69,9 +71,50 @@ export function AuthModal() {
 
   if (!isOpen) return null;
 
+  // Poll pra saber se a pessoa confirmou pelo link do e-mail (mesmo
+  // mecanismo da tela /entrar — ver comentário lá e em
+  // reset-password/route.ts sobre por que não dá pra usar
+  // createCustomToken neste projeto).
+  useEffect(() => {
+    if (!awaitingChallenge) return;
+    let cancelled = false;
+    const startedAt = Date.now();
+
+    const interval = setInterval(async () => {
+      if (cancelled) return;
+      if (Date.now() - startedAt > 10 * 60 * 1000) {
+        setChallengeExpired(true);
+        setAwaitingChallenge(false);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/auth/login-challenge-status?email=${encodeURIComponent(email)}`);
+        const d = await res.json();
+        if (cancelled) return;
+        if (d.expired) {
+          setChallengeExpired(true);
+          setAwaitingChallenge(false);
+          return;
+        }
+        if (d.confirmed) {
+          setAwaitingChallenge(false);
+          try {
+            await signInWithEmailAndPassword(auth, email, password);
+          } catch {
+            setLoginError('Confirmado, mas não foi possível concluir o login. Tente novamente.');
+          }
+        }
+      } catch {
+        // soluço de rede num poll não deve derrubar a espera
+      }
+    }, 3000);
+
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [awaitingChallenge, email, password]);
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setLoginLoading(true); setLoginError('');
+    setLoginLoading(true); setLoginError(''); setChallengeExpired(false);
     try {
       const recaptchaToken = await getRecaptchaToken('login');
       const rl = await fetch('/api/auth/login', {
@@ -79,7 +122,13 @@ export function AuthModal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, recaptchaToken }),
       });
-      if (rl.status === 429) throw new Error((await rl.json()).error);
+      const rlData = await rl.json().catch(() => ({}));
+      if (!rl.ok) throw new Error(rlData.error || 'Erro ao entrar');
+      if (rlData.requiresEmailChallenge) {
+        setAwaitingChallenge(true);
+        setLoginLoading(false);
+        return;
+      }
 
       await signInWithEmailAndPassword(auth, email, password);
       // O AuthModalProvider detecta o login (via onAuthStateChanged) e
@@ -197,6 +246,13 @@ export function AuthModal() {
               </button>
             </p>
 
+            {challengeExpired && (
+              <div className="mb-5 px-4 py-3 bg-amber-50 border border-amber-200 text-sm text-amber-700 flex items-center gap-2 rounded-sm">
+                <IconAlert size={16} className="shrink-0" />
+                O link de confirmação expirou. Tente entrar novamente.
+              </div>
+            )}
+
             {loginError && (
               <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-center gap-2 rounded-sm">
                 <IconAlert size={16} className="shrink-0" />
@@ -204,35 +260,64 @@ export function AuthModal() {
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="flex flex-col gap-4">
-              <div>
-                <label className="label">E-mail</label>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                  className="input" placeholder="seu@email.com" autoComplete="email" autoFocus />
+            {awaitingChallenge ? (
+              <div className="border border-mist bg-warm px-6 py-8 text-center">
+                <div className="w-14 h-14 bg-clay/10 flex items-center justify-center mx-auto mb-5">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
+                    <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
+                  </svg>
+                </div>
+                <p className="font-display text-xl text-ink mb-1">Confirme por e-mail</p>
+                <p className="text-sm text-mid mb-6 leading-relaxed">
+                  Por segurança, enviamos um link de confirmação para{' '}
+                  <strong className="text-ink">{email}</strong>. Clique nele — esta tela
+                  continua sozinha assim que você confirmar.
+                </p>
+                <div className="flex items-center justify-center gap-2 text-xs text-faint mb-4">
+                  <span className="spinner-dark" style={{ width: 14, height: 14 }} />
+                  Aguardando confirmação…
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setAwaitingChallenge(false); setLoginError(''); }}
+                  className="text-sm text-clay font-medium hover:underline"
+                >
+                  Cancelar e voltar
+                </button>
               </div>
-              <div>
-                <label className="label">Senha</label>
-                <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                  className="input" placeholder="••••••••" autoComplete="current-password" />
-              </div>
-              <button type="submit" disabled={loginLoading}
-                className="btn-primary w-full h-12 text-[13px] font-semibold tracking-wide flex items-center justify-center gap-2 mt-1">
-                {loginLoading ? <><span className="spinner" /><span>Entrando...</span></> : 'Entrar na minha conta'}
-              </button>
-            </form>
+            ) : (
+              <>
+                <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                  <div>
+                    <label className="label">E-mail</label>
+                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                      className="input" placeholder="seu@email.com" autoComplete="email" autoFocus />
+                  </div>
+                  <div>
+                    <label className="label">Senha</label>
+                    <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                      className="input" placeholder="••••••••" autoComplete="current-password" />
+                  </div>
+                  <button type="submit" disabled={loginLoading}
+                    className="btn-primary w-full h-12 text-[13px] font-semibold tracking-wide flex items-center justify-center gap-2 mt-1">
+                    {loginLoading ? <><span className="spinner" /><span>Entrando...</span></> : 'Entrar na minha conta'}
+                  </button>
+                </form>
 
-            <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 divider" /><span className="text-xs text-faint uppercase tracking-wider">ou</span><div className="flex-1 divider" />
-            </div>
-            <GoogleSignInButton onError={setLoginError} />
+                <div className="flex items-center gap-3 my-5">
+                  <div className="flex-1 divider" /><span className="text-xs text-faint uppercase tracking-wider">ou</span><div className="flex-1 divider" />
+                </div>
+                <GoogleSignInButton onError={setLoginError} />
 
-            <button
-              type="button"
-              onClick={() => { setForgotEmail(email); setForgotStep('email'); setMode('forgot'); }}
-              className="block w-full text-center text-xs text-faint hover:text-mid transition-colors mt-5"
-            >
-              Esqueci minha senha
-            </button>
+                <button
+                  type="button"
+                  onClick={() => { setForgotEmail(email); setForgotStep('email'); setMode('forgot'); }}
+                  className="block w-full text-center text-xs text-faint hover:text-mid transition-colors mt-5"
+                >
+                  Esqueci minha senha
+                </button>
+              </>
+            )}
           </>
         ) : mode === 'signup' ? (
           <>
