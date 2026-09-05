@@ -115,9 +115,7 @@ function ResetForm() {
   if (linkInvalid) return (
     <div className="text-center py-10">
       <div className="w-20 h-20 bg-red-50 border border-red-100 flex items-center justify-center mx-auto mb-6">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-500">
-          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
+        <IconAlert size={40} strokeWidth={1.5} className="text-red-500" />
       </div>
       <h2 className="font-display text-2xl text-ink mb-2">Link inválido</h2>
       <p className="text-mid text-sm mb-6">{linkInvalid}</p>
