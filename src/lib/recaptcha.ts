@@ -59,3 +59,50 @@ export async function verifyRecaptcha(
     return true; // timeout/rede, não bloqueia
   }
 }
+
+export type RecaptchaOutcome = 'pass' | 'challenge' | 'block';
+
+/**
+ * Versão em degraus da verificação, para fluxos que sabem lidar com um
+ * meio-termo em vez de só passar/bloquear (hoje: login, via verificação
+ * extra por e-mail quando o score vem "suspeito, mas não claramente bot").
+ *
+ * score >= passScore (0.5)      → 'pass'      segue normal, sem fricção
+ * score >= challengeScore (0.3) → 'challenge' pede confirmação por e-mail
+ * score <  challengeScore       → 'block'     rejeita, é bot com confiança alta
+ *
+ * Mesmo fail-open das outras funções: sem secret, sem token, erro de rede
+ * ou resposta sem score numérico → 'pass'. Só bloqueia quando o Google
+ * responde de verdade com um score baixo.
+ */
+export async function checkRecaptchaScore(
+  token: string | undefined,
+  expectedAction: string,
+  { passScore = 0.5, challengeScore = 0.3 }: { passScore?: number; challengeScore?: number } = {}
+): Promise<RecaptchaOutcome> {
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  if (!secret) return 'pass';
+  if (!token) return 'pass';
+
+  try {
+    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token }),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!res.ok) return 'pass';
+
+    const data = (await res.json()) as SiteVerifyResponse;
+
+    if (!data.success) return 'block';
+    if (data.action && data.action !== expectedAction) return 'block';
+    if (typeof data.score !== 'number') return 'pass';
+    if (data.score >= passScore) return 'pass';
+    if (data.score >= challengeScore) return 'challenge';
+    return 'block';
+  } catch {
+    return 'pass';
+  }
+}
