@@ -41,6 +41,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { getStaffPrefs, setStaffPref } from '@/lib/staffPrefs';
 import { getDoc } from 'firebase/firestore';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
+import { IconAlert } from '@/components/ui/Icon';
 
 // Carregados só quando abertos de verdade — PhotoColorPicker,
 // DefaultWeightsModal e DuplicateProductModal não são usados na maioria
@@ -785,7 +786,7 @@ export default function ProductForm({ initial }: Props) {
 
         {error && (
           <div className="mb-5 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 flex items-center gap-2 rounded-[4px]">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <IconAlert size={15} className="shrink-0" />
             {error}
           </div>
         )}

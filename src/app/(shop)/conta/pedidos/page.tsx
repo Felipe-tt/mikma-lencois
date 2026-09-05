@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { OrdersListSkeleton } from '@/components/ui/Skeleton';
 import { PIXModal } from '@/components/checkout/PIXModal';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { IconAlert } from '@/components/ui/Icon';
 
 const BADGES: Record<string, string> = {
   pending_payment: 'badge-pending',
@@ -194,9 +195,7 @@ export default function PedidosPage() {
                 {order.status === 'pending_payment' && (
                   <div className="border-t border-amber-100 bg-amber-50 px-5 sm:px-6 py-4">
                     <div className="flex items-start gap-3 mb-3">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 shrink-0 mt-0.5">
-                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                      </svg>
+                      <IconAlert size={16} className="text-amber-500 shrink-0 mt-0.5" />
                       <p className="text-xs text-amber-700 leading-relaxed">
                         Este pedido está aguardando pagamento. Gere o PIX para pagar ou cancele se não quiser mais.
                       </p>

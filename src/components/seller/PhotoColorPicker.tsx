@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { hexToColorName } from '@/lib/colorNames';
 import { auth } from '@/lib/firebase/client';
 import { useFullscreenOverlay } from '@/lib/hooks/useFullscreenOverlay';
+import { IconAlert } from '@/components/ui/Icon';
 
 interface Props {
   images: string[];
@@ -188,7 +189,7 @@ export function PhotoColorPicker({ images, imageIndex, onChangeImage, onPick, on
 
             {loadError && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70 px-6 text-center">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/70"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <IconAlert size={22} className="text-white/70" />
                 <p className="text-xs text-white/70">Não foi possível carregar essa foto pra extrair a cor</p>
               </div>
             )}
