@@ -3,6 +3,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/BrandLogo';
+import { IconAlert } from '@/components/ui/Icon';
 
 function ConfirmContent() {
   const router = useRouter();
@@ -73,9 +74,7 @@ function ConfirmContent() {
       {state === 'error' && (
         <>
           <div className="w-20 h-20 bg-red-50 border border-red-100 flex items-center justify-center mx-auto mb-6">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-500">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
+            <IconAlert size={40} strokeWidth={1.5} className="text-red-500" />
           </div>
           <h1 className="font-display font-normal text-ink text-2xl mb-2">Não foi possível confirmar</h1>
           <p className="text-mid text-sm mb-6">{error}</p>
