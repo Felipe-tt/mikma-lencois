@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/BrandLogo';
+import { IconAlert } from '@/components/ui/Icon';
 
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
@@ -147,9 +148,7 @@ function ResetForm() {
 
       {error && (
         <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2.5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
+          <IconAlert size={16} className="shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
