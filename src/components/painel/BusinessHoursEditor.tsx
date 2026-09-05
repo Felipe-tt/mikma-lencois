@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   WEEKDAYS, type WeekdayKey, type BusinessHours, type DayHours, type TimeRange,
 } from '@/lib/business-hours';
+import { IconAlert } from '@/components/ui/Icon';
 
 interface Props {
   value: BusinessHours;
@@ -239,7 +240,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
             {hasOverlapOrInvalid && (
               <div className="px-4 pb-3 -mt-1">
                 <p className="text-[11px] text-red-500 flex items-center gap-1.5">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <IconAlert size={12} />
                   {hasOverlapOrInvalid}
                 </p>
               </div>

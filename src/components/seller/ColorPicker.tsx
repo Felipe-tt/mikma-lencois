@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { TEXTILE_COLORS, hexToColorName, searchColorsByName, resolveColorName } from '@/lib/colorNames';
+import { IconAlert } from '@/components/ui/Icon';
 
 interface Props {
   value: string;      // hex
@@ -167,7 +168,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
 
       {error && (
         <p className="text-xs text-red-500 flex items-center gap-1">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <IconAlert size={11} />
           {error}
         </p>
       )}
