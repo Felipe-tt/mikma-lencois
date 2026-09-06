@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { NextFetchEvent } from 'next/server';
 import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
@@ -60,92 +59,6 @@ async function isIpReleased(projectId: string, docId: string): Promise<boolean> 
   } catch {
     return false;
   }
-}
-
-async function lookupIpGeo(ip: string): Promise<{ city: string; region: string; country: string; isp: string; debugError: string }> {
-  // IPs locais/privados não são geolocalizáveis
-  if (ip === '0.0.0.0' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
-    return { city: '', region: '', country: '', isp: '', debugError: 'ip_local' };
-  }
-
-  // ipapi.co bloqueia/rate-limita IPs de cloud providers (GCP, AWS, Azure).
-  // Tentamos múltiplas APIs em sequência, a primeira que responder com sucesso vence.
-  // ip-api.com (HTTP) e freeipapi.com funcionam bem de cloud; ipapi.co fica por último.
-  type GeoResult = { city: string; region: string; country: string; isp: string; debugError: string };
-  const attempts: Array<() => Promise<GeoResult | null>> = [
-    // 1. ip-api.com, funciona de cloud, sem chave, 45 req/min grátis
-    async () => {
-      const res = await fetch(
-        `http://ip-api.com/json/${ip}?fields=status,city,regionName,country,org`,
-        { signal: AbortSignal.timeout(4000) }
-      );
-      if (!res.ok) return null;
-      const d = await res.json();
-      if (d.status !== 'success') return null;
-      return { city: d.city ?? '', region: d.regionName ?? '', country: d.country ?? '', isp: d.org ?? '', debugError: '' };
-    },
-    // 2. freeipapi.com, funciona de cloud, sem chave
-    async () => {
-      const res = await fetch(
-        `https://freeipapi.com/api/json/${ip}`,
-        { signal: AbortSignal.timeout(4000) }
-      );
-      if (!res.ok) return null;
-      const d = await res.json();
-      if (!d.cityName) return null;
-      return { city: d.cityName ?? '', region: d.regionName ?? '', country: d.countryName ?? '', isp: '', debugError: '' };
-    },
-    // 3. ipapi.co, fallback: funciona de IPs residenciais, mas bloqueia cloud
-    async () => {
-      const res = await fetch(
-        `https://ipapi.co/${ip}/json/`,
-        { signal: AbortSignal.timeout(5000), headers: { 'User-Agent': 'MikmaLencois/1.0' } }
-      );
-      if (!res.ok) return null;
-      const d = await res.json();
-      if (d.error) return null;
-      return { city: d.city ?? '', region: d.region ?? '', country: d.country_name ?? '', isp: d.org ?? '', debugError: '' };
-    },
-  ];
-
-  const errors: string[] = [];
-  for (let i = 0; i < attempts.length; i++) {
-    try {
-      const result = await attempts[i]();
-      if (result) return result;
-      errors.push(`attempt_${i + 1}_no_data`);
-    } catch (err) {
-      errors.push(`attempt_${i + 1}_${err instanceof Error ? err.message.slice(0, 40) : 'err'}`);
-    }
-  }
-  return { city: '', region: '', country: '', isp: '', debugError: errors.join('|') };
-}
-
-// Atualiza só os campos de geo num documento que já existe (PATCH com
-// updateMask, pra não sobrescrever `released`/`enteredAt`/etc. que podem
-// já ter mudado entre o registro inicial e a geo resolver), chamada via
-// event.waitUntil(), nunca aguardada no caminho do redirect.
-async function updateGeoInQueue(projectId: string, docId: string, ip: string) {
-  const geo = await lookupIpGeo(ip);
-  const fieldPaths = ['geoCity', 'geoRegion', 'geoCountry', 'isp', 'geoDebug']
-    .map(f => `updateMask.fieldPaths=${f}`)
-    .join('&');
-  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}?${fieldPaths}`;
-  const fields = {
-    geoCity: { stringValue: geo.city },
-    geoRegion: { stringValue: geo.region },
-    geoCountry: { stringValue: geo.country },
-    isp: { stringValue: geo.isp },
-    geoDebug: { stringValue: geo.debugError },
-  };
-  try {
-    await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields }),
-      signal: AbortSignal.timeout(6000),
-    });
-  } catch { /* silencioso, best-effort, não afeta o visitante */ }
 }
 
 // Bots/crawlers que não devem poluir a fila de manutenção, não são
@@ -225,7 +138,7 @@ function applySecurityHeaders(res: NextResponse): void {
 
 // ── Middleware principal ──────────────────────────────────────────────────────
 
-export async function proxy(req: NextRequest, event: NextFetchEvent) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Scanners de vulnerabilidade (procurando WordPress/PHP que não existe
@@ -305,11 +218,15 @@ export async function proxy(req: NextRequest, event: NextFetchEvent) {
           // chamadas a APIs externas de geo.
           if (!isBot) {
             await registerInQueue(projectId, docId, ip, req);
-            // Geo não bloqueia o redirect, ipapi.co pode levar até alguns
-            // segundos, e o visitante não deve esperar isso pra ver a página
-            // de manutenção. waitUntil mantém a isolate viva até o PATCH de
-            // geo terminar, mesmo depois da resposta já ter sido enviada.
-            event.waitUntil(updateGeoInQueue(projectId, docId, ip));
+            // Geo não é resolvida aqui de propósito: fazer isso no
+            // middleware (mesmo via waitUntil) mantinha a isolate do
+            // Cloud Run viva e faturada por vários segundos extras a
+            // mais por visita, só pra popular um dado cosmético do
+            // painel. registerInQueue já grava geoDebug:'pending', e é
+            // a própria página /manutencao que dispara
+            // /api/maintenance/geo no carregamento — essa rota roda
+            // durante um request HTTP normal (não em cima do redirect),
+            // então não estica o tempo faturado desta invocação.
           }
 
           const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
