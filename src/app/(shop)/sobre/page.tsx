@@ -3,6 +3,8 @@ import { getSettings } from '@/lib/settings';
 import { BrandLogo } from '@/components/BrandLogo';
 import { BusinessHoursCard } from '@/components/storefront/BusinessHoursCard';
 import Image from 'next/image';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { parseBusinessHours, WEEKDAYS } from '@/lib/business-hours';
 
 export default async function SobrePage() {
   const s = await getSettings();
@@ -25,8 +27,37 @@ export default async function SobrePage() {
   const whatsappLabel = s.aboutWhatsappLabel || 'Falar no WhatsApp';
   const whatsappHref = s.whatsappUrl || `https://wa.me/${(s.storePhone ?? '').replace(/\D/g,'')}`;
 
+  // LocalBusiness com horário de funcionamento — Google pode mostrar
+  // isso direto no resultado de busca (e no Google Maps, se o negócio
+  // também estiver cadastrado lá com o mesmo nome/endereço).
+  const DAY_NAME: Record<string, string> = {
+    mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday',
+    fri: 'Friday', sat: 'Saturday', sun: 'Sunday',
+  };
+  const businessHours = parseBusinessHours(s.businessHours);
+  const openingHoursSpecification = WEEKDAYS.flatMap(({ key }) => {
+    const day = businessHours[key];
+    if (day.closed) return [];
+    return day.ranges.map(r => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: `https://schema.org/${DAY_NAME[key]}`,
+      opens: r.open,
+      closes: r.close,
+    }));
+  });
+  const localBusinessJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: s.storeName || 'Mikma Lençóis',
+    url: 'https://mikma.com.br/sobre',
+    ...(s.storeCity && { address: { '@type': 'PostalAddress', addressLocality: s.storeCity, addressCountry: 'BR' } }),
+    ...(s.storePhone && { telephone: s.storePhone }),
+    ...(openingHoursSpecification.length > 0 && { openingHoursSpecification }),
+  };
+
   return (
     <div>
+      <JsonLd data={localBusinessJsonLd} />
       {/* ── Hero ── */}
       <div className="relative overflow-hidden bg-warm border-b border-mist">
         <div className="absolute inset-0 pointer-events-none select-none">

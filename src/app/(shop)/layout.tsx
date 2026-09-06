@@ -3,6 +3,7 @@ import { Footer } from '@/components/layout/Footer';
 import { PageTransition } from '@/components/ui/PageTransition';
 import { MaintenanceGate } from '@/components/layout/MaintenanceGate';
 import { getSettings } from '@/lib/settings';
+import { JsonLd } from '@/components/seo/JsonLd';
 
 // Sem force-dynamic: páginas públicas usam ISR normalmente.
 // A checagem de manutenção "de verdade" acontece no middleware (Edge), sem
@@ -14,8 +15,31 @@ import { getSettings } from '@/lib/settings';
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
   const s = await getSettings();
+  const siteUrl = 'https://mikma.com.br';
+  const orgJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: s.storeName || 'Mikma Lençóis',
+    url: siteUrl,
+    ...(s.storeCity && { address: { '@type': 'PostalAddress', addressLocality: s.storeCity, addressCountry: 'BR' } }),
+    ...(s.storePhone && { telephone: s.storePhone }),
+    ...(s.instagramUrl && { sameAs: [s.instagramUrl] }),
+  };
+  const websiteJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: s.storeName || 'Mikma Lençóis',
+    url: siteUrl,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${siteUrl}/produtos?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
   return (
     <div className="flex min-h-screen flex-col">
+      <JsonLd data={orgJsonLd} />
+      <JsonLd data={websiteJsonLd} />
       <MaintenanceGate />
       <Header topbarText={s.topbarText} freeShippingThresholdCents={s.freeShippingThresholdCents} />
       <main className="flex-1">

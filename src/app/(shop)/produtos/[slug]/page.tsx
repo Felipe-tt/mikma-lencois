@@ -13,6 +13,7 @@ import { getSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 import { TrackViewItem } from '@/components/product/TrackViewItem';
+import { JsonLd } from '@/components/seo/JsonLd';
 
 // ISR: revalida a cada 5 minutos, reduz leituras no Firestore por visita ao produto
 export const revalidate = 300;
@@ -139,9 +140,67 @@ export default async function ProductPage({ params }: Props) {
     /\d+\s*fios|percal|misto|microfibra|algodão|poliéster|bamboo|cetim/i.test(t)
   ) ?? [];
 
+  // Dados estruturados (schema.org), pro Google mostrar preço, estoque e
+  // estrelas de avaliação direto no resultado de busca (rich snippet) —
+  // sem isso o Google só tem o título/descrição normal da página.
+  const siteUrl = 'https://mikma.com.br';
+  const productUrl = `${siteUrl}/produtos/${product.id}`;
+  const totalStock = inventory.reduce((sum, i) => sum + Math.max(0, i.quantity - i.reserved), 0);
+  const avgRating = reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
+
+  const productJsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description?.slice(0, 5000),
+    image: product.images,
+    sku: product.id,
+    category: product.category,
+    brand: { '@type': 'Brand', name: 'Mikma Lençóis' },
+    offers: {
+      '@type': 'Offer',
+      url: productUrl,
+      priceCurrency: 'BRL',
+      price: (product.price / 100).toFixed(2),
+      availability: totalStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+    },
+  };
+  if (reviews.length > 0) {
+    productJsonLd.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: avgRating.toFixed(1),
+      reviewCount: reviews.length,
+    };
+    // Só as mais recentes — a nota geral já vem do aggregateRating acima,
+    // isso aqui é só pra enriquecer ainda mais o rich snippet.
+    productJsonLd.review = reviews.slice(0, 5).map(r => ({
+      '@type': 'Review',
+      author: { '@type': 'Person', name: r.userName },
+      reviewRating: { '@type': 'Rating', ratingValue: r.rating, bestRating: 5, worstRating: 1 },
+      reviewBody: r.comment,
+      datePublished: r.createdAt,
+    }));
+  }
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Início', item: siteUrl },
+      { '@type': 'ListItem', position: 2, name: 'Produtos', item: `${siteUrl}/produtos` },
+      ...(product.category
+        ? [{ '@type': 'ListItem', position: 3, name: product.category, item: `${siteUrl}/produtos?categoria=${encodeURIComponent(product.category)}` }]
+        : []),
+      { '@type': 'ListItem', position: product.category ? 4 : 3, name: product.name, item: productUrl },
+    ],
+  };
+
   return (
     <div>
       <TrackViewItem id={product.id} name={product.name} priceCents={product.price} category={product.category} />
+      <JsonLd data={productJsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
       <div className="border-b border-mist bg-warm/40">
         <div className="container-shop py-4">
           {/* Breadcrumb */}
