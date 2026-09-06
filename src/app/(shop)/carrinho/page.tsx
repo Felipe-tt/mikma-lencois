@@ -9,6 +9,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { useRouter } from 'next/navigation';
 import type { Cart, CartItem } from '@/types';
 import { CartSkeleton } from '@/components/ui/Skeleton';
+import { getStockUrgency } from '@/lib/stockUrgency';
 
 export default function CartPage() {
   const [threshold, setThreshold] = useState(25000);
@@ -217,7 +218,14 @@ export default function CartPage() {
                       }
                       const avail = stockMap[item.sku];
                       if (avail === 0) return <p className="text-xs text-red-500 font-semibold">Fora de estoque, remova do carrinho</p>;
-                      if (avail !== undefined && avail <= 5) return <p className="text-xs text-amber-600 font-semibold">Apenas {avail} {avail === 1 ? 'unidade disponível' : 'unidades disponíveis'}</p>;
+                      const urgency = avail !== undefined ? getStockUrgency(avail) : null;
+                      if (urgency) {
+                        return (
+                          <p className={`text-xs font-semibold ${urgency.level === 'critical' ? 'text-red-600' : 'text-amber-600'}`}>
+                            {urgency.text}
+                          </p>
+                        );
+                      }
                       return null;
                     })()}
                     <p className="text-base font-semibold text-ink mt-auto">{formatCurrency(item.unitPrice)}</p>

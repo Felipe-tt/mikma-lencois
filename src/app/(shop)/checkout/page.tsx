@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, onSnapshot, getDoc, setDoc, collection, query, where, getDocs, documentId } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
@@ -12,6 +12,7 @@ import { maskCep, maskCpf, maskPhone, onlyDigits, isValidCpf, isValidPhone, isVa
 import { Select } from '@/components/ui/Select';
 import type { ShippingOption } from '@/lib/shipping-pricing';
 import Image from 'next/image';
+import { trackBeginCheckout } from '@/lib/analytics';
 
 interface CustomerData { name: string; cpf: string; phone: string; email: string }
 
@@ -156,6 +157,7 @@ export default function CheckoutPage() {
   const router = useRouter();
 
   const [cart, setCart]       = useState<Cart | null>(null);
+  const beginCheckoutTracked = useRef(false);
   const [cartLoading, setCL]  = useState(true);
   const [step, setStep]       = useState<1 | 2 | 3>(1); // 1=dados, 2=endereço, 3=entrega
   const [s1done, setS1Done]   = useState(false);
@@ -207,8 +209,16 @@ export default function CheckoutPage() {
     if (!user) { router.push('/entrar'); return; }
     const unsub = onSnapshot(doc(db, 'carts', user.uid), snap => {
       if (!snap.exists() || !snap.data()?.items?.length) { router.push('/carrinho'); return; }
-      setCart(snap.data() as Cart);
+      const c = snap.data() as Cart;
+      setCart(c);
       setCL(false);
+      if (!beginCheckoutTracked.current) {
+        beginCheckoutTracked.current = true;
+        trackBeginCheckout(
+          c.items.map(i => ({ sku: i.sku, productId: i.productId, productName: i.productName, unitPriceCents: i.unitPrice, quantity: i.quantity })),
+          c.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0)
+        );
+      }
     });
     getDoc(doc(db, 'users', user.uid)).then(s => {
       const d = s.data();

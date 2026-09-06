@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import { trackPurchase } from '@/lib/analytics';
 
 interface Props {
   qrCode: string;
@@ -29,21 +30,29 @@ function useCountdown(expiresAt?: string) {
 
 type PaymentStatus = 'pending' | 'confirmed' | 'expired' | 'failed';
 
-function usePaymentStatus(orderId: string): PaymentStatus {
+function usePaymentStatus(orderId: string, totalCents: number): PaymentStatus {
   const [status, setStatus] = useState<PaymentStatus>('pending');
   useEffect(() => {
     if (!orderId) return;
     const unsub = onSnapshot(doc(db, 'orders', orderId), snap => {
       if (!snap.exists()) return;
-      const s = snap.data().status as string;
+      const data = snap.data();
+      const s = data.status as string;
       if (s === 'paid' || s === 'preparing' || s === 'shipped' || s === 'delivered') {
         setStatus('confirmed');
+        const items = (data.items ?? []) as Array<{ sku: string; productId: string; productName: string; unitPrice: number; quantity: number }>;
+        trackPurchase({
+          orderId,
+          totalCents,
+          shippingCents: data.shippingCents,
+          items: items.map(i => ({ sku: i.sku, productId: i.productId, productName: i.productName, unitPriceCents: i.unitPrice, quantity: i.quantity })),
+        });
       } else if (s === 'cancelled') {
         setStatus('failed');
       }
     });
     return unsub;
-  }, [orderId]);
+  }, [orderId, totalCents]);
   return status;
 }
 
@@ -51,7 +60,7 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
   const secondsLeft = useCountdown(expiresAt);
-  const paymentStatus = usePaymentStatus(orderId);
+  const paymentStatus = usePaymentStatus(orderId, totalCents);
   const expired = secondsLeft === 0;
   const confirmed = paymentStatus === 'confirmed';
   const failed = paymentStatus === 'failed';

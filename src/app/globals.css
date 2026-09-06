@@ -328,6 +328,16 @@ html.dark {
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  /* Chamou atenção pra "última unidade!" sem ser irritante — bem mais
+     sutil que um pulse comum, só a opacidade respirando de leve. */
+  .animate-pulse-subtle {
+    animation: pulseSubtle 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 /* @keyframes fora de @layer, dentro de @layer o Tailwind pode descartar

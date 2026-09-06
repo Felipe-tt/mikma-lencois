@@ -12,6 +12,7 @@ import { FadeIn } from '@/components/ui/FadeIn';
 import { getSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
+import { TrackViewItem } from '@/components/product/TrackViewItem';
 
 // ISR: revalida a cada 5 minutos, reduz leituras no Firestore por visita ao produto
 export const revalidate = 300;
@@ -140,6 +141,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div>
+      <TrackViewItem id={product.id} name={product.name} priceCents={product.price} category={product.category} />
       <div className="border-b border-mist bg-warm/40">
         <div className="container-shop py-4">
           {/* Breadcrumb */}
