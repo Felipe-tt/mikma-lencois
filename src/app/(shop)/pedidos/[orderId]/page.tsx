@@ -18,6 +18,7 @@ import { formatCurrency, formatTs, formatTsDateTime } from '@/lib/utils/format';
 import { carrierName, trackingUrl } from '@/lib/carriers';
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
+import { trackPurchase } from '@/lib/analytics';
 
 // ─── Status steps ─────────────────────────────────────────────────────────────
 
@@ -109,7 +110,16 @@ export default function OrderDetailPage() {
   useEffect(() => {
     if (!user || !orderId) return;
     return onSnapshot(doc(db, 'orders', orderId), snap => {
-      if (snap.exists()) setOrder({ id: snap.id, ...snap.data() } as Order);
+      if (!snap.exists()) return;
+      const data = { id: snap.id, ...snap.data() } as Order;
+      setOrder(data);
+      if (data.status === 'paid' || data.status === 'preparing' || data.status === 'shipped' || data.status === 'delivered') {
+        trackPurchase({
+          orderId: data.id,
+          totalCents: data.totalCents,
+          items: data.items.map(i => ({ sku: i.sku, productId: i.productId, productName: i.productName, unitPriceCents: i.unitPrice, quantity: i.quantity })),
+        });
+      }
     });
   }, [user, orderId]);
 

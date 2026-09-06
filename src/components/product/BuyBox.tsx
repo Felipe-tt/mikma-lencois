@@ -11,6 +11,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import type { Product, InventoryItem, ProductVariant, CartItem } from '@/types';
 import { getStockUrgency } from '@/lib/stockUrgency';
+import { trackAddToCart } from '@/lib/analytics';
 
 interface Props {
   product: Product;
@@ -106,6 +107,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       : [...existingItems, newItem];
 
     await setDoc(cartRef, { userId: user.uid, items: updatedItems, updatedAt: serverTimestamp() }, { merge: true });
+    trackAddToCart({ sku, productId: product.id, productName: product.name, unitPriceCents: product.price, quantity: finalQty });
     return true;
   }
 
