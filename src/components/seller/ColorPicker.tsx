@@ -21,12 +21,13 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
   const [showSugg, setShowSugg] = useState(false);
   const [showSwatches, setShowSwatches] = useState(false);
   const [error, setError] = useState('');
+  const [customHint, setCustomHint] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   // Sincroniza quando o valor externo muda (ex: cor escolhida por foto)
   useEffect(() => {
-    if (colorName !== inputName) setInputName(colorName || '');
+    if (colorName !== inputName) { setInputName(colorName || ''); setCustomHint(false); }
   }, [colorName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fecha dropdowns ao clicar fora
@@ -45,6 +46,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
     const q = e.target.value;
     setInputName(q);
     setError('');
+    setCustomHint(false);
     setShowSwatches(false);
     clearTimeout(debounceRef.current);
     if (q.length < 1) { setSuggestions([]); setShowSugg(false); return; }
@@ -60,6 +62,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
     setInputName(s.name);
     setSuggestions([]);
     setShowSugg(false);
+    setCustomHint(false);
     onChange(s.hex, s.name);
   }
 
@@ -71,15 +74,25 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
       setInputName(found.name);
       onChange(found.hex, found.name);
       setError('');
-    } else {
-      setError('Não encontramos essa cor, escolha uma sugestão ou use a paleta');
+      setCustomHint(false);
+      return;
     }
+    // Não achou na lista têxtil curada — não é motivo pra travar o
+    // cadastro. Mantém o hex que já estava selecionado (swatch, seletor
+    // nativo, ou o padrão da linha) e usa o texto digitado como nome
+    // livre. Vendedor pode chamar a cor do jeito que quiser (ex.: "Vinho
+    // Bordô", "Off-white", um nome de coleção), não só o que está na
+    // paleta pré-definida.
+    onChange(value, inputName.trim());
+    setError('');
+    setCustomHint(true);
   }
 
   function pickHex(hex: string) {
     const name = hexToColorName(hex);
     setInputName(name);
     setError('');
+    setCustomHint(false);
     onChange(hex, name);
   }
 
@@ -155,7 +168,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
               <button
                 key={c.hex}
                 type="button"
-                onClick={() => { setInputName(c.name); setError(''); onChange(c.hex, c.name); setShowSwatches(false); }}
+                onClick={() => { setInputName(c.name); setError(''); setCustomHint(false); onChange(c.hex, c.name); setShowSwatches(false); }}
                 className={`w-8 h-8 border transition-transform hover:scale-110 shrink-0 rounded-[4px] bg-[var(--color)] ${value?.toLowerCase() === c.hex.toLowerCase() ? 'ring-2 ring-clay ring-offset-1' : 'border-mist'}`}
                 style={{ '--color': c.hex } as React.CSSProperties}
                 title={c.name}
@@ -170,6 +183,11 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
         <p className="text-xs text-red-500 flex items-center gap-1">
           <IconAlert size={11} />
           {error}
+        </p>
+      )}
+      {!error && customHint && (
+        <p className="text-xs text-faint flex items-center gap-1">
+          Nome personalizado — a cor exibida não muda sozinha, ajuste no seletor ao lado se quiser que bata visualmente.
         </p>
       )}
     </div>

@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import type { Product, InventoryItem, ProductVariant, CartItem } from '@/types';
+import { getStockUrgency } from '@/lib/stockUrgency';
 
 interface Props {
   product: Product;
@@ -55,6 +56,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
   const availableStock = selectedVariant ? getStock(selectedVariant) : 0;
   const outOfStock = availableStock === 0;
+  const urgency = getStockUrgency(availableStock);
 
   const closeAdded = useCallback(() => setAddedOpen(false), []);
 
@@ -190,14 +192,10 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
         </div>
 
         {/* Estoque */}
-        <div className="flex items-center gap-2 -mt-1">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${outOfStock ? 'bg-red-400' : availableStock <= 5 ? 'bg-amber-400' : 'bg-green-500'}`} />
-          <span className="text-[12px] font-medium text-mid">
-            {outOfStock
-              ? 'Fora de estoque'
-              : availableStock <= 5
-              ? `Últimas ${availableStock} unidades`
-              : 'Em estoque'}
+        <div className={`flex items-center gap-2 -mt-1 ${urgency?.level === 'critical' ? 'animate-pulse-subtle' : ''}`}>
+          <span className={`w-2 h-2 rounded-full shrink-0 ${outOfStock ? 'bg-red-400' : urgency?.level === 'critical' ? 'bg-red-500' : urgency?.level === 'warning' ? 'bg-amber-400' : 'bg-green-500'}`} />
+          <span className={`text-[12px] font-medium ${urgency?.level === 'critical' ? 'text-red-600 font-bold' : 'text-mid'}`}>
+            {outOfStock ? 'Fora de estoque' : urgency ? urgency.text : 'Em estoque'}
           </span>
         </div>
 
