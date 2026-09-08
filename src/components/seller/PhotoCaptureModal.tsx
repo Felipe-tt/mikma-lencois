@@ -140,16 +140,20 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
       </div>
 
       {captured.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto px-4 pb-3 shrink-0" onClick={e => e.stopPropagation()}>
+        <div className="flex gap-2.5 overflow-x-auto px-4 pt-3 pb-3 shrink-0" onClick={e => e.stopPropagation()}>
           {captured.map((c, i) => (
-            <div key={i} className="relative shrink-0">
-              <img src={c.dataUrl} alt="" className="w-16 h-16 object-cover rounded-[4px] border border-white/20" />
+            <div key={i} className="relative shrink-0 first:ml-0">
+              <img
+                src={c.dataUrl}
+                alt=""
+                className="w-[68px] h-[68px] object-cover rounded-xl border border-white/15 shadow-lg shadow-black/40"
+              />
               <button
                 onClick={() => removeCaptured(i)}
-                className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow"
-                aria-label="Remover"
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center ring-2 ring-black shadow-md active:scale-90 transition-transform"
+                aria-label="Remover foto"
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
           ))}
