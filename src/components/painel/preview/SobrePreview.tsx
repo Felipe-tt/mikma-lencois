@@ -26,6 +26,7 @@ export function SobrePreview({ s }: { s: StoreSettings }) {
   const timelineTitle = s.aboutTimelineTitle || 'Nossa trajetória';
   const timeline = parseTimeline(s.aboutTimeline);
   const whatsappLabel = s.aboutWhatsappLabel || 'Falar no WhatsApp';
+  const paras = [s.aboutPara1, s.aboutPara2, s.aboutPara3].filter(Boolean) as string[];
 
   return (
     <div className="bg-white dark:bg-warm">
@@ -48,9 +49,9 @@ export function SobrePreview({ s }: { s: StoreSettings }) {
 
           {/* Texto + Timeline */}
           <div className="flex flex-col gap-9">
-            {[s.aboutPara1, s.aboutPara2, s.aboutPara3].filter(Boolean).length > 0 && (
+            {paras.length > 0 && (
               <div className="flex flex-col gap-4">
-                {[s.aboutPara1, s.aboutPara2, s.aboutPara3].filter(Boolean).map((para, i) => (
+                {paras.map((para, i) => (
                   <p key={i} className={`leading-relaxed text-mid ${i === 0 ? 'text-[1rem]' : 'text-[13px]'}`}>{para}</p>
                 ))}
               </div>
@@ -79,7 +80,7 @@ export function SobrePreview({ s }: { s: StoreSettings }) {
               </div>
             )}
 
-            {[s.aboutPara1, s.aboutPara2, s.aboutPara3].filter(Boolean).length === 0 && timeline.length === 0 && (
+            {paras.length === 0 && timeline.length === 0 && (
               <p className="text-[12px] text-faint italic py-6 text-center border border-dashed border-[#E4DED5]">
                 Nenhum texto ou marco adicionado ainda, preencha ao lado para ver aqui.
               </p>

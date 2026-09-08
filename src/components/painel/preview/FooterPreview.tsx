@@ -8,6 +8,7 @@ export function FooterPreview({ s }: { s: StoreSettings }) {
   const year = new Date().getFullYear();
   const storeName = s.storeName || 'Mikma Lençóis';
   const wa = s.whatsappUrl || (s.storePhone ? `https://wa.me/${s.storePhone.replace(/\D/g, '')}` : null);
+  const socialLabels = [s.instagramUrl && 'Instagram', wa && 'WhatsApp'].filter(Boolean) as string[];
   const status = s.businessHours ? getOpenStatus(parseBusinessHours(s.businessHours), s.businessHoursTimezone) : null;
 
   return (
@@ -20,10 +21,11 @@ export function FooterPreview({ s }: { s: StoreSettings }) {
             <p className="text-[12px] text-paper/45 leading-relaxed max-w-[20ch]">
               {s.storeSlogan}
             </p>
-            {(s.instagramUrl || wa) && (
+            {socialLabels.length > 0 && (
               <div className="flex items-center gap-3 mt-1">
-                {s.instagramUrl && <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-paper/40">Instagram</span>}
-                {wa && <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-paper/40">WhatsApp</span>}
+                {socialLabels.map(label => (
+                  <span key={label} className="text-[10px] font-semibold tracking-[0.12em] uppercase text-paper/40">{label}</span>
+                ))}
               </div>
             )}
           </div>
@@ -66,7 +68,8 @@ export function FooterPreview({ s }: { s: StoreSettings }) {
           <p className="text-[10px] text-paper/35">
             © {year} {storeName} · Todos os direitos reservados
           </p>
-          <div className="flex items-center gap-3">            <span className="text-paper/10">·</span>
+          <div className="flex items-center gap-3">
+            <span className="text-paper/10">·</span>
             <span className="text-[9px] font-semibold tracking-[0.1em] text-paper/25 uppercase">PIX</span>
             <span className="text-paper/10">·</span>
             <span className="text-[9px] text-paper/25 tracking-[0.16em] uppercase">{(s.storeCity || '').toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
