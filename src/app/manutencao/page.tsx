@@ -1,5 +1,6 @@
 import { getSettings } from '@/lib/settings';
 import { MaintenanceAdminRedirect } from '@/components/layout/MaintenanceAdminRedirect';
+import { MaintenancePoll } from '@/components/layout/MaintenancePoll';
 
 // Antes era 'force-dynamic': cada visita (incluindo bots/scanners) virava
 // uma invocação de compute sem cache, gerando custo constante em "Non-Firebase
@@ -26,45 +27,7 @@ export default async function ManutencaoPage() {
   return (
     <>
       <MaintenanceAdminRedirect />
-      {/* Dispara o geo lookup assim que a página carrega.
-          Roda durante um request HTTP ativo → Cloud Run não congela a instância.
-          É isso que garante que o geo deixe de ficar "pending" no painel. */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `fetch('/api/maintenance/geo').catch(function(){});`,
-        }}
-      />
-
-      {/* Polling: assim que a manutenção acabar (ou esse IP for liberado
-          manualmente pelo painel), sai sozinho de /manutencao de volta pra
-          "/", sem precisar que o visitante dê refresh. Checa a cada 20s
-          (antes era 5s - gerava volume alto de invocações de compute sem
-          necessidade real, já que "sair da manutenção" não é uma ação que
-          precisa de reação em tempo real); silencioso em caso de erro de
-          rede (só tenta de novo no próximo tick). */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            (function () {
-              var checking = false;
-              function checkMaintenanceStatus() {
-                if (checking) return;
-                checking = true;
-                fetch('/api/maintenance/status', { cache: 'no-store' })
-                  .then(function (res) { return res.json(); })
-                  .then(function (data) {
-                    if (!data.active || data.released) {
-                      window.location.href = '/';
-                    }
-                  })
-                  .catch(function () {})
-                  .finally(function () { checking = false; });
-              }
-              setInterval(checkMaintenanceStatus, 20000);
-            })();
-          `,
-        }}
-      />
+      <MaintenancePoll />
       <style>{`
         .mnt-page {
           min-height: 100vh;
