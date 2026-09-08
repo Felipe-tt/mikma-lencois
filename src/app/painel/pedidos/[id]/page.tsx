@@ -268,7 +268,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     } finally { setUpdating(false); }
   }
 
-  async function dispatchDelivery() {
+  async function dispatchDelivery(forceOverspend = false) {
     if (!order) return;
     setUpdating(true);
     setDispatchError(null);
@@ -278,10 +278,26 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       const res = await fetch('/api/delivery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ orderId: order.id, carrier }),
+        body: JSON.stringify({ orderId: order.id, carrier, ...(forceOverspend ? { forceOverspend: true } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) {
+        // Uber Direct: custo recotado no despacho ficou acima da margem
+        // tolerada, o backend bloqueou de propósito. Pergunta ao vendedor
+        // se quer confirmar mesmo assim antes de cobrar o cartão.
+        if (data.error === 'overspend_confirmation_required') {
+          const { confirmed } = await confirmDialog({
+            message: 'Custo da Uber Direct acima do frete cobrado',
+            detail: data.message,
+            confirmLabel: 'Despachar mesmo assim',
+            variant: 'danger',
+          });
+          if (confirmed) {
+            setUpdating(false);
+            return dispatchDelivery(true);
+          }
+          return;
+        }
         setDispatchError(data.error || 'Não foi possível despachar este pedido. Tente novamente.');
         return;
       }
@@ -500,7 +516,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               )}
 
               <button
-                onClick={dispatchDelivery}
+                onClick={() => dispatchDelivery()}
                 disabled={updating}
                 className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
               >

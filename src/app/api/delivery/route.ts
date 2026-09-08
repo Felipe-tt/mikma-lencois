@@ -34,6 +34,7 @@ import {
   uberCreateDelivery,
   uberCancelDelivery,
   uberDirectConfigured,
+  uberQuote,
   buildUberAddress,
   formatPhone,
   type UberManifestItem,
@@ -152,6 +153,47 @@ export async function POST(req: NextRequest) {
         price:    i.unitPrice,
       }));
 
+      // ── Recotação obrigatória no momento do despacho ──────────────────────
+      // O quoteId salvo no checkout expira em minutos (ver uber-direct.ts).
+      // Como o despacho normalmente acontece horas/dias depois, esse quoteId
+      // já está vencido e a Uber ignoraria o preço antigo, cobrando o valor
+      // atual do cartão sem aviso. Por isso sempre recotamos aqui e
+      // comparamos com o que o cliente já pagou, ANTES de criar a entrega
+      // (que é o momento em que o cartão é cobrado de verdade).
+      let freshQuoteId: string | undefined;
+      let currentFeeCents: number;
+      try {
+        const freshQuote = await uberQuote(pickupAddress, dropoffAddress, uberSandbox);
+        freshQuoteId = freshQuote.quoteId;
+        currentFeeCents = freshQuote.feeCents;
+      } catch (err) {
+        return NextResponse.json(
+          { error: `Não foi possível recotar o frete Uber Direct antes do despacho: ${err instanceof Error ? err.message : String(err)}` },
+          { status: 502 }
+        );
+      }
+
+      const chargedCents = order.delivery?.priceCents ?? 0;
+      const marginCents = Math.max(
+        settings.uberOverspendMarginCents ?? 0,
+        Math.round(chargedCents * ((settings.uberOverspendMarginPct ?? 0) / 100))
+      );
+      const overspendCents = currentFeeCents - chargedCents;
+
+      if (overspendCents > marginCents && !parsedBody.data.forceOverspend) {
+        return NextResponse.json(
+          {
+            error: 'overspend_confirmation_required',
+            message: `O custo atual da Uber Direct (R$ ${(currentFeeCents / 100).toFixed(2)}) é maior do que o frete cobrado do cliente (R$ ${(chargedCents / 100).toFixed(2)}), acima da margem tolerada (R$ ${(marginCents / 100).toFixed(2)}). Confirme para despachar mesmo assim.`,
+            chargedCents,
+            currentFeeCents,
+            marginCents,
+            overspendCents,
+          },
+          { status: 409 }
+        );
+      }
+
       const uberDelivery = await uberCreateDelivery({
         orderId:             orderId,
         pickupName:          settings.storeName || 'Mikma Lençóis',
@@ -162,8 +204,10 @@ export async function POST(req: NextRequest) {
         dropoffPhoneNumber:  customerPhone,
         manifestItems,
         manifestTotalValue:  order.totalCents,
-        // Garante o preço cotado, evita divergência se a tarifa mudar entre cotação e despacho
-        quoteId:             order.delivery?.uberQuoteId,
+        // Usa a cotação FRESCA feita agora mesmo (linhas acima), não a do
+        // checkout, essa já expirou. Garante que o valor cobrado é
+        // exatamente o que acabamos de checar contra a margem tolerada.
+        quoteId:             freshQuoteId,
       }, uberSandbox);
 
       await adminDb.collection('orders').doc(orderId).update({
@@ -178,7 +222,9 @@ export async function POST(req: NextRequest) {
         timeline: FieldValue.arrayUnion({
           status: 'shipped',
           at:     new Date().toISOString(),
-          note:   `Despachado via Uber Direct · status: ${uberDelivery.status}`,
+          note:   overspendCents > marginCents
+            ? `Despachado via Uber Direct · status: ${uberDelivery.status} · ATENÇÃO: custo R$ ${(currentFeeCents/100).toFixed(2)} acima do frete cobrado (R$ ${(chargedCents/100).toFixed(2)}), confirmado manualmente pelo vendedor (diferença R$ ${(overspendCents/100).toFixed(2)})`
+            : `Despachado via Uber Direct · status: ${uberDelivery.status}`,
         }),
       });
 

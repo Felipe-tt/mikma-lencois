@@ -57,6 +57,13 @@ export type StoreSettings = {
   // antes de parar de oferecer frete grátis automaticamente. 0 = sem teto
   // (frete grátis sempre ativo quando o valor mínimo é atingido).
   freeShippingMaxLossCents: number;
+  // Margem de erro tolerada no despacho via Uber Direct: se o custo real
+  // recotado no momento do despacho for maior que o frete cobrado do
+  // cliente por mais do que essa margem, o despacho é bloqueado e exige
+  // confirmação manual (forceOverspend) no painel. Usa-se o MAIOR entre o
+  // valor fixo (centavos) e o percentual sobre o frete cobrado.
+  uberOverspendMarginCents: number; // ex: 500 = R$5,00 fixo
+  uberOverspendMarginPct: number;   // ex: 20 = 20% do frete cobrado
   lowStockThreshold: number;
   // Horário de funcionamento (JSON serializado, ver src/lib/business-hours.ts)
   businessHours: string;
@@ -144,6 +151,8 @@ export const STORE_DEFAULTS: StoreSettings = {
   dispatchCutoffTime: '17:00',
   freeShippingThresholdCents: 0,
   freeShippingMaxLossCents: 50000, // R$500 de prejuízo acumulado tolerado por padrão
+  uberOverspendMarginCents: 500, // R$5,00 fixo
+  uberOverspendMarginPct: 0,     // 0 = só usa a margem fixa por padrão
   lowStockThreshold: 3,
   businessHours: JSON.stringify(DEFAULT_BUSINESS_HOURS),
   businessHoursTimezone: 'America/Sao_Paulo',
