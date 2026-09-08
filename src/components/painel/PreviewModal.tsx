@@ -12,8 +12,23 @@ interface Props {
   children: React.ReactNode;
 }
 
+type Viewport = 'desktop' | 'mobile';
+
+const VIEWPORTS: { id: Viewport; label: string; icon: React.ReactNode }[] = [
+  {
+    id: 'desktop',
+    label: 'Desktop',
+    icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>,
+  },
+  {
+    id: 'mobile',
+    label: 'Mobile',
+    icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>,
+  },
+];
+
 export function PreviewModal({ open, onClose, title, routeLabel, children }: Props) {
-  const [viewport, setViewport] = useState<'desktop' | 'mobile'>('desktop');
+  const [viewport, setViewport] = useState<Viewport>('desktop');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -57,24 +72,18 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
           <div className="flex items-center gap-2 shrink-0">
             {/* Viewport toggle */}
             <div className="flex items-center bg-paper/10 p-0.5 rounded">
-              <button
-                onClick={() => setViewport('desktop')}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded transition-colors ${
-                  viewport === 'desktop' ? 'bg-paper text-ink' : 'text-paper/60 hover:text-paper'
-                }`}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>
-                <span className="hidden sm:inline">Desktop</span>
-              </button>
-              <button
-                onClick={() => setViewport('mobile')}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded transition-colors ${
-                  viewport === 'mobile' ? 'bg-paper text-ink' : 'text-paper/60 hover:text-paper'
-                }`}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
-                <span className="hidden sm:inline">Mobile</span>
-              </button>
+              {VIEWPORTS.map(({ id, label, icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setViewport(id)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded transition-colors ${
+                    viewport === id ? 'bg-paper text-ink' : 'text-paper/60 hover:text-paper'
+                  }`}
+                >
+                  {icon}
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
             </div>
 
             <button

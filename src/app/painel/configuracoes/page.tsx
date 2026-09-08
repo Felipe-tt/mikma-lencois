@@ -16,6 +16,7 @@ import { Select } from '@/components/ui/Select';
 import { HeroPreview, FeaturedPreview, CtaPreview } from '@/components/painel/preview/HomePreview';
 import { FooterPreview } from '@/components/painel/preview/FooterPreview';
 import { SobrePreview } from '@/components/painel/preview/SobrePreview';
+import { ProductTrustPreview, SizeGuidePreview, BedSizeGuidePreview } from '@/components/painel/preview/ProductPreview';
 import { BusinessHoursEditor } from '@/components/painel/BusinessHoursEditor';
 import { parseBusinessHours, serializeBusinessHours } from '@/lib/business-hours';
 import { maskCnpj, isValidCnpj, maskPhone, isValidPhone, maskCep, isValidCep } from '@/lib/masks';
@@ -44,7 +45,7 @@ export default function ConfiguracoesPage() {
   const [saved, setSaved]       = useState(false);
   const [saveError, setSaveError] = useState('');
   const [tab, setTab]           = useState<Tab>('loja');
-  const [preview, setPreview]   = useState<null|'hero'|'featured'|'cta'|'footer'|'sobre'>(null);
+  const [preview, setPreview]   = useState<null|'hero'|'featured'|'cta'|'footer'|'sobre'|'trust'|'sizeguide'|'bedguide'>(null);
   const [shippingLedger, setShippingLedger] = useState<{ collectedCents: number; spentCents: number; balanceCents: number } | null>(null);
 
   useEffect(() => {
@@ -157,6 +158,7 @@ export default function ConfiguracoesPage() {
             icon="edit"
             title="Nome e slogan"
             desc="Como sua loja aparece para os clientes"
+            onPreview={() => setPreview('footer')}
           >
             <F label="Nome da loja" hint="Ex: Mikma Lençóis"
               value={settings.storeName} onChange={v => set('storeName', v)} />
@@ -169,7 +171,7 @@ export default function ConfiguracoesPage() {
               placeholder="00.000.000/0000-00" maxLength={18} />
           </Card>
 
-          <Card icon="pin" title="Onde você fica" desc="Endereço físico da sua loja, usado também para gerar etiquetas de envio">
+          <Card icon="pin" title="Onde você fica" desc="Endereço físico da sua loja, usado também para gerar etiquetas de envio" onPreview={() => setPreview('sobre')}>
             <Row>
               <F label="Rua" value={settings.storeAddress} onChange={v => set('storeAddress', v)} placeholder="Rua das Flores" />
               <F label="Número" value={settings.storeNumber} onChange={v => set('storeNumber', v)} placeholder="123" />
@@ -300,14 +302,14 @@ export default function ConfiguracoesPage() {
       {tab === 'produto' && (
         <div className="flex flex-col gap-5">
 
-          <Card icon="shield" title="Garantias do produto" desc="3 frases que aparecem na página de cada produto abaixo do botão de comprar, reforça confiança">
+          <Card icon="shield" title="Garantias do produto" desc="3 frases que aparecem na página de cada produto abaixo do botão de comprar, reforça confiança" onPreview={() => setPreview('trust')}>
             <Info>Use frases curtas e diretas. Ex: entrega, pagamento, suporte.</Info>
             <F label="Garantia 1" value={settings.productTrust1 ?? ''} onChange={v => set('productTrust1', v)} placeholder="Entrega local em Blumenau em até 1h" />
             <F label="Garantia 2" value={settings.productTrust2 ?? ''} onChange={v => set('productTrust2', v)} placeholder="Frete para todo o Brasil com rastreio" />
             <F label="Garantia 3" value={settings.productTrust3 ?? ''} onChange={v => set('productTrust3', v)} placeholder="Pagamento PIX com confirmação imediata" />
           </Card>
 
-          <Card icon="ruler" title="Guia de medidas" desc="Tabela que abre quando o cliente clica em 'Guia de medidas' na página do produto, dimensões por PEÇA (lençol, fronha, capa de duvet...)">
+          <Card icon="ruler" title="Guia de medidas" desc="Tabela que abre quando o cliente clica em 'Guia de medidas' na página do produto, dimensões por PEÇA (lençol, fronha, capa de duvet...)" onPreview={() => setPreview('sizeguide')}>
             <Info>
               Diferente da tabela &quot;Guia de tamanhos de cama&quot; logo abaixo: esta aqui é por tipo de peça (uma
               coluna pra Lençol, outra pra Fronha, outra pra Capa duvet...). Configure as colunas (separadas por
@@ -327,7 +329,7 @@ export default function ConfiguracoesPage() {
               placeholder="Medidas podem variar ±2 cm após lavagem. Recomendamos lavar antes do primeiro uso." />
           </Card>
 
-          <Card icon="ruler" title="Guia de tamanhos de cama" desc="Tabela na página do produto + fonte da largura usada na calculadora do /guia-de-tamanhos">
+          <Card icon="ruler" title="Guia de tamanhos de cama" desc="Tabela na página do produto + fonte da largura usada na calculadora do /guia-de-tamanhos" onPreview={() => setPreview('bedguide')}>
             <Info>
               Uma tabela, dois usos: <strong>1)</strong> aparece na página do produto pra mostrar o tamanho do
               lençol acabado (ele é maior que o colchão de propósito, pra sobrar pano e prender o elástico -
@@ -514,11 +516,14 @@ export default function ConfiguracoesPage() {
       )}
 
       {/* Previews */}
-      <PreviewModal open={preview==='hero'}     onClose={() => setPreview(null)} title="Banner principal"      routeLabel="/"><HeroPreview s={settings}/></PreviewModal>
-      <PreviewModal open={preview==='featured'} onClose={() => setPreview(null)} title="Destaques"             routeLabel="/"><FeaturedPreview s={settings}/></PreviewModal>
-      <PreviewModal open={preview==='cta'}      onClose={() => setPreview(null)} title="Chamada final"         routeLabel="/"><CtaPreview s={settings}/></PreviewModal>
-      <PreviewModal open={preview==='footer'}   onClose={() => setPreview(null)} title="Rodapé"                routeLabel="/"><FooterPreview s={settings}/></PreviewModal>
-      <PreviewModal open={preview==='sobre'}    onClose={() => setPreview(null)} title="Sobre nós"             routeLabel="/sobre"><SobrePreview s={settings}/></PreviewModal>
+      <PreviewModal open={preview==='hero'}      onClose={() => setPreview(null)} title="Banner principal"      routeLabel="/"><HeroPreview s={settings}/></PreviewModal>
+      <PreviewModal open={preview==='featured'}  onClose={() => setPreview(null)} title="Destaques"             routeLabel="/"><FeaturedPreview s={settings}/></PreviewModal>
+      <PreviewModal open={preview==='cta'}       onClose={() => setPreview(null)} title="Chamada final"         routeLabel="/"><CtaPreview s={settings}/></PreviewModal>
+      <PreviewModal open={preview==='footer'}    onClose={() => setPreview(null)} title="Rodapé"                routeLabel="/"><FooterPreview s={settings}/></PreviewModal>
+      <PreviewModal open={preview==='sobre'}     onClose={() => setPreview(null)} title="Sobre nós"             routeLabel="/sobre"><SobrePreview s={settings}/></PreviewModal>
+      <PreviewModal open={preview==='trust'}     onClose={() => setPreview(null)} title="Garantias do produto"  routeLabel="/produtos/[produto]"><ProductTrustPreview s={settings}/></PreviewModal>
+      <PreviewModal open={preview==='sizeguide'} onClose={() => setPreview(null)} title="Guia de medidas"       routeLabel="/produtos/[produto]"><SizeGuidePreview s={settings}/></PreviewModal>
+      <PreviewModal open={preview==='bedguide'}  onClose={() => setPreview(null)} title="Guia de tamanhos"      routeLabel="/produtos/[produto]"><BedSizeGuidePreview s={settings}/></PreviewModal>
     </div>
   );
 }
