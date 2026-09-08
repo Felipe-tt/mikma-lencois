@@ -385,6 +385,24 @@ export default function ConfiguracoesPage() {
             />
           </Card>
 
+          <Card icon="shield" title="Margem de erro, Uber Direct" desc="O preço da Uber é recotado no momento do despacho, se a diferença passar dessa margem, o despacho é bloqueado até você confirmar">
+            <Row>
+              <Num label="Margem fixa (R$)"
+                value={settings.uberOverspendMarginCents / 100}
+                onChange={v => set('uberOverspendMarginCents', Math.round(v * 100))}
+                hint="Diferença em reais tolerada sem confirmação"
+                min={0} step={0.5} />
+              <Num label="Margem percentual (%)"
+                value={settings.uberOverspendMarginPct}
+                onChange={v => set('uberOverspendMarginPct', v)}
+                hint="Diferença em % do frete cobrado, tolerada sem confirmação"
+                min={0} max={100} step={1} />
+            </Row>
+            <p className="text-[11px] text-faint mt-2">
+              Usa-se o que for MAIOR entre os dois. Ex: frete cobrado R$13, margem fixa R$5 e margem 20% (R$2,60) → tolera até R$18 sem pedir confirmação, porque R$5 é maior que R$2,60.
+            </p>
+          </Card>
+
           <Card icon="gift" title="Frete grátis" desc="A partir de qual valor o frete passa a ser gratuito">
             <Num label="Valor mínimo para frete grátis (R$)"
               value={settings.freeShippingThresholdCents / 100}
