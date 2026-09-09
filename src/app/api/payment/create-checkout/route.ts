@@ -23,7 +23,10 @@ import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
-const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
+// Ver nota equivalente em create-pix/route.ts.
+function abacatePayKey(sandbox: boolean): string {
+  return (sandbox ? process.env.ABACATEPAY_SANDBOX_API_KEY : process.env.ABACATEPAY_API_KEY) ?? '';
+}
 
 // Tabela de parcelamento: juros a partir de X parcelas
 // Ajuste conforme as taxas que você paga à AbacatePay/adquirente
@@ -61,6 +64,10 @@ export async function POST(req: NextRequest) {
       return tooManyRequests(rateLimitRetryAfter(`checkout:uid:${uid}`));
     }
 
+    const settings = await getSettings();
+    const abacateSandbox = !!settings.abacatePaySandboxMode;
+    const ABACATEPAY_KEY = abacatePayKey(abacateSandbox);
+
     const parsedBody = await validateBody(req, createCheckoutSchema);
     if (!parsedBody.ok) return parsedBody.response;
     const { address, installments, shipping } = parsedBody.data;
@@ -74,7 +81,7 @@ export async function POST(req: NextRequest) {
     const parsedInstallments = installments;
 
     if (!ABACATEPAY_KEY) {
-      console.error('ABACATEPAY_API_KEY not set');
+      console.error(abacateSandbox ? 'ABACATEPAY_SANDBOX_API_KEY not set' : 'ABACATEPAY_API_KEY not set');
       return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
     }
 
@@ -172,8 +179,6 @@ export async function POST(req: NextRequest) {
     if (subtotalCents <= 0) {
       return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
     }
-
-    const settings = await getSettings();
 
     const totalWeightKg = cartItems.reduce(
       (s, ci) => s + (productMap[ci.productId]?.weightKg ?? settings.defaultItemWeightKg ?? 0.8) * ci.quantity,
@@ -318,6 +323,7 @@ export async function POST(req: NextRequest) {
         method: 'card',
         installments: parsedInstallments,
         installmentCents,
+        abacateSandbox,
       },
       delivery: {
         carrier: matchedShipping.carrier,

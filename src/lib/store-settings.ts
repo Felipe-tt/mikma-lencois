@@ -46,6 +46,11 @@ export type StoreSettings = {
   // teste e produção do Uber Direct (env vars separadas), sem precisar de
   // novo deploy. Nunca guarda client_secret aqui, só a flag.
   uberDirectSandboxMode?: boolean;
+  // Mesma ideia do toggle acima, mas para a AbacatePay. Ambiente lá é
+  // decidido por qual API key é usada (chave de Dev Mode vs produção),
+  // não por outra URL — ver ABACATEPAY_SANDBOX_API_KEY em create-pix e
+  // create-checkout. Nunca guarda a key aqui, só a flag.
+  abacatePaySandboxMode?: boolean;
   defaultItemWeightKg: number;
   // Peso padrão (kg) sugerido no cadastro de produto conforme o tamanho da
   // 1ª variação, editável no popup "Pesos padrão" e sempre sobrescrevível
@@ -139,6 +144,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   originCep: '',
   localDeliveryRadiusKm: 10,
   uberDirectSandboxMode: false,
+  abacatePaySandboxMode: false,
   defaultItemWeightKg: 0.8,
   defaultWeightsBySize: {
     solteiro: 0.6,

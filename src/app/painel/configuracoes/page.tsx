@@ -387,6 +387,16 @@ export default function ConfiguracoesPage() {
             />
           </Card>
 
+          <Card icon="produto" title="AbacatePay, ambiente" desc="Alterna entre a chave de Dev Mode e a de produção da AbacatePay, sem novo deploy">
+            <Toggle
+              label="Usar ambiente de teste (Dev Mode)"
+              checked={!!settings.abacatePaySandboxMode}
+              onChange={v => set('abacatePaySandboxMode', v)}
+              hint="Ligado: usa a chave de Dev Mode da AbacatePay, o PIX/cartão gerado é de teste, nenhum valor real é cobrado. No pedido, aparece um botão para simular o pagamento (aprova na hora, sem PIX de verdade). Desligado: usa a chave de produção, pagamentos reais."
+              warn="TESTE ATIVO, os PIX/checkouts gerados são de Dev Mode e não cobram nada de verdade. Desligue antes de vender de verdade."
+            />
+          </Card>
+
           <Card icon="shield" title="Margem de erro, Uber Direct" desc="O preço da Uber é recotado no momento do despacho, se a diferença passar dessa margem, o despacho é bloqueado até você confirmar">
             <Row>
               <Num label="Margem fixa (R$)"
