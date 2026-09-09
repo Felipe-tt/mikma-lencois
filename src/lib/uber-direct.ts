@@ -271,6 +271,18 @@ export async function uberCreateDelivery(params: UberCreateParams, sandbox: bool
   if (params.dropoffNotes)        body.dropoff_notes       = params.dropoffNotes.slice(0, 280);
   if (params.manifestTotalValue)  body.manifest_total_value = params.manifestTotalValue;
 
+  // Sandbox nunca despacha um entregador de verdade, sem isso a entrega
+  // ficaria parada em "pending" pra sempre. O Robo Courier (feature oficial
+  // de teste da Uber, só funciona em sandbox) simula um entregador de
+  // verdade percorrendo pending → pickup → pickup_complete → dropoff →
+  // delivered em ~2min30s, cada troca dispara o webhook real pro nosso
+  // endpoint (com live_mode:false) — testa o fluxo inteiro (assinatura,
+  // atualização do pedido, push, e-mail) sem custar nada e sem exigir
+  // nenhuma ação manual. Detalhes: developer.uber.com/docs/deliveries/robocourier
+  if (sandbox) {
+    body.test_specifications = { robo_courier_specification: { mode: 'auto' } };
+  }
+
   const res = await fetch(`${apiBase(sandbox)}/customers/${customerId}/deliveries`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
