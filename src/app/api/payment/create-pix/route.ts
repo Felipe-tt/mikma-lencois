@@ -23,7 +23,13 @@ import { createPixSchema } from './schema';
 
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
-const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY!;
+// Ambiente da AbacatePay é decidido por qual API key é usada (chave de Dev
+// Mode vs produção), não por outra base URL. settings.abacatePaySandboxMode
+// (editável em /painel/configuracoes) escolhe qual env var usar, sem
+// precisar de novo deploy — mesmo padrão do toggle uberDirectSandboxMode.
+function abacatePayKey(sandbox: boolean): string {
+  return (sandbox ? process.env.ABACATEPAY_SANDBOX_API_KEY : process.env.ABACATEPAY_API_KEY) ?? '';
+}
 
 export async function POST(req: NextRequest) {
   // Rate limit duplo: por IP e por usuário (aplicado após auth)
@@ -46,6 +52,10 @@ export async function POST(req: NextRequest) {
       return tooManyRequests(rateLimitRetryAfter(`pix:uid:${uid}`));
     }
 
+    const settings = await getSettings();
+    const abacateSandbox = !!settings.abacatePaySandboxMode;
+    const ABACATEPAY_KEY = abacatePayKey(abacateSandbox);
+
     const parsedBody = await validateBody(req, createPixSchema);
     if (!parsedBody.ok) return parsedBody.response;
     const { address, shipping } = parsedBody.data;
@@ -57,7 +67,7 @@ export async function POST(req: NextRequest) {
     // a brecha de alguém mandar priceCents: 0 direto pela API e não pagar frete.
 
     if (!ABACATEPAY_KEY) {
-      console.error('ABACATEPAY_API_KEY not set');
+      console.error(abacateSandbox ? 'ABACATEPAY_SANDBOX_API_KEY not set' : 'ABACATEPAY_API_KEY not set');
       return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
     }
 
@@ -140,8 +150,6 @@ export async function POST(req: NextRequest) {
     }
 
     const productsCents = computeProductsCents(verifiedItems.map(i => ({ unitPrice: i.unitPrice, quantity: i.quantity })));
-
-    const settings = await getSettings();
 
     const totalWeightKg = cartItems.reduce(
       (s, ci) => s + (productMap[ci.productId]?.weightKg ?? settings.defaultItemWeightKg ?? 0.8) * ci.quantity,
@@ -299,7 +307,7 @@ export async function POST(req: NextRequest) {
       totalCents: amountCents,
       clientIp: ip,
       addressKey: normalizeAddressKey(address),
-      payment: { method: 'pix' },
+      payment: { method: 'pix', abacateSandbox },
       delivery: {
         carrier: matchedShipping.carrier,
         label: matchedShipping.label,
@@ -367,7 +375,7 @@ export async function POST(req: NextRequest) {
       method: 'PIX',
       data: {
         amount: amountCents,
-        description: `Pedido #${orderId.slice(-8).toUpperCase()} · frete ${matchedShipping.carrier}`,
+        description: `Pedido #${orderId.slice(-8).toUpperCase()} · frete ${matchedShipping.carrier}${abacateSandbox ? ' · TESTE' : ''}`,
         expiresIn: 900,
         externalId: orderId,
         ...(customerData ? { customer: customerData } : {}),

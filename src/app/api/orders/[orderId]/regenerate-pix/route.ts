@@ -6,7 +6,14 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { extractBearer, getClientIp, tooManyRequests } from '@/lib/security';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
-const ABACATEPAY_KEY  = process.env.ABACATEPAY_API_KEY!;
+// Ver nota em create-pix/route.ts: ambiente é decidido por qual key é
+// usada. Precisa usar a MESMA que gerou o pedido original — regenerar
+// um PIX de teste com a key de produção (ou vice-versa) criaria uma
+// cobrança no ambiente errado, e o webhook de confirmação nunca bateria
+// (o txId novo pertenceria a um ambiente diferente do resto do pedido).
+function abacatePayKey(sandbox: boolean): string {
+  return (sandbox ? process.env.ABACATEPAY_SANDBOX_API_KEY : process.env.ABACATEPAY_API_KEY) ?? '';
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
@@ -50,11 +57,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     cellphone: userData.phone,
   } : undefined;
 
+  const abacateSandbox = !!(order.payment as { abacateSandbox?: boolean } | undefined)?.abacateSandbox;
+  const ABACATEPAY_KEY = abacatePayKey(abacateSandbox);
+  if (!ABACATEPAY_KEY) {
+    console.error(abacateSandbox ? 'ABACATEPAY_SANDBOX_API_KEY not set' : 'ABACATEPAY_API_KEY not set');
+    return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
+  }
+
   const pixPayload: Record<string, unknown> = {
     method: 'PIX',
     data: {
       amount: order.totalCents,
-      description: `Pedido #${orderId.slice(-8).toUpperCase()}`,
+      description: `Pedido #${orderId.slice(-8).toUpperCase()}${abacateSandbox ? ' · TESTE' : ''}`,
       expiresIn: 900,
       externalId: orderId,
       ...(customerData ? { customer: customerData } : {}),

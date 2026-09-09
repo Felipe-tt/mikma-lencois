@@ -154,6 +154,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [cancelDeliveryError, setCancelDeliveryError] = useState<string | null>(null);
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [cancelOrderError, setCancelOrderError] = useState<string | null>(null);
+  const [simulatingPayment, setSimulatingPayment] = useState(false);
+  const [simulatePaymentError, setSimulatePaymentError] = useState<string | null>(null);
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnRegistered, setReturnRegistered] = useState(false);
   const [fraudSignals, setFraudSignals] = useState<{ reason: string; relatedOrderIds: string[] }[]>([]);
@@ -244,6 +246,38 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
+  }
+
+  async function simulatePayment() {
+    if (!order) return;
+    const { confirmed } = await confirmDialog({
+      message: 'Simular pagamento deste PIX?',
+      detail: 'Isso confirma o pedido como pago sem nenhum PIX real, só funciona porque este pedido foi criado em modo de teste (Dev Mode da AbacatePay). Nunca disponível em pedidos reais.',
+      confirmLabel: 'Simular pagamento',
+    });
+    if (!confirmed) return;
+
+    setSimulatingPayment(true);
+    setSimulatePaymentError(null);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch(`/api/orders/${id}/simulate-payment`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSimulatePaymentError(data.error ?? 'Não foi possível simular o pagamento.');
+        return;
+      }
+      // O webhook real da AbacatePay confirma o pedido em alguns segundos;
+      // o listener onSnapshot já ativo na página atualiza a tela sozinho
+      // quando isso acontecer, sem precisar de refresh manual.
+    } catch {
+      setSimulatePaymentError('Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+      setSimulatingPayment(false);
+    }
   }
 
   async function advanceStatus() {
@@ -709,6 +743,12 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {/* ── Pagamento ── */}
         <Card title="Pagamento" icon="card">
+          {order.payment.abacateSandbox && (
+            <div className="mb-2.5 -mt-1 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-1.5">
+              <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-amber-700">Pagamento de teste</span>
+              <span className="text-[10px] text-amber-600">· AbacatePay Dev Mode, nenhum valor real</span>
+            </div>
+          )}
           <Row label="Método" value={order.payment.method.toUpperCase()} />
           <Row label="Status" value={STATUS_LABELS[order.status]} />
           <Row label="Pago em" value={order.payment.paidAt ? formatDateTime(order.payment.paidAt) : null} />
@@ -730,6 +770,20 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <p className="text-[10px] font-mono text-faint break-all bg-warm px-2 py-1.5 leading-relaxed rounded-md">
                 {order.payment.pixCopyPaste.slice(0, 80)}…
               </p>
+            </div>
+          )}
+          {order.payment.method === 'pix' && order.payment.abacateSandbox && order.status === 'pending_payment' && (
+            <div className="pt-3">
+              <button
+                onClick={simulatePayment}
+                disabled={simulatingPayment}
+                className="w-full bg-amber-600 text-white text-[13px] font-bold py-2.5 hover:bg-amber-700 disabled:opacity-50 transition-colors rounded-xl"
+              >
+                {simulatingPayment ? 'Simulando…' : 'Simular pagamento (teste)'}
+              </button>
+              {simulatePaymentError && (
+                <p className="text-[12px] text-red-600 mt-2">{simulatePaymentError}</p>
+              )}
             </div>
           )}
         </Card>
