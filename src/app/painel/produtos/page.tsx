@@ -114,9 +114,9 @@ export default function PainelProdutosPage() {
           {!search && <p className="text-[12px] text-clay-l mt-2 font-semibold">Clique em &quot;+ Novo produto&quot; para começar!</p>}
         </div>
       ) : (
-        <div className="bg-paper border border-mist overflow-hidden rounded-xl">
+        <div className="bg-paper border border-mist overflow-x-auto rounded-xl">
           {/* Header */}
-          <div className="hidden sm:grid grid-cols-[56px_1fr_100px_80px_90px_130px] gap-4 px-4 py-3 border-b border-mist bg-warm">
+          <div className="hidden sm:grid grid-cols-[56px_minmax(160px,1fr)_100px_90px_90px_120px] gap-4 px-4 py-3 border-b border-mist bg-warm min-w-[700px]">
             <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint"></span>
             <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Produto</span>
             <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Categoria</span>
@@ -130,7 +130,7 @@ export default function PainelProdutosPage() {
             return (
               <div
                 key={p.id}
-                className={`grid grid-cols-[56px_1fr_auto] sm:grid-cols-[56px_1fr_100px_80px_90px_130px] gap-4 px-4 py-3 items-center hover:bg-warm transition-colors ${idx < filtered.length - 1 ? 'border-b border-mist' : ''}`}
+                className={`grid grid-cols-[56px_1fr_auto] sm:grid-cols-[56px_minmax(160px,1fr)_100px_90px_90px_120px] gap-4 px-4 py-3 items-center hover:bg-warm transition-colors sm:min-w-[700px] ${idx < filtered.length - 1 ? 'border-b border-mist' : ''}`}
               >
                 {/* Thumb */}
                 <div className="relative w-10 h-10 bg-warm border border-mist shrink-0 overflow-hidden rounded-xl">
