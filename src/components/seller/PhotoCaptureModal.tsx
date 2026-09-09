@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useFullscreenOverlay } from '@/lib/hooks/useFullscreenOverlay';
 
@@ -94,6 +94,14 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
   const [error, setError] = useState('');
   const [captured, setCaptured] = useState<{ dataUrl: string; blob: Blob }[]>([]);
   const viewportHeight = useFullscreenOverlay();
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   async function handleFiles(files: FileList) {
     setBusy(true);
