@@ -132,11 +132,15 @@ export interface Order {
     pixCopyPaste?: string
     paidAt?: string
     abacateSandbox?: boolean
+    confirmedManuallyBy?: string
+    confirmedManuallyNote?: string
   } | {
     method: 'card'
     installments: number
     paidAt?: string
     abacateSandbox?: boolean
+    confirmedManuallyBy?: string
+    confirmedManuallyNote?: string
   }
   delivery: {
     carrier: 'melhor_envio' | 'correios_pac' | 'correios_sedex' | 'jadlog_package' | 'jadlog_expresso' | 'pickup' | 'uber_direct' | 'manual' | null

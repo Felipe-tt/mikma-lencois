@@ -5,12 +5,10 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email';
-import { notifySeller } from '@/lib/push/notifySeller';
-import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { expandStockLines } from '@/lib/orderStockLines';
-import { recordShippingCollected } from '@/lib/shipping-ledger';
+import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
 import { z } from 'zod';
 import { webhookSchema } from './schema';
 
@@ -78,196 +76,9 @@ export async function POST(req: NextRequest) {
 
   console.log('Webhook received:', eventType);
 
-  // ── Helper: confirm an order as paid ─────────────────────────────────────
-  async function confirmOrder(orderId: string, txId: string, note: string) {
-    const orderRef = adminDb.collection('orders').doc(orderId);
-    const now = new Date().toISOString();
-
-    // Transação: lê e escreve o status atomicamente. O cron de expiração
-    // (expire-orders) também decide com base em status === 'pending_payment'
-    //, sem essa transação, o cron poderia cancelar e decrementar reserved
-    // entre o get() e o commit() daqui, duplicando o decremento e deixando
-    // o pedido marcado 'cancelled' por cima de um pagamento real.
-    let order: FirebaseFirestore.DocumentData | null;
-    try {
-      order = await adminDb.runTransaction(async (tx) => {
-        const orderSnap = await tx.get(orderRef);
-        if (!orderSnap.exists) return null;
-        const data = orderSnap.data()!;
-        if (data.status !== 'pending_payment') return null;
-
-        tx.update(orderRef, {
-          status: 'paid',
-          'payment.paidAt': FieldValue.serverTimestamp(),
-          'payment.txId': txId,
-          updatedAt: FieldValue.serverTimestamp(),
-          timeline: FieldValue.arrayUnion({ status: 'paid', at: now, note }),
-        });
-
-        // Decrementa quantity (estoque real, debitado de fato) e reserved
-        // (libera a reserva feita em create-checkout/create-pix na criação
-        // do pedido), ambos pelo mesmo motivo: a venda se concretizou.
-        // expandStockLines inclui a fronha trocada (Jogo de Cama) junto.
-        for (const line of expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>)) {
-          const invRef = adminDb.collection('inventory').doc(line.sku);
-          tx.update(invRef, {
-            quantity: FieldValue.increment(-line.quantity),
-            reserved: FieldValue.increment(-line.quantity),
-            updatedAt: FieldValue.serverTimestamp(),
-          });
-        }
-
-        return data;
-      });
-    } catch (err) {
-      console.error(`Failed to confirm order ${orderId}:`, err);
-      Sentry.captureException(err, { tags: { route: 'payment-webhook', step: 'confirm-order' }, extra: { orderId } });
-      return;
-    }
-
-    if (!order) {
-      console.log('Order not found or already processed:', orderId);
-      return;
-    }
-
-    // ── Caixa de frete: registra o que foi de fato cobrado do cliente ─────
-    // Best-effort, nunca deve travar a confirmação do pedido.
-    try {
-      const shippingCollected = (order.shippingCents as number) ?? 0;
-      if (shippingCollected > 0) await recordShippingCollected(shippingCollected);
-    } catch (err) {
-      console.warn(`[shipping-ledger] falha ao registrar coleta do pedido ${orderId}:`, err);
-    }
-
-    // ── Limpa o carrinho do cliente + notifica vendedor ───────────────────
-    // Fora da transação (best-effort, não precisa ser atômico com o
-    // pagamento em si).
-    const batch = adminDb.batch();
-    const cartRef = adminDb.collection('carts').doc(order.userId as string);
-    batch.update(cartRef, { items: [], updatedAt: FieldValue.serverTimestamp() });
-
-    const notifRef = adminDb
-      .collection('notifications')
-      .doc('seller')
-      .collection('items')
-      .doc();
-    batch.set(notifRef, {
-      type: 'new_order',
-      orderId,
-      message: `Novo pedido pago: #${orderId.slice(-8).toUpperCase()}`,
-      read: false,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    await batch.commit();
-    console.log(`Order ${orderId} confirmed, ${note}`);
-
-    // Push pro vendor (best-effort, nunca deve afetar a confirmação do pedido)
-    const payMethodLabel = (order.payment as { method: string }).method === 'pix' ? 'PIX' : 'Cartão';
-    // IMPORTANTE: await de propósito, ver nota em create-pix/route.ts
-    // sobre CPU throttling do Cloud Run em chamadas fire-and-forget.
-    await notifySeller({
-      title: 'Pagamento confirmado 🎉',
-      body: `${summarizeOrderItems((order.items ?? []) as { productName: string; quantity: number }[])} · ${formatCurrency(order.totalCents as number)} · ${payMethodLabel}`,
-      url: `/painel/pedidos/${orderId}`,
-      data: { orderId, event: 'payment_confirmed' },
-    });
-
-    // ── Email de confirmação ao cliente ───────────────────────────────────
-    // Fora do batch (best-effort, falha de email não reverte o pedido)
-    try {
-      const userSnap = await adminDb.collection('users').doc(order.userId as string).get();
-      const userData = userSnap.data() ?? {};
-      const customerName  = (userData.name ?? userData.displayName ?? 'Cliente') as string;
-
-      // Tenta email do Firestore primeiro; cai para Firebase Auth como fallback
-      let customerEmail = userData.email as string | undefined;
-      if (!customerEmail) {
-        try {
-          const authUser = await adminAuth.getUser(order.userId as string);
-          customerEmail = authUser.email;
-        } catch {
-          console.warn(`[webhook] não foi possível obter email do Auth para uid=${order.userId}`);
-        }
-      }
-
-      if (customerEmail) {
-        const orderUrl = `https://mikma.com.br/pedidos/${orderId}`;
-        const shortId  = orderId.slice(-8).toUpperCase();
-        const items    = order.items as Array<{ productName: string; quantity: number; unitPrice: number }>;
-        const itemLines = items
-          .map(i => `${i.quantity}x ${i.productName}, ${formatCurrency(i.unitPrice * i.quantity)}`)
-          .join('\n');
-
-        const payMethod = (order.payment as { method: string }).method === 'pix' ? 'PIX' : 'Cartão de crédito';
-        const total = formatCurrency(order.totalCents as number);
-
-        await sendEmail({
-          to: customerEmail,
-          subject: `Pedido #${shortId} confirmado, Mikma Lençóis`,
-          text: [
-            `Olá, ${customerName}!`,
-            '',
-            `Seu pedido #${shortId} foi confirmado. Obrigado pela compra!`,
-            '',
-            'ITENS:',
-            itemLines,
-            '',
-            `Total: ${total} via ${payMethod}`,
-            '',
-            `Acompanhe seu pedido: ${orderUrl}`,
-            '',
-            'Qualquer dúvida, responda este e-mail.',
-            'Equipe Mikma Lençóis',
-          ].join('\n'),
-          html: `
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#FAF8F5;font-family:Georgia,serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF8F5;padding:40px 20px;">
-<tr><td align="center">
-<table width="100%" style="max-width:480px;background:#ffffff;border:1px solid #E6DFD5;">
-  <tr><td style="background:#1E1208;padding:28px 32px;">
-    <p style="margin:0;color:#FAF8F5;font-size:20px;font-style:italic;letter-spacing:1px;">Mikma Lençóis</p>
-  </td></tr>
-  <tr><td style="padding:36px;">
-    <p style="margin:0 0 6px;font-size:18px;color:#1E1208;font-weight:bold;">Pedido confirmado!</p>
-    <p style="margin:0 0 24px;font-size:14px;color:#705A48;">Olá, ${customerName}. Recebemos seu pagamento e estamos preparando seu pedido.</p>
-
-    <p style="margin:0 0 8px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.1em;color:#B09C8C;">Pedido #${shortId}</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E6DFD5;margin-bottom:24px;">
-      ${items.map(i => `
-      <tr><td style="padding:10px 14px;border-bottom:1px solid #F0EAE1;font-size:13px;color:#1E1208;">
-        ${i.quantity}x ${i.productName}
-      </td><td style="padding:10px 14px;border-bottom:1px solid #F0EAE1;font-size:13px;color:#1E1208;text-align:right;white-space:nowrap;">
-        ${formatCurrency(i.unitPrice * i.quantity)}
-      </td></tr>`).join('')}
-      <tr><td style="padding:12px 14px;font-size:14px;font-weight:bold;color:#1E1208;">Total</td>
-          <td style="padding:12px 14px;font-size:14px;font-weight:bold;color:#1E1208;text-align:right;">${total}</td></tr>
-    </table>
-
-    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-bottom:24px;">
-      <a href="${orderUrl}" style="display:inline-block;background:#C4714A;color:#ffffff;font-family:Georgia,serif;font-size:14px;font-weight:bold;text-decoration:none;padding:14px 36px;">
-        Acompanhar pedido
-      </a>
-    </td></tr></table>
-
-    <p style="margin:0;font-size:12px;color:#B09C8C;text-align:center;">
-      Dúvidas? Responda este e-mail ou acesse <a href="https://mikma.com.br" style="color:#C4714A;">mikma.com.br</a>
-    </p>
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`,
-          from: 'noreply',
-        });
-
-        console.log(`[webhook] email de confirmação enviado para ${customerEmail}, pedido ${orderId}`);
-      }
-    } catch (emailErr) {
-      // Falha de email não deve quebrar o webhook, pedido já foi confirmado
-      console.error('[webhook] falha ao enviar email de confirmação:', emailErr);
-    }
-  }
+  // Confirmação de pagamento (transação + estoque + notificações + email)
+  // vive em src/lib/orders/confirmPayment.ts, compartilhada com a
+  // confirmação manual do painel (/api/orders/[id]/mark-paid-manually).
 
   if (eventType === 'transparent.expired') {
     // PIX expirou, marca o pedido como payment_expired e libera reserva de
@@ -410,7 +221,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    await confirmOrder(orderId, txId, `PIX confirmado · txId: ${txId.slice(-8)}`);
+    await confirmOrderPaid(orderId, txId, `PIX confirmado · txId: ${txId.slice(-8)}`);
   }
 
   if (eventType === 'checkout.completed') {
@@ -424,7 +235,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    await confirmOrder(orderId, txId, `Cartão confirmado · checkoutId: ${txId.slice(-8)}`);
+    await confirmOrderPaid(orderId, txId, `Cartão confirmado · checkoutId: ${txId.slice(-8)}`);
   }
 
   // Always 200 for other event types (transparent.refunded, subscription.*, etc.)

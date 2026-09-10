@@ -156,6 +156,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [cancelOrderError, setCancelOrderError] = useState<string | null>(null);
   const [simulatingPayment, setSimulatingPayment] = useState(false);
   const [simulatePaymentError, setSimulatePaymentError] = useState<string | null>(null);
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [markPaidError, setMarkPaidError] = useState<string | null>(null);
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnRegistered, setReturnRegistered] = useState(false);
   const [fraudSignals, setFraudSignals] = useState<{ reason: string; relatedOrderIds: string[] }[]>([]);
@@ -277,6 +279,50 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       setSimulatePaymentError('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setSimulatingPayment(false);
+    }
+  }
+
+  async function markPaidManually() {
+    if (!order) return;
+    const { confirmed: hasNote, value: note } = await confirmDialog({
+      message: 'Confirmar pagamento por fora',
+      detail: 'Descreva como o cliente pagou (aparece no registro do pedido, pra você lembrar depois). Ex: "Dinheiro na retirada", "Transferência direto pro Felipe", "Combinado por WhatsApp".',
+      withInput: true,
+      inputPlaceholder: 'Como o cliente pagou?',
+      confirmLabel: 'Continuar',
+    });
+    if (!hasNote || !note?.trim()) {
+      if (hasNote) await confirmDialog({ message: 'Descreva como o pagamento foi feito.', alertOnly: true });
+      return;
+    }
+
+    const { confirmed } = await confirmDialog({
+      message: 'Marcar este pedido como pago?',
+      detail: `"${note.trim()}" — isso confirma o pedido, debita o estoque e envia o e-mail de confirmação pro cliente, exatamente como um pagamento pela AbacatePay. Use só quando o dinheiro já estiver garantido.`,
+      confirmLabel: 'Marcar como pago',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    setMarkingPaid(true);
+    setMarkPaidError(null);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch(`/api/orders/${id}/mark-paid-manually`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ note: note.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMarkPaidError(data.error ?? 'Não foi possível confirmar o pagamento.');
+        return;
+      }
+      // onSnapshot já ativo na página atualiza a tela sozinho.
+    } catch {
+      setMarkPaidError('Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+      setMarkingPaid(false);
     }
   }
 
@@ -784,6 +830,32 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               {simulatePaymentError && (
                 <p className="text-[12px] text-red-600 mt-2">{simulatePaymentError}</p>
               )}
+            </div>
+          )}
+
+          {order.status === 'pending_payment' && !order.payment.abacateSandbox && (
+            <div className="pt-3 border-t border-warm mt-1">
+              <p className="text-[11px] text-faint mb-2 leading-relaxed">
+                Cliente pagou por fora (dinheiro, transferência, outra plataforma)? Confirme manualmente, sem esperar o PIX/cartão.
+              </p>
+              <button
+                onClick={markPaidManually}
+                disabled={markingPaid}
+                className="w-full bg-ink text-paper text-[13px] font-bold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
+              >
+                {markingPaid ? 'Confirmando…' : 'Marcar como pago manualmente'}
+              </button>
+              {markPaidError && (
+                <p className="text-[12px] text-red-600 mt-2">{markPaidError}</p>
+              )}
+            </div>
+          )}
+
+          {order.payment.confirmedManuallyBy && (
+            <div className="mt-2.5 px-2.5 py-1.5 bg-warm border border-mist rounded-md">
+              <p className="text-[11px] text-mid">
+                <span className="font-semibold">Confirmado manualmente</span>{order.payment.confirmedManuallyNote ? ` · ${order.payment.confirmedManuallyNote}` : ''}
+              </p>
             </div>
           )}
         </Card>
