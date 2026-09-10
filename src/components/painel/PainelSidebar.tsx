@@ -45,11 +45,22 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
     <aside className="w-64 shrink-0 flex flex-col bg-paper h-full border-r border-mist/70">
       {/* Brand */}
       <div className="h-16 flex items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 -ml-2 hover:bg-warm transition-colors" onClick={onClose}>
+        {/* <a> normal (não <Link>) de propósito: sair do painel precisa de
+            um reload de página completo, não uma navegação client-side do
+            Next.js. Se o site estiver em manutenção e o cookie de bypass
+            do staff (__session, expira em 1h) tiver expirado nesse
+            instante, o middleware redireciona pra /manutencao — só que
+            durante uma navegação client-side (<Link>) o App Router às
+            vezes não segue esse redirect corretamente, deixando a pessoa
+            "presa" na tela do painel sem nenhum erro visível. Um <a>
+            força reload completo, o navegador sempre respeita o redirect
+            do middleware, então na pior das hipóteses cai em /manutencao
+            (nunca fica parado sem reação). */}
+        <a href="/" className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 -ml-2 hover:bg-warm transition-colors">
           <BrandLogo alt="Mikma" className="h-7 w-auto object-contain" />
           <div className="w-px h-4 bg-mist" />
           <span className="font-mono text-[9px] text-clay-l tracking-[0.22em] uppercase">Painel</span>
-        </Link>
+        </a>
         <NotificationBell />
       </div>
 
@@ -94,13 +105,14 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
           <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-faint mb-0.5">Sessão</p>
           <p className="text-[11.5px] text-ink font-medium truncate">{user?.email}</p>
         </div>
-        <Link
+        {/* <a> normal, não <Link>, mesmo motivo do logo acima. */}
+        <a
           href="/"
           className="flex items-center gap-2 px-3 py-2 text-[12px] text-mid hover:text-ink hover:bg-warm transition-colors rounded-xl"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           Ver loja
-        </Link>
+        </a>
         <button
           onClick={logout}
           className="flex items-center gap-2 w-full px-3 py-2 text-[12px] text-mid hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors rounded-xl text-left"
