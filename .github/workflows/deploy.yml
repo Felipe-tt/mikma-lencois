@@ -79,7 +79,7 @@ jobs:
         run: npm test
 
       - name: Instalar JDK (exigido pelo emulador do Firestore)
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
