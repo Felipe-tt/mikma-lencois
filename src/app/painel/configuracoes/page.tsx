@@ -388,6 +388,9 @@ export default function ConfiguracoesPage() {
           </Card>
 
           <Card icon="produto" title="AbacatePay, ambiente" desc="Alterna entre a chave de Dev Mode e a de produção da AbacatePay, sem novo deploy">
+            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mb-2.5">
+              O secret ABACATEPAY_SANDBOX_API_KEY ainda não foi configurado no Secret Manager do Firebase (só existe como secret do GitHub Actions, que não é lido em produção). Ligar este toggle agora vai gerar erro "provedor de pagamento não configurado" no checkout.
+            </p>
             <Toggle
               label="Usar ambiente de teste (Dev Mode)"
               checked={!!settings.abacatePaySandboxMode}
