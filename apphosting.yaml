@@ -89,9 +89,6 @@ env:
   - variable: ABACATEPAY_API_KEY
     secret: ABACATEPAY_API_KEY
     availability: [RUNTIME]
-  - variable: ABACATEPAY_SANDBOX_API_KEY
-    secret: ABACATEPAY_SANDBOX_API_KEY
-    availability: [RUNTIME]
   - variable: ABACATEPAY_WEBHOOK_SECRET
     secret: ABACATEPAY_WEBHOOK_SECRET
     availability: [RUNTIME]
