@@ -91,11 +91,6 @@ async function registerInQueue(projectId: string, docId: string, ip: string, req
     requestedPath: { stringValue: req.nextUrl.pathname + req.nextUrl.search },
     platform: { stringValue: (req.headers.get('sec-ch-ua-platform') ?? '').replace(/"/g, '') },
     isMobile: { stringValue: req.headers.get('sec-ch-ua-mobile') ?? '' },
-    geoCity: { stringValue: '' },
-    geoRegion: { stringValue: '' },
-    geoCountry: { stringValue: '' },
-    isp: { stringValue: '' },
-    geoDebug: { stringValue: 'pending' },
   };
   try {
     await fetch(url, {
@@ -218,19 +213,9 @@ export async function proxy(req: NextRequest) {
           // acesso" nem ter IP geolocalizado - isso só existe pra dar
           // visibilidade de visitante real esperando no painel. Pular
           // esse trabalho pra bots corta a maior fonte de custo: cada
-          // hit de bot deixa de gerar uma escrita no Firestore + até 3
-          // chamadas a APIs externas de geo.
+          // hit de bot deixa de gerar uma escrita no Firestore.
           if (!isBot) {
             await registerInQueue(projectId, docId, ip, req);
-            // Geo não é resolvida aqui de propósito: fazer isso no
-            // middleware (mesmo via waitUntil) mantinha a isolate do
-            // Cloud Run viva e faturada por vários segundos extras a
-            // mais por visita, só pra popular um dado cosmético do
-            // painel. registerInQueue já grava geoDebug:'pending', e é
-            // a própria página /manutencao que dispara
-            // /api/maintenance/geo no carregamento — essa rota roda
-            // durante um request HTTP normal (não em cima do redirect),
-            // então não estica o tempo faturado desta invocação.
           }
 
           const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));

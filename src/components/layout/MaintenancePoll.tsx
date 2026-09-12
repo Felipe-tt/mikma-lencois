@@ -18,11 +18,6 @@ import { useEffect } from 'react';
  */
 export function MaintenancePoll() {
   useEffect(() => {
-    // Dispara o geo lookup assim que a página carrega. Roda durante um
-    // request HTTP ativo → Cloud Run não congela a instância. É isso que
-    // garante que o geo deixe de ficar "pending" no painel.
-    fetch('/api/maintenance/geo').catch(() => {});
-
     // Polling: assim que a manutenção acabar de verdade (não apenas "esse
     // navegador está liberado"), sai sozinho de /manutencao de volta pra
     // "/", sem precisar que o visitante dê refresh. Checa a cada 20s (antes

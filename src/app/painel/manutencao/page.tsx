@@ -1,5 +1,5 @@
 'use client';
-import { IconCheck, IconPin } from '@/components/ui/Icon';
+import { IconCheck } from '@/components/ui/Icon';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -25,11 +25,6 @@ type QueueEntry = {
   platform?: string;
   isMobile?: string;
   isBot?: boolean;
-  geoCity?: string;
-  geoRegion?: string;
-  geoCountry?: string;
-  isp?: string;
-  geoDebug?: string;
 };
 
 type Status = {
@@ -260,7 +255,6 @@ export default function ManutencaoPage() {
         ) : (
           <div className="divide-y divide-mist">
             {currentList.map(entry => {
-              const location = [entry.geoCity, entry.geoRegion, entry.geoCountry].filter(Boolean).join(', ');
               const device = entry.isMobile === '?1' ? 'Celular' : entry.isMobile === '?0' ? 'Computador' : '';
               return (
                 <div key={entry.id} className="px-5 py-3 flex items-start justify-between gap-4">
@@ -282,20 +276,11 @@ export default function ManutencaoPage() {
                         {entry.uid && (
                           <span className="text-[10px] text-faint-l font-mono">{entry.ip}</span>
                         )}
-                        {location && (
-                          <span className="text-[10px] text-faint flex items-center gap-0.5"><IconPin size={9} />{location}</span>
-                        )}
-                        {entry.isp && (
-                          <span className="text-[10px] text-faint">{entry.isp}</span>
-                        )}
                         {device && (
                           <span className="text-[10px] text-faint">{device}</span>
                         )}
                         {entry.platform && (
                           <span className="text-[10px] text-faint">{entry.platform}</span>
-                        )}
-                        {entry.geoDebug && (
-                          <span className="text-[10px] text-red-400">geo: {entry.geoDebug}</span>
                         )}
                       </div>
 
