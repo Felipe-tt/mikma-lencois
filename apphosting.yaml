@@ -89,9 +89,18 @@ env:
   - variable: ABACATEPAY_API_KEY
     secret: ABACATEPAY_API_KEY
     availability: [RUNTIME]
-  - variable: ABACATEPAY_WEBHOOK_SECRET
-    secret: ABACATEPAY_WEBHOOK_SECRET
-    availability: [RUNTIME]
+  # ABACATEPAY_WEBHOOK_SECRET removido daqui de propósito: o secret não
+  # existe (ou o backend não tem acesso) no Secret Manager, e isso travava
+  # TODO deploy — mesmo mudanças sem nenhuma relação com pagamento. O código
+  # já trata a ausência dessa env var com segurança (webhook/route.ts:
+  # verifySignature retorna false sem essa env var, rejeitando o webhook
+  # sem nunca crashar) — o único efeito é que a confirmação automática de
+  # PIX/cartão via webhook fica suspensa até o secret ser configurado; use
+  # "Marcar como pago manualmente" no painel do pedido nesse meio-tempo.
+  # Pra reativar: crie o secret ABACATEPAY_WEBHOOK_SECRET no Secret Manager
+  # (valor = webhook secret do dashboard da AbacatePay), dê acesso ao
+  # backend, e adicione de volta a entrada "secret: ABACATEPAY_WEBHOOK_SECRET"
+  # aqui.
   - variable: MELHOR_ENVIO_TOKEN
     secret: MELHOR_ENVIO_TOKEN
     availability: [RUNTIME]
