@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import { IconCard, IconMoney, IconBox, IconTruck, IconCheck, IconAlert, IconBell } from '@/components/ui/Icon';
 
 type Notification = {
   id: string;
@@ -15,14 +16,15 @@ type Notification = {
   createdAt: { toMillis: () => number } | null;
 };
 
-const ICON_BY_TYPE: Record<string, string> = {
-  payment_initiated: '💳',
-  new_order: '🎉',
-  uber_pickup: '🛵',
-  uber_delivered: '✅',
-  uber_problem: '⚠️',
-  low_stock: '📦',
+const NOTIF_STYLE: Record<string, { Icon: React.FC<{ size?: number; className?: string }>; color: string }> = {
+  payment_initiated: { Icon: IconCard, color: 'bg-blue-500' },
+  new_order:         { Icon: IconMoney, color: 'bg-emerald-500' },
+  low_stock:         { Icon: IconBox, color: 'bg-amber-500' },
+  uber_pickup:       { Icon: IconTruck, color: 'bg-purple-500' },
+  uber_delivered:    { Icon: IconCheck, color: 'bg-emerald-600' },
+  uber_problem:      { Icon: IconAlert, color: 'bg-red-500' },
 };
+const NOTIF_STYLE_DEFAULT = { Icon: IconBell, color: 'bg-stone-400' };
 
 function timeAgo(ms: number): string {
   const diff = Date.now() - ms;
@@ -151,24 +153,29 @@ export function NotificationBell() {
           <div className="overflow-y-auto flex-1">
             {items.length === 0 ? (
               <p className="text-[12px] text-faint text-center py-8">Nenhuma notificação ainda.</p>
-            ) : items.map(n => (
-              <button
-                key={n.id}
-                onClick={() => handleClick(n)}
-                className={`w-full text-left px-4 py-3 border-b border-warm last:border-0 hover:bg-warm transition-colors flex items-start gap-2.5 ${!n.read ? 'bg-[#FDF6EF]' : ''}`}
-              >
-                <span className="text-[15px] shrink-0 mt-0.5">{ICON_BY_TYPE[n.type] ?? '🔔'}</span>
-                <span className="flex-1 min-w-0">
-                  <span className={`block text-[12.5px] leading-snug ${!n.read ? 'font-semibold text-ink' : 'text-mid'}`}>
-                    {n.message}
+            ) : items.map(n => {
+              const { Icon: NotifIcon, color } = NOTIF_STYLE[n.type] ?? NOTIF_STYLE_DEFAULT;
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => handleClick(n)}
+                  className={`w-full text-left px-4 py-3 border-b border-warm last:border-0 hover:bg-warm transition-colors flex items-start gap-3 ${!n.read ? 'bg-[#FDF6EF]' : ''}`}
+                >
+                  <span className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center ${color}`}>
+                    <NotifIcon size={13} className="text-white" />
                   </span>
-                  {n.createdAt && (
-                    <span className="block text-[10.5px] text-faint mt-0.5">{timeAgo(n.createdAt.toMillis())}</span>
-                  )}
-                </span>
-                {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-clay-l shrink-0 mt-1.5" />}
-              </button>
-            ))}
+                  <span className="flex-1 min-w-0 pt-0.5">
+                    <span className={`block text-[12.5px] leading-snug ${!n.read ? 'font-semibold text-ink' : 'text-mid'}`}>
+                      {n.message}
+                    </span>
+                    {n.createdAt && (
+                      <span className="block text-[10.5px] text-faint mt-0.5">{timeAgo(n.createdAt.toMillis())}</span>
+                    )}
+                  </span>
+                  {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-clay-l shrink-0 mt-2" />}
+                </button>
+              );
+            })}
           </div>
         </div>,
         document.body

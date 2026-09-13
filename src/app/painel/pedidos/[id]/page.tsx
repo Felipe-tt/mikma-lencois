@@ -71,11 +71,11 @@ const TIMELINE_ICON_COMP: Record<string, React.FC<{ size?: number; className?: s
 };
 
 const TIMELINE_COLOR: Record<string, string> = {
-  created: 'bg-mist', payment_initiated: 'bg-blue-300', payment_confirmed: 'bg-emerald-400',
-  payment_expired: 'bg-orange-400', payment_failed: 'bg-red-400', pending_payment: 'bg-yellow-300',
-  paid: 'bg-emerald-400', preparing: 'bg-blue-400', shipped: 'bg-purple-400',
-  delivery_cancelled: 'bg-orange-300',
-  delivered: 'bg-emerald-500', cancelled: 'bg-red-400',
+  created: 'bg-stone-400', payment_initiated: 'bg-blue-400', payment_confirmed: 'bg-emerald-500',
+  payment_expired: 'bg-orange-500', payment_failed: 'bg-red-500', pending_payment: 'bg-amber-500',
+  paid: 'bg-emerald-500', preparing: 'bg-blue-500', shipped: 'bg-purple-500',
+  delivery_cancelled: 'bg-orange-500',
+  delivered: 'bg-emerald-600', cancelled: 'bg-red-500',
 };
 
 function timelineLabel(status: string, order: Order): string {
@@ -935,20 +935,30 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             {timeline.length === 0 ? (
               <p className="text-[12px] text-faint text-center py-3">Sem histórico registrado.</p>
             ) : (
-              <div className="flex flex-col gap-4">
-                {timeline.map((ev, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className={`w-2.5 h-2.5 shrink-0 mt-1.5 ${TIMELINE_COLOR[ev.status] ?? 'bg-mist'}`} />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        {(() => { const TLIcon = TIMELINE_ICON_COMP[ev.status]; return TLIcon ? <TLIcon size={13} /> : <span>•</span>; })()}
-                        <p className="text-[13px] font-semibold text-ink">{timelineLabel(ev.status, order)}</p>
+              <div className="relative">
+                {timeline.length > 1 && (
+                  <div className="absolute left-[17px] top-5 bottom-5 w-px bg-mist" />
+                )}
+                <div className="flex flex-col gap-5">
+                  {timeline.map((ev, i) => {
+                    const TLIcon = TIMELINE_ICON_COMP[ev.status] ?? IconClock;
+                    const isLatest = i === 0;
+                    return (
+                      <div key={i} className="flex items-start gap-4">
+                        <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center relative z-10 ${TIMELINE_COLOR[ev.status] ?? 'bg-stone-400'}`}>
+                          <TLIcon size={16} className="text-white" />
+                        </div>
+                        <div className="flex-1 pt-1.5">
+                          <p className={`text-[13px] font-semibold leading-snug ${isLatest ? 'text-ink' : 'text-mid'}`}>
+                            {timelineLabel(ev.status, order)}
+                          </p>
+                          {ev.note && <p className="text-[12px] text-faint mt-0.5 leading-relaxed">{ev.note}</p>}
+                          <p className="text-[11px] text-faint mt-1 tabular-nums">{formatDateTime(ev.at)}</p>
+                        </div>
                       </div>
-                      {ev.note && <p className="text-[12px] text-mid mt-0.5 ml-7">{ev.note}</p>}
-                      <p className="text-[11px] text-faint mt-0.5 ml-7 tabular-nums">{formatDateTime(ev.at)}</p>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
