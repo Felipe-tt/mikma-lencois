@@ -98,27 +98,34 @@ export async function confirmOrderPaid(
 
   // ── Limpa o carrinho do cliente + notifica vendedor ───────────────────
   // Fora da transação (best-effort, não precisa ser atômico com o
-  // pagamento em si).
-  const batch = adminDb.batch();
-  const cartRef = adminDb.collection('carts').doc(order.userId as string);
-  batch.update(cartRef, { items: [], updatedAt: FieldValue.serverTimestamp() });
+  // pagamento em si). O pedido JÁ foi confirmado como pago acima —
+  // uma falha aqui (rede instável, etc.) não pode fazer a função inteira
+  // lançar e o chamador (mark-paid-manually, simulate-payment) devolver
+  // um 500 pro vendedor como se o pagamento não tivesse sido confirmado.
+  try {
+    const batch = adminDb.batch();
+    const cartRef = adminDb.collection('carts').doc(order.userId as string);
+    batch.update(cartRef, { items: [], updatedAt: FieldValue.serverTimestamp() });
 
-  const notifRef = adminDb
-    .collection('notifications')
-    .doc('seller')
-    .collection('items')
-    .doc();
-  batch.set(notifRef, {
-    type: 'new_order',
-    orderId,
-    message: manual
-      ? `Pedido marcado como pago manualmente: #${orderId.slice(-8).toUpperCase()}`
-      : `Novo pedido pago: #${orderId.slice(-8).toUpperCase()}`,
-    read: false,
-    createdAt: FieldValue.serverTimestamp(),
-  });
+    const notifRef = adminDb
+      .collection('notifications')
+      .doc('seller')
+      .collection('items')
+      .doc();
+    batch.set(notifRef, {
+      type: 'new_order',
+      orderId,
+      message: manual
+        ? `Pedido marcado como pago manualmente: #${orderId.slice(-8).toUpperCase()}`
+        : `Novo pedido pago: #${orderId.slice(-8).toUpperCase()}`,
+      read: false,
+      createdAt: FieldValue.serverTimestamp(),
+    });
 
-  await batch.commit();
+    await batch.commit();
+  } catch (err) {
+    console.warn(`[confirm-order-paid] falha ao limpar carrinho/notificar (best-effort), pedido ${orderId} já confirmado:`, err);
+  }
   console.log(`Order ${orderId} confirmed, ${note}`);
 
   // Push pro vendedor (best-effort, nunca deve afetar a confirmação do pedido)
