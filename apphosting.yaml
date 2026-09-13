@@ -136,3 +136,4 @@ env:
 # processo de CI/deploy, nao devem ir para dentro do backend rodando):
 #   GOOGLE_APPLICATION_CREDENTIALS
 # Forçar novo deploy após reativar versões de secret no Secret Manager (2026-09-12T19:28:56Z)
+# Força novo deploy: PR #137 (redesign) nunca disparou rollout no App Hosting (2026-09-13T11:38:40Z)
