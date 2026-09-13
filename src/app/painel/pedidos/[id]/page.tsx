@@ -937,16 +937,22 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             ) : (
               <div className="relative">
                 {timeline.length > 1 && (
-                  <div className="absolute left-[17px] top-5 bottom-5 w-px bg-mist" />
+                  <div className="absolute left-[16px] top-5 bottom-5 w-[2px] bg-mist" />
                 )}
                 <div className="flex flex-col gap-5">
                   {timeline.map((ev, i) => {
                     const TLIcon = TIMELINE_ICON_COMP[ev.status] ?? IconClock;
                     const isLatest = i === 0;
+                    // Só o evento mais recente ganha a cor do status (padrão
+                    // já usado no TrackingTimeline, o rastreio da
+                    // transportadora acima) — colorir TODO o histórico
+                    // deixa a lista parecendo confete, sem hierarquia clara
+                    // do que é "agora" vs. "já passou".
+                    const badgeColor = isLatest ? (TIMELINE_COLOR[ev.status] ?? 'bg-stone-400') : 'bg-stone-300';
                     return (
                       <div key={i} className="flex items-start gap-4">
-                        <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center relative z-10 ${TIMELINE_COLOR[ev.status] ?? 'bg-stone-400'}`}>
-                          <TLIcon size={16} className="text-white" />
+                        <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center relative z-10 ${badgeColor}`}>
+                          <TLIcon size={16} className={isLatest ? 'text-white' : 'text-white/80'} />
                         </div>
                         <div className="flex-1 pt-1.5">
                           <p className={`text-[13px] font-semibold leading-snug ${isLatest ? 'text-ink' : 'text-mid'}`}>
