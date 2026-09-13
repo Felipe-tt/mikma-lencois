@@ -16,15 +16,20 @@ type Notification = {
   createdAt: { toMillis: () => number } | null;
 };
 
-const NOTIF_STYLE: Record<string, { Icon: React.FC<{ size?: number; className?: string }>; color: string }> = {
-  payment_initiated: { Icon: IconCard, color: 'bg-blue-500' },
-  new_order:         { Icon: IconMoney, color: 'bg-emerald-500' },
-  low_stock:         { Icon: IconBox, color: 'bg-amber-500' },
-  uber_pickup:       { Icon: IconTruck, color: 'bg-purple-500' },
-  uber_delivered:    { Icon: IconCheck, color: 'bg-emerald-600' },
-  uber_problem:      { Icon: IconAlert, color: 'bg-red-500' },
+// Mesma paleta pastel usada nos badges de status do pedido (ver
+// TIMELINE_TONE em painel/pedidos/[id]/page.tsx e .badge-* em
+// globals.css) — fundo suave + ícone colorido, não círculo sólido com
+// ícone branco. Mantém as notificações visualmente ligadas ao resto do
+// painel em vez de introduzir uma paleta "SaaS genérica" nova.
+const NOTIF_STYLE: Record<string, { Icon: React.FC<{ size?: number; className?: string }>; tone: string }> = {
+  payment_initiated: { Icon: IconCard,  tone: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300' },
+  new_order:         { Icon: IconMoney, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
+  low_stock:         { Icon: IconBox,   tone: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' },
+  uber_pickup:       { Icon: IconTruck, tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' },
+  uber_delivered:    { Icon: IconCheck, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
+  uber_problem:      { Icon: IconAlert, tone: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300' },
 };
-const NOTIF_STYLE_DEFAULT = { Icon: IconBell, color: 'bg-stone-400' };
+const NOTIF_STYLE_DEFAULT = { Icon: IconBell, tone: 'bg-warm text-faint' };
 
 function timeAgo(ms: number): string {
   const diff = Date.now() - ms;
@@ -154,15 +159,15 @@ export function NotificationBell() {
             {items.length === 0 ? (
               <p className="text-[12px] text-faint text-center py-8">Nenhuma notificação ainda.</p>
             ) : items.map(n => {
-              const { Icon: NotifIcon, color } = NOTIF_STYLE[n.type] ?? NOTIF_STYLE_DEFAULT;
+              const { Icon: NotifIcon, tone } = NOTIF_STYLE[n.type] ?? NOTIF_STYLE_DEFAULT;
               return (
                 <button
                   key={n.id}
                   onClick={() => handleClick(n)}
                   className={`w-full text-left px-4 py-3 border-b border-warm last:border-0 hover:bg-warm transition-colors flex items-start gap-3 ${!n.read ? 'bg-[#FDF6EF]' : ''}`}
                 >
-                  <span className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center ${color}`}>
-                    <NotifIcon size={13} className="text-white" />
+                  <span className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center ${tone}`}>
+                    <NotifIcon size={13} />
                   </span>
                   <span className="flex-1 min-w-0 pt-0.5">
                     <span className={`block text-[12.5px] leading-snug ${!n.read ? 'font-semibold text-ink' : 'text-mid'}`}>

@@ -70,13 +70,27 @@ const TIMELINE_ICON_COMP: Record<string, React.FC<{ size?: number; className?: s
   cancelled: IconX,
 };
 
-const TIMELINE_COLOR: Record<string, string> = {
-  created: 'bg-stone-400', payment_initiated: 'bg-blue-400', payment_confirmed: 'bg-emerald-500',
-  payment_expired: 'bg-orange-500', payment_failed: 'bg-red-500', pending_payment: 'bg-amber-500',
-  paid: 'bg-emerald-500', preparing: 'bg-blue-500', shipped: 'bg-purple-500',
-  delivery_cancelled: 'bg-orange-500',
-  delivered: 'bg-emerald-600', cancelled: 'bg-red-500',
+// Mesma paleta dos badges de status do pedido (.badge-paid, .badge-shipped
+// etc. em globals.css) — fundo pastel + texto colorido, não círculo sólido
+// com ícone branco. Mantém a timeline visualmente ligada ao resto da tela
+// (o badge de status grande no topo usa exatamente essas mesmas cores),
+// em vez de introduzir uma paleta nova que não existe em nenhum outro
+// lugar do app.
+const TIMELINE_TONE: Record<string, string> = {
+  created:            'bg-stone-100 text-stone-500 border-stone-200/80 dark:bg-stone-500/10 dark:text-stone-400 dark:border-stone-500/30',
+  payment_initiated:  'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30',
+  payment_confirmed:  'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30',
+  payment_expired:    'bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30',
+  payment_failed:     'bg-red-50 text-red-700 border-red-200/80 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/30',
+  pending_payment:    'bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30',
+  paid:               'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30',
+  preparing:          'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30',
+  shipped:            'bg-violet-50 text-violet-700 border-violet-200/80 dark:bg-violet-500/10 dark:text-violet-300 dark:border-violet-500/30',
+  delivery_cancelled: 'bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30',
+  delivered:          'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30',
+  cancelled:          'bg-red-50 text-red-700 border-red-200/80 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/30',
 };
+const TIMELINE_TONE_MUTED = 'bg-warm text-faint border-mist';
 
 function timelineLabel(status: string, order: Order): string {
   if (status === 'payment_initiated') {
@@ -937,28 +951,23 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             ) : (
               <div className="relative">
                 {timeline.length > 1 && (
-                  <div className="absolute left-[16px] top-5 bottom-5 w-[2px] bg-mist" />
+                  <div className="absolute left-[15px] top-4 bottom-4 w-px bg-mist" />
                 )}
-                <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-4">
                   {timeline.map((ev, i) => {
                     const TLIcon = TIMELINE_ICON_COMP[ev.status] ?? IconClock;
                     const isLatest = i === 0;
-                    // Só o evento mais recente ganha a cor do status (padrão
-                    // já usado no TrackingTimeline, o rastreio da
-                    // transportadora acima) — colorir TODO o histórico
-                    // deixa a lista parecendo confete, sem hierarquia clara
-                    // do que é "agora" vs. "já passou".
-                    const badgeColor = isLatest ? (TIMELINE_COLOR[ev.status] ?? 'bg-stone-400') : 'bg-stone-300';
+                    const tone = isLatest ? (TIMELINE_TONE[ev.status] ?? TIMELINE_TONE_MUTED) : TIMELINE_TONE_MUTED;
                     return (
-                      <div key={i} className="flex items-start gap-4">
-                        <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center relative z-10 ${badgeColor}`}>
-                          <TLIcon size={16} className={isLatest ? 'text-white' : 'text-white/80'} />
+                      <div key={i} className="flex items-start gap-3.5">
+                        <div className={`shrink-0 rounded-full border flex items-center justify-center relative z-10 transition-all ${tone} ${isLatest ? 'w-8 h-8' : 'w-7 h-7'}`}>
+                          <TLIcon size={isLatest ? 14 : 12} />
                         </div>
-                        <div className="flex-1 pt-1.5">
-                          <p className={`text-[13px] font-semibold leading-snug ${isLatest ? 'text-ink' : 'text-mid'}`}>
+                        <div className={`flex-1 ${isLatest ? 'pt-1' : 'pt-0.5'}`}>
+                          <p className={`leading-snug ${isLatest ? 'text-[13.5px] font-semibold text-ink' : 'text-[13px] font-medium text-mid'}`}>
                             {timelineLabel(ev.status, order)}
                           </p>
-                          {ev.note && <p className="text-[12px] text-faint mt-0.5 leading-relaxed">{ev.note}</p>}
+                          {ev.note && <p className="text-[12px] text-faint mt-0.5 italic leading-relaxed">{ev.note}</p>}
                           <p className="text-[11px] text-faint mt-1 tabular-nums">{formatDateTime(ev.at)}</p>
                         </div>
                       </div>
