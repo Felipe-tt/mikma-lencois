@@ -172,9 +172,18 @@ export async function POST(req: NextRequest) {
   }
   payload = validated.data;
 
-  const eventType  = payload.event_type as string | undefined;
-  const data       = payload.data       as Record<string, unknown> | undefined;
-  const deliveryId = (data?.id ?? payload.resource_id) as string | undefined;
+  // BUG CRÍTICO CORRIGIDO: o payload real da Uber Direct usa "kind" pro
+  // tipo de evento (ex: "event.delivery_status", "event.courier_update"),
+  // não "event_type". Com o nome errado, eventType SEMPRE vinha undefined
+  // pra qualquer webhook real da Uber — nenhum status ou posição do
+  // entregador nunca chegava a atualizar o pedido, silenciosamente (o
+  // webhook só retornava 200 {ok:true} de qualquer jeito, então nunca
+  // apareceu como erro pra ninguém notar). Confirmado nos exemplos oficiais:
+  // developer.uber.com/docs/deliveries/daas/references/api/webhooks/
+  // delivery-status-webhook e .../courier-update-webhook.
+  const eventType  = (payload.kind ?? payload.event_type) as string | undefined;
+  const data       = payload.data as Record<string, unknown> | undefined;
+  const deliveryId = (payload.delivery_id ?? data?.id ?? payload.resource_id) as string | undefined;
 
   if (!deliveryId) return NextResponse.json({ ok: true });
 
@@ -195,7 +204,9 @@ export async function POST(req: NextRequest) {
 
   // ── event.delivery_status ─────────────────────────────────────────────────
   if (eventType === 'event.delivery_status') {
-    const uberStatus = data?.status as string | undefined;
+    // status também vem no nível raiz do payload (payload.status) além de
+    // dentro de data — usa os dois como fallback, mesma defesa acima.
+    const uberStatus = (data?.status ?? payload.status) as string | undefined;
     if (!uberStatus) return NextResponse.json({ ok: true });
 
     const newStatus = STATUS_MAP[uberStatus] ?? orderData.status;
@@ -286,7 +297,11 @@ export async function POST(req: NextRequest) {
 
     // Posição ao vivo, chega a cada ~20s enquanto o motoboy está a
     // caminho. É o que alimenta o pino que se move no mapa embutido.
-    const location = courier.location as { lat?: number; lng?: number } | undefined;
+    // BUG CORRIGIDO: vem em payload.location (nível raiz), não em
+    // data.courier.location — confirmado no exemplo oficial da Uber
+    // (.../courier-update-webhook). Mantém data.courier.location como
+    // fallback só por segurança, caso a Uber mude o formato de novo.
+    const location = (payload.location ?? courier.location) as { lat?: number; lng?: number } | undefined;
     if (typeof location?.lat === 'number' && typeof location?.lng === 'number') {
       update['delivery.courierLat']        = location.lat;
       update['delivery.courierLng']        = location.lng;
