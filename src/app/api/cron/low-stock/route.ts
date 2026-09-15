@@ -86,6 +86,7 @@ export async function GET(req: NextRequest) {
           type: 'low_stock',
           message: `${statusWord}: ${label}, restam ${low.available} unidade(s)`,
           url: '/painel/estoque',
+          dedupeKey: `low_stock:${low.sku}`,
         });
 
         await alertRef.set({
@@ -103,12 +104,19 @@ export async function GET(req: NextRequest) {
   // Limpa alertas de SKUs que voltaram a ficar saudáveis, pra não acumular
   // lixo e pra que, se cair de novo no futuro, o aviso dispare na hora
   // (sem esperar o cooldown de um alerta antigo que não faz mais sentido).
+  // Some também a notificação do sino desse SKU (dedupeKey = mesmo id),
+  // senão ficaria uma linha de "estoque baixo" pra sempre visível mesmo
+  // depois de repor.
   const lowSkus = new Set(lowItems.map(l => l.sku));
   const alertsSnap = await adminDb.collection('stockAlerts').get();
   const batch = adminDb.batch();
   let toDelete = 0;
   for (const doc of alertsSnap.docs) {
-    if (!lowSkus.has(doc.id)) { batch.delete(doc.ref); toDelete++; }
+    if (!lowSkus.has(doc.id)) {
+      batch.delete(doc.ref);
+      batch.delete(adminDb.collection('notifications').doc('seller').collection('items').doc(`low_stock:${doc.id}`));
+      toDelete++;
+    }
   }
   if (toDelete > 0) { await batch.commit(); results.recovered = toDelete; }
 
