@@ -39,10 +39,12 @@ function StepIcon({ status, active }: { status: OrderStatus; active: boolean }) 
   return null;
 }
 
-// SVG ícones para timeline interna
+// SVG ícones para timeline interna — sempre currentColor, a cor vem do
+// badge (mesmo padrão da timeline do painel, ver TIMELINE_ICON_COMP em
+// /painel/pedidos/[id]/page.tsx).
 function TimelineIcon({ status }: { status: string }) {
   const base = { fill: 'none' as const, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-  const cls = 'w-4 h-4 stroke-clay-l';
+  const cls = 'w-4 h-4';
   if (status === 'created')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>;
   if (status === 'payment_initiated' || status === 'pending_payment')
@@ -50,19 +52,39 @@ function TimelineIcon({ status }: { status: string }) {
   if (status === 'payment_confirmed' || status === 'paid')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
   if (status === 'payment_expired')
-    return <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-amber-500" {...base}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
   if (status === 'payment_failed')
-    return <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-red-500" {...base}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
   if (status === 'preparing')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>;
   if (status === 'shipped')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
   if (status === 'delivered')
-    return <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-emerald-600" {...base}><polyline points="20 6 9 17 4 12"/></svg>;
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><polyline points="20 6 9 17 4 12"/></svg>;
   if (status === 'cancelled')
-    return <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-red-500" {...base}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+    return <svg viewBox="0 0 24 24" className={cls} {...base}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
   return <svg viewBox="0 0 24 24" className={cls} fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>;
 }
+
+// Mesma paleta usada na timeline do painel (TIMELINE_TONE em
+// /painel/pedidos/[id]/page.tsx) — fundo pastel + texto colorido, não
+// círculo sólido. Só o evento mais recente usa a cor do status; os
+// anteriores ficam neutros, evita efeito confete numa lista longa.
+const TIMELINE_TONE: Record<string, string> = {
+  created:            'bg-stone-100 text-stone-500',
+  payment_initiated:  'bg-blue-50 text-blue-700',
+  payment_confirmed:  'bg-emerald-50 text-emerald-700',
+  payment_expired:    'bg-amber-50 text-amber-700',
+  payment_failed:     'bg-red-50 text-red-700',
+  pending_payment:    'bg-amber-50 text-amber-700',
+  paid:               'bg-emerald-50 text-emerald-700',
+  preparing:          'bg-blue-50 text-blue-700',
+  shipped:            'bg-violet-50 text-violet-700',
+  delivery_cancelled: 'bg-amber-50 text-amber-700',
+  delivered:          'bg-emerald-50 text-emerald-700',
+  cancelled:          'bg-red-50 text-red-700',
+};
+const TIMELINE_TONE_MUTED = 'bg-[#FAF7F4] text-faint';
 
 const STATUS_STEPS: { status: OrderStatus; label: string }[] = [
   { status: 'pending_payment', label: 'Aguardando pagamento' },
@@ -354,25 +376,32 @@ export default function OrderDetailPage() {
             {timeline.length > 0 && (
               <section>
                 <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Histórico</h2>
-                <div className="border border-mist divide-y divide-mist">
-                  {timeline.map((ev, i) => (
-                    <div key={i} className="flex items-start gap-4 px-5 py-4">
-                      <div className="w-8 h-8 shrink-0 flex items-center justify-center bg-[#FAF7F4] border border-mist mt-0.5">
-                        <TimelineIcon status={ev.status} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-ink">
-                          {TIMELINE_LABEL[ev.status] ?? ev.status}
-                        </p>
-                        {ev.note && (
-                          <p className="text-xs text-mid mt-0.5">{ev.note}</p>
-                        )}
-                        <p className="text-xs text-faint mt-0.5 tabular-nums">
-                          {formatTsDateTime(ev.at)}
-                        </p>
-                      </div>
+                <div className="border border-mist p-5">
+                  <div className="relative">
+                    {timeline.length > 1 && (
+                      <div className="absolute left-[15px] top-4 bottom-4 w-px bg-mist" />
+                    )}
+                    <div className="flex flex-col gap-4">
+                      {timeline.map((ev, i) => {
+                        const isLatest = i === 0;
+                        const tone = isLatest ? (TIMELINE_TONE[ev.status] ?? TIMELINE_TONE_MUTED) : TIMELINE_TONE_MUTED;
+                        return (
+                          <div key={i} className="flex items-start gap-3.5">
+                            <div className={`shrink-0 rounded-full flex items-center justify-center relative z-10 ${tone} ${isLatest ? 'w-8 h-8' : 'w-7 h-7'}`}>
+                              <TimelineIcon status={ev.status} />
+                            </div>
+                            <div className={isLatest ? 'pt-1' : 'pt-0.5'}>
+                              <p className={isLatest ? 'text-sm font-semibold text-ink' : 'text-sm font-medium text-mid'}>
+                                {TIMELINE_LABEL[ev.status] ?? ev.status}
+                              </p>
+                              {ev.note && <p className="text-xs text-faint mt-0.5 italic">{ev.note}</p>}
+                              <p className="text-xs text-faint mt-1 tabular-nums">{formatTsDateTime(ev.at)}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  </div>
                 </div>
               </section>
             )}
