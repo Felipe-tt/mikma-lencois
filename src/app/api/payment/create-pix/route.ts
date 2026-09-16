@@ -13,6 +13,7 @@ import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { StockError } from '@/lib/errors';
+import { carrierName } from '@/lib/carriers';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
@@ -375,7 +376,7 @@ export async function POST(req: NextRequest) {
       method: 'PIX',
       data: {
         amount: amountCents,
-        description: `Pedido #${orderId.slice(-8).toUpperCase()} · frete ${matchedShipping.carrier}${abacateSandbox ? ' · TESTE' : ''}`,
+        description: `Pedido #${orderId.slice(-8).toUpperCase()} · frete ${carrierName(matchedShipping.carrier)}${abacateSandbox ? ' · TESTE' : ''}`,
         expiresIn: 900,
         externalId: orderId,
         ...(customerData ? { customer: customerData } : {}),
