@@ -1,5 +1,6 @@
 'use client';
 import { IconAlert, IconBox, IconCheck, IconMinusCircle, IconPlusCircle, IconListCheck, IconEdit, IconImage, IconClock, IconX } from '@/components/ui/Icon';
+import { InventoryAuditPanel } from '@/components/painel/InventoryAuditPanel';
 import { NovaVendaSheet } from '@/components/painel/NovaVendaSheet';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
@@ -321,6 +322,8 @@ export default function EstoquePage() {
           onDone={(msg, onUndo) => showToast(msg, onUndo)}
         />
       )}
+
+      {mode === 'dia' && <InventoryAuditPanel />}
 
       {mode === 'dia' && lowCount > 0 && (
         <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex items-center gap-3 rounded-xl">
