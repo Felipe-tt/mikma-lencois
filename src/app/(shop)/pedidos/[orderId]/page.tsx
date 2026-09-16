@@ -124,6 +124,8 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [copied, setCopied] = useState(false);
+  const [confirmingReceived, setConfirmingReceived] = useState(false);
+  const [confirmReceivedError, setConfirmReceivedError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push('/entrar');
@@ -150,6 +152,31 @@ export default function OrderDetailPage() {
     navigator.clipboard.writeText(order.payment.pixCopyPaste);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  }
+
+  async function confirmReceived() {
+    if (!order || !user) return;
+    if (!window.confirm('Confirmar que você já recebeu este pedido? Isso marca o pedido como entregue.')) return;
+
+    setConfirmingReceived(true);
+    setConfirmReceivedError(null);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/orders/${order.id}/confirm-received`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setConfirmReceivedError(data.error ?? 'Não foi possível confirmar. Tente de novo.');
+        return;
+      }
+      // onSnapshot já ativo na página atualiza a tela sozinho.
+    } catch {
+      setConfirmReceivedError('Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+      setConfirmingReceived(false);
+    }
   }
 
   if (loading || !order) return <OrderDetailSkeleton />;
@@ -432,11 +459,27 @@ export default function OrderDetailPage() {
                         href={rastreioUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors"
-                      >
+                        className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors"                      >
                         Rastrear
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                       </a>
+                    )}
+                  </div>
+                )}
+                {order.status === 'shipped' && (
+                  <div className="mt-3 pt-3 border-t border-mist">
+                    <button
+                      onClick={confirmReceived}
+                      disabled={confirmingReceived}
+                      className="w-full bg-ink text-paper text-[13px] font-bold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors"
+                    >
+                      {confirmingReceived ? 'Confirmando…' : 'Já recebi meu pedido'}
+                    </button>
+                    <p className="text-[11px] text-faint mt-2 leading-relaxed">
+                      Confirme aqui se o pedido já chegou, mesmo antes da transportadora atualizar o status sozinha.
+                    </p>
+                    {confirmReceivedError && (
+                      <p className="text-[12px] text-red-600 mt-2">{confirmReceivedError}</p>
                     )}
                   </div>
                 )}
