@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Select } from '@/components/ui/Select';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
+import { PainelSkeleton } from '@/components/painel/PainelSkeleton';
 
 type Coupon = {
   id: string; code: string; type: 'percent' | 'fixed'; value: number;
@@ -15,16 +17,19 @@ type FormState = { code: string; type: 'percent' | 'fixed'; value: number; minOr
 const EMPTY: FormState = { code: '', type: 'percent', value: 10, minOrderCents: 0, maxUses: 100, expiresAt: '' };
 
 export default function CuponsPage() {
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    return onSnapshot(collection(db, 'coupons'), snap => {
-      setCoupons(snap.docs.map(d => ({ id: d.id, ...d.data() } as Coupon)));
-    });
+    return onSnapshot(
+      collection(db, 'coupons'),
+      snap => { setCoupons(snap.docs.map(d => ({ id: d.id, ...d.data() } as Coupon))); setLoadError(false); },
+      err => { console.error('[painel/cupons] onSnapshot:', err); setLoadError(true); setCoupons([]); }
+    );
   }, []);
 
   const handleCreate = async () => {
@@ -161,10 +166,15 @@ export default function CuponsPage() {
         </div>
       )}
 
-      {coupons.length === 0 ? (
-        <div className="border border-mist bg-paper py-16 text-center rounded-xl">
-          <IconCoupons size={40} className="text-mist mx-auto mb-3" />
-          <p className="text-sm text-faint">Nenhum cupom criado ainda.<br />Crie seu primeiro cupom clicando no botão acima!</p>
+      {coupons === null ? (
+        <PainelSkeleton rows={3} />
+      ) : loadError ? (
+        <PanelErrorState message="Não foi possível carregar os cupons." />
+      ) : coupons.length === 0 ? (
+        <div className="panel-card panel-empty">
+          <span className="panel-empty-icon"><IconCoupons size={20} /></span>
+          <p className="text-[13px] font-medium text-ink">Nenhum cupom ainda</p>
+          <p className="text-[12px] text-faint mt-1">Crie um cupom para oferecer desconto no checkout.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
