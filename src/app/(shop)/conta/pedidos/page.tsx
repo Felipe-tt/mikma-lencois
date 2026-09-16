@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
+import { carrierName } from '@/lib/carriers';
 import type { Order } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { OrdersListSkeleton } from '@/components/ui/Skeleton';
@@ -179,7 +180,9 @@ export default function PedidosPage() {
                   <div className="border-t border-mist px-5 sm:px-6 py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-[12px] text-mid min-w-0">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-faint"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8zM5.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM18.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
-                      <span className="text-faint shrink-0">{order.delivery.carrier} ·</span>
+                      {order.delivery.carrier && (
+                        <span className="text-faint shrink-0">{carrierName(order.delivery.carrier)} ·</span>
+                      )}
                       <span className="font-mono font-semibold text-ink truncate">{order.delivery.trackingCode}</span>
                     </div>
                     <button
