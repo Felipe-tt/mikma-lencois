@@ -5,25 +5,74 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth, getClientIp } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { computeExpectedReserved as sumExpected, findReservedMismatches, type SkuMismatch } from '@/lib/inventoryAudit';
+
+interface SuspiciousCancellation {
+  orderId: string;
+  cancelledBy?: string;
+  cancelledAt?: string;
+  paidAt: unknown;
+  totalCents?: number;
+}
 
 /**
- * Auditoria somente leitura do estoque.
+ * Calcula, por SKU, quanto DEVERIA estar reservado agora, a partir da
+ * fonte da verdade: os pedidos com status pending_payment. Pedidos pagos
+ * ja debitaram quantity direto e zeraram a reserva; cancelados e
+ * expirados nao reservam nada.
  *
- * Por quê: reserved em `inventory` é mantido por incrementos/decrementos
- * espalhados em vários endpoints (create-checkout, create-pix, webhook de
- * pagamento, cancelamento manual, cron de expiração). Antes da correção
- * de concorrência nesses pontos, uma corrida entre o cron de expiração e
- * o webhook de pagamento podia decrementar reserved duas vezes para o
- * mesmo pedido, essa rota não corrige nada, só calcula o valor "correto"
- * de reserved a partir da fonte da verdade (pedidos pending_payment) e
- * mostra a diferença, para decidir o que fazer manualmente.
+ * Usa expandStockLines (a mesma funcao usada em create-pix,
+ * create-checkout, webhook de pagamento, cancelamento e cron de
+ * expiracao) em vez de somar item.sku na mao. Isso importa: um Jogo de
+ * Cama com fronha trocada reserva DOIS SKUs (o do jogo e o da fronha
+ * escolhida), e a versao anterior desta auditoria ignorava o swapSku
+ * completamente, entao todo pedido com troca de fronha virava um falso
+ * positivo, acusando "sobra" de reserva numa fronha que na verdade
+ * estava corretamente reservada. Pior que o alarme falso: o ruido
+ * escondia as divergencias reais no meio da lista.
  */
+async function computeExpectedReserved(): Promise<{
+  expectedBySku: Record<string, number>;
+  pendingOrdersChecked: number;
+}> {
+  const pendingOrdersSnap = await adminDb
+    .collection('orders')
+    .where('status', '==', 'pending_payment')
+    .get();
+
+  const ordersItems = pendingOrdersSnap.docs.map(doc => (doc.data().items ?? []) as Array<{
+    productId: string; sku: string; quantity: number;
+    swapSku?: string; swapQtyPerUnit?: number;
+  }>);
+
+  return { expectedBySku: sumExpected(ordersItems), pendingOrdersChecked: pendingOrdersSnap.size };
+}
+
+async function findMismatches(expectedBySku: Record<string, number>): Promise<{
+  mismatches: SkuMismatch[];
+  inventoryItemsChecked: number;
+}> {
+  const inventorySnap = await adminDb.collection('inventory').get();
+  const inventory = inventorySnap.docs.map(doc => ({
+    sku: doc.id,
+    productId: (doc.data().productId ?? '') as string,
+    reserved: (doc.data().reserved ?? 0) as number,
+  }));
+
+  return {
+    mismatches: findReservedMismatches(inventory, expectedBySku),
+    inventoryItemsChecked: inventorySnap.size,
+  };
+}
+
+/** GET, auditoria somente leitura. Nao altera nada. */
 export async function GET(req: NextRequest) {
   const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
   if (!auth.ok) return auth.response;
 
-  // Rota cara (varre todos os pedidos pending_payment + todo o inventário,
-  // até 30s de execução), limite mais apertado que o normal.
+  // Rota cara (varre todos os pedidos pending_payment + todo o inventario,
+  // ate 30s de execucao), limite mais apertado que o normal.
   const ip = getClientIp(req);
   const key = `inventory-audit:${auth.decoded.uid}`;
   if (!await rateLimit(key, 6, 60_000) || !await rateLimit(`inventory-audit-ip:${ip}`, 12, 60_000)) {
@@ -33,74 +82,26 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // ── 1. Soma, por SKU, quanto deveria estar reservado ──────────────────
-  // Fonte da verdade: pedidos com status pending_payment são os únicos
-  // que devem ter estoque reservado (paid já debita quantity direto;
-  // cancelled/payment_expired não reservam nada).
-  const pendingOrdersSnap = await adminDb
-    .collection('orders')
-    .where('status', '==', 'pending_payment')
-    .get();
+  const { expectedBySku, pendingOrdersChecked } = await computeExpectedReserved();
+  const { mismatches, inventoryItemsChecked } = await findMismatches(expectedBySku);
 
-  const expectedReservedBySku: Record<string, number> = {};
-  for (const doc of pendingOrdersSnap.docs) {
-    const items = (doc.data().items ?? []) as Array<{ sku: string; quantity: number }>;
-    for (const item of items) {
-      if (!item.sku) continue;
-      expectedReservedBySku[item.sku] = (expectedReservedBySku[item.sku] ?? 0) + (item.quantity ?? 0);
-    }
-  }
-
-  // ── 2. Compara com o reserved atual em cada doc de inventory ──────────
-  const inventorySnap = await adminDb.collection('inventory').get();
-  const skuMismatches: Array<{
-    sku: string;
-    productId: string;
-    currentReserved: number;
-    expectedReserved: number;
-    diff: number;
-  }> = [];
-
-  for (const doc of inventorySnap.docs) {
-    const data = doc.data();
-    const currentReserved = (data.reserved ?? 0) as number;
-    const expectedReserved = expectedReservedBySku[doc.id] ?? 0;
-    if (currentReserved !== expectedReserved) {
-      skuMismatches.push({
-        sku: doc.id,
-        productId: (data.productId ?? '') as string,
-        currentReserved,
-        expectedReserved,
-        diff: currentReserved - expectedReserved,
-      });
-    }
-  }
-
-  // ── 3. Pedidos cancelados que parecem ter sido pagos ───────────────────
-  // Sinal mais forte de corrupção: status === 'cancelled' mas
-  // payment.paidAt existe (só confirmOrder, no webhook, preenche isso).
+  // Pedidos cancelados que parecem ter sido pagos. Sinal mais forte de
+  // corrupcao: status === 'cancelled' mas payment.paidAt existe (so a
+  // confirmacao de pagamento preenche isso).
   const cancelledSnap = await adminDb
     .collection('orders')
     .where('status', '==', 'cancelled')
     .get();
 
-  const suspiciousCancellations: Array<{
-    orderId: string;
-    cancelledBy?: string;
-    cancelledAt?: string;
-    paidAt: unknown;
-    totalCents?: number;
-  }> = [];
-
+  const suspiciousCancellations: SuspiciousCancellation[] = [];
   for (const doc of cancelledSnap.docs) {
     const data = doc.data();
-    const paidAt = data.payment?.paidAt;
-    if (paidAt) {
+    if (data.payment?.paidAt) {
       suspiciousCancellations.push({
         orderId: doc.id,
         cancelledBy: data.cancelledBy as string | undefined,
         cancelledAt: data.cancelledAt as string | undefined,
-        paidAt,
+        paidAt: data.payment.paidAt,
         totalCents: data.totalCents as number | undefined,
       });
     }
@@ -108,12 +109,101 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     summary: {
-      pendingOrdersChecked: pendingOrdersSnap.size,
-      inventoryItemsChecked: inventorySnap.size,
-      skuMismatchCount: skuMismatches.length,
+      pendingOrdersChecked,
+      inventoryItemsChecked,
+      skuMismatchCount: mismatches.length,
       suspiciousCancellationCount: suspiciousCancellations.length,
     },
-    skuMismatches,
+    skuMismatches: mismatches,
     suspiciousCancellations,
   });
+}
+
+/**
+ * POST, corrige as divergencias de `reserved`, gravando o valor correto
+ * calculado a partir dos pedidos pending_payment.
+ *
+ * Por que e seguro mexer em `reserved` automaticamente, mas NAO em
+ * `quantity`: reserved e um numero derivado, da pra recalcular do zero a
+ * qualquer momento a partir dos pedidos em aberto. Ja quantity e o
+ * estoque fisico real, que so uma contagem na prateleira confirma,
+ * nenhuma rota automatica tem como saber quantas pecas existem de
+ * verdade, entao esta rota nunca toca nele.
+ *
+ * Cada correcao e feita numa transacao que rele o valor dentro dela e so
+ * escreve se o estado ainda for o mesmo que a auditoria viu. Se um
+ * pedido novo entrar no meio do caminho (mudando o esperado), a correcao
+ * daquele SKU e pulada em vez de gravar um numero ja desatualizado.
+ * Grava tambem uma entrada no history do item, pro vendedor ver depois o
+ * que foi mexido e por que.
+ */
+export async function POST(req: NextRequest) {
+  const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
+  if (!auth.ok) return auth.response;
+
+  const ip = getClientIp(req);
+  const key = `inventory-audit-fix:${auth.decoded.uid}`;
+  if (!await rateLimit(key, 3, 60_000) || !await rateLimit(`inventory-audit-fix-ip:${ip}`, 6, 60_000)) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde um pouco antes de corrigir de novo.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }
+    );
+  }
+
+  const { expectedBySku } = await computeExpectedReserved();
+  const { mismatches } = await findMismatches(expectedBySku);
+
+  if (mismatches.length === 0) {
+    return NextResponse.json({ ok: true, corrected: 0, skipped: 0, details: [] });
+  }
+
+  const now = new Date().toISOString();
+  const by = auth.decoded.uid;
+  const details: Array<{ sku: string; from: number; to: number; status: 'corrigido' | 'pulado' }> = [];
+  let corrected = 0;
+  let skipped = 0;
+
+  for (const m of mismatches) {
+    const ref = adminDb.collection('inventory').doc(m.sku);
+    try {
+      const applied = await adminDb.runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        if (!snap.exists) return false;
+
+        const current = (snap.data()?.reserved ?? 0) as number;
+        // Estado mudou entre a leitura da auditoria e agora (pedido novo
+        // reservou, webhook liberou, etc). Pular: na proxima rodada a
+        // auditoria pega o valor ja atualizado.
+        if (current !== m.currentReserved) return false;
+        if (current === m.expectedReserved) return false;
+
+        tx.update(ref, {
+          reserved: m.expectedReserved,
+          updatedAt: FieldValue.serverTimestamp(),
+          history: FieldValue.arrayUnion({
+            type: m.expectedReserved > current ? 'out' : 'in',
+            quantity: Math.abs(m.expectedReserved - current),
+            reason: `Auditoria: reserva corrigida de ${current} para ${m.expectedReserved}`,
+            date: now,
+            by,
+          }),
+        });
+        return true;
+      });
+
+      if (applied) {
+        corrected++;
+        details.push({ sku: m.sku, from: m.currentReserved, to: m.expectedReserved, status: 'corrigido' });
+      } else {
+        skipped++;
+        details.push({ sku: m.sku, from: m.currentReserved, to: m.expectedReserved, status: 'pulado' });
+      }
+    } catch (err) {
+      console.error(`[inventory-audit] falha ao corrigir ${m.sku}:`, err);
+      skipped++;
+      details.push({ sku: m.sku, from: m.currentReserved, to: m.expectedReserved, status: 'pulado' });
+    }
+  }
+
+  return NextResponse.json({ ok: true, corrected, skipped, details });
 }
