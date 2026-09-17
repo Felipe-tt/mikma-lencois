@@ -12,6 +12,8 @@ type Props = {
   className?: string;
   /** Classe do botão/trigger, por padrão usa o mesmo visual do .select nativo do site */
   triggerClassName?: string;
+  /** id do botão/trigger — passa o id que o <label htmlFor> do Field espera, senão clicar no rótulo não foca o campo. */
+  triggerId?: string;
   disabled?: boolean;
   name?: string;
   size?: 'sm' | 'md';
@@ -33,6 +35,7 @@ export function Select({
   placeholder = 'Selecione',
   className = '',
   triggerClassName,
+  triggerId,
   disabled,
   name,
   size = 'md',
@@ -113,6 +116,7 @@ export function Select({
     <div ref={rootRef} className={`relative ${className}`}>
       {name && <input type="hidden" name={name} value={value} />}
       <button
+        id={triggerId}
         type="button"
         role="combobox"
         aria-haspopup="listbox"
