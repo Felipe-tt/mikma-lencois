@@ -6,6 +6,9 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Select } from '@/components/ui/Select';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
+import { Field } from '@/components/ui/Field';
+import { PainelSkeleton } from '@/components/painel/PainelSkeleton';
 
 type Coupon = {
   id: string; code: string; type: 'percent' | 'fixed'; value: number;
@@ -15,16 +18,19 @@ type FormState = { code: string; type: 'percent' | 'fixed'; value: number; minOr
 const EMPTY: FormState = { code: '', type: 'percent', value: 10, minOrderCents: 0, maxUses: 100, expiresAt: '' };
 
 export default function CuponsPage() {
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    return onSnapshot(collection(db, 'coupons'), snap => {
-      setCoupons(snap.docs.map(d => ({ id: d.id, ...d.data() } as Coupon)));
-    });
+    return onSnapshot(
+      collection(db, 'coupons'),
+      snap => { setCoupons(snap.docs.map(d => ({ id: d.id, ...d.data() } as Coupon))); setLoadError(false); },
+      err => { console.error('[painel/cupons] onSnapshot:', err); setLoadError(true); setCoupons([]); }
+    );
   }, []);
 
   const handleCreate = async () => {
@@ -89,57 +95,64 @@ export default function CuponsPage() {
           {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-1 rounded-lg"><IconAlert size={11} />{error}</div>}
 
           <div className="flex flex-col gap-4">
-            <div>
-              <label className="block text-[11px] font-semibold text-mid mb-1.5">Código do cupom</label>
-              <input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
-                placeholder="Ex: VERAO20, BEMVINDO10"
-                className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-clay-l/20 placeholder:normal-case placeholder:font-sans rounded-xl" />
-              <p className="text-[11px] text-faint mt-1">Este é o código que o cliente vai digitar na hora de comprar.</p>
+            <Field label="Código do cupom" required hint="É o que o cliente digita na hora de comprar.">
+              {p => (
+                <input {...p} value={form.code}
+                  onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                  placeholder="Ex: VERAO20, BEMVINDO10"
+                  className="panel-input font-mono uppercase placeholder:normal-case placeholder:font-sans" />
+              )}
+            </Field>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Tipo de desconto">
+                {p => (
+                  <Select
+                    value={form.type}
+                    onChange={v => setForm(f => ({ ...f, type: v as 'percent' | 'fixed' }))}
+                    options={[
+                      { value: 'percent', label: 'Porcentagem (ex: 10% off)' },
+                      { value: 'fixed', label: 'Valor fixo (ex: R$ 20 off)' },
+                    ]}
+                    triggerId={p.id}
+                    triggerClassName="panel-input flex items-center justify-between gap-2 cursor-pointer"
+                  />
+                )}
+              </Field>
+              <Field label={form.type === 'percent' ? 'Quantos % de desconto?' : 'Quantos R$ de desconto?'} required>
+                {p => (
+                  <input {...p} type="number" min={0} value={form.value}
+                    onChange={e => setForm(f => ({ ...f, value: Number(e.target.value) }))}
+                    className="panel-input" />
+                )}
+              </Field>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[11px] font-semibold text-mid mb-1.5">Tipo de desconto</label>
-                <Select
-                  value={form.type}
-                  onChange={v => setForm(f => ({ ...f, type: v as 'percent' | 'fixed' }))}
-                  options={[
-                    { value: 'percent', label: 'Porcentagem (ex: 10% off)' },
-                    { value: 'fixed', label: 'Valor fixo (ex: R$ 20 off)' },
-                  ]}
-                  triggerClassName="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-[2px] flex items-center justify-between gap-2 cursor-pointer hover:border-ink/20 transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-mid mb-1.5">
-                  {form.type === 'percent' ? 'Quantos % de desconto?' : 'Quantos R$ de desconto?'}
-                </label>
-                <input type="number" min={0} value={form.value} onChange={e => setForm(f => ({ ...f, value: Number(e.target.value) }))}
-                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
-              </div>
+              <Field label="Valor mínimo do pedido (R$)" hint="Deixe 0 para não exigir mínimo.">
+                {p => (
+                  <input {...p} type="number" min={0} value={form.minOrderCents}
+                    onChange={e => setForm(f => ({ ...f, minOrderCents: Number(e.target.value) }))}
+                    placeholder="0 = sem mínimo"
+                    className="panel-input" />
+                )}
+              </Field>
+              <Field label="Quantas vezes pode ser usado?">
+                {p => (
+                  <input {...p} type="number" min={1} value={form.maxUses}
+                    onChange={e => setForm(f => ({ ...f, maxUses: Number(e.target.value) }))}
+                    className="panel-input" />
+                )}
+              </Field>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[11px] font-semibold text-mid mb-1.5">Valor mínimo do pedido (R$)</label>
-                <input type="number" min={0} value={form.minOrderCents} onChange={e => setForm(f => ({ ...f, minOrderCents: Number(e.target.value) }))}
-                  placeholder="0 = sem mínimo"
-                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 placeholder:text-faint-l rounded-xl" />
-                <p className="text-[11px] text-faint mt-1">Coloque 0 se não quiser exigir valor mínimo.</p>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-mid mb-1.5">Quantas vezes pode ser usado?</label>
-                <input type="number" min={1} value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: Number(e.target.value) }))}
-                  className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-mid mb-1.5">Data de validade (opcional)</label>
-              <input type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
-                className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
-              <p className="text-[11px] text-faint mt-1">Deixe em branco para o cupom nunca expirar.</p>
-            </div>
+            <Field label="Data de validade" hint="Deixe em branco para o cupom nunca expirar.">
+              {p => (
+                <input {...p} type="date" value={form.expiresAt}
+                  onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
+                  className="panel-input" />
+              )}
+            </Field>
 
             {form.code && form.value > 0 && (
               <div className="bg-clay-l/5 border border-clay-l/20 px-4 py-3 rounded-xl">
@@ -161,10 +174,15 @@ export default function CuponsPage() {
         </div>
       )}
 
-      {coupons.length === 0 ? (
-        <div className="border border-mist bg-paper py-16 text-center rounded-xl">
-          <IconCoupons size={40} className="text-mist mx-auto mb-3" />
-          <p className="text-sm text-faint">Nenhum cupom criado ainda.<br />Crie seu primeiro cupom clicando no botão acima!</p>
+      {coupons === null ? (
+        <PainelSkeleton rows={3} />
+      ) : loadError ? (
+        <PanelErrorState message="Não foi possível carregar os cupons." />
+      ) : coupons.length === 0 ? (
+        <div className="panel-card panel-empty">
+          <span className="panel-empty-icon"><IconCoupons size={20} /></span>
+          <p className="text-[13px] font-medium text-ink">Nenhum cupom ainda</p>
+          <p className="text-[12px] text-faint mt-1">Crie um cupom para oferecer desconto no checkout.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">

@@ -76,10 +76,36 @@ html.dark {
   a { @apply no-underline; }
   button { @apply cursor-pointer; }
   img, video { @apply block max-w-full; }
+  /* Usa a variável do accent, não um hex fixo: no tema escuro o clay é
+     mais claro (#D98A5B), e o valor fixo do tema claro (#B8622F) some
+     contra o fundo escuro, deixando quem navega por teclado sem saber
+     onde está. */
   *:focus-visible {
-    outline: 2px solid #B8622F;
+    outline: 2px solid rgb(var(--c-clay));
     outline-offset: 2px;
+    border-radius: 2px;
   }
+  /* O highlight cinza que o Chrome/Android pinta ao tocar em qualquer
+     elemento clicável briga com os estados de :active próprios do
+     painel, que é usado no celular o dia todo. */
+  button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+  ::selection { background: rgb(var(--c-clay) / 0.22); }
+}
+
+/* Respeita quem pediu menos movimento no sistema. O painel tem ponto
+   pulsante, cards que sobem no hover, spinners e transições em toda
+   parte — pra quem tem sensibilidade vestibular isso é desconfortável,
+   e é uma preferência que o sistema operacional já sabe. Mantém uma
+   duração mínima em vez de zerar: transição instantânea quebra alguns
+   componentes que escutam transitionend pra saber que terminaram. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  html { scroll-behavior: auto; }
 }
 
 @utility btn {
@@ -582,6 +608,88 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
 }
 .panel-tabbar-dot {
   @apply block w-1 h-1 rounded-full bg-clay-l opacity-0 scale-0 transition-all duration-200;
+}
+
+/* ── Unificação com as telas antigas ───────────────────────────────
+   O rework introduziu .panel-card, mas só a home do painel foi migrada:
+   as outras 14 telas continuam escrevendo `bg-paper border border-mist`
+   na mão, o que deixava o painel com duas aparências diferentes
+   dependendo de onde a pessoa estava. Em vez de reescrever 118
+   ocorrências (e ter que lembrar da regra em toda tela nova), o próprio
+   padrão antigo passa a receber a mesma profundidade do card novo.
+   A sombra é bem rasa de propósito: em bloco pequeno (miniatura, tile
+   de número) ela só assenta o elemento no fundo, não vira "cartão". */
+.painel-scope .bg-paper.border.border-mist,
+.painel-scope .bg-white.border.border-mist {
+  box-shadow: 0 1px 2px 0 rgba(12, 11, 9, 0.05);
+}
+
+/* Campos de formulário: cada tela inventou seu próprio anel de foco
+   (ring-2/ring-1, clay-l/20, clay/12, com e sem mudança de borda), o
+   que fazia o mesmo input parecer diferente entre cadastro de produto,
+   cupom e configurações. Aqui todos convergem pro mesmo tratamento.
+   Só vale pra foco por teclado (:focus-visible) — clicar num campo com
+   o mouse não precisa desenhar o anel. */
+.painel-scope input:focus-visible,
+.painel-scope textarea:focus-visible,
+.painel-scope select:focus-visible {
+  outline: none;
+  border-color: rgb(var(--c-clay) / 0.6);
+  box-shadow: 0 0 0 3px rgb(var(--c-clay) / 0.14);
+}
+
+/* Área de toque mínima no celular. O painel é usado em pé, na loja, com
+   uma mão — vários controles secundários (Editar, Apagar, +/-) estavam
+   em 11-12px de texto sem altura mínima, difíceis de acertar. 40px é o
+   piso confortável; no desktop volta ao natural, onde o cursor é
+   preciso e a altura extra só faria a lista esticar. */
+@media (max-width: 1023px) {
+  .painel-scope button:not(.panel-tabbar-item),
+  .painel-scope a[role="button"] {
+    min-height: 40px;
+  }
+}
+
+/* Barra de rolagem discreta nas listas internas do painel (histórico,
+   mensagens, notificações). A barra padrão do Windows é cinza-azulada e
+   larga, destoando bastante da paleta quente do resto. */
+.painel-scope ::-webkit-scrollbar { width: 10px; height: 10px; }
+.painel-scope ::-webkit-scrollbar-track { background: transparent; }
+.painel-scope ::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-mist-d));
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.painel-scope ::-webkit-scrollbar-thumb:hover { background-clip: content-box; background-color: rgb(var(--c-faint-l)); }
+.painel-scope { scrollbar-width: thin; scrollbar-color: rgb(var(--c-mist-d)) transparent; }
+
+/* Números que mudam ao vivo (totais, contadores, valores) alinhados em
+   colunas: sem isso os dígitos têm larguras diferentes e o texto
+   "pula" a cada atualização do onSnapshot. */
+.painel-scope .font-display,
+.painel-scope .tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* Campo de formulário do painel. Substitui a cadeia de classes que cada
+   tela repetia na mão ("w-full border border-mist bg-white dark:bg-warm
+   px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ..."), com
+   pequenas variações entre telas que faziam o mesmo campo parecer
+   diferente em cada lugar. O foco vem da regra de :focus-visible do
+   painel, logo acima. */
+.panel-input {
+  @apply w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm text-ink
+         rounded-xl outline-none transition-colors duration-150
+         placeholder:text-faint-l hover:border-ink/20
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* Estado vazio: as telas repetiam ícone + duas linhas de texto com
+   espaçamentos ligeiramente diferentes em cada uma. */
+.panel-empty {
+  @apply flex flex-col items-center justify-center text-center px-6 py-14;
+}
+.panel-empty-icon {
+  @apply inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-warm text-faint mb-3;
 }
 
 } /* fim @layer components (painel admin rework) */
