@@ -1,9 +1,10 @@
 'use client';
 import { IconAlert, IconBox, IconCheck, IconMinusCircle, IconPlusCircle, IconListCheck, IconEdit, IconImage, IconClock, IconX } from '@/components/ui/Icon';
 import { InventoryAuditPanel } from '@/components/painel/InventoryAuditPanel';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { NovaVendaSheet } from '@/components/painel/NovaVendaSheet';
 
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useId, useMemo, useState, useRef } from 'react';
 import { collection, onSnapshot, doc, updateDoc, getDoc, increment, arrayUnion, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -65,20 +66,35 @@ export default function EstoquePage() {
     setTimeout(() => setToast((t) => (t?.msg === msg ? null : t)), onUndo ? 5000 : 2600);
   }
 
+  const [loadError, setLoadError] = useState(false);
+
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'inventory'), async (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as InventoryItem));
-      const uncachedIds = Array.from(new Set(data.map((i) => i.productId))).filter((id) => !nameCache.current[id]);
-      if (uncachedIds.length > 0) {
-        await Promise.all(uncachedIds.map(async (pid) => {
-          const pdoc = await getDoc(doc(db, 'products', pid));
-          nameCache.current[pid] = pdoc.exists() ? (pdoc.data().name as string) : pid;
-        }));
-      }
-      setItems(data.map((i) => ({ ...i, productName: nameCache.current[i.productId] ?? i.productId }))
-        .sort((a, b) => (a.productName || '').localeCompare(b.productName || '')));
-      setLoading(false);
-    });
+    // O callback é async e busca o nome de cada produto; sem o try/catch,
+    // uma busca que falhasse rejeitava a promise do callback e
+    // setLoading(false) nunca rodava, ficando no esqueleto pra sempre.
+    // Mesmo bug corrigido antes em estoque/historico.
+    const unsub = onSnapshot(
+      collection(db, 'inventory'),
+      async (snap) => {
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as InventoryItem));
+        try {
+          const uncachedIds = Array.from(new Set(data.map((i) => i.productId))).filter((id) => !nameCache.current[id]);
+          if (uncachedIds.length > 0) {
+            await Promise.all(uncachedIds.map(async (pid) => {
+              const pdoc = await getDoc(doc(db, 'products', pid));
+              nameCache.current[pid] = pdoc.exists() ? (pdoc.data().name as string) : pid;
+            }));
+          }
+        } catch (err) {
+          console.error('[estoque] nomes de produto:', err);
+        }
+        setItems(data.map((i) => ({ ...i, productName: nameCache.current[i.productId] ?? i.productId }))
+          .sort((a, b) => (a.productName || '').localeCompare(b.productName || '')));
+        setLoadError(false);
+        setLoading(false);
+      },
+      (err) => { console.error('[estoque] onSnapshot:', err); setLoadError(true); setLoading(false); }
+    );
     return unsub;
   }, []);
 
@@ -265,7 +281,12 @@ export default function EstoquePage() {
 
   if (loading) return (
     <div className="flex flex-col gap-2">
-      {[1, 2, 3, 4].map(i => <div key={i} className="h-[72px] skeleton border border-mist rounded-xl" />)}
+      {[1, 2, 3, 4].map(i => <div key={i} className="h-[72px] skeleton rounded-xl" />)}
+    </div>
+  );
+  if (loadError) return (
+    <div className="max-w-6xl mx-auto">
+      <PanelErrorState message="Não foi possível carregar o estoque." />
     </div>
   );
 
@@ -349,7 +370,7 @@ export default function EstoquePage() {
         <div className="flex items-center gap-3 mb-4">
           <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-            <input type="search" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="search" placeholder="Buscar produto..." aria-label="Buscar produto" value={search} onChange={e => setSearch(e.target.value)}
               className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40 rounded-xl" />
           </div>
           {mode === 'dia' && lowCount > 0 && (
@@ -381,6 +402,7 @@ export default function EstoquePage() {
                   <button type="button" onClick={() => setCountDraft(d => ({ ...d, [item.id]: Math.max(0, val - 1) }))}
                     className="h-10 w-10 border border-mist bg-white dark:bg-warm text-mid font-bold text-lg flex items-center justify-center active:bg-warm rounded-xl">−</button>
                   <input type="number" min={0} inputMode="numeric" value={val}
+                    aria-label={`Quantidade em mãos de ${item.productName}, ${variantLabel(item)}`}
                     onChange={e => setCountDraft(d => ({ ...d, [item.id]: Number(e.target.value) }))}
                     className="w-14 h-10 border-y border-mist bg-white dark:bg-warm text-center font-bold text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20" />
                   <button type="button" onClick={() => setCountDraft(d => ({ ...d, [item.id]: val + 1 }))}
@@ -458,6 +480,7 @@ export default function EstoquePage() {
                       <div className="text-center bg-white dark:bg-warm border border-mist px-3 py-2.5 rounded-xl">
                         <p className="text-[9.5px] font-bold uppercase tracking-wide text-faint mb-1">Avisar quando restar</p>
                         <input type="number" min={0} inputMode="numeric" value={threshold}
+                          aria-label={`Avisar quando restar, ${item.productName}, ${variantLabel(item)}`}
                           onChange={ev => setThresholdDraft(d => ({ ...d, [item.id]: Number(ev.target.value) }))}
                           onBlur={ev => saveThreshold(item, Number(ev.target.value))}
                           className="w-full bg-transparent border-none text-center text-lg font-bold text-mid py-0 focus:outline-none rounded-xl" />
@@ -553,6 +576,8 @@ function InlineActionForm({ item, kind, available, submitting, onCancel, onConfi
 }) {
   const [qty, setQty] = useState(kind === 'correcao' ? item.quantity : 1);
   const [note, setNote] = useState('');
+  const qtyId = useId();
+  const noteId = useId();
   const title = kind === 'venda' ? 'Registrar venda na loja física'
     : kind === 'entrada' ? 'Registrar chegada de mercadoria'
     : 'Corrigir número após contagem';
@@ -566,14 +591,14 @@ function InlineActionForm({ item, kind, available, submitting, onCancel, onConfi
       <p className="text-[12px] font-bold text-ink">{title}</p>
       <div className="flex gap-2">
         <div className="w-24 shrink-0">
-          <label className="block text-[10px] font-semibold text-mid mb-1">{qtyLabel}</label>
-          <input type="number" min={0} inputMode="numeric" value={qty} autoFocus disabled={submitting}
+          <label htmlFor={qtyId} className="block text-[10px] font-semibold text-mid mb-1">{qtyLabel}</label>
+          <input id={qtyId} type="number" min={0} inputMode="numeric" value={qty} autoFocus disabled={submitting}
             onChange={e => setQty(Number(e.target.value))}
             className="w-full border border-clay-l/40 text-center py-2 font-bold focus:outline-none disabled:opacity-50 rounded-xl" />
         </div>
         <div className="flex-1">
-          <label className="block text-[10px] font-semibold text-mid mb-1">Observação</label>
-          <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder={placeholder} disabled={submitting}
+          <label htmlFor={noteId} className="block text-[10px] font-semibold text-mid mb-1">Observação</label>
+          <input id={noteId} type="text" value={note} onChange={e => setNote(e.target.value)} placeholder={placeholder} disabled={submitting}
             className="w-full border border-mist px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 disabled:opacity-50 rounded-xl" />
         </div>
       </div>
