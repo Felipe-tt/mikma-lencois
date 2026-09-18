@@ -383,8 +383,9 @@ function ConversationThread({
           {/* Assunto (opcional, expansível) */}
           {showSubject ? (
             <div className="flex items-center gap-2">
-              <label className="text-[10px] font-bold uppercase tracking-wide text-faint shrink-0">Assunto</label>
+              <label htmlFor="msg-assunto" className="text-[10px] font-bold uppercase tracking-wide text-faint shrink-0">Assunto</label>
               <input
+                id="msg-assunto"
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
                 placeholder="Re: contato Mikma Lençóis"
@@ -402,6 +403,7 @@ function ConversationThread({
             onChange={e => setReply(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Escreva sua resposta… (Ctrl+Enter para enviar)"
+            aria-label="Sua resposta"
             rows={3}
             className="w-full resize-none border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint-l rounded-xl"
           />
