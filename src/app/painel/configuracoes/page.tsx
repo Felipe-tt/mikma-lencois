@@ -7,7 +7,7 @@ import {
   IconInfo, IconX, IconInventory, IconMail,
 } from '@/components/ui/Icon';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
@@ -208,10 +208,11 @@ export default function ConfiguracoesPage() {
               onChange={next => set('businessHours', serializeBusinessHours(next))}
             />
             <div>
-              <label className="block text-[11px] font-semibold text-mid mb-1.5">Fuso horário</label>
+              <label htmlFor="config-fuso" className="block text-[11px] font-semibold text-mid mb-1.5">Fuso horário</label>
               <Select
                 value={settings.businessHoursTimezone || 'America/Sao_Paulo'}
                 onChange={v => set('businessHoursTimezone', v)}
+                triggerId="config-fuso"
                 options={[
                   { value: 'America/Sao_Paulo', label: 'Brasília (GMT-3), maioria do Brasil' },
                   { value: 'America/Manaus', label: 'Manaus (GMT-4)' },
@@ -597,12 +598,13 @@ function F({ label, value, onChange, hint, placeholder, maxLength, type='text' }
   label:string; value:string; onChange:(v:string)=>void;
   hint?:string; placeholder?:string; maxLength?:number; type?:string;
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
-      <input type={type} value={value} onChange={e=>onChange(e.target.value)}
+      <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
+      <input id={id} type={type} value={value} onChange={e=>onChange(e.target.value)}
         placeholder={placeholder} maxLength={maxLength}
-        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint-l rounded-xl" />
+        className="panel-input placeholder:text-faint-l" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>
   );
@@ -610,11 +612,12 @@ function F({ label, value, onChange, hint, placeholder, maxLength, type='text' }
 function TA({ label, value, onChange, rows=3, placeholder, hint }: {
   label:string; value:string; onChange:(v:string)=>void; rows?:number; placeholder?:string; hint?:string;
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
-      <textarea value={value} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={placeholder}
-        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 resize-y placeholder:text-faint-l rounded-xl" />
+      <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
+      <textarea id={id} value={value} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={placeholder}
+        className="panel-input resize-y placeholder:text-faint-l" />
       {hint && <p className="mt-1.5 text-[11px] text-faint">{hint}</p>}
     </div>
   );
@@ -645,12 +648,13 @@ function Num({ label, value, onChange, hint, min, max, step=1 }: {
   label:string; value:number; onChange:(v:number)=>void;
   hint?:string; min?:number; max?:number; step?:number;
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
-      <input type="number" value={value} onChange={e=>onChange(parseFloat(e.target.value)||0)}
+      <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
+      <input id={id} type="number" value={value} onChange={e=>onChange(parseFloat(e.target.value)||0)}
         min={min} max={max} step={step} inputMode="decimal"
-        className="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl" />
+        className="panel-input" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>
   );
@@ -679,7 +683,7 @@ function TableEditor({ colsJson, rowsJson, onRowsChange }: {
         <div key={i} className="flex gap-2 items-center">
           <div className="grid gap-2 flex-1 [grid-template-columns:repeat(var(--cols),1fr)]" style={{ '--cols': cols.length } as React.CSSProperties}>
             {cols.map(col => (
-              <input key={col} type="text" value={row[col]??''} placeholder={col}
+              <input key={col} type="text" value={row[col]??''} placeholder={col} aria-label={`${col}, linha ${i + 1}`}
                 onChange={e => {
                   const next = [...rows]; next[i]={...next[i],[col]:e.target.value};
                   onRowsChange(JSON.stringify(next));
@@ -837,8 +841,9 @@ function TeamPanel() {
         <Info>Só admins conseguem gerenciar a equipe. Sellers têm acesso ao painel, mas não podem adicionar ou remover outras pessoas, assim uma conta de seller comprometida não vira uma porta pra criar acessos ilimitados.</Info>
         <form onSubmit={handleAdd} className="flex flex-col gap-3">
           <div className="relative flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Buscar pessoa</label>
+            <label htmlFor="config-buscar-pessoa" className="text-[11px] font-bold text-mid uppercase tracking-wide">Buscar pessoa</label>
             <input
+              id="config-buscar-pessoa"
               value={selected ? (selected.displayName || selected.email || '') : query}
               onChange={e => { setQuery(e.target.value); setSelected(null); }}
               placeholder="Nome ou e-mail…"
@@ -868,10 +873,10 @@ function TeamPanel() {
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Nível de acesso</label>
-            <div className="flex gap-2">
+            <label id="config-nivel-label" className="text-[11px] font-bold text-mid uppercase tracking-wide">Nível de acesso</label>
+            <div role="group" aria-labelledby="config-nivel-label" className="flex gap-2">
               {(['seller', 'admin'] as const).map(r => (
-                <button type="button" key={r} onClick={() => setRole(r)}
+                <button type="button" key={r} aria-pressed={role === r} onClick={() => setRole(r)}
                   className={`flex-1 py-2.5 text-[12px] font-semibold border transition-colors ${ role === r ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm' } rounded-xl`}>
                   {r === 'seller' ? 'Seller (gerencia loja)' : 'Admin (gerencia loja + equipe)'}
                 </button>
