@@ -8,6 +8,8 @@ interface Props {
   value: string;      // hex
   colorName: string;
   onChange: (hex: string, name: string) => void;
+  /** Repassado pro campo de nome (o principal), pra permitir um <label htmlFor> associado de fora. */
+  id?: string;
 }
 
 /**
@@ -15,7 +17,7 @@ interface Props {
  * Três formas de escolher: clicar num swatch da paleta, digitar o nome
  * (com autocomplete), ou usar o seletor de cor nativo do navegador.
  */
-export function ColorPicker({ value, colorName, onChange }: Props) {
+export function ColorPicker({ value, colorName, onChange, id }: Props) {
   const [inputName, setInputName] = useState(colorName || '');
   const [suggestions, setSuggestions] = useState<Array<{ name: string; hex: string }>>([]);
   const [showSugg, setShowSugg] = useState(false);
@@ -116,6 +118,7 @@ export function ColorPicker({ value, colorName, onChange }: Props) {
         {/* Campo de nome com autocomplete */}
         <div className="relative flex-1">
           <input
+            id={id}
             type="text"
             value={inputName}
             onChange={handleInput}

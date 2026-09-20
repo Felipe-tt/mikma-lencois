@@ -59,9 +59,14 @@ export function NotificationBell() {
       orderBy('createdAt', 'desc'),
       limit(30)
     );
-    return onSnapshot(q, snap => {
-      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() } as Notification)));
-    });
+    // Falha aqui degrada em silêncio de propósito: o sino é um extra no
+    // topo do painel, não pode virar erro na cara de quem está no meio
+    // de um atendimento. Sem notificação é melhor que painel quebrado.
+    return onSnapshot(
+      q,
+      snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() } as Notification))),
+      err => console.error('[NotificationBell] onSnapshot:', err)
+    );
   }, []);
 
   useEffect(() => {

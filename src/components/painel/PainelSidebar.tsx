@@ -35,9 +35,11 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    // Contador de não lidas: se falhar, some o selinho e nada mais.
     return onSnapshot(
       query(collection(db, 'conversations'), where('unread', '==', true)),
-      snap => setUnreadCount(snap.size)
+      snap => setUnreadCount(snap.size),
+      err => console.error('[PainelSidebar] contador de mensagens:', err)
     );
   }, []);
 
@@ -65,7 +67,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-2 overflow-y-auto scrollbar-none">
+      <nav aria-label="Navegação principal" className="flex-1 px-3 py-2 overflow-y-auto scrollbar-none">
         <ul className="flex flex-col gap-1">
           {NAV.map(({ href, label, desc, exact, Icon }) => {
             const active = exact ? pathname === href : pathname.startsWith(href);
@@ -74,6 +76,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
                 <Link
                   href={href}
                   onClick={onClose}
+                  aria-current={active ? 'page' : undefined}
                   className={`panel-nav-item ${active ? 'is-active' : ''}`}
                 >
                   <span className={`shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${

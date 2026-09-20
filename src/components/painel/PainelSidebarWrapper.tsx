@@ -115,11 +115,11 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
             overlay que escurece o resto da tela (mesmo z-index, mas depois
             no DOM), dando a impressão de dois menus ao mesmo tempo. */}
         {!open && (
-          <nav data-no-print className="panel-tabbar lg:hidden">
+          <nav data-no-print aria-label="Navegação principal" className="panel-tabbar lg:hidden">
             {TABBAR_NAV.map(({ href, label, exact, Icon }) => {
               const active = exact ? pathname === href : pathname.startsWith(href);
               return (
-                <Link key={href} href={href} className={`panel-tabbar-item ${active ? 'is-active' : ''}`}>
+                <Link key={href} href={href} aria-current={active ? 'page' : undefined} className={`panel-tabbar-item ${active ? 'is-active' : ''}`}>
                   <Icon size={19} />
                   <span className="text-[10px] font-semibold leading-none">{label}</span>
                   <span className="panel-tabbar-dot" />
