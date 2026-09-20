@@ -834,7 +834,7 @@ export default function ProductForm({ initial }: Props) {
           <FormSection step={2} title="Informações básicas">
             <div>
               <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-1 mb-1">
-                <label className="label mb-0">Nome do produto</label>
+                <label htmlFor="prod-nome" className="label mb-0">Nome do produto</label>
                 {nameEditedManually && currentNameSuggestion && name !== currentNameSuggestion && (
                   <button
                     type="button"
@@ -851,6 +851,7 @@ export default function ProductForm({ initial }: Props) {
               </div>
               <div className="relative">
                 <input
+                  id="prod-nome"
                   value={name}
                   onChange={e => { setName(e.target.value); setNameEditedManually(true); }}
                   placeholder="Jogo de cama queen algodão"
@@ -877,8 +878,9 @@ export default function ProductForm({ initial }: Props) {
             </div>
 
             <div>
-              <label className="label">Descrição</label>
+              <label htmlFor="prod-descricao" className="label">Descrição</label>
               <textarea
+                id="prod-descricao"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 rows={3}
@@ -889,8 +891,9 @@ export default function ProductForm({ initial }: Props) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">Preço (R$)</label>
+                <label htmlFor="prod-preco" className="label">Preço (R$)</label>
                 <input
+                  id="prod-preco"
                   ref={priceInputRef}
                   value={price}
                   onChange={e => setPrice(e.target.value)}
@@ -910,22 +913,24 @@ export default function ProductForm({ initial }: Props) {
                 )}
               </div>
               <div>
-                <label className="label">Categoria</label>
+                <label htmlFor="prod-categoria" className="label">Categoria</label>
                 <Select
                   value={category}
                   onChange={v => setCategory(v as typeof category)}
                   options={CATEGORIES.map(c => ({ value: c, label: c }))}
+                  triggerId="prod-categoria"
                 />
               </div>
             </div>
 
             <div>
-              <label className="label">Tamanho</label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <label id="prod-tamanho-label" className="label">Tamanho</label>
+              <div role="group" aria-labelledby="prod-tamanho-label" className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {SIZES.map(s => (
                   <button
                     key={s}
                     type="button"
+                    aria-pressed={size === s}
                     onClick={() => { tap(); setSize(s); }}
                     className={`py-3 rounded-[6px] border text-[13px] font-semibold transition-colors ${
                       size === s
@@ -941,7 +946,7 @@ export default function ProductForm({ initial }: Props) {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="label mb-0">
+                <label htmlFor="prod-peso" className="label mb-0">
                   Peso por unidade (kg) <span className="text-red-500">*</span>
                 </label>
                 <button
@@ -954,6 +959,7 @@ export default function ProductForm({ initial }: Props) {
               </div>
               <div className="relative max-w-[10rem]">
                 <input
+                  id="prod-peso"
                   type="number"
                   min="0.01"
                   step="0.01"
@@ -983,10 +989,11 @@ export default function ProductForm({ initial }: Props) {
 
             {category === 'Jogos de cama' && (
               <div>
-                <label className="label">
+                <label htmlFor="prod-fronhas" className="label">
                   Quantas fronhas vêm no jogo? <span className="font-normal normal-case text-faint">(solteiro/berço geralmente 1, casal/queen/king geralmente 2)</span>
                 </label>
                 <input
+                  id="prod-fronhas"
                   type="number"
                   min={1}
                   max={10}
@@ -1010,8 +1017,9 @@ export default function ProductForm({ initial }: Props) {
             )}
 
             <div>
-              <label className="label">Tags <span className="font-normal normal-case text-faint">(separadas por vírgula)</span></label>
+              <label htmlFor="prod-tags" className="label">Tags <span className="font-normal normal-case text-faint">(separadas por vírgula)</span></label>
               <input
+                id="prod-tags"
                 value={tags}
                 onChange={e => setTags(e.target.value)}
                 placeholder="algodão, casal, branco"
@@ -1096,7 +1104,7 @@ export default function ProductForm({ initial }: Props) {
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] text-faint block font-semibold tracking-[0.1em] uppercase">Cor</label>
+                        <label htmlFor={`prod-cor-${r.fabric}`} className="text-[10px] text-faint block font-semibold tracking-[0.1em] uppercase">Cor</label>
                         {images.length > 0 && (
                           <button
                             type="button"
@@ -1109,6 +1117,7 @@ export default function ProductForm({ initial }: Props) {
                         )}
                       </div>
                       <ColorPicker
+                        id={`prod-cor-${r.fabric}`}
                         value={r.color}
                         colorName={r.colorName}
                         onChange={(hex, colorName) => updateRow(r.fabric, { color: hex, colorName })}
@@ -1123,8 +1132,9 @@ export default function ProductForm({ initial }: Props) {
 
                     {!isEdit && (
                       <div className="w-24">
-                        <label className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Estoque</label>
+                        <label htmlFor={`prod-estoque-${r.fabric}`} className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Estoque</label>
                         <input
+                          id={`prod-estoque-${r.fabric}`}
                           type="number"
                           min={0}
                           // Nunca mostra "0" literal na caixa — um número
@@ -1170,7 +1180,7 @@ export default function ProductForm({ initial }: Props) {
             {specsOpen && (
               <div className="border border-mist p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl">
                 <div>
-                  <label className="label">Espessura do fio <span className="font-normal normal-case text-faint">(malha)</span></label>
+                  <label htmlFor="prod-fio" className="label">Espessura do fio <span className="font-normal normal-case text-faint">(malha)</span></label>
                   <Select
                     value={yarnCount}
                     onChange={handleYarnCountChange}
@@ -1179,19 +1189,20 @@ export default function ProductForm({ initial }: Props) {
                       ...YARN_COUNTS.map(y => ({ value: y, label: `Fio ${y}` })),
                     ]}
                     size="sm"
+                    triggerId="prod-fio"
                   />
                 </div>
                 <div>
-                  <label className="label">Gramatura (g/m²)</label>
-                  <input type="number" min={0} placeholder="180" value={weightGsm} onChange={e => setWeightGsm(e.target.value)} className="input-sm" />
+                  <label htmlFor="prod-gramatura" className="label">Gramatura (g/m²)</label>
+                  <input id="prod-gramatura" type="number" min={0} placeholder="180" value={weightGsm} onChange={e => setWeightGsm(e.target.value)} className="input-sm" />
                 </div>
                 <div className="col-span-2">
-                  <label className="label">Composição</label>
-                  <input placeholder="100% Algodão" value={composition} onChange={e => setComposition(e.target.value)} className="input-sm" />
+                  <label htmlFor="prod-composicao" className="label">Composição</label>
+                  <input id="prod-composicao" placeholder="100% Algodão" value={composition} onChange={e => setComposition(e.target.value)} className="input-sm" />
                 </div>
                 <div className="col-span-2">
-                  <label className="label">Certificações <span className="font-normal normal-case text-faint">(vírgula)</span></label>
-                  <input placeholder="OEKO-TEX, Fair Trade" value={certifications} onChange={e => setCertifications(e.target.value)} className="input-sm" />
+                  <label htmlFor="prod-certificacoes" className="label">Certificações <span className="font-normal normal-case text-faint">(vírgula)</span></label>
+                  <input id="prod-certificacoes" placeholder="OEKO-TEX, Fair Trade" value={certifications} onChange={e => setCertifications(e.target.value)} className="input-sm" />
                 </div>
               </div>
             )}
