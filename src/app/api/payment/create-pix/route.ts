@@ -396,6 +396,15 @@ export async function POST(req: NextRequest) {
     console.log('AbacatePay status:', pixRes.status, 'body:', pixText);
 
     if (!pixRes.ok) {
+      // Sem isso, o motivo real (o que a AbacatePay respondeu) só ia pro
+      // console.log do servidor — invisível pra qualquer pessoa fora de
+      // quem tem acesso ao Cloud Run. Próxima vez que isso acontecer,
+      // aparece no Sentry com o status e o corpo da resposta.
+      Sentry.captureMessage('AbacatePay recusou create PIX', {
+        level: 'error',
+        tags: { route: 'create-pix', abacatePayStatus: String(pixRes.status) },
+        extra: { orderId, responseBody: pixText.slice(0, 1000) },
+      });
       await orderRef.delete();
       // Liberar reserva de estoque
       for (let i = 0; i < stockLines.length; i++) {

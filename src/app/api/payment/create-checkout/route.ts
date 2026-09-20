@@ -460,6 +460,11 @@ export async function POST(req: NextRequest) {
     console.log('AbacatePay checkout status:', checkRes.status, 'body:', checkText);
 
     if (!checkRes.ok) {
+      Sentry.captureMessage('AbacatePay recusou create checkout', {
+        level: 'error',
+        tags: { route: 'create-checkout', abacatePayStatus: String(checkRes.status) },
+        extra: { orderId, responseBody: checkText.slice(0, 1000) },
+      });
       await orderRef.delete();
       // Liberar reserva de estoque
       for (let i = 0; i < stockLines.length; i++) {
