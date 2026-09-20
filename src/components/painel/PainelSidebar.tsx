@@ -35,9 +35,11 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    // Contador de não lidas: se falhar, some o selinho e nada mais.
     return onSnapshot(
       query(collection(db, 'conversations'), where('unread', '==', true)),
-      snap => setUnreadCount(snap.size)
+      snap => setUnreadCount(snap.size),
+      err => console.error('[PainelSidebar] contador de mensagens:', err)
     );
   }, []);
 

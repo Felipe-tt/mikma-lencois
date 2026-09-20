@@ -7,6 +7,7 @@ import { db, auth } from '@/lib/firebase/client';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
 import { PainelSkeleton } from '@/components/painel/PainelSkeleton';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import Link from 'next/link';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import {
@@ -64,6 +65,7 @@ export default function PainelPedidos() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Record<string, { name?: string; email?: string }>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [filter, setFilter] = useState('todos');
   const [search, setSearch] = useState('');
   const [dispatching, setDispatching] = useState<string | null>(null);
@@ -72,7 +74,8 @@ export default function PainelPedidos() {
   useEffect(() => {
     return onSnapshot(
       query(collection(db, 'orders'), orderBy('createdAt', 'desc')),
-      snap => { setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); setLoading(false); }
+      snap => { setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); setLoadError(false); setLoading(false); },
+      err => { console.error('[painel/pedidos] onSnapshot:', err); setLoadError(true); setLoading(false); }
     );
   }, []);
 
@@ -171,6 +174,7 @@ export default function PainelPedidos() {
   }).length;
 
   if (loading) return <PainelSkeleton rows={6} />;
+  if (loadError) return <PanelErrorState message="Não foi possível carregar os pedidos." />;
 
   return (
     <div className="max-w-6xl mx-auto">

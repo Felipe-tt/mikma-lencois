@@ -5,6 +5,7 @@ import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import Link from 'next/link';
 import { Select } from '@/components/ui/Select';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
 
 type MovementLog = { type: 'in' | 'out'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
 type InventoryItem = {
@@ -22,23 +23,38 @@ function variantLabel(item: InventoryItem) {
 export default function HistoricoEstoquePage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'todos' | 'in' | 'out'>('todos');
   const nameCache = useRef<Record<string, string>>({});
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'inventory'), async (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as InventoryItem));
-      const uncachedIds = Array.from(new Set(data.map((i) => i.productId))).filter((id) => !nameCache.current[id]);
-      if (uncachedIds.length > 0) {
-        await Promise.all(uncachedIds.map(async (pid) => {
-          const pdoc = await getDoc(doc(db, 'products', pid));
-          nameCache.current[pid] = pdoc.exists() ? (pdoc.data().name as string) : pid;
-        }));
-      }
-      setItems(data.map((i) => ({ ...i, productName: nameCache.current[i.productId] ?? i.productId })));
-      setLoading(false);
-    });
+    // O callback é async e busca o nome de cada produto. Sem o try/catch,
+    // uma única busca que falhasse rejeitava a promise do callback, o
+    // setLoading(false) nunca rodava e a tela ficava carregando pra
+    // sempre. O nome do produto é enfeite aqui: se não vier, cai pro id
+    // e a lista de movimentações continua servindo.
+    const unsub = onSnapshot(
+      collection(db, 'inventory'),
+      async (snap) => {
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as InventoryItem));
+        try {
+          const uncachedIds = Array.from(new Set(data.map((i) => i.productId))).filter((id) => !nameCache.current[id]);
+          if (uncachedIds.length > 0) {
+            await Promise.all(uncachedIds.map(async (pid) => {
+              const pdoc = await getDoc(doc(db, 'products', pid));
+              nameCache.current[pid] = pdoc.exists() ? (pdoc.data().name as string) : pid;
+            }));
+          }
+        } catch (err) {
+          console.error('[estoque/historico] nomes de produto:', err);
+        }
+        setItems(data.map((i) => ({ ...i, productName: nameCache.current[i.productId] ?? i.productId })));
+        setLoadError(false);
+        setLoading(false);
+      },
+      (err) => { console.error('[estoque/historico] onSnapshot:', err); setLoadError(true); setLoading(false); }
+    );
     return unsub;
   }, []);
 
@@ -83,7 +99,13 @@ export default function HistoricoEstoquePage() {
 
   if (loading) return (
     <div className="flex flex-col gap-2 max-w-6xl mx-auto">
-      {[1, 2, 3, 4].map(i => <div key={i} className="h-[52px] skeleton border border-mist rounded-xl" />)}
+      {[1, 2, 3, 4].map(i => <div key={i} className="h-[52px] skeleton rounded-xl" />)}
+    </div>
+  );
+
+  if (loadError) return (
+    <div className="max-w-6xl mx-auto">
+      <PanelErrorState message="Não foi possível carregar o histórico." />
     </div>
   );
 
