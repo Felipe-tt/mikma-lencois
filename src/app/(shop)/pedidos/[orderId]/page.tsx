@@ -15,7 +15,7 @@ import { db } from '@/lib/firebase/client';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/types';
 import { formatCurrency, formatTs, formatTsDateTime } from '@/lib/utils/format';
-import { carrierName, trackingUrl } from '@/lib/carriers';
+import { carrierName, trackingUrl, isCorreios } from '@/lib/carriers';
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { trackPurchase } from '@/lib/analytics';
@@ -185,6 +185,10 @@ export default function OrderDetailPage() {
   const currentStep = stepIndex(order.status);
   const carrier = order.delivery?.carrier ?? null;
   const trackCode = order.delivery?.trackingCode;
+  // Pra Correios (PAC/SEDEX), rastreia direto pelo código (Link&Track), sem
+  // depender de ter sido despachado pela Melhor Envio. Outras transportadoras
+  // continuam usando o orderId (via Melhor Envio) como antes.
+  const useCorreiosTracking = !!carrier && isCorreios(carrier) && !!trackCode;
   // Uber Direct: usa a trackingUrl da entrega (link em tempo real do Uber), não código
   const rastreioUrl = carrier === 'uber_direct'
     ? (order.delivery?.trackingUrl ?? null)
@@ -205,7 +209,11 @@ export default function OrderDetailPage() {
             Rastreamento
           </h2>
           <div className="border border-mist p-5">
-            <TrackingTimeline orderId={orderId} carrierName={carrierName(carrier)} />
+            <TrackingTimeline
+              trackingCode={useCorreiosTracking ? trackCode : undefined}
+              orderId={useCorreiosTracking ? undefined : orderId}
+              carrierName={carrierName(carrier)}
+            />
           </div>
         </section>
       )}
