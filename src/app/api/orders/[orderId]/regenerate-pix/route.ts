@@ -68,7 +68,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     method: 'PIX',
     data: {
       amount: order.totalCents,
-      description: `Pedido #${orderId.slice(-8).toUpperCase()}${abacateSandbox ? ' · TESTE' : ''}`,
+      // Ver nota em create-pix/route.ts: AbacatePay rejeita "·" na descrição.
+      description: `Pedido #${orderId.slice(-8).toUpperCase()}${abacateSandbox ? ' - TESTE' : ''}`,
       expiresIn: 900,
       externalId: orderId,
       ...(customerData ? { customer: customerData } : {}),
