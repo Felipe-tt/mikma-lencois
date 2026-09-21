@@ -376,7 +376,10 @@ export async function POST(req: NextRequest) {
       method: 'PIX',
       data: {
         amount: amountCents,
-        description: `Pedido #${orderId.slice(-8).toUpperCase()} · frete ${carrierName(matchedShipping.carrier)}${abacateSandbox ? ' · TESTE' : ''}`,
+        // AbacatePay rejeita caracteres fora do ASCII básico na descrição
+        // (confirmado: "·" U+00B7 dá 400 "Disallowed character"). Usa só
+        // hífen como separador aqui, nunca o "·" usado no resto do app.
+        description: `Pedido #${orderId.slice(-8).toUpperCase()} - frete ${carrierName(matchedShipping.carrier)}${abacateSandbox ? ' - TESTE' : ''}`,
         expiresIn: 900,
         externalId: orderId,
         ...(customerData ? { customer: customerData } : {}),
