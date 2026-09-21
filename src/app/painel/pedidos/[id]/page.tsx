@@ -16,7 +16,7 @@ const LiveDeliveryMap = dynamic(
   () => import('@/components/tracking/LiveDeliveryMap').then(m => m.LiveDeliveryMap),
   { ssr: false }
 );
-import { carrierNameVendor, trackingUrl } from '@/lib/carriers';
+import { carrierNameVendor, trackingUrl, isCorreios } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import {
   IconTruck, IconProducts, IconBox, IconMaintenance, IconUser, IconCard, IconPin, IconClock,
@@ -556,6 +556,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           const carrier = shipping?.carrier ?? 'correios_pac';
           const isPickup    = carrier === 'pickup';
           const isUberDirect = carrier === 'uber_direct';
+          // Correios (PAC/SEDEX) despacha manual, só com o código de rastreio,
+          // sem passar pela Melhor Envio (compra de etiqueta automática).
+          const isCorreiosCarrier = isCorreios(carrier);
           const CARRIER_LABELS: Record<string, string> = {
             correios_pac:    'Correios PAC',
             correios_sedex:  'Correios SEDEX',
@@ -598,6 +601,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <p className="text-[11px] text-faint">
                   Um motoboy Uber será solicitado assim que você clicar. Acompanhe o status em tempo real aqui no painel.
                 </p>
+              ) : isCorreiosCarrier ? (
+                <p className="text-[11px] text-faint">
+                  Poste na agência dos Correios e cole aqui o código de rastreio (formato AA123456789BR)
+                  pra confirmar o despacho. Sem Melhor Envio, sem etiqueta automática.
+                </p>
               ) : (
                 <p className="text-[11px] text-faint">
                   A etiqueta será gerada automaticamente via Melhor Envio e o saldo da sua conta será debitado.
@@ -609,15 +617,35 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{dispatchError}</p>
               )}
 
-              <button
-                onClick={() => dispatchDelivery()}
-                disabled={updating}
-                className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
-              >
-                {updating
-                  ? (isPickup ? 'Salvando…' : isUberDirect ? 'Solicitando motoboy…' : 'Gerando etiqueta…')
-                  : (isPickup ? 'Confirmar retirada' : isUberDirect ? 'Solicitar motoboy Uber' : 'Gerar etiqueta e despachar')}
-              </button>
+              {isCorreiosCarrier ? (
+                <>
+                  <input
+                    type="text"
+                    value={trackingCode}
+                    onChange={e => setTrackingCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                    placeholder="AA123456789BR"
+                    maxLength={20}
+                    className="w-full font-mono text-[13px] tracking-wide border border-mist bg-white dark:bg-warm px-4 py-3 rounded-xl focus:outline-none focus:border-ink"
+                  />
+                  <button
+                    onClick={advanceStatus}
+                    disabled={updating || !trackingCode.trim()}
+                    className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
+                  >
+                    {updating ? 'Salvando…' : 'Confirmar despacho'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => dispatchDelivery()}
+                  disabled={updating}
+                  className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
+                >
+                  {updating
+                    ? (isPickup ? 'Salvando…' : isUberDirect ? 'Solicitando motoboy…' : 'Gerando etiqueta…')
+                    : (isPickup ? 'Confirmar retirada' : isUberDirect ? 'Solicitar motoboy Uber' : 'Gerar etiqueta e despachar')}
+                </button>
+              )}
             </div>
           );
         })()}
@@ -938,7 +966,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <span className="ml-auto font-mono text-[11px] text-mid">{order.delivery.trackingCode}</span>
             </div>
             <div className="px-5 py-4">
-              <TrackingTimeline orderId={order.id} carrierName={carrierNameVendor(order.delivery.carrier!)} />
+              <TrackingTimeline
+                trackingCode={isCorreios(order.delivery.carrier!) && order.delivery.trackingCode ? order.delivery.trackingCode : undefined}
+                orderId={isCorreios(order.delivery.carrier!) && order.delivery.trackingCode ? undefined : order.id}
+                carrierName={carrierNameVendor(order.delivery.carrier!)}
+              />
             </div>
           </div>
         )}

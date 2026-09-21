@@ -61,8 +61,15 @@ export async function GET(
 
   const { code } = await params;
 
+  // Normaliza uma vez só: maiúsculas e sem espaço/traço/pontuação, pra não
+  // depender de como o vendedor colou o código (com espaço, minúsculo etc).
+  // Antes a detecção usava o código "cru" e só limpava mais embaixo (Modo 1),
+  // então um código com espaço no meio passava batido pelo isCorreiosCode e
+  // caía (errado) no fluxo de orderId/Melhor Envio.
+  const clean = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
   // Modo 1: código de rastreio do Correios (formato AAA000000000BR)
-  const isCorreiosCode = /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(code.trim().toUpperCase());
+  const isCorreiosCode = /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(clean);
 
   // Modo 2: orderId do Firestore (para buscar via Melhor Envio)
   const isFirestoreOrder = !isCorreiosCode && code.length > 13;
@@ -127,9 +134,10 @@ export async function GET(
         source: 'live',
       };
 
-      // Se tem tracking_url e é dos Correios, busca eventos detalhados
-      if (trackCode && isCorreiosCode) {
-        const correiosResult = await fetchCorreios(trackCode);
+      // Se tem código e é dos Correios, busca eventos detalhados
+      const trackCodeClean = trackCode ? trackCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+      if (trackCodeClean && /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(trackCodeClean)) {
+        const correiosResult = await fetchCorreios(trackCodeClean);
         if (correiosResult) {
           result.events = correiosResult.events;
           result.service = correiosResult.service;
@@ -144,7 +152,6 @@ export async function GET(
   }
 
   // Modo 1: Correios via Link&Track
-  const clean = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (clean.length < 10 || clean.length > 13) {
     return NextResponse.json({ error: 'Código inválido' }, { status: 400 });
   }
