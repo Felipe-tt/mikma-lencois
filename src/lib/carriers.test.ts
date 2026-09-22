@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { carrierName, carrierNameVendor, trackingUrl, isCorreios } from './carriers';
+import { carrierName, carrierNameVendor, trackingUrl, isCorreios, normalizeTrackingCode, isCorreiosTrackingCode } from './carriers';
 
 describe('carrierName', () => {
   it('retorna nome amigável pro cliente', () => {
@@ -53,5 +53,37 @@ describe('isCorreios', () => {
   it('não confunde outras transportadoras com Correios', () => {
     expect(isCorreios('jadlog_package')).toBe(false);
     expect(isCorreios('uber_direct')).toBe(false);
+  });
+});
+
+describe('normalizeTrackingCode', () => {
+  it('deixa em maiúsculas', () => {
+    expect(normalizeTrackingCode('aa123456789br')).toBe('AA123456789BR');
+  });
+  it('remove espaço no meio do código (era o caso que escapava da detecção)', () => {
+    expect(normalizeTrackingCode('AA 123456789 BR')).toBe('AA123456789BR');
+  });
+  it('remove traço e pontuação', () => {
+    expect(normalizeTrackingCode('AA-123456789-BR')).toBe('AA123456789BR');
+  });
+  it('remove espaço nas pontas', () => {
+    expect(normalizeTrackingCode('  AA123456789BR  ')).toBe('AA123456789BR');
+  });
+});
+
+describe('isCorreiosTrackingCode', () => {
+  it('reconhece o formato padrão dos Correios (AA123456789BR)', () => {
+    expect(isCorreiosTrackingCode('AA123456789BR')).toBe(true);
+  });
+  it('reconhece mesmo colado com espaço, minúsculo ou traço (bug original: SEDEX travava)', () => {
+    expect(isCorreiosTrackingCode('aa 123456789 br')).toBe(true);
+    expect(isCorreiosTrackingCode('AA-123456789-BR')).toBe(true);
+  });
+  it('rejeita um orderId do Firestore (não é formato Correios)', () => {
+    expect(isCorreiosTrackingCode('aB3xY9zQwErT1u2VpL8n')).toBe(false);
+  });
+  it('rejeita string vazia ou tamanho errado', () => {
+    expect(isCorreiosTrackingCode('')).toBe(false);
+    expect(isCorreiosTrackingCode('AA123BR')).toBe(false);
   });
 });

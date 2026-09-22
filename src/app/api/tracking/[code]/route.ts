@@ -4,6 +4,7 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { meTracking } from '@/lib/melhorenvio';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, extractBearer } from '@/lib/security';
+import { normalizeTrackingCode, isCorreiosTrackingCode } from '@/lib/carriers';
 
 export interface TrackingEvent {
   date: string;
@@ -66,10 +67,10 @@ export async function GET(
   // Antes a detecção usava o código "cru" e só limpava mais embaixo (Modo 1),
   // então um código com espaço no meio passava batido pelo isCorreiosCode e
   // caía (errado) no fluxo de orderId/Melhor Envio.
-  const clean = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const clean = normalizeTrackingCode(code);
 
   // Modo 1: código de rastreio do Correios (formato AAA000000000BR)
-  const isCorreiosCode = /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(clean);
+  const isCorreiosCode = isCorreiosTrackingCode(clean);
 
   // Modo 2: orderId do Firestore (para buscar via Melhor Envio)
   const isFirestoreOrder = !isCorreiosCode && code.length > 13;

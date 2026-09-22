@@ -80,3 +80,19 @@ export function trackingUrl(carrier: CarrierKey, code: string): string | null {
 export function isCorreios(carrier: CarrierKey): boolean {
   return carrier === 'correios_pac' || carrier === 'correios_sedex';
 }
+
+/**
+ * Normaliza um código de rastreio pra maiúsculas, sem espaço/traço/pontuação.
+ * O vendedor pode colar o código de qualquer jeito (com espaço no meio,
+ * minúsculo, com traço), então tudo que compara/detecta o formato tem que
+ * usar essa mesma normalização, ou um código "sujo" escapa da detecção e
+ * cai no fluxo errado (era exatamente o bug do rastreio de SEDEX travado).
+ */
+export function normalizeTrackingCode(code: string): string {
+  return code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/** True se o código (já normalizado ou não) está no formato dos Correios: AA123456789BR */
+export function isCorreiosTrackingCode(code: string): boolean {
+  return /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(normalizeTrackingCode(code));
+}

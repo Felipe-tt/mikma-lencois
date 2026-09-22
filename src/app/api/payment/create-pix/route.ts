@@ -9,6 +9,7 @@ import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
 import { tooManyRequests, addressSchema, validateBody, getClientIp, isValidCartQuantity } from '@/lib/security';
+import { sanitizePixDescription } from '@/lib/abacatepay';
 import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
@@ -376,10 +377,11 @@ export async function POST(req: NextRequest) {
       method: 'PIX',
       data: {
         amount: amountCents,
-        // AbacatePay rejeita caracteres fora do ASCII básico na descrição
-        // (confirmado: "·" U+00B7 dá 400 "Disallowed character"). Usa só
-        // hífen como separador aqui, nunca o "·" usado no resto do app.
-        description: `Pedido #${orderId.slice(-8).toUpperCase()} - frete ${carrierName(matchedShipping.carrier)}${abacateSandbox ? ' - TESTE' : ''}`,
+        // Sanitiza pra nunca mandar caractere fora do que a AbacatePay aceita
+        // (bug real: "·" travava o PIX; nomes com acento tem o mesmo risco).
+        description: sanitizePixDescription(
+          `Pedido #${orderId.slice(-8).toUpperCase()} - frete ${carrierName(matchedShipping.carrier)}${abacateSandbox ? ' - TESTE' : ''}`
+        ),
         expiresIn: 900,
         externalId: orderId,
         ...(customerData ? { customer: customerData } : {}),
