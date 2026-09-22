@@ -4,6 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { extractBearer, getClientIp, tooManyRequests } from '@/lib/security';
+import { sanitizePixDescription } from '@/lib/abacatepay';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 // Ver nota em create-pix/route.ts: ambiente é decidido por qual key é
@@ -68,8 +69,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     method: 'PIX',
     data: {
       amount: order.totalCents,
-      // Ver nota em create-pix/route.ts: AbacatePay rejeita "·" na descrição.
-      description: `Pedido #${orderId.slice(-8).toUpperCase()}${abacateSandbox ? ' - TESTE' : ''}`,
+      // Ver nota em src/lib/abacatepay.ts: AbacatePay rejeita caractere fora do ASCII básico.
+      description: sanitizePixDescription(
+        `Pedido #${orderId.slice(-8).toUpperCase()}${abacateSandbox ? ' - TESTE' : ''}`
+      ),
       expiresIn: 900,
       externalId: orderId,
       ...(customerData ? { customer: customerData } : {}),
