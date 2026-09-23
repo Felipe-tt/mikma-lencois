@@ -16,7 +16,7 @@ const LiveDeliveryMap = dynamic(
   () => import('@/components/tracking/LiveDeliveryMap').then(m => m.LiveDeliveryMap),
   { ssr: false }
 );
-import { carrierNameVendor, trackingUrl, isCorreios } from '@/lib/carriers';
+import { carrierNameVendor, trackingUrl, isCorreios, isCorreiosTrackingCode } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import {
   IconTruck, IconProducts, IconBox, IconMaintenance, IconUser, IconCard, IconPin, IconClock,
@@ -344,6 +344,19 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     if (!order) return;
     const next = STATUS_NEXT[order.status];
     if (!next) return;
+
+    // Despacho manual (Correios/Jadlog etc. sem Melhor Envio): confirma antes,
+    // porque clicar aqui já dispara o e-mail de "pedido enviado" pro cliente,
+    // mesmo que o pacote não tenha sido postado de verdade ainda.
+    if (order.status === 'preparing' && trackingCode.trim()) {
+      const { confirmed } = await confirmDialog({
+        message: 'Confirmar despacho?',
+        detail: `O cliente recebe o e-mail de "pedido enviado" com o código ${trackingCode.trim()}. Só confirme depois de já ter postado de verdade.`,
+        confirmLabel: 'Já postei, confirmar',
+      });
+      if (!confirmed) return;
+    }
+
     setUpdating(true);
     try {
       const token = await user!.getIdToken();
@@ -627,9 +640,14 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     maxLength={20}
                     className="w-full font-mono text-[13px] tracking-wide border border-mist bg-white dark:bg-warm px-4 py-3 rounded-xl focus:outline-none focus:border-ink"
                   />
+                  {trackingCode.trim().length > 0 && !isCorreiosTrackingCode(trackingCode) && (
+                    <p className="text-[11px] text-amber-600">
+                      Isso não parece um código dos Correios (formato esperado: AA123456789BR). Confere antes de continuar.
+                    </p>
+                  )}
                   <button
                     onClick={advanceStatus}
-                    disabled={updating || !trackingCode.trim()}
+                    disabled={updating || !isCorreiosTrackingCode(trackingCode)}
                     className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
                   >
                     {updating ? 'Salvando…' : 'Confirmar despacho'}
