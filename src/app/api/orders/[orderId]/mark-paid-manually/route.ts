@@ -9,7 +9,7 @@ import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
 const bodySchema = z.object({
   // Como o cliente pagou de fato: obrigatório, fica registrado no pedido e
   // no timeline pra auditoria (ex: "Dinheiro na retirada", "Transferência
-  // direto pro Felipe", "Pago fiado, combinado por WhatsApp").
+  // direto pro vendedor", "Pago fiado, combinado por WhatsApp").
   note: z.string().trim().min(3).max(300),
 });
 
