@@ -300,7 +300,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     if (!order) return;
     const { confirmed: hasNote, value: note } = await confirmDialog({
       message: 'Confirmar pagamento por fora',
-      detail: 'Descreva como o cliente pagou (aparece no registro do pedido, pra você lembrar depois). Ex: "Dinheiro na retirada", "Transferência direto pro Felipe", "Combinado por WhatsApp".',
+      detail: 'Descreva como o cliente pagou (aparece no registro do pedido, pra você lembrar depois). Ex: "Dinheiro na retirada", "Transferência direto pro vendedor", "Combinado por WhatsApp".',
       withInput: true,
       inputPlaceholder: 'Como o cliente pagou?',
       confirmLabel: 'Continuar',
