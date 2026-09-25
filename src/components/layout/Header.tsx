@@ -18,7 +18,7 @@ const NAV_LINKS = [
 ];
 
 export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
-  const { user, logout } = useAuth();
+  const { user, logout, loading: authLoading } = useAuth();
   const count      = useCartCount();
   const cartTotal  = useCartTotal();
   const pathname   = usePathname();
@@ -135,7 +135,11 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             </button>
 
             {/* Auth */}
-            {user ? (
+            {authLoading ? (
+              // Evita o flash de "Entrar/Cadastrar" antes do Firebase confirmar
+              // a sessão já logada (leva uns instantes, mesmo com cache local).
+              <div className="hidden md:block w-[92px] h-[30px]" aria-hidden />
+            ) : user ? (
               <>
                 {(user.role === 'seller' || user.role === 'admin') && (
                   <NavLink href="/painel" className={`hidden md:flex text-[10px] font-bold tracking-[0.14em] uppercase px-2 py-1.5 transition-colors ${isDark ? 'text-paper/40 hover:text-paper' : 'text-mid hover:text-ink'}`}>Painel</NavLink>
@@ -240,7 +244,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                 </NavLink>
               ))}
               <div className="h-px bg-mist mx-4 my-3" />
-              {user ? (
+              {authLoading ? null : user ? (
                 <>
                   <NavLink href="/conta" className="px-4 py-3 text-[15px] font-medium text-ink hover:bg-warm transition-colors">Minha conta</NavLink>
                   {(user.role === 'seller' || user.role === 'admin') && (
