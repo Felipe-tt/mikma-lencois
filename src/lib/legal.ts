@@ -7,7 +7,7 @@ import type { StoreSettings } from '@/lib/store-settings';
  * qual texto cada cliente deu o aceite. Incrementar sempre que houver
  * mudança material nos dois documentos e atualizar LEGAL_UPDATED_LABEL.
  */
-export const LEGAL_VERSION = '2.0';
+export const LEGAL_VERSION = '2.1';
 export const LEGAL_UPDATED_LABEL = '7 de outubro de 2026';
 
 export type StoreIdentity = {

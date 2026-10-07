@@ -1,5 +1,6 @@
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { CookieBanner } from '@/components/layout/CookieBanner';
 import { PageTransition } from '@/components/ui/PageTransition';
 import { MaintenanceGate } from '@/components/layout/MaintenanceGate';
 import { getSettings } from '@/lib/settings';
@@ -56,6 +57,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         businessHours={s.businessHours}
         businessHoursTimezone={s.businessHoursTimezone}
       />
+      <CookieBanner />
     </div>
   );
 }

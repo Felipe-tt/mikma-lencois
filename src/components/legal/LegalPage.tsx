@@ -10,11 +10,14 @@ export type LegalSection = {
 export function LegalPage({
   title,
   intro,
+  summary,
   sections,
   footer,
 }: {
   title: string;
   intro: ReactNode;
+  /** Pontos-chave em linguagem simples, mostrados antes do índice. */
+  summary?: string[];
   sections: LegalSection[];
   footer?: ReactNode;
 }) {
@@ -36,7 +39,21 @@ export function LegalPage({
         <div className="max-w-2xl flex flex-col gap-10">
           <P>{intro}</P>
 
-          <nav aria-label="Índice" className="rounded-lg border border-mist bg-warm/40 p-5">
+          {summary && summary.length > 0 && (
+            <aside aria-label="Em resumo" className="border-l-2 border-clay bg-warm/50 px-5 py-4">
+              <p className="eyebrow mb-3">Em resumo</p>
+              <ul className="flex flex-col gap-2 text-[14px] leading-relaxed text-mid">
+                {summary.map(item => (
+                  <li key={item} className="flex gap-2.5">
+                    <span aria-hidden className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-clay" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          )}
+
+          <nav aria-label="Índice" className="border border-mist bg-warm/40 p-5">
             <p className="eyebrow mb-3">Índice</p>
             <ol className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2 text-[14px] leading-snug">
               {sections.map((s, i) => (

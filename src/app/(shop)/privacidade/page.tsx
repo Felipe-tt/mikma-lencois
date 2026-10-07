@@ -3,6 +3,7 @@ export const revalidate = 86400; // 24h, conteúdo estático
 import Link from 'next/link';
 import { getSettings } from '@/lib/settings';
 import { storeIdentity } from '@/lib/legal';
+import { CookiePreferencesButton } from '@/components/layout/CookiePreferencesButton';
 import { LegalPage, ContactList, P, H3, UL, B, type LegalSection } from '@/components/legal/LegalPage';
 
 export const metadata = {
@@ -124,10 +125,11 @@ export default async function PrivacidadePage() {
               registros de acesso. Base: legítimo interesse (art. 7º, IX) e obrigação legal (Marco
               Civil da Internet, Lei nº 12.965/2014).
             </li>
-            {hasGA && (
+            {(hasGA || hasMeta) && (
               <li>
-                <B>Medir a audiência e melhorar o site</B> (Google Analytics). Base: legítimo
-                interesse (art. 7º, IX), com direito de oposição (veja a seção Cookies).
+                <B>Medir a audiência e melhorar o site</B>
+                {hasGA && <> (Google Analytics)</>}. Base: consentimento (art. 7º, I), dado no aviso
+                de cookies e revogável a qualquer momento (veja a seção Cookies).
               </li>
             )}
             <li>
@@ -224,39 +226,43 @@ export default async function PrivacidadePage() {
               <B>Necessários:</B> mantêm você conectado (sessão do Firebase Authentication),
               lembram sua preferência de tema claro ou escuro e viabilizam a segurança dos
               formulários de login, cadastro e recuperação de senha (reCAPTCHA). Sem eles, o site
-              não funciona corretamente.
+              não funciona corretamente, por isso não dependem de escolha.
             </li>
             {hasGA && (
               <li>
                 <B>Medição de audiência (Google Analytics 4):</B> cookies como _ga e _ga_ seguido do
                 identificador da propriedade, que podem durar até 2 anos. Enviam ao Google eventos de
                 navegação e compra, como páginas visitadas, produtos visualizados e itens
-                adicionados ao carrinho.
+                adicionados ao carrinho. <B>Só são ativados se você aceitar.</B>
               </li>
             )}
             {hasMeta && (
               <li>
-                <B>Meta Pixel:</B> cookie próprio da Meta para medir eventos de navegação e compra.
+                <B>Meta Pixel:</B> cookie próprio da Meta para medir eventos de navegação e compra.{' '}
+                <B>Só é ativado se você aceitar.</B>
               </li>
             )}
           </UL>
+          {(hasGA || hasMeta) && (
+            <>
+              <P>
+                Na sua primeira visita, mostramos um aviso para você aceitar ou recusar os cookies
+                de medição. A recusa tem o mesmo peso da aceitação, e o site funciona normalmente
+                nos dois casos. Sua escolha fica salva neste navegador por 12 meses.
+              </P>
+              <P>
+                Para rever ou mudar sua escolha a qualquer momento, use{' '}
+                <CookiePreferencesButton className={link + ' font-medium'}>
+                  Preferências de cookies
+                </CookiePreferencesButton>{' '}
+                (também disponível no rodapé do site). Ao recusar depois de ter aceitado, apagamos
+                os cookies de medição já gravados.
+              </P>
+            </>
+          )}
           <P>
-            Você pode apagar ou bloquear cookies nas configurações do navegador
-            {hasGA && (
-              <>
-                {' '}
-                e, para o Google Analytics, instalar o{' '}
-                <a
-                  href="https://tools.google.com/dlpage/gaoptout"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={link}
-                >
-                  complemento de desativação oferecido pelo Google
-                </a>
-              </>
-            )}
-            . Bloquear os cookies necessários pode impedir o login e a finalização de compras.
+            Você também pode apagar ou bloquear cookies nas configurações do navegador. Bloquear os
+            cookies necessários pode impedir o login e a finalização de compras.
           </P>
         </>
       ),
@@ -455,6 +461,14 @@ export default async function PrivacidadePage() {
           .
         </>
       }
+      summary={[
+        'Coletamos só o necessário para vender, cobrar e entregar os seus pedidos.',
+        'Não vendemos nem alugamos seus dados pessoais.',
+        'Em Perfil, você baixa uma cópia dos seus dados ou exclui a conta quando quiser.',
+        ...(hasGA || hasMeta
+          ? ['Cookies de medição de audiência só são ativados se você aceitar, e você pode mudar de ideia a qualquer momento.']
+          : []),
+      ]}
       sections={sections}
     />
   );
