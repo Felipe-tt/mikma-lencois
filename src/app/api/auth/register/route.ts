@@ -5,6 +5,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
 import { verifyRecaptcha } from '@/lib/recaptcha';
+import { LEGAL_VERSION } from '@/lib/legal';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
       emailVerified: true,
       ...(phone ? { phone } : {}),
       ...(cpf ? { cpf } : {}),
-      lgpdConsent: { date: new Date().toISOString(), version: '1.0', ip },
+      lgpdConsent: { date: new Date().toISOString(), version: LEGAL_VERSION, ip },
       createdAt: new Date().toISOString(),
     });
 
