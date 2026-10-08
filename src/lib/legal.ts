@@ -1,14 +1,24 @@
 import type { StoreSettings } from '@/lib/store-settings';
 
 /**
- * Versão vigente dos Termos de Uso e da Política de Privacidade.
+ * Data da última atualização material dos documentos legais (AAAA-MM-DD).
  *
- * É gravada em users/{uid}.lgpdConsent.version no cadastro, para provar a
- * qual texto cada cliente deu o aceite. Incrementar sempre que houver
- * mudança material nos dois documentos e atualizar LEGAL_UPDATED_LABEL.
+ * Ao visitante mostramos só o ano ("Última atualização: 2026"), como as
+ * lojas em geral. A data completa fica guardada em
+ * users/{uid}.lgpdConsent.version no cadastro, para provar a qual texto cada
+ * cliente deu o aceite. Atualizar sempre que houver mudança relevante.
  */
-export const LEGAL_VERSION = '2.1';
-export const LEGAL_UPDATED_LABEL = '7 de outubro de 2026';
+export const LEGAL_UPDATED_AT = '2026-10-07';
+export const LEGAL_VERSION = LEGAL_UPDATED_AT;
+export const LEGAL_UPDATED_LABEL = LEGAL_UPDATED_AT.slice(0, 4);
+
+/** Documentos que aparecem no menu lateral das páginas legais. */
+export const LEGAL_PAGES = [
+  { href: '/termos', label: 'Termos e Condições de Uso' },
+  { href: '/privacidade', label: 'Política de Privacidade' },
+  { href: '/politica-de-cookies', label: 'Política de Cookies' },
+  { href: '/trocas-e-devolucoes', label: 'Trocas e Devoluções' },
+] as const;
 
 export type StoreIdentity = {
   name: string;
