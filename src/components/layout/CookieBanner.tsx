@@ -84,7 +84,7 @@ export function CookieBanner() {
           Usamos cookies de análise para entender como o site é usado e melhorá-lo. Eles só são
           ativados se você aceitar.{' '}
           <Link
-            href="/privacidade#cookies"
+            href="/politica-de-cookies"
             className="text-ink underline underline-offset-2 hover:text-clay transition-colors"
           >
             Saiba mais

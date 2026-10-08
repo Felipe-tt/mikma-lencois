@@ -126,8 +126,10 @@ export function Footer({
                 </li>
               )}
               {[
+                { href: '/trocas-e-devolucoes', label: 'Trocas e devoluções' },
                 { href: '/privacidade', label: 'Privacidade' },
                 { href: '/termos', label: 'Termos de uso' },
+                { href: '/politica-de-cookies', label: 'Política de cookies' },
               ].map(({ href, label }) => (
                 <li key={href}>
                   <Link href={href} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
