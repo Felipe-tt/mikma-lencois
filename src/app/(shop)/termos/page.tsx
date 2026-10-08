@@ -38,7 +38,8 @@ export default async function TermosPage() {
         <>
           <P>
             Podemos atualizar estes Termos para refletir mudanças na loja ou na legislação. A versão
-            vigente é sempre a publicada nesta página, com a data e o número da versão indicados.
+            vigente é sempre a publicada nesta página, com a data da última atualização indicada no
+            topo.
           </P>
           <P>
             Mudanças relevantes serão destacadas no site ou comunicadas por e-mail. Pedidos já

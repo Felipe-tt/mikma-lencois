@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { LEGAL_UPDATED_LABEL, LEGAL_VERSION, type StoreIdentity } from '@/lib/legal';
+import { LEGAL_UPDATED_LABEL, type StoreIdentity } from '@/lib/legal';
 
 export type LegalSection = {
   id: string;
@@ -30,7 +30,7 @@ export function LegalPage({
             {title}
           </h1>
           <p className="mt-4 text-[13px] text-faint">
-            Versão {LEGAL_VERSION} · Atualizada em {LEGAL_UPDATED_LABEL}
+            Última atualização: {LEGAL_UPDATED_LABEL}
           </p>
         </div>
       </div>
@@ -78,12 +78,9 @@ export function LegalPage({
             </section>
           ))}
 
-          <div className="text-[12px] text-faint border-t border-mist pt-6 flex flex-col gap-1">
-            <p>
-              Versão {LEGAL_VERSION}, atualizada em {LEGAL_UPDATED_LABEL}.
-            </p>
-            {footer}
-          </div>
+          {footer && (
+            <div className="text-[12px] text-faint border-t border-mist pt-6">{footer}</div>
+          )}
         </div>
       </div>
     </div>

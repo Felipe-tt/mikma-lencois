@@ -75,8 +75,8 @@ export default async function PrivacidadePage() {
               identificador e a situação da cobrança.
             </li>
             <li>
-              <B>Registro de aceite:</B> no cadastro, guardamos a data, a versão destes documentos e
-              o IP de onde o aceite foi dado.
+              <B>Registro de aceite:</B> no cadastro, guardamos a data do aceite, qual versão destes
+              documentos foi aceita e o IP de onde o aceite foi dado.
             </li>
             <li>
               <B>Dados técnicos de acesso:</B> endereço IP, data e hora, navegador e dispositivo,
@@ -427,7 +427,8 @@ export default async function PrivacidadePage() {
       body: (
         <P>
           Podemos atualizar esta Política para refletir mudanças no site, nos nossos fornecedores ou
-          na lei. A versão vigente é sempre a publicada nesta página, com número e data. Mudanças
+          na lei. A versão vigente é sempre a publicada nesta página, com a data da última atualização
+          indicada no topo. Mudanças
           relevantes serão destacadas no site ou comunicadas por e-mail.
         </P>
       ),
