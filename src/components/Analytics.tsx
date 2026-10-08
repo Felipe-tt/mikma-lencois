@@ -3,6 +3,7 @@ import { Suspense, useEffect, useRef } from 'react';
 import Script from 'next/script';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { GA_ID, META_PIXEL_ID, trackPageView } from '@/lib/analytics';
+import { useCookieConsent } from '@/lib/cookie-consent';
 
 /**
  * Dispara um page_view a cada troca de rota. Necessário porque o App
@@ -32,6 +33,10 @@ function RouteChangeTracker() {
 }
 
 export function Analytics() {
+  // Nada de terceiros (GA/Pixel) é carregado antes do aceite no aviso de
+  // cookies. Recusou ou ainda não escolheu: nenhum script, nenhum cookie.
+  const consent = useCookieConsent();
+  if (consent !== 'granted') return null;
   if (!GA_ID && !META_PIXEL_ID) return null;
 
   return (
@@ -66,16 +71,6 @@ export function Analytics() {
               fbq('track', 'PageView');
             `}
           </Script>
-          <noscript>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              height="1"
-              width="1"
-              alt=""
-              style={{ display: 'none' }}
-              src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
-            />
-          </noscript>
         </>
       )}
 

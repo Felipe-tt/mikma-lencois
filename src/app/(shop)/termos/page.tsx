@@ -389,6 +389,12 @@ export default async function TermosPage() {
           .
         </>
       }
+      summary={[
+        'Aceitamos PIX e, quando disponível, cartão de crédito. O pedido é confirmado após o pagamento.',
+        'Pedidos aguardando pagamento são cancelados automaticamente após 48 horas.',
+        'Você pode desistir da compra em até 7 dias corridos após o recebimento.',
+        'Produtos com defeito são cobertos nos prazos do Código de Defesa do Consumidor.',
+      ]}
       sections={sections}
     />
   );

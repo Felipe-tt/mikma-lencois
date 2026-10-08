@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { parseBusinessHours, getOpenStatus } from '@/lib/business-hours';
+import { CookiePreferencesButton } from '@/components/layout/CookiePreferencesButton';
 
 interface Props {
   storeName?: string;
@@ -134,6 +135,9 @@ export function Footer({
                   </Link>
                 </li>
               ))}
+              <li>
+                <CookiePreferencesButton className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150" />
+              </li>
               {reclameAquiUrl && (
                 <li>
                   <a href={reclameAquiUrl} target="_blank" rel="noopener noreferrer"
