@@ -90,10 +90,8 @@ export async function POST(req: NextRequest) {
     // Revoga todos os tokens anteriores, força logout em outras sessões
     await adminAuth.revokeRefreshTokens(user.uid);
 
-    // Atualiza hash no Firestore
-    const { hash } = await import('@node-rs/argon2');
-    const passwordHash = await hash(newPassword, { memoryCost: 65536, timeCost: 3, parallelism: 4, outputLen: 32 });
-    await adminDb.collection('users').doc(user.uid).update({ passwordHash, updatedAt: new Date().toISOString() });
+    // Só carimba a atualização. A senha vive apenas no Firebase Auth.
+    await adminDb.collection('users').doc(user.uid).update({ updatedAt: new Date().toISOString() });
 
     await ref.delete();
 

@@ -25,6 +25,8 @@ import { createPixSchema } from './schema';
 
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
+/** Máximo de pedidos "aguardando pagamento" simultâneos por cliente. */
+const MAX_PENDING_ORDERS_PER_USER = 3;
 // Ambiente da AbacatePay é decidido por qual API key é usada (chave de Dev
 // Mode vs produção), não por outra base URL. settings.abacatePaySandboxMode
 // (editável em /painel/configuracoes) escolhe qual env var usar, sem
@@ -239,6 +241,24 @@ export async function POST(req: NextRequest) {
           copyPaste: existing.payment.pixCopyPaste,
           expiresAt: existing.payment.expiresAt,
         });
+      }
+    }
+
+    // ── Teto de pedidos aguardando pagamento por cliente ─────────────────────
+    // Cada pedido pendente RESERVA estoque até pagar ou expirar (48h). Sem
+    // teto, uma conta (ou várias) gera pedidos em série e "segura" o estoque
+    // inteiro da loja sem nunca pagar. Cliente real tem 1, no máximo 2.
+    {
+      const pendingSnap = await adminDb.collection('orders')
+        .where('userId', '==', uid)
+        .where('status', '==', 'pending_payment')
+        .limit(MAX_PENDING_ORDERS_PER_USER)
+        .get();
+      if (pendingSnap.size >= MAX_PENDING_ORDERS_PER_USER) {
+        return NextResponse.json(
+          { error: 'Você já tem pedidos aguardando pagamento. Conclua ou cancele um deles para criar outro.' },
+          { status: 409 }
+        );
       }
     }
 

@@ -6,6 +6,7 @@ import { notifySeller } from '@/lib/push/notifySeller';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { recordShippingCollected } from '@/lib/shipping-ledger';
+import { escapeHtml } from '@/lib/html';
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -49,16 +50,27 @@ export async function confirmOrderPaid(
       const data = orderSnap.data()!;
       if (data.status !== 'pending_payment') return null;
 
+      // Defesa em profundidade: o evento é assinado, mas se o txId diferir do
+      // registrado no pedido (ex.: cliente pagou um QR antigo depois de gerar
+      // outro) NÃO rejeitamos, para não deixar dinheiro recebido com pedido
+      // parado. Só deixamos o alerta visível no histórico para conferência.
+      const registeredTxId = (data.payment as { txId?: string } | undefined)?.txId;
+      const txMismatch = !!registeredTxId && registeredTxId !== txId;
+      const auditNote = txMismatch
+        ? `${note} · ATENÇÃO: txId do evento difere do registrado (${registeredTxId.slice(-8)})`
+        : note;
+
       tx.update(orderRef, {
         status: 'paid',
         'payment.paidAt': FieldValue.serverTimestamp(),
         'payment.txId': txId,
+        ...(txMismatch ? { 'payment.txIdMismatch': true, 'payment.previousTxId': registeredTxId } : {}),
         ...(manual ? {
           'payment.confirmedManuallyBy': manual.uid,
           'payment.confirmedManuallyNote': manual.note,
         } : {}),
         updatedAt: FieldValue.serverTimestamp(),
-        timeline: FieldValue.arrayUnion({ status: 'paid', at: now, note }),
+        timeline: FieldValue.arrayUnion({ status: 'paid', at: now, note: auditNote }),
       });
 
       // Decrementa quantity (estoque real, debitado de fato) e reserved
@@ -194,7 +206,7 @@ export async function confirmOrderPaid(
   </td></tr>
   <tr><td style="padding:36px;">
     <p style="margin:0 0 6px;font-size:18px;color:#1E1208;font-weight:bold;">Pedido confirmado!</p>
-    <p style="margin:0 0 24px;font-size:14px;color:#705A48;">Olá, ${customerName}. Recebemos seu pagamento e estamos preparando seu pedido.</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#705A48;">Olá, ${escapeHtml(customerName)}. Recebemos seu pagamento e estamos preparando seu pedido.</p>
 
     <p style="margin:0 0 8px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.1em;color:#B09C8C;">Pedido #${shortId}</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E6DFD5;margin-bottom:24px;">

@@ -22,12 +22,15 @@ interface SiteVerifyResponse {
 /**
  * Verifica um token de reCAPTCHA v3 gerado no cliente.
  *
- * Fail-open por design (mesmo padrão já usado no projeto para Sentry e
- * Upstash): se a secret não estiver configurada, ou se a chamada ao Google
- * falhar/der timeout, a verificação passa, um soluço de rede ou uma env
- * var não configurada em algum ambiente não deve travar cadastro/login
- * para usuários legítimos. A proteção real contra automação em massa
- * continua sendo o rate limiting, que não depende de terceiros.
+ * - Sem secret configurada (dev/CI): passa, não há o que verificar.
+ * - Secret configurada e token AUSENTE: bloqueia. Antes isto passava, o que
+ *   anulava o CAPTCHA: qualquer bot só precisava omitir o campo. O front
+ *   sempre envia o token (ver recaptcha-client.ts); quem não consegue gerar
+ *   (script bloqueado) recebe a mensagem para recarregar/desbloquear.
+ * - Falha da API do Google (rede/timeout/5xx): passa (fail-open), para um
+ *   soluço de terceiros não derrubar cadastro/login. O atacante não controla
+ *   isso, e o rate limiting continua valendo.
+ * - Resposta do Google dizendo que NÃO é humano: bloqueia.
  */
 export async function verifyRecaptcha(
   token: string | undefined,
@@ -36,7 +39,7 @@ export async function verifyRecaptcha(
 ): Promise<boolean> {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
   if (!secret) return true; // reCAPTCHA não configurado neste ambiente
-  if (!token) return true;  // frontend não enviou token (ex: JS desabilitado), não bloqueia
+  if (!token) return false; // token ausente com reCAPTCHA configurado = bot omitindo o campo
 
   try {
     const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
@@ -67,13 +70,14 @@ export type RecaptchaOutcome = 'pass' | 'challenge' | 'block';
  * meio-termo em vez de só passar/bloquear (hoje: login, via verificação
  * extra por e-mail quando o score vem "suspeito, mas não claramente bot").
  *
- * score >= passScore (0.5)      → 'pass'      segue normal, sem fricção
- * score >= challengeScore (0.3) → 'challenge' pede confirmação por e-mail
- * score <  challengeScore       → 'block'     rejeita, é bot com confiança alta
+ * score >= passScore (0.5)      -> 'pass'      segue normal, sem fricção
+ * score >= challengeScore (0.3) -> 'challenge' pede confirmação por e-mail
+ * score <  challengeScore       -> 'block'     rejeita, é bot com confiança alta
  *
- * Mesmo fail-open das outras funções: sem secret, sem token, erro de rede
- * ou resposta sem score numérico → 'pass'. Só bloqueia quando o Google
- * responde de verdade com um score baixo.
+ * Sem secret configurada -> 'pass'. Token ausente com secret configurada ->
+ * 'challenge' (não 'pass'): quem não gerou token precisa provar posse do
+ * e-mail, o que cobre o usuário com script bloqueado sem deixar bot omitir
+ * o campo. Erro de rede/Google -> 'pass' (fail-open, como em verifyRecaptcha).
  */
 export async function checkRecaptchaScore(
   token: string | undefined,
@@ -82,7 +86,7 @@ export async function checkRecaptchaScore(
 ): Promise<RecaptchaOutcome> {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
   if (!secret) return 'pass';
-  if (!token) return 'pass';
+  if (!token) return 'challenge';
 
   try {
     const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {

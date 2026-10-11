@@ -22,6 +22,12 @@ const OK = NextResponse.json({ ok: true });
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
+  // Teto GLOBAL de envios por hora, independente de IP. É a defesa contra
+  // spam/phishing em massa a partir do domínio da loja caso o IP seja forjado.
+  if (!await rateLimit('send-reset:global', 150, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: 'Estamos com muitos pedidos agora. Tente novamente em alguns minutos.' }, { status: 429 });
+  }
+
   const ipKey = `send-reset:ip:${ip}`;
   if (!await rateLimit(ipKey, 3, 15 * 60 * 1000)) {
     const wait = Math.ceil(rateLimitRetryAfter(ipKey) / 60000);

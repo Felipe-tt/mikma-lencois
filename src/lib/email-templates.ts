@@ -1,3 +1,4 @@
+import { escapeHtml } from '@/lib/html';
 interface ActionEmailInput {
   greetingName: string;
   /** Texto explicando o que aconteceu e o que o botão faz */
@@ -43,7 +44,7 @@ export function deliveryStatusEmailHtml({
         </td></tr>
         <tr><td style="padding:40px 36px;">
           <p style="margin:0 0 4px;font-size:13px;color:#C4714A;font-weight:bold;text-transform:uppercase;letter-spacing:0.06em;">${headline}</p>
-          <p style="margin:0 0 8px;font-size:18px;color:#1E1208;font-weight:bold;">Olá, ${greetingName}!</p>
+          <p style="margin:0 0 8px;font-size:18px;color:#1E1208;font-weight:bold;">Olá, ${escapeHtml(greetingName)}!</p>
           <p style="margin:0 0 28px;font-size:15px;color:#705A48;line-height:1.6;">${bodyText}</p>
 
           <table width="100%" cellpadding="0" cellspacing="0">
@@ -98,7 +99,7 @@ export function actionButtonEmailHtml({
         </td></tr>
         <!-- Body -->
         <tr><td style="padding:40px 36px;">
-          <p style="margin:0 0 8px;font-size:18px;color:#1E1208;font-weight:bold;">Olá, ${greetingName}!</p>
+          <p style="margin:0 0 8px;font-size:18px;color:#1E1208;font-weight:bold;">Olá, ${escapeHtml(greetingName)}!</p>
           <p style="margin:0 0 28px;font-size:15px;color:#705A48;line-height:1.6;">${introText}</p>
 
           <!-- Botão -->

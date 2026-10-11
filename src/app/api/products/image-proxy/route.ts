@@ -46,7 +46,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const upstream = await fetch(parsed.toString(), { signal: AbortSignal.timeout(10_000) });
+    const upstream = await fetch(parsed.toString(), {
+      signal: AbortSignal.timeout(10_000),
+      // Nunca segue redirect: a allowlist de host só vale para a URL inicial.
+      redirect: 'manual',
+    });
     if (!upstream.ok || !upstream.body) {
       return NextResponse.json({ error: 'Não foi possível buscar a imagem' }, { status: 502 });
     }
@@ -60,6 +64,9 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': contentType,
+        // Mesmo que o tipo seja SVG, o navegador não executa script nem sniffa o conteúdo.
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'none'; sandbox",
         'Cache-Control': 'private, max-age=300',
       },
     });

@@ -6,6 +6,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, safeJson, extractBearer, tooManyRequests } from '@/lib/security';
 import { serialize } from '@/lib/utils/serialize';
 import type { Review } from '@/types';
+import { sanitizeDisplayName } from '@/lib/html';
 
 const schema = z.object({
   orderId: z.string().min(1).max(128),
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
     uid = decoded.uid;
-    name = (decoded.name as string | undefined) ?? 'Cliente';
+    name = sanitizeDisplayName(decoded.name as string | undefined) || 'Cliente';
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }

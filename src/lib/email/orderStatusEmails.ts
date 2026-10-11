@@ -1,6 +1,7 @@
 import { carrierName, trackingUrl as getTrackingUrl } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Order } from '@/types';
+import { escapeHtml } from '@/lib/html';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br';
 const STORE = 'Mikma Lençóis';
@@ -41,10 +42,10 @@ function itemsHtml(order: Order) {
   const rows = order.items.map(it => `
     <tr>
       <td style="padding:10px 0;border-bottom:1px solid #F0EBE1;font-size:13px;color:#1E1208;">
-        ${it.productName}<br>
+        ${escapeHtml(it.productName)}<br>
         <span style="font-size:11px;color:#9C8B7C;">
-          ${it.variant.size}${it.variant.color ? ` · ${it.variant.color}` : ''}
-          ${it.variant.fabric ? ` · ${it.variant.fabric}` : ''} · ${it.quantity}x
+          ${escapeHtml(it.variant.size)}${it.variant.color ? ` · ${escapeHtml(it.variant.color)}` : ''}
+          ${it.variant.fabric ? ` · ${escapeHtml(it.variant.fabric)}` : ''} · ${it.quantity}x
         </span>
       </td>
       <td style="padding:10px 0;border-bottom:1px solid #F0EBE1;font-size:13px;color:#1E1208;text-align:right;white-space:nowrap;">
@@ -84,7 +85,7 @@ export function buildPreparing(order: Order, name: string) {
       <p style="margin:0 0 4px;font-size:12px;color:#9C8B7C;letter-spacing:.08em;text-transform:uppercase;">Pedido #${id}</p>
       <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">Pedido em separação!</h1>
       <p style="margin:0 0 14px;font-size:15px;color:#2C1F14;line-height:1.7;">
-        Olá, <strong>${name}</strong>! Nossa equipe já começou a separar e embalar o seu pedido com todo cuidado.
+        Olá, <strong>${escapeHtml(name)}</strong>! Nossa equipe já começou a separar e embalar o seu pedido com todo cuidado.
       </p>
       <p style="margin:0 0 20px;font-size:14px;color:#705A48;line-height:1.65;">
         Em breve ele estará a caminho. Você receberá um e-mail assim que for despachado.
@@ -109,16 +110,16 @@ export function buildShipped(order: Order, name: string) {
   const carrierLabel = carrier ? carrierName(carrier) : 'transportadora';
   const trackingBlock = code ? `
     <div style="background:#F5F0EB;padding:16px 20px;margin:20px 0;border-left:3px solid #C4714A;">
-      <p style="margin:0 0 4px;font-size:11px;color:#9C8B7C;text-transform:uppercase;letter-spacing:.08em;">Código de rastreio · ${carrierLabel}</p>
-      <p style="margin:0;font-family:monospace;font-size:18px;font-weight:bold;color:#1E1208;letter-spacing:.12em;">${code}</p>
-      ${rastreioUrl ? `<p style="margin:8px 0 0;"><a href="${rastreioUrl}" style="font-size:12px;color:#C4714A;text-decoration:none;">Rastrear na ${carrierLabel}</a></p>` : ''}
+      <p style="margin:0 0 4px;font-size:11px;color:#9C8B7C;text-transform:uppercase;letter-spacing:.08em;">Código de rastreio · ${escapeHtml(carrierLabel)}</p>
+      <p style="margin:0;font-family:monospace;font-size:18px;font-weight:bold;color:#1E1208;letter-spacing:.12em;">${escapeHtml(code)}</p>
+      ${rastreioUrl ? `<p style="margin:8px 0 0;"><a href="${escapeHtml(rastreioUrl)}" style="font-size:12px;color:#C4714A;text-decoration:none;">Rastrear na ${escapeHtml(carrierLabel)}</a></p>` : ''}
     </div>` : '';
   const html = wrap(`
     <div style="padding:36px 36px 4px;">
       <p style="margin:0 0 4px;font-size:12px;color:#9C8B7C;letter-spacing:.08em;text-transform:uppercase;">Pedido #${id}</p>
       <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">Pedido despachado!</h1>
       <p style="margin:0 0 14px;font-size:15px;color:#2C1F14;line-height:1.7;">
-        Olá, <strong>${name}</strong>! Seu pedido saiu e está a caminho. Fique de olho!
+        Olá, <strong>${escapeHtml(name)}</strong>! Seu pedido saiu e está a caminho. Fique de olho!
       </p>
       ${trackingBlock}
       ${itemsHtml(order)}
@@ -140,7 +141,7 @@ export function buildDelivered(order: Order, name: string) {
       <p style="margin:0 0 4px;font-size:12px;color:#9C8B7C;letter-spacing:.08em;text-transform:uppercase;">Pedido #${id}</p>
       <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">Pedido entregue!</h1>
       <p style="margin:0 0 14px;font-size:15px;color:#2C1F14;line-height:1.7;">
-        Olá, <strong>${name}</strong>! Seu pedido chegou. Esperamos que você ame seus novos lençóis!
+        Olá, <strong>${escapeHtml(name)}</strong>! Seu pedido chegou. Esperamos que você ame seus novos lençóis!
       </p>
       <p style="margin:0 0 20px;font-size:14px;color:#705A48;line-height:1.65;">
         Qualquer dúvida, é só responder esse e-mail, estamos aqui.
