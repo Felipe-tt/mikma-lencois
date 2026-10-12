@@ -8,7 +8,9 @@ service firebase.storage {
       allow write: if request.auth != null
         && (request.auth.token.role == 'seller' || request.auth.token.role == 'admin')
         && request.resource.size < 8 * 1024 * 1024  // 8 MB
-        && request.resource.contentType.matches('image/.*');
+        // Sem image/svg+xml: SVG pode carregar <script> e seria servido do
+        // domínio do Storage. Só formatos raster.
+        && request.resource.contentType.matches('image/(webp|jpeg|png|gif|avif)');
     }
 
     // Bloquear tudo mais

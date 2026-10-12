@@ -7,6 +7,7 @@ import { IconBox, IconCheck, IconX, IconSearch, IconInventory, IconReceipt } fro
 import type { MovementLog } from '@/types';
 import { nextTapDelta, shouldConfirmRapidTap, applyTapDelta } from '@/lib/inventoryTap';
 import { useFullscreenOverlay } from '@/lib/hooks/useFullscreenOverlay';
+import { staffActor } from '@/lib/staffActor';
 
 export type InventoryItem = {
   id: string; productId: string; productName?: string; sku: string;
@@ -155,7 +156,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         type, quantity: qty,
         reason: type === 'out' ? 'Venda presencial (loja física)' : 'Reposição de estoque',
         date: new Date().toISOString(), saleId: batchId,
-        ...(user?.email ? { by: user.email } : {}),
+        by: staffActor(user),
       };
       logs.push({ itemId: item.id, log });
       batch.update(doc(db, 'inventory', item.id), {
@@ -191,7 +192,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
             quantity: increment(log.type === 'out' ? log.quantity : -log.quantity),
             history: arrayUnion({
               type: log.type === 'out' ? 'in' : 'out', quantity: log.quantity, reason: `Desfeito: ${log.reason}`,
-              date: new Date().toISOString(), saleId: batchId, ...(user?.email ? { by: user.email } : {}),
+              date: new Date().toISOString(), saleId: batchId, by: staffActor(user),
             }),
             updatedAt: serverTimestamp(),
           });

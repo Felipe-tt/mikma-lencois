@@ -5,6 +5,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
+import { maintenanceDocId } from '@/lib/maintenanceQueue';
 
 // Endpoint público (sem auth) consultado via polling pela página /manutencao
 // (pra saber quando sair de lá sozinha) e pelo MaintenanceGate (fallback
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
     if (staff) return NextResponse.json({ active, released: true });
   }
 
-  const docId = ip.replace(/[.:]/g, '_');
+  const docId = await maintenanceDocId(ip, process.env.STAFF_SESSION_SECRET);
   const queueSnap = await adminDb.doc(`maintenance_queue/${docId}`).get();
   const released = queueSnap.exists ? (queueSnap.data()?.released ?? false) : false;
 

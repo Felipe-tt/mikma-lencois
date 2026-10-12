@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1]);
+    const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
     const uid = decoded.uid;
 
     if (!await rateLimit(`shipping:uid:${uid}`, 20, 60 * 60 * 1000)) {

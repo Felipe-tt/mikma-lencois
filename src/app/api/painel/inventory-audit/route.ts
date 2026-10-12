@@ -158,7 +158,8 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date().toISOString();
-  const by = auth.decoded.uid;
+  // Rótulo fixo: inventory.history é de leitura pública, não grava uid/e-mail da equipe.
+  const by = 'Auditoria de estoque';
   const details: Array<{ sku: string; from: number; to: number; status: 'corrigido' | 'pulado' }> = [];
   let corrected = 0;
   let skipped = 0;

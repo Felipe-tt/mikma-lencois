@@ -6,6 +6,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
 import { verifyRecaptcha } from '@/lib/recaptcha';
 import { LEGAL_VERSION } from '@/lib/legal';
+import { sanitizeDisplayName } from '@/lib/html';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -74,14 +75,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const name: string = vData.name;
+  const name: string = sanitizeDisplayName(vData.name) || 'Cliente';
 
   try {
-    const { hash } = await import('@node-rs/argon2');
-    const passwordHash = await hash(password, {
-      memoryCost: 65536, timeCost: 3, parallelism: 4, outputLen: 32,
-    });
-
+    // A senha fica SÓ no Firebase Auth (hash irreversível gerenciado pelo
+    // Google). Não guardamos cópia no Firestore: nenhum código a lia, e o
+    // documento users/{uid} é legível pela equipe.
     const userRecord = await adminAuth.createUser({
       email,
       password,
@@ -96,7 +95,6 @@ export async function POST(req: NextRequest) {
       name,
       email,
       role: 'buyer',
-      passwordHash,
       emailVerified: true,
       ...(phone ? { phone } : {}),
       ...(cpf ? { cpf } : {}),

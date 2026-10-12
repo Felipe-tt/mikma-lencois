@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { clientIpFromHeaders, isPlausibleIp } from '@/lib/ip';
+export { isPlausibleIp };
 import { adminAuth } from '@/lib/firebase/admin';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { z, type ZodType, type ZodError } from 'zod';
@@ -21,15 +23,12 @@ import { z, type ZodType, type ZodError } from 'zod';
  * próprio cliente.
  */
 export function getClientIp(req: NextRequest): string {
-  const fastlyIp = req.headers.get('fastly-client-ip');
-  if (fastlyIp) return fastlyIp.trim();
-
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) {
-    const parts = fwd.split(',').map((p) => p.trim()).filter(Boolean);
-    if (parts.length > 0) return parts[parts.length - 1];
-  }
-  return req.headers.get('x-real-ip') ?? req.headers.get('x-nf-client-connection-ip') ?? 'unknown';
+  // Atenção: fastly-client-ip só é confiável quando a requisição passou pelo
+  // Firebase Hosting/Fastly. Se o domínio *.run.app aceitar acesso direto, esse
+  // header pode ser forjado: por isso rotas sensíveis NÃO dependem só do IP
+  // (há limite por e-mail/uid e tetos globais), e a validação do formato
+  // impede que strings arbitrárias virem chaves de rate limit.
+  return clientIpFromHeaders(req.headers);
 }
 
 interface SafeJsonOk<T = unknown> { ok: true; data: T }

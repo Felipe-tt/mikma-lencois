@@ -11,7 +11,13 @@ import { actionButtonEmailHtml } from '@/lib/email-templates';
 import { verifyRecaptcha } from '@/lib/recaptcha';
 
 const schema = z.object({
-  name: z.string().min(2).max(100).trim(),
+  name: z
+    .string()
+    .min(2)
+    .max(100)
+    .trim()
+    // eslint-disable-next-line no-control-regex
+    .refine(n => !/[<>\u0000-\u001f\u007f]/.test(n), 'Nome contém caracteres inválidos'),
   email: z.string().email().max(256).toLowerCase(),
   recaptchaToken: z.string().min(1).optional(),
 });
@@ -20,6 +26,12 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mikma.com.br';
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
+
+  // Teto GLOBAL de envios por hora, independente de IP. É a defesa contra
+  // spam/phishing em massa a partir do domínio da loja caso o IP seja forjado.
+  if (!await rateLimit('send-verify:global', 150, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: 'Estamos com muitos pedidos agora. Tente novamente em alguns minutos.' }, { status: 429 });
+  }
 
   // Rate limit: 3 envios por IP por 15 min
   const ipKey = `send-verify:ip:${ip}`;

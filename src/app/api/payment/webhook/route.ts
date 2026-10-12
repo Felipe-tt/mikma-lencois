@@ -11,6 +11,7 @@ import { expandStockLines } from '@/lib/orderStockLines';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
 import { z } from 'zod';
 import { webhookSchema } from './schema';
+import { escapeHtml } from '@/lib/html';
 
 
 const ABACATEPAY_WEBHOOK_SECRET = process.env.ABACATEPAY_WEBHOOK_SECRET!;
@@ -180,7 +181,7 @@ export async function POST(req: NextRequest) {
   <tr><td style="background:#ffffff;padding:36px;border-top:3px solid #C4714A;">
     <p style="margin:0 0 6px;font-size:18px;font-weight:bold;color:#1E1208;">PIX expirado</p>
     <p style="margin:0 0 20px;font-size:14px;color:#705A48;line-height:1.65;">
-      Olá, ${customerName}. O tempo de pagamento do pedido <strong>#${shortId}</strong> (${total}) expirou.
+      Olá, ${escapeHtml(customerName)}. O tempo de pagamento do pedido <strong>#${shortId}</strong> (${total}) expirou.
     </p>
     <p style="margin:0 0 28px;font-size:14px;color:#705A48;line-height:1.65;">
       Sem problemas, você pode gerar um novo código PIX e concluir o pagamento.

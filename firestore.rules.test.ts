@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { setDoc, getDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { setDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, collection } from 'firebase/firestore';
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 
 // Testa as regras publicadas em firestore.rules contra o emulador local.
@@ -182,5 +182,235 @@ describe('deny-by-default: coleção não listada em nenhuma regra', () => {
     await assertFails(
       setDoc(doc(admin.firestore(), 'algumaColecaoNovaNaoMapeada/doc1'), { x: 1 })
     );
+  });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Correções da auditoria de segurança
+// ─────────────────────────────────────────────────────────────────────────────
+
+const seedUser = (extra: Record<string, unknown> = {}) =>
+  testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users/buyer1'), {
+      uid: 'buyer1', name: 'Ana', role: 'buyer', emailVerified: true, ...extra,
+    });
+  });
+
+describe('users/{uid}: whitelist de campos graváveis pelo próprio usuário', () => {
+  it('CRÍTICO: comprador não grava campos do servidor (emailVerified, lgpdConsent, uid, email)', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await seedUser();
+    const ref = doc(buyer.firestore(), 'users/buyer1');
+    await assertFails(updateDoc(ref, { emailVerified: false }));
+    await assertFails(updateDoc(ref, { lgpdConsent: { version: 'x' } }));
+    await assertFails(updateDoc(ref, { email: 'outro@x.com' }));
+    await assertFails(updateDoc(ref, { uid: 'buyer2' }));
+  });
+
+  it('comprador atualiza nome, telefone, CPF e endereço (mapa), como o checkout faz', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await seedUser();
+    await assertSucceeds(
+      setDoc(doc(buyer.firestore(), 'users/buyer1'), {
+        name: 'Ana Souza', cpf: '12345678901', phone: '47999999999',
+        address: { cep: '89010000', street: 'Rua X', number: '1' },
+      }, { merge: true })
+    );
+  });
+
+  it('nome com < ou > é recusado (higiene contra injeção)', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await seedUser();
+    await assertFails(updateDoc(doc(buyer.firestore(), 'users/buyer1'), { name: '<b>Ana</b>' }));
+    await assertFails(updateDoc(doc(buyer.firestore(), 'users/buyer1'), { name: 'a'.repeat(101) }));
+  });
+
+  it('um update que não toca no nome passa mesmo se o nome legado tiver < (não trava o usuário)', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await seedUser({ name: '<legado>' });
+    await assertSucceeds(updateDoc(doc(buyer.firestore(), 'users/buyer1'), { phone: '47999999999' }));
+  });
+
+  it('preferências do painel (staffPrefs) continuam graváveis', async () => {
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users/seller1'), { uid: 'seller1', role: 'seller' });
+    });
+    await assertSucceeds(
+      setDoc(doc(seller.firestore(), 'users/seller1'), { 'staffPrefs.lastSize': 'Queen' }, { merge: true })
+    );
+  });
+
+  it('create: dono cria o próprio documento só com campos da whitelist', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await assertSucceeds(setDoc(doc(buyer.firestore(), 'users/buyer1'), { name: 'Ana', phone: '47999999999' }));
+  });
+
+  it('CRÍTICO: create com role/admin ou em documento de outro usuário é recusado', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await assertFails(setDoc(doc(buyer.firestore(), 'users/buyer1'), { name: 'Ana', role: 'admin' }));
+    await assertFails(setDoc(doc(buyer.firestore(), 'users/buyer2'), { name: 'Ana' }));
+  });
+});
+
+describe('orders/{orderId}: sem update pelo client SDK', () => {
+  it('CRÍTICO: nem seller nem admin reescrevem pedido direto (ex.: marcar como pago)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'pending_payment' });
+    });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    await assertFails(updateDoc(doc(seller.firestore(), 'orders/order1'), { status: 'paid' }));
+    await assertFails(updateDoc(doc(admin.firestore(), 'orders/order1'), { status: 'paid' }));
+  });
+
+  it('comprador também não altera o próprio pedido', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'pending_payment' });
+    });
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await assertFails(updateDoc(doc(buyer.firestore(), 'orders/order1'), { status: 'paid' }));
+  });
+
+  it('seller ainda apaga pedido cancelado (fluxo do painel)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'cancelled' });
+    });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await assertSucceeds(deleteDoc(doc(seller.firestore(), 'orders/order1')));
+  });
+});
+
+describe('coupons/{code}: só a equipe lê', () => {
+  const seed = () =>
+    testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'coupons/VIP50'), { code: 'VIP50', type: 'percent', value: 50, active: true });
+    });
+
+  it('CRÍTICO: cliente logado não lê nem lista cupons', async () => {
+    await seed();
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await assertFails(getDoc(doc(buyer.firestore(), 'coupons/VIP50')));
+    await assertFails(getDocs(collection(buyer.firestore(), 'coupons')));
+  });
+
+  it('visitante anônimo também não', async () => {
+    await seed();
+    const anon = testEnv.unauthenticatedContext();
+    await assertFails(getDocs(collection(anon.firestore(), 'coupons')));
+  });
+
+  it('seller lê e lista (painel de cupons)', async () => {
+    await seed();
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await assertSucceeds(getDocs(collection(seller.firestore(), 'coupons')));
+  });
+});
+
+describe('settings/store: parâmetros de dinheiro e sandbox só o admin altera', () => {
+  const seed = () =>
+    testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'settings/store'), {
+        storeName: 'Mikma', pixDiscountPct: 10, abacatePaySandboxMode: false,
+        uberDirectSandboxMode: false, freeShippingThresholdCents: 0, creditMinOrderCents: 0,
+      });
+    });
+
+  it('leitura continua pública', async () => {
+    await seed();
+    await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'settings/store')));
+  });
+
+  it('seller edita configuração comum (merge sem mudar os campos sensíveis)', async () => {
+    await seed();
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await assertSucceeds(
+      setDoc(doc(seller.firestore(), 'settings/store'),
+        { storeName: 'Mikma Lençóis', pixDiscountPct: 10, abacatePaySandboxMode: false }, { merge: true })
+    );
+  });
+
+  it('CRÍTICO: seller não muda desconto PIX, frete grátis, cartão nem modos sandbox', async () => {
+    await seed();
+    const ref = doc(testEnv.authenticatedContext('seller1', { role: 'seller' }).firestore(), 'settings/store');
+    await assertFails(updateDoc(ref, { pixDiscountPct: 99 }));
+    await assertFails(updateDoc(ref, { abacatePaySandboxMode: true }));
+    await assertFails(updateDoc(ref, { uberDirectSandboxMode: true }));
+    await assertFails(updateDoc(ref, { freeShippingThresholdCents: 1 }));
+    await assertFails(updateDoc(ref, { creditMinOrderCents: 100 }));
+  });
+
+  it('admin altera tudo, inclusive os campos sensíveis', async () => {
+    await seed();
+    const ref = doc(testEnv.authenticatedContext('admin1', { role: 'admin' }).firestore(), 'settings/store');
+    await assertSucceeds(updateDoc(ref, { pixDiscountPct: 12, abacatePaySandboxMode: true }));
+  });
+
+  it('comprador não escreve configurações', async () => {
+    await seed();
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await assertFails(updateDoc(doc(buyer.firestore(), 'settings/store'), { storeName: 'x' }));
+  });
+});
+
+describe('maintenance_queue: leitura por ID, listagem só da equipe, criação restrita', () => {
+  const ID = 'a'.repeat(64);
+  const validEntry = () => ({
+    ip: '189.1.2.3', released: false, enteredAt: new Date().toISOString(),
+    userAgent: 'Mozilla/5.0', isBot: false, referer: '', acceptLanguage: 'pt-BR',
+    requestedPath: '/', platform: 'Windows', isMobile: '?0',
+  });
+  const seed = () =>
+    testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `maintenance_queue/${ID}`), { ...validEntry(), requestedPath: '/produtos' });
+    });
+
+  it('o proxy (anônimo) lê UM documento pelo ID (checa se o IP está liberado)', async () => {
+    await seed();
+    await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), `maintenance_queue/${ID}`)));
+  });
+
+  it('CRÍTICO: ninguém anônimo (nem comprador logado) lista a coleção', async () => {
+    await seed();
+    await assertFails(getDocs(collection(testEnv.unauthenticatedContext().firestore(), 'maintenance_queue')));
+    await assertFails(
+      getDocs(collection(testEnv.authenticatedContext('buyer1', { role: 'buyer' }).firestore(), 'maintenance_queue'))
+    );
+  });
+
+  it('seller lista (painel de manutenção)', async () => {
+    await seed();
+    await assertSucceeds(
+      getDocs(collection(testEnv.authenticatedContext('seller1', { role: 'seller' }).firestore(), 'maintenance_queue'))
+    );
+  });
+
+  it('anônimo cria o registro no formato exato que o proxy grava', async () => {
+    const anon = testEnv.unauthenticatedContext();
+    await assertSucceeds(setDoc(doc(anon.firestore(), `maintenance_queue/${'b'.repeat(64)}`), validEntry()));
+  });
+
+  it('CRÍTICO: criação fora do formato é recusada (ID, campo extra, released=true, tamanho)', async () => {
+    const db = testEnv.unauthenticatedContext().firestore();
+    await assertFails(setDoc(doc(db, 'maintenance_queue/189_1_2_3'), validEntry())); // ID antigo (IP)
+    await assertFails(setDoc(doc(db, `maintenance_queue/${'c'.repeat(64)}`), { ...validEntry(), extra: 'x' }));
+    await assertFails(setDoc(doc(db, `maintenance_queue/${'d'.repeat(64)}`), { ...validEntry(), released: true }));
+    await assertFails(setDoc(doc(db, `maintenance_queue/${'e'.repeat(64)}`), { ...validEntry(), userAgent: 'a'.repeat(301) }));
+    await assertFails(setDoc(doc(db, `maintenance_queue/${'f'.repeat(64)}`), { ...validEntry(), requestedPath: 'a'.repeat(201) }));
+  });
+
+  it('anônimo não sobrescreve nem se auto-libera num registro existente', async () => {
+    await seed();
+    const ref = doc(testEnv.unauthenticatedContext().firestore(), `maintenance_queue/${ID}`);
+    await assertFails(setDoc(ref, { ...validEntry(), requestedPath: '/outro' }));
+    await assertFails(updateDoc(ref, { released: true }));
+  });
+
+  it('seller libera (released=true) e apaga', async () => {
+    await seed();
+    const ref = doc(testEnv.authenticatedContext('seller1', { role: 'seller' }).firestore(), `maintenance_queue/${ID}`);
+    await assertSucceeds(updateDoc(ref, { released: true }));
+    await assertSucceeds(deleteDoc(ref));
   });
 });

@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email';
 import { timingSafeEqual } from 'crypto';
 import { expandStockLines } from '@/lib/orderStockLines';
+import { escapeHtml } from '@/lib/html';
 
 // ── Timings ────────────────────────────────────────────────────────────────────
 // Pedido sem pagamento por WARN_AFTER_MS → envia aviso "vai cancelar em 24h"
@@ -227,7 +228,7 @@ export async function GET(req: NextRequest) {
               body: `
                 <p style="margin:0 0 6px;font-size:18px;font-weight:bold;color:#1E1208;">Pedido cancelado</p>
                 <p style="margin:0 0 24px;font-size:14px;color:#705A48;line-height:1.65;">
-                  Olá, ${customerName}. Como o pagamento do pedido <strong>#${shortId}</strong> (${total})
+                  Olá, ${escapeHtml(customerName)}. Como o pagamento do pedido <strong>#${shortId}</strong> (${total})
                   não foi realizado em 48 horas, ele foi cancelado automaticamente.
                 </p>
                 <p style="margin:0;font-size:14px;color:#705A48;line-height:1.65;">
@@ -274,7 +275,7 @@ export async function GET(req: NextRequest) {
               body: `
                 <p style="margin:0 0 6px;font-size:18px;font-weight:bold;color:#1E1208;">Seu pedido vai expirar</p>
                 <p style="margin:0 0 24px;font-size:14px;color:#705A48;line-height:1.65;">
-                  Olá, ${customerName}. Seu pedido <strong>#${shortId}</strong> (${total}) ainda
+                  Olá, ${escapeHtml(customerName)}. Seu pedido <strong>#${shortId}</strong> (${total}) ainda
                   está aguardando pagamento.
                 </p>
                 <p style="margin:0 0 0;font-size:14px;color:#705A48;line-height:1.65;">

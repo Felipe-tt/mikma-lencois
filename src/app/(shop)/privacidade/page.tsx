@@ -278,7 +278,7 @@ export default async function PrivacidadePage() {
       clauses: [
         clause('A Loja adota medidas técnicas e administrativas para proteger os dados pessoais, entre elas:', [
           'comunicação protegida por criptografia (HTTPS/TLS) em todo o Site;',
-          'armazenamento de senhas somente como hash (Argon2);',
+          'senhas protegidas por hash irreversível, gerenciado pelo Firebase Authentication, sem cópia no banco de dados da Loja;',
           'autenticação gerenciada pelo Firebase Authentication, com proteção contra robôs (reCAPTCHA) e limitação de tentativas nos formulários sensíveis;',
           'regras de acesso ao banco de dados, de modo que cada Cliente acesse apenas os próprios dados, e restrição das áreas administrativas a perfis autorizados;',
           'infraestrutura em nuvem do Google, com criptografia dos dados em repouso, e compartilhamento com terceiros limitado ao necessário.',
