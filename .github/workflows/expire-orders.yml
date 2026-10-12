@@ -6,6 +6,8 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch: # permite rodar manualmente
 
+permissions: {}
+
 jobs:
   expire-orders:
     name: Expirar pedidos sem pagamento

@@ -6,66 +6,52 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Menor privilégio por padrão: o GITHUB_TOKEN só lê o conteúdo do repositório.
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: "24"
 
 jobs:
+  # ── 1) Validação: testes, regras do Firestore e build ──────────────────────
+  # Este job é o check obrigatório "build-and-deploy" da regra do repositório e
+  # roda em TODO evento (inclusive PRs). Ele NÃO recebe nenhum segredo de
+  # produção. Antes, o job inteiro carregava FIREBASE_PRIVATE_KEY,
+  # ABACATEPAY_API_KEY, RECAPTCHA_SECRET_KEY etc. e executava npm ci/test/build
+  # do código do PR: qualquer pessoa capaz de abrir um PR (ou com um token
+  # vazado) podia exfiltrar as chaves de produção editando um teste. O build
+  # de produção passa com valores de mentira, porque só a parte NEXT_PUBLIC_*
+  # (pública por natureza) é incorporada ao bundle e este workflow não publica
+  # o site (quem faz isso é o App Hosting, com os segredos dele).
   build-and-deploy:
     name: build-and-deploy
     runs-on: ubuntu-latest
-    # Antes este job inteiro só rodava em push/workflow_dispatch para main,
-    # o que fazia o check "build-and-deploy" (obrigatório na regra do
-    # repositório) aparecer como "skipped" em qualquer PR, inclusive PRs
-    # do Dependabot, tornando impossível satisfazer a regra e mergear.
-    # Agora o job roda em todo evento (build + testes validam o PR), e só
-    # os passos de deploy de fato (a partir de "Install Firebase CLI") são
-    # restritos a push/workflow_dispatch em main via `if` nos próprios passos.
     env:
-      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
-      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
-      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
-      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-      NEXT_PUBLIC_FIREBASE_VAPID_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_VAPID_KEY }}
-      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-      FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
-      FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
-      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
-      NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${{ secrets.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}
-      RECAPTCHA_SECRET_KEY: ${{ secrets.RECAPTCHA_SECRET_KEY }}
-      ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
-      ABACATEPAY_PUBLIC_KEY: ${{ secrets.ABACATEPAY_PUBLIC_KEY }}
-      MELHOR_ENVIO_TOKEN: ${{ secrets.MELHOR_ENVIO_TOKEN }}
-      MELHOR_ENVIO_CLIENT_SECRET: ${{ secrets.MELHOR_ENVIO_CLIENT_SECRET }}
-      MELHOR_ENVIO_SANDBOX: 'false'
-      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-      RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
-      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
-      EMAIL_CONTATO_ADDRESS: ${{ secrets.EMAIL_CONTATO_ADDRESS }}
+      # Placeholders: não são credenciais reais.
+      NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyCiBuildPlaceholderNotARealKey000000
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-placeholder
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-placeholder.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "0"
+      NEXT_PUBLIC_FIREBASE_APP_ID: 1:0:web:0
+      FIREBASE_PROJECT_ID: ci-placeholder
+      FIREBASE_CLIENT_EMAIL: ci-placeholder@ci-placeholder.iam.gserviceaccount.com
       NEXT_PUBLIC_APP_URL: https://mikma.com.br
       NEXT_PUBLIC_BASE_URL: https://mikma.com.br
-      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      STAFF_SESSION_SECRET: ${{ secrets.STAFF_SESSION_SECRET }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 2
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Cache node_modules
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         id: npm-cache
         with:
           path: node_modules
@@ -79,7 +65,7 @@ jobs:
         run: npm test
 
       - name: Instalar JDK (exigido pelo emulador do Firestore)
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: '21'
@@ -88,7 +74,7 @@ jobs:
         run: npm run test:rules
 
       - name: Cache Next.js build cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: .next/cache
           key: nextjs-v3-webpack-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.css', 'src/**/*.ts', 'src/**/*.tsx', 'tailwind.config.ts') }}
@@ -99,72 +85,56 @@ jobs:
           # produção mesmo após o fix estar no commit). Preferimos um
           # cache miss ocasional (build mais lenta) a servir código stale.
 
-      - name: Criar .env.production com variáveis server-side
-        run: |
-          # FIREBASE_PRIVATE_KEY pode conter quebras de linha REAIS (comum
-          # quando se cola a chave inteira, com \n de verdade, no valor do
-          # secret no GitHub). Um arquivo .env é parseado linha a linha -
-          # se a chave entrar com newlines reais, só a primeira linha
-          # ("-----BEGIN PRIVATE KEY-----") vira o valor de fato, e o resto
-          # vira lixo/linhas soltas no arquivo. Escapamos pra \n literal
-          # aqui (2 caracteres: barra + n) ANTES de escrever; o código que
-          # lê essa env var (normalizePrivateKey em src/lib/firebase/admin.ts)
-          # já espera e converte esse formato de volta pra newline real.
-          FIREBASE_PRIVATE_KEY_SAFE=$(printf '%s' "${{ secrets.FIREBASE_PRIVATE_KEY }}" | awk '{printf "%s\\n", $0}')
-
-          cat > .env.production << EOF
-          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
-          RESEND_WEBHOOK_SECRET=${{ secrets.RESEND_WEBHOOK_SECRET }}
-          RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}
-          EMAIL_CONTATO_ADDRESS=${{ secrets.EMAIL_CONTATO_ADDRESS }}
-          FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}
-          FIREBASE_PRIVATE_KEY=$FIREBASE_PRIVATE_KEY_SAFE
-          RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
-          ABACATEPAY_API_KEY=${{ secrets.ABACATEPAY_API_KEY }}
-          ABACATEPAY_PUBLIC_KEY=${{ secrets.ABACATEPAY_PUBLIC_KEY }}
-          MELHOR_ENVIO_TOKEN=${{ secrets.MELHOR_ENVIO_TOKEN }}
-          CRON_SECRET=${{ secrets.CRON_SECRET }}
-          UBER_DIRECT_CLIENT_ID=${{ secrets.UBER_DIRECT_CLIENT_ID }}
-          UBER_DIRECT_CLIENT_SECRET=${{ secrets.UBER_DIRECT_CLIENT_SECRET }}
-          UBER_DIRECT_CUSTOMER_ID=${{ secrets.UBER_DIRECT_CUSTOMER_ID }}
-          UBER_DIRECT_WEBHOOK_SECRET=${{ secrets.UBER_DIRECT_WEBHOOK_SECRET }}
-          UBER_DIRECT_SANDBOX_CLIENT_ID=${{ secrets.UBER_DIRECT_SANDBOX_CLIENT_ID }}
-          UBER_DIRECT_SANDBOX_CLIENT_SECRET=${{ secrets.UBER_DIRECT_SANDBOX_CLIENT_SECRET }}
-          UBER_DIRECT_SANDBOX_CUSTOMER_ID=${{ secrets.UBER_DIRECT_SANDBOX_CUSTOMER_ID }}
-          UBER_DIRECT_SANDBOX_WEBHOOK_SECRET=${{ secrets.UBER_DIRECT_SANDBOX_WEBHOOK_SECRET }}
-          UBER_DIRECT_RADIUS_KM=15
-          ORS_API_KEY=${{ secrets.ORS_API_KEY }}
-          UPSTASH_REDIS_REST_URL=${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN=${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          SENTRY_DSN=${{ secrets.SENTRY_DSN }}
-          NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          SENTRY_ORG=${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
-          SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
-          STAFF_SESSION_SECRET=${{ secrets.STAFF_SESSION_SECRET }}
-          EOF
-
       - name: Build Next.js
         run: npm run build
 
-      - name: Install Firebase CLI
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        run: npm install -g firebase-tools
+  # ── 2) Deploy de regras/índices/Storage: SÓ na main, único job com a chave ─
+  # A service account (GOOGLE_APPLICATION_CREDENTIALS) só existe neste job, que
+  # só roda em push/workflow_dispatch na main depois da validação acima passar.
+  # `environment: production` permite proteger isso no GitHub (Settings ->
+  # Environments -> production: restringir a branch main e, se quiser, exigir
+  # aprovação), e guardar o segredo no ambiente em vez do repositório.
+  deploy-firebase:
+    name: deploy-firebase
+    needs: build-and-deploy
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-firebase
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # Sem scripts de ciclo de vida e ANTES de existir qualquer segredo no
+      # ambiente: nenhum pacote instalado roda código com a chave por perto.
+      # Usa o firebase-tools travado no package-lock (antes era um
+      # `npm install -g firebase-tools` sem versão, a cada deploy).
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
 
       - name: Write service account key
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        run: echo "$GOOGLE_APPLICATION_CREDENTIALS" > $HOME/sa.json
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          umask 077
+          printf '%s' "$SA_JSON" > "$HOME/sa.json"
 
       - name: Configurar CORS do bucket de Storage (upload direto do navegador)
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: node scripts/set-bucket-cors.mjs "$HOME/sa.json"
         env:
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
 
       - name: Deploy Firestore Rules
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:rules --project mikma-lencois
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json npx firebase deploy --only firestore:rules --project mikma-lencois
 
       - name: Deploy Firestore Indexes
         # A service account do CI ainda não tem a permissão de IAM pra gerenciar
@@ -172,17 +142,19 @@ jobs:
         # no IAM do projeto, não deixamos essa falha travar o deploy do site -
         # é só um passo a mais de infra, não algo que quebra produção na hora.
         # Ver nota no fim do arquivo sobre como resolver a permissão.
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only firestore:indexes --project mikma-lencois
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json npx firebase deploy --only firestore:indexes --project mikma-lencois
         continue-on-error: true
 
       - name: Deploy Storage Rules
         # continue-on-error mantido como rede de segurança: se faltar
         # alguma permissão de IAM específica do Storage no futuro, isso
         # não deve travar o deploy do site (que depende só do Firestore).
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json firebase deploy --only storage --project mikma-lencois
+        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json npx firebase deploy --only storage --project mikma-lencois
         continue-on-error: true
+
+      - name: Remover a chave do disco
+        if: always()
+        run: rm -f "$HOME/sa.json"
 
 # ── Nota: migração para o Firebase App Hosting ───────────────────────────────
 # O deploy do site em si (hosting classico, "frameworksBackend") foi removido
