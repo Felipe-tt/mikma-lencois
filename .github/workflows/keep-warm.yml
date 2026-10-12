@@ -17,6 +17,8 @@ on:
                          # instância dormir por longos períodos)
   workflow_dispatch: {} # permite rodar manualmente pelo GitHub
 
+permissions: {}
+
 jobs:
   ping:
     runs-on: ubuntu-latest
