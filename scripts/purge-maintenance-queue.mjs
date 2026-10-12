@@ -11,22 +11,27 @@
  * Consequência: IPs que estavam "liberados" precisam ser liberados de novo
  * pelo painel (Manutenção).
  *
- * Uso (rode uma vez, depois do deploy):
- *   node scripts/purge-maintenance-queue.mjs /caminho/service-account.json           # só conta
- *   node scripts/purge-maintenance-queue.mjs /caminho/service-account.json --apply   # apaga
+ * Uso (rode UMA vez, no Cloud Shell, depois que o deploy novo estiver no ar):
+ *   node scripts/purge-maintenance-queue.mjs            # só conta (dry-run)
+ *   node scripts/purge-maintenance-queue.mjs --apply    # grava de fato
+ *
+ * Fora do Cloud Shell, passe o caminho de uma chave de service account como
+ * primeiro argumento: node scripts/purge-maintenance-queue.mjs chave.json [--apply]
  */
 import { readFileSync } from 'node:fs';
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-const [keyPath, flag] = process.argv.slice(2);
-const apply = flag === '--apply';
-if (!keyPath) {
-  console.error('[purge-maintenance-queue] Uso: node scripts/purge-maintenance-queue.mjs <service-account.json> [--apply]');
-  process.exit(1);
-}
+const args = process.argv.slice(2);
+const apply = args.includes('--apply');
+const keyPath = args.find((a) => !a.startsWith('--')); // opcional
 
-initializeApp({ credential: cert(JSON.parse(readFileSync(keyPath, 'utf8'))) });
+initializeApp(
+  keyPath
+    ? { credential: cert(JSON.parse(readFileSync(keyPath, 'utf8'))) }
+    // Sem chave: usa as credenciais do ambiente (ex.: Cloud Shell já logado).
+    : { credential: applicationDefault(), projectId: process.env.GOOGLE_CLOUD_PROJECT || 'mikma-lencois' },
+);
 const db = getFirestore();
 
 const snap = await db.collection('maintenance_queue').get();

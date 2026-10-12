@@ -7,23 +7,27 @@
  * aumentava a superfície de vazamento. O código novo não grava mais; este
  * script limpa o que já existe.
  *
- * Uso (rode uma vez, depois de publicar o deploy novo):
- *   node scripts/purge-password-hash.mjs /caminho/service-account.json           # só conta (dry-run)
- *   node scripts/purge-password-hash.mjs /caminho/service-account.json --apply   # apaga de fato
+ * Uso (rode UMA vez, no Cloud Shell, depois que o deploy novo estiver no ar):
+ *   node scripts/purge-password-hash.mjs            # só conta (dry-run)
+ *   node scripts/purge-password-hash.mjs --apply    # grava de fato
+ *
+ * Fora do Cloud Shell, passe o caminho de uma chave de service account como
+ * primeiro argumento: node scripts/purge-password-hash.mjs chave.json [--apply]
  */
 import { readFileSync } from 'node:fs';
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const [keyPath, flag] = process.argv.slice(2);
-const apply = flag === '--apply';
+const args = process.argv.slice(2);
+const apply = args.includes('--apply');
+const keyPath = args.find((a) => !a.startsWith('--')); // opcional
 
-if (!keyPath) {
-  console.error('[purge-password-hash] Uso: node scripts/purge-password-hash.mjs <service-account.json> [--apply]');
-  process.exit(1);
-}
-
-initializeApp({ credential: cert(JSON.parse(readFileSync(keyPath, 'utf8'))) });
+initializeApp(
+  keyPath
+    ? { credential: cert(JSON.parse(readFileSync(keyPath, 'utf8'))) }
+    // Sem chave: usa as credenciais do ambiente (ex.: Cloud Shell já logado).
+    : { credential: applicationDefault(), projectId: process.env.GOOGLE_CLOUD_PROJECT || 'mikma-lencois' },
+);
 const db = getFirestore();
 
 const snap = await db.collection('users').where('passwordHash', '!=', null).get();

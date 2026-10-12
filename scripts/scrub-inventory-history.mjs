@@ -6,23 +6,28 @@
  * novo grava só o nome de exibição (ou "Equipe"); este script limpa o legado:
  * onde `by` parece e-mail, vira o displayName da conta (se existir) ou "Equipe".
  *
- * Uso (rode uma vez, depois do deploy):
- *   node scripts/scrub-inventory-history.mjs /caminho/service-account.json           # só conta
- *   node scripts/scrub-inventory-history.mjs /caminho/service-account.json --apply   # grava
+ * Uso (rode UMA vez, no Cloud Shell, depois que o deploy novo estiver no ar):
+ *   node scripts/scrub-inventory-history.mjs            # só conta (dry-run)
+ *   node scripts/scrub-inventory-history.mjs --apply    # grava de fato
+ *
+ * Fora do Cloud Shell, passe o caminho de uma chave de service account como
+ * primeiro argumento: node scripts/scrub-inventory-history.mjs chave.json [--apply]
  */
 import { readFileSync } from 'node:fs';
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-const [keyPath, flag] = process.argv.slice(2);
-const apply = flag === '--apply';
-if (!keyPath) {
-  console.error('[scrub-inventory-history] Uso: node scripts/scrub-inventory-history.mjs <service-account.json> [--apply]');
-  process.exit(1);
-}
+const args = process.argv.slice(2);
+const apply = args.includes('--apply');
+const keyPath = args.find((a) => !a.startsWith('--')); // opcional
 
-initializeApp({ credential: cert(JSON.parse(readFileSync(keyPath, 'utf8'))) });
+initializeApp(
+  keyPath
+    ? { credential: cert(JSON.parse(readFileSync(keyPath, 'utf8'))) }
+    // Sem chave: usa as credenciais do ambiente (ex.: Cloud Shell já logado).
+    : { credential: applicationDefault(), projectId: process.env.GOOGLE_CLOUD_PROJECT || 'mikma-lencois' },
+);
 const db = getFirestore();
 const auth = getAuth();
 
