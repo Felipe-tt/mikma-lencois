@@ -8,6 +8,7 @@ import type { ReturnRequest, ReturnStatus } from '@/types';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { formatDateTime } from '@/lib/utils/format';
 import { IconExchange, IconCheck, IconX, IconBox } from '@/components/ui/Icon';
+import { staffActor } from '@/lib/staffActor';
 
 const STATUS_LABEL: Record<ReturnStatus, string> = {
   solicitada: 'Solicitada', aprovada: 'Aprovada', recusada: 'Recusada', concluida: 'Concluída',
@@ -97,7 +98,7 @@ export default function TrocasPage() {
               type: 'in', quantity: line.quantity,
               reason: `Troca/devolução, pedido #${r.orderId.slice(-8).toUpperCase()}`,
               date: new Date().toISOString(),
-              ...(user?.email ? { by: user.email } : {}),
+              by: staffActor(user),
             }),
             updatedAt: serverTimestamp(),
           });

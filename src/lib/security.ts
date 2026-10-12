@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { clientIpFromHeaders, isPlausibleIp } from '@/lib/ip';
+export { isPlausibleIp };
 import { adminAuth } from '@/lib/firebase/admin';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { z, type ZodType, type ZodError } from 'zod';
@@ -20,30 +22,13 @@ import { z, type ZodType, type ZodError } from 'zod';
  * o Cloud Run direto), nunca o primeiro valor, que é forjável pelo
  * próprio cliente.
  */
-/** IPv4 ou IPv6 sintaticamente plausível (sem lixo arbitrário como chave de rate limit). */
-export function isPlausibleIp(value: string): boolean {
-  if (value.length > 45) return false;
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) {
-    return value.split('.').every((n) => Number(n) <= 255);
-  }
-  return value.includes(':') && /^[0-9a-f:.]+$/i.test(value);
-}
-
 export function getClientIp(req: NextRequest): string {
   // Atenção: fastly-client-ip só é confiável quando a requisição passou pelo
   // Firebase Hosting/Fastly. Se o domínio *.run.app aceitar acesso direto, esse
   // header pode ser forjado: por isso rotas sensíveis NÃO dependem só do IP
   // (há limite por e-mail/uid e tetos globais), e a validação do formato
-  // abaixo impede que strings arbitrárias virem chaves de rate limit.
-  const fastlyIp = req.headers.get('fastly-client-ip')?.trim();
-  if (fastlyIp && isPlausibleIp(fastlyIp)) return fastlyIp;
-
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) {
-    const parts = fwd.split(',').map((p) => p.trim()).filter(Boolean);
-    if (parts.length > 0) return parts[parts.length - 1];
-  }
-  return req.headers.get('x-real-ip') ?? req.headers.get('x-nf-client-connection-ip') ?? 'unknown';
+  // impede que strings arbitrárias virem chaves de rate limit.
+  return clientIpFromHeaders(req.headers);
 }
 
 interface SafeJsonOk<T = unknown> { ok: true; data: T }

@@ -9,6 +9,7 @@ import { collection, onSnapshot, doc, updateDoc, getDoc, increment, arrayUnion, 
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Link from 'next/link';
+import { staffActor } from '@/lib/staffActor';
 
 type MovementLog = { type: 'in' | 'out'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
 type InventoryItem = {
@@ -126,7 +127,7 @@ export default function EstoquePage() {
     return {
       type, quantity, reason: reason.trim() || (type === 'out' ? 'Venda presencial (loja física)' : 'Reposição de estoque'),
       date: new Date().toISOString(),
-      ...(user?.email ? { by: user.email } : {}),
+      by: staffActor(user),
     };
   }
 

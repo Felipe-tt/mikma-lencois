@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
+import { clientIpFromHeaders } from '@/lib/ip';
+import { maintenanceDocId, pathOnly, safeReferer, clip } from '@/lib/maintenanceQueue';
 
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
 
@@ -79,18 +81,20 @@ const SCANNER_PATH_PATTERN = /^\/(wp-admin|wp-login|wp-content|wp-includes|wp-js
 
 async function registerInQueue(projectId: string, docId: string, ip: string, req: NextRequest) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
-  const userAgent = req.headers.get('user-agent') ?? '';
+  const userAgent = clip(req.headers.get('user-agent'), 300);
   const fields: Record<string, unknown> = {
-    ip: { stringValue: ip },
+    ip: { stringValue: clip(ip, 45) },
     released: { booleanValue: false },
     enteredAt: { stringValue: new Date().toISOString() },
     userAgent: { stringValue: userAgent },
     isBot: { booleanValue: isBotUserAgent(userAgent) },
-    referer: { stringValue: req.headers.get('referer') ?? '' },
-    acceptLanguage: { stringValue: req.headers.get('accept-language') ?? '' },
-    requestedPath: { stringValue: req.nextUrl.pathname + req.nextUrl.search },
-    platform: { stringValue: (req.headers.get('sec-ch-ua-platform') ?? '').replace(/"/g, '') },
-    isMobile: { stringValue: req.headers.get('sec-ch-ua-mobile') ?? '' },
+    // Sem query string/hash: links de e-mail (reset de senha, confirmação)
+    // carregam token e NUNCA podem ser gravados (nem no referer).
+    referer: { stringValue: safeReferer(req.headers.get('referer')) },
+    acceptLanguage: { stringValue: clip(req.headers.get('accept-language'), 100) },
+    requestedPath: { stringValue: pathOnly(req.nextUrl.pathname) },
+    platform: { stringValue: clip((req.headers.get('sec-ch-ua-platform') ?? '').replace(/"/g, ''), 30) },
+    isMobile: { stringValue: clip(req.headers.get('sec-ch-ua-mobile'), 10) },
   };
   try {
     await fetch(url, {
@@ -174,20 +178,13 @@ export async function proxy(req: NextRequest) {
     // ninguém. O IP real vem em fastly-client-ip. X-Forwarded-For (último
     // valor) só como fallback pra quando não tem Firebase Hosting na
     // frente (ex: emulador local batendo direto no Cloud Run).
-    const fastlyIp = req.headers.get('fastly-client-ip');
-    let ip = fastlyIp?.trim() || '';
-    if (!ip) {
-      const xff = req.headers.get('x-forwarded-for');
-      const xffParts = xff ? xff.split(',').map((p) => p.trim()).filter(Boolean) : [];
-      ip = xffParts.length > 0
-        ? xffParts[xffParts.length - 1]
-        : req.headers.get('x-real-ip') || '0.0.0.0';
-    }
-    const docId = ip.replace(/[.:]/g, '_');
+    const ip = clientIpFromHeaders(req.headers);
 
     const active = await getMaintenanceStatus(projectId);
 
     if (active) {
+      // ID do documento = HMAC do IP (ver lib/maintenanceQueue.ts).
+      const docId = await maintenanceDocId(ip, process.env.STAFF_SESSION_SECRET);
       // Staff logado (seller/admin) sempre vê o site normal, independente
       // de IP liberado, não faz sentido pedir pra quem está trabalhando
       // no painel também ficar liberando o próprio IP toda vez que a rede

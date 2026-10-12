@@ -5,7 +5,7 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, orderBy, query, doc } from 'firebase/firestore';
+import { collection, limit, onSnapshot, orderBy, query, doc } from 'firebase/firestore';
 
 type QueueEntry = {
   id: string;
@@ -75,7 +75,7 @@ export default function ManutencaoPage() {
     );
 
     const unsubQueue = onSnapshot(
-      query(collection(db, 'maintenance_queue'), orderBy('enteredAt', 'desc')),
+      query(collection(db, 'maintenance_queue'), orderBy('enteredAt', 'desc'), limit(200)),
       snap => {
         setQueue(snap.docs.map(d => ({ id: d.id, ...d.data() })) as QueueEntry[]);
       },

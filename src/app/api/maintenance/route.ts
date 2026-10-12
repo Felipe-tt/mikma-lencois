@@ -7,6 +7,7 @@ import { extractBearer, tooManyRequests, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { maintenanceActionSchema } from './schema';
+import { maintenanceDocId } from '@/lib/maintenanceQueue';
 
 
 // Validação simples de IPv4/IPv6, evita que um valor arbitrário em
@@ -86,10 +87,9 @@ export async function POST(req: NextRequest) {
     if (!isValidIp(body.ip)) {
       return NextResponse.json({ error: 'IP inválido' }, { status: 400 });
     }
-    // Precisa bater EXATAMENTE com a regex usada em src/proxy.ts
-    // (substitui '.' E ':' , IPv6 tem ':', então usar [./] aqui fazia o
-    // release nunca encontrar o documento certo pra IPs IPv6).
-    await adminDb.collection('maintenance_queue').doc(body.ip.replace(/[.:]/g, '_')).set({
+    // O ID tem que ser IDÊNTICO ao calculado em src/proxy.ts (HMAC do IP).
+    const queueDocId = await maintenanceDocId(body.ip, process.env.STAFF_SESSION_SECRET);
+    await adminDb.collection('maintenance_queue').doc(queueDocId).set({
       ip: body.ip,
       released: true,
       releasedAt: new Date().toISOString(),
@@ -101,22 +101,27 @@ export async function POST(req: NextRequest) {
   // liberar todos
   if (body.action === 'release_all') {
     const queueSnap = await adminDb.collection('maintenance_queue').get();
-    const batch = adminDb.batch();
-    queueSnap.docs.forEach(d => batch.update(d.ref, {
-      released: true,
-      releasedAt: new Date().toISOString(),
-      releasedBy: user.email ?? user.uid,
-    }));
-    await batch.commit();
+    // Lotes de até 400 (o limite do Firestore é 500 por batch).
+    for (let i = 0; i < queueSnap.docs.length; i += 400) {
+      const batch = adminDb.batch();
+      queueSnap.docs.slice(i, i + 400).forEach(d => batch.update(d.ref, {
+        released: true,
+        releasedAt: new Date().toISOString(),
+        releasedBy: user.email ?? user.uid,
+      }));
+      await batch.commit();
+    }
     return NextResponse.json({ ok: true });
   }
 
   // limpar queue
   if (body.action === 'clear_queue') {
     const queueSnap = await adminDb.collection('maintenance_queue').get();
-    const batch = adminDb.batch();
-    queueSnap.docs.forEach(d => batch.delete(d.ref));
-    await batch.commit();
+    for (let i = 0; i < queueSnap.docs.length; i += 400) {
+      const batch = adminDb.batch();
+      queueSnap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
     return NextResponse.json({ ok: true });
   }
 
