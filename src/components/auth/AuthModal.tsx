@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import {
+  validateName, validateEmail, stripNameChars, suggestEmailFix, normalizeEmail, EMAIL_MAX, NAME_MAX,
+} from '@/lib/validation/signup';
 import { auth } from '@/lib/firebase/client';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
@@ -27,6 +30,8 @@ export function AuthModal() {
   // ── Signup ──
   const [name, setName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
+  const [signupFieldErrors, setSignupFieldErrors] = useState<{ name?: string; email?: string }>({});
+  const emailSuggestion = suggestEmailFix(signupEmail);
   const [signupStep, setSignupStep] = useState<SignupStep>('form');
   const [signupError, setSignupError] = useState('');
   const [signupLoading, setSignupLoading] = useState(false);
@@ -45,7 +50,7 @@ export function AuthModal() {
   useEffect(() => {
     if (!isOpen) {
       setEmail(''); setPassword(''); setLoginError('');
-      setName(''); setSignupEmail(''); setSignupStep('form'); setSignupError('');
+      setName(''); setSignupEmail(''); setSignupStep('form'); setSignupError(''); setSignupFieldErrors({});
       setForgotEmail(''); setForgotStep('email'); setForgotResent(false);
     }
   }, [isOpen]);
@@ -144,11 +149,21 @@ export function AuthModal() {
     }
   }
 
+  function signupName() {
+    const r = validateName(name);
+    return r.ok ? r.value : name.trim();
+  }
+
   async function sendVerification(e: React.FormEvent) {
     e.preventDefault();
     setSignupError('');
-    if (name.trim().length < 2) return setSignupError('Por favor, informe seu nome completo.');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail)) return setSignupError('Por favor, informe um e-mail válido.');
+    const nameRes = validateName(name);
+    const emailRes = validateEmail(signupEmail);
+    const errs: { name?: string; email?: string } = {};
+    if (!nameRes.ok) errs.name = nameRes.error;
+    if (!emailRes.ok) errs.email = emailRes.error;
+    setSignupFieldErrors(errs);
+    if (!nameRes.ok || !emailRes.ok) return;
 
     setSignupLoading(true);
     try {
@@ -158,7 +173,7 @@ export function AuthModal() {
       const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: signupEmail.trim().toLowerCase() }),
+        body: JSON.stringify({ name: signupName(), email: normalizeEmail(signupEmail) }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -178,7 +193,7 @@ export function AuthModal() {
       const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: signupEmail.trim().toLowerCase() }),
+        body: JSON.stringify({ name: signupName(), email: normalizeEmail(signupEmail) }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -338,16 +353,34 @@ export function AuthModal() {
                   </div>
                 )}
 
-                <form onSubmit={sendVerification} className="flex flex-col gap-4">
+                <form onSubmit={sendVerification} noValidate className="flex flex-col gap-4">
                   <div>
                     <label className="label">Seu nome completo</label>
-                    <input type="text" value={name} onChange={e => setName(e.target.value)}
-                      className="input" placeholder="Maria da Silva" autoComplete="name" autoFocus />
+                    <input type="text" value={name}
+                      onChange={e => { setName(stripNameChars(e.target.value)); setSignupFieldErrors(f => ({ ...f, name: undefined })); }}
+                      onBlur={() => { if (!name) return; const r = validateName(name); setSignupFieldErrors(f => ({ ...f, name: r.ok ? undefined : r.error })); }}
+                      className="input" placeholder="Maria da Silva" autoComplete="name" autoCapitalize="words"
+                      maxLength={NAME_MAX} spellCheck={false}
+                      aria-invalid={!!signupFieldErrors.name} aria-describedby={signupFieldErrors.name ? 'modal-err-name' : undefined}
+                      autoFocus />
+                    {signupFieldErrors.name && <p id="modal-err-name" role="alert" className="mt-1.5 text-xs text-red-600">{signupFieldErrors.name}</p>}
                   </div>
                   <div>
                     <label className="label">Seu e-mail</label>
-                    <input type="email" value={signupEmail} onChange={e => setSignupEmail(e.target.value)}
-                      className="input" placeholder="seuemail@exemplo.com" autoComplete="email" />
+                    <input type="email" value={signupEmail}
+                      onChange={e => { setSignupEmail(e.target.value.replace(/\s/g, '')); setSignupFieldErrors(f => ({ ...f, email: undefined })); }}
+                      onBlur={() => { if (!signupEmail) return; const r = validateEmail(signupEmail); setSignupFieldErrors(f => ({ ...f, email: r.ok ? undefined : r.error })); }}
+                      className="input" placeholder="seuemail@exemplo.com" autoComplete="email" inputMode="email"
+                      autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={EMAIL_MAX}
+                      aria-invalid={!!signupFieldErrors.email} aria-describedby={signupFieldErrors.email ? 'modal-err-email' : undefined} />
+                    {signupFieldErrors.email && <p id="modal-err-email" role="alert" className="mt-1.5 text-xs text-red-600">{signupFieldErrors.email}</p>}
+                    {!signupFieldErrors.email && emailSuggestion && (
+                      <p className="mt-1.5 text-xs text-mid">
+                        Você quis dizer{' '}
+                        <button type="button" onClick={() => setSignupEmail(emailSuggestion)}
+                          className="text-clay font-medium underline underline-offset-2">{emailSuggestion}</button>?
+                      </p>
+                    )}
                     <p className="mt-1.5 text-xs text-mid">Vamos te enviar um e-mail com um botão para confirmar.</p>
                   </div>
                   <button type="submit" disabled={signupLoading}

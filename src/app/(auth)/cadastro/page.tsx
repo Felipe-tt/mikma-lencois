@@ -9,34 +9,43 @@ import Image from 'next/image';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { consumeReturnTo } from '@/lib/auth/returnTo';
-import { maskPhone, maskCpf, isValidCpf, isValidPhone } from '@/lib/masks';
+import { maskPhone, maskCpf } from '@/lib/masks';
+import {
+  validateName, validateEmail, validatePassword, validatePhone, validateCpf,
+  stripNameChars, suggestEmailFix, passwordChecks, normalizeEmail, EMAIL_MAX, NAME_MAX, PASSWORD_MAX,
+} from '@/lib/validation/signup';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
 
 type Step = 'email' | 'awaiting' | 'password' | 'done';
 
 function PasswordStrength({ password }: { password: string }) {
-  const checks = [
-    { label: 'Mínimo 8 caracteres', ok: password.length >= 8 },
-    { label: 'Letra maiúscula', ok: /[A-Z]/.test(password) },
-    { label: 'Número', ok: /[0-9]/.test(password) },
-  ];
-  const score = checks.filter(c => c.ok).length;
   if (!password) return null;
+  const checks = passwordChecks(password);
+  const score = checks.filter(c => c.ok).length;
   return (
-    <div className="mt-2 space-y-1.5">
+    <div className="mt-2 space-y-1.5" aria-live="polite">
       <div className="flex gap-1">
-        {[0,1,2].map(i => (
+        {checks.map((_, i) => (
           <div key={i} className={`h-1 flex-1 transition-colors rounded-full ${
             i < score ? ['bg-red-400','bg-yellow-400','bg-green-500'][score-1] : 'bg-mist'
           }`} />
         ))}
       </div>
-      <p className={`text-xs ${score===3?'text-green-500':score===2?'text-yellow-500':'text-red-400'}`}>
-        {score===3?'Senha forte':score===2?'Senha média, adicione maiúscula ou número':'Senha fraca'}
-      </p>
+      <ul className="text-xs space-y-0.5">
+        {checks.map(c => (
+          <li key={c.label} className={c.ok ? 'text-green-600' : 'text-faint'}>
+            {c.ok ? '\u2713' : '\u2022'} {c.label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
+}
+
+function FieldError({ id, msg }: { id: string; msg?: string }) {
+  if (!msg) return null;
+  return <p id={id} role="alert" className="mt-1.5 text-xs text-red-600">{msg}</p>;
 }
 
 function ErrorBox({ msg }: { msg: string }) {
@@ -69,6 +78,19 @@ function RegisterContent() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const emailSuggestion = suggestEmailFix(email);
+
+  function setFieldError(field: string, msg?: string) {
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      if (msg) next[field] = msg; else delete next[field];
+      return next;
+    });
+  }
+  function blurValidate(field: string, result: { ok: boolean; error?: string }) {
+    setFieldError(field, result.ok ? undefined : result.error);
+  }
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resent, setResent]     = useState(false);
 
@@ -84,12 +106,22 @@ function RegisterContent() {
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
+  function normalizedName() {
+    const r = validateName(name);
+    return r.ok ? r.value : name.trim();
+  }
+
   // ── Step 1: envia link de confirmação por e-mail ─────────────────────────
   async function handleSendLink(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (name.trim().length < 2) return setError('Por favor, informe seu nome completo.');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError('Por favor, informe um e-mail válido.');
+    const nameRes = validateName(name);
+    const emailRes = validateEmail(email);
+    const errs: Record<string, string> = {};
+    if (!nameRes.ok) errs.name = nameRes.error;
+    if (!emailRes.ok) errs.email = emailRes.error;
+    setFieldErrors(errs);
+    if (!nameRes.ok || !emailRes.ok) return;
 
     setLoading(true);
     try {
@@ -97,7 +129,7 @@ function RegisterContent() {
       const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), recaptchaToken }),
+        body: JSON.stringify({ name: normalizedName(), email: normalizeEmail(email), recaptchaToken }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -120,7 +152,7 @@ function RegisterContent() {
       const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), recaptchaToken }),
+        body: JSON.stringify({ name: normalizedName(), email: normalizeEmail(email), recaptchaToken }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -138,11 +170,23 @@ function RegisterContent() {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (password.length < 8) return setError('A senha precisa ter pelo menos 8 caracteres.');
-    if (password !== confirm) return setError('As senhas não são iguais.');
-    if (phone && !isValidPhone(phone)) return setError('Telefone inválido.');
-    if (cpf && !isValidCpf(cpf)) return setError('CPF inválido.');
-    if (!lgpd) return setError('Aceite os termos para continuar.');
+    const passRes = validatePassword(password, email);
+    const phoneRes = validatePhone(phone);
+    const cpfRes = validateCpf(cpf);
+    const errs: Record<string, string> = {};
+    if (!passRes.ok) errs.password = passRes.error;
+    if (password !== confirm) errs.confirm = 'As senhas não são iguais.';
+    if (!phoneRes.ok) errs.phone = phoneRes.error;
+    if (!cpfRes.ok) errs.cpf = cpfRes.error;
+    if (!lgpd) errs.lgpd = 'Aceite os termos para continuar.';
+    setFieldErrors(errs);
+    if (Object.keys(errs).length) {
+      if (errs.phone || errs.cpf) {
+        const el = document.getElementById('optional-data') as HTMLDetailsElement | null;
+        if (el) el.open = true;
+      }
+      return;
+    }
 
     setLoading(true);
     try {
@@ -151,16 +195,16 @@ function RegisterContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
+          email: normalizeEmail(email),
           password,
-          phone: phone || undefined,
-          cpf: cpf.replace(/\D/g,'') || undefined,
+          phone: phoneRes.ok ? phoneRes.value || undefined : undefined,
+          cpf: cpfRes.ok ? cpfRes.value || undefined : undefined,
           recaptchaToken,
         }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, normalizeEmail(email), password);
       setStep('done');
       setTimeout(() => router.push(consumeReturnTo() ?? '/'), 2000);
     } catch (err: unknown) {
@@ -238,18 +282,35 @@ function RegisterContent() {
 
               {error && <ErrorBox msg={error} />}
 
-              <form onSubmit={handleSendLink} className="flex flex-col gap-5">
+              <form onSubmit={handleSendLink} noValidate className="flex flex-col gap-5">
                 <div>
                   <label className="label">Seu nome completo</label>
-                  <input type="text" value={name} onChange={e => setName(e.target.value)}
+                  <input type="text" value={name}
+                    onChange={e => { setName(stripNameChars(e.target.value)); if (fieldErrors.name) setFieldError('name'); }}
+                    onBlur={() => name && blurValidate('name', validateName(name))}
                     className="input text-base" placeholder="Maria da Silva"
-                    autoComplete="name" autoFocus />
+                    autoComplete="name" autoCapitalize="words" maxLength={NAME_MAX} spellCheck={false}
+                    aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? 'err-name' : undefined}
+                    autoFocus />
+                  <FieldError id="err-name" msg={fieldErrors.name} />
                 </div>
                 <div>
                   <label className="label">Seu e-mail</label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  <input type="email" value={email}
+                    onChange={e => { setEmail(e.target.value.replace(/\s/g, '')); if (fieldErrors.email) setFieldError('email'); }}
+                    onBlur={() => email && blurValidate('email', validateEmail(email))}
                     className="input text-base" placeholder="seuemail@exemplo.com"
-                    autoComplete="email" />
+                    autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off"
+                    spellCheck={false} maxLength={EMAIL_MAX}
+                    aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'err-email' : undefined} />
+                  <FieldError id="err-email" msg={fieldErrors.email} />
+                  {!fieldErrors.email && emailSuggestion && (
+                    <p className="mt-1.5 text-xs text-mid">
+                      Você quis dizer{' '}
+                      <button type="button" onClick={() => setEmail(emailSuggestion)}
+                        className="text-clay font-medium underline underline-offset-2">{emailSuggestion}</button>?
+                    </p>
+                  )}
                   <p className="mt-1.5 text-xs text-mid">Vamos te enviar um e-mail com um botão para confirmar.</p>
                 </div>
 
@@ -324,14 +385,16 @@ function RegisterContent() {
 
               {error && <ErrorBox msg={error} />}
 
-              <form onSubmit={handleRegister} className="flex flex-col gap-5">
+              <form onSubmit={handleRegister} noValidate className="flex flex-col gap-5">
                 <div>
                   <label className="label">Senha</label>
                   <div className="relative">
                     <input type={showPass ? 'text' : 'password'} value={password}
-                      onChange={e => setPassword(e.target.value)}
+                      onChange={e => { setPassword(e.target.value); if (fieldErrors.password) setFieldError('password'); }}
                       className="input text-base pr-11" placeholder="Mínimo 8 caracteres"
-                      autoComplete="new-password" autoFocus />
+                      autoComplete="new-password" maxLength={PASSWORD_MAX}
+                      aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'err-password' : undefined}
+                      autoFocus />
                     <button type="button" onClick={() => setShowPass(p => !p)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-mid p-1">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -341,42 +404,53 @@ function RegisterContent() {
                       </svg>
                     </button>
                   </div>
+                  <FieldError id="err-password" msg={fieldErrors.password} />
                   <PasswordStrength password={password} />
                 </div>
 
                 <div>
                   <label className="label">Repita a senha</label>
-                  <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
+                  <input type="password" value={confirm}
+                    onChange={e => { setConfirm(e.target.value); if (fieldErrors.confirm) setFieldError('confirm'); }}
                     className="input text-base" placeholder="Digite a senha novamente"
-                    autoComplete="new-password" />
+                    autoComplete="new-password" maxLength={PASSWORD_MAX}
+                    aria-invalid={!!fieldErrors.confirm} aria-describedby={fieldErrors.confirm ? 'err-confirm' : undefined} />
+                  <FieldError id="err-confirm" msg={fieldErrors.confirm} />
                   {confirm && password === confirm && (
                     <p className="mt-1.5 text-xs text-green-500 flex items-center gap-1">Senhas iguais</p>
                   )}
                 </div>
 
                 {/* Dados opcionais em accordeon */}
-                <details className="border border-mist">
+                <details id="optional-data" className="border border-mist">
                   <summary className="px-4 py-3 text-sm text-mid cursor-pointer select-none hover:text-ink transition-colors">
                     + Adicionar telefone e CPF (opcional)
                   </summary>
                   <div className="px-4 pb-4 pt-3 flex flex-col gap-4">
                     <div>
                       <label className="label">Telefone / WhatsApp</label>
-                      <input type="tel" value={phone} onChange={e => setPhone(maskPhone(e.target.value))}
-                        className="input" placeholder="(47) 99999-0000" autoComplete="tel" />
+                      <input type="tel" value={phone}
+                        onChange={e => { setPhone(maskPhone(e.target.value)); if (fieldErrors.phone) setFieldError('phone'); }}
+                        onBlur={() => phone && blurValidate('phone', validatePhone(phone))}
+                        className="input" placeholder="(47) 99999-0000" autoComplete="tel" inputMode="tel"
+                        aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? 'err-phone' : undefined} />
+                      <FieldError id="err-phone" msg={fieldErrors.phone} />
                     </div>
                     <div>
                       <label className="label">CPF</label>
                       <input type="text" inputMode="numeric" value={cpf}
-                        onChange={e => setCpf(maskCpf(e.target.value))}
-                        className="input" placeholder="000.000.000-00" autoComplete="off" />
+                        onChange={e => { setCpf(maskCpf(e.target.value)); if (fieldErrors.cpf) setFieldError('cpf'); }}
+                        onBlur={() => cpf && blurValidate('cpf', validateCpf(cpf))}
+                        className="input" placeholder="000.000.000-00" autoComplete="off"
+                        aria-invalid={!!fieldErrors.cpf} aria-describedby={fieldErrors.cpf ? 'err-cpf' : undefined} />
+                      <FieldError id="err-cpf" msg={fieldErrors.cpf} />
                     </div>
                   </div>
                 </details>
 
                 <label className="flex items-start gap-3 cursor-pointer group">
                   <div
-                    onClick={() => setLgpd(p => !p)}
+                    onClick={() => { setLgpd(p => !p); if (fieldErrors.lgpd) setFieldError('lgpd'); }}
                     className={`mt-0.5 w-5 h-5 rounded-sm border shrink-0 flex items-center justify-center transition-colors
                       ${lgpd ? 'bg-clay border-clay' : 'border-mist group-hover:border-clay/60'}`}
                   >
@@ -390,6 +464,7 @@ function RegisterContent() {
                     <Link href="/privacidade" className="text-clay underline underline-offset-2" target="_blank">Política de Privacidade</Link>
                   </span>
                 </label>
+                <FieldError id="err-lgpd" msg={fieldErrors.lgpd} />
 
                 <button type="submit" disabled={loading}
                   className="btn-primary w-full h-13 text-[14px] font-semibold tracking-wide flex items-center justify-center gap-2">

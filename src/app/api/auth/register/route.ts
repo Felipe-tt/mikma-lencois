@@ -7,14 +7,32 @@ import { getClientIp } from '@/lib/security';
 import { verifyRecaptcha } from '@/lib/recaptcha';
 import { LEGAL_VERSION } from '@/lib/legal';
 import { sanitizeDisplayName } from '@/lib/html';
+import { validateEmail, validatePassword, validatePhone, validateCpf, PASSWORD_MAX } from '@/lib/validation/signup';
 
-const schema = z.object({
-  email: z.string().email().max(256).toLowerCase(),
-  password: z.string().min(8).max(128),
-  phone: z.string().max(20).optional(),
-  cpf: z.string().length(11).regex(/^\d+$/).optional(),
-  recaptchaToken: z.string().min(1).optional(),
-});
+const schema = z
+  .object({
+    email: z.string().max(320).transform((v, ctx) => {
+      const r = validateEmail(v);
+      if (!r.ok) { ctx.addIssue({ code: 'custom', message: r.error }); return z.NEVER; }
+      return r.value;
+    }),
+    password: z.string().max(PASSWORD_MAX + 1),
+    phone: z.string().max(30).optional().transform((v, ctx) => {
+      const r = validatePhone(v ?? '');
+      if (!r.ok) { ctx.addIssue({ code: 'custom', message: r.error }); return z.NEVER; }
+      return r.value || undefined;
+    }),
+    cpf: z.string().max(20).optional().transform((v, ctx) => {
+      const r = validateCpf(v ?? '');
+      if (!r.ok) { ctx.addIssue({ code: 'custom', message: r.error }); return z.NEVER; }
+      return r.value || undefined;
+    }),
+    recaptchaToken: z.string().min(1).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const r = validatePassword(data.password, data.email);
+    if (!r.ok) ctx.addIssue({ code: 'custom', path: ['password'], message: r.error });
+  });
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -34,7 +52,10 @@ export async function POST(req: NextRequest) {
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || 'Dados inválidos' },
+      { status: 400 }
+    );
   }
 
   const { email, password, phone, cpf, recaptchaToken } = parsed.data;
