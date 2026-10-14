@@ -9,16 +9,20 @@ import { sendEmail } from '@/lib/email';
 import { generateActionToken } from '@/lib/auth-token';
 import { actionButtonEmailHtml } from '@/lib/email-templates';
 import { verifyRecaptcha } from '@/lib/recaptcha';
+import { validateName, validateEmail } from '@/lib/validation/signup';
+import { checkEmailDeliverability } from '@/lib/validation/emailDeliverability';
 
 const schema = z.object({
-  name: z
-    .string()
-    .min(2)
-    .max(100)
-    .trim()
-    // eslint-disable-next-line no-control-regex
-    .refine(n => !/[<>\u0000-\u001f\u007f]/.test(n), 'Nome contém caracteres inválidos'),
-  email: z.string().email().max(256).toLowerCase(),
+  name: z.string().max(200).transform((v, ctx) => {
+    const r = validateName(v);
+    if (!r.ok) { ctx.addIssue({ code: 'custom', message: r.error }); return z.NEVER; }
+    return r.value;
+  }),
+  email: z.string().max(320).transform((v, ctx) => {
+    const r = validateEmail(v);
+    if (!r.ok) { ctx.addIssue({ code: 'custom', message: r.error }); return z.NEVER; }
+    return r.value;
+  }),
   recaptchaToken: z.string().min(1).optional(),
 });
 
@@ -50,7 +54,10 @@ export async function POST(req: NextRequest) {
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || 'Dados inválidos' },
+      { status: 400 }
+    );
   }
 
   const { name, email, recaptchaToken } = parsed.data;
@@ -70,6 +77,13 @@ export async function POST(req: NextRequest) {
       { error: 'Já enviamos um link para este e-mail. Aguarde alguns minutos.' },
       { status: 429 }
     );
+  }
+
+  // Descartável, domínio sem MX ou caixa inexistente (verificador opcional).
+  // Roda depois do rate limit e do reCAPTCHA para bots não gastarem créditos.
+  const deliverability = await checkEmailDeliverability(email);
+  if (!deliverability.ok) {
+    return NextResponse.json({ error: deliverability.error }, { status: 400 });
   }
 
   // Verifica se e-mail já está cadastrado, mas a resposta HTTP é sempre
