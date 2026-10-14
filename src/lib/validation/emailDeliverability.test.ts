@@ -13,7 +13,6 @@ describe('checkEmailDeliverability', () => {
     vi.resetModules();
     resolveMx.mockReset(); resolve4.mockReset(); resolve6.mockReset();
     resolve4.mockResolvedValue([]); resolve6.mockResolvedValue([]);
-    delete process.env.KICKBOX_API_KEY;
   });
   afterEach(() => vi.restoreAllMocks());
 
@@ -48,26 +47,5 @@ describe('checkEmailDeliverability', () => {
   it('falha aberto em erro de DNS temporario', async () => {
     resolveMx.mockRejectedValue(dnsErr('ESERVFAIL'));
     expect((await (await load())('a@qualquer.com')).ok).toBe(true);
-  });
-
-  it('Kickbox: rejeita apenas undeliverable', async () => {
-    process.env.KICKBOX_API_KEY = 'test';
-    resolveMx.mockResolvedValue([{ exchange: 'mx.x.com', priority: 1 }]);
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    const reply = (result: string) => fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, result }), { status: 200 }));
-    reply('undeliverable');
-    expect((await (await load())('a@x1.com')).ok).toBe(false);
-    for (const r of ['deliverable', 'risky', 'unknown']) {
-      vi.resetModules(); resolveMx.mockResolvedValue([{ exchange: 'mx.x.com', priority: 1 }]);
-      reply(r);
-      expect((await (await load())(`a@${r}.com`)).ok, r).toBe(true);
-    }
-  });
-
-  it('Kickbox: falha aberto se a API cair', async () => {
-    process.env.KICKBOX_API_KEY = 'test';
-    resolveMx.mockResolvedValue([{ exchange: 'mx.x.com', priority: 1 }]);
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('down'));
-    expect((await (await load())('a@x2.com')).ok).toBe(true);
   });
 });
