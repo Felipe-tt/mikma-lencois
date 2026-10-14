@@ -7,7 +7,8 @@ import { getClientIp } from '@/lib/security';
 import { verifyRecaptcha } from '@/lib/recaptcha';
 import { LEGAL_VERSION } from '@/lib/legal';
 import { sanitizeDisplayName } from '@/lib/html';
-import { validateEmail, validatePassword, validatePhone, validateCpf, PASSWORD_MAX } from '@/lib/validation/signup';
+import { validateEmail, validatePhone, validateCpf } from '@/lib/validation/signup';
+import { checkPassword, PASSWORD_MAX } from '@/lib/validation/password';
 
 const schema = z
   .object({
@@ -16,7 +17,7 @@ const schema = z
       if (!r.ok) { ctx.addIssue({ code: 'custom', message: r.error }); return z.NEVER; }
       return r.value;
     }),
-    password: z.string().max(PASSWORD_MAX + 1),
+    password: z.string().max(PASSWORD_MAX, `A senha pode ter no máximo ${PASSWORD_MAX} caracteres.`),
     phone: z.string().max(30).optional().transform((v, ctx) => {
       const r = validatePhone(v ?? '');
       if (!r.ok) { ctx.addIssue({ code: 'custom', message: r.error }); return z.NEVER; }
@@ -28,10 +29,6 @@ const schema = z
       return r.value || undefined;
     }),
     recaptchaToken: z.string().min(1).optional(),
-  })
-  .superRefine((data, ctx) => {
-    const r = validatePassword(data.password, data.email);
-    if (!r.ok) ctx.addIssue({ code: 'custom', path: ['password'], message: r.error });
   });
 
 export async function POST(req: NextRequest) {
@@ -97,6 +94,12 @@ export async function POST(req: NextRequest) {
   }
 
   const name: string = sanitizeDisplayName(vData.name) || 'Cliente';
+
+  // Tamanho, força (zxcvbn pt-br), senhas vazadas (HIBP) e termos do contexto.
+  const passwordReport = await checkPassword(password, { email, name });
+  if (!passwordReport.ok) {
+    return NextResponse.json({ error: passwordReport.error }, { status: 400 });
+  }
 
   try {
     // A senha fica SÓ no Firebase Auth (hash irreversível gerenciado pelo

@@ -11,34 +11,51 @@ import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { consumeReturnTo } from '@/lib/auth/returnTo';
 import { maskPhone, maskCpf } from '@/lib/masks';
 import {
-  validateName, validateEmail, validatePassword, validatePhone, validateCpf,
-  stripNameChars, suggestEmailFix, passwordChecks, normalizeEmail, EMAIL_MAX, NAME_MAX, PASSWORD_MAX,
+  validateName, validateEmail, validatePhone, validateCpf,
+  stripNameChars, suggestEmailFix, normalizeEmail, EMAIL_MAX, NAME_MAX,
 } from '@/lib/validation/signup';
+import { checkPassword, PASSWORD_MAX, PASSWORD_MIN, type PasswordReport } from '@/lib/validation/password';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
 
 type Step = 'email' | 'awaiting' | 'password' | 'done';
 
-function PasswordStrength({ password }: { password: string }) {
-  if (!password) return null;
-  const checks = passwordChecks(password);
-  const score = checks.filter(c => c.ok).length;
+const STRENGTH_LABELS = ['Muito fraca', 'Fraca', 'Razoável', 'Boa', 'Excelente'];
+const STRENGTH_COLORS = ['bg-red-500', 'bg-red-400', 'bg-yellow-400', 'bg-green-500', 'bg-green-600'];
+
+/** Indicador de força (zxcvbn pt-br) com checagem de senhas vazadas (HIBP). Debounce de 400 ms. */
+function PasswordStrength({ password, email }: { password: string; email: string }) {
+  const [report, setReport] = useState<PasswordReport | null>(null);
+
+  useEffect(() => {
+    if (password.length < PASSWORD_MIN) { setReport(null); return; }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      checkPassword(password, { email }).then(r => { if (!cancelled) setReport(r); });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [password, email]);
+
+  if (!password) {
+    return <p className="mt-2 text-xs text-faint">Use {PASSWORD_MIN} ou mais caracteres. Uma frase longa é melhor que símbolos.</p>;
+  }
+  if (password.length < PASSWORD_MIN) {
+    return <p className="mt-2 text-xs text-faint" aria-live="polite">Faltam {PASSWORD_MIN - password.length} caractere(s).</p>;
+  }
+  if (!report) return <p className="mt-2 text-xs text-faint" aria-live="polite">Analisando…</p>;
+
+  const filled = Math.max(report.score, 1);
   return (
     <div className="mt-2 space-y-1.5" aria-live="polite">
       <div className="flex gap-1">
-        {checks.map((_, i) => (
-          <div key={i} className={`h-1 flex-1 transition-colors rounded-full ${
-            i < score ? ['bg-red-400','bg-yellow-400','bg-green-500'][score-1] : 'bg-mist'
-          }`} />
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className={`h-1 flex-1 transition-colors rounded-full ${i <= filled ? STRENGTH_COLORS[report.score] : 'bg-mist'}`} />
         ))}
       </div>
-      <ul className="text-xs space-y-0.5">
-        {checks.map(c => (
-          <li key={c.label} className={c.ok ? 'text-green-600' : 'text-faint'}>
-            {c.ok ? '\u2713' : '\u2022'} {c.label}
-          </li>
-        ))}
-      </ul>
+      <p className={`text-xs ${report.ok ? 'text-green-600' : 'text-red-600'}`}>
+        {STRENGTH_LABELS[report.score]}{report.error ? `. ${report.error}` : ''}
+      </p>
+      {report.suggestions.slice(0, 2).map(sug => <p key={sug} className="text-xs text-faint">{sug}</p>)}
     </div>
   );
 }
@@ -170,11 +187,11 @@ function RegisterContent() {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    const passRes = validatePassword(password, email);
+    const passRes = await checkPassword(password, { email });
     const phoneRes = validatePhone(phone);
     const cpfRes = validateCpf(cpf);
     const errs: Record<string, string> = {};
-    if (!passRes.ok) errs.password = passRes.error;
+    if (!passRes.ok) errs.password = passRes.error ?? 'Senha inválida.';
     if (password !== confirm) errs.confirm = 'As senhas não são iguais.';
     if (!phoneRes.ok) errs.phone = phoneRes.error;
     if (!cpfRes.ok) errs.cpf = cpfRes.error;
@@ -405,7 +422,7 @@ function RegisterContent() {
                     </button>
                   </div>
                   <FieldError id="err-password" msg={fieldErrors.password} />
-                  <PasswordStrength password={password} />
+                  <PasswordStrength password={password} email={email} />
                 </div>
 
                 <div>

@@ -10,6 +10,7 @@ import { generateActionToken } from '@/lib/auth-token';
 import { actionButtonEmailHtml } from '@/lib/email-templates';
 import { verifyRecaptcha } from '@/lib/recaptcha';
 import { validateName, validateEmail } from '@/lib/validation/signup';
+import { checkEmailDeliverability } from '@/lib/validation/emailDeliverability';
 
 const schema = z.object({
   name: z.string().max(200).transform((v, ctx) => {
@@ -76,6 +77,13 @@ export async function POST(req: NextRequest) {
       { error: 'Já enviamos um link para este e-mail. Aguarde alguns minutos.' },
       { status: 429 }
     );
+  }
+
+  // Descartável, domínio sem MX ou caixa inexistente (verificador opcional).
+  // Roda depois do rate limit e do reCAPTCHA para bots não gastarem créditos.
+  const deliverability = await checkEmailDeliverability(email);
+  if (!deliverability.ok) {
+    return NextResponse.json({ error: deliverability.error }, { status: 400 });
   }
 
   // Verifica se e-mail já está cadastrado, mas a resposta HTTP é sempre

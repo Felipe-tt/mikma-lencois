@@ -1,3 +1,4 @@
+import { isValidCpf as isValidCpfLib } from '@brazilian-utils/brazilian-utils';
 /** Aplica máscara de CEP: 00000-000 */
 export function maskCep(v: string): string {
   const d = v.replace(/\D/g, '').slice(0, 8);
@@ -38,20 +39,9 @@ export function onlyDigits(v: string): string {
   return v.replace(/\D/g, '');
 }
 
-/** Valida CPF (dígitos verificadores) */
+/** Valida CPF (dígitos verificadores), via brazilian-utils */
 export function isValidCpf(v: string): boolean {
-  const d = v.replace(/\D/g, '');
-  if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false;
-  let sum = 0;
-  for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * (10 - i);
-  let r = (sum * 10) % 11;
-  if (r === 10 || r === 11) r = 0;
-  if (r !== parseInt(d[9])) return false;
-  sum = 0;
-  for (let i = 0; i < 10; i++) sum += parseInt(d[i]) * (11 - i);
-  r = (sum * 10) % 11;
-  if (r === 10 || r === 11) r = 0;
-  return r === parseInt(d[10]);
+  return isValidCpfLib(v.replace(/\D/g, ''));
 }
 
 /** Valida CNPJ (dígitos verificadores) */
