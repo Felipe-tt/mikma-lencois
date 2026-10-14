@@ -11,6 +11,7 @@ import { actionButtonEmailHtml } from '@/lib/email-templates';
 import { verifyRecaptcha } from '@/lib/recaptcha';
 import { validateName, validateEmail } from '@/lib/validation/signup';
 import { checkEmailDeliverability } from '@/lib/validation/emailDeliverability';
+import { authErrorCode } from '@/lib/firebase/authErrors';
 
 const schema = z.object({
   name: z.string().max(200).transform((v, ctx) => {
@@ -96,8 +97,10 @@ export async function POST(req: NextRequest) {
     alreadyRegistered = true;
   } catch (e: unknown) {
     // auth/user-not-found = não existe, pode prosseguir com o cadastro normal
-    const code = (e as { errorInfo?: { code?: string } })?.errorInfo?.code;
+    const code = authErrorCode(e);
     if (code !== 'auth/user-not-found') {
+      // Sem este log, uma falha de credencial/permissão do Admin SDK ficava invisível.
+      console.error('[send-verification] getUserByEmail falhou', code ?? 'sem-codigo', e instanceof Error ? e.message : String(e));
       return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
   }
