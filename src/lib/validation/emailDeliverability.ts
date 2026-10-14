@@ -1,9 +1,13 @@
 /**
- * Checagens de e-mail que so fazem sentido no servidor (DNS, lista de
- * descartaveis e verificador externo opcional). Todas "falham aberto":
- * se o DNS ou a API externa estiver fora, o cadastro nao e bloqueado,
- * porque o link de confirmacao enviado por e-mail e a prova definitiva
- * de que a caixa existe.
+ * Checagens de e-mail que so fazem sentido no servidor, todas gratuitas:
+ * lista de descartaveis (biblioteca local) e consulta DNS de MX.
+ * Falham abertas: se o DNS estiver fora, o cadastro nao e bloqueado, porque o
+ * link de confirmacao enviado por e-mail e a prova definitiva de que a caixa existe.
+ *
+ * Nao ha verificacao de caixa postal (sondagem SMTP ou API de terceiros): nao
+ * existe opcao gratuita e confiavel. Sondagem SMTP exige porta 25 de saida
+ * (bloqueada na Google Cloud) e Gmail/Microsoft/catch-all dao falsos
+ * resultados; APIs de verificacao sao pagas e enviam e-mails de clientes a terceiros.
  */
 import { promises as dns } from 'node:dns';
 import MailChecker from 'mailchecker';
@@ -51,25 +55,6 @@ async function domainAcceptsMail(domain: string): Promise<boolean> {
   return result;
 }
 
-/**
- * Verificador de caixa postal em tempo real (SMTP) via Kickbox. So roda se
- * KICKBOX_API_KEY estiver definida. Rejeita apenas "undeliverable"; "risky"
- * e "unknown" (catch-all, Gmail/Microsoft bloqueando sondagem) passam.
- */
-async function kickboxRejects(email: string): Promise<boolean> {
-  const key = process.env.KICKBOX_API_KEY;
-  if (!key) return false;
-  try {
-    const url = `https://api.kickbox.com/v2/verify?email=${encodeURIComponent(email)}&timeout=4000&apikey=${encodeURIComponent(key)}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000), cache: 'no-store' });
-    if (!res.ok) return false;
-    const data = (await res.json()) as { success?: boolean; result?: string };
-    return data.success === true && data.result === 'undeliverable';
-  } catch {
-    return false;
-  }
-}
-
 export async function checkEmailDeliverability(email: string): Promise<DeliverabilityResult> {
   const domain = email.split('@')[1];
   if (!domain) return { ok: false, error: 'Informe um e-mail válido.' };
@@ -79,9 +64,6 @@ export async function checkEmailDeliverability(email: string): Promise<Deliverab
   }
   if (!(await domainAcceptsMail(domain))) {
     return { ok: false, error: 'Esse domínio de e-mail não existe ou não recebe mensagens. Confira se digitou certo.' };
-  }
-  if (await kickboxRejects(email)) {
-    return { ok: false, error: 'Não encontramos essa caixa de e-mail. Confira se digitou certo.' };
   }
   return { ok: true };
 }
