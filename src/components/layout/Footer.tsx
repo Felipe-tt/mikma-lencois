@@ -50,7 +50,9 @@ export function Footer({
               className="h-7 w-auto object-contain object-left opacity-80 self-start"
             />
             <p className="text-[13px] text-paper/60 leading-relaxed max-w-[20ch]">
-              {tagline}
+              {tagline || (storeCity?.split(',')[0].trim()
+                ? `Lençóis direto da fábrica em ${storeCity.split(',')[0].trim()}.`
+                : 'Lençóis direto da fábrica.')}
             </p>
 
             {/* Social */}
@@ -78,6 +80,7 @@ export function Footer({
             <ul className="flex flex-col gap-3.5">
               {[
                 { href: '/produtos', label: 'Produtos' },
+                { href: '/guia-de-tamanhos', label: 'Guia de tamanhos' },
                 { href: '/sobre', label: 'Sobre nós' },
               ].map(({ href, label }) => (
                 <li key={href}>

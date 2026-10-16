@@ -14,8 +14,9 @@ import { useOverlay } from '@/lib/hooks/useOverlay';
 interface Props { topbarText?: string; freeShippingThresholdCents?: number }
 
 const NAV_LINKS = [
-  { href: '/produtos', label: 'Produtos' },
-  { href: '/sobre',    label: 'Sobre' },
+  { href: '/produtos',         label: 'Produtos' },
+  { href: '/guia-de-tamanhos', label: 'Guia de tamanhos' },
+  { href: '/sobre',            label: 'Sobre' },
 ];
 
 export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
@@ -102,10 +103,10 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           </NavLink>
 
           {/* Desktop nav, right next to the logo */}
-          <nav className={`hidden md:flex items-center gap-9 ml-8 transition-all duration-200 ${searchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <nav className={`hidden md:flex items-center gap-6 lg:gap-9 ml-6 lg:ml-8 transition-opacity duration-200 ${searchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             {NAV_LINKS.map(({ href, label }) => (
               <NavLink key={href} href={href}
-                className={`text-[13px] font-medium tracking-[0.01em] transition-colors duration-150 relative pb-0.5
+                className={`whitespace-nowrap text-[13px] font-medium tracking-[0.01em] transition-colors duration-150 relative pb-0.5
                   after:absolute after:bottom-0 after:left-0 after:h-px after:bg-clay after:transition-all after:duration-200
                   ${pathname.startsWith(href)
                     ? `${isDark ? 'text-paper' : 'text-ink'} after:w-full`
@@ -256,13 +257,13 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
             {/* Search mobile */}
             <div className="px-4 py-3 border-b border-mist">
-              <form onSubmit={handleSearch} className="flex items-center gap-2 px-3 py-2 border border-mist bg-paper/80 rounded-[2px]">
+              <form onSubmit={handleSearch} className="flex items-center gap-2 px-3 h-11 border border-mist-d bg-paper focus-within:border-ink transition-colors duration-150">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
                 <input ref={mobileSearchRef} type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar…"
                   aria-label="Buscar produtos" enterKeyHint="search"
-                  className="flex-1 bg-transparent text-sm text-ink placeholder:text-faint outline-none" />
+                  className="flex-1 min-w-0 bg-transparent text-[16px] text-ink placeholder:text-faint outline-none" />
               </form>
             </div>
 

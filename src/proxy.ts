@@ -114,7 +114,7 @@ function applySecurityHeaders(res: NextResponse): void {
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.headers.set('X-DNS-Prefetch-Control', 'off');
   res.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
-  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()');
+  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
   res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   res.headers.set('Content-Security-Policy', [
     "default-src 'self'",
