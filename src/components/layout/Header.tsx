@@ -201,7 +201,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                 <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
               {count > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-clay text-paper text-[9px] font-bold flex items-center justify-center leading-none px-[3px] rounded-[2px]">
+                <span key={count} className="animate-badge-bump absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-clay text-paper text-[9px] font-bold flex items-center justify-center leading-none px-[3px] rounded-[2px]">
                   {count > 9 ? '9+' : count}
                 </span>
               )}
@@ -268,9 +268,10 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             </div>
 
             <nav className="flex-1 px-2 py-4 flex flex-col overflow-y-auto">
-              {NAV_LINKS.map(({ href, label }) => (
+              {NAV_LINKS.map(({ href, label }, i) => (
                 <NavLink key={href} href={href}
-                  className={`px-4 py-3 text-[15px] font-medium transition-colors ${pathname.startsWith(href) ? 'text-clay bg-warm' : 'text-ink hover:bg-warm'}`}
+                  style={{ animationDelay: `${70 + i * 40}ms` }}
+                  className={`animate-drawer-item px-4 py-3 text-[15px] font-medium transition-colors ${pathname.startsWith(href) ? 'text-clay bg-warm' : 'text-ink hover:bg-warm'}`}
                 >
                   {label}
                 </NavLink>

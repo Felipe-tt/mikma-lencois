@@ -22,13 +22,16 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   const { isFavorite, toggle } = useWishlist();
   const { requireAuth } = useAuthModal();
   const favorite = isFavorite(product.id);
+  // Só anima o coração quando a pessoa toca: sem isso, todos os favoritos
+  // "pulavam" juntos quando a lista carregava.
+  const [pops, setPops] = useState(0);
 
   const isNew        = product.tags?.includes('novo') || product.tags?.includes('new');
   const isBestSeller = product.tags?.includes('bestseller') || product.tags?.includes('mais vendido');
   const badge        = isNew ? 'Novo' : isBestSeller ? 'Destaque' : null;
 
   function handleFavoriteClick() {
-    requireAuth(() => { void toggle(product.id); }, 'Entre pra salvar nos favoritos.');
+    requireAuth(() => { setPops(n => n + 1); void toggle(product.id); }, 'Entre pra salvar nos favoritos.');
   }
 
   // O botão de favoritar fica como irmão do link (não dentro dele): botão
@@ -113,11 +116,11 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
         aria-pressed={favorite}
         className="absolute top-3 right-3 z-10 w-9 h-9 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full transition-transform duration-150 hover:scale-110 active:scale-90"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24"
+        <svg key={pops} width="16" height="16" viewBox="0 0 24 24"
           fill={favorite ? '#b45744' : 'none'}
           stroke={favorite ? '#b45744' : 'currentColor'}
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          className={favorite ? '' : 'text-ink/70'}
+          className={favorite ? (pops > 0 ? 'animate-heart-pop' : '') : 'text-ink/70'}
         >
           <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" />
         </svg>
