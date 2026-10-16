@@ -64,6 +64,9 @@ jobs:
       - name: Rodar testes automatizados
         run: npm test
 
+      - name: Lint (ESLint)
+        run: npm run lint
+
       - name: Instalar JDK (exigido pelo emulador do Firestore)
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
