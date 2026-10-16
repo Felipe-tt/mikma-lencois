@@ -239,13 +239,14 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   // Sinais de fraude leve (endereço/IP compartilhado com outra conta),
   // ver src/lib/fraudSignals.ts. Não bloqueia nada, só avisa o vendedor.
+  const orderIdForSignals = order?.id;
   useEffect(() => {
-    if (!order || !user) return;
+    if (!orderIdForSignals || !user) return;
     let cancelled = false;
     (async () => {
       try {
         const token = await user.getIdToken();
-        const res = await fetch(`/api/painel/pedidos/${order.id}/fraud-signals`, {
+        const res = await fetch(`/api/painel/pedidos/${orderIdForSignals}/fraud-signals`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok || cancelled) return;
@@ -256,7 +257,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       }
     })();
     return () => { cancelled = true; };
-  }, [order?.id, user]);
+  }, [orderIdForSignals, user]);
 
   function copy(text: string, key: string) {
     navigator.clipboard.writeText(text);

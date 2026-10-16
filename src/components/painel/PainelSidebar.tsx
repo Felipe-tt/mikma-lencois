@@ -58,6 +58,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
             força reload completo, o navegador sempre respeita o redirect
             do middleware, então na pior das hipóteses cai em /manutencao
             (nunca fica parado sem reação). */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/" className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 -ml-2 hover:bg-warm transition-colors">
           <BrandLogo alt="Mikma" className="h-7 w-auto object-contain" />
           <div className="w-px h-4 bg-mist" />
@@ -109,6 +110,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
           <p className="text-[11.5px] text-ink font-medium truncate">{user?.email}</p>
         </div>
         {/* <a> normal, não <Link>, mesmo motivo do logo acima. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
           href="/"
           className="flex items-center gap-2 px-3 py-2 text-[12px] text-mid hover:text-ink hover:bg-warm transition-colors rounded-xl"

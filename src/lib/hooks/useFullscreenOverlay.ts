@@ -58,7 +58,7 @@ export function useFullscreenOverlay(enabled: boolean = true): number | null {
       window.visualViewport?.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
     };
-  }, []);
+  }, [enabled]);
 
   return height;
 }

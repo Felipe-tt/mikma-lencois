@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rules": "firebase emulators:exec --only firestore --project mikma-rules-test \"vitest run --config vitest.rules.config.ts\""
@@ -48,7 +48,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@types/sanitize-html": "^2.16.1",
-    "eslint": "^10.8.1",
+    "eslint": "^9.39.1",
     "eslint-config-next": "~16.3.8",
     "firebase-tools": "^15.26.0",
     "postcss": "^8.5.26",
