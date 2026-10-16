@@ -42,7 +42,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <ThemeScript />
         <link rel="icon" href="/favicon.ico" sizes="32x32" />

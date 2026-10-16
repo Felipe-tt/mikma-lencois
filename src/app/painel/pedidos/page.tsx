@@ -19,7 +19,7 @@ const STATUS_LABEL: Record<string, string> = {
   pending_payment: 'Aguardando pagamento',
   paid:            'Pago',
   preparing:       'Separando',
-  shipped:         'Despachado',
+  shipped:         'A caminho',
   delivered:       'Entregue',
   cancelled:       'Cancelado',
 };
@@ -37,7 +37,7 @@ const FILTERS: { id: string; label: string; Icon?: React.FC<React.SVGProps<SVGSV
   { id: 'todos',           label: 'Todos' },
   { id: 'paid',            label: 'Precisam separar',   Icon: IconAlert },
   { id: 'preparing',       label: 'Separando',          Icon: IconBox },
-  { id: 'shipped',         label: 'Despachados',        Icon: IconTruck },
+  { id: 'shipped',         label: 'A caminho',          Icon: IconTruck },
   { id: 'delivered',       label: 'Entregues',          Icon: IconCheck },
   { id: 'pending_payment', label: 'Aguardando pgto',    Icon: IconHourglass },
   { id: 'cancelled',       label: 'Cancelados',         Icon: IconX },
@@ -58,7 +58,9 @@ function carrierLabel(carrier?: string) {
   if (carrier.startsWith('correios_pac')) return 'Correios PAC';
   if (carrier.startsWith('correios_sedex')) return 'Correios SEDEX';
   if (carrier.startsWith('jadlog')) return 'Jadlog';
-  return carrier;
+  if (carrier === 'uber_direct') return 'Uber Direct';
+  if (carrier === 'manual') return 'Entrega própria';
+  return carrier.replace(/_/g, ' ');
 }
 
 const PAGE = 50;

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProducts, IconArrowRight } from '@/components/ui/Icon';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 const BADGE: Record<string, string> = {
   pending_payment: 'badge-pending', payment_expired: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
@@ -28,6 +29,8 @@ function startOfTodayISO() {
 }
 
 export default function PainelDashboard() {
+  const { user } = useAuth();
+  const firstName = user?.displayName?.trim().split(/\s+/)[0] ?? '';
   // Duas consultas de propósito, com papéis diferentes:
   //
   // `recent` alimenta só a lista "Últimos pedidos" — 10 basta.
@@ -90,12 +93,12 @@ export default function PainelDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <span className="panel-live-dot" aria-hidden="true" />
-        <div>
-          <h1 className="font-display font-normal text-ink text-2xl">Olá!</h1>
-          <p className="text-[13px] text-faint mt-0.5">Um resumo do que está acontecendo na loja, em tempo real.</p>
-        </div>
+      <div className="mb-8">
+        <h1 className="font-display font-normal text-ink text-2xl">{firstName ? `Olá, ${firstName}!` : 'Olá!'}</h1>
+        <p className="flex items-center gap-2 text-[13px] text-faint mt-1">
+          <span className="panel-live-dot" aria-hidden="true" />
+          Um resumo do que está acontecendo na loja, em tempo real.
+        </p>
       </div>
 
       {(waiting > 0 || needAction > 0) && (
@@ -170,7 +173,7 @@ export default function PainelDashboard() {
             className="panel-row flex items-center justify-between gap-3"
           >
             <span className="flex items-center gap-3 min-w-0">
-              <span className="text-[11px] font-mono text-faint shrink-0">#{o.id.slice(-6).toUpperCase()}</span>
+              <span className="text-[11px] font-mono text-faint shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
               <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
             </span>
             <span className="flex items-center gap-4 shrink-0">

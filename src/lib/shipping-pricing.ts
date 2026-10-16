@@ -465,5 +465,25 @@ export async function computeShippingOptions(
     );
   }
 
-  return { options: deduped, distKm, isLocal, freeShipping, uberDebug, uberSandbox };
+  return { options: assignRelativeTags(deduped), distKm, isLocal, freeShipping, uberDebug, uberSandbox };
+}
+
+/**
+ * "Mais econômico" e "Mais rápido" valem em relação às opções que o cliente
+ * está vendo, não ao tipo de serviço: antes PAC e Jadlog Package vinham os
+ * dois como "mais econômico". Entre as transportadoras (retirada e entrega
+ * local ficam com a tag "local"), a mais barata ganha "economico" e a mais
+ * rápida ganha "rapido"; com uma opção só, ou quando a mesma é as duas
+ * coisas, fica só "economico".
+ */
+export function assignRelativeTags(options: ShippingOption[]): ShippingOption[] {
+  const carriers = options.filter(o => o.tag !== 'local');
+  for (const o of carriers) delete o.tag;
+  if (carriers.length < 2) return options;
+  const price = (o: ShippingOption) => o.realPriceCents ?? o.priceCents;
+  const cheapest = [...carriers].sort((a, b) => price(a) - price(b) || a.estimatedDays - b.estimatedDays)[0];
+  const fastest  = [...carriers].sort((a, b) => a.estimatedDays - b.estimatedDays || price(a) - price(b))[0];
+  cheapest.tag = 'economico';
+  if (fastest !== cheapest && fastest.estimatedDays < cheapest.estimatedDays) fastest.tag = 'rapido';
+  return options;
 }

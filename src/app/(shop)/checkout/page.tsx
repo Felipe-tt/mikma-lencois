@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { Fragment, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, onSnapshot, getDoc, setDoc, collection, query, where, getDocs, documentId } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
@@ -49,7 +49,6 @@ function CarrierIcon({ carrier }: { carrier: string }) {
 }
 
 const TAG: Record<string, { label: string; cls: string }> = {
-  local:     { label: 'Entrega hoje',   cls: 'bg-emerald-100 text-emerald-800' },
   rapido:    { label: 'Mais rápido',    cls: 'bg-amber-100 text-amber-800' },
   economico: { label: 'Mais econômico', cls: 'bg-sky-100 text-sky-800' },
 };
@@ -394,19 +393,36 @@ export default function CheckoutPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9]">
+    <div className="min-h-screen bg-paper">
 
       {/* ── Top bar ── */}
       <div className="bg-white dark:bg-warm border-b border-mist sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 overflow-x-auto scrollbar-none">
+          {/* Celular: etapa atual + barra de progresso. As 4 etapas com
+              rótulo não cabem e só sobravam barras soltas. */}
+          <div className="sm:hidden flex items-center justify-between gap-4 w-full">
+            <span key={step} className="text-[13px] font-semibold text-ink animate-fade-in">{STEP_LABELS[step - 1]}</span>
+            <span className="flex items-center gap-2.5 shrink-0" aria-label={`Etapa ${step} de 3`}>
+              <span className="font-mono text-[11px] text-faint tabular-nums">{step}/3</span>
+              <span className="flex gap-1" aria-hidden="true">
+                {[1, 2, 3].map(n => (
+                  <span key={n} className={`h-1 w-6 transition-colors duration-300 ${n <= step ? 'bg-ink' : 'bg-mist'}`} />
+                ))}
+              </span>
+            </span>
+          </div>
+          <div className="hidden sm:flex items-center gap-3">
             <Crumb state="done" label="Carrinho" />
             <CrumbDivider />
-            <Crumb state={step >= 1 ? 'active' : 'pending'} label="Identificação" />
-            <CrumbDivider />
-            <Crumb state={step >= 2 ? 'active' : 'pending'} label="Endereço" />
-            <CrumbDivider />
-            <Crumb state={step >= 3 ? 'active' : 'pending'} label="Entrega e pagamento" />
+            {STEP_LABELS.map((label, i) => {
+              const n = i + 1;
+              return (
+                <Fragment key={label}>
+                  <Crumb state={step > n ? 'done' : step === n ? 'active' : 'pending'} label={label} />
+                  {n < 3 && <CrumbDivider />}
+                </Fragment>
+              );
+            })}
           </div>
 
         </div>
@@ -435,7 +451,7 @@ export default function CheckoutPage() {
                     autoComplete="name" />
                   <Err msg={errors.name} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 min-[440px]:grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="co-cpf">CPF</Label>
                     <Input id="co-cpf" value={customer.cpf} onChange={v => setCustomer(c => ({ ...c, cpf: maskCpf(v) }))}
@@ -578,11 +594,13 @@ export default function CheckoutPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-[13px] font-semibold text-ink">{opt.label}</span>
-                                {opt.tag && <span className={`text-[10px] font-bold tracking-[0.06em] uppercase px-2 py-0.5 rounded-full ${TAG[opt.tag]?.cls}`}>{TAG[opt.tag]?.label}</span>}
+                                {opt.tag && opt.tag !== 'local' && <span className={`text-[10px] font-bold tracking-[0.06em] uppercase px-2 py-0.5 ${TAG[opt.tag]?.cls}`}>{TAG[opt.tag]?.label}</span>}
                               </div>
                               <p className="text-[11px] text-faint mt-0.5">
-                                {opt.estimatedDays === 0
-                                  ? 'Entrega hoje'
+                                {opt.carrier === 'pickup'
+                                  ? 'Pronto pra retirar hoje, no horário da loja'
+                                  : opt.estimatedDays === 0
+                                  ? 'Chega hoje'
                                   : `Recebe ${estimatedDate(opt.estimatedDays)}`}
                               </p>
                             </div>
@@ -619,7 +637,7 @@ export default function CheckoutPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-bold text-ink">PIX</p>
                           {pixDiscount > 0 && (
-                            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5">
                               {pixDiscountPct}% de desconto
                             </span>
                           )}
@@ -755,12 +773,16 @@ export default function CheckoutPage() {
               <div className="px-5 py-4 flex flex-col gap-4">
                 {items.map(item => (
                   <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex items-start gap-3">
-                    <div className="relative shrink-0 w-12 h-14 bg-paper border border-mist overflow-hidden">
-                      {item.image
-                        ? <Image src={item.image} alt={item.productName} fill sizes="48px" className="object-cover" />
-                        : <div className="h-full flex items-center justify-center text-faint text-xs font-display">M</div>
-                      }
-                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ink text-paper text-[9px] font-bold flex items-center justify-center rounded-full">
+                    {/* Badge de quantidade fora do overflow-hidden da foto: dentro dele
+                        o canto era cortado e o número sumia. */}
+                    <div className="relative shrink-0 w-12 h-14">
+                      <div className="absolute inset-0 bg-paper border border-mist overflow-hidden">
+                        {item.image
+                          ? <Image src={item.image} alt={item.productName} fill sizes="48px" className="object-cover" />
+                          : <div className="h-full flex items-center justify-center text-faint text-xs font-display">M</div>
+                        }
+                      </div>
+                      <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 bg-ink text-paper text-[10px] font-bold tabular-nums flex items-center justify-center rounded-full ring-2 ring-paper">
                         {item.quantity}
                       </span>
                     </div>
@@ -836,18 +858,19 @@ export default function CheckoutPage() {
   );
 }
 
+const STEP_LABELS = ['Identificação', 'Endereço', 'Entrega e pagamento'] as const;
+
 function Crumb({ state, label }: { state: 'done' | 'active' | 'pending'; label: string }) {
   return (
-    <span className={`flex items-center gap-1.5 shrink-0 ${state === 'pending' ? 'opacity-35' : ''}`}>
+    <span aria-current={state === 'active' ? 'step' : undefined} className={`flex items-center gap-1.5 shrink-0 transition-opacity duration-200 ${state === 'pending' ? 'opacity-40' : ''}`}>
       {state === 'done' && (
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-emerald-600">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       )}
-      <span className={`text-xs font-semibold hidden sm:block ${state === 'active' ? 'text-ink' : state === 'done' ? 'text-faint' : 'text-faint'}`}>
+      <span className={`text-xs font-semibold transition-colors duration-200 ${state === 'active' ? 'text-ink' : 'text-faint'}`}>
         {label}
       </span>
-      {state === 'active' && <span className="sm:hidden text-xs font-bold text-ink">{label}</span>}
     </span>
   );
 }

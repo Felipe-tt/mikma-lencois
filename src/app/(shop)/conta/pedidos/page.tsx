@@ -101,11 +101,15 @@ export default function PedidosPage() {
   return (
     <div>
       <div className="border-b border-mist">
-        <div className="container-shop flex items-end justify-between">
+        <div className="container-shop py-8 sm:py-10 flex items-end justify-between gap-4">
           <div>
+            <Link href="/conta" className="group inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-faint hover:text-ink transition-colors duration-150 mb-3">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+              Área do cliente
+            </Link>
             <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Meus pedidos</h1>
           </div>
-          <Link href="/perfil" className="text-sm text-mid hover:text-clay transition-colors font-medium hidden sm:block">
+          <Link href="/perfil" className="text-sm text-mid hover:text-ink transition-colors font-medium hidden sm:block border-b border-mist-d hover:border-ink pb-px mb-1.5">
             Meu perfil
           </Link>
         </div>

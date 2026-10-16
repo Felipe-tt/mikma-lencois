@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import {
+  connectAuthEmulator,
   initializeAuth,
   getAuth,
   indexedDBLocalPersistence,
@@ -8,6 +9,7 @@ import {
   browserPopupRedirectResolver,
 } from 'firebase/auth'
 import {
+  connectFirestoreEmulator,
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
@@ -100,5 +102,16 @@ export const db = initializeFirestore(app, {
       ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
       : memoryLocalCache(),
 })
+
+// Desenvolvimento local com Firebase Emulator Suite (Auth + Firestore):
+// NEXT_PUBLIC_FIREBASE_EMULATORS=1 no .env.local. Nunca setado em produção.
+if (process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === '1' && typeof window !== 'undefined') {
+  try {
+    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+    connectFirestoreEmulator(db, '127.0.0.1', 8080)
+  } catch {
+    // Já conectado (hot-reload em dev)
+  }
+}
 
 export default app
