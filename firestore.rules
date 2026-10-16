@@ -99,7 +99,11 @@ service cloud.firestore {
     // segurança só em regra do Firestore. Edição/exclusão: só admin
     // (moderação de conteúdo abusivo).
     match /reviews/{reviewId} {
-      allow read: if true;
+      // A lista pública sai pelo servidor (página do produto e
+      // /api/reviews), só com nome abreviado, nota e comentário. Direto
+      // do Firestore, cada um lê só as próprias avaliações (pra saber o
+      // que já avaliou); antes qualquer um lia userId e orderId de todos.
+      allow read: if isAuth() && (resource.data.userId == request.auth.uid || isSellerOrAdmin());
       allow create: if false;
       allow update: if false;
       allow delete: if hasRole('admin');
