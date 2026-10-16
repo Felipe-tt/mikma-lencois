@@ -105,19 +105,19 @@ export function ProductGallery({ images, name, tag }: Props) {
     <div className="flex gap-3 sm:gap-4">
       {/* Trilha de miniaturas, desktop */}
       {images.length > 1 && (
-        <div className="hidden sm:flex flex-col gap-2 w-[64px] shrink-0 max-h-[560px] overflow-y-auto scrollbar-none">
+        <div className="hidden sm:flex flex-col gap-2.5 w-[72px] shrink-0 max-h-[600px] overflow-y-auto scrollbar-none p-1 -m-1">
           {images.slice(0, 10).map((img, i) => (
             <button
               key={i}
               type="button"
               onClick={() => setActive(i)}
-              className={`relative aspect-square shrink-0 overflow-hidden bg-warm border transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 ${
-                active === i ? 'border-ink border-2' : 'border-mist/60 hover:border-ink/40'
+              className={`relative aspect-[4/5] shrink-0 overflow-hidden bg-warm transition-[opacity,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                active === i ? 'opacity-100 ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'opacity-55 hover:opacity-100'
               }`}
               aria-label={`Ver foto ${i + 1}`}
               aria-current={active === i ? 'true' : undefined}
             >
-              <Image src={img} alt="" fill sizes="64px" className="object-contain p-1" />
+              <Image src={img} alt="" fill sizes="64px" className="object-cover" />
             </button>
           ))}
         </div>
@@ -125,7 +125,7 @@ export function ProductGallery({ images, name, tag }: Props) {
 
       <div className="flex-1 min-w-0 flex flex-col gap-2">
         <div
-          className={`group relative aspect-square overflow-hidden bg-warm select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
+          className={`group relative aspect-[4/5] overflow-hidden bg-warm select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={() => { swipe.current = null; }}
@@ -141,7 +141,7 @@ export function ProductGallery({ images, name, tag }: Props) {
             />
           )}
           {hasImages ? (
-            <div className="absolute inset-0 p-6 sm:p-10">
+            <div className="absolute inset-0">
               <div className="relative w-full h-full">
                 <Image
                   src={images[active]}
@@ -149,7 +149,7 @@ export function ProductGallery({ images, name, tag }: Props) {
                   fill
                   priority
                   sizes="(max-width: 1024px) 100vw, 45vw"
-                  className="object-contain transition-transform duration-300 group-hover:scale-105"
+                  className="object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.7,0.2,1)] group-hover:scale-[1.03]"
                 />
               </div>
             </div>
@@ -203,19 +203,19 @@ export function ProductGallery({ images, name, tag }: Props) {
         </div>
 
         {images.length > 1 && (
-          <div className="flex sm:hidden gap-2 overflow-x-auto scrollbar-none">
+          <div className="flex sm:hidden gap-2.5 overflow-x-auto scrollbar-none p-1 -m-1">
             {images.slice(0, 10).map((img, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => setActive(i)}
-                className={`relative aspect-square w-14 shrink-0 overflow-hidden bg-warm border transition-colors duration-150 ${
-                  active === i ? 'border-ink border-2' : 'border-mist/60'
+                className={`relative aspect-[4/5] w-14 shrink-0 overflow-hidden bg-warm transition-[opacity,box-shadow] duration-200 ${
+                  active === i ? 'opacity-100 ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'opacity-55'
                 }`}
                 aria-label={`Ver foto ${i + 1}`}
                 aria-current={active === i ? 'true' : undefined}
               >
-                <Image src={img} alt="" fill sizes="56px" className="object-contain p-1" />
+                <Image src={img} alt="" fill sizes="56px" className="object-cover" />
               </button>
             ))}
           </div>
