@@ -8,11 +8,14 @@ import { db, auth } from '@/lib/firebase/client';
 import { formatTsDateTime } from '@/lib/utils/format';
 import type { EmailMessage, EmailAttachment, Conversation } from '@/types';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { escapeHtml } from '@/lib/html';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
 
 export default function PainelMensagens() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     return onSnapshot(
@@ -20,7 +23,9 @@ export default function PainelMensagens() {
       snap => {
         setConversations(snap.docs.map(d => ({ id: d.id, ...d.data() } as Conversation)));
         setLoading(false);
-      }
+        setLoadError(false);
+      },
+      err => { console.error('[mensagens] onSnapshot:', err); setLoading(false); setLoadError(true); }
     );
   }, []);
 
@@ -71,6 +76,7 @@ export default function PainelMensagens() {
     }
   }
 
+  if (loadError) return <PanelErrorState message="Não foi possível carregar as mensagens." onRetry={() => window.location.reload()} />;
   if (loading) return <DashboardSkeleton />;
 
   return (
@@ -219,6 +225,11 @@ function ConversationThread({
         setMessages(msgs);
         setLoading(false);
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+      },
+      err => {
+        console.error('[mensagens] conversa:', err);
+        setLoading(false);
+        setError('Não foi possível carregar esta conversa. Verifique sua conexão.');
       }
     );
   }, [conversation.id]);
@@ -265,7 +276,8 @@ function ConversationThread({
   function previewHtml(text: string): string {
     const bodyHtml = text
       .split(/\n\n+/)
-      .map(p => `<p style="margin:0 0 14px;line-height:1.65;">${p.replace(/\n/g, '<br>')}</p>`)
+      // Escapado: o preview usa dangerouslySetInnerHTML.
+      .map(p => `<p style="margin:0 0 14px;line-height:1.65;">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
       .join('');
     return `<div style="font-family:Helvetica,Arial,sans-serif;background:#F5F0EB;padding:24px 16px;">
       <div style="max-width:560px;margin:0 auto;">

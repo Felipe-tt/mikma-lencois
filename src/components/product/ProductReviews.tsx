@@ -5,11 +5,12 @@ import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { StarRating } from './StarRating';
 import { formatDate } from '@/lib/utils/format';
-import type { Order, Review } from '@/types';
+import type { Order } from '@/types';
+import type { PublicReview } from '@/lib/reviews';
 
 interface Props {
   productId: string;
-  initialReviews: Review[];
+  initialReviews: PublicReview[];
 }
 
 export function ProductReviews({ productId, initialReviews }: Props) {
@@ -57,10 +58,10 @@ export function ProductReviews({ productId, initialReviews }: Props) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ orderId: eligibleOrderId, productId, rating, comment }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao enviar avaliação');
-      const { id } = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao enviar avaliação');
       setReviews(prev => [
-        { id, productId, orderId: eligibleOrderId, userId: user!.uid, userName: user!.displayName ?? 'Você', rating: rating as Review['rating'], comment, createdAt: new Date().toISOString() },
+        { id: data.id, productId, userName: data.userName ?? 'Você', rating: rating as PublicReview['rating'], comment, createdAt: new Date().toISOString() },
         ...prev,
       ]);
       setEligibleOrderId(null);

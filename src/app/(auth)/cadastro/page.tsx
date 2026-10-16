@@ -245,7 +245,7 @@ function RegisterContent() {
           width={400}
           height={400}
           aria-hidden="true"
-          className="pointer-events-none select-none absolute -bottom-20 -right-20 w-[360px] max-w-[70%] h-auto object-contain opacity-[0.12]"
+          className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] max-w-[540px] h-auto object-contain opacity-[0.07] dark:opacity-[0.06]"
         />
         <Link href="/" className="relative z-10"><BrandLogo alt="Mikma" className="h-9 w-auto object-contain" /></Link>
         <div className="relative z-10">
@@ -301,8 +301,8 @@ function RegisterContent() {
 
               <form onSubmit={handleSendLink} noValidate className="flex flex-col gap-5">
                 <div>
-                  <label className="label">Seu nome completo</label>
-                  <input type="text" value={name}
+                  <label htmlFor="cad-nome" className="label">Seu nome completo</label>
+                  <input id="cad-nome" type="text" value={name}
                     onChange={e => { setName(stripNameChars(e.target.value)); if (fieldErrors.name) setFieldError('name'); }}
                     onBlur={() => name && blurValidate('name', validateName(name))}
                     className="input text-base" placeholder="Maria da Silva"
@@ -312,8 +312,8 @@ function RegisterContent() {
                   <FieldError id="err-name" msg={fieldErrors.name} />
                 </div>
                 <div>
-                  <label className="label">Seu e-mail</label>
-                  <input type="email" value={email}
+                  <label htmlFor="cad-email" className="label">Seu e-mail</label>
+                  <input id="cad-email" type="email" value={email}
                     onChange={e => { setEmail(e.target.value.replace(/\s/g, '')); if (fieldErrors.email) setFieldError('email'); }}
                     onBlur={() => email && blurValidate('email', validateEmail(email))}
                     className="input text-base" placeholder="seuemail@exemplo.com"
@@ -404,15 +404,15 @@ function RegisterContent() {
 
               <form onSubmit={handleRegister} noValidate className="flex flex-col gap-5">
                 <div>
-                  <label className="label">Senha</label>
+                  <label htmlFor="cad-senha" className="label">Senha</label>
                   <div className="relative">
-                    <input type={showPass ? 'text' : 'password'} value={password}
+                    <input id="cad-senha" type={showPass ? 'text' : 'password'} value={password}
                       onChange={e => { setPassword(e.target.value); if (fieldErrors.password) setFieldError('password'); }}
                       className="input text-base pr-11" placeholder="Mínimo 8 caracteres"
                       autoComplete="new-password" maxLength={PASSWORD_MAX}
                       aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'err-password' : undefined}
                       autoFocus />
-                    <button type="button" onClick={() => setShowPass(p => !p)}
+                    <button type="button" onClick={() => setShowPass(p => !p)} aria-label={showPass ? "Ocultar senha" : "Mostrar senha"} aria-pressed={showPass}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-mid p-1">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                         {showPass
@@ -426,8 +426,8 @@ function RegisterContent() {
                 </div>
 
                 <div>
-                  <label className="label">Repita a senha</label>
-                  <input type="password" value={confirm}
+                  <label htmlFor="cad-senha2" className="label">Repita a senha</label>
+                  <input id="cad-senha2" type="password" value={confirm}
                     onChange={e => { setConfirm(e.target.value); if (fieldErrors.confirm) setFieldError('confirm'); }}
                     className="input text-base" placeholder="Digite a senha novamente"
                     autoComplete="new-password" maxLength={PASSWORD_MAX}
@@ -445,8 +445,8 @@ function RegisterContent() {
                   </summary>
                   <div className="px-4 pb-4 pt-3 flex flex-col gap-4">
                     <div>
-                      <label className="label">Telefone / WhatsApp</label>
-                      <input type="tel" value={phone}
+                      <label htmlFor="cad-tel" className="label">Telefone / WhatsApp</label>
+                      <input id="cad-tel" type="tel" value={phone}
                         onChange={e => { setPhone(maskPhone(e.target.value)); if (fieldErrors.phone) setFieldError('phone'); }}
                         onBlur={() => phone && blurValidate('phone', validatePhone(phone))}
                         className="input" placeholder="(47) 99999-0000" autoComplete="tel" inputMode="tel"
@@ -454,8 +454,8 @@ function RegisterContent() {
                       <FieldError id="err-phone" msg={fieldErrors.phone} />
                     </div>
                     <div>
-                      <label className="label">CPF</label>
-                      <input type="text" inputMode="numeric" value={cpf}
+                      <label htmlFor="cad-cpf" className="label">CPF</label>
+                      <input id="cad-cpf" type="text" inputMode="numeric" value={cpf}
                         onChange={e => { setCpf(maskCpf(e.target.value)); if (fieldErrors.cpf) setFieldError('cpf'); }}
                         onBlur={() => cpf && blurValidate('cpf', validateCpf(cpf))}
                         className="input" placeholder="000.000.000-00" autoComplete="off"

@@ -153,13 +153,13 @@ function ResetForm() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
-          <label className="label">Nova senha</label>
+          <label htmlFor="nova-senha" className="label">Nova senha</label>
           <div className="relative">
-            <input type={showPass ? 'text' : 'password'} value={password}
+            <input id="nova-senha" type={showPass ? 'text' : 'password'} value={password}
               onChange={e => setPassword(e.target.value)}
               className="input text-base pr-11" placeholder="Mínimo 8 caracteres"
               autoComplete="new-password" autoFocus />
-            <button type="button" onClick={() => setShowPass(p => !p)}
+            <button type="button" onClick={() => setShowPass(p => !p)} aria-label={showPass ? "Ocultar senha" : "Mostrar senha"} aria-pressed={showPass}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-mid p-1">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 {showPass
@@ -172,8 +172,8 @@ function ResetForm() {
         </div>
 
         <div>
-          <label className="label">Repita a nova senha</label>
-          <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
+          <label htmlFor="nova-senha2" className="label">Repita a nova senha</label>
+          <input id="nova-senha2" type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
             className="input text-base" placeholder="Digite a senha novamente"
             autoComplete="new-password" />
           {confirm && password === confirm && (

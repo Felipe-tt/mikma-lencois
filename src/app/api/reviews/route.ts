@@ -3,10 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { z } from 'zod';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { getClientIp, safeJson, extractBearer, tooManyRequests } from '@/lib/security';
+import { getClientIp, safeJson, extractBearer, tooManyRequests, verifyAuth } from '@/lib/security';
 import { serialize } from '@/lib/utils/serialize';
 import type { Review } from '@/types';
 import { sanitizeDisplayName } from '@/lib/html';
+import { revalidatePath } from 'next/cache';
+import { shortReviewerName, toPublicReview } from '@/lib/reviews';
 
 const schema = z.object({
   orderId: z.string().min(1).max(128),
@@ -26,7 +28,7 @@ export async function GET(req: NextRequest) {
     .limit(100)
     .get();
 
-  const reviews = snap.docs.map(d => serialize<Review>({ id: d.id, ...d.data() }));
+  const reviews = snap.docs.map(d => toPublicReview(serialize<Review>({ id: d.id, ...d.data() })));
   return NextResponse.json({ reviews });
 }
 
@@ -94,20 +96,56 @@ export async function POST(req: NextRequest) {
       name = (userSnap.data()?.name as string | undefined) ?? 'Cliente';
     }
 
+    // ID fixo por (pedido, produto) + create(): duas requisições ao mesmo
+    // tempo (duplo clique, duas abas) não geram duas avaliações; a
+    // checagem acima sozinha deixava passar e inflava a média.
     const now = new Date().toISOString();
-    const ref = await adminDb.collection('reviews').add({
-      productId,
-      orderId,
-      userId: uid,
-      userName: name,
-      rating,
-      comment,
-      createdAt: now,
-    });
+    const ref = adminDb.collection('reviews').doc(`${orderId}_${productId}`);
+    try {
+      await ref.create({
+        productId,
+        orderId,
+        userId: uid,
+        userName: shortReviewerName(name),
+        rating,
+        comment,
+        createdAt: now,
+      });
+    } catch (err) {
+      if ((err as { code?: number }).code === 6) {
+        return NextResponse.json({ error: 'Você já avaliou este produto neste pedido' }, { status: 409 });
+      }
+      throw err;
+    }
 
-    return NextResponse.json({ id: ref.id }, { status: 201 });
+    // Sem isso a página do produto (ISR de 5 min) não mostrava a avaliação
+    // nova pra quem acabou de avaliar e recarregou.
+    try { revalidatePath(`/produtos/${productId}`); } catch { /* best-effort */ }
+
+    return NextResponse.json({ id: ref.id, userName: shortReviewerName(name) }, { status: 201 });
   } catch (err) {
     console.error('[reviews] falha ao criar avaliação:', err);
     return NextResponse.json({ error: 'Erro ao salvar avaliação' }, { status: 500 });
   }
+}
+
+// ── DELETE /api/reviews?id=xxx, moderação pela equipe ──────────────────────
+// Antes não havia tela nem rota: avaliação ofensiva só saía pelo console
+// do Firebase. Revalida a página do produto pra sumir na hora.
+export async function DELETE(req: NextRequest) {
+  const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
+  if (!auth.ok) return auth.response;
+
+  const id = req.nextUrl.searchParams.get('id');
+  if (!id || id.length > 300) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 });
+
+  const ref = adminDb.collection('reviews').doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) return NextResponse.json({ error: 'Avaliação não encontrada' }, { status: 404 });
+  const productId = snap.data()?.productId as string | undefined;
+  await ref.delete();
+  if (productId) {
+    try { revalidatePath(`/produtos/${productId}`); } catch { /* best-effort */ }
+  }
+  return NextResponse.json({ ok: true });
 }

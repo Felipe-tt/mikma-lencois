@@ -257,7 +257,7 @@ export default function LoginPage() {
             width={400}
             height={400}
             aria-hidden="true"
-            className="pointer-events-none select-none absolute -bottom-20 -right-20 w-[360px] max-w-[70%] h-auto object-contain opacity-[0.12]"
+            className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] max-w-[540px] h-auto object-contain opacity-[0.07] dark:opacity-[0.06]"
           />
           <Link href="/" className="relative z-10">
             <BrandLogo alt="Mikma" className="h-9 w-auto object-contain" />
@@ -329,25 +329,25 @@ export default function LoginPage() {
             ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               <div>
-                <label className="label">E-mail</label>
-                <input type="email" required value={email}
+                <label htmlFor="login-email" className="label">E-mail</label>
+                <input id="login-email" type="email" required value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="input" placeholder="seu@email.com" autoComplete="email" />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="label !mb-0">Senha</label>
+                  <label htmlFor="login-senha" className="label !mb-0">Senha</label>
                   <button type="button" onClick={() => setShowForgot(true)}
                     className="text-xs text-clay hover:text-clay-d transition-colors">
                     Esqueci minha senha
                   </button>
                 </div>
                 <div className="relative">
-                  <input type={showPass ? 'text' : 'password'} required value={password}
+                  <input id="login-senha" type={showPass ? 'text' : 'password'} required value={password}
                     onChange={e => setPassword(e.target.value)}
                     className="input pr-10" placeholder="••••••••" autoComplete="current-password" />
-                  <button type="button" onClick={() => setShowPass(p => !p)}
+                  <button type="button" onClick={() => setShowPass(p => !p)} aria-label={showPass ? "Ocultar senha" : "Mostrar senha"} aria-pressed={showPass}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-mid transition-colors">
                     <EyeIcon open={showPass} />
                   </button>

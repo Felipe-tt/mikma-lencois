@@ -15,6 +15,7 @@ import type { Metadata } from 'next';
 import { serialize } from '@/lib/utils/serialize';
 import { TrackViewItem } from '@/components/product/TrackViewItem';
 import { JsonLd } from '@/components/seo/JsonLd';
+import { toPublicReview, type PublicReview } from '@/lib/reviews';
 
 // ISR: revalida a cada 5 minutos, reduz leituras no Firestore por visita ao produto
 export const revalidate = 300;
@@ -52,14 +53,14 @@ async function getRelated(product: Product): Promise<Product[]> {
   } catch { return []; }
 }
 
-async function getReviews(productId: string): Promise<Review[]> {
+async function getReviews(productId: string): Promise<PublicReview[]> {
   try {
     const snap = await adminDb.collection('reviews')
       .where('productId', '==', productId)
       .orderBy('createdAt', 'desc')
       .limit(100)
       .get();
-    return snap.docs.map(d => serialize<Review>({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => toPublicReview(serialize<Review>({ id: d.id, ...d.data() })));
   } catch { return []; }
 }
 

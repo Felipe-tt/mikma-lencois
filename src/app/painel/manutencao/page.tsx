@@ -85,39 +85,57 @@ export default function ManutencaoPage() {
     return () => { unsubStatus(); unsubQueue(); };
   }, []);
 
-  const toggle = async () => {
-    setToggling(true);
+  // Toda ação confere a resposta: antes a tela marcava "liberado" mesmo
+  // com a API falhando, e um erro de rede deixava o botão travado.
+  const [actionError, setActionError] = useState('');
+
+  async function post(body: Record<string, unknown>) {
     const h = await getHeaders();
-    const res = await fetch('/api/maintenance', {
-      method: 'POST', headers: h,
-      body: JSON.stringify({ action: 'toggle' }),
-    });
-    if (res.ok) {
-      const data = await res.json();
+    const res = await fetch('/api/maintenance', { method: 'POST', headers: h, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? 'Não foi possível concluir. Tente de novo.');
+    return data;
+  }
+
+  const toggle = async () => {
+    // Ligar tira a loja do ar pra todo mundo: pede confirmação.
+    const turningOn = !status.active;
+    const { confirmed } = await confirmDialog(turningOn
+      ? { message: 'Colocar a loja em manutenção?', detail: 'Os clientes deixam de acessar o site até você desligar. Pedidos em andamento não são afetados.', confirmLabel: 'Ligar manutenção', variant: 'danger' }
+      : { message: 'Reabrir a loja?', detail: 'O site volta a ficar acessível para todos.', confirmLabel: 'Reabrir loja' });
+    if (!confirmed) return;
+    setToggling(true); setActionError('');
+    try {
+      const data = await post({ action: 'toggle' });
       setStatus(s => ({ ...s, active: data.active }));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Não foi possível alterar a manutenção.');
+    } finally {
+      setToggling(false);
     }
-    setToggling(false);
   };
 
   const releaseEntry = async (entry: QueueEntry) => {
     const key = entry.uid ?? entry.ip;
-    setReleasing(key);
-    const h = await getHeaders();
-    await fetch('/api/maintenance', {
-      method: 'POST', headers: h,
-      body: JSON.stringify({ action: 'release', ip: entry.ip, uid: entry.uid }),
-    });
-    setQueue(q => q.map(e => (e.id === entry.id ? { ...e, released: true } : e)));
-    setReleasing(null);
+    setReleasing(key); setActionError('');
+    try {
+      await post({ action: 'release', ip: entry.ip, uid: entry.uid });
+      setQueue(q => q.map(e => (e.id === entry.id ? { ...e, released: true } : e)));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Não foi possível liberar o acesso.');
+    } finally {
+      setReleasing(null);
+    }
   };
 
   const releaseAll = async () => {
-    const h = await getHeaders();
-    await fetch('/api/maintenance', {
-      method: 'POST', headers: h,
-      body: JSON.stringify({ action: 'release_all' }),
-    });
-    setQueue(q => q.map(e => ({ ...e, released: true })));
+    setActionError('');
+    try {
+      await post({ action: 'release_all' });
+      setQueue(q => q.map(e => ({ ...e, released: true })));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Não foi possível liberar todos.');
+    }
   };
 
   const clearQueue = async () => {
@@ -128,12 +146,13 @@ export default function ManutencaoPage() {
       variant: 'danger',
     });
     if (!confirmed) return;
-    const h = await getHeaders();
-    await fetch('/api/maintenance', {
-      method: 'POST', headers: h,
-      body: JSON.stringify({ action: 'clear_queue' }),
-    });
-    setQueue([]);
+    setActionError('');
+    try {
+      await post({ action: 'clear_queue' });
+      setQueue([]);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Não foi possível limpar a fila.');
+    }
   };
 
   // Bots/crawlers não entram na fila de IPs visível pro admin, não são
@@ -152,6 +171,9 @@ export default function ManutencaoPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {actionError && (
+        <div role="alert" className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold rounded-lg">{actionError}</div>
+      )}
       <div className="mb-7">
         <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-clay-l mb-1">Painel</p>
         <h1 className="font-display font-normal text-ink text-2xl">Manutenção</h1>

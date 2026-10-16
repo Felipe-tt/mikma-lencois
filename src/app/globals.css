@@ -3,6 +3,13 @@
 @import 'tailwindcss';
 @config '../../tailwind.config.ts';
 
+/* O tema do site é escolhido pela classe .dark no <html> (ThemeToggle).
+   No Tailwind 4 a variante dark: segue o tema do SISTEMA por padrão, e o
+   darkMode: 'class' do config antigo não vale: com o site no escuro e o
+   celular/PC no claro, a logo aparecia preta sobre fundo escuro (e todo
+   dark: do site ficava trocado). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ── Paleta de cores (light / dark) ──────────────────────────────────
    Cada token de cor do tailwind.config aponta pra uma dessas variáveis
    (formato "R G B" sem vírgula, pra funcionar com rgb(var(--x) / alpha)).
