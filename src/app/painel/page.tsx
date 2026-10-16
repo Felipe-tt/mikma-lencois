@@ -172,9 +172,11 @@ export default function PainelDashboard() {
             href={`/painel/pedidos/${o.id}`}
             className="panel-row flex items-center justify-between gap-3"
           >
-            <span className="flex items-center gap-3 min-w-0">
+            {/* No celular o ID fica em cima do status: lado a lado, "Aguardando
+                pagamento" quebrava em duas linhas dentro do selo. */}
+            <span className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3 min-w-0">
               <span className="text-[11px] font-mono text-faint shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
-              <span className={BADGE[o.status] ?? 'badge'}>{LABEL[o.status] ?? o.status}</span>
+              <span className={`${BADGE[o.status] ?? 'badge'} whitespace-nowrap`}>{LABEL[o.status] ?? o.status}</span>
             </span>
             <span className="flex items-center gap-4 shrink-0">
               <span className="text-[11px] text-faint hidden sm:block">{formatTsDateTime(o.createdAt)}</span>
