@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/lib/auth/AuthContext';
-import { AuthModalProvider } from '@/lib/auth/AuthModalContext';
+import { AuthModalProvider, useAuthModal } from '@/lib/auth/AuthModalContext';
 import { NavigationProvider } from '@/lib/NavigationContext';
 import { ChunkErrorReload } from '@/components/ChunkErrorReload';
 
@@ -18,6 +19,17 @@ const AuthModal = dynamic(
   { ssr: false }
 );
 
+// O chunk do modal de login (validação de cadastro, libphonenumber, corretor
+// de e-mail) era baixado em toda página, mesmo sem ninguém abrir o modal.
+// Agora só carrega na primeira abertura e fica montado depois disso (pra
+// preservar o estado e o poll do desafio por e-mail).
+function AuthModalOnDemand() {
+  const { isOpen } = useAuthModal();
+  const [everOpened, setEverOpened] = useState(false);
+  if (isOpen && !everOpened) setEverOpened(true);
+  return everOpened ? <AuthModal /> : null;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
@@ -26,7 +38,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           {children}
           <ChunkErrorReload />
           <ConfirmDialogHost />
-          <AuthModal />
+          <AuthModalOnDemand />
         </NavigationProvider>
       </AuthModalProvider>
     </AuthProvider>
