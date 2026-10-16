@@ -69,7 +69,7 @@ export default function ConfiguracoesPage() {
     setSettings(s => ({ ...s, [field]: value }));
 
   const handleSave = async () => {
-    // CEP da loja alimenta a geração de etiqueta de envio (Melhor Envio) -
+    // CEP da loja alimenta a cotação de frete (origem do envio) -
     // um CEP incompleto aqui só quebra na hora de despachar um pedido,
     // bem mais tarde e mais difícil de diagnosticar. Bloqueia antes.
     if (settings.storeCep && !isValidCep(settings.storeCep)) {

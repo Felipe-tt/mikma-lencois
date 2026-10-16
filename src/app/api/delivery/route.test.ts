@@ -59,16 +59,6 @@ vi.mock('@/lib/rateLimit', () => ({
   rateLimitRetryAfter: vi.fn(() => 0),
 }));
 
-const meDispatch = vi.fn();
-const meCancel = vi.fn();
-const meBalance = vi.fn();
-vi.mock('@/lib/melhorenvio', () => ({
-  meDispatch: (...args: unknown[]) => meDispatch(...args),
-  meCancel: (...args: unknown[]) => meCancel(...args),
-  meBalance: (...args: unknown[]) => meBalance(...args),
-  ME_SERVICES: { correios_pac: 1, correios_sedex: 2, jadlog_package: 7, jadlog_expresso: 18 },
-}));
-
 vi.mock('@/lib/shipping-ledger', () => ({
   recordShippingSpent: vi.fn(async () => {}),
 }));
@@ -105,7 +95,6 @@ describe('POST /api/delivery (despacho)', () => {
     for (const k of Object.keys(users)) delete users[k];
     for (const k of Object.keys(settingsDocs)) delete settingsDocs[k];
     (adminAuth.verifyIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'seller-1', role: 'seller' });
-    process.env.MELHOR_ENVIO_TOKEN = 'fake-token-de-teste';
   });
 
   it('rejeita sem token', async () => {
@@ -130,7 +119,7 @@ describe('POST /api/delivery (despacho)', () => {
     expect(res.status).toBe(409);
   });
 
-  it('retirada na loja: avança pra shipped sem chamar Melhor Envio', async () => {
+  it('retirada na loja: avança pra shipped', async () => {
     orders['order-1'] = { status: 'paid', items: [], delivery: { carrier: 'pickup' } };
     const res = await POST(req('POST', { orderId: 'order-1' }));
     const json = await res.json();
@@ -138,53 +127,21 @@ describe('POST /api/delivery (despacho)', () => {
     expect(res.status).toBe(200);
     expect(json.carrier).toBe('pickup');
     expect(orders['order-1'].status).toBe('shipped');
-    expect(meDispatch).not.toHaveBeenCalled();
   });
 
-  it('bloqueia o despacho via Melhor Envio se o saldo for insuficiente (trava de segurança)', async () => {
-    orders['order-1'] = {
-      status: 'paid',
-      userId: 'user-1',
-      totalCents: 30000,
-      items: [{ productId: 'p1', productName: 'Lençol', quantity: 1, unitPrice: 30000 }],
-      address: validAddress,
-      delivery: { carrier: 'correios_sedex', priceCents: 4500, realPriceCents: 4500 },
-    };
-    users['user-1'] = { name: 'Cliente', email: 'cliente@example.com', cpf: '00000000000', phone: '47999999999' };
-    meBalance.mockResolvedValue(1000); // R$10, bem menos que os R$45 necessários
-
-    const res = await POST(req('POST', { orderId: 'order-1' }));
-    const json = await res.json();
-
-    expect(res.status).toBe(402);
-    expect(json.error).toContain('Saldo insuficiente');
-    expect(meDispatch).not.toHaveBeenCalled();
-    // Pedido não pode ter sido alterado se o despacho foi bloqueado
-    expect(orders['order-1'].status).toBe('paid');
-  });
-
-  it('despacha via Melhor Envio com saldo suficiente e salva os dados retornados', async () => {
-    orders['order-1'] = {
-      status: 'paid',
-      userId: 'user-1',
-      totalCents: 30000,
-      items: [{ productId: 'p1', productName: 'Lençol', quantity: 1, unitPrice: 30000 }],
-      address: validAddress,
-      delivery: { carrier: 'correios_sedex', priceCents: 4500, realPriceCents: 4500 },
-    };
-    users['user-1'] = { name: 'Cliente', email: 'cliente@example.com', cpf: '00000000000', phone: '47999999999' };
-    meBalance.mockResolvedValue(100000); // saldo de sobra
-    meDispatch.mockResolvedValue({ meOrderId: 'me-123', trackingCode: 'AA123456789BR', labelUrl: 'https://labels.example/1.pdf' });
-
-    const res = await POST(req('POST', { orderId: 'order-1' }));
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.trackingCode).toBe('AA123456789BR');
-    expect(orders['order-1'].status).toBe('shipped');
-    const delivery = orders['order-1'].delivery as Record<string, unknown>;
-    expect(delivery.trackingCode).toBe('AA123456789BR');
-    expect(delivery.melhorEnvioOrderId).toBe('me-123');
+  it('Correios/Jadlog: não despacha por aqui (é manual, com código de rastreio)', async () => {
+    for (const carrier of ['correios_sedex', 'correios_pac', 'jadlog_package']) {
+      orders['order-1'] = {
+        status: 'paid',
+        userId: 'user-1',
+        items: [{ productId: 'p1', productName: 'Lençol', quantity: 1, unitPrice: 30000 }],
+        address: validAddress,
+        delivery: { carrier, priceCents: 4500, realPriceCents: 4500 },
+      };
+      const res = await POST(req('POST', { orderId: 'order-1' }));
+      expect(res.status).toBe(400);
+      expect(orders['order-1'].status).toBe('paid');
+    }
   });
 });
 
@@ -201,22 +158,10 @@ describe('DELETE /api/delivery (cancelamento)', () => {
     expect(res.status).toBe(409);
   });
 
-  it('se a Melhor Envio falhar ao cancelar, retorna 502 e NÃO reverte o pedido', async () => {
-    orders['order-1'] = { status: 'shipped', delivery: { carrier: 'correios_sedex', melhorEnvioOrderId: 'me-123', trackingCode: 'AA123456789BR' } };
-    meCancel.mockRejectedValue(new Error('ME fora do ar'));
+  it('despacho manual: reverte pra preparing e limpa os dados de entrega', async () => {
+    orders['order-1'] = { status: 'shipped', delivery: { carrier: 'correios_sedex', trackingCode: 'AA123456789BR' } };
 
-    const res = await DELETE(req('DELETE', { orderId: 'order-1', reason: 'cliente desistiu' }));
-    expect(res.status).toBe(502);
-    // Como o cancelamento na ME falhou, o pedido tem que continuar "shipped"
-    // do jeito que estava, senão a loja perde o rastro da etiqueta comprada.
-    expect(orders['order-1'].status).toBe('shipped');
-  });
-
-  it('cancela com sucesso: reverte pra preparing e limpa os dados de entrega', async () => {
-    orders['order-1'] = { status: 'shipped', delivery: { carrier: 'correios_sedex', melhorEnvioOrderId: 'me-123', trackingCode: 'AA123456789BR' } };
-    meCancel.mockResolvedValue(undefined);
-
-    const res = await DELETE(req('DELETE', { orderId: 'order-1', reason: 'cliente desistiu' }));
+    const res = await DELETE(req('DELETE', { orderId: 'order-1', reason: 'endereço errado' }));
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -225,15 +170,5 @@ describe('DELETE /api/delivery (cancelamento)', () => {
     const delivery = orders['order-1'].delivery as Record<string, unknown>;
     expect(delivery.carrier).toBeNull();
     expect(delivery.trackingCode).toBeNull();
-    expect(meCancel).toHaveBeenCalledWith('me-123', expect.stringContaining('cliente desistiu'));
-  });
-
-  it('pedido sem melhorEnvioOrderId (despacho manual): não chama meCancel, só reverte', async () => {
-    orders['order-1'] = { status: 'shipped', delivery: { carrier: 'correios_sedex', trackingCode: 'AA123456789BR' } };
-
-    const res = await DELETE(req('DELETE', { orderId: 'order-1', reason: 'endereço errado' }));
-    expect(res.status).toBe(200);
-    expect(meCancel).not.toHaveBeenCalled();
-    expect(orders['order-1'].status).toBe('preparing');
   });
 });

@@ -15,7 +15,6 @@ import { webhookSchema } from '@/app/api/payment/webhook/schema';
 import { createCheckoutSchema } from '@/app/api/payment/create-checkout/schema';
 import { createPixSchema } from '@/app/api/payment/create-pix/schema';
 import { quoteSchema } from '@/app/api/shipping/quote/schema';
-import { mePayloadSchema } from '@/app/api/shipping/webhook/schema';
 import { uberWebhookSchema } from '@/app/api/shipping/uber-webhook/schema';
 import { dispatchSchema, cancelDeliverySchema } from '@/app/api/delivery/schema';
 import { updateStatusSchema } from '@/app/api/orders/[orderId]/update-status/schema';
@@ -113,16 +112,6 @@ describe('shipping/quote, quoteSchema', () => {
   });
   it('rejeita CEP incompleto', () => {
     expect(quoteSchema.safeParse({ destCep: '890' }).success).toBe(false);
-  });
-});
-
-describe('shipping/webhook (Melhor Envio), mePayloadSchema', () => {
-  it('aceita evento válido com id numérico ou string', () => {
-    expect(mePayloadSchema.safeParse({ event: 'order.posted', data: { id: 123 } }).success).toBe(true);
-    expect(mePayloadSchema.safeParse({ event: 'order.posted', data: { id: 'abc' } }).success).toBe(true);
-  });
-  it('rejeita quando falta data.id', () => {
-    expect(mePayloadSchema.safeParse({ event: 'order.posted', data: {} }).success).toBe(false);
   });
 });
 

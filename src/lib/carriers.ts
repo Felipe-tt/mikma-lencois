@@ -81,6 +81,30 @@ export function isCorreios(carrier: CarrierKey): boolean {
   return carrier === 'correios_pac' || carrier === 'correios_sedex';
 }
 
+/** True se é Jadlog (Package ou Expresso). */
+export function isJadlog(carrier: CarrierKey): boolean {
+  return carrier === 'jadlog_package' || carrier === 'jadlog_expresso';
+}
+
+/**
+ * True se o despacho é manual: o lojista posta na agência e informa o
+ * código de rastreio no painel (Correios e Jadlog, sem compra de etiqueta).
+ */
+export function isManualDispatch(carrier: CarrierKey): boolean {
+  return isCorreios(carrier) || isJadlog(carrier);
+}
+
+/**
+ * Validação leve do código digitado no painel: Correios tem formato fixo
+ * (AA123456789BR); Jadlog varia (número do pedido/CT-e), então só exige
+ * algo plausível (6 a 30 caracteres alfanuméricos).
+ */
+export function isValidTrackingCodeFor(carrier: CarrierKey, code: string): boolean {
+  const clean = normalizeTrackingCode(code);
+  if (isCorreios(carrier)) return isCorreiosTrackingCode(clean);
+  return clean.length >= 6 && clean.length <= 30;
+}
+
 /**
  * Normaliza um código de rastreio pra maiúsculas, sem espaço/traço/pontuação.
  * O vendedor pode colar o código de qualquer jeito (com espaço no meio,

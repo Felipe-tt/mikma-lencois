@@ -1,10 +1,9 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
-import { meTracking } from '@/lib/melhorenvio';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, extractBearer } from '@/lib/security';
-import { normalizeTrackingCode, isCorreiosTrackingCode } from '@/lib/carriers';
+import { normalizeTrackingCode, isCorreiosTrackingCode, carrierName, trackingUrl } from '@/lib/carriers';
 
 export interface TrackingEvent {
   date: string;
@@ -66,13 +65,13 @@ export async function GET(
   // depender de como o vendedor colou o código (com espaço, minúsculo etc).
   // Antes a detecção usava o código "cru" e só limpava mais embaixo (Modo 1),
   // então um código com espaço no meio passava batido pelo isCorreiosCode e
-  // caía (errado) no fluxo de orderId/Melhor Envio.
+  // caía (errado) no fluxo de orderId.
   const clean = normalizeTrackingCode(code);
 
   // Modo 1: código de rastreio do Correios (formato AAA000000000BR)
   const isCorreiosCode = isCorreiosTrackingCode(clean);
 
-  // Modo 2: orderId do Firestore (para buscar via Melhor Envio)
+  // Modo 2: orderId do Firestore (usa o código salvo no pedido)
   const isFirestoreOrder = !isCorreiosCode && code.length > 13;
 
   if (isFirestoreOrder) {
@@ -93,7 +92,7 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    // Busca o pedido no Firestore para pegar o melhorEnvioOrderId e trackingUrl
+    // Busca o pedido no Firestore para pegar o código e a transportadora
     try {
       const orderSnap = await adminDb.collection('orders').doc(code).get();
       if (!orderSnap.exists) {
@@ -105,39 +104,27 @@ export async function GET(
         return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
       }
 
-      const meOrderId = order.delivery?.melhorEnvioOrderId;
-      const trackCode = order.delivery?.trackingCode;
+      const trackCode = order.delivery?.trackingCode as string | undefined;
+      const carrier   = (order.delivery?.carrier ?? order.selectedShipping?.carrier) as string | undefined;
 
-      if (!meOrderId) {
-        return NextResponse.json({ error: 'Envio ainda não processado pela Melhor Envio' }, { status: 404 });
+      if (!trackCode) {
+        return NextResponse.json({ error: 'Envio ainda sem código de rastreio' }, { status: 404 });
       }
 
-      // Busca status na Melhor Envio
-      const [meStatus] = await meTracking([meOrderId]);
-
       const result: TrackingResult = {
-        code: trackCode ?? meOrderId,
-        service: order.delivery?.carrier?.replace(/_/g, ' '),
-        events: meStatus ? [{
-          date: new Date().toLocaleDateString('pt-BR'),
-          time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-          location: '',
-          status: {
-            pending:   'Aguardando processamento',
-            released:  'Etiqueta gerada',
-            posted:    'Postado',
-            delivered: 'Entregue',
-            canceled:  'Cancelado',
-          }[meStatus.status] ?? meStatus.status,
-        }] : [],
-        trackingUrl: meStatus?.tracking_url ?? null,
+        code: trackCode,
+        service: carrier ? carrierName(carrier) : undefined,
+        events: [],
+        trackingUrl: (order.delivery?.trackingUrl as string | undefined)
+          ?? (carrier ? trackingUrl(carrier, trackCode) : null),
         updatedAt: new Date().toISOString(),
         source: 'live',
       };
 
-      // Se tem código e é dos Correios, busca eventos detalhados
-      const trackCodeClean = trackCode ? trackCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
-      if (trackCodeClean && /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(trackCodeClean)) {
+      // Código dos Correios: busca os eventos detalhados. Jadlog não tem API
+      // pública de rastreio, fica só o link pro site deles.
+      const trackCodeClean = normalizeTrackingCode(trackCode);
+      if (isCorreiosTrackingCode(trackCodeClean)) {
         const correiosResult = await fetchCorreios(trackCodeClean);
         if (correiosResult) {
           result.events = correiosResult.events;
@@ -147,7 +134,7 @@ export async function GET(
 
       return NextResponse.json(result);
     } catch (err) {
-      console.error('tracking via ME error:', err);
+      console.error('tracking por pedido error:', err);
       return NextResponse.json({ error: 'Erro ao buscar rastreio' }, { status: 500 });
     }
   }

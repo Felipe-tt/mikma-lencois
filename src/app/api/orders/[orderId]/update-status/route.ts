@@ -8,6 +8,8 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import type { Order, OrderStatus, User } from '@/types';
 import { updateStatusSchema } from './schema';
 import { buildPreparing, buildShipped, buildDelivered } from '@/lib/email/orderStatusEmails';
+import { isManualDispatch } from '@/lib/carriers';
+import { recordShippingSpent } from '@/lib/shipping-ledger';
 
 
 const ALLOWED: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -83,6 +85,19 @@ export async function POST(
   }
 
   await ref.update(update);
+
+  // Despacho manual (Correios/Jadlog): registra no caixa de frete o valor
+  // cotado como custo estimado. Antes isso vinha da compra da etiqueta no
+  // Melhor Envio; sem registrar, o teto de prejuízo do frete grátis
+  // (freeShippingMaxLossCents) nunca disparava. Best-effort.
+  if (next === 'shipped') {
+    const carrier = order.delivery?.carrier ?? '';
+    const estimatedCost = (order.delivery as { realPriceCents?: number } | undefined)?.realPriceCents ?? 0;
+    if (isManualDispatch(carrier) && estimatedCost > 0) {
+      try { await recordShippingSpent(estimatedCost); }
+      catch (err) { console.warn(`[shipping-ledger] falha ao registrar gasto do pedido ${orderId}:`, err); }
+    }
+  }
 
   // Email ao cliente
   let emailError: string | null = null;

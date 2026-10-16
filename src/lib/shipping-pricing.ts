@@ -117,7 +117,7 @@ async function buildDropoffAddress(cep: string): Promise<string> {
   }
 }
 
-// ── Melhor Envio (PAC + SEDEX Correios + Jadlog) ─────────────────────────────
+// ── Melhor Envio, só cotação (PAC + SEDEX Correios + Jadlog, sem saldo) ─────
 
 interface MEShipment {
   id: number | string;

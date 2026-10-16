@@ -185,9 +185,9 @@ export default function OrderDetailPage() {
   const currentStep = stepIndex(order.status);
   const carrier = order.delivery?.carrier ?? null;
   const trackCode = order.delivery?.trackingCode;
-  // Pra Correios (PAC/SEDEX), rastreia direto pelo código (Link&Track), sem
-  // depender de ter sido despachado pela Melhor Envio. Outras transportadoras
-  // continuam usando o orderId (via Melhor Envio) como antes.
+  // Pra Correios (PAC/SEDEX), rastreia direto pelo código (Link&Track).
+  // Outras transportadoras usam o orderId (a API devolve o código salvo
+  // no pedido e o link de rastreio da transportadora).
   const useCorreiosTracking = !!carrier && isCorreios(carrier) && !!trackCode;
   // Uber Direct: usa a trackingUrl da entrega (link em tempo real do Uber), não código
   const rastreioUrl = carrier === 'uber_direct'
@@ -202,7 +202,7 @@ export default function OrderDetailPage() {
 
   const trackingSection = (
     <>
-      {/* Rastreio, Correios/ME via TrackingTimeline, Uber Direct via link em tempo real */}
+      {/* Rastreio, Correios/Jadlog via TrackingTimeline, Uber Direct via link em tempo real */}
       {carrier && carrier !== 'pickup' && carrier !== 'manual' && carrier !== 'uber_direct' && (
         <section>
           <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">

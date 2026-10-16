@@ -1,7 +1,8 @@
 /**
  * "Caixa" de frete, registra quanto foi realmente COBRADO do cliente em
  * frete (shippingCents, já com frete grátis aplicado quando for o caso) vs.
- * quanto foi de fato GASTO nas transportadoras (Melhor Envio / Uber Direct)
+ * quanto foi de fato GASTO nas transportadoras (Uber Direct real; Correios/
+ * Jadlog estimado pelo valor cotado, no despacho manual)
  * no momento do despacho.
  *
  * saldo = collectedCents - spentCents
