@@ -251,6 +251,16 @@ export default function ProductForm({ initial }: Props) {
     qty: 0,
   }));
   const [rows, setRows] = useState<FabricRow[]>(initialRows);
+
+  // ID das variações que JÁ existem: produtos publicados a partir de
+  // rascunho/CSV usam "v1", não o `${tamanho}_${tecido}` deste formulário.
+  // Sem reaproveitar o ID, abrir um desses produtos marcava a variação como
+  // "removida" e salvar apagava o estoque dela (criando outra zerada).
+  const existingVariantIds = useRef(new Map(
+    (initial?.variants ?? []).map(v => [`${v.size}|${v.fabric ?? FABRICS[0]}`, v.id]),
+  )).current;
+  const variantIdFor = (s: string, fabric: string) =>
+    existingVariantIds.get(`${s}|${fabric}`) ?? makeVariantId(s, fabric);
   const rowMemory = useRef<Map<string, FabricRow>>(new Map(initialRows.map(r => [r.fabric, r])));
   const [autoColoredFabrics, setAutoColoredFabrics] = useState<Set<string>>(new Set());
 
@@ -507,7 +517,7 @@ export default function ProductForm({ initial }: Props) {
   ];
   const stepsDone = steps.filter(s => s.done).length;
 
-  const currentSkuSet = new Set(rows.map(r => makeVariantId(size, r.fabric)));
+  const currentSkuSet = new Set(rows.map(r => variantIdFor(size, r.fabric)));
   const orphanedSkus = isEdit
     ? Object.keys(existingSkus).filter(sku => !currentSkuSet.has(sku.replace(`${initial?.id}_`, '')))
     : [];
@@ -583,7 +593,7 @@ export default function ProductForm({ initial }: Props) {
       const priceCents = Math.round(parseFloat(price.replace(',', '.')) * 100);
       const tagArr = tags.split(',').map(t => t.trim()).filter(Boolean);
       const builtVariants = rows.map(({ fabric, color, colorName }) => ({
-        id: makeVariantId(size, fabric),
+        id: variantIdFor(size, fabric),
         size,
         fabric,
         color,
@@ -622,7 +632,7 @@ export default function ProductForm({ initial }: Props) {
             console.warn('[ProductForm] não foi possível apagar o estoque da variação removida', sku, err);
           })),
           ...rows
-            .map(r => ({ variantId: makeVariantId(size, r.fabric), r }))
+            .map(r => ({ variantId: variantIdFor(size, r.fabric), r }))
             .filter(({ variantId }) => !existingSkus[`${productId}_${variantId}`])
             .map(({ variantId, r }) => setDoc(doc(db, 'inventory', `${productId}_${variantId}`), {
               productId, sku: `${productId}_${variantId}`,
@@ -635,7 +645,7 @@ export default function ProductForm({ initial }: Props) {
         const newRef = doc(collection(db, 'products'));
         await setDoc(newRef, { ...data, createdAt: serverTimestamp() });
         await Promise.all(rows.map(r => {
-          const variantId = makeVariantId(size, r.fabric);
+          const variantId = variantIdFor(size, r.fabric);
           const sku = `${newRef.id}_${variantId}`;
           return setDoc(doc(db, 'inventory', sku), {
             productId: newRef.id, sku,
