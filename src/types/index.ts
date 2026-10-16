@@ -231,6 +231,8 @@ export interface Cart {
   items: CartItem[]
   reservedUntil?: string // ISO, expira em 15min
   updatedAt: string
+  /** Cupom aplicado no carrinho; o servidor revalida no pagamento. */
+  couponCode?: string | null
 }
 
 // ─── Coupons ─────────────────────────────────────────────────────────────────

@@ -99,7 +99,7 @@ function Input({
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
         onBlur={() => { setTouched(true); onBlur?.(); }}
-        className={`w-full border px-3.5 py-3 text-sm text-ink placeholder:text-faint-l focus:outline-none transition-all duration-150 ${
+        className={`w-full border px-3.5 py-3 text-sm text-ink placeholder:text-faint focus:outline-none transition-[border-color,box-shadow,background-color] duration-150 ${
           hasError && touched
             ? 'border-red-400 bg-red-50/40 focus:border-red-400 focus:ring-2 focus:ring-red-100'
             : valid
@@ -123,11 +123,14 @@ function Section({
   num: number; label: string; done?: boolean; open: boolean;
   onEdit?: () => void; children: React.ReactNode;
 }) {
+  // Seção concluída e fechada: o cabeçalho inteiro vira o botão "Editar".
+  const editable = !!done && !open && !!onEdit;
+  const HeaderTag = editable ? 'button' : 'div';
   return (
     <div className={`border transition-colors ${open ? 'border-ink/20' : 'border-mist'}`}>
-      <div
-        className={`flex items-center gap-3 px-5 py-4 ${!open && done ? 'cursor-pointer hover:bg-paper/60' : ''}`}
-        onClick={() => !open && done && onEdit?.()}
+      <HeaderTag
+        {...(editable ? { type: 'button' as const, onClick: onEdit, 'aria-label': `Editar ${label}` } : {})}
+        className={`flex items-center gap-3 px-5 py-4 w-full text-left ${editable ? 'cursor-pointer hover:bg-paper/60 transition-colors' : ''}`}
       >
         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
           done && !open ? 'bg-emerald-600 text-white' :
@@ -144,12 +147,12 @@ function Section({
             {label}
           </h2>
         </div>
-        {done && !open && (
-          <button type="button" onClick={onEdit} className="text-xs font-semibold text-clay-l hover:text-[#A05838] transition-colors shrink-0">
+        {editable && (
+          <span aria-hidden className="text-xs font-semibold text-clay hover:text-clay-d transition-colors shrink-0">
             Editar
-          </button>
+          </span>
         )}
-      </div>
+      </HeaderTag>
       {open && <div className="px-5 pb-5">{children}</div>}
     </div>
   );
@@ -486,7 +489,7 @@ export default function CheckoutPage() {
                   <div>
                     <Label htmlFor="co-number">Número</Label>
                     <Input id="co-number" value={addr.number} onChange={v => setAddr(a => ({ ...a, number: v }))}
-                      placeholder="123 ou S/N" required hasError={!!errors.number} autoComplete="address-line2" />
+                      placeholder="123 ou S/N" required hasError={!!errors.number} autoComplete="off" />
                     <Err msg={errors.number} />
                   </div>
                   <div>
@@ -551,13 +554,15 @@ export default function CheckoutPage() {
                       </button>
                     </div>
                   ) : shippingOptions.length > 0 ? (
-                    <div className="flex flex-col divide-y divide-mist border border-mist bg-white dark:bg-warm overflow-hidden">
+                    <div role="radiogroup" aria-label="Opção de entrega" className="flex flex-col divide-y divide-mist border border-mist bg-white dark:bg-warm overflow-hidden">
                       {shippingOptions.map(opt => {
                         const sel = selectedShipping?.carrier === opt.carrier;
                         return (
                           <button
                             key={opt.carrier}
                             type="button"
+                            role="radio"
+                            aria-checked={sel}
                             onClick={() => setSelShip(opt)}
                             className={`flex items-center gap-4 w-full px-4 py-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${sel ? 'bg-warm' : 'hover:bg-paper'}`}
                           >
@@ -597,10 +602,10 @@ export default function CheckoutPage() {
                 {/* Pagamento */}
                 <div>
                   <p className="text-xs font-bold text-mid tracking-[0.05em] uppercase mb-3">Forma de pagamento</p>
-                  <div className="flex flex-col divide-y divide-mist border border-mist bg-white dark:bg-warm overflow-hidden">
+                  <div role="radiogroup" aria-label="Forma de pagamento" className="flex flex-col divide-y divide-mist border border-mist bg-white dark:bg-warm overflow-hidden">
 
                     {/* PIX */}
-                    <button type="button" onClick={() => setPayMethod('pix')}
+                    <button type="button" role="radio" aria-checked={payMethod === 'pix'} onClick={() => setPayMethod('pix')}
                       className={`flex items-center gap-4 w-full px-4 py-4 text-left transition-all ${payMethod === 'pix' ? 'bg-warm' : 'hover:bg-paper'}`}>
                       <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${payMethod === 'pix' ? 'border-ink' : 'border-faint-l'}`}>
                         {payMethod === 'pix' && <span className="w-2.5 h-2.5 rounded-full bg-ink" />}
@@ -629,8 +634,9 @@ export default function CheckoutPage() {
 
                     {/* Crédito */}
                     {creditTotal >= 10000 && (
-                      <button type="button" onClick={() => setPayMethod('credit')}
-                        className={`flex flex-col w-full px-4 py-4 text-left transition-all ${payMethod === 'credit' ? 'bg-warm' : 'hover:bg-paper'}`}>
+                      <div className={`transition-colors ${payMethod === 'credit' ? 'bg-warm' : ''}`}>
+                      <button type="button" role="radio" aria-checked={payMethod === 'credit'} onClick={() => setPayMethod('credit')}
+                        className={`flex flex-col w-full px-4 py-4 text-left transition-colors ${payMethod === 'credit' ? '' : 'hover:bg-paper'}`}>
                         <div className="flex items-center gap-4 w-full">
                           <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${payMethod === 'credit' ? 'border-ink' : 'border-faint-l'}`}>
                             {payMethod === 'credit' && <span className="w-2.5 h-2.5 rounded-full bg-ink" />}
@@ -645,18 +651,19 @@ export default function CheckoutPage() {
                             <p className="text-xs text-faint mt-0.5">Qualquer bandeira · até {Math.min(8, Math.floor(creditTotal / 10000))}x</p>
                           </div>
                         </div>
+                      </button>
 
-                        {/* Seletor de parcelas */}
+                        {/* Seletor de parcelas: fora do botão do cartão (botão dentro de botão é inválido) */}
                         {payMethod === 'credit' && maxInstall > 1 && (
-                          <div className="mt-3 ml-9 pl-4">
-                            <p className="text-[11px] font-semibold text-mid mb-2">Em quantas vezes?</p>
-                            <div className="flex flex-wrap gap-2">
+                          <div className="pb-4 px-4 ml-9 pl-4">
+                            <p id="installments-label" className="text-[11px] font-semibold text-mid mb-2">Em quantas vezes?</p>
+                            <div role="radiogroup" aria-labelledby="installments-label" className="flex flex-wrap gap-2">
                               {Array.from({ length: maxInstall }, (_, i) => i + 1).map(n => {
                                 const val = Math.round(creditTotal / n);
                                 return (
-                                  <button key={n} type="button"
-                                    onClick={e => { e.stopPropagation(); setInstall(n); }}
-                                    className={`px-3 py-2 border text-xs font-medium transition-all ${
+                                  <button key={n} type="button" role="radio" aria-checked={installments === n}
+                                    onClick={() => setInstall(n)}
+                                    className={`px-3 py-2 border text-xs font-medium active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-150 ${
                                       installments === n
                                         ? 'border-ink bg-ink text-paper'
                                         : 'border-mist text-mid hover:border-ink/40'
@@ -670,7 +677,7 @@ export default function CheckoutPage() {
                             </div>
                           </div>
                         )}
-                      </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -751,7 +758,7 @@ export default function CheckoutPage() {
                     <div className="relative shrink-0 w-12 h-14 bg-paper border border-mist overflow-hidden">
                       {item.image
                         ? <Image src={item.image} alt={item.productName} fill sizes="48px" className="object-cover" />
-                        : <div className="h-full flex items-center justify-center text-faint-l text-xs font-display">M</div>
+                        : <div className="h-full flex items-center justify-center text-faint text-xs font-display">M</div>
                       }
                       <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ink text-paper text-[9px] font-bold flex items-center justify-center rounded-full">
                         {item.quantity}

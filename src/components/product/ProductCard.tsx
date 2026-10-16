@@ -27,98 +27,101 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   const isBestSeller = product.tags?.includes('bestseller') || product.tags?.includes('mais vendido');
   const badge        = isNew ? 'Novo' : isBestSeller ? 'Destaque' : null;
 
-  function handleFavoriteClick(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    requireAuth(() => toggle(product.id));
+  function handleFavoriteClick() {
+    requireAuth(() => { void toggle(product.id); });
   }
 
+  // O botão de favoritar fica como irmão do link (não dentro dele): botão
+  // dentro de <a> é interativo aninhado, e leitor de tela/teclado se perdiam.
   return (
-    <NavLink
-      href={`/produtos/${product.id}`}
-      className="group block bg-paper relative overflow-hidden"
+    <div
+      className="group relative bg-paper overflow-hidden"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Imagem */}
-      <div className="relative aspect-[3/4] overflow-hidden bg-warm">
-        {img0 && !imgError ? (
-          <>
-            <Image
-              src={img0} alt={product.name} fill priority={priority}
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className={`object-cover transition-all duration-700 ${
-                img1 && hovered ? 'scale-[1.04] opacity-0' : 'scale-100 opacity-100'
-              }`}
-              onError={() => setImgError(true)}
-            />
-            {img1 && (
+      <NavLink
+        href={`/produtos/${product.id}`}
+        className="block"
+      >
+        {/* Imagem */}
+        <div className="relative aspect-[3/4] overflow-hidden bg-warm">
+          {img0 && !imgError ? (
+            <>
               <Image
-                src={img1} alt="" fill
+                src={img0} alt={product.name} fill priority={priority}
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className={`object-cover transition-all duration-700 ${
-                  hovered ? 'scale-100 opacity-100' : 'scale-[1.04] opacity-0'
+                  img1 && hovered ? 'scale-[1.04] opacity-0' : 'scale-100 opacity-100'
                 }`}
+                onError={() => setImgError(true)}
               />
-            )}
-          </>
-        ) : (
-          <div className="flex h-full items-center justify-center bg-warm">
-            <BrandLogo alt="" className="w-28 h-auto opacity-[0.12]" />
-          </div>
-        )}
+              {img1 && (
+                <Image
+                  src={img1} alt="" fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  className={`object-cover transition-all duration-700 ${
+                    hovered ? 'scale-100 opacity-100' : 'scale-[1.04] opacity-0'
+                  }`}
+                />
+              )}
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center bg-warm">
+              <BrandLogo alt="" className="w-28 h-auto opacity-[0.12]" />
+            </div>
+          )}
 
-        {/* Favoritar */}
-        <button
-          type="button"
-          onClick={handleFavoriteClick}
-          aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-          aria-pressed={favorite}
-          className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full transition-transform hover:scale-110 active:scale-95"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24"
-            fill={favorite ? '#b45744' : 'none'}
-            stroke={favorite ? '#b45744' : 'currentColor'}
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            className={favorite ? '' : 'text-ink/70'}
-          >
-            <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" />
-          </svg>
-        </button>
-
-        {/* Badge */}
-        {(badge || lowStock) && (
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-            {badge && (
-              <span className={`text-[9px] font-bold tracking-[0.14em] uppercase px-2.5 py-1 leading-none ${
-                isNew ? 'bg-mid text-paper' : 'bg-ink text-paper'
-              }`}>{badge}</span>
-            )}
-            {lowStock && (
-              <span className="bg-amber-50 text-amber-700 border border-amber-200/60 text-[9px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 leading-none">
-                Últimas
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="px-4 pt-4 pb-5">
-        <p className="text-[12px] font-medium text-ink leading-snug line-clamp-2 mb-3 group-hover:text-mid transition-colors duration-200">
-          {product.name}
-        </p>
-        <div className="flex items-baseline justify-between">
-          <p className="font-display text-[1.2rem] text-ink font-normal leading-none tracking-[-0.01em]">
-            {formatCurrency(product.price)}
-          </p>
-          {product.variants && product.variants.length > 1 && (
-            <p className="font-mono text-[10px] text-faint">
-              {product.variants.length} tam.
-            </p>
+          {/* Badge */}
+          {(badge || lowStock) && (
+            <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+              {badge && (
+                <span className={`text-[9px] font-bold tracking-[0.14em] uppercase px-2.5 py-1 leading-none ${
+                  isNew ? 'bg-mid text-paper' : 'bg-ink text-paper'
+                }`}>{badge}</span>
+              )}
+              {lowStock && (
+                <span className="bg-amber-50 text-amber-700 border border-amber-200/60 text-[9px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 leading-none">
+                  Últimas
+                </span>
+              )}
+            </div>
           )}
         </div>
-      </div>
-    </NavLink>
+
+        {/* Info */}
+        <div className="px-4 pt-4 pb-5">
+          <p className="text-[12px] font-medium text-ink leading-snug line-clamp-2 mb-3 group-hover:text-mid transition-colors duration-200">
+            {product.name}
+          </p>
+          <div className="flex items-baseline justify-between">
+            <p className="font-display text-[1.2rem] text-ink font-normal leading-none tracking-[-0.01em]">
+              {formatCurrency(product.price)}
+            </p>
+            {product.variants && product.variants.length > 1 && (
+              <p className="font-mono text-[10px] text-faint">
+                {product.variants.length} tam.
+              </p>
+            )}
+          </div>
+        </div>
+      </NavLink>
+      {/* Favoritar */}
+      <button
+        type="button"
+        onClick={handleFavoriteClick}
+        aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        aria-pressed={favorite}
+        className="absolute top-3 right-3 z-10 w-9 h-9 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full transition-transform duration-150 hover:scale-110 active:scale-90"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24"
+          fill={favorite ? '#b45744' : 'none'}
+          stroke={favorite ? '#b45744' : 'currentColor'}
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          className={favorite ? '' : 'text-ink/70'}
+        >
+          <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" />
+        </svg>
+      </button>
+    </div>
   );
 }

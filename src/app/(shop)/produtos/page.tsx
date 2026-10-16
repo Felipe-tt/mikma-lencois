@@ -26,6 +26,10 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   return {
     title,
     description,
+    // Ordenação e filtros geram a mesma lista em várias URLs: o Google
+    // indexa só a da categoria (ou a geral). Busca não é indexada.
+    alternates: { canonical: categoria ? `/produtos?categoria=${encodeURIComponent(categoria)}` : '/produtos' },
+    ...(q ? { robots: { index: false, follow: true } } : {}),
     openGraph: { title, description, type: 'website' },
   };
 }

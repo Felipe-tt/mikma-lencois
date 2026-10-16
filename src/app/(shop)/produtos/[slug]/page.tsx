@@ -1,5 +1,6 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import Link from 'next/link';
 import type { Product, InventoryItem, Review } from '@/types';
 import { BuyBox } from '@/components/product/BuyBox';
@@ -19,22 +20,16 @@ import { JsonLd } from '@/components/seo/JsonLd';
 export const revalidate = 300;
 interface Props { params: Promise<{ slug: string }> }
 
-// Cache de produto individual: evita leitura Firestore em requets quentes dentro do mesmo container
-const _productCache = new Map<string, { data: Product | null; at: number }>();
-const PRODUCT_TTL = 5 * 60 * 1000; // 5 min
-
-async function getProduct(id: string): Promise<Product | null> {
-  const hit = _productCache.get(id);
-  if (hit && Date.now() - hit.at < PRODUCT_TTL) return hit.data;
+// cache() do React: deduplica a leitura entre generateMetadata e a página
+// na MESMA requisição. Antes era um Map por container com TTL de 5 min,
+// que o revalidatePath do painel não limpava: preço alterado continuava
+// velho na página (e o checkout já cobrava o novo), e produto reativado
+// seguia dando 404.
+const getProduct = cache(async (id: string): Promise<Product | null> => {
   const snap = await adminDb.collection('products').doc(id).get();
-  if (!snap.exists || !snap.data()?.active) {
-    _productCache.set(id, { data: null, at: Date.now() });
-    return null;
-  }
-  const data = serialize<Product>({ id: snap.id, ...snap.data() });
-  _productCache.set(id, { data, at: Date.now() });
-  return data;
-}
+  if (!snap.exists || !snap.data()?.active) return null;
+  return serialize<Product>({ id: snap.id, ...snap.data() });
+});
 async function getInventory(id: string): Promise<InventoryItem[]> {
   // select() reduz o payload: só campos necessários para exibir disponibilidade
   const snap = await adminDb.collection('inventory')
@@ -103,10 +98,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: p.name,
     description: p.description?.slice(0, 160),
+    alternates: { canonical: `/produtos/${p.id}` },
     openGraph: {
       title: p.name,
       description: p.description?.slice(0, 160),
-      images: p.images[0] ? [{ url: p.images[0], width: 1200, height: 630, alt: p.name }] : [],
+      url: `/produtos/${p.id}`,
+      // Sem width/height: a foto não é 1200x630 e dimensão errada faz o
+      // WhatsApp/Facebook cortar a prévia.
+      images: p.images[0] ? [{ url: p.images[0], alt: p.name }] : [],
       type: 'website',
     },
     twitter: {
@@ -164,6 +163,15 @@ export default async function ProductPage({ params }: Props) {
       price: (product.price / 100).toFixed(2),
       availability: totalStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
+      // Direito de arrependimento (CDC art. 49): 7 dias corridos, ver
+      // /trocas-e-devolucoes. O Merchant Center avisa quando falta.
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        applicableCountry: 'BR',
+        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        merchantReturnDays: 7,
+        returnMethod: 'https://schema.org/ReturnByMail',
+      },
     },
   };
   if (reviews.length > 0) {

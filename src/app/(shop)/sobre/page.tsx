@@ -5,6 +5,22 @@ import { BusinessHoursCard } from '@/components/storefront/BusinessHoursCard';
 import Image from 'next/image';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { parseBusinessHours, WEEKDAYS } from '@/lib/business-hours';
+import type { Metadata } from 'next';
+
+// Sem isso a página herdava o título e a descrição da home.
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSettings();
+  const name = s.storeName || 'Mikma Lençóis';
+  const city = s.storeCity || 'Blumenau';
+  const title = 'Sobre';
+  const description = `Conheça a ${name}: lençóis de qualidade direto de fábrica em ${city}, SC, com entrega rápida na cidade e envio para todo o Brasil.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: '/sobre' },
+    openGraph: { title: `Sobre a ${name}`, description, url: '/sobre', type: 'website' },
+  };
+}
 
 export default async function SobrePage() {
   const s = await getSettings();

@@ -604,7 +604,7 @@ function F({ label, value, onChange, hint, placeholder, maxLength, type='text' }
       <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
       <input id={id} type={type} value={value} onChange={e=>onChange(e.target.value)}
         placeholder={placeholder} maxLength={maxLength}
-        className="panel-input placeholder:text-faint-l" />
+        className="panel-input placeholder:text-faint" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>
   );
@@ -617,7 +617,7 @@ function TA({ label, value, onChange, rows=3, placeholder, hint }: {
     <div>
       <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
       <textarea id={id} value={value} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={placeholder}
-        className="panel-input resize-y placeholder:text-faint-l" />
+        className="panel-input resize-y placeholder:text-faint" />
       {hint && <p className="mt-1.5 text-[11px] text-faint">{hint}</p>}
     </div>
   );
@@ -692,7 +692,7 @@ function TableEditor({ colsJson, rowsJson, onRowsChange }: {
             ))}
           </div>
           <button onClick={() => onRowsChange(JSON.stringify(rows.filter((_,idx)=>idx!==i)))}
-            className="w-7 h-7 flex items-center justify-center text-faint-l hover:text-red-400 transition-colors shrink-0 text-sm">
+            className="w-7 h-7 flex items-center justify-center text-faint hover:text-red-400 transition-colors shrink-0 text-sm">
             <IconX size={14} />
           </button>
         </div>

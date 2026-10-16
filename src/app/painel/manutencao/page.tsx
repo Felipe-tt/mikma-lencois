@@ -170,7 +170,7 @@ export default function ManutencaoPage() {
                 : 'O site está acessível normalmente para todos.'}
             </p>
             {status.updatedBy && (
-              <p className="text-[11px] text-faint-l mt-1">
+              <p className="text-[11px] text-faint mt-1">
                 Alterado por {status.updatedBy}
                 {status.updatedAt ? ` · ${new Date(status.updatedAt).toLocaleString('pt-BR')}` : ''}
               </p>
@@ -248,7 +248,7 @@ export default function ManutencaoPage() {
             <p className="text-[13px] text-faint">
               {tab === 'ips' ? 'Nenhum IP na fila.' : 'Nenhum usuário logado na fila.'}
             </p>
-            <p className="text-[11px] text-faint-l mt-1">
+            <p className="text-[11px] text-faint mt-1">
               Quando o site estiver em manutenção, os visitantes aparecerão aqui.
             </p>
           </div>
@@ -274,7 +274,7 @@ export default function ManutencaoPage() {
 
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                         {entry.uid && (
-                          <span className="text-[10px] text-faint-l font-mono">{entry.ip}</span>
+                          <span className="text-[10px] text-faint font-mono">{entry.ip}</span>
                         )}
                         {device && (
                           <span className="text-[10px] text-faint">{device}</span>
@@ -285,7 +285,7 @@ export default function ManutencaoPage() {
                       </div>
 
                       {entry.requestedPath && (
-                        <p className="text-[10px] text-faint-l mt-0.5 truncate">
+                        <p className="text-[10px] text-faint mt-0.5 truncate">
                           Tentou acessar: <span className="font-mono">{entry.requestedPath}</span>
                         </p>
                       )}
@@ -299,7 +299,7 @@ export default function ManutencaoPage() {
 
                       {entry.userAgent && (
                         <details className="mt-1">
-                          <summary className="text-[10px] text-faint-l cursor-pointer select-none">Mais detalhes</summary>
+                          <summary className="text-[10px] text-faint cursor-pointer select-none">Mais detalhes</summary>
                           <div className="mt-1 text-[10px] text-faint space-y-0.5 pl-2 border-l border-mist">
                             <p className="break-all"><strong>User-Agent:</strong> {entry.userAgent}</p>
                             {entry.referer && <p className="break-all"><strong>Veio de:</strong> {entry.referer}</p>}

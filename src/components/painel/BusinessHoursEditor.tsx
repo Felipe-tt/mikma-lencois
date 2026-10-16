@@ -146,7 +146,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
               {/* Intervalos ou "Fechado" */}
               <div className="flex-1 min-w-0">
                 {day.closed ? (
-                  <span className="text-[12px] text-faint-l italic">Fechado</span>
+                  <span className="text-[12px] text-faint italic">Fechado</span>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {day.ranges.length === 0 && (
@@ -160,7 +160,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                           onChange={e => setRange(key, idx, 'open', e.target.value)}
                           className="border border-mist px-2 py-1.5 text-[12px] tabular-nums w-[108px] sm:w-[92px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
                         />
-                        <span className="text-faint-l text-[11px] shrink-0">até</span>
+                        <span className="text-faint text-[11px] shrink-0">até</span>
                         <input
                           type="time"
                           value={range.close}
@@ -170,7 +170,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                         <button
                           type="button"
                           onClick={() => removeRange(key, idx)}
-                          className="w-6 h-6 flex items-center justify-center text-faint-l hover:text-red-500 transition-colors shrink-0"
+                          className="w-6 h-6 flex items-center justify-center text-faint hover:text-red-500 transition-colors shrink-0"
                           aria-label="Remover intervalo"
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>

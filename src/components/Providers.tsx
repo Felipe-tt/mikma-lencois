@@ -6,6 +6,7 @@ import { AuthProvider } from '@/lib/auth/AuthContext';
 import { AuthModalProvider, useAuthModal } from '@/lib/auth/AuthModalContext';
 import { NavigationProvider } from '@/lib/NavigationContext';
 import { ChunkErrorReload } from '@/components/ChunkErrorReload';
+import { WishlistProvider } from '@/lib/hooks/useWishlist';
 
 // ssr: false garante que esses hosts nunca rodem no servidor.
 // createPortal / listeners de DOM dependem de document, não existe no
@@ -34,12 +35,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <AuthModalProvider>
-        <NavigationProvider>
-          {children}
-          <ChunkErrorReload />
-          <ConfirmDialogHost />
-          <AuthModalOnDemand />
-        </NavigationProvider>
+        <WishlistProvider>
+          <NavigationProvider>
+            {children}
+            <ChunkErrorReload />
+            <ConfirmDialogHost />
+            <AuthModalOnDemand />
+          </NavigationProvider>
+        </WishlistProvider>
       </AuthModalProvider>
     </AuthProvider>
   );
