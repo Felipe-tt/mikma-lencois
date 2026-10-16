@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Product } from '@/types';
 import { ProductCard } from '@/components/product/ProductCard';
 import { matchMattressSize, lookupAlias, type MattressSizeKey, type MattressWidthMap } from '@/lib/mattressSizeMatch';
@@ -30,6 +30,19 @@ export function SizeGuideCalculator({ products, widths }: Props) {
   const [heightWarning, setHeightWarning] = useState<string | undefined>();
   const [aliasNote, setAliasNote] = useState<string | undefined>();
   const [error, setError] = useState('');
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  // No celular a recomendação aparece abaixo da dobra: sem rolar, parece
+  // que o botão não fez nada.
+  useEffect(() => {
+    const el = resultRef.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top;
+    if (top > window.innerHeight * 0.6) {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    }
+  }, [result]);
 
   function handleMeasure(e: React.FormEvent) {
     e.preventDefault();
@@ -91,62 +104,62 @@ export function SizeGuideCalculator({ products, widths }: Props) {
   return (
     <div className="flex flex-col gap-8">
       {/* Seletor de modo */}
-      <div className="flex gap-2 justify-center">
-        <button onClick={() => { setMode('medir'); setResult(null); setError(''); }}
-          className={`px-5 py-2.5 text-[12px] font-semibold border transition-colors ${mode === 'medir' ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm'}`}>
+      <div className="flex gap-2 justify-center" role="group" aria-label="Como você quer descobrir o tamanho">
+        <button type="button" aria-pressed={mode === 'medir'} onClick={() => { setMode('medir'); setResult(null); setError(''); }}
+          className={`h-11 px-5 text-[12px] font-semibold border active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-150 ${mode === 'medir' ? 'bg-ink text-paper border-ink' : 'border-mist-d text-mid hover:border-ink hover:text-ink'}`}>
           Vou medir agora
         </button>
-        <button onClick={() => { setMode('nome'); setResult(null); setError(''); }}
-          className={`px-5 py-2.5 text-[12px] font-semibold border transition-colors ${mode === 'nome' ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm'}`}>
+        <button type="button" aria-pressed={mode === 'nome'} onClick={() => { setMode('nome'); setResult(null); setError(''); }}
+          className={`h-11 px-5 text-[12px] font-semibold border active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-150 ${mode === 'nome' ? 'bg-ink text-paper border-ink' : 'border-mist-d text-mid hover:border-ink hover:text-ink'}`}>
           Já sei o nome
         </button>
       </div>
 
       {mode === 'medir' ? (
-        <form onSubmit={handleMeasure} className="bg-paper border border-mist p-6 flex flex-col gap-4">
+        <form onSubmit={handleMeasure} className="bg-paper border border-mist p-5 sm:p-6 flex flex-col gap-4 animate-fade-in">
           <p className="text-[12px] text-faint leading-relaxed">
-            Meça a <strong className="text-mid">largura do colchão</strong> (não da cama, do colchão em si), de ponta a ponta. É a medida que mais diferencia os tamanhos. A altura é opcional, mas ajuda se o seu colchão for bem alto ou bem fino.
+            Passe a fita de uma lateral à outra do <strong className="text-mid">colchão</strong>, por cima. A altura é opcional, mas ajuda se o seu colchão for bem alto ou bem fino.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Largura (cm)</label>
-              <input value={width} onChange={e => setWidth(e.target.value)} inputMode="decimal" placeholder="138"
-                className="border border-mist px-3 py-2.5 text-[14px] outline-none focus:border-clay-l bg-white dark:bg-warm" />
+              <label htmlFor="guia-largura" className="text-[11px] font-bold text-mid uppercase tracking-wide">Largura (cm)</label>
+              <input id="guia-largura" value={width} onChange={e => setWidth(e.target.value)} inputMode="decimal" placeholder="138"
+                className="h-12 min-w-0 border border-mist-d px-3 text-[16px] sm:text-[14px] outline-none focus:border-ink transition-colors duration-150 bg-white dark:bg-warm" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-mid uppercase tracking-wide">Altura (opcional)</label>
-              <input value={height} onChange={e => setHeight(e.target.value)} inputMode="decimal" placeholder="25"
-                className="border border-mist px-3 py-2.5 text-[14px] outline-none focus:border-clay-l bg-white dark:bg-warm" />
+              <label htmlFor="guia-altura" className="text-[11px] font-bold text-mid uppercase tracking-wide">Altura (cm, opcional)</label>
+              <input id="guia-altura" value={height} onChange={e => setHeight(e.target.value)} inputMode="decimal" placeholder="25"
+                className="h-12 min-w-0 border border-mist-d px-3 text-[16px] sm:text-[14px] outline-none focus:border-ink transition-colors duration-150 bg-white dark:bg-warm" />
             </div>
           </div>
-          {error && <p className="text-[12px] text-red-600">{error}</p>}
-          <button type="submit" className="bg-clay-l text-paper text-[13px] font-semibold py-3 hover:bg-clay transition-colors">
+          {error && <p role="alert" className="text-[12px] text-red-600 animate-fade-in">{error}</p>}
+          <button type="submit" className="h-12 bg-ink text-paper text-[13px] font-semibold tracking-[0.03em] hover:bg-clay active:scale-[0.99] transition-[background-color,transform] duration-200">
             Descobrir meu tamanho
           </button>
         </form>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 animate-fade-in">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {SIZE_BUTTONS.map(b => (
-              <button key={b.key} onClick={() => handlePickName(b.key)}
-                className={`border p-4 text-center transition-colors ${result === b.key ? 'bg-ink text-paper border-ink' : 'border-mist bg-paper hover:bg-warm text-ink'}`}>
+              <button key={b.key} type="button" aria-pressed={result === b.key} onClick={() => handlePickName(b.key)}
+                className={`border p-4 text-center active:scale-[0.98] transition-[background-color,border-color,color,transform] duration-150 ${result === b.key ? 'bg-ink text-paper border-ink' : 'border-mist-d bg-paper hover:border-ink text-ink'}`}>
                 <p className="text-[14px] font-semibold">{b.label}</p>
-                <p className={`text-[11px] mt-0.5 ${result === b.key ? 'text-[#D8C8B8]' : 'text-faint'}`}>{b.desc}</p>
+                <p className={`text-[11px] mt-0.5 ${result === b.key ? 'text-paper/70' : 'text-faint'}`}>{b.desc}</p>
               </button>
             ))}
           </div>
-          <form onSubmit={handleOtherName} className="flex gap-2 items-center justify-center">
+          <form onSubmit={handleOtherName} className="flex flex-wrap gap-2 items-center justify-center">
             <span className="text-[12px] text-faint">Ouviu outro nome (viúva, solteirão)?</span>
-            <input value={otherName} onChange={e => setOtherName(e.target.value)} placeholder="ex: viúva"
-              className="border border-mist px-3 py-2 text-[13px] outline-none focus:border-clay-l bg-white dark:bg-warm w-36" />
-            <button type="submit" className="text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors">Ver</button>
+            <input value={otherName} onChange={e => setOtherName(e.target.value)} placeholder="ex: viúva" aria-label="Outro nome de tamanho"
+              className="h-10 border border-mist-d px-3 text-[16px] sm:text-[13px] outline-none focus:border-ink transition-colors duration-150 bg-white dark:bg-warm w-36" />
+            <button type="submit" className="h-10 px-4 border border-ink text-[12px] font-semibold text-ink hover:bg-ink hover:text-paper transition-colors duration-150">Ver</button>
           </form>
-          {error && <p className="text-[12px] text-red-600 text-center">{error}</p>}
+          {error && <p role="alert" className="text-[12px] text-red-600 text-center animate-fade-in">{error}</p>}
         </div>
       )}
 
       {result && (
-        <div className="border-t border-mist pt-8 flex flex-col gap-5">
+        <div key={result} ref={resultRef} className="scroll-mt-20 border-t border-mist pt-8 flex flex-col gap-5 animate-fade-up">
           <div className="text-center">
             <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-2">Recomendação</p>
             <p className="font-display text-3xl text-ink mb-2">{widths[result].label}</p>

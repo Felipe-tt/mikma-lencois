@@ -215,6 +215,14 @@ export async function POST(req: NextRequest) {
     if (orderData.status === 'delivered' && newStatus !== 'delivered')
       return NextResponse.json({ ok: true });
 
+    // Reenvio do mesmo status (a Uber reenvia em caso de timeout) ou
+    // "entregue" que chega depois do cliente já ter confirmado: antes
+    // repetia e-mail, push, notificação e linha na timeline.
+    const lastUber = (orderData.delivery as { uberLastStatus?: string } | undefined)?.uberLastStatus;
+    if (uberStatus === lastUber || (orderData.status === 'delivered' && uberStatus === 'delivered')) {
+      return NextResponse.json({ ok: true });
+    }
+
     const update: Record<string, unknown> = {
       updatedAt: FieldValue.serverTimestamp(),
       timeline:  FieldValue.arrayUnion({
@@ -225,6 +233,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (newStatus !== orderData.status) update.status = newStatus;
+    update['delivery.uberLastStatus'] = uberStatus;
     if (data?.tracking_url)             update['delivery.trackingUrl'] = data.tracking_url;
     if (data?.dropoff_eta)              update['delivery.dropoffEta']  = data.dropoff_eta;
     if (uberStatus === 'delivered')     update['delivery.deliveredAt'] = FieldValue.serverTimestamp();

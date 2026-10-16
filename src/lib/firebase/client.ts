@@ -13,7 +13,6 @@ import {
   persistentMultipleTabManager,
   memoryLocalCache,
 } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
 
 // __FIREBASE_DEFAULTS__ is injected at runtime by Firebase Hosting / Cloud Run.
 // NEXT_PUBLIC_* vars only exist at build time.
@@ -102,5 +101,4 @@ export const db = initializeFirestore(app, {
       : memoryLocalCache(),
 })
 
-export const storage = getStorage(app)
 export default app

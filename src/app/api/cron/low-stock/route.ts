@@ -109,16 +109,17 @@ export async function GET(req: NextRequest) {
   // depois de repor.
   const lowSkus = new Set(lowItems.map(l => l.sku));
   const alertsSnap = await adminDb.collection('stockAlerts').get();
-  const batch = adminDb.batch();
-  let toDelete = 0;
-  for (const doc of alertsSnap.docs) {
-    if (!lowSkus.has(doc.id)) {
+  const recoveredDocs = alertsSnap.docs.filter(d => !lowSkus.has(d.id));
+  // 2 operações por SKU e o lote aceita no máximo 500: em lotes de 200.
+  for (let i = 0; i < recoveredDocs.length; i += 200) {
+    const batch = adminDb.batch();
+    for (const doc of recoveredDocs.slice(i, i + 200)) {
       batch.delete(doc.ref);
       batch.delete(adminDb.collection('notifications').doc('seller').collection('items').doc(`low_stock:${doc.id}`));
-      toDelete++;
     }
+    await batch.commit();
   }
-  if (toDelete > 0) { await batch.commit(); results.recovered = toDelete; }
+  if (recoveredDocs.length > 0) results.recovered = recoveredDocs.length;
 
   return NextResponse.json({ ok: true, ...results });
 }

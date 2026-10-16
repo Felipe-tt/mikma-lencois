@@ -66,7 +66,10 @@ export async function POST(req: NextRequest) {
 
     const { email, password, recaptchaToken } = parsed.data;
     const emailLower = email.toLowerCase();
-    const emailKey = `login:email:${emailLower}`;
+    // Por IP + e-mail: só o e-mail deixava qualquer pessoa travar o login
+    // de outra (8 tentativas erradas com o e-mail dela). O limite por IP
+    // acima continua segurando força bruta.
+    const emailKey = `login:email:${ip}:${emailLower}`;
     if (!await rateLimit(emailKey, 8, 15 * 60 * 1000)) {
       return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 });
     }

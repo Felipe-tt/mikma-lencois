@@ -8,7 +8,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import {
   IconHome, IconOrders, IconMessages, IconProducts,
-  IconInventory, IconReports, IconCoupons, IconSettings, IconMaintenance, IconExchange,
+  IconInventory, IconReports, IconCoupons, IconSettings, IconMaintenance, IconExchange, IconStar,
 } from '@/components/ui/Icon';
 import { NotificationBell } from './NotificationBell';
 
@@ -23,6 +23,7 @@ export const NAV = [
   { href: '/painel/cupons',         label: 'Cupons',         desc: 'Descontos para clientes',                 Icon: IconCoupons },
   { href: '/painel/configuracoes',  label: 'Configurações',  desc: 'Textos e informações',                    Icon: IconSettings },
   { href: '/painel/manutencao',     label: 'Manutenção',     desc: 'Controle de acesso ao site',              Icon: IconMaintenance },
+  { href: '/painel/avaliacoes',     label: 'Avaliações',     desc: 'Moderar avaliações de clientes',          Icon: IconStar },
 ];
 
 // Itens que ficam na barra inferior do mobile (os mais usados no dia a

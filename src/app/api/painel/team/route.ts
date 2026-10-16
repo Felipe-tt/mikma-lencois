@@ -60,6 +60,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // O DELETE já impedia o admin de se remover; aqui impedia não: um admin
+  // podia se rebaixar e ficar sem acesso à equipe.
+  if (targetUser.uid === auth.decoded.uid && role !== 'admin') {
+    return NextResponse.json({ error: 'Você não pode tirar seu próprio acesso de admin.' }, { status: 400 });
+  }
+
   // Preserva outros custom claims que eventualmente existam, só troca a role.
   const existingClaims = (targetUser.customClaims ?? {}) as Record<string, unknown>;
   await adminAuth.setCustomUserClaims(targetUser.uid, { ...existingClaims, role });

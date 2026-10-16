@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconMoney, IconBox, IconReceipt, IconTrophy, IconTruck, IconReports, IconAlert } from '@/components/ui/Icon';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -28,7 +28,13 @@ export default function RelatoriosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Trocar de período rápido (90d -> 7d) podia deixar o botão "7 dias"
+  // mostrando os números de 90 dias, se a consulta maior voltasse por
+  // último. Cada carga tem um número e só a mais recente atualiza a tela.
+  const requestRef = useRef(0);
+
   const load = useCallback(async () => {
+    const requestId = ++requestRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -73,6 +79,7 @@ export default function RelatoriosPage() {
         carrierMap[name] = (carrierMap[name] ?? 0) + 1;
       }
 
+      if (requestId !== requestRef.current) return;
       setStats({
         revenue,
         orders: orders.length,
@@ -81,11 +88,12 @@ export default function RelatoriosPage() {
         byCarrier: Object.entries(carrierMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
       });
     } catch (err) {
+      if (requestId !== requestRef.current) return;
       console.error('[relatorios] falha ao carregar:', err);
       setError('Não foi possível carregar os dados agora.');
       setStats(null);
     } finally {
-      setLoading(false);
+      if (requestId === requestRef.current) setLoading(false);
     }
   }, [period]);
 

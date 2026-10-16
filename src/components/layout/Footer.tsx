@@ -50,7 +50,9 @@ export function Footer({
               className="h-7 w-auto object-contain object-left opacity-80 self-start"
             />
             <p className="text-[13px] text-paper/60 leading-relaxed max-w-[20ch]">
-              {tagline}
+              {tagline || (storeCity?.split(',')[0].trim()
+                ? `Lençóis direto da fábrica em ${storeCity.split(',')[0].trim()}.`
+                : 'Lençóis direto da fábrica.')}
             </p>
 
             {/* Social */}
@@ -78,6 +80,7 @@ export function Footer({
             <ul className="flex flex-col gap-3.5">
               {[
                 { href: '/produtos', label: 'Produtos' },
+                { href: '/guia-de-tamanhos', label: 'Guia de tamanhos' },
                 { href: '/sobre', label: 'Sobre nós' },
               ].map(({ href, label }) => (
                 <li key={href}>
@@ -158,10 +161,13 @@ export function Footer({
             © {year} {storeName} · Todos os direitos reservados
           </p>
           <div className="flex items-center gap-4">
-            {/* Trust seals */}            <span className="text-paper/10">·</span>
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/55 uppercase">PIX</span>
-            <span className="text-paper/10">·</span>
-            <span className="text-[10px] text-paper/55 tracking-[0.16em] uppercase">{storeCity.toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
+            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/55 uppercase">Pagamento via PIX</span>
+            {storeCity && (
+              <>
+                <span aria-hidden className="text-paper/25">·</span>
+                <span className="text-[10px] text-paper/55 tracking-[0.16em] uppercase">{storeCity.toUpperCase().replace(', ', '\u00a0·\u00a0')}</span>
+              </>
+            )}
           </div>
         </div>
       </div>

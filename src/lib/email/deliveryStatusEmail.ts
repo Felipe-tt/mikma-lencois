@@ -37,7 +37,7 @@ export async function notifyCustomerDeliveryStatus(
     if (!email) return;
 
     const shortId = orderId.slice(-8).toUpperCase();
-    const orderUrl = `https://mikma.com.br/pedidos/${orderId}`;
+    const orderUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br'}/pedidos/${orderId}`;
 
     const COPY: Record<typeof uberStatus, { subject: string; headline: string; body: string; button: string }> = {
       pickup_complete: {

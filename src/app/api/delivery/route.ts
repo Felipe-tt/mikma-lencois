@@ -77,7 +77,11 @@ export async function POST(req: NextRequest) {
 
     // ── Retirada na loja ────────────────────────────────────────────────────
     if (carrier === 'pickup') {
-      await adminDb.collection('orders').doc(orderId).update({
+      const orderRef = adminDb.collection('orders').doc(orderId);
+      const ok = await adminDb.runTransaction(async tx => {
+        const fresh = await tx.get(orderRef);
+        if (!['paid', 'preparing'].includes(fresh.data()?.status)) return false;
+        tx.update(orderRef, {
         status: 'shipped',
         'delivery.carrier': 'pickup',
         'delivery.trackingCode': null,
@@ -88,7 +92,10 @@ export async function POST(req: NextRequest) {
           at: new Date().toISOString(),
           note: 'Cliente retirou na loja',
         }),
+        });
+        return true;
       });
+      if (!ok) return NextResponse.json({ error: 'Este pedido já foi despachado. Atualize a página.' }, { status: 409 });
       return NextResponse.json({ carrier: 'pickup', trackingCode: null, labelUrl: null });
     }
 
@@ -184,7 +191,26 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const uberDelivery = await uberCreateDelivery({
+      // Trava o despacho antes de chamar a Uber: dois toques (ou duas
+      // pessoas da equipe) criavam duas corridas, e as duas eram cobradas.
+      const orderRef = adminDb.collection('orders').doc(orderId);
+      const LOCK_MS = 2 * 60 * 1000;
+      const locked = await adminDb.runTransaction(async tx => {
+        const fresh = await tx.get(orderRef);
+        const data = fresh.data() ?? {};
+        if (!['paid', 'preparing'].includes(data.status)) return false;
+        const lockAt = (data.delivery as { dispatchLockAt?: number } | undefined)?.dispatchLockAt ?? 0;
+        if (Date.now() - lockAt < LOCK_MS) return false;
+        tx.update(orderRef, { 'delivery.dispatchLockAt': Date.now() });
+        return true;
+      });
+      if (!locked) {
+        return NextResponse.json({ error: 'Este pedido já está sendo despachado. Atualize a página em instantes.' }, { status: 409 });
+      }
+
+      let uberDelivery: Awaited<ReturnType<typeof uberCreateDelivery>>;
+      try {
+      uberDelivery = await uberCreateDelivery({
         orderId:             orderId,
         pickupName:          settings.storeName || 'Mikma Lençóis',
         pickupAddress,
@@ -199,6 +225,10 @@ export async function POST(req: NextRequest) {
         // exatamente o que acabamos de checar contra a margem tolerada.
         quoteId:             freshQuoteId,
       }, uberSandbox);
+      } catch (err) {
+        await orderRef.update({ 'delivery.dispatchLockAt': FieldValue.delete() }).catch(() => {});
+        throw err;
+      }
 
       await adminDb.collection('orders').doc(orderId).update({
         status: 'shipped',
@@ -208,6 +238,7 @@ export async function POST(req: NextRequest) {
         'delivery.trackingUrl':           uberDelivery.trackingUrl,
         'delivery.trackingCode':          null,
         'delivery.dispatchedAt':          FieldValue.serverTimestamp(),
+        'delivery.dispatchLockAt':        FieldValue.delete(),
         updatedAt:                        FieldValue.serverTimestamp(),
         timeline: FieldValue.arrayUnion({
           status: 'shipped',

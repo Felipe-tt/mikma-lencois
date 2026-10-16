@@ -7,6 +7,7 @@ import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import Link from 'next/link';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProducts, IconArrowRight } from '@/components/ui/Icon';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
 
 const BADGE: Record<string, string> = {
   pending_payment: 'badge-pending', payment_expired: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
@@ -42,22 +43,34 @@ export default function PainelDashboard() {
   // cronologicamente).
   const [recent, setRecent] = useState<Order[] | null>(null);
   const [monthly, setMonthly] = useState<Order[] | null>(null);
+  // Pedidos que pedem ação, sem corte de data: um pedido pago no dia 31
+  // sumia do aviso "para separar" no dia 1º.
+  const [pending, setPending] = useState<Order[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const unsubRecent = onSnapshot(
       query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(10)),
       snap => setRecent(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))),
-      err => { console.error('[painel] pedidos recentes:', err); setRecent([]); }
+      err => { console.error('[painel] pedidos recentes:', err); setRecent([]); setLoadError(true); }
     );
     const unsubMonthly = onSnapshot(
       query(collection(db, 'orders'), where('createdAt', '>=', startOfMonthISO()), orderBy('createdAt', 'desc')),
       snap => setMonthly(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))),
-      err => { console.error('[painel] pedidos do mês:', err); setMonthly([]); }
+      err => { console.error('[painel] pedidos do mês:', err); setMonthly([]); setLoadError(true); }
     );
-    return () => { unsubRecent(); unsubMonthly(); };
+    const unsubPending = onSnapshot(
+      query(collection(db, 'orders'), where('status', 'in', ['paid', 'pending_payment'])),
+      snap => setPending(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))),
+      err => { console.error('[painel] pedidos pendentes:', err); setPending([]); setLoadError(true); }
+    );
+    return () => { unsubRecent(); unsubMonthly(); unsubPending(); };
   }, []);
 
-  if (recent === null || monthly === null) return <DashboardSkeleton />;
+  // Sem isso, uma falha de rede/permissão mostrava a tela zerada como se
+  // não houvesse nenhuma venda.
+  if (loadError) return <PanelErrorState message="Não foi possível carregar o resumo da loja." onRetry={() => window.location.reload()} />;
+  if (recent === null || monthly === null || pending === null) return <DashboardSkeleton />;
 
   // Só pedidos efetivamente pagos (antes payment_expired entrava como receita).
   const PAID = new Set(['paid', 'preparing', 'shipped', 'delivered']);
@@ -65,8 +78,8 @@ export default function PainelDashboard() {
   const todayStr = startOfTodayISO();
   const today = counted.filter(o => o.createdAt >= todayStr);
 
-  const waiting = monthly.filter(o => o.status === 'pending_payment').length;
-  const needAction = monthly.filter(o => o.status === 'paid').length;
+  const waiting = pending.filter(o => o.status === 'pending_payment').length;
+  const needAction = pending.filter(o => o.status === 'paid').length;
 
   const kpis = [
     { label: 'Pedidos hoje',    value: today.length,                                      fmt: 'n' as const, desc: 'pedidos pagos',  Icon: IconBox },

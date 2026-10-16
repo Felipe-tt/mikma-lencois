@@ -36,6 +36,7 @@ vi.mock('firebase-admin/firestore', () => ({
   FieldValue: {
     serverTimestamp: () => 'MOCK_TIMESTAMP',
     arrayUnion: (v: unknown) => v,
+    delete: () => undefined,
   },
 }));
 
@@ -51,6 +52,19 @@ vi.mock('@/lib/firebase/admin', () => ({
         id
       ),
     }),
+    // Transação simplificada: lê e aplica na hora (o teste é sequencial).
+    runTransaction: async <T,>(fn: (tx: {
+      get: (ref: { get: () => Promise<unknown> }) => Promise<unknown>;
+      update: (ref: { update: (p: Record<string, unknown>) => Promise<void> }, patch: Record<string, unknown>) => void;
+    }) => Promise<T>) => {
+      const pending: Array<() => Promise<void>> = [];
+      const result = await fn({
+        get: ref => ref.get(),
+        update: (ref, patch) => { pending.push(() => ref.update(patch)); },
+      });
+      for (const apply of pending) await apply();
+      return result;
+    },
   },
 }));
 

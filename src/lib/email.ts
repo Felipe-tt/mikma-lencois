@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { escapeHtml } from '@/lib/html';
 
 let _resend: Resend | null = null;
 function getResend(): Resend {
@@ -32,7 +33,8 @@ export function buildReplyHtml(text: string, storeName = STORE_NAME): string {
   // Converte quebras de linha em <br> e preserva parágrafos
   const bodyHtml = text
     .split(/\n\n+/)
-    .map(para => `<p style="margin:0 0 16px;line-height:1.65;">${para.replace(/\n/g, '<br>')}</p>`)
+    // Escapa antes: "<", "&" ou "<nome do cupom>" no texto quebravam o e-mail.
+    .map(para => `<p style="margin:0 0 16px;line-height:1.65;">${escapeHtml(para).replace(/\n/g, '<br>')}</p>`)
     .join('');
 
   return `<!DOCTYPE html>

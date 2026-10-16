@@ -30,7 +30,7 @@ export default async function GuiaDeTamanhosPage() {
         Qual lençol é o certo pro seu colchão?
       </h1>
       <p className="text-[15px] text-mid max-w-[52ch] mx-auto text-center leading-relaxed mb-10">
-        Meça a largura do colchão (não da cama, do colchão em si) e a gente te diz exatamente qual tamanho comprar, sem chute.
+        Meça a largura do colchão (não da cama) e a gente te diz exatamente qual tamanho comprar, sem chute.
       </p>
 
       <SizeGuideCalculator products={products} widths={widths} />

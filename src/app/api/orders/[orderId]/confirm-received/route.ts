@@ -21,6 +21,10 @@ import type { Order, User } from '@/types';
  * nunca pra retirada na loja (o vendedor confirma no balcão, o cliente não
  * está "recebendo" remotamente).
  */
+class ConfirmError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
 
@@ -44,37 +48,42 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     );
   }
 
-  const ref  = adminDb.collection('orders').doc(orderId);
-  const snap = await ref.get();
-  if (!snap.exists) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+  const ref = adminDb.collection('orders').doc(orderId);
 
-  const order = { id: snap.id, ...snap.data() } as Order;
-
-  if (order.userId !== uid) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+  // Leitura e escrita na mesma transação: concorrendo com o painel ou com
+  // o webhook da Uber, o pedido virava "entregue" duas vezes e o cliente
+  // recebia dois e-mails.
+  let order: Order;
+  try {
+    order = await adminDb.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new ConfirmError(404, 'Pedido não encontrado');
+      const current = { id: snap.id, ...snap.data() } as Order;
+      if (current.userId !== uid) throw new ConfirmError(403, 'Sem permissão');
+      if (current.status !== 'shipped') {
+        throw new ConfirmError(400, current.status === 'delivered' ? 'Este pedido já está marcado como entregue.' : 'Este pedido ainda não foi despachado.');
+      }
+      if (current.delivery?.carrier === 'pickup') {
+        throw new ConfirmError(400, 'Pedidos de retirada na loja são confirmados pelo vendedor no balcão.');
+      }
+      const now = new Date().toISOString();
+      tx.update(ref, {
+        status: 'delivered',
+        updatedAt: FieldValue.serverTimestamp(),
+        'delivery.deliveredAt': FieldValue.serverTimestamp(),
+        timeline: FieldValue.arrayUnion({ status: 'delivered', at: now, note: 'Confirmado pelo cliente' }),
+      });
+      return current;
+    });
+  } catch (err) {
+    if (err instanceof ConfirmError) return NextResponse.json({ error: err.message }, { status: err.status });
+    throw err;
   }
-  if (order.status !== 'shipped') {
-    return NextResponse.json(
-      { error: order.status === 'delivered' ? 'Este pedido já está marcado como entregue.' : 'Este pedido ainda não foi despachado.' },
-      { status: 400 }
-    );
-  }
-  if (order.delivery?.carrier === 'pickup') {
-    return NextResponse.json({ error: 'Pedidos de retirada na loja são confirmados pelo vendedor no balcão.' }, { status: 400 });
-  }
-
-  const now = new Date().toISOString();
-  await ref.update({
-    status: 'delivered',
-    updatedAt: FieldValue.serverTimestamp(),
-    'delivery.deliveredAt': FieldValue.serverTimestamp(),
-    timeline: FieldValue.arrayUnion({ status: 'delivered', at: now, note: 'Confirmado pelo cliente' }),
-  });
 
   // Notifica o vendedor (best-effort, nunca deve afetar a resposta pro cliente)
   try {
     await adminDb.collection('notifications').doc('seller').collection('items').add({
-      type: 'new_order',
+      type: 'order_delivered',
       orderId,
       message: `Cliente confirmou recebimento: #${orderId.slice(-8).toUpperCase()}`,
       read: false,

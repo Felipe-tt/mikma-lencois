@@ -31,7 +31,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
           <circle cx="16" cy="12" r="1.5" fill="currentColor" stroke="none"/>
           <circle cx="8" cy="18" r="1.5" fill="currentColor" stroke="none"/>
         </svg>
-        Guia de medidas
+        Medidas deste produto
       </button>
 
       {/* Backdrop, portal pro body para evitar bug com transform de ancestral */}
@@ -56,7 +56,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
             <div className="flex items-center justify-between px-6 py-5 border-b border-mist shrink-0">
               <div>
                 <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-faint mb-1">Produto</p>
-                <h3 id="size-guide-title" className="font-display font-normal text-ink text-xl leading-none">Guia de medidas</h3>
+                <h3 id="size-guide-title" className="font-display font-normal text-ink text-xl leading-none">Medidas deste produto</h3>
               </div>
               <button
                 onClick={close}
