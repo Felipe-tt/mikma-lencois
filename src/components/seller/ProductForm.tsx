@@ -180,7 +180,6 @@ export default function ProductForm({ initial }: Props) {
         rowMemory.current = new Map(initRows.map(r => [r.fabric, r]));
       }
     }).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, user]);
 
   function handleYarnCountChange(v: string) {
@@ -326,7 +325,6 @@ export default function ProductForm({ initial }: Props) {
     setJustAutoUpdated(true);
     const t = setTimeout(() => setJustAutoUpdated(false), 900);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentNameSuggestion, nameEditedManually]);
 
   /* ───────────────────────── Rascunho automático ───────────────────────── */

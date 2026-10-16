@@ -76,7 +76,7 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
     } finally {
       setLoading(false);
     }
-  }, [key]);
+  }, [key, orderId]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
 

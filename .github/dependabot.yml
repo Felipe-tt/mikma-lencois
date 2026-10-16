@@ -12,6 +12,12 @@ updates:
       # Majors continuam vindo separados (podem quebrar API).
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # ESLint 10 quebra eslint-plugin-react (usado pelo eslint-config-next
+      # 16): "contextOrFilename.getFilename is not a function". Liberar
+      # quando o eslint-config-next declarar suporte a eslint 10.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
 
   # Actions usadas nos workflows (.github/workflows/*.yml)
   - package-ecosystem: "github-actions"

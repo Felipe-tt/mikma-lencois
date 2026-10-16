@@ -107,7 +107,6 @@ export function NotificationBell() {
       window.removeEventListener('resize', onReposition);
       window.removeEventListener('scroll', onReposition, true);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const unread = items.filter(n => !n.read);
