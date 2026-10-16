@@ -108,10 +108,12 @@ html.dark {
      mais claro (#D98A5B), e o valor fixo do tema claro (#B8622F) some
      contra o fundo escuro, deixando quem navega por teclado sem saber
      onde está. */
+  /* Sem border-radius aqui: ele mudava o formato do próprio elemento ao
+     receber foco (botões redondos, como o coração do favorito, viravam
+     quadrados). O outline já acompanha o arredondamento do elemento. */
   *:focus-visible {
     outline: 2px solid rgb(var(--c-clay));
     outline-offset: 2px;
-    border-radius: 2px;
   }
   /* O highlight cinza que o Chrome/Android pinta ao tocar em qualquer
      elemento clicável briga com os estados de :active próprios do
