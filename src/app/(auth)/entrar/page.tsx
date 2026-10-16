@@ -257,7 +257,7 @@ export default function LoginPage() {
             width={400}
             height={400}
             aria-hidden="true"
-            className="pointer-events-none select-none absolute -bottom-20 -right-20 w-[360px] max-w-[70%] h-auto object-contain opacity-[0.12]"
+            className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] max-w-[540px] h-auto object-contain opacity-[0.07] dark:opacity-[0.06]"
           />
           <Link href="/" className="relative z-10">
             <BrandLogo alt="Mikma" className="h-9 w-auto object-contain" />
