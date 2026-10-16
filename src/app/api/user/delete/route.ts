@@ -62,10 +62,11 @@ export async function DELETE(req: NextRequest) {
       for (const line of expandStockLines(items)) {
         const invSnap = await adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get();
         if (!invSnap.empty) {
-          adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
+          // await: um update solto pode se perder quando a instância encerra.
+          await adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
             reserved: FieldValue.increment(-line.quantity),
             updatedAt: FieldValue.serverTimestamp(),
-          }).catch(() => {});
+          }).catch((err) => console.error('[user/delete] falha ao liberar reserva', line.sku, err));
         }
       }
     }

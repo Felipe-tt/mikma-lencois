@@ -13,6 +13,7 @@ import { OrdersListSkeleton } from '@/components/ui/Skeleton';
 
 const STATUS_LABEL: Record<string, string> = {
   pending_payment: 'Aguardando pagamento',
+  payment_expired: 'PIX expirado',
   paid: 'Pago',
   preparing: 'Em preparo',
   shipped: 'Em rota',
@@ -22,6 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_BADGE: Record<string, string> = {
   pending_payment: 'badge-pending',
+  payment_expired: 'badge-pending',
   paid: 'badge-paid',
   preparing: 'badge-preparing',
   shipped: 'badge-shipped',

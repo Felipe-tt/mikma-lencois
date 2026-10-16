@@ -37,7 +37,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       if (!snap.exists) throw new Error('NOT_FOUND');
       const data = snap.data()!;
       if (data.userId !== uid) throw new Error('FORBIDDEN');
-      if (data.status !== 'pending_payment') throw new Error('NOT_CANCELLABLE');
+      if (data.status !== 'pending_payment' && data.status !== 'payment_expired') throw new Error('NOT_CANCELLABLE');
+
+      // Só pending_payment ainda tem reserva (payment_expired já foi liberado
+      // pelo webhook). Liberada aqui dentro, junto com o status; antes era
+      // um update sem await fora da transação, que podia se perder.
+      const lines = data.status === 'pending_payment'
+        ? expandStockLines((data.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>)
+        : [];
+      const invRefs = lines.map(l => adminDb.collection('inventory').doc(l.sku));
+      const invSnaps = await Promise.all(invRefs.map(r => tx.get(r)));
 
       const now = new Date().toISOString();
       tx.update(ref, {
@@ -46,6 +55,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
         updatedAt: now,
         timeline: FieldValue.arrayUnion({ status: 'cancelled', at: now, note: 'Cancelado pelo cliente' }),
       });
+      for (let i = 0; i < lines.length; i++) {
+        if (!invSnaps[i].exists) continue;
+        tx.update(invRefs[i], {
+          reserved: FieldValue.increment(-lines[i].quantity),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
       return data;
     });
   } catch (err) {
@@ -56,18 +72,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       return NextResponse.json({ error: 'Só é possível cancelar pedidos aguardando pagamento' }, { status: 400 });
     }
     throw err;
-  }
-
-  // Pedido pendente sempre tem estoque reservado (reservado na criação do PIX/checkout), liberar agora
-  const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>;
-  for (const line of expandStockLines(items)) {
-    const invSnap = await adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get();
-    if (!invSnap.empty) {
-      adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
-        reserved: FieldValue.increment(-line.quantity),
-        updatedAt: FieldValue.serverTimestamp(),
-      }).catch(() => {});
-    }
   }
 
   return NextResponse.json({ ok: true });

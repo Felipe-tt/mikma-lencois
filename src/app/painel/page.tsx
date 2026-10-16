@@ -9,11 +9,11 @@ import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProducts, IconArrowRight } from '@/components/ui/Icon';
 
 const BADGE: Record<string, string> = {
-  pending_payment: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
+  pending_payment: 'badge-pending', payment_expired: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
   shipped: 'badge-shipped', delivered: 'badge-delivered', cancelled: 'badge-cancelled',
 };
 const LABEL: Record<string, string> = {
-  pending_payment: 'Aguardando pagamento', paid: 'Pago', preparing: 'Separando',
+  pending_payment: 'Aguardando pagamento', payment_expired: 'PIX expirado', paid: 'Pago', preparing: 'Separando',
   shipped: 'A caminho', delivered: 'Entregue', cancelled: 'Cancelado',
 };
 
@@ -59,7 +59,9 @@ export default function PainelDashboard() {
 
   if (recent === null || monthly === null) return <DashboardSkeleton />;
 
-  const counted = monthly.filter(o => o.status !== 'pending_payment' && o.status !== 'cancelled');
+  // Só pedidos efetivamente pagos (antes payment_expired entrava como receita).
+  const PAID = new Set(['paid', 'preparing', 'shipped', 'delivered']);
+  const counted = monthly.filter(o => PAID.has(o.status));
   const todayStr = startOfTodayISO();
   const today = counted.filter(o => o.createdAt >= todayStr);
 
