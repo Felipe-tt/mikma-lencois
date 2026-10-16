@@ -17,6 +17,16 @@ const LINKS = [
     ),
   },
   {
+    href: '/favoritos',
+    label: 'Favoritos',
+    desc: 'Os produtos que você salvou pra ver depois',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+      </svg>
+    ),
+  },
+  {
     href: '/perfil',
     label: 'Meu perfil',
     desc: 'Edite seu nome, exporte ou exclua seus dados',
@@ -52,14 +62,12 @@ export default function ContaPage() {
       </div>
 
       <div className="container-shop py-8 sm:py-12 pb-20">
-        <div className="grid grid-cols-1 sm:grid-cols-2 max-w-2xl border border-mist">
-          {LINKS.map(({ href, label, desc, icon }, idx) => (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-mist border border-mist max-w-4xl">
+          {LINKS.map(({ href, label, desc, icon }) => (
             <Link
               key={href}
               href={href}
-              className={`flex items-start gap-5 bg-paper px-6 py-7 group hover:bg-warm transition-colors duration-150 ${
-                idx % 2 === 0 ? 'border-b sm:border-b-0 sm:border-r border-mist' : 'border-b last:border-b-0 border-mist'
-              }`}
+              className="flex items-start gap-5 bg-paper px-6 py-7 group hover:bg-warm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink/30"
             >
               <span className="text-clay mt-0.5 shrink-0">{icon}</span>
               <div className="min-w-0">

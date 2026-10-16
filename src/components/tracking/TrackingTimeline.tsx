@@ -16,7 +16,7 @@ interface Props {
 function StatusIcon({ status, active }: { status: string; active: boolean }) {
   const s = status.toLowerCase();
   const cls = `w-4 h-4 ${active ? 'stroke-white' : 'stroke-faint'}`;
-  const base = { fill: 'none' as const, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const base = { fill: 'none' as const, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
   if (s.includes('entregue') || s.includes('entrega efetuada'))
     return <svg viewBox="0 0 24 24" className={cls} {...base}><polyline points="20 6 9 17 4 12"/></svg>;

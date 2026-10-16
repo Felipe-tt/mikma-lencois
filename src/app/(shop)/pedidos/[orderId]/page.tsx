@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 // Carregado sob demanda: leaflet só é baixado quando essa página realmente
@@ -30,7 +31,7 @@ import { PIXModal } from '@/components/checkout/PIXModal';
 // SVG ícones para cada step do progresso (sem emojis)
 function StepIcon({ status, active }: { status: OrderStatus; active: boolean }) {
   const cls = `w-4 h-4 ${active ? 'stroke-clay-l' : 'stroke-faint-l'}`;
-  const base = { fill: 'none' as const, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const base = { fill: 'none' as const, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   if (status === 'pending_payment')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
   if (status === 'paid')
@@ -48,7 +49,7 @@ function StepIcon({ status, active }: { status: OrderStatus; active: boolean }) 
 // badge (mesmo padrão da timeline do painel, ver TIMELINE_ICON_COMP em
 // /painel/pedidos/[id]/page.tsx).
 function TimelineIcon({ status }: { status: string }) {
-  const base = { fill: 'none' as const, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const base = { fill: 'none' as const, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   const cls = 'w-4 h-4';
   if (status === 'created')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>;
@@ -89,7 +90,7 @@ const TIMELINE_TONE: Record<string, string> = {
   delivered:          'bg-emerald-50 text-emerald-700',
   cancelled:          'bg-red-50 text-red-700',
 };
-const TIMELINE_TONE_MUTED = 'bg-[#FAF7F4] text-faint';
+const TIMELINE_TONE_MUTED = 'bg-warm text-faint ring-1 ring-inset ring-mist';
 
 const STATUS_STEPS: { status: OrderStatus; label: string }[] = [
   { status: 'pending_payment', label: 'Aguardando pagamento' },
@@ -319,11 +320,14 @@ export default function OrderDetailPage() {
   return (
     <div>
       <div className="border-b border-mist">
-        <div className="container-shop">
-          <span className="eyebrow mb-3 block">Meus pedidos</span>
+        <div className="container-shop py-8 sm:py-10">
+          <Link href="/conta/pedidos" className="group inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-faint hover:text-ink transition-colors duration-150 mb-3">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+            Meus pedidos
+          </Link>
           <div className="flex items-center gap-3 flex-wrap pb-1">
-            <h1 className="font-display font-normal text-ink">
-              #{order.id.slice(-8).toUpperCase()}
+            <h1 className="font-display font-normal text-ink text-3xl sm:text-4xl tabular-nums">
+              Pedido #{order.id.slice(-8).toUpperCase()}
             </h1>
             {isCancelled && (
               <span className="text-xs font-bold text-red-600 border border-red-200 bg-red-50 px-2.5 py-1">
