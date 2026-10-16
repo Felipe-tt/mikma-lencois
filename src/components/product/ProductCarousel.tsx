@@ -86,7 +86,7 @@ export function ProductCarousel({ products }: Props) {
 
         <div
           ref={trackRef}
-          className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory scroll-pl-1 pb-1"
+          className="flex gap-3 sm:gap-5 overflow-x-auto scrollbar-none snap-x snap-mandatory scroll-pl-1 pb-1"
         >
           {products.map((p) => (
             <div

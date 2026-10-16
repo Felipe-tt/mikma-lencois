@@ -16,7 +16,7 @@ export default function ProdutosLoading() {
           <aside className="hidden lg:flex flex-col gap-3 w-44 shrink-0">
             {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-8 w-full" />)}
           </aside>
-          <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-px bg-mist border border-mist">
+          <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
             {Array.from({ length: 12 }).map((_, i) => <ProductCardSkeleton key={i} />)}
           </div>
         </div>
