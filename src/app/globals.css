@@ -62,6 +62,10 @@ html.dark {
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    /* Reserva o espaço da barra de rolagem: os modais travam o scroll com
+       overflow:hidden no body, e sem isso a página "pulava" pro lado no
+       desktop toda vez que um modal abria/fechava. */
+    scrollbar-gutter: stable;
   }
   body {
     @apply bg-paper text-ink font-sans antialiased;
@@ -92,20 +96,32 @@ html.dark {
   ::selection { background: rgb(var(--c-clay) / 0.22); }
 }
 
-/* Respeita quem pediu menos movimento no sistema. O painel tem ponto
-   pulsante, cards que sobem no hover, spinners e transições em toda
-   parte — pra quem tem sensibilidade vestibular isso é desconfortável,
-   e é uma preferência que o sistema operacional já sabe. Mantém uma
-   duração mínima em vez de zerar: transição instantânea quebra alguns
-   componentes que escutam transitionend pra saber que terminaram. */
+/* Respeita quem pediu menos movimento no sistema. Antes zerava a duração
+   de TUDO (0.01ms), o que o próprio padrão desaconselha: entradas viravam
+   "estalos" e o spinner parava num frame só, sem indicar carregamento.
+   Agora: animações saem (entradas mostram direto o estado final, já que
+   todas terminam visíveis) e cada componente pode declarar uma versão
+   reduzida em --animation-reduced (ex.: spinner gira devagar). Transições
+   de cor/opacidade continuam, só o deslocamento no hover é removido. */
+@property --animation-reduced {
+  syntax: "*";
+  inherits: false;
+  initial-value: none;
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    animation: var(--animation-reduced) !important;
     scroll-behavior: auto !important;
   }
-  html { scroll-behavior: auto; }
+  .animate-spin { --animation-reduced: spin 2.5s linear infinite; }
+  /* Cards/botões que "sobem" no hover: mantém a mudança de cor, sem mover. */
+  [class*="hover:-translate-"]:hover,
+  [class*="hover:translate-"]:hover,
+  [class*="hover:scale-"]:hover,
+  [class*="active:scale-"]:active {
+    translate: none !important;
+    scale: none !important;
+  }
 }
 
 @utility btn {
