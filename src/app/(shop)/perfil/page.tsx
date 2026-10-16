@@ -2,62 +2,92 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteUser } from 'firebase/auth';
+import { updateProfile } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { setReturnTo } from '@/lib/auth/returnTo';
 import { PerfilSkeleton } from '@/components/ui/Skeleton';
 
 export default function PerfilPage() {
   const { user, userData, loading, logout } = useAuth();
   const router = useRouter();
-  const [name, setName] = useState(userData?.name ?? '');
+  const [name, setName] = useState('');
+  const [nameTouched, setNameTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  if (loading) return <PerfilSkeleton />;
+  // O nome chega depois do primeiro render (userData carrega à parte):
+  // antes o campo nascia vazio e ficava vazio.
+  useEffect(() => {
+    if (!nameTouched) setName(userData?.name ?? user?.displayName ?? '');
+  }, [userData?.name, user?.displayName, nameTouched]);
 
-  if (!user) {
-    router.push('/entrar');
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && !user) { setReturnTo('/perfil'); router.push('/entrar'); }
+  }, [loading, user, router]);
+
+  if (loading || !user) return <PerfilSkeleton />;
 
   const handleSave = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    await updateDoc(doc(db, 'users', user.uid), { name });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    const clean = name.trim();
+    if (!clean) { setError('Digite seu nome.'); return; }
+    setSaving(true); setError('');
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { name: clean });
+      // Atualiza também o nome do login, que é o que aparece em "Olá, X".
+      if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: clean }).catch(() => {});
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setError('Não foi possível salvar. Verifique sua conexão e tente de novo.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleExport = async () => {
-    const res = await fetch('/api/user/export', {
-      headers: { Authorization: `Bearer ${await user.getIdToken()}` },
-    });
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'meus-dados.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    setError('');
+    try {
+      const res = await fetch('/api/user/export', {
+        headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'meus-dados.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('Não foi possível exportar seus dados agora. Tente de novo em alguns minutos.');
+    }
   };
 
+  // A API já apaga a conta no Firebase Auth. Antes o navegador tentava
+  // apagar de novo (dava erro e a pessoa ficava na página sem aviso), e
+  // se a API falhasse o login era apagado mesmo assim, deixando os dados.
   const handleDelete = async () => {
-    setDeleting(true);
+    setDeleting(true); setError('');
     try {
-      await fetch('/api/user/delete', {
+      const res = await fetch('/api/user/delete', {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${await user.getIdToken()}` },
       });
-      await deleteUser(auth.currentUser!);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? 'Não foi possível excluir a conta agora. Tente de novo em alguns minutos.');
+      }
+      await logout().catch(() => {});
       router.push('/');
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : 'Não foi possível excluir a conta agora.');
       setDeleting(false);
     }
   };
@@ -66,8 +96,8 @@ export default function PerfilPage() {
     <div>
       <div className="border-b border-mist">
         <div className="container-shop">
-          <h1 className="font-display font-normal text-ink" >
-            Minha conta
+          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl py-8 sm:py-10">
+            Meu perfil
           </h1>
         </div>
       </div>
@@ -78,12 +108,12 @@ export default function PerfilPage() {
           <h2 className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-5">Dados pessoais</h2>
           <div className="flex flex-col gap-4">
             <div>
-              <label className="label">Nome</label>
-              <input value={name} onChange={e => setName(e.target.value)} className="input" />
+              <label htmlFor="perfil-nome" className="label">Nome</label>
+              <input id="perfil-nome" value={name} onChange={e => { setNameTouched(true); setName(e.target.value); }} autoComplete="name" className="input" />
             </div>
             <div>
-              <label className="label">E-mail</label>
-              <input value={user.email ?? ''} disabled className="input opacity-40 cursor-not-allowed bg-warm" />
+              <label htmlFor="perfil-email" className="label">E-mail</label>
+              <input id="perfil-email" value={user.email ?? ''} disabled className="input opacity-40 cursor-not-allowed bg-warm" />
             </div>
             <div className="flex items-center gap-3 pt-1">
               <button onClick={handleSave} disabled={saving} className="btn-primary">
@@ -98,6 +128,10 @@ export default function PerfilPage() {
             </div>
           </div>
         </div>
+
+        {error && (
+          <p role="alert" className="mb-4 border border-red-200 bg-red-50 text-red-700 text-[13px] px-4 py-3">{error}</p>
+        )}
 
         {/* LGPD */}
         <div className="border border-mist p-6 mb-4">

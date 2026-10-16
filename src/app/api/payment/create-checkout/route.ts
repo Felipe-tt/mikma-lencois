@@ -272,12 +272,13 @@ export async function POST(req: NextRequest) {
     // normais — reutilizada também nos dois pontos de liberação mais abaixo,
     // pra soltar a reserva da fronha junto se o pagamento falhar.
     const stockLines = expandStockLines(sanitizedCartItems);
-    const inventoryQueries = await Promise.all(
-      stockLines.map(line =>
-        adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get()
-      )
+    // O ID do documento de estoque é o próprio SKU. Antes buscava pelo
+    // campo `sku`, que produtos importados por CSV não tinham: o checkout
+    // não achava o estoque e vendia sem reservar.
+    const inventorySnaps = await Promise.all(
+      stockLines.map(line => adminDb.collection('inventory').doc(line.sku).get())
     );
-    const invDocRefs = inventoryQueries.map(snap => snap.docs[0]?.ref ?? null);
+    const invDocRefs = inventorySnaps.map(snap => (snap.exists ? snap.ref : null));
 
     try {
       await adminDb.runTransaction(async tx => {

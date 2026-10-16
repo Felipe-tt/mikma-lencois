@@ -34,10 +34,14 @@ export default function CuponsPage() {
   }, []);
 
   const handleCreate = async () => {
-    if (!form.code) { setError('Digite o código do cupom.'); return; }
-    if (!form.value) { setError('Digite o valor do desconto.'); return; }
-    setSaving(true); setError('');
     const code = form.code.toUpperCase().trim();
+    if (!code) { setError('Digite o código do cupom.'); return; }
+    // O código vira o ID do documento: "/" ou espaço quebravam o caminho.
+    if (!/^[A-Z0-9_-]{3,30}$/.test(code)) { setError('Use só letras, números, - ou _ (de 3 a 30).'); return; }
+    if (!(form.value > 0)) { setError('Digite um valor de desconto maior que zero.'); return; }
+    if (form.type === 'percent' && form.value > 100) { setError('A porcentagem vai até 100%.'); return; }
+    if (form.minOrderCents < 0 || form.maxUses < 1) { setError('Confira o pedido mínimo e o limite de usos.'); return; }
+    setSaving(true); setError('');
     try {
       // IMPORTANTE: o código do cupom precisa ser o ID do documento, é
       // assim que /api/checkout/validate-coupon e as rotas de pagamento
@@ -52,17 +56,24 @@ export default function CuponsPage() {
         return;
       }
       await setDoc(ref, {
-        code, type: form.type, value: form.value,
+        // Valor fixo é guardado em centavos (é assim que o cálculo lê, ver
+        // lib/orderPricing). Antes ia em reais: "R$ 20 off" dava R$ 0,20.
+        code, type: form.type,
+        value: form.type === 'fixed' ? Math.round(form.value * 100) : form.value,
         minOrderCents: Math.round(form.minOrderCents * 100),
         maxUses: form.maxUses, usedCount: 0, active: true,
-        expiresAt: form.expiresAt || null, createdAt: serverTimestamp(),
+        // Vale até o fim do dia escolhido no horário de Brasília (só a data
+        // virava meia-noite UTC, e o cupom parava às 21h da véspera).
+        expiresAt: form.expiresAt ? `${form.expiresAt}T23:59:59-03:00` : null, createdAt: serverTimestamp(),
       });
       setForm(EMPTY); setShowForm(false);
     } catch { setError('Erro ao criar cupom. Tente novamente.'); }
     finally { setSaving(false); }
   };
 
-  const toggleActive = (id: string, active: boolean) => updateDoc(doc(db, 'coupons', id), { active: !active });
+  const toggleActive = (id: string, active: boolean) =>
+    updateDoc(doc(db, 'coupons', id), { active: !active })
+      .catch(() => setError('Não foi possível alterar o cupom. Tente de novo.'));
   const remove = async (id: string) => {
     const { confirmed } = await confirmDialog({
       message: 'Apagar este cupom?',
@@ -71,10 +82,13 @@ export default function CuponsPage() {
       variant: 'danger',
     });
     if (!confirmed) return;
-    deleteDoc(doc(db, 'coupons', id));
+    deleteDoc(doc(db, 'coupons', id))
+      .catch(() => setError('Não foi possível apagar o cupom. Tente de novo.'));
   };
 
-  const desconto = (c: Coupon) => c.type === 'percent' ? `${c.value}% de desconto` : `R$ ${c.value.toFixed(2)} de desconto`;
+  const desconto = (c: Coupon) => c.type === 'percent'
+    ? `${c.value}% de desconto`
+    : `${(c.value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} de desconto`;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -88,6 +102,10 @@ export default function CuponsPage() {
           {showForm ? 'Cancelar' : '+ Criar cupom'}
         </button>
       </div>
+
+      {!showForm && error && (
+        <div role="alert" className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-1 rounded-lg"><IconAlert size={11} />{error}</div>
+      )}
 
       {showForm && (
         <div className="bg-paper border border-mist p-5 mb-6 rounded-xl">
@@ -201,7 +219,7 @@ export default function CuponsPage() {
               <div className="flex items-center justify-between text-[11px] text-faint pt-3 border-t border-mist">
                 <span>
                   Usado <strong>{c.usedCount ?? 0}</strong> de <strong>{c.maxUses}</strong> vezes
-                  {c.expiresAt && ` · Válido até ${new Date(c.expiresAt + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+                  {c.expiresAt && ` · Válido até ${new Date(c.expiresAt.length === 10 ? `${c.expiresAt}T12:00:00` : c.expiresAt).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`}
                 </span>
                 <button onClick={() => remove(c.id)} className="text-red-400 hover:text-red-600 font-semibold transition-colors">Apagar</button>
               </div>

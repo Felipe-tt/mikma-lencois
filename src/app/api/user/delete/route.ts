@@ -36,15 +36,42 @@ export async function DELETE(req: NextRequest) {
       .where('status', '==', 'pending_payment')
       .get();
 
-    const batch = adminDb.batch();
-
+    // Cada pedido pendente é cancelado na própria transação, relendo o
+    // status, igual a /api/orders/[id]/cancel. Antes era um batch sem
+    // checar: se o webhook confirmasse o pagamento no meio, o pedido pago
+    // virava cancelado e a reserva era descontada duas vezes.
     for (const orderDoc of pendingOrders.docs) {
-      batch.update(orderDoc.ref, {
-        status: 'cancelled',
-        updatedAt: FieldValue.serverTimestamp(),
-      });
+      try {
+        const cancelled = await adminDb.runTransaction(async tx => {
+          const snap = await tx.get(orderDoc.ref);
+          const data = snap.data();
+          if (!data || data.status !== 'pending_payment') return null;
+          const lines = expandStockLines((data.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>);
+          const invRefs = lines.map(l => adminDb.collection('inventory').doc(l.sku));
+          const invSnaps = await Promise.all(invRefs.map(r => tx.get(r)));
+          const now = new Date().toISOString();
+          tx.update(orderDoc.ref, {
+            status: 'cancelled',
+            cancelledAt: now,
+            updatedAt: FieldValue.serverTimestamp(),
+            timeline: FieldValue.arrayUnion({ status: 'cancelled', at: now, note: 'Conta excluída pelo cliente' }),
+          });
+          lines.forEach((line, i) => {
+            if (!invSnaps[i].exists) return;
+            tx.update(invRefs[i], {
+              reserved: FieldValue.increment(-line.quantity),
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+          });
+          return data;
+        });
+        if (cancelled) await releaseCouponUse(cancelled.couponCode as string | undefined);
+      } catch (err) {
+        console.error('[user/delete] falha ao cancelar pedido', orderDoc.id, err);
+      }
     }
 
+    const batch = adminDb.batch();
     batch.delete(adminDb.doc(`users/${uid}`));
     batch.delete(adminDb.doc(`carts/${uid}`));
 
@@ -52,29 +79,6 @@ export async function DELETE(req: NextRequest) {
     for (const d of notifSnap.docs) batch.delete(d.ref);
 
     await batch.commit();
-
-    // Libera o estoque reservado dos pedidos que acabaram de virar
-    // 'cancelled' — IMPORTANTE fazer isso, senão fica preso pra sempre:
-    // o cron de expiração só olha pedidos 'pending_payment', e esse
-    // pedido já não é mais isso a partir daqui. expandStockLines inclui
-    // a fronha trocada (Jogo de Cama) na liberação também.
-    for (const orderDoc of pendingOrders.docs) {
-      const items = (orderDoc.data().items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>;
-      for (const line of expandStockLines(items)) {
-        const invSnap = await adminDb.collection('inventory').where('sku', '==', line.sku).limit(1).get();
-        if (!invSnap.empty) {
-          // await: um update solto pode se perder quando a instância encerra.
-          await adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
-            reserved: FieldValue.increment(-line.quantity),
-            updatedAt: FieldValue.serverTimestamp(),
-          }).catch((err) => console.error('[user/delete] falha ao liberar reserva', line.sku, err));
-        }
-      }
-    }
-
-    for (const orderDoc of pendingOrders.docs) {
-      await releaseCouponUse(orderDoc.data().couponCode as string | undefined);
-    }
 
     // Revoga tokens antes de deletar, evita uso de token após exclusão
     await adminAuth.revokeRefreshTokens(uid);

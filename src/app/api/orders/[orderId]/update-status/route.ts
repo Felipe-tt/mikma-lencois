@@ -20,6 +20,10 @@ const ALLOWED: Partial<Record<OrderStatus, OrderStatus>> = {
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
+class StatusError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
@@ -62,29 +66,43 @@ export async function POST(
   const body = parsedBody.data;
 
   const ref = adminDb.collection('orders').doc(orderId);
-  const snap = await ref.get();
-  if (!snap.exists) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
-
-  const order = { id: snap.id, ...snap.data() } as Order;
-  const next = ALLOWED[order.status];
-  if (!next) return NextResponse.json({ error: `Não é possível avançar de "${order.status}"` }, { status: 400 });
-
   const now = new Date().toISOString();
-  const update: Record<string, unknown> = {
-    status: next,
-    updatedAt: FieldValue.serverTimestamp(),
-    timeline: FieldValue.arrayUnion({ status: next, at: now }),
-  };
 
-  if (next === 'shipped') {
-    if (body.trackingCode) update['delivery.trackingCode'] = body.trackingCode;
-    update['delivery.dispatchedAt'] = FieldValue.serverTimestamp();
-  }
-  if (next === 'delivered') {
-    update['delivery.deliveredAt'] = FieldValue.serverTimestamp();
-  }
+  // Leitura e escrita na mesma transação: antes eram separadas, e dois
+  // toques seguidos faziam o pedido pular de "pago" direto pra "enviado"
+  // (sem rastreio) com dois e-mails pro cliente.
+  let order: Order;
+  let next: OrderStatus;
+  try {
+    ({ order, next } = await adminDb.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new StatusError(404, 'Pedido não encontrado');
+      const current = { id: snap.id, ...snap.data() } as Order;
+      if (body.fromStatus && body.fromStatus !== current.status) {
+        throw new StatusError(409, 'Este pedido já foi atualizado. Atualize a página.');
+      }
+      const target = ALLOWED[current.status];
+      if (!target) throw new StatusError(400, `Não é possível avançar de "${current.status}"`);
 
-  await ref.update(update);
+      const update: Record<string, unknown> = {
+        status: target,
+        updatedAt: FieldValue.serverTimestamp(),
+        timeline: FieldValue.arrayUnion({ status: target, at: now }),
+      };
+      if (target === 'shipped') {
+        if (body.trackingCode) update['delivery.trackingCode'] = body.trackingCode;
+        update['delivery.dispatchedAt'] = FieldValue.serverTimestamp();
+      }
+      if (target === 'delivered') {
+        update['delivery.deliveredAt'] = FieldValue.serverTimestamp();
+      }
+      tx.update(ref, update);
+      return { order: current, next: target };
+    }));
+  } catch (err) {
+    if (err instanceof StatusError) return NextResponse.json({ error: err.message }, { status: err.status });
+    throw err;
+  }
 
   // Despacho manual (Correios/Jadlog): registra no caixa de frete o valor
   // cotado como custo estimado. Antes isso vinha da compra da etiqueta no

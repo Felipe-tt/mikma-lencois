@@ -5,7 +5,8 @@ import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { NovaVendaSheet } from '@/components/painel/NovaVendaSheet';
 
 import { useEffect, useId, useMemo, useState, useRef } from 'react';
-import { collection, onSnapshot, doc, updateDoc, getDoc, increment, arrayUnion, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, getDoc, getDocs, query, where, increment, arrayUnion, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { expandStockLines } from '@/lib/orderStockLines';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Link from 'next/link';
@@ -241,15 +242,42 @@ export default function EstoquePage() {
     setMode('contagem');
   }
 
+  // Peças de pedidos pagos/em separação ainda estão na prateleira, mas já
+  // saíram do estoque do site (são descontadas no pagamento). A contagem
+  // física inclui essas peças, então elas são descontadas aqui: antes iam
+  // direto pro estoque e o site vendia de novo o que já estava vendido.
+  async function loadCommitted(): Promise<Record<string, number>> {
+    const snap = await getDocs(query(collection(db, 'orders'), where('status', 'in', ['paid', 'preparing'])));
+    const out: Record<string, number> = {};
+    for (const d of snap.docs) {
+      const lines = expandStockLines((d.data().items ?? []) as Parameters<typeof expandStockLines>[0]);
+      for (const line of lines) out[line.sku] = (out[line.sku] ?? 0) + line.quantity;
+    }
+    return out;
+  }
+
   async function saveCount() {
+    let committed: Record<string, number>;
+    try {
+      committed = await loadCommitted();
+    } catch (err) {
+      console.error('[estoque] falha ao ler pedidos pagos', err);
+      showToast('Não deu pra conferir os pedidos pagos agora, tenta de novo.');
+      return;
+    }
+    const target = (item: { id: string }) => {
+      const shelf = countDraft[item.id];
+      if (shelf === undefined || !Number.isFinite(shelf)) return undefined;
+      return Math.max(0, shelf - (committed[item.id] ?? 0));
+    };
     const bigJumps = items.filter(item => {
-      const v = countDraft[item.id];
-      return v !== undefined && Number.isFinite(v) && Math.abs(v - item.quantity) >= 50;
+      const v = target(item);
+      return v !== undefined && Math.abs(v - item.quantity) >= 50;
     });
     if (bigJumps.length > 0) {
       const ok = window.confirm(
         `${bigJumps.length === 1 ? 'Um item teve' : `${bigJumps.length} itens tiveram`} uma mudança de 50 unidades ou mais ` +
-        `(ex: "${bigJumps[0].productName}" de ${bigJumps[0].quantity} para ${countDraft[bigJumps[0].id]}). ` +
+        `(ex: "${bigJumps[0].productName}" de ${bigJumps[0].quantity} para ${target(bigJumps[0])}). ` +
         `Confere se não foi erro de digitação antes de continuar. Salvar mesmo assim?`
       );
       if (!ok) return;
@@ -259,8 +287,8 @@ export default function EstoquePage() {
       const batch = writeBatch(db);
       let changed = 0;
       for (const item of items) {
-        const newQty = countDraft[item.id];
-        if (newQty === undefined || !Number.isFinite(newQty) || newQty === item.quantity) continue;
+        const newQty = target(item);
+        if (newQty === undefined || newQty === item.quantity) continue;
         const diff = newQty - item.quantity;
         changed++;
         batch.update(doc(db, 'inventory', item.id), {
@@ -360,8 +388,8 @@ export default function EstoquePage() {
       {mode === 'contagem' && (
         <div className="bg-blue-50 border border-blue-100 px-4 py-3 mb-5 text-[13px] text-blue-900 rounded-xl">
           Percorra a lista e digite quantas peças você tem <strong>fisicamente em mãos agora</strong> de cada item
-          (inclua as já vendidas no site que ainda não saíram pra entrega). Só o que você mudar vai ser salvo, e fica
-          registrado no histórico de cada item.
+          (inclua as separadas pra pedidos já pagos: o sistema desconta essas peças sozinho ao salvar). Só o que
+          você mudar vai ser salvo, e fica registrado no histórico de cada item.
         </div>
       )}
 

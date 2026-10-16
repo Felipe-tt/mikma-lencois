@@ -365,7 +365,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       const res = await fetch(`/api/orders/${id}/update-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(trackingCode ? { trackingCode } : {}),
+        body: JSON.stringify({ fromStatus: order?.status, ...(trackingCode ? { trackingCode } : {}) }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -508,7 +508,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     if (!confirmed) return;
     setDeleting(true);
     try { await deleteDoc(doc(db, 'orders', id)); router.push('/painel/pedidos'); }
-    catch { setDeleting(false); }
+    catch {
+      setDeleting(false);
+      await confirmDialog({ message: 'Não foi possível apagar o pedido. Tente de novo.', alertOnly: true });
+    }
   }
 
   if (loading) return (

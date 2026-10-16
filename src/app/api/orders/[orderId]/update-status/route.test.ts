@@ -55,6 +55,19 @@ vi.mock('@/lib/firebase/admin', () => ({
     collection: (name: string) => ({
       doc: (id: string) => makeDocRef(name === 'orders' ? orders : users, id),
     }),
+    // Transação simplificada: lê e aplica na hora (o teste é sequencial).
+    runTransaction: async <T,>(fn: (tx: {
+      get: (ref: ReturnType<typeof makeDocRef>) => ReturnType<ReturnType<typeof makeDocRef>['get']>;
+      update: (ref: ReturnType<typeof makeDocRef>, patch: Record<string, unknown>) => void;
+    }) => Promise<T>) => {
+      const pending: Array<() => Promise<void>> = [];
+      const result = await fn({
+        get: ref => ref.get(),
+        update: (ref, patch) => { pending.push(() => ref.update(patch)); },
+      });
+      for (const apply of pending) await apply();
+      return result;
+    },
   },
 }));
 
@@ -116,6 +129,19 @@ describe('POST /api/orders/[orderId]/update-status', () => {
     expect(json.newStatus).toBe('shipped');
     expect(orders['order-1'].status).toBe('shipped');
     expect((orders['order-1'].delivery as Record<string, unknown>).trackingCode).toBe('AA123456789BR');
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('toque duplo: com fromStatus desatualizado não avança de novo', async () => {
+    orders['order-1'] = { status: 'paid', userId: 'user-1', items: [], delivery: {} };
+
+    const first = await POST(req({ fromStatus: 'paid' }), { params });
+    expect(first.status).toBe(200);
+    expect(orders['order-1'].status).toBe('preparing');
+
+    const second = await POST(req({ fromStatus: 'paid' }), { params });
+    expect(second.status).toBe(409);
+    expect(orders['order-1'].status).toBe('preparing');
     expect(sendEmail).toHaveBeenCalledTimes(1);
   });
 

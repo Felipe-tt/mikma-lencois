@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { OrdersListSkeleton } from '@/components/ui/Skeleton';
 import { PIXModal } from '@/components/checkout/PIXModal';
 import { copyText } from '@/lib/clipboard';
+import { setReturnTo } from '@/lib/auth/returnTo';
 import { requestNewPix } from '@/lib/orders/requestNewPix';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { IconAlert } from '@/components/ui/Icon';
@@ -46,13 +47,15 @@ export default function PedidosPage() {
   const [actionOrderId, setActionOId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<Record<string, string>>({});
   const [copiedId, setCopiedId]       = useState<string | null>(null);
+  const [listError, setListError]     = useState(false);
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { router.push('/entrar'); return; }
+    if (!user) { setReturnTo('/conta/pedidos'); router.push('/entrar'); return; }
     return onSnapshot(
       query(collection(db, 'orders'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')),
-      snap => { setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); setOL(false); }
+      snap => { setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); setOL(false); setListError(false); },
+      () => { setOL(false); setListError(true); }
     );
   }, [user, loading, router]);
 
@@ -109,7 +112,12 @@ export default function PedidosPage() {
       </div>
 
       <div className="container-shop py-8 sm:py-12 pb-20 max-w-3xl">
-        {loading || ordersLoading ? (
+        {listError ? (
+          <div role="alert" className="border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-4 flex items-center justify-between gap-3">
+            <span>Não foi possível carregar seus pedidos. Verifique sua conexão.</span>
+            <button type="button" onClick={() => window.location.reload()} className="shrink-0 text-xs font-semibold underline underline-offset-2">Tentar de novo</button>
+          </div>
+        ) : loading || ordersLoading ? (
           <OrdersListSkeleton />
         ) : orders.length === 0 ? (
           <EmptyState

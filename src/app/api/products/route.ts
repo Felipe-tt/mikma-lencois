@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   for (const variant of parse.data.variants) {
     const sku = `${ref.id}_${variant.id}`;
     batch.set(adminDb.collection('inventory').doc(sku), {
-      productId: ref.id, variant, quantity: 0, reserved: 0,
+      sku, productId: ref.id, variant, quantity: 0, reserved: 0,
       lowStockThreshold: 5, history: [], updatedAt: FieldValue.serverTimestamp(),
     });
   }

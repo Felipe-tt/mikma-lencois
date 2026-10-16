@@ -524,13 +524,27 @@ export default function ProductForm({ initial }: Props) {
     if (images.length === 0) { setError('Adicione pelo menos uma foto.'); return; }
     if (rows.length === 0) { setError('Marque pelo menos um tecido disponível.'); return; }
 
+    // A confirmação vem antes de qualquer upload ou exclusão: cancelar aqui
+    // não pode deixar nada pela metade.
+    if (isEdit && orphanedWithStock.length > 0) {
+      const count = orphanedWithStock.length;
+      const { confirmed: ok } = await confirmDialog({
+        message: `${count === 1 ? 'Uma variação removida ainda tem' : `${count} variações removidas ainda têm`} estoque cadastrado.`,
+        detail: 'Se continuar, esse estoque será apagado permanentemente.',
+        confirmLabel: 'Continuar mesmo assim',
+        variant: 'danger',
+      });
+      if (!ok) return;
+    }
+
     setSaving(true);
     setError('');
     try {
-      // Apaga fotos removidas E sobe as novas ao mesmo tempo — antes a
-      // exclusão rodava toda antes de começar o upload, atrasando o
-      // salvamento à toa (uma coisa não depende da outra pra completar).
-      const deleteOldPhotos = removedUrls.length > 0
+      // Fotos removidas só são apagadas DEPOIS que o produto foi salvo.
+      // Antes a exclusão começava junto com o upload: se o salvamento
+      // falhasse (ou o vendedor cancelasse a confirmação acima), o produto
+      // ficava apontando pra fotos que já não existiam.
+      const deleteOldPhotos = () => removedUrls.length > 0
         ? Promise.allSettled(
             removedUrls.map(url => {
               try {
@@ -562,7 +576,7 @@ export default function ProductForm({ initial }: Props) {
         })
       );
 
-      const [, uploaded] = await Promise.all([deleteOldPhotos, uploadNewPhotos]);
+      const uploaded = await uploadNewPhotos;
       const uploadedUrls: string[] = uploaded.filter((u): u is string => !!u);
 
       const priceCents = Math.round(parseFloat(price.replace(',', '.')) * 100);
@@ -595,17 +609,6 @@ export default function ProductForm({ initial }: Props) {
 
       if (isEdit) {
         const productId = initial!.id!;
-
-        if (orphanedWithStock.length > 0) {
-          const count = orphanedWithStock.length;
-          const { confirmed: ok } = await confirmDialog({
-            message: `${count === 1 ? 'Uma variação removida ainda tem' : `${count} variações removidas ainda têm`} estoque cadastrado.`,
-            detail: 'Se continuar, esse estoque será apagado permanentemente.',
-            confirmLabel: 'Continuar mesmo assim',
-            variant: 'danger',
-          });
-          if (!ok) { setSaving(false); return; }
-        }
 
         // Grava tudo em paralelo — antes eram writes sequenciais (1 por
         // tecido + 1 por SKU removido, um de cada vez), o que somava
@@ -641,6 +644,7 @@ export default function ProductForm({ initial }: Props) {
           });
         }));
       }
+      await deleteOldPhotos();
       clearDraft();
       if (!isEdit && user) {
         // Grava categoria/tamanho/tecidos como padrão pro próximo cadastro

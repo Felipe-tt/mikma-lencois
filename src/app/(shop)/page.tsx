@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { serialize } from '@/lib/utils/serialize';
 
-export const revalidate = 900; // ISR: revalida a cada 5 minutos
+export const revalidate = 900; // ISR: revalida a cada 15 minutos
 
 async function getFeatured(): Promise<Product[]> {
   try {
@@ -83,7 +83,7 @@ export default async function HomePage() {
 
           {/* Headline, ocupa toda a largura disponível */}
           <h1
-            className="font-display font-normal text-ink leading-[0.96] tracking-[-0.025em] text-[clamp(3.8rem,9.5vw,9rem)]"
+            className="font-display font-normal text-ink leading-[0.96] tracking-[-0.025em] text-[clamp(2.75rem,9.5vw,9rem)]"
           >
             <span className="block">{heroLine1}</span>
             <span className="block italic text-mid">{heroLine2}</span>
@@ -211,7 +211,7 @@ export default async function HomePage() {
       <section className="theme-locked bg-ink">
         <div className="container-shop py-14 sm:py-20">
           <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-mid mb-8">
-            {city} · Est. {s.foundedYear || ''}
+            {s.foundedYear ? `${city} · Est. ${s.foundedYear}` : city}
           </p>
           <h2
             className="font-display font-normal text-paper leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl text-[clamp(2.2rem,5vw,4rem)]"
@@ -224,7 +224,7 @@ export default async function HomePage() {
               {ctaBtn1}
             </Link>
             <Link href="/sobre"
-              className="inline-flex items-center justify-center h-12 px-7 border border-paper/15 text-paper/50 text-[13px] font-medium hover:text-paper hover:border-paper/30 transition-colors duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 border border-paper/25 text-paper/80 text-[13px] font-medium hover:text-paper hover:border-paper/50 transition-colors duration-200">
               {ctaBtn2}
             </Link>
           </div>

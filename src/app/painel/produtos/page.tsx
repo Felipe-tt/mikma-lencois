@@ -1,4 +1,5 @@
 'use client';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { IconAlert, IconSearch, IconProducts } from '@/components/ui/Icon';
 
 import { useEffect, useState } from 'react';
@@ -16,11 +17,13 @@ export default function PainelProdutosPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     return onSnapshot(
       query(collection(db, 'products'), orderBy('createdAt', 'desc')),
-      snap => { setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Product))); setLoading(false); }
+      snap => { setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Product))); setLoading(false); setLoadError(false); },
+      err => { console.error('[painel/produtos] onSnapshot:', err); setLoading(false); setLoadError(true); }
     );
   }, []);
 
@@ -65,6 +68,10 @@ export default function PainelProdutosPage() {
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  if (loadError) return (
+    <div className="max-w-6xl mx-auto"><PanelErrorState onRetry={() => window.location.reload()} /></div>
+  );
+
   if (loading) return (
     <div className="flex flex-col gap-2">
       {[1,2,3,4].map(i => <div key={i} className="h-[72px] skeleton border border-mist rounded-xl" />)}
@@ -84,27 +91,31 @@ export default function PainelProdutosPage() {
         </div>
       )}
 
-      <div className="flex gap-3 mb-5">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+        <div className="relative flex-1 min-w-0">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Digite o nome do produto..."
+            aria-label="Buscar produto"
+            type="search"
             className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40 rounded-xl"
           />
         </div>
-        <Link
-          href="/painel/produtos/importar-csv"
-          className="shrink-0 border border-mist text-ink text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-warm transition-colors rounded-xl"
-        >
-          Importar de CSV
-        </Link>
-        <Link
-          href="/painel/produtos/novo"
-          className="shrink-0 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors rounded-full"
-        >
-          + Novo produto
-        </Link>
+        <div className="grid grid-cols-2 sm:flex gap-3">
+          <Link
+            href="/painel/produtos/importar-csv"
+            className="inline-flex items-center justify-center min-h-11 border border-mist text-ink text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-warm active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
+          >
+            Importar CSV
+          </Link>
+          <Link
+            href="/painel/produtos/novo"
+            className="inline-flex items-center justify-center min-h-11 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
+          >
+            + Novo produto
+          </Link>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
@@ -171,7 +182,8 @@ export default function PainelProdutosPage() {
                   <button
                     onClick={() => toggleActive(p.id, p.active)}
                     disabled={isBusy}
-                    className={`sm:hidden text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-1 border transition-colors disabled:opacity-50 ${ p.active ? 'border-clay-l text-clay-l' : 'border-mist text-faint' } rounded-full`}
+                    aria-pressed={p.active}
+                    className={`sm:hidden min-h-9 text-[11px] font-bold tracking-[0.06em] uppercase px-3 border transition-colors disabled:opacity-50 ${ p.active ? 'border-clay-l text-clay-l' : 'border-mist text-faint' } rounded-full`}
                   >
                     {isBusy ? '…' : p.active ? 'Visível' : 'Oculto'}
                   </button>
@@ -197,14 +209,15 @@ export default function PainelProdutosPage() {
                     <>
                       <Link
                         href={`/painel/produtos/${p.id}`}
-                        className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors"
+                        className="inline-flex items-center min-h-9 px-1 text-[12px] font-semibold text-clay hover:text-clay-d transition-colors"
                       >
                         Editar
                       </Link>
                       <button
                         onClick={() => setConfirmDeleteId(p.id)}
                         disabled={isBusy}
-                        className="text-[11px] font-semibold text-red-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                        aria-label={`Apagar ${p.name}`}
+                        className="inline-flex items-center min-h-9 px-1 text-[12px] font-semibold text-red-500 hover:text-red-700 disabled:opacity-50 transition-colors"
                       >
                         Apagar
                       </button>

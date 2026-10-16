@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { collection, onSnapshot, doc, updateDoc, query as fsQuery, where, limit, getDocs, arrayUnion, increment, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, arrayUnion, increment, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { ReturnRequest, ReturnStatus } from '@/types';
@@ -9,6 +9,7 @@ import { expandStockLines } from '@/lib/orderStockLines';
 import { formatDateTime } from '@/lib/utils/format';
 import { IconExchange, IconCheck, IconX, IconBox } from '@/components/ui/Icon';
 import { staffActor } from '@/lib/staffActor';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
 
 const STATUS_LABEL: Record<ReturnStatus, string> = {
   solicitada: 'Solicitada', aprovada: 'Aprovada', recusada: 'Recusada', concluida: 'Concluída',
@@ -34,6 +35,7 @@ export default function TrocasPage() {
   const [filter, setFilter] = useState<ReturnStatus | 'todas'>('todas');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState('');
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'returns'), snap => {
@@ -41,7 +43,8 @@ export default function TrocasPage() {
       data.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
       setRequests(data);
       setLoading(false);
-    });
+      setLoadError(false);
+    }, () => { setLoading(false); setLoadError(true); });
     return unsub;
   }, []);
 
@@ -83,16 +86,20 @@ export default function TrocasPage() {
   async function concludeAndRestock(r: ReturnRequest, restock: boolean) {
     setBusyId(r.id);
     try {
-      let missing = 0;
-      if (restock) {
-        const batch = writeBatch(db);
-        const lines = expandStockLines(r.items);
-        for (const line of lines) {
-          const q = fsQuery(collection(db, 'inventory'), where('sku', '==', line.sku), limit(1));
-          const snap = await getDocs(q);
-          if (snap.empty) { missing++; continue; }
-          const invDoc = snap.docs[0];
-          batch.update(invDoc.ref, {
+      // Tudo numa transação que relê a troca: antes a reposição e o
+      // "concluída" eram duas escritas soltas, e dois toques (ou dois
+      // celulares) devolviam o estoque em dobro.
+      const missing = await runTransaction(db, async tx => {
+        const returnRef = doc(db, 'returns', r.id);
+        const current = await tx.get(returnRef);
+        if (!current.exists() || current.data().status === 'concluida') throw new Error('ALREADY_DONE');
+        let notFound = 0;
+        const lines = restock ? expandStockLines(r.items) : [];
+        const invRefs = lines.map(line => doc(db, 'inventory', line.sku));
+        const invSnaps = await Promise.all(invRefs.map(ref => tx.get(ref)));
+        lines.forEach((line, i) => {
+          if (!invSnaps[i].exists()) { notFound++; return; }
+          tx.update(invRefs[i], {
             quantity: increment(line.quantity),
             history: arrayUnion({
               type: 'in', quantity: line.quantity,
@@ -102,11 +109,9 @@ export default function TrocasPage() {
             }),
             updatedAt: serverTimestamp(),
           });
-        }
-        await batch.commit();
-      }
-      await updateDoc(doc(db, 'returns', r.id), {
-        status: 'concluida', restocked: restock, updatedAt: serverTimestamp(),
+        });
+        tx.update(returnRef, { status: 'concluida', restocked: restock, updatedAt: serverTimestamp() });
+        return notFound;
       });
       showToast(
         restock
@@ -114,8 +119,12 @@ export default function TrocasPage() {
           : 'Concluído (sem repor estoque).'
       );
     } catch (err) {
-      console.error('[trocas] falha ao concluir', err);
-      showToast('Não deu pra concluir agora.');
+      if (err instanceof Error && err.message === 'ALREADY_DONE') {
+        showToast('Essa troca já tinha sido concluída.');
+      } else {
+        console.error('[trocas] falha ao concluir', err);
+        showToast('Não deu pra concluir agora.');
+      }
     } finally {
       setBusyId(null);
     }
@@ -142,7 +151,9 @@ export default function TrocasPage() {
         ))}
       </div>
 
-      {loading ? (
+      {loadError ? (
+        <PanelErrorState onRetry={() => window.location.reload()} />
+      ) : loading ? (
         <p className="text-[13px] text-faint">Carregando…</p>
       ) : filtered.length === 0 ? (
         <div className="border border-mist bg-paper py-16 text-center rounded-xl">

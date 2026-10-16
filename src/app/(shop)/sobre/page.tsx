@@ -85,7 +85,7 @@ export default async function SobrePage() {
             <p className="page-label">Sobre nós</p>
             <h1 className="font-display font-normal leading-[1.02]">
               <em className="text-clay not-italic text-5xl sm:text-6xl lg:text-[5.5rem] block">{heroLine1}</em>
-              <span className="text-ink/35 text-3xl sm:text-4xl lg:text-[3.6rem] block mt-1">{heroLine2}</span>
+              <span className="text-ink/70 text-3xl sm:text-4xl lg:text-[3.6rem] block mt-1">{heroLine2}</span>
             </h1>
           </div>
         </div>

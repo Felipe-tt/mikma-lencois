@@ -35,13 +35,22 @@ export async function DELETE(req: NextRequest) {
     .where('status', '==', 'cancelled')
     .get();
 
-  if (snap.empty) {
+  // Só limpa os que nunca foram pagos e foram cancelados há mais de 30 dias.
+  // Cancelado depois de pago (estorno) é histórico financeiro e entra na
+  // auditoria de estoque; antes ia embora junto.
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const docs = snap.docs.filter(d => {
+    const data = d.data();
+    if ((data.payment as { paidAt?: unknown } | undefined)?.paidAt) return false;
+    const at = data.updatedAt?.toMillis?.() ?? Date.parse(data.updatedAt ?? data.createdAt ?? '');
+    return Number.isFinite(at) && at < cutoff;
+  });
+  if (docs.length === 0) {
     return NextResponse.json({ deleted: 0 });
   }
 
   // Firestore batch suporta até 500 operações por vez
   const BATCH_SIZE = 500;
-  const docs = snap.docs;
   let deleted = 0;
 
   for (let i = 0; i < docs.length; i += BATCH_SIZE) {
