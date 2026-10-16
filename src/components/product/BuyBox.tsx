@@ -382,7 +382,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       </div>
 
       {/* ── Barra fixa mobile, padrão universal de PDP de marketplace ── */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-paper border-t border-mist px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+      <div data-mobile-buybar className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-paper border-t border-mist px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         {cartError && (
           <p role="alert" className="absolute bottom-full inset-x-0 bg-red-50 border-t border-red-200 text-red-700 text-[12px] leading-snug px-4 py-2">
             {cartError}

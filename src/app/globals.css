@@ -883,3 +883,11 @@ html.dark .cookie-glass {
     backdrop-filter: none;
   }
 }
+
+/* Barra fixa de compra do celular (BuyBox): o rodapé ganha espaço embaixo
+   pra última linha não ficar escondida atrás dela. */
+@media (max-width: 639px) {
+  body:has([data-mobile-buybar]) footer {
+    padding-bottom: calc(69px + env(safe-area-inset-bottom));
+  }
+}
