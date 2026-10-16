@@ -3,6 +3,12 @@ import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 import { clientIpFromHeaders } from '@/lib/ip';
 import { maintenanceDocId, pathOnly, safeReferer, clip } from '@/lib/maintenanceQueue';
 
+// Firebase Emulator Suite em desenvolvimento local (ver lib/firebase/client.ts).
+const EMULATOR_CONNECT_SRC =
+  process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === '1'
+    ? ' http://127.0.0.1:9099 http://127.0.0.1:8080 ws://127.0.0.1:8080'
+    : '';
+
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
 
 // Fica atrás do Firebase Hosting. Manutenção precisa valer o quanto antes pra
@@ -126,7 +132,7 @@ function applySecurityHeaders(res: NextResponse): void {
     // script do reCAPTCHA faz uma chamada de rede pra /recaptcha/api2/clr,
     // sem isso ela quebrava silenciosamente por CSP (bug preexistente,
     // achado ao investigar por que o GA4 não carregava).
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://api.abacatepay.com https://viacep.com.br https://nominatim.openstreetmap.org https://www.thecolorapi.com https://tessdata.projectnaptha.com https://cdn.jsdelivr.net https://unpkg.com https://storage.googleapis.com https://*.ingest.us.sentry.io https://*.ingest.sentry.io https://www.google.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://api.pwnedpasswords.com",
+    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://api.abacatepay.com https://viacep.com.br https://nominatim.openstreetmap.org https://www.thecolorapi.com https://tessdata.projectnaptha.com https://cdn.jsdelivr.net https://unpkg.com https://storage.googleapis.com https://*.ingest.us.sentry.io https://*.ingest.sentry.io https://www.google.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://api.pwnedpasswords.com" + EMULATOR_CONNECT_SRC,
     "frame-src https://www.google.com https://recaptcha.google.com https://accounts.google.com https://*.firebaseapp.com https://*.web.app",
     "worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com",
     "object-src 'none'",
