@@ -244,7 +244,10 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
 
                 {/* QR Code */}
                 <div className="flex flex-col items-center gap-3">
-                  <div className="border-2 border-mist p-3 bg-white dark:bg-warm">
+                  {/* Fundo branco também no modo escuro: o QR do PIX é preto
+                      (às vezes com fundo transparente) e some num fundo escuro,
+                      o app do banco não consegue ler. */}
+                  <div className="border-2 border-mist p-3 bg-white">
                     {qrCode ? (
                       <img src={qrCode} alt="QR Code PIX" className="w-44 h-44 block" width={176} height={176}/>
                     ) : (

@@ -409,7 +409,7 @@ export default function OrderDetailPage() {
               Total: <span className="font-bold text-ink">{formatCurrency(order.totalCents)}</span>
             </p>
             {order.payment.pixQrCode && (
-              <img src={order.payment.pixQrCode} alt="QR Code PIX" className="w-44 h-44 border border-mist" />
+              <img src={order.payment.pixQrCode} alt="QR Code PIX" className="w-44 h-44 border border-mist bg-white p-2" />
             )}
             <div className="w-full flex gap-2">
               <input readOnly value={order.payment.pixCopyPaste}
