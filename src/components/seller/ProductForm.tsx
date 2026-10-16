@@ -615,7 +615,10 @@ export default function ProductForm({ initial }: Props) {
         // tecidos. Promise.all despacha todas as escritas de uma vez.
         await Promise.all([
           updateDoc(doc(db, 'products', productId), data),
-          ...orphanedSkus.map(sku => deleteDoc(doc(db, 'inventory', sku)).catch(() => {})),
+          ...orphanedSkus.map(sku => deleteDoc(doc(db, 'inventory', sku)).catch(err => {
+            // Falha esperada só quando o SKU tem reserva de pedido pendente.
+            console.warn('[ProductForm] não foi possível apagar o estoque da variação removida', sku, err);
+          })),
           ...rows
             .map(r => ({ variantId: makeVariantId(size, r.fabric), r }))
             .filter(({ variantId }) => !existingSkus[`${productId}_${variantId}`])

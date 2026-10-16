@@ -414,3 +414,29 @@ describe('maintenance_queue: leitura por ID, listagem só da equipe, criação r
     await assertSucceeds(deleteDoc(ref));
   });
 });
+
+describe('inventory/{sku} delete', () => {
+  it('seller apaga SKU sem reserva (variação removida do produto)', async () => {
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'inventory/p1_v1'), { productId: 'p1', quantity: 2, reserved: 0, history: [] });
+    });
+    await assertSucceeds(deleteDoc(doc(seller.firestore(), 'inventory/p1_v1')));
+  });
+
+  it('seller não apaga SKU com reserva de pedido pendente', async () => {
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'inventory/p1_v1'), { productId: 'p1', quantity: 2, reserved: 1, history: [] });
+    });
+    await assertFails(deleteDoc(doc(seller.firestore(), 'inventory/p1_v1')));
+  });
+
+  it('comprador não apaga SKU', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'inventory/p1_v1'), { productId: 'p1', quantity: 2, reserved: 0, history: [] });
+    });
+    await assertFails(deleteDoc(doc(buyer.firestore(), 'inventory/p1_v1')));
+  });
+});

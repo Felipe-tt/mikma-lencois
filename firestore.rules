@@ -75,7 +75,11 @@ service cloud.firestore {
         && request.resource.data.reserved == resource.data.reserved
         && request.resource.data.history.size() >= resource.data.history.size();
       allow create: if isSellerOrAdmin();
-      allow delete: if false;
+      // Variação removida do produto (ProductForm): o painel apaga o SKU.
+      // Antes era 'if false' e o deleteDoc falhava em silêncio, deixando o
+      // estoque "fantasma" contando na página do produto e no painel. Só
+      // sem reserva ativa, pra não quebrar pedido aguardando pagamento.
+      allow delete: if isSellerOrAdmin() && resource.data.get('reserved', 0) == 0;
     }
 
     // ── Carts ────────────────────────────────────────────────────────────────
