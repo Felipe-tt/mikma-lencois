@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconMoney, IconBox, IconReceipt, IconTrophy, IconTruck, IconReports, IconAlert } from '@/components/ui/Icon';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { carrierName, type CarrierKey } from '@/lib/carriers';
+import { carrierNameVendor, type CarrierKey } from '@/lib/carriers';
 import type { Order } from '@/types';
 
 type Period = '7d' | '30d' | '90d';
@@ -75,7 +75,7 @@ export default function RelatoriosPage() {
         // carrierName traduz a chave interna (uber_direct, correios_pac)
         // pro nome que a pessoa reconhece.
         const key = order.delivery?.carrier;
-        const name = key ? carrierName(key as CarrierKey) : 'Não informado';
+        const name = key ? carrierNameVendor(key as CarrierKey) : 'Não informado';
         carrierMap[name] = (carrierMap[name] ?? 0) + 1;
       }
 
