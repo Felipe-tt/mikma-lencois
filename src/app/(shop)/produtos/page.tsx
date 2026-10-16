@@ -87,7 +87,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
               <div className="hidden sm:block">
                 <SortSelect current={ordem} />
               </div>
-              <div className="lg:hidden">
+              <div className="hidden sm:block lg:hidden">
                 <MobileFilterSheet categories={catNames} active={categoria} />
               </div>
             </div>
@@ -128,8 +128,10 @@ export default async function ProdutosPage({ searchParams }: Props) {
           {/* Grid */}
           <div className="flex-1 min-w-0">
             {/* Mobile sort */}
-            <div className="flex items-center justify-between mb-4 sm:hidden">
-              <span className="text-[12px] text-faint">{products.length} produtos</span>
+            {/* Celular: filtro e ordenação na mesma linha (o total já aparece
+                no título, não repete aqui). */}
+            <div className="flex items-center justify-between gap-3 mb-4 sm:hidden">
+              <MobileFilterSheet categories={catNames} active={categoria} />
               <SortSelect current={ordem} />
             </div>
 
