@@ -12,6 +12,7 @@ import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { BrandLogo } from '@/components/BrandLogo';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
+import { useOverlay } from '@/lib/hooks/useOverlay';
 
 type SignupStep = 'form' | 'awaiting';
 type ForgotStep = 'email' | 'sent';
@@ -45,23 +46,19 @@ export function AuthModal() {
   const [forgotResent, setForgotResent] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
+  const { mounted, state } = useOverlay({ open: isOpen, onClose: close, panelRef: dialogRef });
 
-  // Reseta o formulário sempre que o modal fecha, pra não reabrir com lixo do uso anterior.
+  // Reseta o formulário depois que o modal some (não durante a saída,
+  // senão o conteúdo troca enquanto ele ainda está na tela), pra não
+  // reabrir com lixo do uso anterior.
   useEffect(() => {
-    if (!isOpen) {
+    if (!mounted) {
       setEmail(''); setPassword(''); setLoginError('');
       setAwaitingChallenge(false); setChallengeExpired(false);
       setName(''); setSignupEmail(''); setSignupStep('form'); setSignupError(''); setSignupFieldErrors({});
       setForgotEmail(''); setForgotStep('email'); setForgotResent(false);
     }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [isOpen, close]);
+  }, [mounted]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -120,7 +117,7 @@ export function AuthModal() {
   // useEffect do poll, e abrir o modal mudava a quantidade de hooks entre
   // renders (React quebra com "Rendered more hooks than during the
   // previous render").
-  if (!isOpen) return null;
+  if (!mounted) return null;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -239,14 +236,20 @@ export function AuthModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="overlay-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4"
+      data-state={state}
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
-      role="dialog"
-      aria-modal="true"
     >
-      <div className="absolute inset-0 bg-[rgba(30,18,8,0.6)] backdrop-blur-sm" />
-      <div ref={dialogRef} className="relative w-full max-w-[420px] bg-paper shadow-2xl p-7 sm:p-9 max-h-[90vh] overflow-y-auto">
-        <button onClick={close} aria-label="Fechar" className="absolute top-4 right-4 text-mist hover:text-mid transition-colors">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={mode === 'login' ? 'Entrar na sua conta' : mode === 'signup' ? 'Criar conta' : 'Recuperar senha'}
+        data-variant="dialog"
+        className="overlay-panel relative w-full max-w-[420px] bg-paper shadow-2xl p-7 sm:p-9 max-h-[90dvh] overflow-y-auto overscroll-contain"
+      >
+        <button type="button" onClick={close} aria-label="Fechar" className="absolute top-3 right-3 w-9 h-9 flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>

@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase/client';
 import { trackPurchase } from '@/lib/analytics';
 import { copyText } from '@/lib/clipboard';
 import { requestNewPix } from '@/lib/orders/requestNewPix';
+import { useOverlay, OVERLAY_EXIT_MS } from '@/lib/hooks/useOverlay';
 
 interface Props {
   qrCode: string;
@@ -74,8 +75,17 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
   const [copyFailed, setCopyFailed] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regenError, setRegenError] = useState('');
-  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(true);
   const copyInputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Quem renderiza o modal o desmonta ao chamar onClose; espera a saída
+  // terminar antes de avisar, senão ele some de uma vez.
+  const requestClose = () => {
+    if (!open) return;
+    setOpen(false);
+    setTimeout(onClose, OVERLAY_EXIT_MS);
+  };
+  const { mounted, state } = useOverlay({ open, onClose: requestClose, panelRef });
   const secondsLeft = useCountdown(expiresAt);
   const paymentStatus = usePaymentStatus(orderId, totalCents);
   const expired = secondsLeft === 0 || paymentStatus === 'expired';
@@ -83,14 +93,6 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
   const failed = paymentStatus === 'failed';
 
   const total = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCents / 100);
-
-  useEffect(() => {
-    setMounted(true);
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey); };
-  }, [onClose]);
 
   async function copy() {
     const ok = await copyText(copyPaste);
@@ -135,12 +137,18 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-[rgba(30,18,8,0.7)] backdrop-blur-sm p-0 sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="pix-modal-title"
+      className="overlay-backdrop fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      data-state={state}
     >
-      <div className="w-full sm:max-w-md bg-paper shadow-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh] overflow-hidden sm:rounded-sm">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pix-modal-title"
+        data-variant="responsive"
+        className="overlay-panel w-full sm:max-w-md bg-paper shadow-2xl flex flex-col max-h-[95dvh] sm:max-h-[90vh] overflow-hidden pb-[env(safe-area-inset-bottom)] sm:pb-0"
+      >
 
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-5 border-b border-mist shrink-0">
@@ -269,8 +277,10 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
                       aria-label="Código PIX copia e cola"
                     />
                     <button
+                      type="button"
                       onClick={copy}
-                      className={`shrink-0 px-4 py-2.5 text-xs font-bold tracking-[0.08em] uppercase transition-colors ${
+                      aria-live="polite"
+                      className={`shrink-0 px-4 py-2.5 text-xs font-bold tracking-[0.08em] uppercase active:scale-[0.97] transition-[background-color,transform] duration-150 ${
                         copied ? 'bg-emerald-600 text-paper' : 'bg-ink text-paper hover:bg-clay'
                       }`}
                     >
@@ -323,8 +333,9 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
         {/* ── Footer ── */}
         <div className="border-t border-mist px-6 py-4 shrink-0 flex items-center justify-between gap-3">
           <button
-            onClick={onClose}
-            className="text-sm font-medium text-faint hover:text-ink transition-colors"
+            type="button"
+            onClick={requestClose}
+            className="text-sm font-medium text-mid hover:text-ink transition-colors"
           >
             {confirmed ? 'Ver meus pedidos' : 'Fechar'}
           </button>

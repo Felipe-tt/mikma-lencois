@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { PainelSidebar, TABBAR_NAV } from './PainelSidebar';
 import { NotificationBell } from './NotificationBell';
 import { IconSettings } from '@/components/ui/Icon';
+import { useOverlayBehavior } from '@/lib/hooks/useOverlay';
 
 // Distância mínima (px) pro gesto contar como swipe intencional, e não
 // um toque acidental ou scroll vertical.
@@ -17,12 +18,12 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setOpen(false); }, [pathname]);
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  // Drawer fica sempre montado (desliza com transform); aqui só trava o
+  // scroll, fecha com Esc e prende o foco enquanto está aberto.
+  useOverlayBehavior({ active: open, onClose: () => setOpen(false), panelRef: drawerRef });
 
   // Gesto de swipe pra abrir/fechar o menu no mobile. Aberto: swipe pra
   // qualquer lugar do drawer fecha ao arrastar pra esquerda. Fechado:
@@ -71,18 +72,26 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
       </div>
 
       {/* Overlay mobile */}
-      {open && (
-        <div
-          data-no-print
-          className="fixed inset-0 z-40 bg-[rgba(30,18,8,0.5)] backdrop-blur-sm lg:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      <div
+        data-no-print
+        aria-hidden
+        data-state={open ? 'open' : 'closed'}
+        className={`overlay-backdrop fixed inset-0 z-40 lg:hidden ${open ? '' : 'pointer-events-none'}`}
+        onClick={() => setOpen(false)}
+      />
 
       {/* Drawer mobile */}
       <div
+        ref={drawerRef}
         data-no-print
-        className={`fixed top-0 left-0 z-50 h-full lg:hidden transition-transform duration-300 ease-out shadow-modal rounded-r-3xl overflow-hidden ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal={open}
+        aria-label="Menu do painel"
+        inert={!open}
+        data-variant="drawer-left"
+        data-state={open ? 'open' : 'closed'}
+        className="overlay-panel fixed top-0 left-0 z-50 h-full lg:hidden shadow-modal rounded-r-3xl overflow-hidden"
       >
         <PainelSidebar onClose={() => setOpen(false)} />
       </div>
@@ -92,9 +101,11 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
         {/* Mobile topbar — vidro fosco, gruda no topo */}
         <div data-no-print className="panel-topbar lg:hidden flex items-center gap-3 px-4 h-14">
           <button
+            type="button"
             onClick={() => setOpen(true)}
-            className="p-2 -ml-2 text-mid hover:text-ink hover:bg-warm transition-colors rounded-xl"
+            className="p-2 -ml-2 text-mid hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150 rounded-xl"
             aria-label="Abrir menu"
+            aria-expanded={open}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M3 6h18M3 12h18M3 18h18"/>
