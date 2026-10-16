@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { adminCancelSchema } from './schema';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
+import { uberCancelDelivery } from '@/lib/uber-direct';
 
 
 // Statuses que ainda não tiveram o estoque debitado (só reservado)
@@ -63,6 +64,7 @@ export async function POST(
   // e um pagamento confirmado pelo webhook no meio fazia o estoque ser
   // tratado como "só reservado" num pedido que já tinha debitado quantity.
   let unpaidCouponCode: string | undefined;
+  let uberToCancel: { id: string; sandbox: boolean } | null = null;
   try {
     await adminDb.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
@@ -78,6 +80,14 @@ export async function POST(
       const mode = PENDING_STATUSES.has(order.status)
         ? 'release'
         : NO_STOCK_STATUSES.has(order.status) ? 'none' : 'restock';
+
+      // Corrida da Uber em andamento: cancela depois do commit. Sem isso o
+      // motoboy seguia com o pacote de um pedido já cancelado e o estoque
+      // já devolvido.
+      const uberId = order.delivery?.uberDirectDeliveryId as string | undefined;
+      uberToCancel = order.status === 'shipped' && uberId
+        ? { id: uberId, sandbox: !!order.delivery?.uberSandbox }
+        : null;
 
       // Pedido que nunca foi pago devolve o uso do cupom (fora da transação).
       unpaidCouponCode = mode === 'restock' ? undefined : (order.couponCode as string | undefined);
@@ -112,5 +122,26 @@ export async function POST(
 
   await releaseCouponUse(unpaidCouponCode);
 
-  return NextResponse.json({ ok: true });
+  // Melhor esforço: o pedido já está cancelado. Se a Uber recusar (motoboy
+  // já entregou, corrida já encerrada...), fica registrado na timeline pra
+  // o lojista resolver pelo app da Uber.
+  let uberCancelFailed = false;
+  if (uberToCancel) {
+    const { id, sandbox } = uberToCancel;
+    try {
+      await uberCancelDelivery(id, 'other', reason.slice(0, 200), sandbox);
+    } catch (err) {
+      uberCancelFailed = true;
+      console.error('[admin-cancel] uberCancelDelivery falhou:', err);
+      await ref.update({
+        timeline: FieldValue.arrayUnion({
+          status: 'cancelled',
+          at: new Date().toISOString(),
+          note: 'Não foi possível cancelar a corrida na Uber automaticamente. Cancele pelo app da Uber.',
+        }),
+      }).catch(() => {});
+    }
+  }
+
+  return NextResponse.json({ ok: true, ...(uberCancelFailed ? { uberCancelFailed: true } : {}) });
 }

@@ -490,6 +490,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       const data = await res.json();
       if (!res.ok) { setCancelOrderError(data.error ?? 'Erro ao cancelar pedido'); return; }
       setOrder(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+      if (data.uberCancelFailed) {
+        setCancelOrderError('Pedido cancelado, mas a corrida na Uber não pôde ser cancelada automaticamente. Cancele pelo app da Uber.');
+      }
     } catch {
       setCancelOrderError('Erro de conexão. Tente novamente.');
     } finally {
@@ -916,7 +919,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             </div>
           )}
 
-          {order.status === 'pending_payment' && !order.payment.abacateSandbox && (
+          {(order.status === 'pending_payment' || order.status === 'payment_expired') && !order.payment.abacateSandbox && (
             <div className="pt-3 border-t border-warm mt-1">
               <p className="text-[11px] text-faint mb-2 leading-relaxed">
                 Cliente pagou por fora (dinheiro, transferência, outra plataforma)? Confirme manualmente, sem esperar o PIX/cartão.
@@ -1081,11 +1084,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         )}
 
         {/* ── Cancelar pedido (lojista) ── */}
+        {/* Fora do bloco do botão: o aviso de "corrida da Uber não cancelada"
+            aparece depois que o pedido já virou cancelado. */}
+        {cancelOrderError && (
+          <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{cancelOrderError}</p>
+        )}
         {order.status !== 'cancelled' && order.status !== 'delivered' && (
           <div className="flex flex-col gap-2">
-            {cancelOrderError && (
-              <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{cancelOrderError}</p>
-            )}
             <button onClick={handleCancelOrder} disabled={cancellingOrder}
               className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-xl">
               {cancellingOrder ? 'Cancelando…' : 'Cancelar este pedido'}

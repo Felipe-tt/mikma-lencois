@@ -49,7 +49,13 @@ export async function confirmOrderPaid(
       const orderSnap = await tx.get(orderRef);
       if (!orderSnap.exists) return null;
       const data = orderSnap.data()!;
-      if (data.status !== 'pending_payment') return null;
+      // Confirmação MANUAL também aceita PIX expirado: o cliente pode ter
+      // pagado por fora (transferência, dinheiro) depois que o PIX venceu.
+      // Nesse caso a reserva já foi liberada na expiração, então só debita
+      // a quantidade (sem mexer em reserved). O webhook continua exigindo
+      // pending_payment.
+      const wasExpired = data.status === 'payment_expired';
+      if (data.status !== 'pending_payment' && !(manual && wasExpired)) return null;
 
       // Defesa em profundidade: o evento é assinado, mas se o txId diferir do
       // registrado no pedido (ex.: cliente pagou um QR antigo depois de gerar
@@ -95,7 +101,7 @@ export async function confirmOrderPaid(
         }
         tx.update(invRefs[i], {
           quantity: FieldValue.increment(-line.quantity),
-          reserved: FieldValue.increment(-line.quantity),
+          ...(wasExpired ? {} : { reserved: FieldValue.increment(-line.quantity) }),
           updatedAt: FieldValue.serverTimestamp(),
         });
       });
