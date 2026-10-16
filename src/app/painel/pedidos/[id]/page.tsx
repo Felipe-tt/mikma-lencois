@@ -251,7 +251,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok || cancelled) return;
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!cancelled) setFraudSignals(data.signals ?? []);
       } catch {
         // Falha silenciosa: é um alerta a mais, não algo crítico pro fluxo do pedido
@@ -283,7 +283,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setSimulatePaymentError(data.error ?? 'Não foi possível simular o pagamento.');
         return;
@@ -329,7 +329,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ note: note.trim() }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setMarkPaidError(data.error ?? 'Não foi possível confirmar o pagamento.');
         return;
@@ -374,6 +374,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           alertOnly: true,
         });
       }
+    } catch {
+      await confirmDialog({ message: 'Sem conexão. O status não foi alterado, tente de novo.', alertOnly: true });
     } finally { setUpdating(false); }
   }
 
@@ -389,7 +391,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ orderId: order.id, carrier, ...(forceOverspend ? { forceOverspend: true } : {}) }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         // Uber Direct: custo recotado no despacho ficou acima da margem
         // tolerada, o backend bloqueou de propósito. Pergunta ao vendedor
@@ -452,7 +454,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ orderId: order.id, reason: (reason ?? '').trim() }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setCancelDeliveryError(data.error || 'Não foi possível cancelar a entrega.');
         return;
@@ -487,7 +489,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ reason: (reason ?? '').trim() || 'Cancelado pelo lojista' }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) { setCancelOrderError(data.error ?? 'Erro ao cancelar pedido'); return; }
       setOrder(prev => prev ? { ...prev, status: 'cancelled' } : prev);
       if (data.uberCancelFailed) {

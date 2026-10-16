@@ -186,8 +186,20 @@ function RegisterContent() {
   // ── Step 3: cria conta ───────────────────────────────────────────────────
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setError('');
-    const passRes = await checkPassword(password, { email });
+    // Desabilita o botão já durante a checagem da senha (carrega o zxcvbn e
+    // consulta o HIBP pela rede): antes um duplo clique nesse intervalo
+    // mandava dois cadastros e um deles voltava "e-mail já cadastrado".
+    setLoading(true);
+    let passRes: Awaited<ReturnType<typeof checkPassword>>;
+    try {
+      passRes = await checkPassword(password, { email });
+    } catch {
+      setLoading(false);
+      setError('Não foi possível verificar a senha agora. Tente de novo.');
+      return;
+    }
     const phoneRes = validatePhone(phone);
     const cpfRes = validateCpf(cpf);
     const errs: Record<string, string> = {};
@@ -202,10 +214,10 @@ function RegisterContent() {
         const el = document.getElementById('optional-data') as HTMLDetailsElement | null;
         if (el) el.open = true;
       }
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
     try {
       const recaptchaToken = await getRecaptchaToken('register');
       const res = await fetch('/api/auth/register', {

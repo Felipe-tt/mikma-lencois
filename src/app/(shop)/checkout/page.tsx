@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/Select';
 import type { ShippingOption } from '@/lib/shipping-pricing';
 import Image from 'next/image';
 import { trackBeginCheckout } from '@/lib/analytics';
+import { computePixTotalCents, computeCardTotalCents, installmentFeeRate } from '@/lib/orderPricing';
 
 interface CustomerData { name: string; cpf: string; phone: string; email: string }
 
@@ -163,6 +164,7 @@ export default function CheckoutPage() {
   const router = useRouter();
 
   const [cart, setCart]       = useState<Cart | null>(null);
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
   const beginCheckoutTracked = useRef(false);
   const [cartLoading, setCL]  = useState(true);
   const [step, setStep]       = useState<1 | 2 | 3>(1); // 1=dados, 2=endereço, 3=entrega
@@ -371,14 +373,38 @@ export default function CheckoutPage() {
   const shipCents   = selectedShipping?.priceCents ?? 0;
   const PIX_DISCOUNT_THRESHOLD = pixThresholdCents;
   const pixDiscount  = pixThresholdCents > 0 && subtotal >= PIX_DISCOUNT_THRESHOLD ? Math.round(subtotal * (pixDiscountPct / 100)) : 0;
-  const pixTotal     = subtotal - pixDiscount + shipCents;
-  // Crédito: sem desconto, com possibilidade de juros (embutidos no backend)
-  const creditTotal  = subtotal + shipCents;
+  // Mesmas funções que o servidor usa pra cobrar (lib/orderPricing): antes
+  // esta tela ignorava o cupom do carrinho e os juros do parcelamento, e o
+  // valor cobrado saía diferente do mostrado.
+  const couponDiscount = couponApplied && couponApplied.code === (cart?.couponCode ?? null) ? couponApplied.discount : 0;
+  const pixTotal     = computePixTotalCents({ productsCents: subtotal, pixDiscountCents: pixDiscount, couponDiscountCents: couponDiscount, shippingCents: shipCents });
+  const cardTotalFor = (n: number) => computeCardTotalCents({ productsCents: subtotal, couponDiscountCents: couponDiscount, shippingCents: shipCents, feeRate: installmentFeeRate(n) });
+  const creditBase   = cardTotalFor(1);
+  const creditTotal  = cardTotalFor(installments);
+  const creditFees   = creditTotal - creditBase;
   const total        = payMethod === 'pix' ? pixTotal : creditTotal;
   const totalItems   = items.reduce((s, i) => s + i.quantity, 0);
   // Parcelamento: mín R$100/parcela, máx 8x
-  const maxInstall   = Math.min(8, Math.floor(creditTotal / 10000));
+  const maxInstall   = Math.min(8, Math.floor(creditBase / 10000));
   const installVal   = Math.round(creditTotal / installments);
+
+  // Cupom aplicado no carrinho: revalida com o mesmo endpoint do carrinho
+  // (e a mesma regra das rotas de pagamento) pra mostrar o desconto real.
+  const cartCoupon = cart?.couponCode ?? null;
+  useEffect(() => {
+    if (!user || !cartCoupon || subtotal <= 0) return;
+    let cancelled = false;
+    user.getIdToken().then(token => fetch('/api/checkout/validate-coupon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code: cartCoupon, orderCents: subtotal }),
+    })).then(async res => {
+      if (cancelled) return;
+      const data = await res.json().catch(() => ({}));
+      setCouponApplied(res.ok ? { code: cartCoupon, discount: data.discountCents ?? 0 } : null);
+    }).catch(() => { if (!cancelled) setCouponApplied(null); });
+    return () => { cancelled = true; };
+  }, [user, cartCoupon, subtotal]);
 
   if (loading || cartLoading) return <CheckoutSkeleton />;
   if (pixData) return (
@@ -651,7 +677,7 @@ export default function CheckoutPage() {
                     </button>
 
                     {/* Crédito */}
-                    {creditTotal >= 10000 && (
+                    {creditBase >= 10000 && (
                       <div className={`transition-colors ${payMethod === 'credit' ? 'bg-warm' : ''}`}>
                       <button type="button" role="radio" aria-checked={payMethod === 'credit'} onClick={() => setPayMethod('credit')}
                         className={`flex flex-col w-full px-4 py-4 text-left transition-colors ${payMethod === 'credit' ? '' : 'hover:bg-paper'}`}>
@@ -666,7 +692,7 @@ export default function CheckoutPage() {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-bold text-ink">Cartão de crédito</p>
-                            <p className="text-xs text-faint mt-0.5">Qualquer bandeira · até {Math.min(8, Math.floor(creditTotal / 10000))}x</p>
+                            <p className="text-xs text-faint mt-0.5">Qualquer bandeira · até {maxInstall}x</p>
                           </div>
                         </div>
                       </button>
@@ -677,7 +703,8 @@ export default function CheckoutPage() {
                             <p id="installments-label" className="text-[11px] font-semibold text-mid mb-2">Em quantas vezes?</p>
                             <div role="radiogroup" aria-labelledby="installments-label" className="flex flex-wrap gap-2">
                               {Array.from({ length: maxInstall }, (_, i) => i + 1).map(n => {
-                                const val = Math.round(creditTotal / n);
+                                const val = Math.round(cardTotalFor(n) / n);
+                                const noFee = installmentFeeRate(n) === 0;
                                 return (
                                   <button key={n} type="button" role="radio" aria-checked={installments === n}
                                     onClick={() => setInstall(n)}
@@ -688,7 +715,9 @@ export default function CheckoutPage() {
                                     }`}
                                   >
                                     {n}x {formatCurrency(val)}
-                                    {n === 1 && <span className="ml-1 text-[9px] opacity-60">à vista</span>}
+                                    {n === 1
+                                      ? <span className="ml-1 text-[9px] opacity-60">à vista</span>
+                                      : noFee && <span className="ml-1 text-[9px] opacity-60">sem juros</span>}
                                   </button>
                                 );
                               })}
@@ -709,6 +738,16 @@ export default function CheckoutPage() {
                     {pixDiscount > 0 && payMethod === 'pix' && (
                       <div className="flex justify-between text-emerald-600 font-medium">
                         <span>Desconto PIX ({pixDiscountPct}%)</span><span>-{formatCurrency(pixDiscount)}</span>
+                      </div>
+                    )}
+                    {couponDiscount > 0 && (
+                      <div className="flex justify-between text-emerald-600 font-medium">
+                        <span>Cupom {couponApplied?.code}</span><span>-{formatCurrency(couponDiscount)}</span>
+                      </div>
+                    )}
+                    {payMethod === 'credit' && creditFees > 0 && (
+                      <div className="flex justify-between text-mid">
+                        <span>Juros ({installments}x)</span><span>+{formatCurrency(creditFees)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-mid">
@@ -804,6 +843,16 @@ export default function CheckoutPage() {
                 {pixDiscount > 0 && payMethod === 'pix' && (
                   <div className="flex justify-between text-sm text-emerald-600 font-medium">
                     <span>Desconto PIX ({pixDiscountPct}%)</span><span>-{formatCurrency(pixDiscount)}</span>
+                  </div>
+                )}
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-emerald-600 font-medium">
+                    <span>Cupom {couponApplied?.code}</span><span>-{formatCurrency(couponDiscount)}</span>
+                  </div>
+                )}
+                {payMethod === 'credit' && creditFees > 0 && (
+                  <div className="flex justify-between text-sm text-mid">
+                    <span>Juros ({installments}x)</span><span>+{formatCurrency(creditFees)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">

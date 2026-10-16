@@ -16,7 +16,7 @@ import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
-import { computeProductsCents, validateCoupon, computeCardTotalCents } from '@/lib/orderPricing';
+import { computeProductsCents, validateCoupon, computeCardTotalCents, installmentFeeRate } from '@/lib/orderPricing';
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 import { createCheckoutSchema } from './schema';
@@ -29,22 +29,6 @@ function abacatePayKey(sandbox: boolean): string {
   return (sandbox ? process.env.ABACATEPAY_SANDBOX_API_KEY : process.env.ABACATEPAY_API_KEY) ?? '';
 }
 
-// Tabela de parcelamento: juros a partir de X parcelas
-// Ajuste conforme as taxas que você paga à AbacatePay/adquirente
-const INSTALLMENT_FEES: Record<number, number> = {
-  1: 0,
-  2: 0,
-  3: 0,
-  4: 0.0199,
-  5: 0.0249,
-  6: 0.0299,
-  7: 0.0349,
-  8: 0.0399,
-  9: 0.0449,
-  10: 0.0499,
-  11: 0.0549,
-  12: 0.0599,
-};
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -229,7 +213,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Aplica juros de parcelamento (se houver) ──────────────────────────────
-    const feeRate = INSTALLMENT_FEES[parsedInstallments] ?? 0;
+    const feeRate = installmentFeeRate(parsedInstallments);
     const totalCents = computeCardTotalCents({ productsCents, couponDiscountCents, shippingCents, feeRate });
     const installmentCents = Math.round(totalCents / parsedInstallments);
 

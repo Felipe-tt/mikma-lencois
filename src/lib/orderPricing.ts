@@ -85,3 +85,27 @@ export function computeCardTotalCents(args: {
   const { productsCents, couponDiscountCents, shippingCents, feeRate } = args;
   return Math.max(0, Math.round((productsCents - couponDiscountCents + shippingCents) * (1 + feeRate)));
 }
+
+/**
+ * Juros do parcelamento no cartão, por número de parcelas. Usado no servidor
+ * (valor cobrado) e no checkout (valor mostrado): antes a tabela vivia só na
+ * rota de pagamento e o checkout mostrava "6x de R$ X" sem os juros.
+ */
+export const INSTALLMENT_FEES: Readonly<Record<number, number>> = {
+  1: 0,
+  2: 0,
+  3: 0,
+  4: 0.0199,
+  5: 0.0249,
+  6: 0.0299,
+  7: 0.0349,
+  8: 0.0399,
+  9: 0.0449,
+  10: 0.0499,
+  11: 0.0549,
+  12: 0.0599,
+};
+
+export function installmentFeeRate(installments: number): number {
+  return INSTALLMENT_FEES[installments] ?? 0;
+}

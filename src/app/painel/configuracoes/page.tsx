@@ -861,9 +861,19 @@ function TeamPanel() {
   async function handleRemove(uid: string) {
     if (!confirm('Remover o acesso dessa pessoa ao painel?')) return;
     setBusy(true);
+    setError('');
     try {
-      await authFetch('/api/painel/team', { method: 'DELETE', body: JSON.stringify({ uid }) });
+      const res = await authFetch('/api/painel/team', { method: 'DELETE', body: JSON.stringify({ uid }) });
+      // Antes ignorava a resposta: "não pode remover o próprio acesso" ou
+      // pessoa não encontrada não mostravam nada.
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? 'Não foi possível remover. Tente de novo.');
+        return;
+      }
       await load();
+    } catch {
+      setError('Erro de conexão. Tente de novo.');
     } finally {
       setBusy(false);
     }

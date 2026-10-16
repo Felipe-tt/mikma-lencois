@@ -178,17 +178,30 @@ export default function PainelPedidos() {
 
   // Só Uber Direct e retirada despacham por aqui; Correios/Jadlog precisam
   // do código de rastreio, que é informado no detalhe do pedido.
-  async function dispatch(orderId: string) {
+  async function dispatch(orderId: string, forceOverspend = false) {
     setDispatching(orderId);
     try {
       const token = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/delivery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({ orderId, ...(forceOverspend ? { forceOverspend: true } : {}) }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        // Mesmo tratamento do detalhe do pedido: a Uber recotou acima da
+        // margem e o servidor pede confirmação. Antes aparecia o código cru
+        // "overspend_confirmation_required" e não dava pra confirmar.
+        if (err.error === 'overspend_confirmation_required') {
+          const { confirmed } = await confirmDialog({
+            message: 'Custo da Uber Direct acima do frete cobrado',
+            detail: err.message,
+            confirmLabel: 'Despachar mesmo assim',
+            variant: 'danger',
+          });
+          if (confirmed) { setDispatching(null); return dispatch(orderId, true); }
+          return;
+        }
         await confirmDialog({ message: err.error ?? 'Não deu pra despachar. Abra o pedido pra ver os detalhes.', alertOnly: true });
       }
     } catch {
