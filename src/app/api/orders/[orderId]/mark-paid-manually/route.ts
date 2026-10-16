@@ -19,7 +19,8 @@ const bodySchema = z.object({
  * Confirma manualmente que um pedido foi pago por fora da AbacatePay:
  * dinheiro na entrega/retirada, transferência direta, outra plataforma,
  * combinado por WhatsApp, etc. Só seller/admin, e só em pedidos ainda
- * 'pending_payment' — nunca sobrescreve um pedido que já foi confirmado
+ * 'pending_payment' ou com o PIX expirado (pago por fora depois de vencer)
+ * — nunca sobrescreve um pedido que já foi confirmado
  * (nem por webhook real, nem por outra confirmação manual).
  *
  * Passa pelo MESMO caminho de código do webhook real (confirmOrderPaid):
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   if (!snap.exists) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
   const order = snap.data()!;
 
-  if (order.status !== 'pending_payment') {
+  if (order.status !== 'pending_payment' && order.status !== 'payment_expired') {
     return NextResponse.json({ error: 'Pedido não está mais aguardando pagamento.' }, { status: 400 });
   }
 
