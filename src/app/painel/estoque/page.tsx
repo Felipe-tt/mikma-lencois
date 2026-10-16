@@ -110,6 +110,10 @@ export default function EstoquePage() {
     })
     .filter(i => !onlyLow || isLow(i));
   const lowCount = items.filter(isLow).length;
+  const lowItems = items.filter(isLow);
+  const lowProductNames = Array.from(new Set(lowItems.map(i => i.productName || i.productId)));
+  const lowNames = lowProductNames.slice(0, 2).join(', ')
+    + (lowProductNames.length > 2 ? ` e mais ${lowProductNames.length - 2}` : '');
 
   // Agrupa por produto (uma linha de várias variações fica muito mais fácil de escanear assim)
   const groups = useMemo(() => {
@@ -365,6 +369,25 @@ export default function EstoquePage() {
         </div>
       </div>
 
+      {/* Aviso de estoque baixo ANTES da grade, com os nomes e um atalho pra
+          lista filtrada: antes ficava no fim da página dizendo "destacados em
+          amarelo abaixo", mas a grade de fotos não destaca nada. */}
+      {mode === 'dia' && lowCount > 0 && (
+        <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex items-start sm:items-center gap-3 rounded-xl">
+          <IconAlert size={18} className="text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+          <p className="text-[13px] text-amber-800 flex-1 min-w-0">
+            <strong>{lowCount} {lowCount === 1 ? 'item está' : 'itens estão'} quase acabando:</strong>
+            {' '}{lowNames}
+          </p>
+          {!(subview === 'lista' && onlyLow) && (
+            <button type="button" onClick={() => { setSubview('lista'); setOnlyLow(true); }}
+              className="shrink-0 text-[12px] font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900 transition-colors">
+              Ver
+            </button>
+          )}
+        </div>
+      )}
+
       {mode === 'dia' && subview === 'grade' && (
         <NovaVendaSheet
           embedded
@@ -375,15 +398,6 @@ export default function EstoquePage() {
 
       {mode === 'dia' && <InventoryAuditPanel />}
 
-      {mode === 'dia' && lowCount > 0 && (
-        <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex items-center gap-3 rounded-xl">
-          <IconAlert size={18} className="text-amber-600 shrink-0" />
-          <p className="text-[13px] text-amber-800">
-            <strong>{lowCount} {lowCount === 1 ? 'produto está' : 'produtos estão'} quase acabando!</strong>
-            {' '}Verifique os itens destacados em amarelo abaixo e reabasteça o estoque.
-          </p>
-        </div>
-      )}
 
       {mode === 'contagem' && (
         <div className="bg-blue-50 border border-blue-100 px-4 py-3 mb-5 text-[13px] text-blue-900 rounded-xl">
