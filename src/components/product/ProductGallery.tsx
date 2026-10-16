@@ -43,7 +43,9 @@ export function ProductGallery({ images, name, tag }: Props) {
           const dims = dimsRef.current[src];
           return { src, width: dims?.w ?? FALLBACK_SIZE.w, height: dims?.h ?? FALLBACK_SIZE.h, alt: name };
         }),
-        bgOpacity: 0.96,
+        // Opaco: com 0.96 o cabeçalho e a barra de compra da página apareciam
+        // por trás da foto (a página é clara), poluindo a visualização.
+        bgOpacity: 1,
         showHideAnimationType: 'zoom',
         zoomAnimationDuration: 250,
         wheelToZoom: true,
