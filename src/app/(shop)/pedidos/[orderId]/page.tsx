@@ -355,7 +355,7 @@ export default function OrderDetailPage() {
                       ? 'bg-clay-l border-clay-l text-paper'
                       : i === currentStep
                         ? 'bg-white dark:bg-warm border-clay-l text-clay-l shadow-sm'
-                        : 'bg-white dark:bg-warm border-mist text-faint-l'
+                        : 'bg-white dark:bg-warm border-mist text-faint'
                   }`}>
                     {i < currentStep
                       ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -364,7 +364,7 @@ export default function OrderDetailPage() {
                   </div>
                   {/* label */}
                   <span className={`mt-2 text-[11px] text-center leading-tight px-1 ${
-                    i <= currentStep ? 'text-ink font-medium' : 'text-faint-l'
+                    i <= currentStep ? 'text-ink font-medium' : 'text-faint'
                   }`}>
                     {step.label}
                   </span>

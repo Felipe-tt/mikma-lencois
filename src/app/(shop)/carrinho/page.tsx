@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import type { Cart, CartItem } from '@/types';
 import { CartSkeleton } from '@/components/ui/Skeleton';
 import { getStockUrgency } from '@/lib/stockUrgency';
+import { setReturnTo } from '@/lib/auth/returnTo';
 
 export default function CartPage() {
   const [threshold, setThreshold] = useState(25000);
@@ -25,6 +26,7 @@ export default function CartPage() {
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [itemError, setItemError] = useState('');
 
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
@@ -34,7 +36,7 @@ export default function CartPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { router.push('/entrar'); return; }
+    if (!user) { setReturnTo('/carrinho'); router.push('/entrar'); return; }
     return onSnapshot(doc(db, 'carts', user.uid), snap => {
       setCart(snap.exists() ? snap.data() as Cart : null);
       setCartLoading(false);
@@ -74,20 +76,61 @@ export default function CartPage() {
     }).catch(() => {});
   }, [cart]);
 
-  const hasUnavailableItem = (cart?.items ?? []).some(item => activeMap[item.productId] === false);
+  // Item esgotado ou com quantidade acima do estoque também trava o botão:
+  // antes passava daqui e o erro só aparecia no último passo do checkout.
+  const hasUnavailableItem = (cart?.items ?? []).some(item =>
+    activeMap[item.productId] === false ||
+    (stockMap[item.sku] !== undefined && stockMap[item.sku] < item.quantity)
+  );
+
+  const subtotalForCoupon = (cart?.items ?? []).reduce((a, i) => a + i.unitPrice * i.quantity, 0);
+
+  // Cupom gravado no carrinho (aplicado antes, em outra visita): o servidor
+  // já usa no pagamento, então a tela precisa mostrar o desconto também.
+  useEffect(() => {
+    const saved = cart?.couponCode;
+    if (!user || !saved || couponApplied?.code === saved || subtotalForCoupon <= 0) return;
+    let cancelled = false;
+    user.getIdToken().then(token => fetch('/api/checkout/validate-coupon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code: saved, orderCents: subtotalForCoupon }),
+    })).then(async res => {
+      if (cancelled) return;
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) setCouponApplied({ code: saved, discount: data.discountCents ?? 0 });
+      else {
+        // Cupom deixou de valer (expirou, esgotou): tira do carrinho e avisa.
+        setCouponError(data.error ?? `O cupom ${saved} não é mais válido.`);
+        updateDoc(doc(db, 'carts', user.uid), { couponCode: null }).catch(() => {});
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [cart?.couponCode, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function removeItem(sku: string, note?: string) {
     if (!user || !cart) return;
     setRemoving(note ? `${sku}::${note}` : sku);
-    await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.filter(i => !(i.sku === sku && i.note === note)) });
-    setRemoving(null);
+    setItemError('');
+    try {
+      await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.filter(i => !(i.sku === sku && i.note === note)) });
+    } catch {
+      setItemError('Não foi possível remover o item. Verifique sua conexão e tente de novo.');
+    } finally {
+      setRemoving(null);
+    }
   }
   async function updateQty(sku: string, qty: number, note?: string) {
     if (!user || !cart) return;
     if (qty < 1) { await removeItem(sku, note); return; }
-    await updateDoc(doc(db, 'carts', user.uid), {
-      items: cart.items.map(i => (i.sku === sku && i.note === note) ? { ...i, quantity: qty } : i),
-    });
+    setItemError('');
+    try {
+      await updateDoc(doc(db, 'carts', user.uid), {
+        items: cart.items.map(i => (i.sku === sku && i.note === note) ? { ...i, quantity: qty } : i),
+      });
+    } catch {
+      setItemError('Não foi possível atualizar a quantidade. Verifique sua conexão e tente de novo.');
+    }
   }
 
   async function applyCoupon() {
@@ -183,6 +226,9 @@ export default function CartPage() {
 
           {/* ── Itens ── */}
           <div>
+            {itemError && (
+              <p role="alert" className="mb-2 border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-3">{itemError}</p>
+            )}
             <div className="divide-y divide-mist/70">
               {items.map(item => {
                 const lineKey = item.note ? `${item.sku}::${item.note}` : item.sku;
@@ -218,6 +264,9 @@ export default function CartPage() {
                       }
                       const avail = stockMap[item.sku];
                       if (avail === 0) return <p className="text-xs text-red-500 font-semibold">Fora de estoque, remova do carrinho</p>;
+                      if (avail !== undefined && avail < item.quantity) {
+                        return <p className="text-xs text-red-500 font-semibold">Só {avail} disponíve{avail === 1 ? 'l' : 'is'}, diminua a quantidade</p>;
+                      }
                       const urgency = avail !== undefined ? getStockUrgency(avail) : null;
                       if (urgency) {
                         return (
@@ -293,6 +342,7 @@ export default function CartPage() {
                       value={couponCode}
                       onChange={e => setCouponCode(e.target.value)}
                       placeholder="Código do cupom"
+                      aria-label="Código do cupom"
                       className="input flex-1 text-sm uppercase placeholder:normal-case placeholder:text-faint"
                       onKeyDown={e => e.key === 'Enter' && applyCoupon()}
                       autoFocus
@@ -300,17 +350,18 @@ export default function CartPage() {
                     <button
                       onClick={applyCoupon}
                       disabled={couponLoading || !couponCode.trim()}
-                      className="px-4 py-2.5 bg-ink text-paper text-xs font-bold tracking-[0.08em] uppercase disabled:opacity-50 hover:bg-clay transition-colors"
+                      className="min-w-[84px] inline-flex items-center justify-center px-4 py-2.5 bg-ink text-paper text-xs font-bold tracking-[0.08em] uppercase disabled:opacity-50 disabled:pointer-events-none hover:bg-clay active:scale-[0.97] transition-[background-color,transform] duration-150"
                     >
-                      {couponLoading ? '...' : 'Aplicar'}
+                      {couponLoading ? <span className="spinner-sm" /> : 'Aplicar'}
                     </button>
-                    <button onClick={() => { setCouponOpen(false); setCouponError(''); }} className="text-faint hover:text-mid transition-colors px-1">
+                    <button type="button" aria-label="Fechar cupom" onClick={() => { setCouponOpen(false); setCouponError(''); }} className="text-faint hover:text-ink transition-colors px-1">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                   </div>
-                  {couponError && <p className="text-xs text-red-500">{couponError}</p>}
+                  {couponError && <p role="alert" className="text-xs text-red-500">{couponError}</p>}
                 </div>
               )}
+              {!couponOpen && couponError && <p role="alert" className="text-xs text-red-500 mt-2">{couponError}</p>}
             </div>
           </div>
 
@@ -330,7 +381,7 @@ export default function CartPage() {
                 {couponApplied && (
                   <div className="flex justify-between text-sm text-emerald-600">
                     <span>Desconto ({couponApplied.code})</span>
-                    <span className="font-semibold">{formatCurrency(couponApplied.discount)}</span>
+                    <span className="font-semibold">−{formatCurrency(couponApplied.discount)}</span>
                   </div>
                 )}
 

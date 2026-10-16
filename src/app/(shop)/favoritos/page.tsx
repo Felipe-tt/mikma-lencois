@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { setReturnTo } from '@/lib/auth/returnTo';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useWishlist } from '@/lib/hooks/useWishlist';
@@ -16,19 +17,33 @@ export default function FavoritosPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { router.push('/entrar'); return; }
+    if (!user) { setReturnTo('/favoritos'); router.push('/entrar'); return; }
   }, [user, loading, router]);
+
+  // Produtos já buscados ficam guardados: desfavoritar um card só tira ele
+  // da grade, sem rebuscar todos e sem piscar o skeleton na página toda.
+  const cacheRef = useRef(new Map<string, Product | null>());
 
   useEffect(() => {
     if (wishlistLoading) return;
-    if (productIds.length === 0) { setProducts([]); setFetching(false); return; }
-    setFetching(true);
-    Promise.all(
-      productIds.map(id => fetch(`/api/products/${id}`).then(r => (r.ok ? r.json() : null)))
-    ).then((results) => {
-      setProducts(results.filter((p): p is Product => !!p && p.active !== false));
+    const cache = cacheRef.current;
+    const show = () => setProducts(
+      productIds.map(id => cache.get(id)).filter((p): p is Product => !!p && p.active !== false)
+    );
+    const missing = productIds.filter(id => !cache.has(id));
+    if (missing.length === 0) { show(); setFetching(false); return; }
+    let cancelled = false;
+    Promise.all(missing.map(id =>
+      fetch(`/api/products/${id}`)
+        .then(r => (r.ok ? r.json() : null))
+        .catch(() => null)
+        .then(p => { cache.set(id, p as Product | null); })
+    )).finally(() => {
+      if (cancelled) return;
+      show();
       setFetching(false);
     });
+    return () => { cancelled = true; };
   }, [productIds, wishlistLoading]);
 
   const isLoading = loading || wishlistLoading || fetching;

@@ -76,6 +76,29 @@ export function ProductGallery({ images, name, tag }: Props) {
   const prev = () => setActive(a => (a - 1 + images.length) % images.length);
   const next = () => setActive(a => (a + 1) % images.length);
 
+  // Swipe no celular: arrastar a foto pro lado troca de foto (antes só
+  // dava pelas setinhas). Um arrasto não conta como toque pra ampliar.
+  const swipe = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  function onPointerDown(e: React.PointerEvent) {
+    if (e.pointerType !== 'touch' || images.length < 2) return;
+    swipe.current = { x: e.clientX, y: e.clientY, moved: false };
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    const start = swipe.current;
+    if (!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      start.moved = true;
+      if (dx < 0) next(); else prev();
+    }
+  }
+  function onZoomClick() {
+    if (swipe.current?.moved) { swipe.current = null; return; }
+    swipe.current = null;
+    if (hasImages) openAt(active);
+  }
+
   return (
     <div className="flex gap-3 sm:gap-4">
       {/* Trilha de miniaturas, desktop */}
@@ -84,11 +107,13 @@ export function ProductGallery({ images, name, tag }: Props) {
           {images.slice(0, 10).map((img, i) => (
             <button
               key={i}
+              type="button"
               onClick={() => setActive(i)}
-              className={`relative aspect-square shrink-0 overflow-hidden bg-warm border transition-colors duration-150 focus:outline-none ${
+              className={`relative aspect-square shrink-0 overflow-hidden bg-warm border transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 ${
                 active === i ? 'border-ink border-2' : 'border-mist/60 hover:border-ink/40'
               }`}
               aria-label={`Ver foto ${i + 1}`}
+              aria-current={active === i ? 'true' : undefined}
             >
               <Image src={img} alt="" fill sizes="64px" className="object-contain p-1" />
             </button>
@@ -98,9 +123,21 @@ export function ProductGallery({ images, name, tag }: Props) {
 
       <div className="flex-1 min-w-0 flex flex-col gap-2">
         <div
-          className={`group relative aspect-square overflow-hidden bg-warm select-none ${hasImages ? 'cursor-zoom-in' : ''}`}
-          onClick={() => hasImages && openAt(active)}
+          className={`group relative aspect-square overflow-hidden bg-warm select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          onPointerCancel={() => { swipe.current = null; }}
         >
+          {hasImages && (
+            // Botão cobrindo a foto: ampliar também pelo teclado (antes era
+            // só onClick numa div, inacessível sem mouse).
+            <button
+              type="button"
+              onClick={onZoomClick}
+              aria-label={`Ampliar foto ${active + 1} de ${images.length}`}
+              className="absolute inset-0 z-[1] cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-4"
+            />
+          )}
           {hasImages ? (
             <div className="absolute inset-0 p-6 sm:p-10">
               <div className="relative w-full h-full">
@@ -137,15 +174,17 @@ export function ProductGallery({ images, name, tag }: Props) {
           {images.length > 1 && (
             <>
               <button
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 sm:hidden"
-                onClick={e => { e.stopPropagation(); prev(); }}
+                type="button"
+                className="absolute z-[2] left-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 sm:hidden"
+                onClick={prev}
                 aria-label="Foto anterior"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
               </button>
               <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 sm:hidden"
-                onClick={e => { e.stopPropagation(); next(); }}
+                type="button"
+                className="absolute z-[2] right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 sm:hidden"
+                onClick={next}
                 aria-label="Próxima foto"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -156,7 +195,7 @@ export function ProductGallery({ images, name, tag }: Props) {
           {hasImages && (
             <div className="absolute bottom-3 right-3 flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:gap-1.5 bg-ink/70 backdrop-blur-sm sm:px-2.5 sm:py-1.5 rounded-full sm:rounded-none text-[10px] text-paper font-medium pointer-events-none">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-              <span className="hidden sm:inline">Toque para ampliar</span>
+              <span className="hidden sm:inline">Ampliar</span>
             </div>
           )}
         </div>
@@ -166,11 +205,13 @@ export function ProductGallery({ images, name, tag }: Props) {
             {images.slice(0, 10).map((img, i) => (
               <button
                 key={i}
+                type="button"
                 onClick={() => setActive(i)}
                 className={`relative aspect-square w-14 shrink-0 overflow-hidden bg-warm border transition-colors duration-150 ${
                   active === i ? 'border-ink border-2' : 'border-mist/60'
                 }`}
                 aria-label={`Ver foto ${i + 1}`}
+                aria-current={active === i ? 'true' : undefined}
               >
                 <Image src={img} alt="" fill sizes="56px" className="object-contain p-1" />
               </button>

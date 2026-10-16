@@ -1,20 +1,37 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { doc, onSnapshot, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Wishlist } from '@/types';
 
+type WishlistValue = {
+  productIds: string[];
+  isFavorite: (productId: string) => boolean;
+  toggle: (productId: string) => Promise<boolean>;
+  loading: boolean;
+  loggedIn: boolean;
+};
+
+const WishlistContext = createContext<WishlistValue | null>(null);
+
 /**
- * Estado em tempo real da wishlist do usuário logado + função pra
- * favoritar/desfavoritar um produto. Documento único por usuário
- * (wishlists/{uid}), no mesmo padrão do carrinho (carts/{uid}).
+ * Estado em tempo real da wishlist do usuário logado (wishlists/{uid}),
+ * numa assinatura só pro site inteiro. Antes cada ProductCard abria o
+ * próprio onSnapshot: uma listagem com 24 cards eram 24 assinaturas.
  */
-export function useWishlist() {
+export function WishlistProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [productIds, setProductIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // toggle lê usuário e lista atuais por ref: a ação guardada pelo
+  // requireAuth (favoritar sem estar logado) roda depois do login, com
+  // uma closure de antes dele, e antes disso não fazia nada.
+  const userRef = useRef(user);
+  const idsRef = useRef(productIds);
+  useEffect(() => { userRef.current = user; idsRef.current = productIds; });
 
   useEffect(() => {
     if (!user) {
@@ -23,27 +40,45 @@ export function useWishlist() {
       return;
     }
     setLoading(true);
-    const ref = doc(db, 'wishlists', user.uid);
-    const unsub = onSnapshot(ref, (snap) => {
+    return onSnapshot(doc(db, 'wishlists', user.uid), snap => {
       const data = snap.data() as Wishlist | undefined;
       setProductIds(data?.productIds ?? []);
       setLoading(false);
-    });
-    return unsub;
+    }, () => setLoading(false));
   }, [user]);
 
   const isFavorite = useCallback((productId: string) => productIds.includes(productId), [productIds]);
 
   const toggle = useCallback(async (productId: string) => {
-    if (!user) return false; // caller decide o que fazer (ex: redirecionar pra login)
-    const ref = doc(db, 'wishlists', user.uid);
-    const favoriting = !productIds.includes(productId);
-    await setDoc(ref, {
-      productIds: favoriting ? arrayUnion(productId) : arrayRemove(productId),
-      updatedAt: new Date().toISOString(),
-    }, { merge: true });
+    const current = userRef.current;
+    if (!current) return false; // caller decide o que fazer (ex: abrir o login)
+    const favoriting = !idsRef.current.includes(productId);
+    // Otimista: o coração muda na hora, o snapshot confirma depois.
+    setProductIds(ids => favoriting ? [...ids, productId] : ids.filter(id => id !== productId));
+    try {
+      await setDoc(doc(db, 'wishlists', current.uid), {
+        productIds: favoriting ? arrayUnion(productId) : arrayRemove(productId),
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch {
+      setProductIds(ids => favoriting ? ids.filter(id => id !== productId) : [...ids, productId]);
+      return !favoriting;
+    }
     return favoriting;
-  }, [user, productIds]);
+  }, []);
 
-  return { productIds, isFavorite, toggle, loading, loggedIn: !!user };
+  const value = useMemo(
+    () => ({ productIds, isFavorite, toggle, loading, loggedIn: !!user }),
+    [productIds, isFavorite, toggle, loading, user],
+  );
+  return createElement(WishlistContext.Provider, { value }, children);
+}
+
+// Fora do provider (ex.: preview do painel, testes): sem favoritos.
+const EMPTY: WishlistValue = {
+  productIds: [], isFavorite: () => false, toggle: async () => false, loading: false, loggedIn: false,
+};
+
+export function useWishlist(): WishlistValue {
+  return useContext(WishlistContext) ?? EMPTY;
 }

@@ -405,7 +405,7 @@ function ConversationThread({
             placeholder="Escreva sua resposta… (Ctrl+Enter para enviar)"
             aria-label="Sua resposta"
             rows={3}
-            className="w-full resize-none border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint-l rounded-xl"
+            className="w-full resize-none border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint rounded-xl"
           />
 
           {/* Barra de ações */}

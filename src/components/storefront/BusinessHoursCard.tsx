@@ -55,7 +55,7 @@ export function BusinessHoursCard({ businessHours, timezone = 'America/Sao_Paulo
         {groups.map(g => (
           <div key={g.label} className="flex items-start justify-between gap-4 text-[13px]">
             <dt className="text-faint shrink-0 pt-px">{g.label}</dt>
-            <dd className={`flex flex-col items-end gap-0.5 text-right tabular-nums ${g.text === 'Fechado' ? 'text-faint-l' : 'text-ink'}`}>
+            <dd className={`flex flex-col items-end gap-0.5 text-right tabular-nums ${g.text === 'Fechado' ? 'text-faint' : 'text-ink'}`}>
               {g.ranges.map((r, idx) => <span key={idx}>{r}</span>)}
             </dd>
           </div>

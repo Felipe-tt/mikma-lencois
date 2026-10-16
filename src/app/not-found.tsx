@@ -31,7 +31,7 @@ export default async function NotFound() {
           Voltar ao início
         </Link>
       </div>
-      <p className="mt-16 font-mono text-[10px] tracking-[0.2em] uppercase text-faint-l">
+      <p className="mt-16 font-mono text-[10px] tracking-[0.2em] uppercase text-faint">
         {s.storeName || 'Mikma Lençóis'} · {s.storeCity || 'Blumenau, SC'}
       </p>
     </div>
