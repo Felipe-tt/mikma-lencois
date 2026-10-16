@@ -2,7 +2,7 @@
 import React from 'react';
 
 import { useEffect, useState, useMemo } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, limit } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
@@ -61,8 +61,19 @@ function carrierLabel(carrier?: string) {
   return carrier;
 }
 
+const PAGE = 50;
+const ACTIVE_STATUSES = ['paid', 'preparing', 'pending_payment'];
+
 export default function PainelPedidos() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  // Antes um listener em tempo real sobre TODOS os pedidos da loja: no 4G
+  // o painel ia ficando mais lento (e caro) a cada venda. Agora:
+  // - pedidos que pedem ação (pagos, separando, aguardando) sempre todos;
+  // - o histórico vem de 50 em 50, com o filtro aplicado no servidor.
+  const [active, setActive] = useState<Order[]>([]);
+  const [page, setPage] = useState<Order[]>([]);
+  const [pageSize, setPageSize] = useState(PAGE);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [customers, setCustomers] = useState<Record<string, { name?: string; email?: string }>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -73,17 +84,54 @@ export default function PainelPedidos() {
 
   useEffect(() => {
     return onSnapshot(
-      query(collection(db, 'orders'), orderBy('createdAt', 'desc')),
-      snap => { setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); setLoadError(false); setLoading(false); },
-      err => { console.error('[painel/pedidos] onSnapshot:', err); setLoadError(true); setLoading(false); }
+      query(collection(db, 'orders'), where('status', 'in', ACTIVE_STATUSES)),
+      snap => { setActive(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); setLoadError(false); },
+      err => { console.error('[painel/pedidos] onSnapshot ativos:', err); setLoadError(true); setLoading(false); }
     );
   }, []);
+
+  useEffect(() => {
+    const base = collection(db, 'orders');
+    const q = filter === 'todos'
+      ? query(base, orderBy('createdAt', 'desc'), limit(pageSize))
+      : query(base, where('status', '==', filter), orderBy('createdAt', 'desc'), limit(pageSize));
+    return onSnapshot(
+      q,
+      snap => {
+        setPage(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order)));
+        setHasMore(snap.size >= pageSize);
+        setLoadError(false); setLoading(false); setLoadingMore(false);
+      },
+      err => { console.error('[painel/pedidos] onSnapshot:', err); setLoadError(true); setLoading(false); setLoadingMore(false); }
+    );
+  }, [filter, pageSize]);
+
+  useEffect(() => { setPageSize(PAGE); }, [filter]);
+
+  // Junta os dois conjuntos (sem repetir) na ordem do mais novo pro mais antigo.
+  const orders = useMemo(() => {
+    const byId = new Map<string, Order>();
+    for (const o of page) byId.set(o.id, o);
+    if (filter === 'todos' || ACTIVE_STATUSES.includes(filter)) {
+      for (const o of active) if (filter === 'todos' || o.status === filter) byId.set(o.id, o);
+    }
+    const ts = (o: Order) => {
+      const d = o.createdAt as unknown;
+      if (d && typeof d === 'object' && 'seconds' in (d as object)) return (d as { seconds: number }).seconds * 1000;
+      return Date.parse(String(d ?? '')) || 0;
+    };
+    return Array.from(byId.values()).sort((a, b) => ts(b) - ts(a));
+  }, [page, active, filter]);
 
   // Busca os dados de cliente (nome/e-mail) dos pedidos atuais, Order só
   // guarda userId, então carrega em lote a cada mudança no conjunto de
   // usuários referenciados, em vez de 1 leitura por pedido a cada render.
   useEffect(() => {
-    const ids = Array.from(new Set(orders.map(o => o.userId).filter(Boolean)));
+    // Pedidos novos já trazem customerName/customerEmail; só busca o
+    // cadastro dos antigos.
+    const ids = Array.from(new Set(
+      orders.filter(o => !(o as Order & { customerName?: string }).customerName).map(o => o.userId).filter(Boolean)
+    ));
     const missing = ids.filter(id => !(id in customers));
     if (missing.length === 0) return;
 
@@ -172,11 +220,12 @@ export default function PainelPedidos() {
   }
 
   const filtered = useMemo(() => {
-    let list = filter === 'todos' ? orders : orders.filter(o => o.status === filter);
+    let list = orders;
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(o => {
-        const c = customers[o.userId];
+        const own = o as Order & { customerName?: string; customerEmail?: string };
+        const c = own.customerName ? { name: own.customerName, email: own.customerEmail } : customers[o.userId];
         return (
           o.id.toLowerCase().includes(q) ||
           (c?.name ?? '').toLowerCase().includes(q) ||
@@ -188,7 +237,7 @@ export default function PainelPedidos() {
     return list;
   }, [orders, customers, filter, search]);
 
-  const needActionCount  = orders.filter(o => o.status === 'paid').length;
+  const needActionCount  = active.filter(o => o.status === 'paid').length;
   const cancelledCount   = orders.filter(o => o.status === 'cancelled').length;
   const todayCount       = orders.filter(o => {
     const d = o.createdAt;
@@ -209,7 +258,7 @@ export default function PainelPedidos() {
           <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-clay-l mb-1">Painel</p>
           <h1 className="font-display font-normal text-ink text-2xl">Pedidos</h1>
           <p className="text-[13px] text-faint mt-1">
-            {orders.length} pedido(s) no total · {todayCount} hoje
+            {todayCount} pedido{todayCount === 1 ? '' : 's'} hoje
           </p>
         </div>
       </div>
@@ -232,14 +281,16 @@ export default function PainelPedidos() {
       <div className="flex flex-col gap-3 mb-5">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {FILTERS.map(f => {
-            const count = f.id === 'todos' ? orders.length : orders.filter(o => o.status === f.id).length;
-            if (f.id !== 'todos' && count === 0) return null;
+            // Contagem exata só dos que pedem ação (carregados inteiros);
+            // o histórico é paginado, então ali não mostra número.
+            const count = ACTIVE_STATUSES.includes(f.id) ? active.filter(o => o.status === f.id).length : null;
+            if (count === 0 && filter !== f.id) return null;
             return (
               <button key={f.id} onClick={() => setFilter(f.id)}
                 className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border transition-colors ${ filter === f.id ? 'bg-ink text-paper border-ink' : 'bg-paper text-mid border-mist hover:bg-warm' } rounded-xl`}>
                 {f.Icon && <f.Icon size={11} className="shrink-0" />}
                 {f.label}
-                <span className={`text-[9px] font-bold ${filter === f.id ? 'opacity-40' : 'opacity-50'}`}>{count}</span>
+                {count !== null && <span className={`text-[9px] font-bold ${filter === f.id ? 'opacity-40' : 'opacity-50'}`}>{count}</span>}
               </button>
             );
           })}
@@ -287,9 +338,10 @@ export default function PainelPedidos() {
                   </span>
                 </div>
                 {/* Cliente */}
-                {customers[order.userId]?.name && (
-                  <p className="text-[13px] text-ink font-medium">{customers[order.userId]!.name}</p>
-                )}
+                {(() => {
+                  const name = (order as Order & { customerName?: string }).customerName || customers[order.userId]?.name;
+                  return name ? <p className="text-[13px] text-ink font-medium">{name}</p> : null;
+                })()}
                 {/* Detalhes */}
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-[11px] text-faint">{formatTsDateTime(order.createdAt)}</span>
@@ -354,6 +406,25 @@ export default function PainelPedidos() {
           </div>
         ))}
       </div>
+
+      {hasMore && !search.trim() && (
+        <button
+          type="button"
+          onClick={() => { setLoadingMore(true); setPageSize(n => n + PAGE); }}
+          disabled={loadingMore}
+          className="mt-4 w-full min-h-11 border border-mist bg-paper text-[12px] font-semibold text-mid hover:bg-warm hover:text-ink active:scale-[0.99] transition-[background-color,color,transform] duration-150 disabled:opacity-60 rounded-xl inline-flex items-center justify-center gap-2"
+        >
+          {loadingMore ? <><span className="spinner-dark" />Carregando…</> : 'Carregar mais pedidos'}
+        </button>
+      )}
+      {hasMore && search.trim() && (
+        <p className="mt-3 text-[11px] text-faint text-center">
+          A busca olha os pedidos já carregados.{' '}
+          <button type="button" onClick={() => { setLoadingMore(true); setPageSize(n => n + PAGE); }} className="font-semibold text-clay underline underline-offset-2">
+            Carregar mais
+          </button>
+        </p>
+      )}
 
       {/* Limpar cancelados */}
       {cancelledCount > 0 && (

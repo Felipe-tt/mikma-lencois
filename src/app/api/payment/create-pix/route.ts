@@ -332,12 +332,21 @@ export async function POST(req: NextRequest) {
       throw err;
     }
 
+    // ── (lido antes de criar o pedido: nome/e-mail vão no próprio pedido)
+    // ── Load user profile for customer data ──────────────────────────────────
+    const userSnap = await adminDb.collection('users').doc(uid).get();
+    const userData = userSnap.data() ?? {};
+
     // ── Create order ─────────────────────────────────────────────────────────
     const orderId = `ord_${randomBytes(8).toString('hex')}`;
     const orderRef = adminDb.collection('orders').doc(orderId);
     const now = new Date().toISOString();
     await orderRef.set({
       userId: uid,
+      // Cópia do nome/e-mail: a lista de pedidos do painel lia o cadastro
+      // de cada cliente, uma leitura por pedido.
+      customerName: ((userData.name ?? userData.displayName ?? '') as string).slice(0, 120),
+      customerEmail: ((userData.email ?? '') as string).slice(0, 200),
       items: verifiedItems,
       address,
       status: 'pending_payment',
@@ -396,9 +405,6 @@ export async function POST(req: NextRequest) {
       url: `/painel/pedidos/${orderId}`,
     });
 
-    // ── Load user profile for customer data ──────────────────────────────────
-    const userSnap = await adminDb.collection('users').doc(uid).get();
-    const userData = userSnap.data() ?? {};
 
     // ── AbacatePay v2, POST /transparents/create ─────────────────────────────
     // Only include customer if we have at least email; metadata must be omitted
