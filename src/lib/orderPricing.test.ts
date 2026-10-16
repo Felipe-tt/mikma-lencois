@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeProductsCents,
+  installmentFeeRate,
   validateCoupon,
   computePixDiscountCents,
   computePixTotalCents,
@@ -157,5 +158,19 @@ describe('computeCardTotalCents', () => {
       productsCents: 1000, couponDiscountCents: 5000, shippingCents: 0, feeRate: 0.05,
     });
     expect(total).toBe(0);
+  });
+});
+
+describe('installmentFeeRate', () => {
+  it('sem juros até 3x e com juros a partir de 4x', () => {
+    expect(installmentFeeRate(1)).toBe(0);
+    expect(installmentFeeRate(3)).toBe(0);
+    expect(installmentFeeRate(4)).toBeCloseTo(0.0199);
+    expect(installmentFeeRate(8)).toBeCloseTo(0.0399);
+  });
+
+  it('parcela fora da tabela não tem juros', () => {
+    expect(installmentFeeRate(0)).toBe(0);
+    expect(installmentFeeRate(99)).toBe(0);
   });
 });
