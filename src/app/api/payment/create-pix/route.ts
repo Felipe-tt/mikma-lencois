@@ -247,7 +247,9 @@ export async function POST(req: NextRequest) {
           txId: existing.payment.txId,
           qrCode: existing.payment.pixQrCode,
           copyPaste: existing.payment.pixCopyPaste,
-          expiresAt: existing.payment.expiresAt,
+          // Gravado como Date (vira Timestamp no Firestore): mandar o objeto
+          // cru virava {_seconds,...} no JSON e o modal não contava o prazo.
+          expiresAt: existing.payment.expiresAt?.toDate?.().toISOString() ?? existing.payment.expiresAt ?? undefined,
           totalCents: amountCents,
         });
       }

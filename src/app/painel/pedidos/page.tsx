@@ -17,6 +17,7 @@ import {
 
 const STATUS_LABEL: Record<string, string> = {
   pending_payment: 'Aguardando pagamento',
+  payment_expired: 'PIX expirado',
   paid:            'Pago',
   preparing:       'Separando',
   shipped:         'A caminho',
@@ -26,6 +27,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const BADGE: Record<string, string> = {
   pending_payment: 'badge-pending',
+  payment_expired: 'badge-pending',
   paid:            'badge-paid',
   preparing:       'badge-preparing',
   shipped:         'badge-shipped',

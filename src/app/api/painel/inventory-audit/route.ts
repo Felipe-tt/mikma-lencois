@@ -182,7 +182,10 @@ export async function POST(req: NextRequest) {
           reserved: m.expectedReserved,
           updatedAt: FieldValue.serverTimestamp(),
           history: FieldValue.arrayUnion({
-            type: m.expectedReserved > current ? 'out' : 'in',
+            // 'adjust': correção de RESERVA, não entrada/saída de peças. Como
+            // 'in'/'out' o "desfazer" do painel mexia na quantidade (criando
+            // estoque fantasma) e a correção contava como venda do dia.
+            type: 'adjust',
             quantity: Math.abs(m.expectedReserved - current),
             reason: `Auditoria: reserva corrigida de ${current} para ${m.expectedReserved}`,
             date: now,

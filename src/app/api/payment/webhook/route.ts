@@ -103,6 +103,13 @@ export async function POST(req: NextRequest) {
           if (!orderSnap.exists) return null;
           const data = orderSnap.data()!;
           if (data.status !== 'pending_payment') return null;
+          // Expiração de um PIX ANTIGO: o cliente gerou um novo ("Pagar
+          // agora") e o pedido aponta pro txId novo. Sem esta checagem, o
+          // aviso do PIX velho expirava o pedido e liberava o estoque com o
+          // PIX novo ainda válido; pago, ele era ignorado (pedido não estava
+          // mais pending_payment) e o dinheiro entrava sem pedido pago.
+          const expiredTxId = transparent.id as string | undefined;
+          if (expiredTxId && data.payment?.txId && expiredTxId !== data.payment.txId) return null;
 
           // Leituras antes das escritas; SKU sem documento de estoque é
           // pulado em vez de derrubar a transação inteira.

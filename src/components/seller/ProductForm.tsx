@@ -819,6 +819,7 @@ export default function ProductForm({ initial }: Props) {
                     <span className="absolute bottom-1 left-1 bg-ink/80 text-paper text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm">Capa</span>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => makeCover(i)}
                       className="absolute bottom-1 left-1 bg-white/90 text-ink text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm hover:bg-white transition-colors"
                       title="Tornar capa"
@@ -826,9 +827,13 @@ export default function ProductForm({ initial }: Props) {
                       Tornar capa
                     </button>
                   )}
+                  {/* Dentro do canto da foto, discreto; vira vermelho só no
+                      hover/toque. Antes era um círculo vermelho grande vazando
+                      pra fora da miniatura e cobrindo a vizinha. */}
                   <button
+                    type="button"
                     onClick={() => removeImage(i)}
-                    className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow"
+                    className="absolute top-1 right-1 w-7 h-7 rounded-full bg-ink/70 text-paper backdrop-blur-sm flex items-center justify-center hover:bg-red-600 active:scale-90 transition-[background-color,transform] duration-150"
                     aria-label="Remover foto"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -837,8 +842,9 @@ export default function ProductForm({ initial }: Props) {
               ))}
 
               <button
+                type="button"
                 onClick={() => setShowCamera(true)}
-                className="h-20 w-20 border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 hover:border-clay hover:text-clay transition-colors rounded-[4px]"
+                className="h-20 w-20 border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 hover:border-clay hover:text-clay transition-colors rounded-xl"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 <span className="text-[10px] font-medium">Foto</span>

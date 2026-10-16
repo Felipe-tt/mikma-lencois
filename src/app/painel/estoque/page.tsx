@@ -12,7 +12,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import Link from 'next/link';
 import { staffActor } from '@/lib/staffActor';
 
-type MovementLog = { type: 'in' | 'out'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
+type MovementLog = { type: 'in' | 'out' | 'adjust'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
 type InventoryItem = {
   id: string; productId: string; productName?: string; sku: string;
   variant: { size: string; fabric: string; color: string; colorName?: string };
@@ -208,7 +208,9 @@ export default function EstoquePage() {
    *  nunca apaga/edita o histórico existente, então a trilha de auditoria
    *  continua íntegra (dá pra ver que algo foi desfeito, e quando). */
   async function undoLast(item: InventoryItem) {
-    const last = item.history?.[item.history.length - 1];
+    // Última movimentação de peças: correções de reserva da auditoria
+    // ('adjust') não se desfazem por aqui.
+    const last = [...(item.history ?? [])].reverse().find(m => m.type === 'in' || m.type === 'out');
     if (!last) return;
     const ok = window.confirm(`Desfazer "${last.type === 'out' ? '−' : '+'}${last.quantity} · ${last.reason}"?`);
     if (!ok) return;
@@ -569,8 +571,8 @@ export default function EstoquePage() {
                           <p className="text-[11px] text-faint">Nenhuma movimentação registrada ainda.</p>
                         ) : history.map((m, i) => (
                           <div key={i} className="flex items-center justify-between text-[11px]">
-                            <span className={m.type === 'out' ? 'text-red-600' : 'text-emerald-700'}>
-                              {m.type === 'out' ? '−' : '+'}{m.quantity} · {m.reason}{m.by ? ` (${m.by})` : ''}
+                            <span className={m.type === 'out' ? 'text-red-600' : m.type === 'adjust' ? 'text-faint' : 'text-emerald-700'}>
+                              {m.type === 'out' ? '−' : m.type === 'adjust' ? '±' : '+'}{m.quantity} · {m.reason}{m.by ? ` (${m.by})` : ''}
                             </span>
                             <span className="text-faint shrink-0 ml-2 flex items-center gap-2">
                               {timeAgo(m.date)}

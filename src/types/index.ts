@@ -73,7 +73,8 @@ export interface Wishlist {
 
 // ─── Inventory ───────────────────────────────────────────────────────────────
 export interface MovementLog {
-  type: 'in' | 'out'
+  /** 'adjust' = correção de reserva pela auditoria; não move peças. */
+  type: 'in' | 'out' | 'adjust'
   quantity: number
   reason: string
   date: string
