@@ -63,8 +63,8 @@ html.dark {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     /* Reserva o espaço da barra de rolagem: os modais travam o scroll com
-       overflow:hidden no body, e sem isso a página "pulava" pro lado no
-       desktop toda vez que um modal abria/fechava. */
+       overflow:hidden no html (useOverlay), e sem isso a página "pulava"
+       pro lado no desktop toda vez que um modal abria/fechava. */
     scrollbar-gutter: stable;
   }
   body {
@@ -124,10 +124,13 @@ html.dark {
   }
 }
 
+/* Transição só do que muda (cor, borda, escala do clique): transition-all
+   animava também padding/largura quando o texto do botão trocava
+   ("Salvar" -> "Salvando…") e o botão "escorregava" de tamanho. */
 @utility btn {
   @apply inline-flex items-center justify-center gap-2
          font-sans text-[13px] font-medium tracking-[0.03em]
-         border transition-all duration-150
+         border transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-150 ease-out
          disabled:opacity-40 disabled:pointer-events-none
          whitespace-nowrap select-none;
 }
@@ -167,7 +170,8 @@ html.dark {
   }
   .btn-ghost {
     @apply btn px-3 py-2 border-transparent bg-transparent text-mid
-           hover:text-ink hover:bg-warm;
+           hover:text-ink hover:bg-warm
+           active:scale-[0.96];
   }
   .btn-clay {
     @apply btn px-6 py-3 bg-clay text-paper border-clay
@@ -184,7 +188,9 @@ html.dark {
     @apply inline-flex items-center justify-center
            w-9 h-9 border border-mist bg-paper text-mid
            hover:border-clay hover:text-clay hover:bg-warm
-           transition-all duration-150;
+           active:scale-[0.94]
+           disabled:opacity-40 disabled:pointer-events-none
+           transition-[background-color,border-color,color,transform] duration-150 ease-out;
   }
 
   /* ─── Inputs ──────────────────────────────────────────────────── */
@@ -502,6 +508,7 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
 .painel-scope .btn-outline,
 .painel-scope .btn-clay,
 .painel-scope .btn-icon,
+.painel-scope .btn-ghost,
 .painel-scope .input,
 .painel-scope .input-sm,
 .painel-scope .select {
@@ -718,12 +725,76 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
 .email-html-body table { border-collapse: collapse; max-width: 100%; }
 .email-html-body td, .email-html-body th { padding: 4px 8px; }
 
-/* ── ConfirmDialog ───────────────────────────────────────────────── */
-@keyframes confirm-in {
-  from { opacity: 0; transform: scale(0.96) translateY(6px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+/* ── Overlays: modais, sheets e drawers ──────────────────────────────
+   Uma só linguagem de movimento pra tudo que abre por cima da página.
+   Entrada mais longa e desacelerando (o olho acompanha o painel chegar),
+   saída curta e acelerando (sai do caminho rápido). Transições, não
+   keyframes: se o cliente fecha no meio da entrada, o painel volta do
+   ponto onde está, sem salto. O data-state vem do useOverlay, que mantém
+   o overlay montado até a saída terminar (OVERLAY_EXIT_MS). */
+:root {
+  --overlay-in: 260ms;
+  --overlay-out: 170ms;
+  --overlay-ease-in: cubic-bezier(0.16, 1, 0.3, 1);
+  --overlay-ease-out: cubic-bezier(0.4, 0, 1, 1);
+  --overlay-dim: rgb(30 18 8 / 0.5);
 }
-.animate-confirm-in { animation: confirm-in 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
+html.dark { --overlay-dim: rgb(0 0 0 / 0.62); }
+
+/* Fundo: escurece e desfoca sem mexer na opacidade dos filhos. */
+.overlay-backdrop {
+  background-color: transparent;
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+  transition:
+    background-color var(--overlay-out) var(--overlay-ease-out),
+    backdrop-filter var(--overlay-out) var(--overlay-ease-out),
+    -webkit-backdrop-filter var(--overlay-out) var(--overlay-ease-out);
+}
+.overlay-backdrop[data-state="open"] {
+  background-color: var(--overlay-dim);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  transition-duration: var(--overlay-in);
+  transition-timing-function: var(--overlay-ease-in);
+}
+
+.overlay-panel {
+  outline: none;
+  transition:
+    opacity var(--overlay-out) var(--overlay-ease-out),
+    transform var(--overlay-out) var(--overlay-ease-out);
+}
+/* Fechado, por variante */
+.overlay-panel[data-variant="dialog"] { opacity: 0; transform: translateY(8px) scale(0.97); }
+.overlay-panel[data-variant="sheet"] { transform: translateY(100%); }
+.overlay-panel[data-variant="drawer-left"] { transform: translateX(-100%); }
+/* Sheet no celular, diálogo do sm pra cima */
+.overlay-panel[data-variant="responsive"] { transform: translateY(100%); }
+@media (min-width: 640px) {
+  .overlay-panel[data-variant="responsive"] { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+/* Aberto (mais específico que todas as variantes acima) */
+[data-state="open"] .overlay-panel[data-variant],
+.overlay-panel[data-variant][data-state="open"] {
+  opacity: 1;
+  transform: none;
+  transition-duration: var(--overlay-in);
+  transition-timing-function: var(--overlay-ease-in);
+}
+
+/* Telas cheias (câmera, conta-gotas, registrar venda) que o componente
+   pai monta/desmonta direto: só a entrada, curta, sem depender do hook. */
+@keyframes overlay-enter {
+  from { opacity: 0; transform: translateY(12px); }
+}
+.overlay-enter { animation: overlay-enter var(--overlay-in) var(--overlay-ease-in) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sem deslizar nem escalar: só um fade curto. */
+  .overlay-panel[data-variant] { transform: none !important; opacity: 0; }
+  :root { --overlay-in: 140ms; --overlay-out: 100ms; }
+}
 
 /* ── Impressão (etiqueta de envio, etc.) ─────────────────────────── */
 /* Qualquer elemento de chrome do painel (sidebar, topbar, banners) marcado

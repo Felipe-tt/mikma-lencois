@@ -104,6 +104,12 @@ export async function POST(req: NextRequest) {
           const data = orderSnap.data()!;
           if (data.status !== 'pending_payment') return null;
 
+          // Leituras antes das escritas; SKU sem documento de estoque é
+          // pulado em vez de derrubar a transação inteira.
+          const lines = expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>);
+          const invRefs = lines.map(line => adminDb.collection('inventory').doc(line.sku));
+          const invSnaps = invRefs.length > 0 ? await tx.getAll(...invRefs) : [];
+
           tx.update(orderRef, {
             status: 'payment_expired',
             updatedAt: FieldValue.serverTimestamp(),
@@ -114,19 +120,20 @@ export async function POST(req: NextRequest) {
             }),
           });
 
-          for (const line of expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>)) {
-            tx.update(adminDb.collection('inventory').doc(line.sku), {
+          lines.forEach((line, i) => {
+            if (!invSnaps[i].exists) return;
+            tx.update(invRefs[i], {
               reserved: FieldValue.increment(-line.quantity),
               updatedAt: FieldValue.serverTimestamp(),
             });
-          }
+          });
 
           return data;
         });
       } catch (err) {
         console.error(`Failed to expire order ${orderId}:`, err);
         Sentry.captureException(err, { tags: { route: 'payment-webhook', step: 'expire-order' }, extra: { orderId } });
-        order = null;
+        return NextResponse.json({ error: 'Falha ao expirar pedido' }, { status: 500 });
       }
 
       if (order) {
@@ -222,7 +229,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    await confirmOrderPaid(orderId, txId, `PIX confirmado · txId: ${txId.slice(-8)}`);
+    try {
+      await confirmOrderPaid(orderId, txId, `PIX confirmado · txId: ${txId.slice(-8)}`);
+    } catch {
+      // Falha transitória (contenção, timeout): 500 faz a AbacatePay
+      // reenviar o evento. confirmOrderPaid é idempotente.
+      return NextResponse.json({ error: 'Falha ao confirmar pagamento' }, { status: 500 });
+    }
   }
 
   if (eventType === 'checkout.completed') {
@@ -236,7 +249,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    await confirmOrderPaid(orderId, txId, `Cartão confirmado · checkoutId: ${txId.slice(-8)}`);
+    try {
+      await confirmOrderPaid(orderId, txId, `Cartão confirmado · checkoutId: ${txId.slice(-8)}`);
+    } catch {
+      // Falha transitória (contenção, timeout): 500 faz a AbacatePay
+      // reenviar o evento. confirmOrderPaid é idempotente.
+      return NextResponse.json({ error: 'Falha ao confirmar pagamento' }, { status: 500 });
+    }
   }
 
   // Always 200 for other event types (transparent.refunded, subscription.*, etc.)

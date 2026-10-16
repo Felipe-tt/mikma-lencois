@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useOverlay } from '@/lib/hooks/useOverlay';
 
 interface Props {
   open: boolean;
@@ -29,30 +30,25 @@ const VIEWPORTS: { id: Viewport; label: string; icon: React.ReactNode }[] = [
 
 export function PreviewModal({ open, onClose, title, routeLabel, children }: Props) {
   const [viewport, setViewport] = useState<Viewport>('desktop');
-  const [mounted, setMounted] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { mounted, state } = useOverlay({ open, onClose, panelRef });
 
-  useEffect(() => setMounted(true), []);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-    };
-  }, [open, onClose]);
-
-  if (!mounted || !open) return null;
+  if (!mounted) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8 bg-[rgba(30,18,8,0.55)] backdrop-blur-[2px]"
+      className="overlay-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8"
+      data-state={state}
       onClick={onClose}
     >
       <div
-        className={`bg-paper w-full max-h-full flex flex-col shadow-2xl animate-preview-in rounded-[6px] overflow-hidden ${viewport === 'mobile' ? 'max-w-[480px]' : 'max-w-[1180px]'}`}
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Pré-visualização: ${title}`}
+        data-variant="dialog"
+        className={`overlay-panel bg-paper w-full max-h-full flex flex-col shadow-2xl rounded-2xl overflow-hidden ${viewport === 'mobile' ? 'max-w-[480px]' : 'max-w-[1180px]'}`}
         onClick={e => e.stopPropagation()}
       >
         {/* ── Toolbar ── */}
@@ -71,12 +67,14 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
 
           <div className="flex items-center gap-2 shrink-0">
             {/* Viewport toggle */}
-            <div className="flex items-center bg-paper/10 p-0.5 rounded">
+            <div className="flex items-center bg-paper/10 p-0.5 rounded-lg">
               {VIEWPORTS.map(({ id, label, icon }) => (
                 <button
                   key={id}
+                  type="button"
+                  aria-pressed={viewport === id}
                   onClick={() => setViewport(id)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded transition-colors ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-md transition-[background-color,color] duration-150 ${
                     viewport === id ? 'bg-paper text-ink' : 'text-paper/60 hover:text-paper'
                   }`}
                 >
@@ -88,8 +86,9 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
 
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center text-paper/60 hover:text-paper hover:bg-paper/10 rounded transition-colors"
-              aria-label="Fechar"
+              type="button"
+              className="w-8 h-8 flex items-center justify-center text-paper/60 hover:text-paper hover:bg-paper/10 active:scale-90 rounded-lg transition-[color,background-color,transform] duration-150"
+              aria-label="Fechar pré-visualização"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
@@ -108,19 +107,12 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
         {/* ── Footer hint ── */}
         <div className="px-4 py-2.5 bg-paper border-t border-mist flex items-center justify-between shrink-0">
           <p className="text-[10px] text-faint">Pré-visualização ao vivo, reflete o que você digitou, ainda não salvo</p>
-          <button onClick={onClose} className="text-[11px] font-semibold text-mid hover:text-ink transition-colors">
+          <button type="button" onClick={onClose} className="text-[11px] font-semibold text-mid hover:text-ink transition-colors">
             Fechar
           </button>
         </div>
       </div>
 
-      <style jsx global>{`
-        @keyframes preview-in {
-          from { opacity: 0; transform: scale(0.97) translateY(8px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .animate-preview-in { animation: preview-in 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
-      `}</style>
     </div>,
     document.body
   );

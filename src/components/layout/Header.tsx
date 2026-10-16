@@ -9,6 +9,7 @@ import { NavLink } from '@/components/ui/NavLink';
 import { formatCurrency } from '@/lib/utils/format';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BrandLogo } from '@/components/BrandLogo';
+import { useOverlay } from '@/lib/hooks/useOverlay';
 
 interface Props { topbarText?: string; freeShippingThresholdCents?: number }
 
@@ -28,6 +29,17 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery]           = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLInputElement>(null);
+  // No celular a lupa abre o menu já com o campo de busca focado (a
+  // busca inline do header só existe do md pra cima).
+  const [focusSearch, setFocusSearch] = useState(false);
+  const drawer = useOverlay({
+    open: menuOpen,
+    onClose: () => setMenuOpen(false),
+    panelRef: drawerRef,
+    initialFocusRef: focusSearch ? mobileSearchRef : undefined,
+  });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -35,13 +47,19 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => { document.body.style.overflow = menuOpen ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [menuOpen]);
   useEffect(() => { setMenuOpen(false); setSearchOpen(false); setQuery(''); }, [pathname]);
   useEffect(() => { if (searchOpen) setTimeout(() => searchRef.current?.focus(), 80); }, [searchOpen]);
+  useEffect(() => { if (!menuOpen) setFocusSearch(false); }, [menuOpen]);
+
+  function onSearchButton() {
+    if (window.matchMedia('(min-width: 768px)').matches) { setSearchOpen(v => !v); return; }
+    setFocusSearch(true);
+    setMenuOpen(true);
+  }
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (query.trim()) { router.push(`/produtos?q=${encodeURIComponent(query.trim())}`); setSearchOpen(false); setQuery(''); }
+    if (query.trim()) { router.push(`/produtos?q=${encodeURIComponent(query.trim())}`); setSearchOpen(false); setMenuOpen(false); setQuery(''); }
   }
 
   // Free shipping progress
@@ -69,8 +87,9 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Mobile hamburger */}
           <button
-            className={`p-2 -ml-2 md:hidden transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}
-            onClick={() => setMenuOpen(true)} aria-label="Abrir menu"
+            type="button"
+            className={`p-2 -ml-2 md:hidden active:scale-90 transition-[color,transform] duration-150 ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}
+            onClick={() => setMenuOpen(true)} aria-label="Abrir menu" aria-haspopup="dialog" aria-expanded={menuOpen}
           >
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M3 7h18M3 12h18M3 17h18"/>
@@ -99,7 +118,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           </nav>
 
           {/* Search inline */}
-          <div className={`hidden md:flex items-center flex-1 mx-8 transition-all duration-200 ${searchOpen ? 'opacity-100' : 'opacity-0 pointer-events-none w-0 overflow-hidden mx-0'}`}>
+          <div inert={!searchOpen} className={`hidden md:flex items-center flex-1 mx-8 transition-all duration-200 ${searchOpen ? 'opacity-100' : 'opacity-0 pointer-events-none w-0 overflow-hidden mx-0'}`}>
             <form onSubmit={handleSearch} className="flex items-center gap-2.5 flex-1 border-b-2 border-ink/20 pb-1 focus-within:border-clay/50 transition-colors">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -109,11 +128,13 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                 type="search"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Escape') setSearchOpen(false); }}
                 placeholder="Buscar produtos, categorias…"
+                aria-label="Buscar produtos"
                 className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-faint outline-none"
               />
               {query && (
-                <button type="button" onClick={() => setQuery('')} className="text-faint hover:text-ink transition-colors p-0.5">
+                <button type="button" onClick={() => { setQuery(''); searchRef.current?.focus(); }} aria-label="Limpar busca" className="text-faint hover:text-ink transition-colors p-0.5">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
               )}
@@ -125,8 +146,9 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
             {/* Search */}
             <button
-              className={`p-2 transition-colors duration-150 ${isDark ? 'text-paper/50 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`}
-              onClick={() => setSearchOpen(v => !v)} aria-label="Buscar"
+              type="button"
+              className={`p-2 active:scale-90 transition-[color,background-color,transform] duration-150 ${isDark ? 'text-paper/50 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`}
+              onClick={onSearchButton} aria-label={searchOpen ? 'Fechar busca' : 'Buscar'} aria-expanded={searchOpen}
             >
               {searchOpen
                 ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -171,7 +193,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             )}
 
             {/* Cart */}
-            <NavLink href="/carrinho" className={`relative p-2 ml-0.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`} aria-label="Carrinho">
+            <NavLink href="/carrinho" className={`relative p-2 ml-0.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`} aria-label={count > 0 ? `Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}` : 'Carrinho'}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
@@ -209,15 +231,23 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
       </header>
 
       {/* ── Mobile drawer ──────────────────────────────────────────── */}
-      {menuOpen && (
-        <>
-          <div className="fixed inset-0 z-50 bg-[rgba(30,18,8,0.45)] backdrop-blur-sm animate-fade-in" onClick={() => setMenuOpen(false)} />
-          <div className="fixed top-0 left-0 z-50 w-[300px] h-full bg-paper shadow-modal animate-slide-in flex flex-col">
+      {drawer.mounted && (
+        <div className="overlay-backdrop fixed inset-0 z-50" data-state={drawer.state} onClick={() => setMenuOpen(false)}>
+          <div
+            ref={drawerRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            data-variant="drawer-left"
+            className="overlay-panel absolute top-0 left-0 w-[300px] max-w-[85vw] h-full bg-paper shadow-modal flex flex-col pb-[env(safe-area-inset-bottom)]"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between px-5 h-[60px] border-b border-mist">
               <NavLink href="/" onClick={() => setMenuOpen(false)}>
                 <BrandLogo alt="Logo" className="h-9 w-auto object-contain" />
               </NavLink>
-              <button className="btn-ghost p-2" onClick={() => setMenuOpen(false)} aria-label="Fechar">
+              <button type="button" className="btn-ghost p-2" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
@@ -230,7 +260,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
-                <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar…"
+                <input ref={mobileSearchRef} type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar…"
+                  aria-label="Buscar produtos" enterKeyHint="search"
                   className="flex-1 bg-transparent text-sm text-ink placeholder:text-faint outline-none" />
               </form>
             </div>
@@ -269,7 +300,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               <ThemeToggle />
             </div>
           </div>
-        </>
+        </div>
       )}
     </>
   );

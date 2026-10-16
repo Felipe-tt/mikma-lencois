@@ -24,8 +24,10 @@ function Filter({ categories, active, onClose }: Props) {
           return (
             <li key={label}>
               <button
+                type="button"
                 onClick={() => go(value)}
-                className={`w-full text-left px-3 py-2.5 text-sm transition-all duration-200 font-medium ${isActive ? 'bg-ink text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`}
+                aria-current={isActive ? 'true' : undefined}
+                className={`w-full text-left px-3 py-2.5 text-sm transition-[background-color,color] duration-150 font-medium active:bg-warm-d ${isActive ? 'bg-ink text-paper active:bg-ink' : 'text-mid hover:text-ink hover:bg-warm'}`}
               >
                 {label}
               </button>

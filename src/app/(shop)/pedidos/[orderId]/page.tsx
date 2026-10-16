@@ -19,6 +19,11 @@ import { carrierName, trackingUrl, isCorreios } from '@/lib/carriers';
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { trackPurchase } from '@/lib/analytics';
+import { copyText } from '@/lib/clipboard';
+import { requestNewPix, type NewPix } from '@/lib/orders/requestNewPix';
+import { setReturnTo } from '@/lib/auth/returnTo';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { PIXModal } from '@/components/checkout/PIXModal';
 
 // ─── Status steps ─────────────────────────────────────────────────────────────
 
@@ -126,15 +131,21 @@ export default function OrderDetailPage() {
   const [copied, setCopied] = useState(false);
   const [confirmingReceived, setConfirmingReceived] = useState(false);
   const [confirmReceivedError, setConfirmReceivedError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [newPix, setNewPix] = useState<NewPix | null>(null);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [pixError, setPixError] = useState('');
 
   useEffect(() => {
-    if (!loading && !user) router.push('/entrar');
+    // Link do e-mail ("Gerar novo PIX", "Pedido enviado"): depois do login
+    // o cliente volta pra este pedido, não pra home.
+    if (!loading && !user) { setReturnTo(window.location.pathname); router.push('/entrar'); }
   }, [user, loading, router]);
 
   useEffect(() => {
     if (!user || !orderId) return;
     return onSnapshot(doc(db, 'orders', orderId), snap => {
-      if (!snap.exists()) return;
+      if (!snap.exists()) { setNotFound(true); return; }
       const data = { id: snap.id, ...snap.data() } as Order;
       setOrder(data);
       if (data.status === 'paid' || data.status === 'preparing' || data.status === 'shipped' || data.status === 'delivered') {
@@ -144,14 +155,30 @@ export default function OrderDetailPage() {
           items: data.items.map(i => ({ sku: i.sku, productId: i.productId, productName: i.productName, unitPriceCents: i.unitPrice, quantity: i.quantity })),
         });
       }
-    });
+    }, () => setNotFound(true)); // sem permissão (pedido de outra conta)
   }, [user, orderId]);
 
   function copyPix() {
     if (!order || order.payment.method !== 'pix' || !order.payment.pixCopyPaste) return;
-    navigator.clipboard.writeText(order.payment.pixCopyPaste);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    const code = order.payment.pixCopyPaste;
+    copyText(code).then(ok => {
+      if (!ok) return;
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }
+
+  async function generatePix() {
+    if (!order) return;
+    setPixLoading(true);
+    setPixError('');
+    try {
+      setNewPix(await requestNewPix(order.id));
+    } catch (err) {
+      setPixError(err instanceof Error ? err.message : 'Não foi possível gerar o PIX. Tente novamente.');
+    } finally {
+      setPixLoading(false);
+    }
   }
 
   async function confirmReceived() {
@@ -179,6 +206,15 @@ export default function OrderDetailPage() {
     }
   }
 
+  if (notFound) return (
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16">
+      <EmptyState
+        title="Pedido não encontrado"
+        description="Confira se você entrou com a mesma conta usada na compra."
+        actions={[{ label: 'Meus pedidos', href: '/conta/pedidos', variant: 'primary' }]}
+      />
+    </div>
+  );
   if (loading || !order) return <OrderDetailSkeleton />;
 
   const isCancelled = order.status === 'cancelled';
@@ -342,6 +378,22 @@ export default function OrderDetailPage() {
         {trackingIsPriority && (
           <div className="mb-8 flex flex-col gap-6">
             {trackingSection}
+          </div>
+        )}
+
+        {/* ── PIX expirado: gerar outro sem refazer o pedido ───────── */}
+        {order.payment.method === 'pix' && (order.status === 'payment_expired' || (order.status === 'pending_payment' && !order.payment.pixCopyPaste)) && (
+          <div className="mb-8 border border-amber-200 bg-amber-50/50 p-6 flex flex-col items-center gap-3 text-center">
+            <p className="text-sm font-semibold text-ink">
+              {order.status === 'payment_expired' ? 'O PIX deste pedido expirou' : 'Pague para confirmar o pedido'}
+            </p>
+            <p className="text-xs text-mid">
+              Total: <span className="font-bold text-ink">{formatCurrency(order.totalCents)}</span>
+            </p>
+            <button type="button" onClick={generatePix} disabled={pixLoading} className="btn-clay text-xs px-6 py-3 font-semibold tracking-wide">
+              {pixLoading ? <><span className="spinner w-3.5 h-3.5" /> Gerando…</> : 'Gerar novo PIX'}
+            </button>
+            {pixError && <p role="alert" className="text-xs text-red-600">{pixError}</p>}
           </div>
         )}
 
@@ -530,6 +582,17 @@ export default function OrderDetailPage() {
 
         </div>
       </div>
+
+      {newPix && (
+        <PIXModal
+          qrCode={newPix.qrCode}
+          copyPaste={newPix.copyPaste}
+          orderId={order.id}
+          totalCents={newPix.totalCents ?? order.totalCents}
+          expiresAt={newPix.expiresAt}
+          onClose={() => setNewPix(null)}
+        />
+      )}
     </div>
   );
 }

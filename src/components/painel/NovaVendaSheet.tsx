@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { doc, getDoc, writeBatch, increment, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -7,6 +7,7 @@ import { IconBox, IconCheck, IconX, IconSearch, IconInventory, IconReceipt } fro
 import type { MovementLog } from '@/types';
 import { nextTapDelta, shouldConfirmRapidTap, applyTapDelta } from '@/lib/inventoryTap';
 import { useFullscreenOverlay } from '@/lib/hooks/useFullscreenOverlay';
+import { useOverlayBehavior } from '@/lib/hooks/useOverlay';
 import { staffActor } from '@/lib/staffActor';
 
 export type InventoryItem = {
@@ -36,6 +37,8 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
   const { user } = useAuth();
   const [mode, setMode] = useState<'venda' | 'reposicao'>('venda');
   const viewportHeight = useFullscreenOverlay(!embedded);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useOverlayBehavior({ active: !embedded, onClose: () => onClose?.(), panelRef });
   // Em tela pequena, 5-6 colunas deixam a foto minúscula e difícil de tocar
   // certo, por isso o conjunto de opções (e o padrão) muda conforme o
   // tamanho da tela, em vez de oferecer sempre as mesmas 3-6 colunas.
@@ -216,7 +219,12 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
 
   return (
     <div
-      className={embedded ? 'flex flex-col' : 'fixed inset-0 z-[60] h-[100dvh] bg-paper flex flex-col'}
+      ref={panelRef}
+      tabIndex={embedded ? undefined : -1}
+      role={embedded ? undefined : 'dialog'}
+      aria-modal={embedded ? undefined : true}
+      aria-label={embedded ? undefined : 'Registrar movimentação'}
+      className={embedded ? 'flex flex-col' : 'overlay-enter fixed inset-0 z-[60] h-[100dvh] bg-paper flex flex-col outline-none'}
       style={!embedded && viewportHeight ? { height: viewportHeight } : undefined}
     >
       {/* Cabeçalho */}
@@ -224,7 +232,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         {!embedded && (
           <div className="flex items-center justify-between gap-2">
             <p className="text-[15px] font-bold text-ink">Registrar movimentação</p>
-            <button onClick={onClose} className="text-faint hover:text-mid p-1.5" aria-label="Fechar">
+            <button type="button" onClick={onClose} className="text-faint hover:text-ink hover:bg-warm active:scale-90 rounded-lg p-1.5 transition-[color,background-color,transform] duration-150" aria-label="Fechar">
               <IconX size={20} />
             </button>
           </div>

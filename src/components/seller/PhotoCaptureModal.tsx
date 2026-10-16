@@ -136,7 +136,7 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black"
+      className="overlay-enter fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black"
       style={viewportHeight ? { height: viewportHeight } : undefined}
       onClick={onClose}
     >

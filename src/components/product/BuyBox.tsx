@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,8 @@ import { SIZE_LABEL } from '@/lib/productOptions';
 import type { Product, InventoryItem, ProductVariant, CartItem } from '@/types';
 import { getStockUrgency } from '@/lib/stockUrgency';
 import { trackAddToCart } from '@/lib/analytics';
+import { useOverlay } from '@/lib/hooks/useOverlay';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 
 interface Props {
   product: Product;
@@ -39,6 +41,12 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const [adding, setAdding] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
   const [addedOpen, setAddedOpen] = useState(false);
+  const [cartError, setCartError] = useState<string | null>(null);
+  // Visitante clicou em comprar: abre o login aqui mesmo e, ao entrar,
+  // completa a ação (antes ia pra /entrar e perdia o produto).
+  const [afterLogin, setAfterLogin] = useState<'cart' | 'buy' | null>(null);
+  const { requireAuth } = useAuthModal();
+  const addedPanelRef = useRef<HTMLDivElement>(null);
 
   // ── Frete estimado ──
   const [cep, setCep] = useState('');
@@ -60,14 +68,14 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const urgency = getStockUrgency(availableStock);
 
   const closeAdded = useCallback(() => setAddedOpen(false), []);
+  const added = useOverlay({ open: addedOpen, onClose: closeAdded, panelRef: addedPanelRef });
 
   useEffect(() => {
-    if (!addedOpen) return;
-    document.body.style.overflow = 'hidden';
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closeAdded(); };
-    window.addEventListener('keydown', handler);
-    return () => { window.removeEventListener('keydown', handler); document.body.style.overflow = ''; };
-  }, [addedOpen, closeAdded]);
+    if (!user || !afterLogin) return;
+    const action = afterLogin;
+    setAfterLogin(null);
+    if (action === 'cart') addToCart(); else buyNow();
+  }, [user, afterLogin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Preço, parcelamento e PIX, mesma lógica do checkout, uma única fonte de verdade visual ──
   const lineTotal = product.price * qty;
@@ -113,14 +121,16 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
   async function addToCart() {
     if (loading) return;
-    if (!user) { router.push('/entrar'); return; }
+    if (!user) { requireAuth(() => setAfterLogin('cart')); return; }
     if (!selectedVariant || outOfStock) return;
     setAdding(true);
+    setCartError(null);
     try {
       await addItemToCart(qty);
       setAddedOpen(true);
     } catch (err) {
       console.error('addToCart error:', err);
+      setCartError('Não foi possível adicionar ao carrinho. Verifique sua conexão e tente de novo.');
     } finally {
       setAdding(false);
     }
@@ -128,14 +138,16 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
   async function buyNow() {
     if (loading) return;
-    if (!user) { router.push('/entrar'); return; }
+    if (!user) { requireAuth(() => setAfterLogin('buy')); return; }
     if (!selectedVariant || outOfStock) return;
     setBuyingNow(true);
+    setCartError(null);
     try {
       await addItemToCart(qty);
       router.push('/checkout');
     } catch (err) {
       console.error('buyNow error:', err);
+      setCartError('Não foi possível adicionar ao carrinho. Verifique sua conexão e tente de novo.');
       setBuyingNow(false);
     }
   }
@@ -307,9 +319,10 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             {outOfStock
               ? 'Fora de estoque'
               : adding
-              ? <><span className="spinner" />Adicionando…</>
+              ? <><span className="spinner-dark" />Adicionando…</>
               : 'Adicionar ao carrinho'}
           </button>
+          {cartError && <p role="alert" className="text-[12px] text-red-600 leading-snug">{cartError}</p>}
         </div>
 
         {/* Calculadora de frete, padrão Amazon/ML "Calcule o frete" */}
@@ -367,7 +380,12 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       </div>
 
       {/* ── Barra fixa mobile, padrão universal de PDP de marketplace ── */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-paper border-t border-mist px-4 py-3 flex items-center gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-paper border-t border-mist px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        {cartError && (
+          <p role="alert" className="absolute bottom-full inset-x-0 bg-red-50 border-t border-red-200 text-red-700 text-[12px] leading-snug px-4 py-2">
+            {cartError}
+          </p>
+        )}
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-ink leading-none">{formatCurrency(product.price)}</p>
           <p className="text-[10px] text-faint mt-1">{maxInstall}x de {formatCurrency(installVal)}</p>
@@ -394,24 +412,31 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           onClick={buyNow}
           disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
           className={[
-            'flex-1 h-11 text-[13px] font-semibold tracking-[0.04em] transition-all',
+            'flex-1 h-11 text-[13px] font-semibold tracking-[0.04em] transition-[background-color,transform] duration-150',
             outOfStock || !selectedVariant
               ? 'cursor-not-allowed bg-warm text-faint'
               : 'bg-ink text-paper active:scale-[0.98]',
           ].join(' ')}
         >
-          {outOfStock ? 'Fora de estoque' : buyingNow ? '…' : 'Comprar agora'}
+          {outOfStock ? 'Fora de estoque' : buyingNow ? <span className="inline-flex items-center gap-2"><span className="spinner" />Preparando…</span> : 'Comprar agora'}
         </button>
       </div>
 
       {/* ── Modal: item adicionado ── */}
-      {addedOpen && createPortal(
+      {added.mounted && createPortal(
         <div
-          className="fixed inset-0 z-[80] bg-[rgba(30,18,8,0.5)] backdrop-blur-sm flex items-end sm:items-center justify-center animate-fade-in"
+          className="overlay-backdrop fixed inset-0 z-[80] flex items-end sm:items-center justify-center"
+          data-state={added.state}
           onClick={closeAdded}
         >
           <div
-            className="w-full sm:max-w-sm bg-paper sm:mx-4 sm:rounded-sm overflow-hidden shadow-modal animate-scale-in"
+            ref={addedPanelRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="added-title"
+            data-variant="responsive"
+            className="overlay-panel w-full sm:max-w-sm bg-paper sm:mx-4 overflow-hidden shadow-modal pb-[env(safe-area-inset-bottom)] sm:pb-0"
             onClick={e => e.stopPropagation()}
           >
             <div className="px-6 pt-7 pb-6 text-center">
@@ -420,20 +445,23 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
               </div>
-              <h3 className="font-display font-normal text-ink text-xl leading-none mb-1">Adicionado ao carrinho</h3>
-              <p className="text-[13px] text-faint">{qty} {qty > 1 ? 'unidades' : 'unidade'} de {product.name}{selectedVariant ? ` · ${selectedVariant.size}${selectedVariant.color ? ` · ${selectedVariant.color}` : ''}` : ''}</p>
+              <h3 id="added-title" className="font-display font-normal text-ink text-xl leading-none mb-1">Adicionado ao carrinho</h3>
+              <p className="text-[13px] text-faint">{qty} {qty > 1 ? 'unidades' : 'unidade'} de {product.name}{selectedVariant ? ` · ${SIZE_LABEL[selectedVariant.size] ?? selectedVariant.size}${selectedVariant.colorName ? ` · ${selectedVariant.colorName}` : ''}` : ''}</p>
             </div>
 
             <div className="flex flex-col gap-2 px-6 pb-6">
               <button
+                type="button"
+                autoFocus
                 onClick={() => router.push('/carrinho')}
-                className="w-full h-12 text-[13px] font-semibold tracking-[0.06em] bg-ink text-paper border border-ink hover:bg-clay hover:border-clay transition-colors duration-150"
+                className="w-full h-12 text-[13px] font-semibold tracking-[0.06em] bg-ink text-paper border border-ink hover:bg-clay hover:border-clay active:scale-[0.98] transition-[background-color,border-color,transform] duration-150"
               >
                 Ver carrinho
               </button>
               <button
+                type="button"
                 onClick={closeAdded}
-                className="w-full h-12 text-[13px] font-semibold tracking-[0.06em] text-mid border border-mist hover:border-ink/50 hover:text-ink transition-colors duration-150"
+                className="w-full h-12 text-[13px] font-semibold tracking-[0.06em] text-mid border border-mist hover:border-ink/50 hover:text-ink active:scale-[0.98] transition-[border-color,color,transform] duration-150"
               >
                 Continuar comprando
               </button>

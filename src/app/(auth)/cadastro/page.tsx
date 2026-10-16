@@ -245,7 +245,7 @@ function RegisterContent() {
           width={400}
           height={400}
           aria-hidden="true"
-          className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[280px] h-auto object-contain opacity-[0.14]"
+          className="pointer-events-none select-none absolute -bottom-20 -right-20 w-[360px] max-w-[70%] h-auto object-contain opacity-[0.12]"
         />
         <Link href="/" className="relative z-10"><BrandLogo alt="Mikma" className="h-9 w-auto object-contain" /></Link>
         <div className="relative z-10">

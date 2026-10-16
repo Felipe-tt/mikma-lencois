@@ -28,6 +28,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useOverlay } from '@/lib/hooks/useOverlay';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -91,61 +92,51 @@ export function confirmDialog(options: ConfirmOptions): Promise<ConfirmResult> {
 
 export function ConfirmDialogHost() {
   const [pending, setPending] = useState<PendingDialog | null>(null);
+  // `open` separado de `pending`: ao fechar, o conteúdo continua na tela
+  // durante a animação de saída em vez de sumir de uma vez.
+  const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     pushPending = (p) => {
       setInputValue('');
       setPending(p);
+      setOpen(true);
     };
     return () => { pushPending = null; };
   }, []);
 
-  // Foca o campo de texto (withInput) ou o botão de confirmar ao abrir
-  useEffect(() => {
-    if (!pending) return;
-    const timer = setTimeout(() => {
-      if (pending.options.withInput) {
-        inputRef.current?.focus();
-      } else {
-        confirmBtnRef.current?.focus();
-      }
-    }, 60); // aguarda a animação de entrada
-    return () => clearTimeout(timer);
-  }, [pending]);
+  const hasInput = !!pending?.options.withInput;
+  const { mounted, state } = useOverlay({
+    open,
+    onClose: () => resolve(false),
+    panelRef,
+    initialFocusRef: hasInput ? inputRef : confirmBtnRef,
+    dismissible: !pending?.options.alertOnly,
+  });
 
-  // Trava scroll do body enquanto aberto
+  // Enter confirma (exceto com campo de texto, que trata o próprio Enter)
   useEffect(() => {
-    if (!pending) return;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, [pending]);
-
-  // Escape fecha/cancela
-  useEffect(() => {
-    if (!pending) return;
+    if (!open || hasInput) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (!pending.options.alertOnly) resolve(false);
-      }
-      if (e.key === 'Enter' && !pending.options.withInput) {
-        resolve(true);
-      }
+      // Enter num botão focado já dispara o clique dele (ex.: Cancelar).
+      if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) resolve(true);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [pending]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, hasInput, pending]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function resolve(confirmed: boolean) {
-    if (!pending) return;
+    if (!pending || !open) return;
     const value = pending.options.withInput ? inputValue : undefined;
     pending.resolve({ confirmed, value });
-    setPending(null);
+    setOpen(false);
   }
 
-  if (!pending) return null;
+  if (!pending || !mounted) return null;
 
   const {
     message, detail, confirmLabel, cancelLabel,
@@ -153,19 +144,24 @@ export function ConfirmDialogHost() {
   } = pending.options;
 
   const confirmCls = variant === 'danger'
-    ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-300'
-    : 'bg-clay-l text-paper hover:bg-[#A8593A] focus:ring-clay-l/40';
+    ? 'bg-red-600 text-white hover:bg-red-700'
+    : 'bg-clay text-paper hover:bg-clay-d';
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[rgba(30,18,8,0.55)] backdrop-blur-[2px]"
+      className="overlay-backdrop fixed inset-0 z-[200] flex items-center justify-center p-4"
+      data-state={state}
       onClick={() => { if (!alertOnly) resolve(false); }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-message"
     >
       <div
-        className="bg-paper w-full max-w-[400px] shadow-2xl animate-confirm-in rounded-none overflow-hidden"
+        ref={panelRef}
+        tabIndex={-1}
+        role={alertOnly ? 'alertdialog' : 'dialog'}
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-message"
+        aria-describedby={detail ? 'confirm-dialog-detail' : undefined}
+        data-variant="dialog"
+        className="overlay-panel bg-paper w-full max-w-[400px] shadow-2xl rounded-none overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header stripe */}
@@ -180,7 +176,7 @@ export function ConfirmDialogHost() {
             {message}
           </p>
           {detail && (
-            <p className="mt-1.5 text-[12px] text-mid leading-relaxed">{detail}</p>
+            <p id="confirm-dialog-detail" className="mt-1.5 text-[12px] text-mid leading-relaxed">{detail}</p>
           )}
 
           {withInput && (
@@ -191,18 +187,18 @@ export function ConfirmDialogHost() {
               onChange={e => setInputValue(e.target.value)}
               placeholder={inputPlaceholder ?? ''}
               onKeyDown={e => { if (e.key === 'Enter') resolve(true); }}
-              className="mt-4 w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/25 placeholder:text-faint-l"
+              className="mt-4 w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] outline-none focus:border-clay focus:ring-2 focus:ring-clay/20 transition-[border-color,box-shadow] duration-150 placeholder:text-faint"
             />
           )}
         </div>
 
         {/* Actions */}
-        <div className={`flex items-center px-6 py-5 gap-2.5 ${alertOnly ? 'justify-end' : 'justify-end'}`}>
+        <div className="flex items-center justify-end px-6 py-5 gap-2.5">
           {!alertOnly && (
             <button
               type="button"
               onClick={() => resolve(false)}
-              className="px-4 py-2 text-[12px] font-semibold text-mid border border-mist hover:bg-warm transition-colors focus:outline-none focus:ring-2 focus:ring-mist"
+              className="px-4 py-2 text-[12px] font-semibold text-mid border border-mist hover:bg-warm hover:text-ink active:scale-[0.97] transition-[background-color,color,transform] duration-150"
             >
               {cancelLabel ?? 'Cancelar'}
             </button>
@@ -211,7 +207,7 @@ export function ConfirmDialogHost() {
             ref={confirmBtnRef}
             type="button"
             onClick={() => resolve(true)}
-            className={`px-4 py-2 text-[12px] font-semibold transition-colors focus:outline-none focus:ring-2 ${confirmCls}`}
+            className={`px-4 py-2 text-[12px] font-semibold active:scale-[0.97] transition-[background-color,transform] duration-150 ${confirmCls}`}
           >
             {confirmLabel ?? (alertOnly ? 'OK' : 'Confirmar')}
           </button>

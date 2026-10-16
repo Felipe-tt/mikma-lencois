@@ -1,9 +1,12 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { trackPurchase } from '@/lib/analytics';
+import { copyText } from '@/lib/clipboard';
+import { requestNewPix } from '@/lib/orders/requestNewPix';
+import { useOverlay, OVERLAY_EXIT_MS } from '@/lib/hooks/useOverlay';
 
 interface Props {
   qrCode: string;
@@ -32,6 +35,9 @@ type PaymentStatus = 'pending' | 'confirmed' | 'expired' | 'failed';
 
 function usePaymentStatus(orderId: string, totalCents: number): PaymentStatus {
   const [status, setStatus] = useState<PaymentStatus>('pending');
+  // O pedido muda de status várias vezes depois de pago (preparando,
+  // enviado...); a compra só pode ser registrada no analytics uma vez.
+  const tracked = useRef(false);
   useEffect(() => {
     if (!orderId) return;
     const unsub = onSnapshot(doc(db, 'orders', orderId), snap => {
@@ -40,6 +46,8 @@ function usePaymentStatus(orderId: string, totalCents: number): PaymentStatus {
       const s = data.status as string;
       if (s === 'paid' || s === 'preparing' || s === 'shipped' || s === 'delivered') {
         setStatus('confirmed');
+        if (tracked.current) return;
+        tracked.current = true;
         const items = (data.items ?? []) as Array<{ sku: string; productId: string; productName: string; unitPrice: number; quantity: number }>;
         trackPurchase({
           orderId,
@@ -49,6 +57,10 @@ function usePaymentStatus(orderId: string, totalCents: number): PaymentStatus {
         });
       } else if (s === 'cancelled') {
         setStatus('failed');
+      } else if (s === 'payment_expired') {
+        setStatus('expired');
+      } else if (s === 'pending_payment') {
+        setStatus('pending');
       }
     });
     return unsub;
@@ -56,29 +68,60 @@ function usePaymentStatus(orderId: string, totalCents: number): PaymentStatus {
   return status;
 }
 
-export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, onClose }: Props) {
+export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents: initialTotal, orderId, expiresAt: initialExpires, onClose }: Props) {
+  const [pix, setPix] = useState({ qrCode: initialQr, copyPaste: initialCopy, expiresAt: initialExpires, totalCents: initialTotal });
+  const { qrCode, copyPaste, expiresAt, totalCents } = pix;
   const [copied, setCopied] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenError, setRegenError] = useState('');
+  const [open, setOpen] = useState(true);
+  const copyInputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Quem renderiza o modal o desmonta ao chamar onClose; espera a saída
+  // terminar antes de avisar, senão ele some de uma vez.
+  const requestClose = () => {
+    if (!open) return;
+    setOpen(false);
+    setTimeout(onClose, OVERLAY_EXIT_MS);
+  };
+  const { mounted, state } = useOverlay({ open, onClose: requestClose, panelRef });
   const secondsLeft = useCountdown(expiresAt);
   const paymentStatus = usePaymentStatus(orderId, totalCents);
-  const expired = secondsLeft === 0;
+  const expired = secondsLeft === 0 || paymentStatus === 'expired';
   const confirmed = paymentStatus === 'confirmed';
   const failed = paymentStatus === 'failed';
 
   const total = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCents / 100);
 
-  useEffect(() => {
-    setMounted(true);
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey); };
-  }, [onClose]);
-
-  function copy() {
-    navigator.clipboard.writeText(copyPaste);
+  async function copy() {
+    const ok = await copyText(copyPaste);
+    if (!ok) {
+      // Sem permissão de copiar (comum dentro do Instagram/WhatsApp):
+      // seleciona o código pro cliente copiar segurando o dedo.
+      setCopyFailed(true);
+      copyInputRef.current?.focus();
+      copyInputRef.current?.select();
+      return;
+    }
+    setCopyFailed(false);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  }
+
+  async function regenerate() {
+    setRegenerating(true);
+    setRegenError('');
+    try {
+      const next = await requestNewPix(orderId);
+      setPix({ qrCode: next.qrCode, copyPaste: next.copyPaste, expiresAt: next.expiresAt, totalCents: next.totalCents ?? totalCents });
+      setCopied(false);
+      setCopyFailed(false);
+    } catch (err) {
+      setRegenError(err instanceof Error ? err.message : 'Não foi possível gerar o PIX. Tente novamente.');
+    } finally {
+      setRegenerating(false);
+    }
   }
 
   const timeLabel = (() => {
@@ -94,12 +137,18 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-[rgba(30,18,8,0.7)] backdrop-blur-sm p-0 sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="pix-modal-title"
+      className="overlay-backdrop fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      data-state={state}
     >
-      <div className="w-full sm:max-w-md bg-paper shadow-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh] overflow-hidden sm:rounded-sm">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pix-modal-title"
+        data-variant="responsive"
+        className="overlay-panel w-full sm:max-w-md bg-paper shadow-2xl flex flex-col max-h-[95dvh] sm:max-h-[90vh] overflow-hidden pb-[env(safe-area-inset-bottom)] sm:pb-0"
+      >
 
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-5 border-b border-mist shrink-0">
@@ -157,9 +206,20 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
                   <p className="text-sm text-faint max-w-[30ch] leading-relaxed">
                     {failed
                       ? 'O pagamento não foi identificado e o pedido foi cancelado.'
-                      : 'O tempo para pagamento esgotou. Faça um novo pedido.'}
+                      : 'O tempo para pagamento esgotou. Gere um novo código para pagar o mesmo pedido.'}
                   </p>
                 </div>
+                {!failed && (
+                  <button
+                    type="button"
+                    onClick={regenerate}
+                    disabled={regenerating}
+                    className="btn-clay text-xs px-6 py-3 font-semibold tracking-wide"
+                  >
+                    {regenerating ? <><span className="spinner w-3.5 h-3.5" /> Gerando…</> : 'Gerar novo PIX'}
+                  </button>
+                )}
+                {regenError && <p role="alert" className="text-xs text-red-600">{regenError}</p>}
               </div>
             )}
 
@@ -209,6 +269,7 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
                 <div className="w-full flex flex-col gap-2">
                   <div className="flex items-center border border-mist bg-warm/40 overflow-hidden">
                     <input
+                      ref={copyInputRef}
                       readOnly
                       value={copyPaste}
                       onFocus={e => e.currentTarget.select()}
@@ -216,8 +277,10 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
                       aria-label="Código PIX copia e cola"
                     />
                     <button
+                      type="button"
                       onClick={copy}
-                      className={`shrink-0 px-4 py-2.5 text-xs font-bold tracking-[0.08em] uppercase transition-colors ${
+                      aria-live="polite"
+                      className={`shrink-0 px-4 py-2.5 text-xs font-bold tracking-[0.08em] uppercase active:scale-[0.97] transition-[background-color,transform] duration-150 ${
                         copied ? 'bg-emerald-600 text-paper' : 'bg-ink text-paper hover:bg-clay'
                       }`}
                     >
@@ -234,6 +297,11 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
                       )}
                     </button>
                   </div>
+                  {copyFailed && (
+                    <p role="status" className="text-[11px] text-amber-700">
+                      Seu navegador não deixou copiar. O código está selecionado: toque e segure para copiar.
+                    </p>
+                  )}
                 </div>
 
                 {/* Aviso */}
@@ -265,8 +333,9 @@ export function PIXModal({ qrCode, copyPaste, totalCents, orderId, expiresAt, on
         {/* ── Footer ── */}
         <div className="border-t border-mist px-6 py-4 shrink-0 flex items-center justify-between gap-3">
           <button
-            onClick={onClose}
-            className="text-sm font-medium text-faint hover:text-ink transition-colors"
+            type="button"
+            onClick={requestClose}
+            className="text-sm font-medium text-mid hover:text-ink transition-colors"
           >
             {confirmed ? 'Ver meus pedidos' : 'Fechar'}
           </button>

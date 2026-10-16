@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Order, ReturnItem, ReturnType } from '@/types';
 import { IconX } from '@/components/ui/Icon';
+import { Overlay } from '@/components/ui/Overlay';
 
 interface Props {
   order: Order;
@@ -72,14 +73,16 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
   }
 
   return (
-    <div className="fixed inset-0 z-[80] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
-      <div
-        className="bg-paper w-full sm:max-w-md sm:border sm:border-mist max-h-[90vh] flex flex-col animate-fade-in"
-        onClick={e => e.stopPropagation()}
-      >
+    <Overlay
+      onClose={onClose}
+      variant="responsive"
+      labelledBy="return-title"
+      className="bg-paper w-full sm:max-w-md sm:border sm:border-mist max-h-[90dvh] flex flex-col rounded-t-3xl sm:rounded-2xl overflow-hidden"
+    >
+      {close => (<>
         <div className="flex items-center justify-between px-5 py-4 border-b border-mist shrink-0">
-          <p className="text-[14px] font-bold text-ink">Registrar troca ou devolução</p>
-          <button onClick={onClose} className="text-faint hover:text-mid p-1" aria-label="Fechar"><IconX size={18} /></button>
+          <p id="return-title" className="text-[14px] font-bold text-ink">Registrar troca ou devolução</p>
+          <button type="button" onClick={close} className="text-faint hover:text-ink hover:bg-warm active:scale-90 rounded-lg p-1.5 transition-[color,background-color,transform] duration-150" aria-label="Fechar"><IconX size={18} /></button>
         </div>
 
         <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto">
@@ -135,12 +138,12 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
           <button
             onClick={submit}
             disabled={saving}
-            className="w-full bg-ink text-paper text-[12px] font-bold uppercase tracking-[0.08em] py-3 hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-xl"
+            className="w-full bg-ink text-paper text-[12px] font-bold uppercase tracking-[0.08em] py-3 hover:bg-ink/80 active:scale-[0.98] transition-[background-color,transform] duration-150 disabled:opacity-50 disabled:pointer-events-none rounded-xl inline-flex items-center justify-center gap-2"
           >
-            {saving ? 'Registrando...' : 'Registrar'}
+            {saving ? <><span className="spinner" />Registrando…</> : 'Registrar'}
           </button>
         </div>
-      </div>
-    </div>
+      </>)}
+    </Overlay>
   );
 }

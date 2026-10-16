@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { consumeReturnTo } from '@/lib/auth/returnTo';
+import { Overlay } from '@/components/ui/Overlay';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
 
@@ -34,12 +35,6 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
   const [resent, setResent]   = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [onClose]);
   useEffect(() => {
     if (resendCooldown <= 0) return;
     const t = setTimeout(() => setResendCooldown(c => c - 1), 1000);
@@ -79,11 +74,9 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="absolute inset-0 bg-[rgba(30,18,8,0.6)] backdrop-blur-sm" />
-      <div className="relative w-full max-w-sm bg-paper shadow-2xl p-8">
-        <button onClick={onClose} className="absolute top-4 right-4 text-mist hover:text-mid transition-colors">
+    <Overlay onClose={onClose} labelledBy="forgot-title" className="relative w-full max-w-sm bg-paper shadow-2xl p-8">
+      {close => (<>
+        <button type="button" onClick={close} aria-label="Fechar" className="absolute top-3 right-3 w-9 h-9 flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
@@ -91,15 +84,15 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
 
         {step === 'email' && (
           <>
-            <p className="font-display text-xl text-ink mb-1">Esqueceu a senha?</p>
+            <p id="forgot-title" className="font-display text-xl text-ink mb-1">Esqueceu a senha?</p>
             <p className="text-sm text-mid mb-6 leading-relaxed">
               Informe seu e-mail e enviaremos um link com um botão para criar uma nova senha.
             </p>
-            {error && <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
+            {error && <p role="alert" className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
             <form onSubmit={sendLink} className="flex flex-col gap-4">
               <div>
-                <label className="label">Seu e-mail</label>
-                <input ref={inputRef} type="email" value={email} onChange={e => setEmail(e.target.value)}
+                <label htmlFor="forgot-email" className="label">Seu e-mail</label>
+                <input id="forgot-email" ref={inputRef} autoFocus type="email" value={email} onChange={e => setEmail(e.target.value)}
                   className="input text-base" placeholder="seuemail@exemplo.com" autoComplete="email" />
               </div>
               <button type="submit" disabled={loading}
@@ -117,7 +110,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
                 <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
               </svg>
             </div>
-            <p className="font-display text-xl text-ink mb-1">Veja seu e-mail</p>
+            <p id="forgot-title" className="font-display text-xl text-ink mb-1">Veja seu e-mail</p>
             <p className="text-sm text-mid mb-6 leading-relaxed">
               Se este e-mail estiver cadastrado, enviamos um link para <strong className="text-ink">{email}</strong>. Clique no botão{' '}
               <strong className="text-ink">&ldquo;Criar nova senha&rdquo;</strong> no e-mail para continuar.
@@ -128,12 +121,12 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
                 className="text-sm text-clay font-medium hover:underline disabled:text-faint transition-colors">
                 {loading ? 'Enviando…' : resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Reenviar link'}
               </button>
-              {resent && <p className="text-xs text-green-600 mt-2">E-mail reenviado.</p>}
+              {resent && <p role="status" className="text-xs text-green-600 mt-2">E-mail reenviado.</p>}
             </div>
           </>
         )}
-      </div>
-    </div>
+      </>)}
+    </Overlay>
   );
 }
 
@@ -264,7 +257,7 @@ export default function LoginPage() {
             width={400}
             height={400}
             aria-hidden="true"
-            className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[280px] h-auto object-contain opacity-[0.14]"
+            className="pointer-events-none select-none absolute -bottom-20 -right-20 w-[360px] max-w-[70%] h-auto object-contain opacity-[0.12]"
           />
           <Link href="/" className="relative z-10">
             <BrandLogo alt="Mikma" className="h-9 w-auto object-contain" />

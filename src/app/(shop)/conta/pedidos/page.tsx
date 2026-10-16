@@ -11,6 +11,8 @@ import type { Order } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { OrdersListSkeleton } from '@/components/ui/Skeleton';
 import { PIXModal } from '@/components/checkout/PIXModal';
+import { copyText } from '@/lib/clipboard';
+import { requestNewPix } from '@/lib/orders/requestNewPix';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { IconAlert } from '@/components/ui/Icon';
 
@@ -43,6 +45,7 @@ export default function PedidosPage() {
   const [pixModal, setPixModal]       = useState<PixModalData | null>(null);
   const [actionOrderId, setActionOId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId]       = useState<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -58,14 +61,8 @@ export default function PedidosPage() {
     setActionOId(order.id);
     setActionError(e => ({ ...e, [order.id]: '' }));
     try {
-      const token = await auth.currentUser!.getIdToken();
-      const res = await fetch(`/api/orders/${order.id}/regenerate-pix`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar PIX');
-      const data = await res.json();
-      setPixModal({ qrCode: data.qrCode, copyPaste: data.copyPaste, orderId: order.id, totalCents: order.totalCents, expiresAt: data.expiresAt });
+      const data = await requestNewPix(order.id);
+      setPixModal({ qrCode: data.qrCode, copyPaste: data.copyPaste, orderId: order.id, totalCents: data.totalCents ?? order.totalCents, expiresAt: data.expiresAt });
     } catch (err) {
       setActionError(e => ({ ...e, [order.id]: err instanceof Error ? err.message : 'Erro' }));
     } finally {
@@ -188,21 +185,28 @@ export default function PedidosPage() {
                       <span className="font-mono font-semibold text-ink truncate">{order.delivery.trackingCode}</span>
                     </div>
                     <button
-                      onClick={() => navigator.clipboard.writeText(order.delivery!.trackingCode!)}
+                      onClick={async () => {
+                        if (await copyText(order.delivery!.trackingCode!)) {
+                          setCopiedId(order.id);
+                          setTimeout(() => setCopiedId(c => (c === order.id ? null : c)), 2000);
+                        }
+                      }}
                       className="shrink-0 text-[10px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.08em]"
                     >
-                      Copiar
+                      {copiedId === order.id ? 'Copiado' : 'Copiar'}
                     </button>
                   </div>
                 )}
 
                 {/* ── Ações para pedido pendente ── */}
-                {order.status === 'pending_payment' && (
+                {(order.status === 'pending_payment' || order.status === 'payment_expired') && (
                   <div className="border-t border-amber-100 bg-amber-50 px-5 sm:px-6 py-4">
                     <div className="flex items-start gap-3 mb-3">
                       <IconAlert size={16} className="text-amber-500 shrink-0 mt-0.5" />
                       <p className="text-xs text-amber-700 leading-relaxed">
-                        Este pedido está aguardando pagamento. Gere o PIX para pagar ou cancele se não quiser mais.
+                        {order.status === 'payment_expired'
+                          ? 'O PIX deste pedido expirou. Gere um novo código para pagar.'
+                          : 'Este pedido está aguardando pagamento. Gere o PIX para pagar ou cancele se não quiser mais.'}
                       </p>
                     </div>
 
@@ -218,7 +222,7 @@ export default function PedidosPage() {
                       >
                         {actionOrderId === order.id
                           ? <><span className="spinner w-3.5 h-3.5" /> Gerando…</>
-                          : 'Pagar agora'
+                          : order.status === 'payment_expired' ? 'Gerar novo PIX' : 'Pagar agora'
                         }
                       </button>
                       <button

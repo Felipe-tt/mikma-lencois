@@ -1,23 +1,24 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CategoryFilter } from './CategoryFilter';
+import { useOverlay } from '@/lib/hooks/useOverlay';
 
 interface Props { categories: string[]; active?: string; }
 
 export function MobileFilterSheet({ categories, active }: Props) {
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { mounted, state } = useOverlay({ open, onClose: () => setOpen(false), panelRef });
 
   if (categories.length === 0) return null;
 
   return (
     <>
       <button
+        type="button"
         onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
         className="btn-outline flex items-center gap-2 text-xs py-2 px-4"
       >
         <FilterIcon />
@@ -25,26 +26,37 @@ export function MobileFilterSheet({ categories, active }: Props) {
         {active && <span className="w-1.5 h-1.5 rounded-full bg-clay shrink-0" />}
       </button>
 
-      {open && (
-        <>
+      {mounted && createPortal(
+        <div className="overlay-backdrop fixed inset-0 z-50 flex items-end" data-state={state} onClick={() => setOpen(false)}>
           <div
-            className="fixed inset-0 z-40 bg-[rgba(30,18,8,0.4)] animate-fade-in"
-            onClick={() => setOpen(false)}
-          />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-paper border-t border-mist rounded-t-xl shadow-2xl animate-fade-up max-h-[70vh] flex flex-col">
+            ref={panelRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="filter-sheet-title"
+            data-variant="sheet"
+            className="overlay-panel w-full bg-paper border-t border-mist shadow-2xl max-h-[75dvh] flex flex-col pb-[env(safe-area-inset-bottom)]"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-mist shrink-0">
-              <p className="font-semibold text-ink text-base">Filtrar produtos</p>
-              <button onClick={() => setOpen(false)} className="btn-ghost p-1.5">
+              <p id="filter-sheet-title" className="font-semibold text-ink text-base">Filtrar produtos</p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Fechar filtros"
+                className="w-9 h-9 -mr-2 flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
               </button>
             </div>
-            <div className="px-6 py-5 overflow-y-auto flex-1">
+            <div className="px-6 py-5 overflow-y-auto overscroll-contain flex-1">
               <CategoryFilter categories={categories} active={active} onClose={() => setOpen(false)} />
             </div>
           </div>
-        </>
+        </div>,
+        document.body
       )}
     </>
   );

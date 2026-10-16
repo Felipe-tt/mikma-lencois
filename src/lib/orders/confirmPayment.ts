@@ -31,7 +31,8 @@ function formatCurrency(cents: number): string {
  * Retorna `true` se o pedido foi de fato confirmado agora (idempotente:
  * `false` se não existe ou já não estava mais 'pending_payment' — webhooks
  * duplicados/atrasados e cliques duplicados no botão manual caem aqui sem
- * duplicar nenhum efeito).
+ * duplicar nenhum efeito). Lança se a transação falhar, pra quem chamou
+ * poder pedir um novo envio (webhook) ou mostrar o erro (painel).
  */
 export async function confirmOrderPaid(
   orderId: string,
@@ -60,6 +61,14 @@ export async function confirmOrderPaid(
         ? `${note} · ATENÇÃO: txId do evento difere do registrado (${registeredTxId.slice(-8)})`
         : note;
 
+      // Leituras antes das escritas (exigência da transação). SKU sem
+      // documento de estoque (produto/variação apagado depois do pedido)
+      // é pulado: tx.update num doc inexistente derrubava a transação
+      // inteira e o pedido pago ficava parado em pending_payment.
+      const lines = expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>);
+      const invRefs = lines.map(line => adminDb.collection('inventory').doc(line.sku));
+      const invSnaps = invRefs.length > 0 ? await tx.getAll(...invRefs) : [];
+
       tx.update(orderRef, {
         status: 'paid',
         'payment.paidAt': FieldValue.serverTimestamp(),
@@ -77,21 +86,29 @@ export async function confirmOrderPaid(
       // (libera a reserva feita em create-checkout/create-pix na criação
       // do pedido), ambos pelo mesmo motivo: a venda se concretizou.
       // expandStockLines inclui a fronha trocada (Jogo de Cama) junto.
-      for (const line of expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>)) {
-        const invRef = adminDb.collection('inventory').doc(line.sku);
-        tx.update(invRef, {
+      lines.forEach((line, i) => {
+        if (!invSnaps[i].exists) {
+          Sentry.captureMessage('confirm-order-paid: SKU sem documento de estoque', {
+            level: 'warning', extra: { orderId, sku: line.sku },
+          });
+          return;
+        }
+        tx.update(invRefs[i], {
           quantity: FieldValue.increment(-line.quantity),
           reserved: FieldValue.increment(-line.quantity),
           updatedAt: FieldValue.serverTimestamp(),
         });
-      }
+      });
 
       return data;
     });
   } catch (err) {
     console.error(`Failed to confirm order ${orderId}:`, err);
     Sentry.captureException(err, { tags: { route: 'confirm-order-paid' }, extra: { orderId, manual: !!manual } });
-    return false;
+    // Relança: o webhook precisa responder erro pro gateway reenviar o
+    // evento. Engolir aqui deixava o pedido pago parado e o cron
+    // cancelava depois de 48h.
+    throw err;
   }
 
   if (!order) {

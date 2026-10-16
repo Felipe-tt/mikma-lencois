@@ -145,6 +145,11 @@ export async function POST(req: NextRequest) {
         if (!prod.active) {
           throw new StockError(`"${prod.name}" não está mais disponível. Remova do carrinho e tente novamente.`);
         }
+        // O SKU vem do carrinho (client SDK): sem isso dava pra pagar o
+        // preço de um produto e reservar/baixar o estoque de outro.
+        if (!ci.sku.startsWith(`${ci.productId}_`)) {
+          throw new StockError('Um item do seu carrinho está inválido. Remova-o e adicione de novo.');
+        }
         return { ...ci, unitPrice: prod.price, productName: prod.name };
       });
     } catch (err) {
@@ -243,6 +248,7 @@ export async function POST(req: NextRequest) {
           qrCode: existing.payment.pixQrCode,
           copyPaste: existing.payment.pixCopyPaste,
           expiresAt: existing.payment.expiresAt,
+          totalCents: amountCents,
         });
       }
     }
@@ -474,6 +480,7 @@ export async function POST(req: NextRequest) {
       qrCode: pix.brCodeBase64,
       copyPaste: pix.brCode,
       expiresAt: pix.expiresAt,
+      totalCents: amountCents,
     });
   } catch (err) {
     console.error('create-pix error:', err);
