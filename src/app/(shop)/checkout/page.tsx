@@ -173,7 +173,17 @@ export default function CheckoutPage() {
   const [errors, setErrors]   = useState<Record<string, string>>({});
   const [apiError, setApiErr] = useState('');
   const [submitting, setSub]  = useState(false);
-  const [pixData, setPixData] = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string; expiresAt?: string } | null>(null);
+  const [pixData, setPixData] = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string; expiresAt?: string; totalCents?: number } | null>(null);
+  // Com o PIX na tela, o carrinho esvazia quando o pagamento confirma.
+  // Sem essa trava o listener abaixo mandava pro /carrinho e o cliente
+  // nunca via o "Pagamento recebido".
+  const pixShownRef = useRef(false);
+  const apiErrorRef = useRef<HTMLDivElement>(null);
+  // O erro aparece no topo do formulário e o botão de pagar fica no fim:
+  // no celular parecia que nada tinha acontecido.
+  useEffect(() => {
+    if (apiError) apiErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [apiError]);
   const [payMethod, setPayMethod]     = useState<'pix' | 'credit'>('pix');
   const [installments, setInstall]    = useState(1);
 
@@ -212,7 +222,10 @@ export default function CheckoutPage() {
     if (loading) return;
     if (!user) { router.push('/entrar'); return; }
     const unsub = onSnapshot(doc(db, 'carts', user.uid), snap => {
-      if (!snap.exists() || !snap.data()?.items?.length) { router.push('/carrinho'); return; }
+      if (!snap.exists() || !snap.data()?.items?.length) {
+        if (!pixShownRef.current) router.push('/carrinho');
+        return;
+      }
       const c = snap.data() as Cart;
       setCart(c);
       setCL(false);
@@ -332,16 +345,18 @@ export default function CheckoutPage() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ address: addr, shipping: selectedShipping, pixDiscount }),
         });
-        if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar PIX');
-        setPixData(await res.json());
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error ?? 'Erro ao gerar PIX. Tente novamente.');
+        pixShownRef.current = true;
+        setPixData(data);
       } else {
         const res = await fetch('/api/payment/create-checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ address: addr, shipping: selectedShipping, installments }),
         });
-        if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao gerar checkout');
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(d.error ?? 'Erro ao gerar checkout. Tente novamente.');
         window.location.href = d.checkoutUrl;
       }
     } catch (err: unknown) {
@@ -369,7 +384,7 @@ export default function CheckoutPage() {
       qrCode={pixData.qrCode}
       copyPaste={pixData.copyPaste}
       orderId={pixData.orderId}
-      totalCents={total}
+      totalCents={pixData.totalCents ?? total}
       expiresAt={pixData.expiresAt}
       onClose={() => router.push('/conta/pedidos')}
     />
@@ -401,7 +416,7 @@ export default function CheckoutPage() {
           <form onSubmit={submit} className="flex flex-col gap-3 w-full">
 
             {apiError && (
-              <div className="flex items-start gap-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3.5 text-sm rounded-sm">
+              <div ref={apiErrorRef} role="alert" className="scroll-mt-20 flex items-start gap-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3.5 text-sm rounded-sm">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 mt-px text-red-500"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
                 {apiError}
               </div>

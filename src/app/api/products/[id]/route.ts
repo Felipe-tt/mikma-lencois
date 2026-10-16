@@ -78,6 +78,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const productData = snap.data();
 
+  // Com pedido aguardando pagamento, apagar o estoque fazia a confirmação
+  // desse pedido falhar. Pede pra desativar o produto em vez de excluir.
+  const invSnap = await adminDb.collection('inventory').where('productId', '==', id).get();
+  if (invSnap.docs.some(d => ((d.data().reserved as number | undefined) ?? 0) > 0)) {
+    return NextResponse.json(
+      { error: 'Este produto tem pedidos aguardando pagamento. Desative-o agora e exclua depois que eles forem pagos ou expirarem.' },
+      { status: 409 }
+    );
+  }
+
   // Apaga imagens do Storage (evita arquivos órfãos acumulando custo)
   const images: string[] = productData?.images ?? [];
   await Promise.allSettled(
@@ -92,7 +102,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   );
 
   // Apaga o estoque vinculado a este produto (cada variante é um doc em inventory)
-  const invSnap = await adminDb.collection('inventory').where('productId', '==', id).get();
   const batch = adminDb.batch();
   invSnap.docs.forEach(d => batch.delete(d.ref));
   batch.delete(productRef);
