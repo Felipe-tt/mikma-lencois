@@ -60,7 +60,6 @@ export default function AvaliacoesPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6">
-        <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-clay-l mb-1">Painel</p>
         <h1 className="font-display font-normal text-ink text-2xl">Avaliações</h1>
         <p className="text-[13px] text-faint mt-1">O que os clientes escreveram nos produtos. Apague só o que for ofensivo ou spam.</p>
       </div>

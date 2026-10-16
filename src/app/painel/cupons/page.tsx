@@ -91,7 +91,7 @@ export default function CuponsPage() {
     : `${(c.value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} de desconto`;
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Cupons de desconto</h1>

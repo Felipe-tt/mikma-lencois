@@ -257,7 +257,6 @@ export default function PainelPedidos() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-clay-l mb-1">Painel</p>
           <h1 className="font-display font-normal text-ink text-2xl">Pedidos</h1>
           <p className="text-[13px] text-faint mt-1">
             {todayCount} pedido{todayCount === 1 ? '' : 's'} hoje
