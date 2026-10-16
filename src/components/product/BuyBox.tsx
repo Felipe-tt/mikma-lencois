@@ -191,9 +191,11 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           <p className="font-display text-[2rem] leading-none text-ink font-normal tracking-[-0.02em]">
             {formatCurrency(product.price)}
           </p>
-          <p className="text-[12px] text-mid mt-1.5">
-            em até <strong className="text-ink">{maxInstall}x de {formatCurrency(installVal)}</strong> sem juros
-          </p>
+          {maxInstall > 1 && (
+            <p className="text-[12px] text-mid mt-1.5">
+              em até <strong className="text-ink">{maxInstall}x de {formatCurrency(installVal)}</strong> sem juros
+            </p>
+          )}
           {pixDiscountThresholdCents > 0 && (
             <p className="text-[12px] text-mid mt-0.5">
               {pixEligible ? (
@@ -336,7 +338,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               placeholder="00000-000"
               inputMode="numeric"
               maxLength={9}
-              className="flex-1 h-10 px-3 border border-mist bg-paper text-[13px] text-ink placeholder:text-faint focus:outline-none focus:border-ink transition-colors appearance-none"
+              className="flex-1 min-w-0 h-10 px-3 border border-mist bg-paper text-[13px] text-ink placeholder:text-faint focus:outline-none focus:border-ink transition-colors appearance-none"
             />
             <button
               onClick={calcShipping}
@@ -388,7 +390,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
         )}
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-ink leading-none">{formatCurrency(product.price)}</p>
-          <p className="text-[10px] text-faint mt-1">{maxInstall}x de {formatCurrency(installVal)}</p>
+          {maxInstall > 1 && <p className="text-[10px] text-faint mt-1">{maxInstall}x de {formatCurrency(installVal)}</p>}
         </div>
         {!outOfStock && (
           <button

@@ -235,25 +235,49 @@ export default async function ProductPage({ params }: Props) {
       <div className="container-shop py-8 pb-28 sm:pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
 
-          {/* ── Coluna esquerda: galeria + informações do produto ── */}
-          <div className="flex flex-col gap-8 min-w-0">
+          {/* Ordem: no celular foto → nome/compra → detalhes; no desktop foto
+              e detalhes à esquerda, nome + compra fixos à direita. Antes o
+              nome ficava embaixo da foto e a coluna de compra começava direto
+              pelo preço, sem dizer o que estava à venda. */}
+          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
             <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} />
+          </div>
 
+          <div className="flex flex-col gap-5 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24">
+            <div>
+              {product.category && (
+                <Link
+                  href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
+                  className="eyebrow text-clay hover:text-ink transition-colors mb-2 inline-block"
+                >
+                  {product.category}
+                </Link>
+              )}
+              <h1 className="font-display font-normal text-ink leading-[1.1] text-[1.75rem] sm:text-[2rem]">
+                {product.name}
+              </h1>
+            </div>
+            {product.category === 'Jogos de cama' && fronhaOptions.length > 0 ? (
+              <JogoDeCamaBuyBox
+                product={product}
+                inventory={inventory}
+                pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
+                pixDiscountPct={s.pixDiscountPct ?? 0}
+                fronhaOptions={fronhaOptions}
+                fronhaInventory={fronhaInventory}
+              />
+            ) : (
+              <BuyBox
+                product={product}
+                inventory={inventory}
+                pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
+                pixDiscountPct={s.pixDiscountPct ?? 0}
+              />
+            )}
+          </div>
+
+          <div className="flex flex-col gap-8 min-w-0 lg:col-start-1 lg:row-start-2">
             <FadeIn className="flex flex-col gap-6">
-              <div>
-                {product.category && (
-                  <Link
-                    href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
-                    className="eyebrow text-clay hover:text-ink transition-colors mb-2 inline-block"
-                  >
-                    {product.category}
-                  </Link>
-                )}
-                <h1 className="font-display font-normal text-ink leading-[1.08] text-[1.9rem] sm:text-[2.3rem] lg:text-[2.5rem]">
-                  {product.name}
-                </h1>
-              </div>
-
               {product.description && (
                 <p className="text-[14px] text-mid leading-relaxed max-w-[60ch]">
                   {product.description}
@@ -329,26 +353,6 @@ export default async function ProductPage({ params }: Props) {
             </FadeIn>
           </div>
 
-          {/* ── Coluna direita: buy box fixa, padrão marketplace ── */}
-          <FadeIn className="lg:sticky lg:top-24" delay={100}>
-            {product.category === 'Jogos de cama' && fronhaOptions.length > 0 ? (
-              <JogoDeCamaBuyBox
-                product={product}
-                inventory={inventory}
-                pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
-                pixDiscountPct={s.pixDiscountPct ?? 0}
-                fronhaOptions={fronhaOptions}
-                fronhaInventory={fronhaInventory}
-              />
-            ) : (
-              <BuyBox
-                product={product}
-                inventory={inventory}
-                pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
-                pixDiscountPct={s.pixDiscountPct ?? 0}
-              />
-            )}
-          </FadeIn>
         </div>
       </div>
 
@@ -365,7 +369,7 @@ export default async function ProductPage({ params }: Props) {
               </div>
               <Link
                 href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
-                className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-mid hover:text-ink transition-colors group pb-0.5"
+                className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-mid hover:text-ink transition-colors group pb-0.5 mr-[96px]"
               >
                 Ver tudo
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -387,7 +391,7 @@ function SizeGuide({ columns, rows }: { columns: string[]; rows: Record<string, 
   return (
     <details className="group border-t border-mist pt-4">
       <summary className="flex items-center justify-between cursor-pointer list-none text-[12px] font-semibold text-mid tracking-[0.08em] uppercase hover:text-ink transition-colors">
-        Guia de tamanhos
+        Tamanhos de cama e colchão
         <svg className="w-3.5 h-3.5 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <path d="M6 9l6 6 6-6"/>
         </svg>

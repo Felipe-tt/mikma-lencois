@@ -91,17 +91,20 @@ export default async function HomePage() {
           </h1>
 
           {/* Copy + CTA, linha única embaixo do headline */}
-          <div className="mt-10 sm:mt-14 flex flex-col sm:flex-row sm:items-end justify-between gap-8">
-            <p className="text-[15px] text-mid leading-relaxed max-w-[38ch] font-light">
+          {/* Texto e botões juntos, alinhados à esquerda com o título: antes o
+              botão ficava sozinho na ponta direita, longe do que ele chama. */}
+          <div className="mt-8 sm:mt-10 flex flex-col items-start gap-7">
+            <p className="text-[15px] sm:text-[16px] text-mid leading-relaxed max-w-[42ch] font-light">
               {heroSubtitle}
             </p>
-            <div className="flex items-center gap-5 shrink-0">
+            <div className="flex items-center gap-6">
               <Link href="/produtos"
-                className="inline-flex items-center justify-center h-12 px-7 bg-ink text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-mid transition-colors duration-200">
+                className="group inline-flex items-center justify-center gap-2 h-12 px-7 bg-ink text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-clay active:scale-[0.98] transition-[background-color,transform] duration-200">
                 Ver produtos
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:translate-x-0.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               </Link>
               <Link href="/sobre"
-                className="text-[13px] text-faint hover:text-ink transition-colors duration-200 border-b border-faint-l hover:border-ink pb-px">
+                className="text-[13px] text-mid hover:text-ink transition-colors duration-200 border-b border-mist-d hover:border-ink pb-px">
                 Sobre nós
               </Link>
             </div>
@@ -109,11 +112,11 @@ export default async function HomePage() {
 
           {/* Trust strip, 4 pilares com ícone + separador */}
           {trustItems.length > 0 && (
-            <div className="mt-12 pt-8 border-t border-faint-l/60">
-              <div className="flex flex-wrap gap-y-4 gap-x-0">
+            <div className="mt-12 pt-8 border-t border-mist-d/70">
+              <div className="grid grid-cols-2 gap-y-4 gap-x-4 sm:flex sm:flex-wrap sm:gap-x-0">
                 {trustItems.map((t, i) => (
                   <div key={t} className="flex items-center">
-                    <div className="flex items-center gap-2.5 pr-6 sm:pr-10">
+                    <div className="flex items-center gap-2.5 sm:pr-10">
                       <span className="text-mid shrink-0">
                         {i === 0 && (
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -136,10 +139,10 @@ export default async function HomePage() {
                           </svg>
                         )}
                       </span>
-                      <span className="text-[12px] text-[#5C4433] font-medium tracking-[0.02em]">{t}</span>
+                      <span className="text-[12px] text-mid font-medium tracking-[0.02em] leading-snug">{t}</span>
                     </div>
                     {i < trustItems.length - 1 && (
-                      <span className="h-4 w-px bg-faint-l mr-6 sm:mr-10 shrink-0 hidden sm:block" />
+                      <span className="h-4 w-px bg-mist-d mr-10 shrink-0 hidden sm:block" />
                     )}
                   </div>
                 ))}
@@ -160,7 +163,7 @@ export default async function HomePage() {
             {s.featuredTitle || 'Destaques'}
           </h2>
           <Link href="/produtos"
-            className="font-mono text-[11px] tracking-[0.14em] uppercase text-faint hover:text-ink transition-colors duration-150 border-b border-transparent hover:border-ink pb-px">
+            className="text-[13px] font-medium text-mid hover:text-ink transition-colors duration-150 border-b border-mist-d hover:border-ink pb-px">
             Ver todos
           </Link>
         </div>
@@ -171,7 +174,7 @@ export default async function HomePage() {
             {categories.map(cat => (
               <Link key={cat}
                 href={`/produtos?categoria=${encodeURIComponent(cat)}`}
-                className="font-mono text-[10px] tracking-[0.12em] uppercase px-3 py-1.5 border border-faint-l text-faint hover:border-ink hover:text-ink transition-colors duration-150">
+                className="text-[12px] font-medium px-4 py-2 border border-mist-d text-mid hover:border-ink hover:text-ink hover:bg-warm active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-150">
                 {cat}
               </Link>
             ))}
@@ -210,21 +213,21 @@ export default async function HomePage() {
       ═══════════════════════════════════════════════════════════ */}
       <section className="theme-locked bg-ink">
         <div className="container-shop py-14 sm:py-20">
-          <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-mid mb-8">
+          <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-paper/55 mb-8">
             {s.foundedYear ? `${city} · Est. ${s.foundedYear}` : city}
           </p>
           <h2
             className="font-display font-normal text-paper leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl text-[clamp(2.2rem,5vw,4rem)]"
           >
-            {ctaLine1}<br /><em className="text-clay-d not-italic">{ctaLine2}</em>
+            {ctaLine1}<br /><em className="text-clay-l not-italic">{ctaLine2}</em>
           </h2>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/produtos"
-              className="inline-flex items-center justify-center h-12 px-7 bg-mid text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-clay-d transition-colors duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 bg-paper text-ink text-[13px] font-medium tracking-[0.05em] hover:bg-clay-l active:scale-[0.98] transition-[background-color,transform] duration-200">
               {ctaBtn1}
             </Link>
             <Link href="/sobre"
-              className="inline-flex items-center justify-center h-12 px-7 border border-paper/25 text-paper/80 text-[13px] font-medium hover:text-paper hover:border-paper/50 transition-colors duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 border border-paper/30 text-paper/85 text-[13px] font-medium hover:text-paper hover:border-paper/60 active:scale-[0.98] transition-[border-color,color,transform] duration-200">
               {ctaBtn2}
             </Link>
           </div>

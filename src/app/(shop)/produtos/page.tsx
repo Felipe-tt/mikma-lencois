@@ -122,10 +122,6 @@ export default async function ProdutosPage({ searchParams }: Props) {
                   ))}
                 </div>
               </div>
-              <div>
-                <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-faint mb-4">Ordenar</p>
-                <SortSelect current={ordem} />
-              </div>
             </aside>
           )}
 

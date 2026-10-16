@@ -76,7 +76,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
 
   return (
     <section id="avaliacoes" className="border-t border-mist section-md">
-      <div className="container-shop max-w-3xl">
+      <div className="container-shop">
         <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
           <div>
             <span className="eyebrow mb-3 block">Depoimentos</span>
