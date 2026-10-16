@@ -50,6 +50,7 @@ export function AuthModal() {
   useEffect(() => {
     if (!isOpen) {
       setEmail(''); setPassword(''); setLoginError('');
+      setAwaitingChallenge(false); setChallengeExpired(false);
       setName(''); setSignupEmail(''); setSignupStep('form'); setSignupError(''); setSignupFieldErrors({});
       setForgotEmail(''); setForgotStep('email'); setForgotResent(false);
     }
@@ -73,8 +74,6 @@ export function AuthModal() {
     const t = setTimeout(() => setForgotResendCooldown(c => c - 1), 1000);
     return () => clearTimeout(t);
   }, [forgotResendCooldown]);
-
-  if (!isOpen) return null;
 
   // Poll pra saber se a pessoa confirmou pelo link do e-mail (mesmo
   // mecanismo da tela /entrar — ver comentário lá e em
@@ -116,6 +115,12 @@ export function AuthModal() {
 
     return () => { cancelled = true; clearInterval(interval); };
   }, [awaitingChallenge, email, password]);
+
+  // Early return só depois de TODOS os hooks: antes ficava acima do
+  // useEffect do poll, e abrir o modal mudava a quantidade de hooks entre
+  // renders (React quebra com "Rendered more hooks than during the
+  // previous render").
+  if (!isOpen) return null;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
