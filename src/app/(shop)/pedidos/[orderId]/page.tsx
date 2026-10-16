@@ -194,7 +194,7 @@ export default function OrderDetailPage() {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setConfirmReceivedError(data.error ?? 'Não foi possível confirmar. Tente de novo.');
         return;

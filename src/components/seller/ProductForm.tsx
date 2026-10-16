@@ -24,7 +24,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, limit as fbLimit, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, limit as fbLimit, getDocs, type DocumentReference } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db } from '@/lib/firebase/client';
 import { storage } from '@/lib/firebase/storage';
@@ -527,6 +527,7 @@ export default function ProductForm({ initial }: Props) {
   });
 
   const [successToast, setSuccessToast] = useState('');
+  const pendingNewRef = useRef<DocumentReference | null>(null);
 
   async function handleSubmit(mode: 'list' | 'another' = 'list') {
     if (!name.trim()) { setError('Dê um nome para o produto.'); return; }
@@ -642,7 +643,11 @@ export default function ProductForm({ initial }: Props) {
             })),
         ]);
       } else {
-        const newRef = doc(collection(db, 'products'));
+        // Mesmo ID em novas tentativas: se o produto foi gravado e o estoque
+        // falhou (conexão ruim), salvar de novo completa ESTE produto em vez
+        // de criar um duplicado ativo e sem estoque.
+        const newRef = pendingNewRef.current ?? doc(collection(db, 'products'));
+        pendingNewRef.current = newRef;
         await setDoc(newRef, { ...data, createdAt: serverTimestamp() });
         await Promise.all(rows.map(r => {
           const variantId = variantIdFor(size, r.fabric);
@@ -656,6 +661,7 @@ export default function ProductForm({ initial }: Props) {
         }));
       }
       await deleteOldPhotos();
+      pendingNewRef.current = null;
       clearDraft();
       if (!isEdit && user) {
         // Grava categoria/tamanho/tecidos como padrão pro próximo cadastro

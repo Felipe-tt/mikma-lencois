@@ -90,7 +90,7 @@ export default function PedidosPage() {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao cancelar');
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Não foi possível cancelar. Tente de novo.');
     } catch (err) {
       setActionError(e => ({ ...e, [order.id]: err instanceof Error ? err.message : 'Erro' }));
     } finally {

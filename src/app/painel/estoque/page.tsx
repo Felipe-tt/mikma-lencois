@@ -262,7 +262,17 @@ export default function EstoquePage() {
     return out;
   }
 
+  // Trava desde o primeiro toque: a leitura dos pedidos e o confirm vêm
+  // antes do setSavingCount, e um toque duplo nesse meio tempo gravava a
+  // contagem duas vezes (histórico com movimentações em dobro).
+  const savingCountRef = useRef(false);
   async function saveCount() {
+    if (savingCountRef.current) return;
+    savingCountRef.current = true;
+    try { await saveCountInner(); } finally { savingCountRef.current = false; }
+  }
+
+  async function saveCountInner() {
     let committed: Record<string, number>;
     try {
       committed = await loadCommitted();
