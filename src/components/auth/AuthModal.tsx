@@ -18,7 +18,7 @@ type SignupStep = 'form' | 'awaiting';
 type ForgotStep = 'email' | 'sent';
 
 export function AuthModal() {
-  const { isOpen, mode, setMode, close } = useAuthModal();
+  const { isOpen, mode, setMode, close, reason } = useAuthModal();
 
   // ── Login ──
   const [email, setEmail] = useState('');
@@ -258,6 +258,15 @@ export function AuthModal() {
         <Link href="/" className="flex mb-6">
           <BrandLogo alt="Mikma" className="h-7 w-auto object-contain" />
         </Link>
+
+        {/* Contexto de por que o modal abriu (adicionar ao carrinho,
+            favoritar...): sem isso a pessoa via só "Entrar" e não ligava
+            o pedido de login ao botão que tinha tocado. */}
+        {reason && mode !== 'forgot' && (
+          <p className="mb-5 -mt-1 border-l-2 border-clay pl-3 text-[13px] text-mid leading-relaxed">
+            {reason}
+          </p>
+        )}
 
         {mode === 'login' ? (
           <>

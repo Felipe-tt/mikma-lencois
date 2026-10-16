@@ -121,7 +121,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
   async function addToCart() {
     if (loading) return;
-    if (!user) { requireAuth(() => setAfterLogin('cart')); return; }
+    if (!user) { requireAuth(() => setAfterLogin('cart'), 'Entre pra adicionar ao carrinho. Depois disso o produto já entra sozinho.'); return; }
     if (!selectedVariant || outOfStock) return;
     setAdding(true);
     setCartError(null);
@@ -138,7 +138,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
   async function buyNow() {
     if (loading) return;
-    if (!user) { requireAuth(() => setAfterLogin('buy')); return; }
+    if (!user) { requireAuth(() => setAfterLogin('buy'), 'Entre pra finalizar a compra. Você continua de onde parou.'); return; }
     if (!selectedVariant || outOfStock) return;
     setBuyingNow(true);
     setCartError(null);

@@ -28,7 +28,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   const badge        = isNew ? 'Novo' : isBestSeller ? 'Destaque' : null;
 
   function handleFavoriteClick() {
-    requireAuth(() => { void toggle(product.id); });
+    requireAuth(() => { void toggle(product.id); }, 'Entre pra salvar nos favoritos.');
   }
 
   // O botão de favoritar fica como irmão do link (não dentro dele): botão
