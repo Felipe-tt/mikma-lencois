@@ -945,3 +945,10 @@ html.dark .cookie-glass {
   100% { transform: scale(1); }
 }
 .animate-badge-bump { animation: badge-bump 360ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Itens do menu mobile entram em sequência quando o drawer abre. */
+@keyframes drawer-item-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-drawer-item { animation: drawer-item-in 260ms cubic-bezier(0.4, 0, 0.2, 1) both; }

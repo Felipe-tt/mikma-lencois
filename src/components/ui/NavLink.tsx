@@ -7,6 +7,7 @@ import React from 'react';
 type NavLinkProps = LinkProps & {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
   'aria-label'?: string;
   onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   onMouseEnter?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
