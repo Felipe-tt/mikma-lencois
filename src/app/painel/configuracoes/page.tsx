@@ -1,4 +1,5 @@
 'use client';
+import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import React from 'react';
 import {
   IconStore, IconImage, IconBox, IconTruck, IconEdit, IconPin, IconPhone,
@@ -7,7 +8,7 @@ import {
   IconInfo, IconX, IconInventory, IconMail,
 } from '@/components/ui/Icon';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
@@ -48,11 +49,21 @@ export default function ConfiguracoesPage() {
   const [preview, setPreview]   = useState<null|'hero'|'featured'|'cta'|'footer'|'sobre'|'trust'|'sizeguide'|'bedguide'>(null);
   const [shippingLedger, setShippingLedger] = useState<{ collectedCents: number; spentCents: number; balanceCents: number } | null>(null);
 
+  // Último estado salvo: o salvamento grava só o que mudou. Mandar o
+  // formulário inteiro incluía valores padrão de campos que nunca foram
+  // gravados (ex.: desconto PIX), e as regras recusavam o vendedor.
+  const savedRef = useRef<StoreSettings>(STORE_DEFAULTS);
+  const [loadError, setLoadError] = useState(false);
+
   useEffect(() => {
     getDoc(doc(db, 'settings', 'store')).then(snap => {
-      if (snap.exists()) setSettings({ ...STORE_DEFAULTS, ...snap.data() });
-      setLoading(false);
-    });
+      const merged = snap.exists() ? { ...STORE_DEFAULTS, ...snap.data() } as StoreSettings : STORE_DEFAULTS;
+      savedRef.current = merged;
+      setSettings(merged);
+    }).catch(err => {
+      console.error('[configuracoes] falha ao carregar', err);
+      setLoadError(true);
+    }).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -89,8 +100,28 @@ export default function ConfiguracoesPage() {
       return;
     }
     setSaveError('');
+    const changed = Object.fromEntries(
+      Object.entries(settings).filter(([k, v]) =>
+        JSON.stringify(v) !== JSON.stringify(savedRef.current[k as keyof StoreSettings]))
+    );
+    if (Object.keys(changed).length === 0) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      return;
+    }
     setSaving(true);
-    await setDoc(doc(db, 'settings', 'store'), settings, { merge: true });
+    try {
+      await setDoc(doc(db, 'settings', 'store'), changed, { merge: true });
+      savedRef.current = settings;
+    } catch (err) {
+      console.error('[configuracoes] falha ao salvar', err);
+      setSaving(false);
+      const denied = (err as { code?: string })?.code === 'permission-denied';
+      setSaveError(denied
+        ? 'Só o administrador pode mudar desconto PIX, frete grátis, valores mínimos e modos de teste. Desfaça essas mudanças ou peça a um admin.'
+        : 'Não foi possível salvar. Verifique sua conexão e tente de novo.');
+      return;
+    }
     // Best-effort: revalida as páginas públicas da loja (ISR) pra mudança
     // aparecer na hora, sem depender do intervalo de revalidate de cada
     // página (até 24h em /sobre, /termos, /privacidade). Falha aqui nunca
@@ -110,6 +141,12 @@ export default function ConfiguracoesPage() {
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
+
+  if (loadError) return (
+    <div className="max-w-5xl mx-auto">
+      <PanelErrorState onRetry={() => window.location.reload()} />
+    </div>
+  );
 
   if (loading) return (
     <div className="flex flex-col gap-3 max-w-5xl mx-auto">

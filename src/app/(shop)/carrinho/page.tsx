@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { formatCurrency } from '@/lib/utils/format';
@@ -50,8 +50,8 @@ export default function CartPage() {
     const skus = items.map(i => i.sku);
     Promise.all(
       skus.map(sku =>
-        getDocs(query(collection(db, 'inventory'), where('sku', '==', sku))).then(snap => {
-          const inv = snap.docs[0]?.data();
+        getDoc(doc(db, 'inventory', sku)).then(snap => {
+          const inv = snap.data();
           return { sku, available: inv ? Math.max(0, (inv.quantity ?? 0) - (inv.reserved ?? 0)) : 99 };
         })
       )

@@ -104,27 +104,43 @@ export default function PainelPedidos() {
     })();
   }, [orders, customers]);
 
+  // Antes chamava com PATCH (a rota só aceita POST) e não olhava a
+  // resposta: o botão mostrava "Atualizando…" e nada acontecia.
   async function markPreparing(orderId: string) {
     setUpdating(orderId);
     try {
       const token = await auth.currentUser?.getIdToken();
-      await fetch(`/api/orders/${orderId}/update-status`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/orders/${orderId}/update-status`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: 'preparing' }),
+        body: JSON.stringify({ fromStatus: 'paid' }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        await confirmDialog({ message: err.error ?? 'Não deu pra atualizar o pedido. Tente de novo.', alertOnly: true });
+      }
+    } catch {
+      await confirmDialog({ message: 'Sem conexão. Tente de novo.', alertOnly: true });
     } finally { setUpdating(null); }
   }
 
+  // Só Uber Direct e retirada despacham por aqui; Correios/Jadlog precisam
+  // do código de rastreio, que é informado no detalhe do pedido.
   async function dispatch(orderId: string) {
     setDispatching(orderId);
     try {
       const token = await auth.currentUser?.getIdToken();
-      await fetch('/api/delivery', {
+      const res = await fetch('/api/delivery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ orderId }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        await confirmDialog({ message: err.error ?? 'Não deu pra despachar. Abra o pedido pra ver os detalhes.', alertOnly: true });
+      }
+    } catch {
+      await confirmDialog({ message: 'Sem conexão. Tente de novo.', alertOnly: true });
     } finally { setDispatching(null); }
   }
 
@@ -134,16 +150,24 @@ export default function PainelPedidos() {
     const count = cancelled.length;
     const { confirmed } = await confirmDialog({
       message: `Apagar ${count} pedido${count !== 1 ? 's' : ''} cancelado${count !== 1 ? 's' : ''}?`,
-      detail: 'Os pedidos serão removidos permanentemente. Esta ação não tem como desfazer.',
+      detail: 'Só são apagados os cancelados há mais de 30 dias que nunca foram pagos. Pedidos estornados ficam no histórico. Esta ação não tem como desfazer.',
       confirmLabel: 'Apagar pedidos',
       variant: 'danger',
     });
     if (!confirmed) return;
     try {
       const token = await auth.currentUser?.getIdToken();
-      await fetch('/api/orders/delete-cancelled', { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-    } catch {
-      await confirmDialog({ message: 'Erro ao apagar. Tente novamente.', alertOnly: true });
+      const res = await fetch('/api/orders/delete-cancelled', { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error);
+      const kept = count - (data.deleted ?? 0);
+      await confirmDialog({
+        message: `${data.deleted ?? 0} pedido${data.deleted === 1 ? '' : 's'} apagado${data.deleted === 1 ? '' : 's'}.`,
+        detail: kept > 0 ? `${kept} ${kept === 1 ? 'ficou' : 'ficaram'}: pedidos que chegaram a ser pagos (estornos) ou cancelados há menos de 30 dias ficam guardados pro histórico.` : undefined,
+        alertOnly: true,
+      });
+    } catch (err) {
+      await confirmDialog({ message: err instanceof Error && err.message ? err.message : 'Erro ao apagar. Tente novamente.', alertOnly: true });
     }
   }
 
@@ -300,7 +324,7 @@ export default function PainelPedidos() {
                   <p className="text-[11px] text-faint">Clique quando começar a preparar.</p>
                 </div>
                 <button onClick={() => markPreparing(order.id)} disabled={updating === order.id}
-                  className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-clay-l text-paper hover:bg-clay-d transition-colors disabled:opacity-50 rounded-full">
+                  className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-clay text-paper hover:bg-clay-d active:scale-[0.97] transition-[background-color,transform] disabled:opacity-50 rounded-full">
                   {updating === order.id ? 'Atualizando…' : 'Comecei a separar'}
                 </button>
               </div>
@@ -314,10 +338,17 @@ export default function PainelPedidos() {
                   <p className="text-[12px] font-semibold text-ink">Separando o pedido</p>
                   <p className="text-[11px] text-faint">Quando embalado e pronto para sair, clique em Despachar.</p>
                 </div>
-                <button onClick={() => dispatch(order.id)} disabled={dispatching === order.id}
-                  className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-ink text-paper hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-full">
-                  {dispatching === order.id ? 'Enviando…' : 'Despachar agora'}
-                </button>
+                {order.delivery?.carrier === 'uber_direct' || order.delivery?.carrier === 'pickup' ? (
+                  <button onClick={() => dispatch(order.id)} disabled={dispatching === order.id}
+                    className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-ink text-paper hover:bg-ink/80 active:scale-[0.97] transition-[background-color,transform] disabled:opacity-50 rounded-full">
+                    {dispatching === order.id ? 'Enviando…' : 'Despachar agora'}
+                  </button>
+                ) : (
+                  <Link href={`/painel/pedidos/${order.id}`}
+                    className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-ink text-paper hover:bg-ink/80 active:scale-[0.97] transition-[background-color,transform] rounded-full">
+                    Informar rastreio
+                  </Link>
+                )}
               </div>
             )}
           </div>

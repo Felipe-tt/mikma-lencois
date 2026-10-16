@@ -41,7 +41,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const productRef = adminDb.collection('products').doc();
   const variantId = 'v1';
 
+  // Relê o rascunho dentro da transação: a checagem de "já publicado"
+  // acima roda solta, e dois toques seguidos criavam dois produtos.
+  try {
   await adminDb.runTransaction(async (tx) => {
+    const fresh = await tx.get(ref);
+    if (fresh.data()?.status === 'published') throw new Error('ALREADY_PUBLISHED');
     tx.set(productRef, {
       name: draft.name.trim(),
       description: draft.description?.trim() || draft.name.trim(),
@@ -68,6 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const sku = `${productRef.id}_${variantId}`;
     tx.set(adminDb.collection('inventory').doc(sku), {
+      sku,
       productId: productRef.id,
       variant: { id: variantId, size, color: draft.colorHex || '', fabric: draft.fabric || '' },
       quantity: 0,
@@ -83,6 +89,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       updatedAt: FieldValue.serverTimestamp(),
     });
   });
+  } catch (err) {
+    if (err instanceof Error && err.message === 'ALREADY_PUBLISHED') {
+      return NextResponse.json({ error: 'Este rascunho já foi publicado' }, { status: 409 });
+    }
+    throw err;
+  }
 
   return NextResponse.json({ productId: productRef.id }, { status: 201 });
 }
