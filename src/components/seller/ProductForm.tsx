@@ -256,9 +256,9 @@ export default function ProductForm({ initial }: Props) {
   // rascunho/CSV usam "v1", não o `${tamanho}_${tecido}` deste formulário.
   // Sem reaproveitar o ID, abrir um desses produtos marcava a variação como
   // "removida" e salvar apagava o estoque dela (criando outra zerada).
-  const existingVariantIds = useRef(new Map(
+  const [existingVariantIds] = useState(() => new Map(
     (initial?.variants ?? []).map(v => [`${v.size}|${v.fabric ?? FABRICS[0]}`, v.id]),
-  )).current;
+  ));
   const variantIdFor = (s: string, fabric: string) =>
     existingVariantIds.get(`${s}|${fabric}`) ?? makeVariantId(s, fabric);
   const rowMemory = useRef<Map<string, FabricRow>>(new Map(initialRows.map(r => [r.fabric, r])));
