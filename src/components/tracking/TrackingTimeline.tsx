@@ -6,7 +6,7 @@ import { auth } from '@/lib/firebase/client';
 
 interface Props {
   // Passa trackingCode para Correios (via Link&Track)
-  // Passa orderId para qualquer carrier via Melhor Envio
+  // Passa orderId para os demais (usa o código salvo no pedido, ex.: Jadlog)
   trackingCode?: string;
   orderId?: string;
   carrierName?: string;

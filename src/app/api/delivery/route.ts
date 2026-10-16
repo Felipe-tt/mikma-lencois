@@ -1,12 +1,11 @@
 /**
  * POST /api/delivery
- * Despacha um pedido via Melhor Envio:
- * 1. Monta endereços remetente/destinatário
- * 2. Adiciona ao carrinho ME → compra → gera etiqueta → obtém PDF
- * 3. Atualiza order no Firestore com status 'shipped' + URL da etiqueta
- * 4. Retorna { labelUrl, trackingCode, meOrderId }
+ * Despacha um pedido que não depende de código de rastreio manual:
+ * - Retirada na loja: só avança o status para 'shipped'
+ * - Uber Direct: solicita o entregador
  *
- * Para retirada na loja: apenas avança o status para 'shipped'
+ * Correios e Jadlog são postados na agência e marcados como despachados
+ * pelo painel informando o código de rastreio (update-status).
  */
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
@@ -19,15 +18,6 @@ import type { Order } from '@/types';
 
 
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
-import {
-  meDispatch,
-  meCancel,
-  meBalance,
-  ME_SERVICES,
-  type MEAddress,
-  type MEProduct,
-  type MEPackage,
-} from '@/lib/melhorenvio';
 import { recordShippingSpent } from '@/lib/shipping-ledger';
 import { dispatchSchema, cancelDeliverySchema } from './schema';
 import {
@@ -85,7 +75,7 @@ export async function POST(req: NextRequest) {
       ?? order.delivery?.carrier
       ?? 'correios_pac';
 
-    // ── Retirada na loja: sem Melhor Envio ──────────────────────────────────
+    // ── Retirada na loja ────────────────────────────────────────────────────
     if (carrier === 'pickup') {
       await adminDb.collection('orders').doc(orderId).update({
         status: 'shipped',
@@ -241,169 +231,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ── Envio via Melhor Envio ───────────────────────────────────────────────
-    if (!process.env.MELHOR_ENVIO_TOKEN) {
-      return NextResponse.json(
-        { error: 'MELHOR_ENVIO_TOKEN não configurado. Configure em Configurações, Entrega.' },
-        { status: 500 }
-      );
-    }
-
-    const serviceId = ME_SERVICES[carrier];
-    if (!serviceId) {
-      return NextResponse.json(
-        { error: `Carrier "${carrier}" não suportado pelo Melhor Envio. Use: ${Object.keys(ME_SERVICES).join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // Monta dados do remetente (sua loja)
-    const storeCnpj = (settings.storeCnpj ?? '').replace(/\D/g, '');
-    const from: MEAddress = {
-      name:             settings.storeName || 'Mikma Lençóis',
-      phone:            (settings.storePhone || '').replace(/\D/g, '').slice(0, 11),
-      email:            settings.storeEmail || 'contato@mikma.com.br',
-      document:         storeCnpj.length === 14 ? storeCnpj : storeCnpj,
-      company_document: storeCnpj.length === 14 ? storeCnpj : undefined,
-      address:          settings.storeAddress || '',
-      number:           settings.storeNumber || 'S/N',
-      complement:       settings.storeComplement || '',
-      district:         settings.storeNeighborhood || '',
-      city:             settings.storeCity?.split(',')[0].trim() || '',
-      country_id:       'BR',
-      postal_code:      (settings.originCep || '').replace(/\D/g, ''),
-      state_abbr:       settings.storeState || 'SC',
-    };
-
-    // Monta dados do destinatário (cliente)
-    const addr = order.address;
-    if (!addr?.cep || !addr?.street) {
-      return NextResponse.json({ error: 'Endereço do cliente incompleto' }, { status: 400 });
-    }
-
-    // Busca dados do cliente
-    const userSnap = await adminDb.collection('users').doc(order.userId).get();
-    const userData = userSnap.data() ?? {};
-    const cpf = (userData.cpf ?? '').replace(/\D/g, '');
-
-    // Email com fallback para Auth (igual ao webhook)
-    let customerEmail = (userData.email as string | undefined) ?? '';
-    if (!customerEmail) {
-      try {
-        const authUser = await adminAuth.getUser(order.userId);
-        customerEmail = authUser.email ?? '';
-      } catch {
-        console.warn(`[delivery] não foi possível obter email do Auth para uid=${order.userId}`);
-      }
-    }
-
-    const to: MEAddress = {
-      name:        userData.name || 'Cliente',
-      phone:       (userData.phone || '').replace(/\D/g, '').slice(0, 11) || '47999999999',
-      email:       customerEmail,
-      document:    cpf || '00000000000', // CPF obrigatório no ME
-      address:     addr.street,
-      number:      addr.number || 'S/N',
-      complement:  addr.complement || '',
-      district:    addr.neighborhood || '',
-      city:        addr.city,
-      country_id:  'BR',
-      postal_code: addr.cep.replace(/\D/g, ''),
-      state_abbr:  addr.state,
-    };
-
-    // Monta produtos
-    const products: MEProduct[] = order.items.map(item => ({
-      name:           item.productName.slice(0, 50),
-      quantity:       item.quantity,
-      unitary_value:  item.unitPrice / 100,
-    }));
-
-    // Busca pesos individuais dos produtos no Firestore
-    const productIds = Array.from(new Set(order.items.map(i => i.productId)));
-    const productDocs = await Promise.all(productIds.map(id => adminDb.collection('products').doc(id).get()));
-    const productWeightMap: Record<string, number> = {};
-    for (const snap of productDocs) {
-      if (snap.exists) {
-        productWeightMap[snap.id] = (snap.data()!.weightKg as number | undefined) ?? (settings.defaultItemWeightKg || 0.8);
-      }
-    }
-
-    // Monta pacote (peso e dimensões)
-    const totalWeightKg = order.items.reduce(
-      (acc, i) => acc + (productWeightMap[i.productId] ?? settings.defaultItemWeightKg ?? 0.8) * i.quantity,
-      0
+    // ── Correios / Jadlog: despacho manual ──────────────────────────────────
+    // A compra automática de etiqueta pelo Melhor Envio foi removida (exigia
+    // saldo pré-pago na conta deles). Agora o lojista posta na agência e
+    // informa o código de rastreio no painel, que usa
+    // /api/orders/[id]/update-status pra marcar como despachado.
+    return NextResponse.json(
+      { error: 'Envios por Correios/Jadlog são despachados informando o código de rastreio no painel.' },
+      { status: 400 }
     );
-
-    const volumes: MEPackage[] = [{
-      weight: Math.max(0.3, totalWeightKg),
-      width:  40,
-      height: 20,
-      length: 50,
-    }];
-
-    const insuranceValue = order.totalCents / 100;
-
-    // ── Trava de segurança: confere saldo real na Melhor Envio antes de
-    // comprar a etiqueta. Nunca deixa a compra ser tentada sem saldo, evita
-    // conta negativa e falha no meio do fluxo. Isso é 100% interno: o
-    // cliente já pagou, essa checagem não aparece pra ele em nenhum momento,
-    // só bloqueia o botão de despacho no painel do seller.
-    const expectedCostCents = order.delivery?.realPriceCents ?? order.delivery?.priceCents ?? 0;
-    if (expectedCostCents > 0) {
-      try {
-        const balanceCents = await meBalance();
-        // 5% de margem de segurança pra repesagem/variação de tarifa
-        const requiredCents = Math.ceil(expectedCostCents * 1.05);
-        if (balanceCents < requiredCents) {
-          return NextResponse.json(
-            {
-              error: `Saldo insuficiente na Melhor Envio (R$ ${(balanceCents / 100).toFixed(2)} disponível, R$ ${(expectedCostCents / 100).toFixed(2)} necessário). Adicione saldo em melhorenvio.com.br antes de despachar.`,
-            },
-            { status: 402 }
-          );
-        }
-      } catch (err) {
-        console.error('[delivery] falha ao consultar saldo Melhor Envio, bloqueando despacho por segurança:', err);
-        return NextResponse.json(
-          { error: 'Não foi possível confirmar o saldo na Melhor Envio agora. Tente novamente em instantes.' },
-          { status: 502 }
-        );
-      }
-    }
-
-    // ── Despacha via Melhor Envio ────────────────────────────────────────────
-    const { meOrderId, trackingCode, labelUrl } = await meDispatch({
-      serviceId,
-      orderId,
-      from,
-      to,
-      products,
-      volumes,
-      insuranceValue,
-    });
-
-    // Registra o custo real no caixa de frete (best-effort, nunca desfaz o despacho já feito)
-    try { await recordShippingSpent(expectedCostCents); }
-    catch (err) { console.warn(`[shipping-ledger] falha ao registrar gasto ME do pedido ${orderId}:`, err); }
-
-    // ── Atualiza pedido no Firestore ─────────────────────────────────────────
-    await adminDb.collection('orders').doc(orderId).update({
-      status: 'shipped',
-      'delivery.carrier':          carrier,
-      'delivery.trackingCode':     trackingCode,
-      'delivery.melhorEnvioOrderId': meOrderId,
-      'delivery.labelUrl':         labelUrl,
-      'delivery.dispatchedAt':     FieldValue.serverTimestamp(),
-      updatedAt:                   FieldValue.serverTimestamp(),
-      timeline: FieldValue.arrayUnion({
-        status: 'shipped',
-        at:    new Date().toISOString(),
-        note:  `Despachado via Melhor Envio · ${carrier} · ${trackingCode ?? 'sem rastreio ainda'}`,
-      }),
-    });
-
-    return NextResponse.json({ carrier, trackingCode, meOrderId, labelUrl });
   } catch (err) {
     console.error('[delivery/dispatch]', err);
     return NextResponse.json({ error: 'Erro ao despachar o pedido. Tente novamente.' }, { status: 500 });
@@ -412,10 +248,10 @@ export async function POST(req: NextRequest) {
 
 /**
  * DELETE /api/delivery
- * Cancela uma entrega já despachada via Melhor Envio.
- * Apenas seller/admin, nunca o cliente.
+ * Cancela uma entrega já despachada (Uber Direct é cancelado na Uber;
+ * Correios/Jadlog manual só volta de status). Apenas seller/admin.
  *
- * Cancela a etiqueta no Melhor Envio, reverte o pedido para
+ * Reverte o pedido para
  * 'preparing' (volta pra fila de despacho) e limpa os dados de
  * entrega, deixando o seller livre para redespachar com outro
  * carrier ou corrigir o que precisar.
@@ -452,7 +288,6 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const meOrderId           = order.delivery?.melhorEnvioOrderId;
     const uberDirectDeliveryId = order.delivery?.uberDirectDeliveryId;
     // Usa o ambiente em que a entrega foi DE FATO criada, não as settings
     // atuais, que podem ter sido trocadas no painel entre o despacho e agora.
@@ -471,18 +306,8 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    // ── Melhor Envio, Retirada na loja não tem nada a cancelar ─────────────────────────
-    if (meOrderId) {
-      try {
-        await meCancel(meOrderId, `Cancelado pelo vendedor: ${reason}`);
-      } catch (err) {
-        console.error('[delivery/cancel] meCancel falhou:', err);
-        return NextResponse.json(
-          { error: 'Não foi possível cancelar a etiqueta no Melhor Envio. Verifique o status diretamente no painel deles antes de tentar novamente.' },
-          { status: 502 }
-        );
-      }
-    }
+    // Correios/Jadlog (despacho manual) e retirada não têm nada a cancelar
+    // fora daqui: só volta o pedido pra fila de despacho.
 
     await adminDb.collection('orders').doc(orderId).update({
       status: 'preparing',

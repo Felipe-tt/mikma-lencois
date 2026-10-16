@@ -30,7 +30,7 @@ Feito pra rodar sozinho: preço e estoque validados no servidor, importação de
 | Auth server-side | Firebase Admin + `google-auth-library` |
 | Senha | `@node-rs/argon2` (hash) |
 | Pagamento | AbacatePay (PIX) |
-| Frete | Melhor Envio v2 · Uber Direct |
+| Frete | Correios (PAC/SEDEX) e Jadlog com despacho manual (cotação via Melhor Envio) · Uber Direct |
 | E-mail | Resend (transacional) · Svix (verificação de assinatura de webhook) |
 | Rate limiting | Upstash Redis |
 | Validação | Zod (schemas de API) · `sanitize-html` (conteúdo rico do painel) |
@@ -104,10 +104,9 @@ Push na branch `main` dispara o deploy automaticamente via GitHub Actions. Um `C
 | Serviço | Endpoint | Autenticação |
 |---|---|---|
 | AbacatePay (PIX) | `/api/payment/webhook` | HMAC-SHA256 |
-| Melhor Envio (rastreio) | `/api/shipping/webhook` | HMAC-SHA256 |
 | E-mail inbound (Resend) | `/api/email/inbound` | Assinatura Svix |
 
-Guia completo de configuração do frete em [`MELHOR_ENVIO_SETUP.md`](./MELHOR_ENVIO_SETUP.md).
+Frete: o Melhor Envio é usado só pra cotar PAC, SEDEX e Jadlog (token em `MELHOR_ENVIO_TOKEN`, sem saldo). O envio é postado na agência e o código de rastreio é informado no painel do pedido.
 
 ## Estrutura
 

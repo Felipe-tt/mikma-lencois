@@ -16,7 +16,7 @@ const LiveDeliveryMap = dynamic(
   () => import('@/components/tracking/LiveDeliveryMap').then(m => m.LiveDeliveryMap),
   { ssr: false }
 );
-import { carrierNameVendor, trackingUrl, isCorreios, isCorreiosTrackingCode } from '@/lib/carriers';
+import { carrierNameVendor, trackingUrl, isCorreios, isManualDispatch, isValidTrackingCodeFor } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import {
   IconTruck, IconProducts, IconBox, IconMaintenance, IconUser, IconCard, IconPin, IconClock,
@@ -347,7 +347,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     const next = STATUS_NEXT[order.status];
     if (!next) return;
 
-    // Despacho manual (Correios/Jadlog etc. sem Melhor Envio): confirma antes,
+    // Despacho manual (Correios/Jadlog): confirma antes,
     // porque clicar aqui já dispara o e-mail de "pedido enviado" pro cliente,
     // mesmo que o pacote não tenha sido postado de verdade ainda.
     if (order.status === 'preparing' && trackingCode.trim()) {
@@ -435,7 +435,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     const carrier = order.delivery?.carrier ?? 'transportadora';
     const { confirmed } = await confirmDialog({
       message: `Cancelar a entrega despachada via ${carrier}?`,
-      detail: 'A etiqueta será cancelada no Melhor Envio e o pedido voltará para "Em preparo".',
+      detail: carrier === 'uber_direct'
+        ? 'A corrida será cancelada na Uber e o pedido voltará para "Em preparo".'
+        : 'O pedido voltará para "Em preparo" e o código de rastreio será removido.',
       confirmLabel: 'Cancelar entrega',
       variant: 'danger',
     });
@@ -572,9 +574,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           const carrier = shipping?.carrier ?? 'correios_pac';
           const isPickup    = carrier === 'pickup';
           const isUberDirect = carrier === 'uber_direct';
-          // Correios (PAC/SEDEX) despacha manual, só com o código de rastreio,
-          // sem passar pela Melhor Envio (compra de etiqueta automática).
+          // Correios e Jadlog despacham manual: posta na agência e informa o
+          // código de rastreio (sem compra de etiqueta automática).
+          const isManualCarrier = isManualDispatch(carrier);
           const isCorreiosCarrier = isCorreios(carrier);
+          const codeOk = isValidTrackingCodeFor(carrier, trackingCode);
           const CARRIER_LABELS: Record<string, string> = {
             correios_pac:    'Correios PAC',
             correios_sedex:  'Correios SEDEX',
@@ -620,12 +624,17 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               ) : isCorreiosCarrier ? (
                 <p className="text-[11px] text-faint">
                   Poste na agência dos Correios e cole aqui o código de rastreio (formato AA123456789BR)
-                  pra confirmar o despacho. Sem Melhor Envio, sem etiqueta automática.
+                  pra confirmar o despacho.
+                </p>
+              ) : isManualCarrier ? (
+                <p className="text-[11px] text-faint">
+                  Poste numa unidade da Jadlog e cole aqui o código de rastreio do comprovante
+                  pra confirmar o despacho.
                 </p>
               ) : (
                 <p className="text-[11px] text-faint">
-                  A etiqueta será gerada automaticamente via Melhor Envio e o saldo da sua conta será debitado.
-                  Imprima, cole na caixa e poste.
+                  Forma de envio sem despacho automático. Combine a entrega com o cliente e informe
+                  o código de rastreio, se houver.
                 </p>
               )}
 
@@ -633,24 +642,26 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{dispatchError}</p>
               )}
 
-              {isCorreiosCarrier ? (
+              {!isPickup && !isUberDirect ? (
                 <>
                   <input
                     type="text"
                     value={trackingCode}
                     onChange={e => setTrackingCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
-                    placeholder="AA123456789BR"
-                    maxLength={20}
+                    placeholder={isCorreiosCarrier ? 'AA123456789BR' : 'Código de rastreio'}
+                    maxLength={30}
                     className="w-full font-mono text-[13px] tracking-wide border border-mist bg-white dark:bg-warm px-4 py-3 rounded-xl focus:outline-none focus:border-ink"
                   />
-                  {trackingCode.trim().length > 0 && !isCorreiosTrackingCode(trackingCode) && (
+                  {trackingCode.trim().length > 0 && !codeOk && (
                     <p className="text-[11px] text-amber-600">
-                      Isso não parece um código dos Correios (formato esperado: AA123456789BR). Confere antes de continuar.
+                      {isCorreiosCarrier
+                        ? 'Isso não parece um código dos Correios (formato esperado: AA123456789BR). Confere antes de continuar.'
+                        : 'Código muito curto ou longo. Confere antes de continuar.'}
                     </p>
                   )}
                   <button
                     onClick={advanceStatus}
-                    disabled={updating || !isCorreiosTrackingCode(trackingCode)}
+                    disabled={updating || !codeOk}
                     className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
                   >
                     {updating ? 'Salvando…' : 'Confirmar despacho'}
@@ -663,8 +674,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   className="w-full bg-ink text-paper text-[13px] font-bold py-3 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
                 >
                   {updating
-                    ? (isPickup ? 'Salvando…' : isUberDirect ? 'Solicitando motoboy…' : 'Gerando etiqueta…')
-                    : (isPickup ? 'Confirmar retirada' : isUberDirect ? 'Solicitar motoboy Uber' : 'Gerar etiqueta e despachar')}
+                    ? (isPickup ? 'Salvando…' : 'Solicitando motoboy…')
+                    : (isPickup ? 'Confirmar retirada' : 'Solicitar motoboy Uber')}
                 </button>
               )}
             </div>
@@ -747,7 +758,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               </div>
             )}
 
-            {/* Código de rastreio (Melhor Envio / Correios) */}
+            {/* Código de rastreio (Correios / Jadlog) */}
             {order.delivery?.trackingCode && (
               <div className="flex items-center justify-between bg-warm px-3 py-2.5 rounded-xl">
                 <div>
@@ -975,10 +986,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </Card>
         )}
 
-        {/* ── Rastreamento (Correios/Melhor Envio, Uber Direct já tem o card
+        {/* ── Rastreamento (Correios/Jadlog; Uber Direct já tem o card
              próprio "entregador em tempo real" acima, com ETA e link do
-             mapa; esse aqui não tem noção de Uber Direct e só mostraria um
-             erro confuso de "Melhor Envio" pra esses pedidos) ── */}
+             mapa) ── */}
         {order.delivery?.carrier && order.delivery.carrier !== 'pickup' && order.delivery.carrier !== 'manual' && order.delivery.carrier !== 'uber_direct' && (
           <div className="bg-paper border border-mist rounded-xl overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">

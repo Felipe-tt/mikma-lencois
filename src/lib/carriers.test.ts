@@ -87,3 +87,23 @@ describe('isCorreiosTrackingCode', () => {
     expect(isCorreiosTrackingCode('AA123BR')).toBe(false);
   });
 });
+
+describe('despacho manual (Correios/Jadlog)', () => {
+  it('isManualDispatch cobre Correios e Jadlog, não Uber nem retirada', async () => {
+    const { isManualDispatch } = await import('./carriers');
+    expect(isManualDispatch('correios_sedex')).toBe(true);
+    expect(isManualDispatch('correios_pac')).toBe(true);
+    expect(isManualDispatch('jadlog_package')).toBe(true);
+    expect(isManualDispatch('jadlog_expresso')).toBe(true);
+    expect(isManualDispatch('uber_direct')).toBe(false);
+    expect(isManualDispatch('pickup')).toBe(false);
+  });
+
+  it('isValidTrackingCodeFor: Correios exige AA123456789BR, Jadlog aceita código livre plausível', async () => {
+    const { isValidTrackingCodeFor } = await import('./carriers');
+    expect(isValidTrackingCodeFor('correios_sedex', 'aa 123456789 br')).toBe(true);
+    expect(isValidTrackingCodeFor('correios_sedex', '12345678')).toBe(false);
+    expect(isValidTrackingCodeFor('jadlog_package', '10084523456789')).toBe(true);
+    expect(isValidTrackingCodeFor('jadlog_package', '123')).toBe(false);
+  });
+});

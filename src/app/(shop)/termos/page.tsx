@@ -160,9 +160,9 @@ export default async function TermosPage() {
         ),
         clause(
           <>
-            <B>Demais regiões:</B> o envio é feito por transportadoras contratadas por meio do
-            Melhor Envio. O prazo, em dias úteis a partir da postagem, é informado no cálculo do
-            frete, e o código de rastreamento fica disponível na página do Pedido.
+            <B>Demais regiões:</B> o envio é feito pelos Correios (PAC ou SEDEX) ou pela Jadlog,
+            conforme a opção escolhida. O prazo, em dias úteis a partir da postagem, é informado no
+            cálculo do frete, e o código de rastreamento fica disponível na página do Pedido.
           </>,
         ),
         clause(

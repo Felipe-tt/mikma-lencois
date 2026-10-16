@@ -142,9 +142,12 @@ export default async function PrivacidadePage() {
               valor do Pedido;
             </>,
             <>
-              <B>Melhor Envio e transportadoras:</B> envios para fora da região de entrega local.
-              Dados: nome, telefone, e-mail, CPF, endereço e características da encomenda (peso,
-              dimensões e valor);
+              <B>Melhor Envio:</B> cálculo do valor e prazo do frete. Dados: CEP de origem e de
+              destino e características da encomenda (peso, dimensões e valor);
+            </>,
+            <>
+              <B>Correios e Jadlog:</B> envios para fora da região de entrega local. Dados: nome,
+              telefone, endereço e características da encomenda (peso, dimensões e valor);
             </>,
             <>
               <B>Uber Direct:</B> entregas locais. Dados: nome, telefone, endereço e descrição dos
