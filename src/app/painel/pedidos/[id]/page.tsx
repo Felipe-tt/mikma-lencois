@@ -858,7 +858,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               </div>
             ) : null}
             <div className="flex justify-between pt-2 border-t border-mist">
-              <span className="text-[13px] font-bold text-ink">Total pago</span>
+              <span className="text-[13px] font-bold text-ink">{order.payment.paidAt ? 'Total pago' : 'Total'}</span>
               <span className="font-display text-xl text-ink">{formatCurrency(order.totalCents)}</span>
             </div>
           </div>
@@ -873,7 +873,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             </div>
           )}
           <Row label="Método" value={order.payment.method.toUpperCase()} />
-          <Row label="Status" value={STATUS_LABELS[order.status]} />
+          {/* Status do PAGAMENTO, não do pedido: "A caminho" aqui confundia. */}
+          <Row label="Status" value={
+            order.payment.paidAt ? 'Pago'
+              : order.status === 'payment_expired' ? 'PIX expirado'
+              : order.status === 'cancelled' ? 'Não pago'
+              : 'Aguardando pagamento'
+          } />
           <Row label="Pago em" value={order.payment.paidAt ? formatDateTime(order.payment.paidAt) : null} />
           {order.payment.method === 'pix' && (
             <Row label="ID da transação" value={order.payment.txId} mono />
