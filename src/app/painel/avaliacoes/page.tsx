@@ -58,7 +58,7 @@ export default function AvaliacoesPage() {
   if (reviews === null) return <PainelSkeleton rows={4} />;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-6">
         <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-clay-l mb-1">Painel</p>
         <h1 className="font-display font-normal text-ink text-2xl">Avaliações</h1>
