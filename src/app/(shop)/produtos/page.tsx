@@ -144,7 +144,9 @@ export default async function ProdutosPage({ searchParams }: Props) {
               />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-px bg-mist border border-mist">
-                {products.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
+                {/* Prioridade alta só nas 2 primeiras (primeira linha no mobile);
+                    mais que isso dilui o ganho e disputa banda com o LCP. */}
+                {products.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 2} />)}
               </div>
             )}
           </div>

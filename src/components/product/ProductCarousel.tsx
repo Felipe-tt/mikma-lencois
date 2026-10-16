@@ -86,13 +86,14 @@ export function ProductCarousel({ products }: Props) {
           ref={trackRef}
           className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory scroll-pl-1 pb-1"
         >
-          {products.map((p, i) => (
+          {products.map((p) => (
             <div
               key={p.id}
               data-carousel-item
               className="snap-start shrink-0 w-[44%] sm:w-[30%] lg:w-[22.5%]"
             >
-              <ProductCard product={p} priority={i < 2} />
+              {/* Carrossel fica no fim da página do produto: carrega lazy. */}
+              <ProductCard product={p} />
             </div>
           ))}
         </div>
