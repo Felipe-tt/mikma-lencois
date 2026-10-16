@@ -16,6 +16,7 @@ import { IconAlert } from '@/components/ui/Icon';
 
 const BADGES: Record<string, string> = {
   pending_payment: 'badge-pending',
+  payment_expired: 'badge-pending',
   paid:            'badge-paid',
   preparing:       'badge-preparing',
   shipped:         'badge-shipped',
@@ -24,6 +25,7 @@ const BADGES: Record<string, string> = {
 };
 const LABELS: Record<string, string> = {
   pending_payment: 'Aguardando pagamento',
+  payment_expired: 'PIX expirado',
   paid:            'Pago',
   preparing:       'Em preparo',
   shipped:         'Em rota',

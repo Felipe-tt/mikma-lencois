@@ -95,6 +95,7 @@ export interface InventoryItem {
 // ─── Orders ──────────────────────────────────────────────────────────────────
 export type OrderStatus =
   | 'pending_payment'
+  | 'payment_expired'
   | 'paid'
   | 'preparing'
   | 'shipped'

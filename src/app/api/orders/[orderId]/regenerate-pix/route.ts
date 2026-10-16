@@ -5,6 +5,13 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { extractBearer, getClientIp, tooManyRequests } from '@/lib/security';
 import { sanitizePixDescription } from '@/lib/abacatepay';
+import { expandStockLines } from '@/lib/orderStockLines';
+import { StockError } from '@/lib/errors';
+
+/** Mesmo prazo do cron expire-orders: depois disso o pedido é cancelado. */
+const ORDER_PAYMENT_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+type StockItem = { productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number };
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 // Ver nota em create-pix/route.ts: ambiente é decidido por qual key é
@@ -47,6 +54,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     return NextResponse.json({ error: 'Pedido não pode ter PIX gerado neste status' }, { status: 400 });
   }
 
+  const createdAtMs = new Date(order.createdAt?.toDate?.() ?? order.createdAt).getTime();
+  if (Number.isFinite(createdAtMs) && Date.now() - createdAtMs > ORDER_PAYMENT_WINDOW_MS) {
+    return NextResponse.json(
+      { error: 'O prazo de pagamento deste pedido acabou. Faça um novo pedido.' },
+      { status: 400 }
+    );
+  }
+
+  // Quando o PIX expira, o webhook (transparent.expired) já liberou a reserva
+  // de estoque. Voltar pra pending_payment sem reservar de novo deixava
+  // reserved negativo depois (confirmOrderPaid/cancelamento decrementam de
+  // novo) e o "disponível" inflado, ou seja, overselling. Aqui só uma
+  // checagem prévia, pra não gerar cobrança se já não há estoque; a reserva
+  // de verdade acontece na transação lá embaixo.
+  const stockLines = expandStockLines((order.items ?? []) as StockItem[]);
+  if (order.status === 'payment_expired') {
+    const invSnaps = await Promise.all(stockLines.map(l => adminDb.collection('inventory').doc(l.sku).get()));
+    for (let i = 0; i < stockLines.length; i++) {
+      const inv = invSnaps[i];
+      if (!inv.exists) continue;
+      const available = (inv.data()!.quantity ?? 0) - (inv.data()!.reserved ?? 0);
+      if (available < stockLines[i].quantity) {
+        return NextResponse.json(
+          { error: 'Um dos itens deste pedido não tem mais estoque. Faça um novo pedido.' },
+          { status: 409 }
+        );
+      }
+    }
+  }
+
   // Carrega dados do usuário para customer
   const userSnap = await adminDb.collection('users').doc(uid).get();
   const userData = userSnap.data() ?? {};
@@ -83,6 +120,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ABACATEPAY_KEY}` },
     body: JSON.stringify(pixPayload),
+    signal: AbortSignal.timeout(10000),
   });
 
   if (!pixRes.ok) {
@@ -93,19 +131,58 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
 
   const pix = (await pixRes.json()).data;
   const nowIso = new Date().toISOString();
-  await ref.update({
-    status: 'pending_payment',
-    'payment.txId':         pix.id,
-    'payment.pixQrCode':    pix.brCodeBase64,
-    'payment.pixCopyPaste': pix.brCode,
-    'payment.expiresAt':    pix.expiresAt ? new Date(pix.expiresAt) : null,
-    updatedAt: nowIso,
-    timeline: FieldValue.arrayUnion({
-      status: 'payment_initiated',
-      at: nowIso,
-      note: 'Novo PIX gerado pelo cliente',
-    }),
-  });
+
+  // Transação: relê o status (o webhook pode ter confirmado o pagamento do
+  // QR antigo enquanto este PIX era gerado, e um update cego voltaria um
+  // pedido pago pra pending_payment) e, se o PIX tinha expirado, reserva o
+  // estoque de novo de forma atômica.
+  try {
+    await adminDb.runTransaction(async (tx) => {
+      const fresh = await tx.get(ref);
+      const freshStatus = fresh.data()?.status;
+      if (freshStatus !== 'pending_payment' && freshStatus !== 'payment_expired') {
+        throw new StockError('Este pedido mudou de status. Atualize a página.');
+      }
+
+      if (freshStatus === 'payment_expired') {
+        const invRefs = stockLines.map(l => adminDb.collection('inventory').doc(l.sku));
+        const invSnaps = await Promise.all(invRefs.map(r => tx.get(r)));
+        for (let i = 0; i < stockLines.length; i++) {
+          if (!invSnaps[i].exists) continue; // item sem controle de estoque
+          const inv = invSnaps[i].data()!;
+          if ((inv.quantity ?? 0) - (inv.reserved ?? 0) < stockLines[i].quantity) {
+            throw new StockError('Um dos itens deste pedido não tem mais estoque. Faça um novo pedido.');
+          }
+        }
+        for (let i = 0; i < stockLines.length; i++) {
+          if (!invSnaps[i].exists) continue;
+          tx.update(invRefs[i], {
+            reserved: FieldValue.increment(stockLines[i].quantity),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      tx.update(ref, {
+        status: 'pending_payment',
+        'payment.txId':         pix.id,
+        'payment.pixQrCode':    pix.brCodeBase64,
+        'payment.pixCopyPaste': pix.brCode,
+        'payment.expiresAt':    pix.expiresAt ? new Date(pix.expiresAt) : null,
+        updatedAt: nowIso,
+        timeline: FieldValue.arrayUnion({
+          status: 'payment_initiated',
+          at: nowIso,
+          note: 'Novo PIX gerado pelo cliente',
+        }),
+      });
+    });
+  } catch (err) {
+    if (err instanceof StockError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    throw err;
+  }
 
   return NextResponse.json({
     orderId,

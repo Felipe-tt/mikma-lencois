@@ -112,7 +112,11 @@ export async function GET(req: NextRequest) {
   // ── Busca todos os pedidos ainda pending_payment ───────────────────────────
   const snap = await adminDb
     .collection('orders')
-    .where('status', '==', 'pending_payment')
+    // payment_expired também: o PIX dura 15 min e o webhook transparent.expired
+    // muda o pedido pra payment_expired, então sem isso quase nenhum pedido
+    // não pago chegava a ser cancelado (ficava parado pra sempre, apesar do
+    // e-mail prometer cancelamento em 48h).
+    .where('status', 'in', ['pending_payment', 'payment_expired'])
     .get();
 
   for (const doc of snap.docs) {
@@ -157,15 +161,26 @@ export async function GET(req: NextRequest) {
         // pedido pago no meio dessa janela seria marcado 'cancelled' por
         // cima do 'paid', e reserved seria decrementado duas vezes
         // (uma em confirmOrder no webhook, outra aqui).
-        const wasCancelled = await adminDb.runTransaction(async (tx) => {
+        // Só pending_payment ainda tem reserva ativa; payment_expired já teve
+        // a reserva liberada pelo webhook transparent.expired.
+        const cancelResult = await adminDb.runTransaction(async (tx): Promise<false | 'release' | 'no-release'> => {
           const freshSnap = await tx.get(ref);
           if (!freshSnap.exists) return false;
           const freshOrder = freshSnap.data()!;
-          if (freshOrder.status !== 'pending_payment') {
+          if (freshOrder.status !== 'pending_payment' && freshOrder.status !== 'payment_expired') {
             // Mudou de status (pago, já cancelado, etc.) entre a leitura
             // inicial do cron e agora, não mexe em nada.
             return false;
           }
+
+          // Reserva liberada na MESMA transação (antes era um update solto,
+          // sem await, que podia se perder quando a instância encerrava).
+          const releaseStock = freshOrder.status === 'pending_payment';
+          const lines = releaseStock
+            ? expandStockLines((freshOrder.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>)
+            : [];
+          const invRefs = lines.map(l => adminDb.collection('inventory').doc(l.sku));
+          const invSnaps = await Promise.all(invRefs.map(r => tx.get(r)));
 
           tx.update(ref, {
             status: 'cancelled',
@@ -178,30 +193,21 @@ export async function GET(req: NextRequest) {
               note: 'Cancelado automaticamente por falta de pagamento após 48h',
             }),
           });
-          return true;
+          for (let i = 0; i < lines.length; i++) {
+            if (!invSnaps[i].exists) continue;
+            tx.update(invRefs[i], {
+              reserved: FieldValue.increment(-lines[i].quantity),
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+          }
+          return releaseStock ? 'release' : 'no-release';
         });
 
-        if (!wasCancelled) {
+        if (!cancelResult) {
           // Pedido já tinha saído de pending_payment (provavelmente pago
           // pelo webhook), pula o e-mail de cancelamento e a liberação
           // de estoque, que já foram tratados em outro lugar.
           continue;
-        }
-
-        // Libera reserva de estoque
-        const items = (order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>;
-        for (const line of expandStockLines(items)) {
-          const invSnap = await adminDb
-            .collection('inventory')
-            .where('sku', '==', line.sku)
-            .limit(1)
-            .get();
-          if (!invSnap.empty) {
-            adminDb.collection('inventory').doc(invSnap.docs[0].id).update({
-              reserved: FieldValue.increment(-line.quantity),
-              updatedAt: FieldValue.serverTimestamp(),
-            }).catch(() => {});
-          }
         }
 
         results.cancelled++;

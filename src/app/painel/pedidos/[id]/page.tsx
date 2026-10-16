@@ -27,6 +27,7 @@ import { RegisterReturnModal } from '@/components/painel/RegisterReturnModal';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending_payment: 'Aguardando Pagamento',
+  payment_expired: 'PIX expirado',
   paid: 'Pago',
   preparing: 'Separando',
   shipped: 'A caminho',
@@ -34,7 +35,7 @@ const STATUS_LABELS: Record<Order['status'], string> = {
   cancelled: 'Cancelado',
 };
 const STATUS_BADGE: Record<Order['status'], string> = {
-  pending_payment: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
+  pending_payment: 'badge-pending', payment_expired: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
   shipped: 'badge-shipped', delivered: 'badge-delivered', cancelled: 'badge-cancelled',
 };
 const STATUS_NEXT: Partial<Record<Order['status'], Order['status']>> = {
@@ -463,7 +464,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
   async function handleCancelOrder() {
     if (!order || order.status === 'cancelled' || order.status === 'delivered') return;
-    const willReturnStock = order.status !== 'pending_payment';
+    // Só pedido já pago teve o estoque debitado (pending_payment/payment_expired não).
+    const willReturnStock = order.status !== 'pending_payment' && order.status !== 'payment_expired';
     const { confirmed, value: reason } = await confirmDialog({
       message: 'Cancelar este pedido?',
       detail: `${willReturnStock ? 'O estoque será devolvido. ' : ''}Esta ação não tem como desfazer.`,
@@ -1044,7 +1046,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </details>
 
         {/* ── Troca / devolução ── */}
-        {order.status !== 'pending_payment' && order.status !== 'cancelled' && (
+        {order.status !== 'pending_payment' && order.status !== 'payment_expired' && order.status !== 'cancelled' && (
           <div className="flex flex-col gap-2">
             {returnRegistered && (
               <p className="text-[12px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
