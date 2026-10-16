@@ -55,9 +55,9 @@ const TAG: Record<string, { label: string; cls: string }> = {
 };
 
 // ── Field components ─────────────────────────────────────────────────────────
-function Label({ children, optional }: { children: React.ReactNode; optional?: boolean }) {
+function Label({ children, optional, htmlFor }: { children: React.ReactNode; optional?: boolean; htmlFor?: string }) {
   return (
-    <label className="block text-xs font-semibold text-mid mb-1.5 tracking-[0.03em]">
+    <label htmlFor={htmlFor} className="block text-xs font-semibold text-mid mb-1.5 tracking-[0.03em]">
       {children}
       {optional && <span className="ml-1.5 text-faint font-normal">opcional</span>}
     </label>
@@ -73,9 +73,10 @@ function Err({ msg }: { msg?: string }) {
   );
 }
 function Input({
-  value, onChange, onBlur, placeholder, type = 'text', inputMode,
+  id, value, onChange, onBlur, placeholder, type = 'text', inputMode,
   maxLength, required, hasError, disabled, autoComplete,
 }: {
+  id?: string;
   value: string; onChange: (v: string) => void; onBlur?: () => void;
   placeholder?: string; type?: string; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
   maxLength?: number; required?: boolean; hasError?: boolean; disabled?: boolean; autoComplete?: string;
@@ -85,8 +86,11 @@ function Input({
   return (
     <div className="relative">
       <input
+        id={id}
+        name={id}
         type={type}
         value={value}
+        aria-invalid={hasError && touched ? true : undefined}
         required={required}
         disabled={disabled}
         autoComplete={autoComplete}
@@ -407,23 +411,23 @@ export default function CheckoutPage() {
             <Section num={1} label="Identificação" open={step === 1} done={s1done} onEdit={() => setStep(1)}>
               <div className="flex flex-col gap-4">
                 <div>
-                  <Label>Nome completo</Label>
-                  <Input value={customer.name} onChange={v => setCustomer(c => ({ ...c, name: v }))}
+                  <Label htmlFor="co-name">Nome completo</Label>
+                  <Input id="co-name" value={customer.name} onChange={v => setCustomer(c => ({ ...c, name: v }))}
                     placeholder="Como consta no documento" required hasError={!!errors.name}
                     autoComplete="name" />
                   <Err msg={errors.name} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>CPF</Label>
-                    <Input value={customer.cpf} onChange={v => setCustomer(c => ({ ...c, cpf: maskCpf(v) }))}
+                    <Label htmlFor="co-cpf">CPF</Label>
+                    <Input id="co-cpf" value={customer.cpf} onChange={v => setCustomer(c => ({ ...c, cpf: maskCpf(v) }))}
                       inputMode="numeric" maxLength={14} placeholder="000.000.000-00"
                       required hasError={!!errors.cpf} autoComplete="off" />
                     <Err msg={errors.cpf} />
                   </div>
                   <div>
-                    <Label>Celular / WhatsApp</Label>
-                    <Input value={customer.phone} onChange={v => setCustomer(c => ({ ...c, phone: maskPhone(v) }))}
+                    <Label htmlFor="co-phone">Celular / WhatsApp</Label>
+                    <Input id="co-phone" value={customer.phone} onChange={v => setCustomer(c => ({ ...c, phone: maskPhone(v) }))}
                       type="tel" maxLength={15} placeholder="(47) 99999-0000"
                       required hasError={!!errors.phone} autoComplete="tel" />
                     <Err msg={errors.phone} />
@@ -441,9 +445,9 @@ export default function CheckoutPage() {
               <div className="flex flex-col gap-4">
                 {/* CEP */}
                 <div>
-                  <Label>CEP</Label>
+                  <Label htmlFor="co-cep">CEP</Label>
                   <div className="relative">
-                    <Input value={addr.cep} onChange={v => {
+                    <Input id="co-cep" value={addr.cep} onChange={v => {
                       const masked = maskCep(v);
                       setAddr(a => ({ ...a, cep: masked }));
                       if (onlyDigits(masked).length === 8) lookupCep(masked);
@@ -457,43 +461,45 @@ export default function CheckoutPage() {
                 </div>
                 {/* Rua */}
                 <div>
-                  <Label>Logradouro</Label>
-                  <Input value={addr.street} onChange={v => setAddr(a => ({ ...a, street: v }))}
+                  <Label htmlFor="co-street">Logradouro</Label>
+                  <Input id="co-street" value={addr.street} onChange={v => setAddr(a => ({ ...a, street: v }))}
                     placeholder="Rua, Avenida, Travessa…" required hasError={!!errors.street} autoComplete="address-line1" />
                   <Err msg={errors.street} />
                 </div>
                 {/* Número + Complemento */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Número</Label>
-                    <Input value={addr.number} onChange={v => setAddr(a => ({ ...a, number: v }))}
+                    <Label htmlFor="co-number">Número</Label>
+                    <Input id="co-number" value={addr.number} onChange={v => setAddr(a => ({ ...a, number: v }))}
                       placeholder="123 ou S/N" required hasError={!!errors.number} autoComplete="address-line2" />
                     <Err msg={errors.number} />
                   </div>
                   <div>
-                    <Label optional>Complemento</Label>
-                    <Input value={addr.complement ?? ''} onChange={v => setAddr(a => ({ ...a, complement: v }))}
+                    <Label optional htmlFor="co-complement">Complemento</Label>
+                    <Input id="co-complement" value={addr.complement ?? ''} onChange={v => setAddr(a => ({ ...a, complement: v }))}
                       placeholder="Apto, bloco…" autoComplete="address-line3" />
                   </div>
                 </div>
                 {/* Bairro */}
                 <div>
-                  <Label>Bairro</Label>
-                  <Input value={addr.neighborhood} onChange={v => setAddr(a => ({ ...a, neighborhood: v }))}
+                  <Label htmlFor="co-neighborhood">Bairro</Label>
+                  <Input id="co-neighborhood" value={addr.neighborhood} onChange={v => setAddr(a => ({ ...a, neighborhood: v }))}
                     required hasError={!!errors.neighborhood} autoComplete="address-level3" />
                   <Err msg={errors.neighborhood} />
                 </div>
                 {/* Cidade + UF */}
                 <div className="grid grid-cols-[1fr_96px] gap-3">
                   <div>
-                    <Label>Cidade</Label>
-                    <Input value={addr.city} onChange={v => setAddr(a => ({ ...a, city: v }))}
+                    <Label htmlFor="co-city">Cidade</Label>
+                    <Input id="co-city" value={addr.city} onChange={v => setAddr(a => ({ ...a, city: v }))}
                       required hasError={!!errors.city} autoComplete="address-level2" />
                     <Err msg={errors.city} />
                   </div>
                   <div>
-                    <Label>UF</Label>
+                    <Label htmlFor="co-state">UF</Label>
                     <Select
+                      triggerId="co-state"
+                      name="state"
                       value={addr.state}
                       onChange={v => setAddr(a => ({ ...a, state: v }))}
                       options={[{ value: '', label: '--' }, ...BR_STATES.map(uf => ({ value: uf, label: uf }))]}
