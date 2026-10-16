@@ -201,7 +201,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                 <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
               {count > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-clay text-paper text-[9px] font-bold flex items-center justify-center leading-none px-[3px] rounded-[2px]">
+                <span key={count} className="animate-badge-bump absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-clay text-paper text-[9px] font-bold flex items-center justify-center leading-none px-[3px] rounded-[2px]">
                   {count > 9 ? '9+' : count}
                 </span>
               )}
