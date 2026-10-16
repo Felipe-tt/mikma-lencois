@@ -215,6 +215,12 @@ export async function POST(req: NextRequest) {
     if (orderData.status === 'delivered' && newStatus !== 'delivered')
       return NextResponse.json({ ok: true });
 
+    // Pedido cancelado no painel fica cancelado: o "canceled" que a Uber
+    // manda depois virava "preparing", o pedido voltava pra lista de ativos
+    // e podia ser despachado de novo com o estoque já devolvido.
+    if (orderData.status === 'cancelled')
+      return NextResponse.json({ ok: true });
+
     // Reenvio do mesmo status (a Uber reenvia em caso de timeout) ou
     // "entregue" que chega depois do cliente já ter confirmado: antes
     // repetia e-mail, push, notificação e linha na timeline.

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Select } from '@/components/ui/Select';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 
-type MovementLog = { type: 'in' | 'out'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
+type MovementLog = { type: 'in' | 'out' | 'adjust'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
 type InventoryItem = {
   id: string; productId: string; productName?: string;
   variant: { size: string; fabric: string; color: string; colorName?: string };
@@ -164,7 +164,7 @@ export default function HistoricoEstoquePage() {
                 <p className="text-[11px] text-faint truncate">{row.m.reason}{row.m.by ? `, ${row.m.by}` : ''}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-[13px] font-bold ${row.m.type === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>{row.m.type === 'out' ? '−' : '+'}{row.m.quantity}</p>
+                <p className={`text-[13px] font-bold ${row.m.type === 'out' ? 'text-red-600' : row.m.type === 'adjust' ? 'text-faint' : 'text-emerald-700'}`}>{row.m.type === 'out' ? '−' : row.m.type === 'adjust' ? '±' : '+'}{row.m.quantity}</p>
                 <p className="text-[10px] text-faint">{new Date(row.m.date).toLocaleString('pt-BR')}</p>
               </div>
             </div>
