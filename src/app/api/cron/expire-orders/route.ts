@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email';
 import { timingSafeEqual } from 'crypto';
 import { expandStockLines } from '@/lib/orderStockLines';
+import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { escapeHtml } from '@/lib/html';
 
 // ── Timings ────────────────────────────────────────────────────────────────────
@@ -209,6 +210,8 @@ export async function GET(req: NextRequest) {
           // de estoque, que já foram tratados em outro lugar.
           continue;
         }
+
+        await releaseCouponUse(order.couponCode as string | undefined);
 
         results.cancelled++;
 

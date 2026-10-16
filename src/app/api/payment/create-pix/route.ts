@@ -14,6 +14,7 @@ import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { StockError } from '@/lib/errors';
+import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { carrierName } from '@/lib/carriers';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
@@ -190,13 +191,15 @@ export async function POST(req: NextRequest) {
     let couponCode: string | null = null;
     if (cartCouponCode) {
       const couponRef = adminDb.collection('coupons').doc(cartCouponCode);
-      const discount = await adminDb.runTransaction(async (tx) => {
-        const couponSnap = await tx.get(couponRef);
+      // Só calcula o desconto aqui. O incremento de usedCount (com nova
+      // checagem de maxUses) acontece na transação da reserva de estoque,
+      // mais abaixo: antes ele vinha aqui e saídas antecipadas (pedido
+      // idêntico recente, limite de pendentes, sem estoque) gastavam um uso
+      // do cupom sem criar pedido nenhum.
+      const discount = await couponRef.get().then(couponSnap => {
         if (!couponSnap.exists) return 0;
         const result = validateCoupon(couponSnap.data()! as Coupon, productsCents);
-        if (!result.valid) return 0;
-        tx.update(couponRef, { usedCount: FieldValue.increment(1) });
-        return result.discountCents;
+        return result.valid ? result.discountCents : 0;
       }).catch(() => 0);
       if (discount > 0) {
         couponDiscountCents = discount;
@@ -285,6 +288,16 @@ export async function POST(req: NextRequest) {
         const invSnaps = await Promise.all(
           invDocRefs.map(ref => (ref ? tx.get(ref) : null))
         );
+        const couponRef = couponCode ? adminDb.collection('coupons').doc(couponCode) : null;
+        const couponSnap = couponRef ? await tx.get(couponRef) : null;
+        if (couponRef) {
+          const result = couponSnap?.exists
+            ? validateCoupon(couponSnap.data()! as Coupon, productsCents)
+            : { valid: false, discountCents: 0 };
+          if (!result.valid || result.discountCents !== couponDiscountCents) {
+            throw new StockError('O cupom aplicado não está mais disponível. Atualize o carrinho e tente novamente.');
+          }
+        }
         for (let i = 0; i < stockLines.length; i++) {
           const snap = invSnaps[i];
           if (!snap) continue; // item sem controle de estoque passa
@@ -303,6 +316,7 @@ export async function POST(req: NextRequest) {
             updatedAt: FieldValue.serverTimestamp(),
           });
         }
+        if (couponRef) tx.update(couponRef, { usedCount: FieldValue.increment(1) });
       });
     } catch (err) {
       if (err instanceof StockError) {
@@ -354,7 +368,7 @@ export async function POST(req: NextRequest) {
     });
 
     // usedCount do cupom já foi incrementado atomicamente acima, dentro
-    // da transação de validação, nada a fazer aqui.
+    // da transação da reserva de estoque, nada a fazer aqui.
 
     // Avisa o vendor que alguém iniciou um pagamento PIX (ainda não confirmado).
     // Best-effort: nunca deve bloquear ou falhar o checkout do cliente.
@@ -431,6 +445,7 @@ export async function POST(req: NextRequest) {
         extra: { orderId, responseBody: pixText.slice(0, 1000) },
       });
       await orderRef.delete();
+      await releaseCouponUse(couponCode);
       // Liberar reserva de estoque
       for (let i = 0; i < stockLines.length; i++) {
         const ref = invDocRefs[i];

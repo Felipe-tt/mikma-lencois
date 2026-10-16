@@ -7,6 +7,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { adminCancelSchema } from './schema';
 import { expandStockLines } from '@/lib/orderStockLines';
+import { releaseCouponUse } from '@/lib/orders/couponUsage';
 
 
 // Statuses que ainda não tiveram o estoque debitado (só reservado)
@@ -61,6 +62,7 @@ export async function POST(
   // Transação: relê o status na hora de escrever. Antes era get() + batch,
   // e um pagamento confirmado pelo webhook no meio fazia o estoque ser
   // tratado como "só reservado" num pedido que já tinha debitado quantity.
+  let unpaidCouponCode: string | undefined;
   try {
     await adminDb.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
@@ -76,6 +78,9 @@ export async function POST(
       const mode = PENDING_STATUSES.has(order.status)
         ? 'release'
         : NO_STOCK_STATUSES.has(order.status) ? 'none' : 'restock';
+
+      // Pedido que nunca foi pago devolve o uso do cupom (fora da transação).
+      unpaidCouponCode = mode === 'restock' ? undefined : (order.couponCode as string | undefined);
 
       const lines = mode === 'none'
         ? []
@@ -104,6 +109,8 @@ export async function POST(
     if (message === 'DELIVERED') return NextResponse.json({ error: 'Não é possível cancelar pedido já entregue' }, { status: 400 });
     throw err;
   }
+
+  await releaseCouponUse(unpaidCouponCode);
 
   return NextResponse.json({ ok: true });
 }

@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { extractBearer, tooManyRequests } from '@/lib/security';
 import { expandStockLines } from '@/lib/orderStockLines';
+import { releaseCouponUse } from '@/lib/orders/couponUsage';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
@@ -73,6 +74,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     }
     throw err;
   }
+
+  // Pedido nunca pago: devolve o uso do cupom.
+  await releaseCouponUse(order.couponCode as string | undefined);
 
   return NextResponse.json({ ok: true });
 }

@@ -4,6 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { expandStockLines } from '@/lib/orderStockLines';
+import { releaseCouponUse } from '@/lib/orders/couponUsage';
 
 export async function DELETE(req: NextRequest) {
   const token = req.headers.get('authorization')?.split('Bearer ')[1];
@@ -69,6 +70,10 @@ export async function DELETE(req: NextRequest) {
           }).catch((err) => console.error('[user/delete] falha ao liberar reserva', line.sku, err));
         }
       }
+    }
+
+    for (const orderDoc of pendingOrders.docs) {
+      await releaseCouponUse(orderDoc.data().couponCode as string | undefined);
     }
 
     // Revoga tokens antes de deletar, evita uso de token após exclusão
