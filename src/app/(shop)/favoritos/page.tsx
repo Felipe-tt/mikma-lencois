@@ -58,7 +58,7 @@ export default function FavoritosPage() {
 
       <div className="container-shop py-8 sm:py-12 pb-20">
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="animate-pulse">
                 <div className="aspect-[3/4] bg-warm" />
@@ -75,7 +75,7 @@ export default function FavoritosPage() {
             actions={[{ label: 'Ver produtos', href: '/produtos' }]}
           />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
             {products.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         )}

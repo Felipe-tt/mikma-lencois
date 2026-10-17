@@ -14,15 +14,14 @@ export function Skeleton({ className, rounded }: SkeletonProps) {
 /* ─── Product Card Skeleton ────────────────────────────────────── */
 export function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col bg-paper border border-mist">
-      {/* Imagem 4:5 */}
+    <div className="flex flex-col">
+      {/* Imagem 4:5, mesmo formato do ProductCard */}
       <div className="skeleton aspect-[4/5] w-full" />
       {/* Info */}
-      <div className="px-3 py-4 flex flex-col gap-2">
-        <Skeleton className="h-2.5 w-14" />
+      <div className="pt-3.5 flex flex-col gap-2">
+        <Skeleton className="h-2.5 w-20" />
         <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-3.5 w-3/4" />
-        <Skeleton className="h-5 w-20 mt-1" />
+        <Skeleton className="h-5 w-24 mt-1" />
       </div>
     </div>
   );
@@ -31,7 +30,7 @@ export function ProductCardSkeleton() {
 /* ─── Product Grid Skeleton ─────────────────────────────────────── */
 export function ProductGridSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-px bg-mist">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
       {Array.from({ length: count }).map((_, i) => (
         <ProductCardSkeleton key={i} />
       ))}
