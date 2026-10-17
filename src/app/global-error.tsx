@@ -1,7 +1,10 @@
 'use client';
 import { useEffect } from 'react';
+import Link from 'next/link';
 import * as Sentry from '@sentry/nextjs';
 import { isChunkError, reloadOnce } from '@/lib/chunkErrorReload';
+import { fontSans, fontDisplay } from '@/lib/fonts';
+import './globals.css';
 
 export default function GlobalError({
   error,
@@ -25,7 +28,9 @@ export default function GlobalError({
   }, [error, isChunk]);
 
   return (
-    <html lang="pt-BR">
+    // Substitui o layout raiz inteiro, então traz as próprias fontes e o
+    // CSS (sem isso o título caía no serif do sistema).
+    <html lang="pt-BR" className={`${fontSans.variable} ${fontDisplay.variable}`}>
       <body>
         <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-paper">
           {isChunk ? (
@@ -33,7 +38,7 @@ export default function GlobalError({
               <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-6">
                 Atualizando
               </p>
-              <h1 className="font-serif text-ink leading-none tracking-[-0.02em] mb-6 text-[clamp(3rem,10vw,6rem)]">
+              <h1 className="font-display font-normal text-ink leading-none tracking-[-0.02em] mb-6 text-[clamp(3rem,10vw,6rem)]">
                 Só um instante
               </h1>
               <p className="text-[15px] text-mid max-w-[36ch] leading-relaxed">
@@ -45,18 +50,20 @@ export default function GlobalError({
               <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-6">
                 Erro inesperado
               </p>
-              <h1 className="font-serif text-ink leading-none tracking-[-0.02em] mb-6 text-[clamp(3rem,10vw,6rem)]">
+              <h1 className="font-display font-normal text-ink leading-none tracking-[-0.02em] mb-6 text-[clamp(3rem,10vw,6rem)]">
                 Algo deu errado
               </h1>
               <p className="text-[15px] text-mid max-w-[36ch] leading-relaxed mb-10">
                 Nossa equipe já foi avisada. Tenta recarregar a página, se continuar acontecendo, entra em contato com a loja.
               </p>
-              <button
-                onClick={() => reset()}
-                className="inline-flex items-center justify-center h-12 px-7 bg-ink text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-mid transition-colors duration-200"
-              >
-                Tentar de novo
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-5">
+                <button onClick={() => reset()} className="btn-primary px-8 py-3.5 text-[13px]">
+                  Tentar de novo
+                </button>
+                <Link href="/" className="text-[13px] text-mid hover:text-ink transition-colors border-b border-mist-d hover:border-ink pb-px">
+                  Voltar ao início
+                </Link>
+              </div>
             </>
           )}
         </div>
