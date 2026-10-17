@@ -84,7 +84,7 @@ export function Footer({
                 { href: '/sobre', label: 'Sobre nós' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
+                  <Link href={href} className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
@@ -101,7 +101,7 @@ export function Footer({
                 { href: '/conta', label: 'Minha conta' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
+                  <Link href={href} className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
@@ -123,7 +123,7 @@ export function Footer({
               )}
               {storeEmail && (
                 <li>
-                  <a href={`mailto:${storeEmail}`} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
+                  <a href={`mailto:${storeEmail}`} className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
                     {storeEmail}
                   </a>
                 </li>
@@ -135,18 +135,18 @@ export function Footer({
                 { href: '/politica-de-cookies', label: 'Política de cookies' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
+                  <Link href={href} className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
               ))}
               <li>
-                <CookiePreferencesButton className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150" />
+                <CookiePreferencesButton className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150" />
               </li>
               {reclameAquiUrl && (
                 <li>
                   <a href={reclameAquiUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-[13px] text-paper/50 hover:text-paper transition-colors duration-150">
+                    className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
                     ReclameAqui
                   </a>
                 </li>

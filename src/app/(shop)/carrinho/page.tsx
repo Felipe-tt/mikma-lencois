@@ -186,24 +186,27 @@ export default function CartPage() {
   );
 
   return (
-    <div className="min-h-screen bg-white dark:bg-warm">
+    <div className="min-h-screen bg-paper">
       {/* Header */}
       <div className="border-b border-mist">
-        <div className="container-shop py-8 flex items-baseline justify-between gap-4">
-          <h1 className="font-display font-normal text-ink text-3xl sm:text-4xl">Carrinho</h1>
-          <span className="text-sm text-faint">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</span>
+        <div className="container-shop pt-10 pb-8 sm:pt-12 flex items-end justify-between gap-4">
+          <div>
+            <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-clay mb-3">Sua sacola</p>
+            <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-[2.8rem] leading-none tracking-[-0.015em]">Carrinho</h1>
+          </div>
+          <span className="text-[13px] text-faint mb-1 tabular-nums">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</span>
         </div>
       </div>
 
       {/* Barra frete grátis */}
       {threshold > 0 && (
-        <div className={`border-b transition-colors ${freeShip ? 'bg-emerald-50 border-emerald-100' : 'bg-warm border-mist'}`}>
+        <div className="border-b border-mist bg-warm/60">
           <div className="container-shop py-3">
             <div className="flex items-center justify-between mb-2">
-              <span className={`text-xs font-semibold ${freeShip ? 'text-emerald-700' : 'text-mid'}`}>
+              <span className={`text-xs font-semibold ${freeShip ? 'text-ink' : 'text-mid'}`}>
                 {freeShip
                   ? <span className="flex items-center gap-1">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-clay"><polyline points="20 6 9 17 4 12"/></svg>
                       Frete grátis desbloqueado para este pedido
                     </span>
                   : <><strong className="text-ink">{formatCurrency(remaining)}</strong> para frete grátis</>
@@ -213,7 +216,7 @@ export default function CartPage() {
             </div>
             <div className="h-[3px] bg-mist/60 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-700 w-[var(--w)] ${freeShip ? 'bg-emerald-500' : 'bg-ink'}`}
+                className={`h-full rounded-full transition-[width,background-color] duration-700 ease-out w-[var(--w)] ${freeShip ? 'bg-clay' : 'bg-ink'}`}
                 style={{ '--w': `${progress}%` } as React.CSSProperties}
               />
             </div>
@@ -277,7 +280,15 @@ export default function CartPage() {
                       }
                       return null;
                     })()}
-                    <p className="text-base font-semibold text-ink mt-auto">{formatCurrency(item.unitPrice)}</p>
+                    {/* Total da linha em destaque; preço unitário embaixo quando
+                        há mais de uma peça (antes só o unitário, e com 2 peças
+                        a conta não fechava com o subtotal). */}
+                    <div className="mt-auto">
+                      <p className="font-display text-[1.15rem] text-ink leading-none tabular-nums">{formatCurrency(item.unitPrice * item.quantity)}</p>
+                      {item.quantity > 1 && (
+                        <p className="text-[11px] text-faint mt-1 tabular-nums">{item.quantity} × {formatCurrency(item.unitPrice)}</p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Qtd + remove */}
