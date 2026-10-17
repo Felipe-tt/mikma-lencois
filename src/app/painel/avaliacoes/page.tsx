@@ -88,7 +88,7 @@ export default function AvaliacoesPage() {
                 {r.comment
                   ? <p className="text-[13px] text-mid leading-relaxed break-words">{r.comment}</p>
                   : <p className="text-[12px] text-faint italic">Sem comentário</p>}
-                <Link href={`/produtos/${r.productId}`} target="_blank" className="inline-block mt-1.5 text-[11px] font-semibold text-clay hover:text-clay-d">
+                <Link href={`/produtos/${r.productId}`} target="_blank" className="inline-flex items-center min-h-10 -my-1.5 text-[11px] font-semibold text-clay hover:text-clay-d">
                   Ver produto
                 </Link>
               </div>

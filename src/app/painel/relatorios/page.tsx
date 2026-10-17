@@ -159,7 +159,7 @@ export default function RelatoriosPage() {
           <p className="text-[13px] text-faint mt-1">Como a loja se saiu nos últimos {periodLabel}.</p>
         </div>
         {stats && stats.orders > 0 && !loading && (
-          <button onClick={() => exportCsv(stats.rows, periodLabel)} className="btn-outline text-[12px] px-4 py-2">
+          <button onClick={() => exportCsv(stats.rows, periodLabel)} className="btn-outline !rounded-full h-10 text-[12px] px-4">
             Baixar planilha (CSV)
           </button>
         )}
@@ -186,8 +186,8 @@ export default function RelatoriosPage() {
 
       {loading ? (
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[1, 2, 3].map(i => <div key={i} className="h-28 skeleton rounded-2xl" />)}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[1, 2, 3].map(i => <div key={i} className={`h-28 skeleton rounded-2xl ${i === 1 ? 'col-span-2 sm:col-span-1' : ''}`} />)}
           </div>
           <div className="h-48 skeleton rounded-2xl" />
         </div>
@@ -206,13 +206,15 @@ export default function RelatoriosPage() {
       ) : (
         <div className="flex flex-col gap-4">
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* No celular: faturamento na largura toda, pedidos e ticket lado a
+              lado (antes eram três cartões de 150px empilhados). */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
               { Icon: IconMoney,   label: 'Faturamento', value: fmt(stats.revenue),   desc: 'soma dos pedidos pagos' },
               { Icon: IconBox,     label: 'Pedidos',     value: String(stats.orders), desc: 'pedidos no período' },
               { Icon: IconReceipt, label: 'Ticket médio', value: fmt(stats.avgTicket), desc: 'valor médio por pedido' },
-            ].map(k => (
-              <div key={k.label} className="panel-stat">
+            ].map((k, i) => (
+              <div key={k.label} className={`panel-stat min-w-0 ${i === 0 ? 'col-span-2 sm:col-span-1' : ''}`}>
                 <span className="panel-stat-icon mb-3"><k.Icon size={17} /></span>
                 <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-faint mb-1">{k.label}</p>
                 <p className="font-display text-2xl text-ink leading-none">{k.value}</p>
