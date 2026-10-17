@@ -257,21 +257,21 @@ export default function LoginPage() {
             width={400}
             height={400}
             aria-hidden="true"
-            className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] max-w-[540px] h-auto object-contain opacity-[0.07] dark:opacity-[0.06]"
+            className="pointer-events-none select-none absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[72%] max-w-[460px] h-auto object-contain opacity-[0.07] dark:opacity-[0.06]"
           />
           <Link href="/" className="relative z-10">
             <BrandLogo alt="Mikma" className="h-9 w-auto object-contain" />
           </Link>
 
           <div className="relative z-10">
-            <p className="font-display text-ink font-normal leading-[1.08] mb-4 text-[clamp(1.8rem,2.5vw,2.6rem)]">
-              Bem-vindo<br />de <em className="text-clay not-italic">volta.</em>
+            {/* Texto no pé do painel: no meio ele caía em cima da lua e
+                colidia com o "Mikma" dentro dela. */}
+            <p className="font-display text-ink font-normal leading-[1.04] tracking-[-0.015em] mb-4 text-[clamp(2.2rem,3vw,3.2rem)]">
+              Bem-vindo<br />de <em className="text-clay">volta.</em>
             </p>
-            <p className="text-[13px] text-mid leading-relaxed max-w-[26ch]">
-              Lençóis de qualidade direto de fábrica.
-            </p>
+            <p className="text-[14px] text-mid leading-relaxed max-w-[30ch]">Lençóis de qualidade direto de fábrica.</p>
+            <p className="mt-10 pt-6 border-t border-mist-d/60 text-[11px] text-faint tracking-[0.2em] uppercase">Blumenau · SC · Brasil</p>
           </div>
-          <p className="relative z-10 text-xs text-faint tracking-widest uppercase">Blumenau · SC · Brasil</p>
         </div>
 
         {/* Formulário */}
