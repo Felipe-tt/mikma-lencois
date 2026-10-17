@@ -256,16 +256,21 @@ export function ProdutosPageSkeleton() {
 /* ─── Perfil Skeleton ───────────────────────────────────────────── */
 export function PerfilSkeleton() {
   return (
-    <div className="container-shop py-12 max-w-lg">
-      <Skeleton className="h-8 w-40 mb-8" />
-      <div className="flex flex-col gap-5">
-        {[1,2,3,4].map(i => (
-          <div key={i} className="flex flex-col gap-1.5">
-            <Skeleton className="h-2.5 w-20" />
-            <Skeleton className="h-12 w-full !rounded-xl" />
+    <div>
+      <div className="border-b border-mist bg-warm/60">
+        <div className="container-shop py-8 sm:py-12">
+          <Skeleton className="h-3 w-28 mb-5" />
+          <div className="flex items-center gap-5">
+            <Skeleton className="w-16 h-16 !rounded-full shrink-0" />
+            <div className="flex flex-col gap-2.5">
+              <Skeleton className="h-10 w-52" />
+              <Skeleton className="h-3 w-40" />
+            </div>
           </div>
-        ))}
-        <Skeleton className="h-12 w-full mt-2" />
+        </div>
+      </div>
+      <div className="container-shop py-8 sm:py-12 grid lg:grid-cols-2 gap-4 sm:gap-5">
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-[260px] !rounded-3xl" />)}
       </div>
     </div>
   );
@@ -275,25 +280,23 @@ export function PerfilSkeleton() {
 export function AccountSkeleton() {
   return (
     <div>
-      <div className="border-b border-mist">
-        <div className="container-shop">
-          <Skeleton className="h-2.5 w-24 mb-3" />
-          <Skeleton className="h-10 w-56" />
-          <Skeleton className="h-3 w-40 mt-2" />
+      <div className="border-b border-mist bg-warm/60">
+        <div className="container-shop py-10 sm:py-14 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-8">
+          <Skeleton className="w-[72px] h-[72px] sm:w-20 sm:h-20 !rounded-full shrink-0" />
+          <div className="flex flex-col gap-2.5">
+            <Skeleton className="h-2.5 w-24" />
+            <Skeleton className="h-10 w-56" />
+            <Skeleton className="h-3 w-64" />
+          </div>
         </div>
       </div>
-      <div className="container-shop py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 max-w-2xl border border-mist rounded-2xl overflow-hidden">
-          {[1, 2].map(i => (
-            <div key={i} className="bg-paper px-6 py-7 flex items-start gap-5">
-              <Skeleton className="w-6 h-6 shrink-0 mt-0.5" />
-              <div className="flex flex-col gap-2 flex-1">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-3.5 w-full" />
-                <Skeleton className="h-3 w-16 mt-2" />
-              </div>
-            </div>
-          ))}
+      <div className="container-shop py-8 sm:py-12 flex flex-col gap-8 sm:gap-10">
+        <Skeleton className="h-[148px] w-full !rounded-3xl" />
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-[88px] sm:h-[98px] !rounded-2xl" />)}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-[82px] !rounded-2xl" />)}
         </div>
       </div>
     </div>

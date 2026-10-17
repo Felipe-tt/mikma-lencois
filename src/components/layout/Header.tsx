@@ -165,12 +165,16 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             ) : user ? (
               <>
                 {(user.role === 'seller' || user.role === 'admin') && (
-                  <NavLink href="/painel" className={`hidden md:flex text-[10px] font-bold tracking-[0.14em] uppercase px-2 py-1.5 transition-colors ${isDark ? 'text-paper/40 hover:text-paper' : 'text-mid hover:text-ink'}`}>Painel</NavLink>
+                  <NavLink href="/painel" className={`hidden md:inline-flex items-center h-8 px-3 mr-1 rounded-full border text-[12px] font-medium transition-colors ${isDark ? 'border-paper/20 text-paper/70 hover:text-paper hover:bg-paper/10' : 'border-mist text-mid hover:text-ink hover:bg-warm'}`}>Painel</NavLink>
                 )}
-                <NavLink href="/conta" className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>
-                  {user.displayName?.split(' ')[0] ?? 'Conta'}
+                {/* Pílula com a inicial: leva pra área do cliente (o "Sair"
+                    fica lá e no menu, longe de um clique sem querer). */}
+                <NavLink href="/conta" aria-label="Minha conta" className={`hidden md:inline-flex items-center gap-2 h-9 pl-1 pr-3.5 mr-1 rounded-full border transition-colors ${isDark ? 'border-paper/20 text-paper hover:bg-paper/10' : 'border-mist text-ink hover:bg-warm hover:border-mist-d'}`}>
+                  <span aria-hidden="true" className="w-7 h-7 rounded-full bg-clay text-paper font-display text-[0.95rem] flex items-center justify-center">
+                    {(user.displayName || user.email || '?').trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span className="text-[13px] font-medium max-w-[110px] truncate">{user.displayName?.split(' ')[0] || 'Conta'}</span>
                 </NavLink>
-                <button onClick={logout} className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/30 hover:text-paper/60' : 'text-faint hover:text-mid'}`}>Sair</button>
               </>
             ) : (
               <>

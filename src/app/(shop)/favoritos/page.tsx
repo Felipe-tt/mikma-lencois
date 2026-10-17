@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { useRouter } from 'next/navigation';
@@ -50,9 +51,18 @@ export default function FavoritosPage() {
 
   return (
     <div>
-      <div className="border-b border-mist">
-        <div className="container-shop py-8 sm:py-10">
-          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Favoritos</h1>
+      <div className="border-b border-mist bg-warm/60">
+        <div className="container-shop py-8 sm:py-12">
+          <Link href="/conta" className="group inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+            Área do cliente
+          </Link>
+          <div className="flex items-end justify-between gap-4">
+            <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-5xl leading-[1.05] tracking-[-0.015em]">Favoritos</h1>
+            {productIds.length > 0 && (
+              <p className="text-[13px] text-mid mb-1 tabular-nums">{productIds.length} {productIds.length === 1 ? 'produto salvo' : 'produtos salvos'}</p>
+            )}
+          </div>
         </div>
       </div>
 
