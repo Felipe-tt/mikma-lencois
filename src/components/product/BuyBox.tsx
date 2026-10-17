@@ -217,8 +217,8 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
         {/* Estoque */}
         <div className={`flex items-center gap-2 -mt-1 ${urgency?.level === 'critical' ? 'animate-pulse-subtle' : ''}`}>
-          <span className={`w-2 h-2 rounded-full shrink-0 ${outOfStock ? 'bg-red-400' : urgency?.level === 'critical' ? 'bg-red-500' : urgency?.level === 'warning' ? 'bg-amber-400' : 'bg-green-500'}`} />
-          <span className={`text-[12px] font-medium ${urgency?.level === 'critical' ? 'text-red-600 font-bold' : 'text-mid'}`}>
+          <span className={`w-2 h-2 rounded-full shrink-0 ${outOfStock ? 'bg-red-400' : urgency?.level === 'critical' ? 'bg-clay' : urgency?.level === 'warning' ? 'bg-amber-400' : 'bg-green-500'}`} />
+          <span className={`text-[12px] font-medium ${urgency?.level === 'critical' ? 'text-clay font-semibold' : 'text-mid'}`}>
             {outOfStock ? 'Fora de estoque' : urgency ? urgency.text : 'Em estoque'}
           </span>
         </div>

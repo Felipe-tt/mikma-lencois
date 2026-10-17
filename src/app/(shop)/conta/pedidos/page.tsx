@@ -151,12 +151,17 @@ export default function PedidosPage() {
                     <div>
                       <p className="text-[11px] text-faint font-mono mb-1">#{order.id.slice(-10).toUpperCase()}</p>
                       <p className="font-display text-xl sm:text-2xl text-ink">{formatCurrency(order.totalCents)}</p>
-                      <p className="text-[11px] text-faint mt-1">
+                      <p className="text-[11px] text-faint mt-1 whitespace-nowrap">
                         {order.createdAt ? formatTsDateTime(order.createdAt) : '-'}
                       </p>
+                      {/* No celular o selo vai embaixo: do lado ele quebrava
+                          em duas linhas e espremia a data. */}
+                      <span className={`${BADGES[order.status] ?? 'badge'} sm:!hidden mt-2.5 whitespace-nowrap`}>
+                        {LABELS[order.status] ?? order.status}
+                      </span>
                     </div>
                   </div>
-                  <span className={BADGES[order.status] ?? 'badge'}>
+                  <span className={`${BADGES[order.status] ?? 'badge'} !hidden sm:!inline-flex shrink-0 whitespace-nowrap`}>
                     {LABELS[order.status] ?? order.status}
                   </span>
                 </div>

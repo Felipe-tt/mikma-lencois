@@ -273,7 +273,8 @@ export default function CartPage() {
                       const urgency = avail !== undefined ? getStockUrgency(avail) : null;
                       if (urgency) {
                         return (
-                          <p className={`text-xs font-semibold ${urgency.level === 'critical' ? 'text-red-600' : 'text-amber-600'}`}>
+                          <p className={`flex items-center gap-1.5 text-[12px] font-medium ${urgency.level === 'critical' ? 'text-clay' : 'text-mid'}`}>
+                            <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full shrink-0 ${urgency.level === 'critical' ? 'bg-clay' : 'bg-amber-400'}`} />
                             {urgency.text}
                           </p>
                         );
@@ -380,7 +381,7 @@ export default function CartPage() {
           <div className="w-full lg:sticky lg:top-6">
             <div className="border border-mist bg-warm/30">
               <div className="px-5 py-4 border-b border-mist">
-                <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-faint">Resumo do pedido</h2>
+                <h2 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-faint">Resumo do pedido</h2>
               </div>
 
               <div className="px-5 py-4 flex flex-col gap-3">

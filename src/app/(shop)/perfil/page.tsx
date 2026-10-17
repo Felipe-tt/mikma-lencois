@@ -110,7 +110,7 @@ export default function PerfilPage() {
       <div className="container-shop py-12 max-w-lg">
         {/* Dados pessoais */}
         <div className="border border-mist p-6 mb-4">
-          <h2 className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-5">Dados pessoais</h2>
+          <h2 className="font-sans text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-5">Dados pessoais</h2>
           <div className="flex flex-col gap-4">
             <div>
               <label htmlFor="perfil-nome" className="label">Nome</label>
@@ -140,7 +140,7 @@ export default function PerfilPage() {
 
         {/* LGPD */}
         <div className="border border-mist p-6 mb-4">
-          <h2 className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-2">Privacidade e dados (LGPD)</h2>
+          <h2 className="font-sans text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-2">Privacidade e dados (LGPD)</h2>
           <p className="text-[13px] text-mid mb-5 leading-relaxed">
             Você tem direito de exportar todos os seus dados ou solicitar a exclusão completa da sua conta.
           </p>
