@@ -267,34 +267,53 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               </form>
             </div>
 
-            <nav className="flex-1 px-2 py-4 flex flex-col overflow-y-auto">
-              {NAV_LINKS.map(({ href, label }, i) => (
-                <NavLink key={href} href={href}
-                  style={{ animationDelay: `${70 + i * 40}ms` }}
-                  className={`animate-drawer-item px-4 py-3 text-[15px] font-medium transition-colors ${pathname.startsWith(href) ? 'text-clay bg-warm' : 'text-ink hover:bg-warm'}`}
-                >
-                  {label}
-                </NavLink>
-              ))}
-              <div className="h-px bg-mist mx-4 my-3" />
-              {authLoading ? null : user ? (
-                <>
-                  <NavLink href="/conta" className="px-4 py-3 text-[15px] font-medium text-ink hover:bg-warm transition-colors">Minha conta</NavLink>
-                  {(user.role === 'seller' || user.role === 'admin') && (
-                    <NavLink href="/painel" className="px-4 py-3 text-[15px] font-medium text-ink hover:bg-warm transition-colors">Painel</NavLink>
-                  )}
-                  <button onClick={logout} className="text-left px-4 py-3 text-[15px] font-medium text-faint hover:text-ink hover:bg-warm transition-colors">
-                    Sair da conta
-                  </button>
-                </>
-              ) : (
-                <>
-                  <NavLink href="/entrar" className="px-4 py-3 text-[15px] font-medium text-ink hover:bg-warm transition-colors">Entrar</NavLink>
-                  <div className="px-4 pt-3">
-                    <NavLink href="/cadastro" className="btn-clay w-full justify-center text-[13px]">Criar conta</NavLink>
-                  </div>
-                </>
-              )}
+            {/* Links principais em tipo de título, cada um numa linha com
+                seta; conta e atalhos ficam embaixo, menores. Antes era uma
+                lista de texto 15px solta num painel quase vazio. */}
+            <nav className="flex-1 flex flex-col overflow-y-auto">
+              <ul className="px-5 pt-2">
+                {NAV_LINKS.map(({ href, label }, i) => {
+                  const active = pathname.startsWith(href);
+                  return (
+                    <li key={href} className="animate-drawer-item border-b border-mist" style={{ animationDelay: `${70 + i * 40}ms` }}>
+                      <NavLink href={href} aria-current={active ? 'page' : undefined}
+                        className={`group flex items-center justify-between py-4 font-display text-[1.6rem] leading-none tracking-[-0.01em] transition-colors ${active ? 'text-clay' : 'text-ink hover:text-clay'}`}
+                      >
+                        {label}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+                          aria-hidden="true" className={`shrink-0 transition-[transform,color] duration-200 group-hover:translate-x-0.5 ${active ? 'text-clay' : 'text-faint'}`}>
+                          <path d="M5 12h14M13 6l6 6-6 6" />
+                        </svg>
+                      </NavLink>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="animate-drawer-item px-5 pt-7 pb-6 flex flex-col gap-1" style={{ animationDelay: `${70 + NAV_LINKS.length * 40}ms` }}>
+                {authLoading ? null : user ? (
+                  <>
+                    <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-2">Sua conta</p>
+                    <NavLink href="/conta" className="py-2 text-[15px] text-ink hover:text-clay transition-colors">Minha conta</NavLink>
+                    <NavLink href="/conta/pedidos" className="py-2 text-[15px] text-ink hover:text-clay transition-colors">Meus pedidos</NavLink>
+                    <NavLink href="/favoritos" className="py-2 text-[15px] text-ink hover:text-clay transition-colors">Favoritos</NavLink>
+                    {(user.role === 'seller' || user.role === 'admin') && (
+                      <NavLink href="/painel" className="py-2 text-[15px] text-ink hover:text-clay transition-colors">Painel</NavLink>
+                    )}
+                    <button onClick={logout} className="text-left py-2 text-[15px] text-faint hover:text-ink transition-colors">
+                      Sair da conta
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[13px] text-mid leading-relaxed mb-4">Entre pra acompanhar pedidos e salvar favoritos.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <NavLink href="/entrar" className="btn-outline justify-center text-[13px] py-3">Entrar</NavLink>
+                      <NavLink href="/cadastro" className="btn-clay justify-center text-[13px] py-3">Criar conta</NavLink>
+                    </div>
+                  </>
+                )}
+              </div>
             </nav>
 
             <div className="px-5 py-4 border-t border-mist flex items-center justify-between">

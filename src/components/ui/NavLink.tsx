@@ -9,6 +9,7 @@ type NavLinkProps = LinkProps & {
   className?: string;
   style?: React.CSSProperties;
   'aria-label'?: string;
+  'aria-current'?: React.AriaAttributes['aria-current'];
   onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   onMouseEnter?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   onMouseLeave?: (e: React.MouseEvent<HTMLAnchorElement>) => void;

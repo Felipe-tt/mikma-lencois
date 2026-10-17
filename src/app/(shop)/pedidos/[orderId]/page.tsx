@@ -242,7 +242,7 @@ export default function OrderDetailPage() {
       {/* Rastreio, Correios/Jadlog via TrackingTimeline, Uber Direct via link em tempo real */}
       {carrier && carrier !== 'pickup' && carrier !== 'manual' && carrier !== 'uber_direct' && (
         <section>
-          <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
+          <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
             Rastreamento
           </h2>
           <div className="border border-mist p-5">
@@ -258,7 +258,7 @@ export default function OrderDetailPage() {
       {/* Uber Direct, bloco em tempo real com entregador e link de rastreio */}
       {carrier === 'uber_direct' && order.status !== 'delivered' && order.status !== 'cancelled' && (
         <section>
-          <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
+          <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
             Acompanhe a entrega
           </h2>
           <div className="border border-mist p-5 flex flex-col gap-4">
@@ -431,7 +431,7 @@ export default function OrderDetailPage() {
 
             {/* Itens */}
             <section>
-              <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Itens</h2>
+              <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Itens</h2>
               <div className="flex flex-col divide-y divide-mist border border-mist">
                 {order.items.map(item => (
                   <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex justify-between items-center px-5 py-4 gap-4">
@@ -466,7 +466,7 @@ export default function OrderDetailPage() {
             {/* Timeline interna do pedido */}
             {timeline.length > 0 && (
               <section>
-                <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Histórico</h2>
+                <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Histórico</h2>
                 <div className="border border-mist p-5">
                   <div className="relative">
                     {timeline.length > 1 && (
@@ -507,7 +507,7 @@ export default function OrderDetailPage() {
             {/* Entrega */}
             {carrier && carrier !== 'pickup' && (
               <section className="border border-mist p-5">
-                <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Entrega</h2>
+                <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Entrega</h2>
                 <p className="text-sm font-medium text-ink">{carrierName(carrier)}</p>
                 {order.delivery?.dispatchedAt && (
                   <p className="text-xs text-faint mt-1">
@@ -552,14 +552,14 @@ export default function OrderDetailPage() {
 
             {carrier === 'pickup' && (
               <section className="border border-mist p-5">
-                <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-2">Entrega</h2>
+                <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-2">Entrega</h2>
                 <p className="text-sm text-ink">Retirada na loja</p>
               </section>
             )}
 
             {/* Endereço */}
             <section className="border border-mist p-5">
-              <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Endereço</h2>
+              <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Endereço</h2>
               <address className="text-sm text-mid not-italic leading-relaxed">
                 {order.address.street}, {order.address.number}
                 {order.address.complement && ` · ${order.address.complement}`}<br />
@@ -570,7 +570,7 @@ export default function OrderDetailPage() {
 
             {/* Pagamento */}
             <section className="border border-mist p-5">
-              <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Pagamento</h2>
+              <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Pagamento</h2>
               <p className="text-sm text-ink capitalize">{order.payment.method === 'pix' ? 'PIX' : 'Cartão de crédito'}</p>
               {order.payment.paidAt && (
                 <p className="text-xs text-faint mt-1">

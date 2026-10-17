@@ -62,14 +62,14 @@ export default function ContaPage() {
       </div>
 
       <div className="container-shop py-8 sm:py-12 pb-20">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-mist border border-mist max-w-4xl">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-mist border border-mist">
           {LINKS.map(({ href, label, desc, icon }) => (
             <Link
               key={href}
               href={href}
               className="flex items-start gap-5 bg-paper px-6 py-7 group hover:bg-warm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink/30"
             >
-              <span className="text-clay mt-0.5 shrink-0">{icon}</span>
+              <span aria-hidden="true" className="w-10 h-10 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0 transition-colors duration-150 group-hover:bg-clay group-hover:text-paper">{icon}</span>
               <div className="min-w-0">
                 <p className="text-[15px] font-semibold text-ink">{label}</p>
                 <p className="text-[13px] text-mid mt-1 leading-relaxed">{desc}</p>

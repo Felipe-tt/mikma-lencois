@@ -277,72 +277,61 @@ export default async function ProductPage({ params }: Props) {
           </div>
 
           <div className="flex flex-col gap-8 min-w-0 lg:col-start-1 lg:row-start-2">
-            <FadeIn className="flex flex-col gap-6">
-              {product.description && (
-                <p className="text-[14px] text-mid leading-relaxed max-w-[60ch]">
-                  {product.description}
-                </p>
-              )}
-
-              {/* ── Specs table ── */}
-              {(product.yarnCount || product.composition || product.weightGsm || specTags.length > 0) && (
-                <div className="border border-mist max-w-[520px]">
-                  <div className="px-4 py-3 bg-warm/50 border-b border-mist">
-                    <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">Especificações do tecido</p>
-                  </div>
-                  <div className="divide-y divide-mist">
-                    {product.yarnCount && (
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <span className="text-[12px] text-mid">Título do fio</span>
-                        <span className="text-[13px] font-semibold text-ink">Fio {product.yarnCount}</span>
-                      </div>
-                    )}
-                    {product.composition && (
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <span className="text-[12px] text-mid">Composição</span>
-                        <span className="text-[13px] font-semibold text-ink">{product.composition}</span>
-                      </div>
-                    )}
-                    {product.weightGsm && (
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <span className="text-[12px] text-mid">Gramatura</span>
-                        <span className="text-[13px] font-semibold text-ink">{product.weightGsm} g/m²</span>
-                      </div>
-                    )}
-                    {specTags.map(tag => (
-                      <div key={tag} className="flex items-center justify-between px-4 py-3">
-                        <span className="text-[12px] text-mid">Tipo</span>
-                        <span className="text-[13px] font-semibold text-ink capitalize">{tag}</span>
-                      </div>
-                    ))}
-                    {product.certifications?.map(cert => (
-                      <div key={cert} className="flex items-center justify-between px-4 py-3">
-                        <span className="text-[12px] text-mid">Certificação</span>
-                        <span className="text-[13px] font-semibold text-clay">{cert}</span>
-                      </div>
-                    ))}
-                  </div>
+            {/* Detalhes: antes eram blocos soltos com larguras diferentes
+                (texto 60ch, tabela e selos 520px, sanfona na coluna toda).
+                Agora tudo segue a largura da coluna, com título de seção. */}
+            <FadeIn className="flex flex-col gap-9 lg:pt-4">
+              <div>
+                <span className="eyebrow mb-3 block">Sobre o produto</span>
+                {product.description && (
+                  <p className="text-[15px] text-ink/80 leading-relaxed max-w-[62ch] whitespace-pre-line">
+                    {product.description}
+                  </p>
+                )}
+                <div className="mt-5">
+                  <SizeGuideModal
+                    columns={sizeGuideColumns}
+                    rows={sizeGuideRows}
+                    note={sizeGuideNote}
+                    whatsappUrl={s.whatsappUrl || undefined}
+                  />
                 </div>
-              )}
-
-              <div className="flex items-center gap-4">
-                <SizeGuideModal
-                  columns={sizeGuideColumns}
-                  rows={sizeGuideRows}
-                  note={sizeGuideNote}
-                  whatsappUrl={s.whatsappUrl || undefined}
-                />
               </div>
 
-              {/* Trust signals, vindos das configs */}
+              {/* Selos, especificações e a sanfona formam uma pilha só, com
+                  uma linha entre cada bloco (sem linha dupla). */}
+              <div>
               {productTrusts.length > 0 && (
-                <div className="flex flex-col gap-2.5 border-t border-mist pt-5 max-w-[520px]">
+                <ul className="grid sm:grid-cols-3 border-y border-mist divide-y sm:divide-y-0 sm:divide-x divide-mist">
                   {productTrusts.map((text, i) => (
-                    <div key={i} className="flex items-center gap-3 text-[13px] text-mid">
-                      <span className="text-clay/80 shrink-0">{i === 0 ? <TruckIcon /> : i === 1 ? <PackageIcon /> : <PixIcon />}</span>
+                    <li key={i} className="flex items-center gap-3 py-4 sm:px-5 sm:first:pl-0 sm:last:pr-0 text-[13px] text-mid leading-snug">
+                      <span aria-hidden="true" className="w-9 h-9 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0">
+                        {i === 0 ? <TruckIcon /> : i === 1 ? <PackageIcon /> : <PixIcon />}
+                      </span>
                       <span>{text}</span>
-                    </div>
+                    </li>
                   ))}
+                </ul>
+              )}
+
+              {/* ── Especificações ── */}
+              {(product.yarnCount || product.composition || product.weightGsm || specTags.length > 0 || (product.certifications?.length ?? 0) > 0) && (
+                <div className="pt-7 first:pt-0">
+                  <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-3">Especificações do tecido</p>
+                  <dl className="grid sm:grid-cols-2 gap-x-10 border-t border-mist">
+                    {[
+                      ...(product.yarnCount ? [{ k: 'Título do fio', v: `Fio ${product.yarnCount}` }] : []),
+                      ...(product.composition ? [{ k: 'Composição', v: product.composition }] : []),
+                      ...(product.weightGsm ? [{ k: 'Gramatura', v: `${product.weightGsm} g/m²` }] : []),
+                      ...specTags.map(tag => ({ k: 'Tipo', v: tag, cap: true })),
+                      ...(product.certifications ?? []).map(cert => ({ k: 'Certificação', v: cert, clay: true })),
+                    ].map((row, i) => (
+                      <div key={i} className="flex items-baseline justify-between gap-4 py-3 border-b border-mist">
+                        <dt className="text-[12px] text-mid">{row.k}</dt>
+                        <dd className={`text-[13px] font-semibold text-right ${'clay' in row && row.clay ? 'text-clay' : 'text-ink'} ${'cap' in row && row.cap ? 'capitalize' : ''}`}>{row.v}</dd>
+                      </div>
+                    ))}
+                  </dl>
                 </div>
               )}
 
@@ -350,6 +339,7 @@ export default async function ProductPage({ params }: Props) {
                 columns={(() => { try { return JSON.parse(s.bedSizeColumns || '[]'); } catch { return ['Tamanho','Cama','Comprimento','Largura']; } })()}
                 rows={(() => { try { return JSON.parse(s.bedSizeRows || '[]'); } catch { return []; } })()}
               />
+              </div>
             </FadeIn>
           </div>
 
@@ -389,7 +379,7 @@ export default async function ProductPage({ params }: Props) {
 function SizeGuide({ columns, rows }: { columns: string[]; rows: Record<string, string>[] }) {
   if (!columns.length || !rows.length) return null;
   return (
-    <details className="group border-t border-mist pt-4">
+    <details className="group border-b first:border-t border-mist py-4">
       <summary className="flex items-center justify-between cursor-pointer list-none text-[12px] font-semibold text-mid tracking-[0.08em] uppercase hover:text-ink transition-colors">
         Tamanhos de cama e colchão
         <svg className="w-3.5 h-3.5 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

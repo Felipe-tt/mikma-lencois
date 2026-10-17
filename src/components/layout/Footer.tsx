@@ -37,7 +37,7 @@ export function Footer({
     <footer className="theme-locked bg-ink text-paper mt-auto overflow-hidden">
 
       {/* ── Corpo ── */}
-      <div className="container-shop py-14 border-t border-paper/[0.07]">
+      <div className="container-shop py-14">
         <div className="grid grid-cols-2 md:grid-cols-[1.6fr_1fr_1fr_1fr] gap-10 md:gap-8 lg:gap-12 pb-12 border-b border-paper/[0.07]">
 
           {/* Col 1, Marca */}
