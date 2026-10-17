@@ -1,7 +1,7 @@
 /**
  * POST /api/delivery
  * Despacha um pedido que não depende de código de rastreio manual:
- * - Retirada na loja: só avança o status para 'shipped'
+ * - Retirada na loja: o pedido vai direto para 'delivered'
  * - Uber Direct: solicita o entregador
  *
  * Correios e Jadlog são postados na agência e marcados como despachados
@@ -15,6 +15,9 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import { z } from 'zod';
 import type { Order } from '@/types';
+import { sendEmail } from '@/lib/email';
+import { buildDelivered } from '@/lib/email/orderStatusEmails';
+import { CONTACT_EMAIL } from '@/lib/email/layout';
 
 
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
@@ -77,26 +80,47 @@ export async function POST(req: NextRequest) {
 
     // ── Retirada na loja ────────────────────────────────────────────────────
     if (carrier === 'pickup') {
+      // A retirada é a própria entrega: vai direto pra 'delivered'. Antes
+      // parava em 'shipped' ("A caminho") e dependia de um segundo clique
+      // que, esquecido, deixava o pedido a caminho pra sempre.
       const orderRef = adminDb.collection('orders').doc(orderId);
       const ok = await adminDb.runTransaction(async tx => {
         const fresh = await tx.get(orderRef);
         if (!['paid', 'preparing'].includes(fresh.data()?.status)) return false;
+        const at = new Date().toISOString();
         tx.update(orderRef, {
-        status: 'shipped',
-        'delivery.carrier': 'pickup',
-        'delivery.trackingCode': null,
-        'delivery.dispatchedAt': FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        timeline: FieldValue.arrayUnion({
-          status: 'shipped',
-          at: new Date().toISOString(),
-          note: 'Cliente retirou na loja',
-        }),
+          status: 'delivered',
+          'delivery.carrier': 'pickup',
+          'delivery.trackingCode': null,
+          'delivery.dispatchedAt': FieldValue.serverTimestamp(),
+          'delivery.deliveredAt': FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          timeline: FieldValue.arrayUnion({ status: 'delivered', at, note: 'Cliente retirou na loja' }),
         });
         return true;
       });
       if (!ok) return NextResponse.json({ error: 'Este pedido já foi despachado. Atualize a página.' }, { status: 409 });
-      return NextResponse.json({ carrier: 'pickup', trackingCode: null, labelUrl: null });
+
+      // E-mail de entregue (best-effort, o pedido já foi atualizado).
+      try {
+        const uSnap = await adminDb.collection('users').doc(order.userId).get();
+        const userData = uSnap.data() as { email?: string; name?: string } | undefined;
+        if (userData?.email) {
+          const firstName = (userData.name ?? '').split(' ')[0] || 'cliente';
+          const payload = buildDelivered({ ...order, status: 'delivered' }, firstName);
+          await sendEmail({
+            to: userData.email,
+            subject: payload.subject,
+            html: payload.html,
+            text: payload.text,
+            from: 'noreply',
+            replyTo: CONTACT_EMAIL,
+          });
+        }
+      } catch (err) {
+        console.error('[delivery] e-mail de retirada falhou:', err);
+      }
+      return NextResponse.json({ carrier: 'pickup', trackingCode: null, labelUrl: null, status: 'delivered' });
     }
 
     // ── Entrega Uber Direct ──────────────────────────────────────────────────
@@ -230,7 +254,23 @@ export async function POST(req: NextRequest) {
         throw err;
       }
 
-      await adminDb.collection('orders').doc(orderId).update({
+      // Transação: o pedido pode ter sido cancelado durante a chamada à Uber
+      // (2-10s). Antes o update cego trazia de volta um pedido cancelado,
+      // com o estoque já devolvido e um motoboy a caminho.
+      const uberOrderRef = adminDb.collection('orders').doc(orderId);
+      const stillDispatchable = await adminDb.runTransaction(async tx => {
+        const fresh = await tx.get(uberOrderRef);
+        if (['paid', 'preparing'].includes(fresh.data()?.status)) return true;
+        tx.update(uberOrderRef, { 'delivery.dispatchLockAt': FieldValue.delete() });
+        return false;
+      });
+      if (!stillDispatchable) {
+        try { await uberCancelDelivery(uberDelivery.deliveryId, 'other', 'Pedido cancelado durante o despacho', uberSandbox); }
+        catch (err) { console.error('[delivery] corrida Uber órfã não cancelada:', uberDelivery.deliveryId, err); }
+        return NextResponse.json({ error: 'O pedido foi cancelado enquanto o motoboy era chamado. A corrida foi cancelada.' }, { status: 409 });
+      }
+
+      await uberOrderRef.update({
         status: 'shipped',
         'delivery.carrier':               'uber_direct',
         'delivery.uberDirectDeliveryId':  uberDelivery.deliveryId,
@@ -342,7 +382,10 @@ export async function DELETE(req: NextRequest) {
 
     await adminDb.collection('orders').doc(orderId).update({
       status: 'preparing',
-      'delivery.carrier':              null,
+      // Volta pra transportadora que o cliente escolheu. Antes ficava null e
+      // o novo despacho saía sem nome de transportadora nem link de rastreio
+      // (e-mail, página do pedido) e fora do caixa de frete.
+      'delivery.carrier': (order as unknown as { selectedShipping?: { carrier?: string } }).selectedShipping?.carrier ?? null,
       'delivery.trackingCode':         null,
       'delivery.trackingUrl':          null,
       'delivery.melhorEnvioOrderId':   null,

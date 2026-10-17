@@ -4,13 +4,16 @@ import { z } from 'zod';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, getClientIp } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
+import { confirmOrderPaid, InsufficientStockError } from '@/lib/orders/confirmPayment';
 
 const bodySchema = z.object({
   // Como o cliente pagou de fato: obrigatório, fica registrado no pedido e
   // no timeline pra auditoria (ex: "Dinheiro na retirada", "Transferência
   // direto pro vendedor", "Pago fiado, combinado por WhatsApp").
   note: z.string().trim().min(3).max(300),
+  // PIX expirado sem estoque livre: o vendedor já viu o aviso e confirmou
+  // que quer seguir mesmo deixando o estoque negativo.
+  force: z.boolean().optional(),
 });
 
 /**
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       { status: 400 }
     );
   }
-  const { note } = parsedBody.data;
+  const { note, force } = parsedBody.data;
 
   const snap = await adminDb.collection('orders').doc(orderId).get();
   if (!snap.exists) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
@@ -76,12 +79,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     return NextResponse.json({ error: 'Pedido não está mais aguardando pagamento.' }, { status: 400 });
   }
 
-  const confirmed = await confirmOrderPaid(
-    orderId,
-    `manual:${uid}:${Date.now()}`,
-    `Pago manualmente por fora · ${note}`,
-    { uid, note }
-  );
+  let confirmed: boolean;
+  try {
+    confirmed = await confirmOrderPaid(
+      orderId,
+      `manual:${uid}:${Date.now()}`,
+      `Pago manualmente por fora · ${note}`,
+      { uid, note, force }
+    );
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json(
+        { error: 'Sem estoque livre para este pedido.', code: 'INSUFFICIENT_STOCK', skus: err.skus },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 
   if (!confirmed) {
     return NextResponse.json(

@@ -9,6 +9,17 @@ import { recordShippingCollected } from '@/lib/shipping-ledger';
 import { buildConfirmed } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
 
+/**
+ * Confirmação manual de um PIX expirado sem estoque livre pra cobrir: a
+ * reserva foi liberada na expiração e o item pode ter sido vendido pra outro
+ * cliente. Quem chamou pergunta ao vendedor e repete com `force`.
+ */
+export class InsufficientStockError extends Error {
+  constructor(public readonly skus: string[]) {
+    super('INSUFFICIENT_STOCK');
+  }
+}
+
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -39,12 +50,13 @@ export async function confirmOrderPaid(
   orderId: string,
   txId: string,
   note: string,
-  manual?: { uid: string; note: string }
+  manual?: { uid: string; note: string; force?: boolean }
 ): Promise<boolean> {
   const orderRef = adminDb.collection('orders').doc(orderId);
   const now = new Date().toISOString();
 
   let order: FirebaseFirestore.DocumentData | null;
+  let lateCapture: FirebaseFirestore.DocumentData | null = null;
   try {
     order = await adminDb.runTransaction(async (tx) => {
       const orderSnap = await tx.get(orderRef);
@@ -56,6 +68,30 @@ export async function confirmOrderPaid(
       // a quantidade (sem mexer em reserved). O webhook continua exigindo
       // pending_payment.
       const wasExpired = data.status === 'payment_expired';
+
+      // Pagamento real chegando com o pedido já cancelado ou expirado (o
+      // cliente terminou de pagar a aba do cartão depois de cancelar, ou o
+      // vendedor cancelou enquanto ele pagava). Antes isso era ignorado em
+      // silêncio: dinheiro recebido, pedido "Cancelado" e ninguém sabia.
+      // Não reativa sozinho (o estoque pode já ter ido pra outro cliente);
+      // registra e avisa o vendedor pra estornar ou marcar como pago.
+      if (!manual && (data.status === 'cancelled' || wasExpired)) {
+        const payment = (data.payment ?? {}) as { lateCaptureTxId?: string };
+        if (payment.lateCaptureTxId === txId) return null;
+        tx.update(orderRef, {
+          'payment.lateCaptureTxId': txId,
+          'payment.lateCaptureAt': FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          timeline: FieldValue.arrayUnion({
+            status: data.status,
+            at: now,
+            note: `Pagamento recebido depois do ${wasExpired ? 'vencimento' : 'cancelamento'} (${note}). Estorne o cliente ou marque o pedido como pago.`,
+          }),
+        });
+        lateCapture = data;
+        return null;
+      }
+
       if (data.status !== 'pending_payment' && !(manual && wasExpired)) return null;
 
       // Defesa em profundidade: o evento é assinado, mas se o txId diferir do
@@ -75,6 +111,17 @@ export async function confirmOrderPaid(
       const lines = expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>);
       const invRefs = lines.map(line => adminDb.collection('inventory').doc(line.sku));
       const invSnaps = invRefs.length > 0 ? await tx.getAll(...invRefs) : [];
+
+      if (wasExpired && !manual?.force) {
+        const needed = new Map<string, number>();
+        lines.forEach(l => needed.set(l.sku, (needed.get(l.sku) ?? 0) + l.quantity));
+        const short = [...needed].filter(([sku, qty]) => {
+          const inv = invSnaps[invRefs.findIndex(r => r.id === sku)]?.data();
+          if (!inv) return false;
+          return ((inv.quantity as number) ?? 0) - ((inv.reserved as number) ?? 0) < qty;
+        });
+        if (short.length > 0) throw new InsufficientStockError(short.map(([sku]) => sku));
+      }
 
       tx.update(orderRef, {
         status: 'paid',
@@ -110,12 +157,18 @@ export async function confirmOrderPaid(
       return data;
     });
   } catch (err) {
+    if (err instanceof InsufficientStockError) throw err;
     console.error(`Failed to confirm order ${orderId}:`, err);
     Sentry.captureException(err, { tags: { route: 'confirm-order-paid' }, extra: { orderId, manual: !!manual } });
     // Relança: o webhook precisa responder erro pro gateway reenviar o
     // evento. Engolir aqui deixava o pedido pago parado e o cron
     // cancelava depois de 48h.
     throw err;
+  }
+
+  if (lateCapture) {
+    await alertLateCapture(orderId, lateCapture);
+    return false;
   }
 
   if (!order) {
@@ -215,4 +268,31 @@ export async function confirmOrderPaid(
   }
 
   return true;
+}
+
+// Avisa o vendedor de um pagamento que chegou com o pedido já cancelado ou
+// expirado. Tudo best-effort: o registro no pedido já foi feito na transação.
+async function alertLateCapture(orderId: string, order: FirebaseFirestore.DocumentData) {
+  const code = orderId.slice(-8).toUpperCase();
+  const total = formatCurrency(order.totalCents as number);
+  Sentry.captureMessage('confirm-order-paid: pagamento depois do cancelamento', {
+    level: 'error', extra: { orderId, status: order.status },
+  });
+  try {
+    await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
+      type: 'late_payment',
+      orderId,
+      message: `Pagamento de ${total} recebido no pedido #${code}, que já estava cancelado. Estorne ou marque como pago.`,
+      read: false,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    console.warn(`[confirm-order-paid] falha ao notificar pagamento atrasado do pedido ${orderId}:`, err);
+  }
+  await notifySeller({
+    title: 'Pagamento em pedido cancelado',
+    body: `#${code} · ${total} · estorne ou marque como pago`,
+    url: `/painel/pedidos/${orderId}`,
+    data: { orderId, event: 'late_payment' },
+  });
 }

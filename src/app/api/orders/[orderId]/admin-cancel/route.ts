@@ -75,6 +75,10 @@ export async function POST(
       const order = snap.data()!;
       if (order.status === 'cancelled') throw new Error('ALREADY_CANCELLED');
       if (order.status === 'delivered') throw new Error('DELIVERED');
+      // Motoboy sendo chamado agora: espera o despacho terminar pra não
+      // cancelar no meio e deixar uma corrida órfã.
+      const lockAt = (order.delivery as { dispatchLockAt?: number } | undefined)?.dispatchLockAt ?? 0;
+      if (Date.now() - lockAt < 2 * 60_000) throw new Error('DISPATCHING');
 
       // pending_payment: só reservado, libera a reserva.
       // payment_expired: o webhook já liberou a reserva, não mexe no estoque
@@ -107,6 +111,9 @@ export async function POST(
         status: 'cancelled',
         cancelledAt: now,
         updatedAt: FieldValue.serverTimestamp(),
+        // Pedido pago: fica marcado como estorno pendente até o lojista
+        // confirmar no painel que devolveu o dinheiro.
+        ...(mode === 'restock' ? { 'payment.refundStatus': 'pending' } : {}),
         timeline: FieldValue.arrayUnion({ status: 'cancelled', at: now, note: reason }),
       });
 
@@ -121,6 +128,7 @@ export async function POST(
     const message = err instanceof Error ? err.message : '';
     if (message === 'NOT_FOUND') return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
     if (message === 'ALREADY_CANCELLED') return NextResponse.json({ error: 'Pedido já está cancelado' }, { status: 400 });
+    if (message === 'DISPATCHING') return NextResponse.json({ error: 'O pedido está sendo despachado pela Uber agora. Aguarde alguns segundos e tente de novo.' }, { status: 409 });
     if (message === 'DELIVERED') return NextResponse.json({ error: 'Não é possível cancelar pedido já entregue' }, { status: 400 });
     throw err;
   }

@@ -280,6 +280,16 @@ describe('orders/{orderId}: sem update pelo client SDK', () => {
     const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
     await assertSucceeds(deleteDoc(doc(seller.firestore(), 'orders/order1')));
   });
+
+  it('seller não apaga pedido cancelado que já foi pago', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'cancelled', payment: { method: 'pix', paidAt: new Date() } });
+      await setDoc(doc(ctx.firestore(), 'orders/order2'), { userId: 'buyer1', status: 'cancelled', payment: { method: 'card', lateCaptureTxId: 'tx1' } });
+    });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order1')));
+    await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order2')));
+  });
 });
 
 describe('coupons/{code}: só a equipe lê', () => {
