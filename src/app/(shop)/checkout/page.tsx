@@ -50,8 +50,8 @@ function CarrierIcon({ carrier }: { carrier: string }) {
 }
 
 const TAG: Record<string, { label: string; cls: string }> = {
-  rapido:    { label: 'Mais rápido',    cls: 'bg-amber-100 text-amber-800' },
-  economico: { label: 'Mais econômico', cls: 'bg-sky-100 text-sky-800' },
+  rapido:    { label: 'Mais rápido',    cls: 'bg-ink/[0.06] text-ink' },
+  economico: { label: 'Mais econômico', cls: 'bg-clay/10 text-clay' },
 };
 
 // ── Field components ─────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ function Section({
         className={`flex items-center gap-3 px-5 py-4 w-full text-left ${editable ? 'cursor-pointer hover:bg-paper/60 transition-colors' : ''}`}
       >
         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
-          done && !open ? 'bg-emerald-600 text-white' :
+          done && !open ? 'bg-clay text-paper' :
           open          ? 'bg-ink text-paper' :
                           'border-2 border-mist text-faint'
         }`}>
@@ -143,7 +143,7 @@ function Section({
           }
         </span>
         <div className="flex-1 min-w-0">
-          <h2 className={`text-sm font-bold ${open ? 'text-ink' : done ? 'text-mid' : 'text-faint'}`}>
+          <h2 className={`font-display font-normal text-[1.15rem] leading-none transition-colors ${open ? 'text-ink' : done ? 'text-mid' : 'text-faint'}`}>
             {label}
           </h2>
         </div>
@@ -423,7 +423,7 @@ export default function CheckoutPage() {
 
       {/* ── Top bar ── */}
       <div className="bg-white dark:bg-warm border-b border-mist sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+        <div className="container-shop h-14 flex items-center justify-between gap-4">
           {/* Celular: etapa atual + barra de progresso. As 4 etapas com
               rótulo não cabem e só sobravam barras soltas. */}
           <div className="sm:hidden flex items-center justify-between gap-4 w-full">
@@ -454,8 +454,8 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <div className="flex flex-col lg:grid lg:grid-cols-[1fr_380px] gap-6 lg:gap-10 items-start">
+      <div className="container-shop py-6 sm:py-10">
+        <div className="flex flex-col lg:grid lg:grid-cols-[1fr_400px] gap-6 lg:gap-12 items-start">
 
           {/* ── Formulário accordion ── */}
           <form onSubmit={submit} className="flex flex-col gap-3 w-full">
@@ -804,7 +804,7 @@ export default function CheckoutPage() {
             <div className="bg-white dark:bg-warm border border-mist">
               {/* Header */}
               <div className="px-5 py-4 border-b border-mist flex items-center justify-between">
-                <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-faint">Seu pedido</h2>
+                <h2 className="font-sans text-[10px] font-bold tracking-[0.2em] uppercase text-faint">Seu pedido</h2>
                 <span className="text-xs text-faint">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</span>
               </div>
 
