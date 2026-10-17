@@ -1,4 +1,5 @@
 'use client';
+import { PixPayBlock } from '@/components/checkout/PIXModal';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -20,7 +21,6 @@ import { carrierName, trackingUrl, isCorreios } from '@/lib/carriers';
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { trackPurchase } from '@/lib/analytics';
-import { copyText } from '@/lib/clipboard';
 import { requestNewPix, type NewPix } from '@/lib/orders/requestNewPix';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -129,7 +129,18 @@ export default function OrderDetailPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [pixTimeUp, setPixTimeUp] = useState(false);
+
+  useEffect(() => {
+    if (!order || order.payment.method !== 'pix' || order.status !== 'pending_payment') return;
+    const raw = order.payment.expiresAt as { toDate?: () => Date } | string | undefined;
+    const d = typeof raw === 'string' ? new Date(raw) : raw?.toDate?.();
+    if (!d || Number.isNaN(d.getTime())) return;
+    const ms = d.getTime() - Date.now();
+    if (ms <= 0) return;
+    const id = setTimeout(() => setPixTimeUp(true), ms + 500);
+    return () => clearTimeout(id);
+  }, [order]);
   const [confirmingReceived, setConfirmingReceived] = useState(false);
   const [confirmReceivedError, setConfirmReceivedError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -159,15 +170,6 @@ export default function OrderDetailPage() {
     }, () => setNotFound(true)); // sem permissão (pedido de outra conta)
   }, [user, orderId]);
 
-  function copyPix() {
-    if (!order || order.payment.method !== 'pix' || !order.payment.pixCopyPaste) return;
-    const code = order.payment.pixCopyPaste;
-    copyText(code).then(ok => {
-      if (!ok) return;
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  }
 
   async function generatePix() {
     if (!order) return;
@@ -235,6 +237,16 @@ export default function OrderDetailPage() {
   // Quando o pedido já foi despachado, rastrear é a informação que o
   // cliente abriu a página pra ver, não devia ficar escondido depois
   // da lista de itens e do histórico. Promove pro topo nesses casos.
+  // Vencimento do PIX (Timestamp do Firestore ou ISO). Quando passa, a tela
+  // já oferece um novo código, sem esperar o servidor marcar como expirado.
+  const pixExpiresIso = (() => {
+    if (order.payment.method !== 'pix') return undefined;
+    const raw = order.payment.expiresAt as { toDate?: () => Date } | string | undefined;
+    const d = typeof raw === 'string' ? new Date(raw) : raw?.toDate?.();
+    return d && !Number.isNaN(d.getTime()) ? d.toISOString() : undefined;
+  })();
+  const pixExpired = pixTimeUp || (!!pixExpiresIso && new Date(pixExpiresIso).getTime() <= Date.now());
+
   const trackingIsPriority = !!carrier && (order.status === 'shipped' || order.status === 'delivered');
 
   const trackingSection = (
@@ -393,10 +405,10 @@ export default function OrderDetailPage() {
         )}
 
         {/* ── PIX expirado: gerar outro sem refazer o pedido ───────── */}
-        {order.payment.method === 'pix' && (order.status === 'payment_expired' || (order.status === 'pending_payment' && !order.payment.pixCopyPaste)) && (
+        {order.payment.method === 'pix' && (order.status === 'payment_expired' || (order.status === 'pending_payment' && (!order.payment.pixCopyPaste || pixExpired))) && (
           <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50/50 p-6 flex flex-col items-center gap-3 text-center">
             <p className="text-sm font-semibold text-ink">
-              {order.status === 'payment_expired' ? 'O PIX deste pedido expirou' : 'Pague para confirmar o pedido'}
+              {order.status === 'payment_expired' || pixExpired ? 'O PIX deste pedido expirou' : 'Pague para confirmar o pedido'}
             </p>
             <p className="text-xs text-mid">
               Total: <span className="font-bold text-ink">{formatCurrency(order.totalCents)}</span>
@@ -408,26 +420,14 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {/* ── PIX pendente ─────────────────────────────────────────── */}
-        {order.status === 'pending_payment' && order.payment.method === 'pix' && order.payment.pixCopyPaste && (
-          <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50/50 p-6 flex flex-col items-center gap-4">
-            <p className="text-sm font-semibold text-ink">Pague para confirmar o pedido</p>
-            <p className="text-xs text-mid">
-              Total: <span className="font-bold text-ink">{formatCurrency(order.totalCents)}</span>
-            </p>
-            {order.payment.pixQrCode && (
-              <img src={order.payment.pixQrCode} alt="QR Code PIX" className="w-44 h-44 rounded-xl border border-mist bg-white p-2" />
-            )}
-            <div className="w-full flex gap-2">
-              <input readOnly value={order.payment.pixCopyPaste}
-                className="input flex-1 text-xs truncate" />
-              <button onClick={copyPix} className="btn-primary shrink-0 text-xs px-4 flex items-center gap-1.5">
-                {copied
-                  ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado</>
-                  : 'Copiar'
-                }
-              </button>
+        {/* ── PIX pendente: mesmo bloco do modal (tempo, copiar, QR, passos) ── */}
+        {order.status === 'pending_payment' && order.payment.method === 'pix' && order.payment.pixCopyPaste && !pixExpired && (
+          <div className="mb-8 rounded-3xl border border-mist bg-paper p-5 sm:p-7 max-w-md">
+            <div className="flex items-baseline justify-between gap-3 mb-5">
+              <p className="font-display text-[1.3rem] text-ink leading-tight">Pague com PIX</p>
+              <p className="font-display text-[1.2rem] text-ink tabular-nums">{formatCurrency(order.totalCents)}</p>
             </div>
+            <PixPayBlock qrCode={order.payment.pixQrCode ?? ''} copyPaste={order.payment.pixCopyPaste} expiresAt={pixExpiresIso} />
           </div>
         )}
 

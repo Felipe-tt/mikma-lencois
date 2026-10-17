@@ -1,13 +1,14 @@
 'use client';
+import Link from 'next/link';
 import { Fragment, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, onSnapshot, getDoc, setDoc, collection, query, where, getDocs, documentId } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc, collection, query, where, getDocs, documentId, orderBy, limit } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import { formatCurrency } from '@/lib/utils/format';
-import type { Cart, Address } from '@/types';
+import type { Cart, Address, Order } from '@/types';
 import { PIXModal } from '@/components/checkout/PIXModal';
 import { CheckoutSkeleton } from '@/components/ui/Skeleton';
 import { maskCep, maskCpf, maskPhone, onlyDigits, isValidCpf, isValidPhone, isValidCep, BR_STATES } from '@/lib/masks';
@@ -187,6 +188,9 @@ export default function CheckoutPage() {
   // Sem essa trava o listener abaixo mandava pro /carrinho e o cliente
   // nunca via o "Pagamento recebido".
   const pixShownRef = useRef(false);
+  // PIX gerado há pouco e ainda não pago (ex: a pessoa recarregou a página
+  // ou voltou depois): mostra um aviso pra pagar esse em vez de gerar outro.
+  const [openPix, setOpenPix] = useState<{ id: string; totalCents: number } | null>(null);
   const apiErrorRef = useRef<HTMLDivElement>(null);
   // O erro aparece no topo do formulário e o botão de pagar fica no fim:
   // no celular parecia que nada tinha acontecido.
@@ -357,6 +361,24 @@ export default function CheckoutPage() {
     if (isValidCep(addr.cep)) quoteShipping(addr.cep);
   }
 
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    getDocs(query(collection(db, 'orders'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'), limit(5)))
+      .then(snap => {
+        if (cancelled) return;
+        const recent = snap.docs.map(d => ({ id: d.id, ...d.data() } as Order)).find(o => {
+          if (o.status !== 'pending_payment' || o.payment.method !== 'pix' || !o.payment.pixCopyPaste) return false;
+          const raw = o.payment.expiresAt as { toDate?: () => Date } | string | undefined;
+          const exp = typeof raw === 'string' ? new Date(raw) : raw?.toDate?.();
+          return !!exp && exp.getTime() > Date.now();
+        });
+        setOpenPix(recent ? { id: recent.id, totalCents: recent.totalCents } : null);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
+
   // Voltar do pagamento pelo botão do navegador restaura a página do cache
   // com o botão ainda em "enviando": libera de novo.
   useEffect(() => {
@@ -453,7 +475,7 @@ export default function CheckoutPage() {
       orderId={pixData.orderId}
       totalCents={pixData.totalCents ?? total}
       expiresAt={pixData.expiresAt}
-      onClose={() => router.push('/conta/pedidos')}
+      onClose={() => router.push(`/pedidos/${pixData.orderId}`)}
     />
   );
 
@@ -496,6 +518,16 @@ export default function CheckoutPage() {
 
       <div className="container-shop py-6 sm:py-10">
         <h1 className="font-display font-normal text-ink text-[1.9rem] sm:text-[2.4rem] leading-tight mb-5 sm:mb-7">Finalizar compra</h1>
+        {openPix && (
+          <div role="status" className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-900 animate-fade-in">
+            <p className="text-[13.5px] leading-snug">
+              Você já tem um PIX aguardando pagamento ({formatCurrency(openPix.totalCents)}). Pague esse pedido para não gerar outro.
+            </p>
+            <Link href={`/pedidos/${openPix.id}`} className="shrink-0 self-start sm:self-auto inline-flex items-center h-10 px-5 rounded-full bg-amber-900 text-amber-50 text-[13px] font-semibold hover:bg-amber-800 transition-colors">
+              Ver PIX do pedido
+            </Link>
+          </div>
+        )}
         <div className="flex flex-col lg:grid lg:grid-cols-[1fr_400px] gap-6 lg:gap-12 items-start">
 
           {/* ── Formulário accordion ── */}

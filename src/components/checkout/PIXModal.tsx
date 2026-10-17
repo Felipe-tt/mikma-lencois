@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -71,12 +72,9 @@ function usePaymentStatus(orderId: string, totalCents: number): PaymentStatus {
 export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents: initialTotal, orderId, expiresAt: initialExpires, onClose }: Props) {
   const [pix, setPix] = useState({ qrCode: initialQr, copyPaste: initialCopy, expiresAt: initialExpires, totalCents: initialTotal });
   const { qrCode, copyPaste, expiresAt, totalCents } = pix;
-  const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regenError, setRegenError] = useState('');
   const [open, setOpen] = useState(true);
-  const copyInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   // Quem renderiza o modal o desmonta ao chamar onClose; espera a saída
   // terminar antes de avisar, senão ele some de uma vez.
@@ -94,44 +92,18 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
 
   const total = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCents / 100);
 
-  async function copy() {
-    const ok = await copyText(copyPaste);
-    if (!ok) {
-      // Sem permissão de copiar (comum dentro do Instagram/WhatsApp):
-      // seleciona o código pro cliente copiar segurando o dedo.
-      setCopyFailed(true);
-      copyInputRef.current?.focus();
-      copyInputRef.current?.select();
-      return;
-    }
-    setCopyFailed(false);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  }
-
   async function regenerate() {
     setRegenerating(true);
     setRegenError('');
     try {
       const next = await requestNewPix(orderId);
       setPix({ qrCode: next.qrCode, copyPaste: next.copyPaste, expiresAt: next.expiresAt, totalCents: next.totalCents ?? totalCents });
-      setCopied(false);
-      setCopyFailed(false);
     } catch (err) {
       setRegenError(err instanceof Error ? err.message : 'Não foi possível gerar o PIX. Tente novamente.');
     } finally {
       setRegenerating(false);
     }
   }
-
-  const timeLabel = (() => {
-    if (secondsLeft === null) return null;
-    const m = Math.floor(secondsLeft / 60);
-    const s = secondsLeft % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  })();
-
-  const urgency = secondsLeft !== null && secondsLeft < 120 && secondsLeft > 0;
 
   if (!mounted) return null;
 
@@ -170,7 +142,8 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
 
         {/* ── Body ── */}
         <div className="overflow-y-auto flex-1">
-          <div className="px-6 py-6 flex flex-col items-center gap-5">
+          {/* role=status: leitor de tela anuncia quando o pagamento confirma ou expira */}
+          <div role="status" aria-live="polite" className="px-6 py-6 flex flex-col items-center gap-5">
 
             {/* ── CONFIRMADO ── */}
             {confirmed && (
@@ -186,9 +159,9 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
                     Seu pedido foi confirmado e já está sendo preparado.
                   </p>
                 </div>
-                <div className="w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 font-medium text-center">
-                  Acompanhe em <span className="underline">Meus pedidos</span>
-                </div>
+                <Link href={`/pedidos/${orderId}`} className="w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 font-medium text-center hover:bg-emerald-100 transition-colors">
+                  Acompanhar o pedido
+                </Link>
               </div>
             )}
 
@@ -227,110 +200,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
 
             {/* ── PENDENTE ── */}
             {!confirmed && !expired && !failed && (
-              <>
-                {/* Status + Countdown */}
-                <div className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border ${urgency ? 'border-amber-200 bg-amber-50' : 'border-mist bg-warm/40'}`}>
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-clay opacity-50 animate-ping"/>
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-clay"/>
-                    </span>
-                    <span className="text-xs font-semibold text-mid">Aguardando pagamento</span>
-                  </div>
-                  {timeLabel && (
-                    <span className={`text-xs font-mono font-bold tabular-nums ${urgency ? 'text-amber-700' : 'text-faint'}`}>
-                      {timeLabel}
-                    </span>
-                  )}
-                </div>
-
-                {/* QR Code */}
-                <div className="flex flex-col items-center gap-3">
-                  {/* Fundo branco também no modo escuro: o QR do PIX é preto
-                      (às vezes com fundo transparente) e some num fundo escuro,
-                      o app do banco não consegue ler. */}
-                  <div className="rounded-2xl border-2 border-mist p-3 bg-white">
-                    {qrCode ? (
-                      <img src={qrCode} alt="QR Code PIX" className="w-44 h-44 block" width={176} height={176}/>
-                    ) : (
-                      <div className="w-44 h-44 rounded-xl flex items-center justify-center bg-warm">
-                        <span className="text-faint text-xs text-center px-4">QR Code indisponível</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-faint text-center max-w-[26ch] leading-relaxed">
-                    Abra o app do seu banco, escolha Pix e escaneie o código
-                  </p>
-                </div>
-
-                {/* Divider */}
-                <div className="w-full flex items-center gap-3">
-                  <div className="flex-1 h-px bg-mist"/>
-                  <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-faint">ou copie o código</span>
-                  <div className="flex-1 h-px bg-mist"/>
-                </div>
-
-                {/* Copia e cola */}
-                <div className="w-full flex flex-col gap-2">
-                  <div className="flex items-center gap-1 rounded-full border border-mist bg-warm/40 overflow-hidden p-1">
-                    <input
-                      ref={copyInputRef}
-                      readOnly
-                      value={copyPaste}
-                      onFocus={e => e.currentTarget.select()}
-                      className="flex-1 min-w-0 pl-3 pr-1 py-2 text-[11px] font-mono text-ink bg-transparent truncate focus:outline-none"
-                      aria-label="Código PIX copia e cola"
-                    />
-                    <button
-                      type="button"
-                      onClick={copy}
-                      aria-live="polite"
-                      className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold tracking-[0.08em] uppercase active:scale-[0.97] transition-[background-color,transform] duration-150 ${
-                        copied ? 'bg-emerald-600 text-paper' : 'bg-ink text-paper hover:bg-clay'
-                      }`}
-                    >
-                      {copied ? (
-                        <span className="flex items-center gap-1.5">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                          Copiado
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
-                          Copiar
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                  {copyFailed && (
-                    <p role="status" className="text-[11px] text-amber-700">
-                      Seu navegador não deixou copiar. O código está selecionado: toque e segure para copiar.
-                    </p>
-                  )}
-                </div>
-
-                {/* Aviso */}
-                <div className="w-full border-l-2 border-clay/40 pl-3 py-1">
-                  <p className="text-xs text-mid leading-relaxed">
-                    Após pagar, a confirmação é <strong className="text-ink">automática e imediata</strong>. Não é necessário enviar comprovante.
-                  </p>
-                </div>
-
-                {/* Steps de instrução */}
-                <div className="w-full flex flex-col gap-2.5">
-                  {[
-                    { n: '1', text: 'Abra o app do seu banco' },
-                    { n: '2', text: 'Escolha a opção PIX' },
-                    { n: '3', text: 'Escaneie o QR Code ou cole o código acima' },
-                    { n: '4', text: 'Confirme o valor e finalize' },
-                  ].map(({ n, text }) => (
-                    <div key={n} className="flex items-center gap-3 text-xs text-mid">
-                      <span className="w-5 h-5 rounded-full bg-warm border border-mist flex items-center justify-center text-[10px] font-bold text-faint shrink-0">{n}</span>
-                      {text}
-                    </div>
-                  ))}
-                </div>
-              </>
+              <PixPayBlock qrCode={qrCode} copyPaste={copyPaste} expiresAt={expiresAt} />
             )}
           </div>
         </div>
@@ -342,7 +212,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
             onClick={requestClose}
             className="text-sm font-medium text-mid hover:text-ink transition-colors"
           >
-            {confirmed ? 'Ver meus pedidos' : 'Fechar'}
+            {confirmed ? 'Ver pedido' : 'Pagar depois'}
           </button>
           {!confirmed && !expired && !failed && (
             <p className="text-xs text-faint flex items-center gap-1.5">
@@ -355,5 +225,138 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
       </div>
     </div>,
     document.body
+  );
+}
+
+
+/**
+ * Bloco de pagamento PIX (tempo, copia e cola, QR e passos). Usado no modal
+ * do checkout e na página do pedido, que antes tinha uma versão sem tempo
+ * nem instruções. No celular o "Copiar código" vem primeiro: quem paga no
+ * próprio telefone não tem como escanear o QR da tela.
+ */
+export function PixPayBlock({ qrCode, copyPaste, expiresAt }: { qrCode: string; copyPaste: string; expiresAt?: string }) {
+  const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const copyInputRef = useRef<HTMLInputElement>(null);
+  const secondsLeft = useCountdown(expiresAt);
+
+  async function copy() {
+    const ok = await copyText(copyPaste);
+    if (!ok) {
+      // Sem permissão de copiar (comum dentro do Instagram/WhatsApp):
+      // seleciona o código pro cliente copiar segurando o dedo.
+      setCopyFailed(true);
+      copyInputRef.current?.focus();
+      copyInputRef.current?.select();
+      return;
+    }
+    setCopyFailed(false);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  }
+
+  const timeLabel = secondsLeft === null ? null
+    : `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
+  const urgency = secondsLeft !== null && secondsLeft < 120 && secondsLeft > 0;
+
+  const copyIcon = copied
+    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>;
+
+  return (
+    <div className="w-full flex flex-col items-center gap-5">
+      {/* Status + tempo */}
+      <div className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border ${urgency ? 'border-amber-200 bg-amber-50' : 'border-mist bg-warm/40'}`}>
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-clay opacity-50 animate-ping"/>
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-clay"/>
+          </span>
+          <span className="text-xs font-semibold text-mid">Aguardando pagamento</span>
+        </div>
+        {timeLabel && (
+          <span className={`text-xs font-mono font-bold tabular-nums ${urgency ? 'text-amber-700' : 'text-faint'}`} aria-label={`Expira em ${timeLabel}`}>
+            {timeLabel}
+          </span>
+        )}
+      </div>
+
+      {/* Celular: copiar primeiro, botão grande */}
+      <button
+        type="button"
+        onClick={copy}
+        className={`sm:hidden w-full h-12 rounded-full inline-flex items-center justify-center gap-2 text-[14px] font-semibold active:scale-[0.98] transition-[background-color,transform] duration-150 ${copied ? 'bg-emerald-600 text-white' : 'bg-ink text-paper'}`}
+      >
+        {copyIcon}
+        {copied ? 'Código copiado' : 'Copiar código PIX'}
+      </button>
+      <span className="sr-only" aria-live="polite">{copied ? 'Código PIX copiado' : ''}</span>
+
+      {/* QR */}
+      <div className="flex flex-col items-center gap-3">
+        {/* Fundo branco também no modo escuro: o QR é preto (às vezes com
+            fundo transparente) e some num fundo escuro. */}
+        <div className="rounded-2xl border-2 border-mist p-3 bg-white">
+          {qrCode ? (
+            <img src={qrCode} alt="QR Code PIX" className="w-40 h-40 sm:w-44 sm:h-44 block" width={176} height={176}/>
+          ) : (
+            <div className="w-44 h-44 rounded-xl flex items-center justify-center bg-warm">
+              <span className="text-faint text-xs text-center px-4">QR Code indisponível</span>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-faint text-center max-w-[28ch] leading-relaxed">
+          <span className="sm:hidden">Pagando por outro aparelho? Escaneie o QR no app do banco.</span>
+          <span className="hidden sm:inline">Abra o app do seu banco, escolha Pix e escaneie o código</span>
+        </p>
+      </div>
+
+      {/* Copia e cola (desktop; no celular serve de alternativa pra copiar na mão) */}
+      <div className="w-full flex flex-col gap-2">
+        <div className="flex items-center gap-1 rounded-full border border-mist bg-warm/40 overflow-hidden p-1">
+          <input
+            ref={copyInputRef}
+            readOnly
+            value={copyPaste}
+            onFocus={e => e.currentTarget.select()}
+            className="flex-1 min-w-0 pl-3 pr-1 py-2 text-[11px] font-mono text-ink bg-transparent truncate focus:outline-none"
+            aria-label="Código PIX copia e cola"
+          />
+          <button
+            type="button"
+            onClick={copy}
+            className={`hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold tracking-[0.08em] uppercase active:scale-[0.97] transition-[background-color,transform] duration-150 ${
+              copied ? 'bg-emerald-600 text-white' : 'bg-ink text-paper hover:bg-clay'
+            }`}
+          >
+            {copyIcon}
+            {copied ? 'Copiado' : 'Copiar'}
+          </button>
+        </div>
+        {copyFailed && (
+          <p role="status" className="text-[11px] text-amber-700">
+            Seu navegador não deixou copiar. O código está selecionado: toque e segure para copiar.
+          </p>
+        )}
+      </div>
+
+      {/* Aviso */}
+      <div className="w-full border-l-2 border-clay/40 pl-3 py-1">
+        <p className="text-xs text-mid leading-relaxed">
+          Após pagar, a confirmação é <strong className="text-ink">automática e imediata</strong>. Não é necessário enviar comprovante.
+        </p>
+      </div>
+
+      {/* Passos */}
+      <ol className="w-full flex flex-col gap-2.5">
+        {['Abra o app do seu banco', 'Escolha a opção PIX', 'Cole o código (ou escaneie o QR)', 'Confirme o valor e finalize'].map((text, i) => (
+          <li key={text} className="flex items-center gap-3 text-xs text-mid">
+            <span className="w-5 h-5 rounded-full bg-warm border border-mist flex items-center justify-center text-[10px] font-bold text-faint shrink-0">{i + 1}</span>
+            {text}
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
