@@ -5,6 +5,7 @@ import { doc, onSnapshot, getDoc, setDoc, collection, query, where, getDocs, doc
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
+import { SIZE_LABEL } from '@/lib/productOptions';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Cart, Address } from '@/types';
 import { PIXModal } from '@/components/checkout/PIXModal';
@@ -442,7 +443,8 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-paper">
 
       {/* ── Top bar ── */}
-      <div className="bg-white dark:bg-warm border-b border-mist sticky top-0 z-20">
+      {/* Fica logo abaixo do header (60px): com top-0 sumia atrás dele ao rolar. */}
+      <div className="bg-paper/90 backdrop-blur-md border-b border-mist sticky top-[60px] z-30">
         <div className="container-shop h-14 flex items-center justify-between gap-4">
           {/* Celular: etapa atual + barra de progresso. As 4 etapas com
               rótulo não cabem e só sobravam barras soltas. */}
@@ -475,6 +477,7 @@ export default function CheckoutPage() {
       </div>
 
       <div className="container-shop py-6 sm:py-10">
+        <h1 className="font-display font-normal text-ink text-[1.9rem] sm:text-[2.4rem] leading-tight mb-5 sm:mb-7">Finalizar compra</h1>
         <div className="flex flex-col lg:grid lg:grid-cols-[1fr_400px] gap-6 lg:gap-12 items-start">
 
           {/* ── Formulário accordion ── */}
@@ -831,13 +834,13 @@ export default function CheckoutPage() {
               {/* Items */}
               <div className="px-5 py-4 flex flex-col gap-4">
                 {items.map(item => (
-                  <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex items-start gap-3">
+                  <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex items-start gap-4">
                     {/* Badge de quantidade fora do overflow-hidden da foto: dentro dele
                         o canto era cortado e o número sumia. */}
-                    <div className="relative shrink-0 w-12 h-14">
-                      <div className="absolute inset-0 rounded-lg bg-paper border border-mist overflow-hidden">
+                    <div className="relative shrink-0 w-14 h-[68px]">
+                      <div className="absolute inset-0 rounded-xl bg-paper border border-mist overflow-hidden">
                         {item.image
-                          ? <Image src={item.image} alt={item.productName} fill sizes="48px" className="object-cover" />
+                          ? <Image src={item.image} alt={item.productName} fill sizes="56px" className="object-cover" />
                           : <div className="h-full flex items-center justify-center text-faint text-xs font-display">M</div>
                         }
                       </div>
@@ -846,11 +849,11 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-ink leading-snug line-clamp-2">{item.productName}</p>
-                      {item.variant?.size && <p className="text-[11px] text-faint mt-0.5">{item.variant.size}</p>}
+                      <p className="text-[13px] font-medium text-ink leading-snug line-clamp-2 pr-2">{item.productName}</p>
+                      {item.variant?.size && <p className="text-[11.5px] text-faint mt-0.5">{[SIZE_LABEL[item.variant.size] ?? item.variant.size, item.variant.colorName].filter(Boolean).join(' · ')}</p>}
                       {item.note && <p className="text-[11px] text-clay font-medium mt-0.5">{item.note}</p>}
                     </div>
-                    <span className="text-xs font-semibold text-ink shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                    <span className="font-display text-[0.98rem] text-ink shrink-0 tabular-nums pt-0.5">{formatCurrency(item.unitPrice * item.quantity)}</span>
                   </div>
                 ))}
               </div>

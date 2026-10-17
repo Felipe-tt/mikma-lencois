@@ -49,25 +49,48 @@ export function Footer({
               height={242}
               className="h-7 w-auto object-contain object-left opacity-80 self-start"
             />
-            <p className="text-[13px] text-paper/60 leading-relaxed max-w-[20ch]">
+            <p className="text-[13px] text-paper/60 leading-relaxed max-w-[28ch]">
               {tagline || (storeCity?.split(',')[0].trim()
                 ? `Lençóis direto da fábrica em ${storeCity.split(',')[0].trim()}.`
                 : 'Lençóis direto da fábrica.')}
             </p>
 
-            {/* Social */}
+            {/* Contato: antes a coluna "Contato" só tinha status e links legais. */}
+            <ul className="flex flex-col gap-2.5 mt-1">
+              {status && (
+                <li>
+                  <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] ${status.isOpen ? 'bg-green-400/10 text-green-300' : 'bg-paper/[0.06] text-paper/60'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${status.isOpen ? 'bg-green-400' : 'bg-paper/35'}`} aria-hidden="true" />
+                    {status.isOpen ? 'Aberto agora' : 'Fechado agora'}
+                  </span>
+                </li>
+              )}
+              {wa && (
+                <li>
+                  <a href={wa} target="_blank" rel="noopener noreferrer" className="text-[13px] text-paper/75 hover:text-paper transition-colors duration-150">
+                    WhatsApp{storePhone ? ` · ${storePhone}` : ''}
+                  </a>
+                </li>
+              )}
+              {storeEmail && (
+                <li>
+                  <a href={`mailto:${storeEmail}`} className="text-[13px] text-paper/75 hover:text-paper transition-colors duration-150 break-all">
+                    {storeEmail}
+                  </a>
+                </li>
+              )}
+            </ul>
+
             {(instagramUrl || wa) && (
               <div className="flex items-center gap-2 mt-1">
                 {instagramUrl && (
-                  <a href={instagramUrl} target="_blank" rel="noopener noreferrer"
-                    className="rounded-full border border-paper/15 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/70 hover:text-paper hover:border-paper/40 transition-colors duration-150">
-                    Instagram
+                  <a href={instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-9 h-9 rounded-full border border-paper/15 flex items-center justify-center text-paper/70 hover:text-paper hover:border-paper/40 hover:bg-paper/[0.06] transition-colors duration-150">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.6" fill="currentColor"/></svg>
                   </a>
                 )}
                 {wa && (
-                  <a href={wa} target="_blank" rel="noopener noreferrer"
-                    className="rounded-full border border-paper/15 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/70 hover:text-paper hover:border-paper/40 transition-colors duration-150">
-                    WhatsApp
+                  <a href={wa} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="w-9 h-9 rounded-full border border-paper/15 flex items-center justify-center text-paper/70 hover:text-paper hover:border-paper/40 hover:bg-paper/[0.06] transition-colors duration-150">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3.5 20.5l1.3-4A8.5 8.5 0 1 1 8 19.6z"/><path d="M9 9.5c.3 1.7 1.8 3.8 4 4.8l1.2-1.1 1.8.8-.4 1.7c-3.6.2-7.3-3.4-7.3-7.1l1.7-.4.8 1.8z"/></svg>
                   </a>
                 )}
               </div>
@@ -109,25 +132,10 @@ export function Footer({
             </ul>
           </div>
 
-          {/* Col 4, Legal + contato */}
+          {/* Col 4, Ajuda (legal) */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Contato</p>
+            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Ajuda</p>
             <ul className="flex flex-col gap-3.5">
-              {status && (
-                <li className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.isOpen ? 'bg-green-400' : 'bg-paper/25'}`} />
-                  <span className={`text-[13px] ${status.isOpen ? 'text-green-400/90' : 'text-paper/50'}`}>
-                    {status.isOpen ? 'Aberto agora' : 'Fechado agora'}
-                  </span>
-                </li>
-              )}
-              {storeEmail && (
-                <li>
-                  <a href={`mailto:${storeEmail}`} className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
-                    {storeEmail}
-                  </a>
-                </li>
-              )}
               {[
                 { href: '/trocas-e-devolucoes', label: 'Trocas e devoluções' },
                 { href: '/privacidade', label: 'Privacidade' },

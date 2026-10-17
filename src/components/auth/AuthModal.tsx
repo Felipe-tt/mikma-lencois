@@ -328,7 +328,7 @@ export function AuthModal() {
                   <div>
                     <label className="label">Senha</label>
                     <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                      className="input" placeholder="••••••••" autoComplete="current-password" />
+                      className="input" placeholder="Sua senha" autoComplete="current-password" />
                   </div>
                   <button type="submit" disabled={loginLoading}
                     className="btn-primary w-full h-12 text-[13px] font-semibold tracking-wide flex items-center justify-center gap-2 mt-1">

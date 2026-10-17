@@ -76,7 +76,7 @@ export default async function HomePage() {
             % da tela) e termina num quadro de no máximo 1920px: em telas
             ultrawide ela começava muito à esquerda, embaixo do título, e
             sobrava uma faixa vazia enorme. */}
-        <div className="hidden lg:block absolute inset-y-0 pointer-events-none select-none overflow-hidden left-[calc(max(0px,50%-640px)+min(100%,1280px)*0.34)] right-[max(0px,50%-960px)]">
+        <div className="hidden lg:block absolute inset-y-0 pointer-events-none select-none overflow-hidden left-[calc(max(0px,50%-var(--shop-max)/2)+min(100%,var(--shop-max))*0.34)] right-[max(0px,50%-960px)]">
           <Image
             src="/hero-bg.jpg"
             alt=""

@@ -285,16 +285,18 @@ function RegisterContent() {
               {[1,2,3].map(n => (
                 <div key={n} className="flex items-center gap-2 flex-1">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
-                    n < stepNum ? 'bg-green-500 text-white' :
+                    n < stepNum ? 'bg-clay text-paper' :
                     n === stepNum ? 'bg-ink text-paper' :
-                    'bg-mist text-faint'
+                    'border border-mist-d text-mid'
                   }`}>
-                    {n}
+                    {n < stepNum
+                      ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                      : n}
                   </div>
                   <p className={`text-xs hidden sm:block ${n === stepNum ? 'text-ink font-medium' : 'text-faint'}`}>
                     {n===1?'Seu e-mail':n===2?'Confirmar':n===3?'Sua senha':''}
                   </p>
-                  {n < 3 && <div className={`flex-1 h-px ${n < stepNum ? 'bg-green-500' : 'bg-mist'}`} />}
+                  {n < 3 && <div className={`flex-1 h-px transition-colors duration-300 ${n < stepNum ? 'bg-clay' : 'bg-mist-d'}`} />}
                 </div>
               ))}
             </div>

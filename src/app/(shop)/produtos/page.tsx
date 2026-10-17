@@ -91,7 +91,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
     return qs ? `/produtos?${qs}` : '/produtos';
   };
   const catNames = categories.map(c => c.name);
-  const heading = search ? `"${search}"` : (categoria ?? 'Todos os produtos');
+  const heading = search ? `“${search}”` : (categoria ?? 'Todos os produtos');
 
   return (
     <div>
@@ -111,11 +111,12 @@ export default async function ProdutosPage({ searchParams }: Props) {
               </p>
             </div>
             <div className="flex items-center gap-2 pb-1 shrink-0">
-              <div className="hidden sm:block">
-                <SortSelect current={ordem} />
-              </div>
+              {/* Mesma ordem do celular: Filtrar antes de Ordenar */}
               <div className="hidden sm:block lg:hidden">
                 <MobileFilterSheet categories={catNames} active={categoria} />
+              </div>
+              <div className="hidden sm:block">
+                <SortSelect current={ordem} />
               </div>
             </div>
           </div>
@@ -168,7 +169,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                 icon={search
                   ? <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                   : <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>}
-                title={search ? `Nada encontrado para "${search}"` : 'Nenhum produto encontrado'}
+                title={search ? `Nada encontrado para “${search}”` : 'Nenhum produto encontrado'}
                 description={search
                   ? 'Confira a grafia ou tente uma palavra mais geral, como "lençol", "casal" ou "percal".'
                   : categoria ? `Não há produtos em "${categoria}". Tente outra categoria.` : 'Ainda não há produtos cadastrados.'}

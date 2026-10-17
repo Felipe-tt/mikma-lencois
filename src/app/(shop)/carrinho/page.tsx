@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import type { Cart, CartItem } from '@/types';
 import { CartSkeleton } from '@/components/ui/Skeleton';
 import { getStockUrgency } from '@/lib/stockUrgency';
+import { SIZE_LABEL } from '@/lib/productOptions';
 import { setReturnTo } from '@/lib/auth/returnTo';
 
 export default function CartPage() {
@@ -209,12 +210,11 @@ export default function CartPage() {
     <div className="min-h-screen bg-paper">
       {/* Header */}
       <div className="border-b border-mist">
-        <div className="container-shop pt-10 pb-8 sm:pt-12 flex items-end justify-between gap-4">
-          <div>
-            <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-clay mb-3">Sua sacola</p>
-            <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-[2.8rem] leading-none tracking-[-0.015em]">Carrinho</h1>
-          </div>
-          <span className="text-[13px] text-faint mb-1 tabular-nums">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</span>
+        {/* Mesmo cabeçalho do catálogo: rótulo, título e contagem embaixo */}
+        <div className="container-shop py-8 sm:py-12">
+          <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-faint mb-3">Sua sacola</p>
+          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">Carrinho</h1>
+          <p className="text-[12px] text-faint mt-2 font-mono tabular-nums">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</p>
         </div>
       </div>
 
@@ -255,10 +255,30 @@ export default function CartPage() {
             <div className="divide-y divide-mist/70">
               {items.map(item => {
                 const lineKey = item.note ? `${item.sku}::${item.note}` : item.sku;
+                const stepper = (
+                    <div className="flex items-center rounded-full border border-mist overflow-hidden">
+                    <button
+                      onClick={() => updateQty(item.sku, item.quantity - 1, item.note)}
+                      className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
+                      aria-label="Diminuir"
+                    >
+                      <svg width="12" height="2" viewBox="0 0 12 2" fill="currentColor"><rect width="12" height="2" rx="1"/></svg>
+                    </button>
+                    <span className="w-9 text-center text-sm font-semibold text-ink tabular-nums">{item.quantity}</span>
+                    <button
+                      onClick={() => { const avail = stockMap[item.sku] ?? 99; if (item.quantity < avail) updateQty(item.sku, item.quantity + 1, item.note); }}
+                      disabled={(stockMap[item.sku] ?? 99) <= item.quantity}
+                      className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Aumentar"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 0a1 1 0 011 1v4h4a1 1 0 110 2H7v4a1 1 0 11-2 0V7H1a1 1 0 010-2h4V1a1 1 0 011-1z"/></svg>
+                    </button>
+                  </div>
+                );
                 return (
                 <div
                   key={lineKey}
-                  className={`flex gap-4 sm:gap-5 py-6 transition-opacity ${removing === lineKey ? 'opacity-40 pointer-events-none' : ''}`}
+                  className={`relative flex gap-4 sm:gap-5 py-6 transition-opacity ${removing === lineKey ? 'opacity-40 pointer-events-none' : ''}`}
                 >
                   {/* Imagem */}
                   <Link href={`/produtos/${item.productId}`} className="relative shrink-0 w-20 h-24 sm:w-24 sm:h-28 rounded-xl bg-warm overflow-hidden border border-mist/60 block">
@@ -270,12 +290,12 @@ export default function CartPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                    <Link href={`/produtos/${item.productId}`} className="text-sm font-semibold text-ink leading-snug hover:text-clay transition-colors line-clamp-2">
+                    <Link href={`/produtos/${item.productId}`} className="text-sm font-semibold text-ink leading-snug hover:text-clay transition-colors line-clamp-2 pr-9 sm:pr-0">
                       {item.productName}
                     </Link>
                     {(item.variant?.size || item.variant?.fabric || item.variant?.colorName || item.variant?.color) && (
                       <p className="text-xs text-faint">
-                        {[item.variant.size, item.variant.fabric, item.variant.colorName || item.variant.color].filter(Boolean).join(' · ')}
+                        {[SIZE_LABEL[item.variant.size] ?? item.variant.size, item.variant.fabric, item.variant.colorName || item.variant.color].filter(Boolean).join(' · ')}
                       </p>
                     )}
                     {item.note && (
@@ -304,40 +324,34 @@ export default function CartPage() {
                     {/* Total da linha em destaque; preço unitário embaixo quando
                         há mais de uma peça (antes só o unitário, e com 2 peças
                         a conta não fechava com o subtotal). */}
-                    <div className="mt-auto">
-                      <p className="font-display text-[1.15rem] text-ink leading-none tabular-nums">{formatCurrency(item.unitPrice * item.quantity)}</p>
-                      {item.quantity > 1 && (
-                        <p className="text-[11px] text-faint mt-1 tabular-nums">{item.quantity} × {formatCurrency(item.unitPrice)}</p>
-                      )}
+                    <div className="mt-auto pt-1 flex items-end justify-between gap-3">
+                      <div>
+                        <p className="font-display text-[1.15rem] text-ink leading-none tabular-nums">{formatCurrency(item.unitPrice * item.quantity)}</p>
+                        {item.quantity > 1 && (
+                          <p className="text-[11px] text-faint mt-1 tabular-nums">{item.quantity} × {formatCurrency(item.unitPrice)}</p>
+                        )}
+                      </div>
+                      {/* Celular: quantidade ao lado do preço, liberando a largura do nome */}
+                      <div className="sm:hidden">{stepper}</div>
                     </div>
                   </div>
 
                   {/* Qtd + remove */}
-                  <div className="flex flex-col items-end justify-between shrink-0">
+                  <button
+                    onClick={() => removeItem(item.sku, item.note)}
+                    aria-label={`Remover ${item.productName}`}
+                    className="sm:hidden absolute top-5 right-0 w-8 h-8 rounded-full flex items-center justify-center text-faint hover:text-red-500 hover:bg-warm transition-colors"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                  <div className="hidden sm:flex flex-col items-end justify-between shrink-0">
                     <button
                       onClick={() => removeItem(item.sku, item.note)}
                       className="text-xs text-faint hover:text-red-500 transition-colors font-medium"
                     >
                       Remover
                     </button>
-                    <div className="flex items-center rounded-full border border-mist overflow-hidden">
-                      <button
-                        onClick={() => updateQty(item.sku, item.quantity - 1, item.note)}
-                        className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
-                        aria-label="Diminuir"
-                      >
-                        <svg width="12" height="2" viewBox="0 0 12 2" fill="currentColor"><rect width="12" height="2" rx="1"/></svg>
-                      </button>
-                      <span className="w-9 text-center text-sm font-semibold text-ink tabular-nums">{item.quantity}</span>
-                      <button
-                        onClick={() => { const avail = stockMap[item.sku] ?? 99; if (item.quantity < avail) updateQty(item.sku, item.quantity + 1, item.note); }}
-                        disabled={(stockMap[item.sku] ?? 99) <= item.quantity}
-                        className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        aria-label="Aumentar"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 0a1 1 0 011 1v4h4a1 1 0 110 2H7v4a1 1 0 11-2 0V7H1a1 1 0 010-2h4V1a1 1 0 011-1z"/></svg>
-                      </button>
-                    </div>
+                    {stepper}
                   </div>
                 </div>
               );})}

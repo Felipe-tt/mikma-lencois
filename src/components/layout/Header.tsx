@@ -77,7 +77,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
   const remaining = Math.max(0, threshold - cartTotal);
   const progress = threshold > 0 ? Math.min(100, (cartTotal / threshold) * 100) : 0;
   const freeShippingUnlocked = cartTotal >= threshold && threshold > 0;
-  const showFreeShippingBar = hasFreeShipping && count > 0;
+  // No checkout o resumo já mostra o frete; a faixa só empurrava a barra de etapas.
+  const showFreeShippingBar = hasFreeShipping && count > 0 && !pathname.startsWith('/checkout');
 
   const isDark = false; // hero is now light, header stays light always
 

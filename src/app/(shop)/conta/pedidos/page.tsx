@@ -115,7 +115,8 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      <div className="container-shop py-8 sm:py-12 pb-20 [&>*]:max-w-3xl">
+      <div className="container-shop py-8 sm:py-12 pb-20 grid lg:grid-cols-[minmax(0,1fr)_300px] gap-8 lg:gap-12 items-start">
+        <div className="min-w-0">
         {listError ? (
           <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-4 flex items-center justify-between gap-3">
             <span>Não foi possível carregar seus pedidos. Verifique sua conexão.</span>
@@ -265,6 +266,29 @@ export default function PedidosPage() {
             ))}
           </div>
         )}
+        </div>
+
+        {/* Lateral no desktop: ajuda pós-compra (antes o terço direito ficava vazio) */}
+        <aside className="hidden lg:flex flex-col gap-4 sticky top-24">
+          <div className="rounded-3xl border border-mist bg-warm/40 p-6">
+            <p className="font-display text-[1.25rem] text-ink leading-tight">Precisa de ajuda?</p>
+            <p className="text-[13px] text-mid mt-1.5 leading-relaxed">Dúvida sobre entrega, troca ou pagamento? A gente resolve.</p>
+            <ul className="mt-5 flex flex-col gap-1">
+              {[
+                { href: '/trocas-e-devolucoes', label: 'Trocas e devoluções' },
+                { href: '/guia-de-tamanhos', label: 'Guia de tamanhos' },
+                { href: '/sobre', label: 'Falar com a loja' },
+              ].map(l => (
+                <li key={l.href}>
+                  <Link href={l.href} className="group flex items-center justify-between rounded-xl px-3 py-2.5 -mx-3 text-[13.5px] text-ink hover:bg-paper transition-colors">
+                    {l.label}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" className="text-faint transition-transform duration-200 group-hover:translate-x-0.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </aside>
       </div>
 
       {/* Modal PIX gerado via "Pagar agora" */}

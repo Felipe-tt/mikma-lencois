@@ -82,9 +82,9 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
             </div>
           )}
 
-          {/* Badge */}
+          {/* Selos: theme-locked porque ficam sobre a foto (no escuro o "Destaque" virava creme e sumia) */}
           {(badge || lowStock) && (
-            <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
+            <div className="theme-locked absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
               {badge && (
                 <span className={`text-[9px] font-semibold tracking-[0.16em] uppercase px-2.5 py-[5px] leading-none rounded-full ${
                   isNew ? 'bg-paper/95 text-ink' : 'bg-ink text-paper'
@@ -134,7 +134,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
         onClick={handleFavoriteClick}
         aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
         aria-pressed={favorite}
-        className={`absolute top-3 right-3 z-10 w-9 h-9 flex items-center justify-center bg-paper/85 backdrop-blur-sm rounded-full transition-[opacity,transform] duration-200 hover:scale-110 active:scale-90 focus-visible:opacity-100 ${
+        className={`theme-locked absolute top-3 right-3 z-10 w-9 h-9 flex items-center justify-center bg-paper/85 backdrop-blur-sm rounded-full transition-[opacity,transform] duration-200 hover:scale-110 active:scale-90 focus-visible:opacity-100 ${
           favorite ? '' : '[@media(hover:hover)]:opacity-0 group-hover:opacity-100'
         }`}
       >

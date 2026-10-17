@@ -15,3 +15,18 @@ export function consumeReturnTo(): string | null {
     return null;
   }
 }
+
+/** Lê sem apagar (pra mostrar no login por que a pessoa foi mandada pra lá). */
+export function peekReturnTo(): string | null {
+  try { return sessionStorage.getItem(KEY); } catch { return null; }
+}
+
+/** Frase curta pro login explicar o redirecionamento ("Entre para ver seu carrinho"). */
+export function returnToReason(path: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith('/carrinho')) return 'Entre para ver seu carrinho.';
+  if (path.startsWith('/checkout')) return 'Entre para finalizar sua compra.';
+  if (path.startsWith('/favoritos')) return 'Entre para ver seus favoritos.';
+  if (path.startsWith('/conta') || path.startsWith('/perfil') || path.startsWith('/pedidos')) return 'Entre para acessar sua conta.';
+  return null;
+}
