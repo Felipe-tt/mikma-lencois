@@ -38,8 +38,9 @@ export function MobileFilterSheet({ categories, active }: Props) {
             className="overlay-panel w-full bg-paper border-t border-mist rounded-t-3xl overflow-hidden shadow-2xl max-h-[75dvh] flex flex-col pb-[env(safe-area-inset-bottom)]"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-mist shrink-0">
-              <p id="filter-sheet-title" className="font-semibold text-ink text-base">Filtrar produtos</p>
+            <span aria-hidden="true" className="mx-auto mt-2.5 block h-1 w-10 rounded-full bg-mist-d shrink-0" />
+            <div className="flex items-center justify-between px-6 pt-3 pb-4 border-b border-mist shrink-0">
+              <p id="filter-sheet-title" className="font-display font-normal text-ink text-[1.3rem] leading-none">Filtrar produtos</p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -15,6 +16,7 @@ import { getStockUrgency } from '@/lib/stockUrgency';
 import { trackAddToCart } from '@/lib/analytics';
 import { useOverlay } from '@/lib/hooks/useOverlay';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
+import { useCartCount } from '@/lib/hooks/useCartCount';
 
 interface Props {
   product: Product;
@@ -57,6 +59,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   // completa a ação (antes ia pra /entrar e perdia o produto).
   const [afterLogin, setAfterLogin] = useState<'cart' | 'buy' | null>(null);
   const { requireAuth } = useAuthModal();
+  const cartCount = useCartCount();
   const addedPanelRef = useRef<HTMLDivElement>(null);
 
   // ── Frete estimado ──
@@ -475,14 +478,28 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             className="overlay-panel w-full sm:max-w-sm bg-paper sm:mx-4 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-modal pb-[env(safe-area-inset-bottom)] sm:pb-0"
             onClick={e => e.stopPropagation()}
           >
-            <div className="px-6 pt-7 pb-6 text-center">
-              <div className="mx-auto mb-4 w-11 h-11 rounded-full bg-clay/10 flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-clay">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
+            {/* Alça do bottom sheet no celular */}
+            <span aria-hidden="true" className="sm:hidden mx-auto mt-2.5 block h-1 w-10 rounded-full bg-mist-d" />
+            <div className="px-6 pt-5 sm:pt-6 pb-5">
+              <div className="flex items-center gap-2.5 mb-4">
+                <span className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center shrink-0 animate-heart-pop">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <h3 id="added-title" className="font-display font-normal text-ink text-[1.25rem] leading-none">Adicionado ao carrinho</h3>
               </div>
-              <h3 id="added-title" className="font-display font-normal text-ink text-xl leading-none mb-1">Adicionado ao carrinho</h3>
-              <p className="text-[13px] text-faint">{addedQty} {addedQty > 1 ? 'unidades' : 'unidade'} de {product.name}{selectedVariant ? ` · ${SIZE_LABEL[selectedVariant.size] ?? selectedVariant.size}${selectedVariant.colorName ? ` · ${selectedVariant.colorName}` : ''}` : ''}</p>
+              {/* O que entrou: foto, variação e valor */}
+              <div className="flex items-center gap-3.5 rounded-2xl bg-warm/60 p-3">
+                <span className="relative w-14 h-[70px] shrink-0 rounded-xl overflow-hidden bg-warm">
+                  {product.images[0] && <Image src={product.images[0]} alt="" fill sizes="56px" className="object-cover" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13.5px] font-medium text-ink leading-snug line-clamp-2">{product.name}</p>
+                  {selectedVariant && (
+                    <p className="text-[12px] text-mid mt-0.5 truncate">{SIZE_LABEL[selectedVariant.size] ?? selectedVariant.size}{selectedVariant.colorName ? ` · ${selectedVariant.colorName}` : ''}</p>
+                  )}
+                  <p className="text-[12.5px] text-ink mt-1 tabular-nums">{addedQty} × {formatCurrency(product.price)}</p>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 px-6 pb-6">
@@ -492,7 +509,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                 onClick={() => router.push('/carrinho')}
                 className="w-full h-12 rounded-full text-[13px] font-semibold tracking-[0.06em] bg-ink text-paper border border-ink hover:bg-clay hover:border-clay active:scale-[0.98] transition-[background-color,border-color,transform] duration-150"
               >
-                Ver carrinho
+                Ver carrinho{cartCount > 0 ? ` (${cartCount} ${cartCount === 1 ? 'item' : 'itens'})` : ''}
               </button>
               <button
                 type="button"
