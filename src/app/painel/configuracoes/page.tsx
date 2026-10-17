@@ -1,4 +1,5 @@
 'use client';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import React from 'react';
 import {
@@ -883,7 +884,13 @@ function TeamPanel() {
   }
 
   async function handleRemove(uid: string) {
-    if (!confirm('Remover o acesso dessa pessoa ao painel?')) return;
+    const { confirmed } = await confirmDialog({
+      message: 'Remover o acesso dessa pessoa ao painel?',
+      detail: 'Ela deixa de conseguir entrar no painel. Dá pra convidar de novo depois.',
+      confirmLabel: 'Remover acesso',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     setBusy(true);
     setError('');
     try {

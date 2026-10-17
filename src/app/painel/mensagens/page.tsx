@@ -88,7 +88,8 @@ export default function PainelMensagens() {
         </p>
       </div>
 
-      <div className="bg-paper border border-mist flex h-[calc(100vh-220px)] min-h-[500px] overflow-hidden rounded-xl">
+      {/* No celular desconta a barra de baixo (antes a caixa passava por trás dela). */}
+      <div className="bg-paper border border-mist flex h-[calc(100dvh-var(--panel-tabbar-h)-env(safe-area-inset-bottom)-200px)] min-h-[380px] lg:h-[calc(100vh-220px)] lg:min-h-[500px] overflow-hidden rounded-xl">
         {/* ── Lista de conversas ── */}
         <div className={`w-full sm:w-[300px] shrink-0 border-r border-mist flex flex-col overflow-hidden ${selected ? 'hidden sm:flex' : ''}`}>
           <div className="px-4 py-3 border-b border-mist bg-warm shrink-0">

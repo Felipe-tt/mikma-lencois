@@ -1,4 +1,5 @@
 'use client';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { IconAlert, IconBox, IconCheck, IconMinusCircle, IconPlusCircle, IconListCheck, IconEdit, IconImage, IconClock, IconX } from '@/components/ui/Icon';
 import { InventoryAuditPanel } from '@/components/painel/InventoryAuditPanel';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
@@ -160,8 +161,13 @@ export default function EstoquePage() {
     if (type === 'out') {
       const avail = available(item);
       if (qty > avail) {
-        const ok = window.confirm(`Só tem ${avail} disponível pra venda, mas você está registrando ${qty}. O estoque vai ficar negativo. Continuar mesmo assim?`);
-        if (!ok) return;
+        const { confirmed } = await confirmDialog({
+          message: `Só tem ${avail} disponível pra venda`,
+          detail: `Você está registrando ${qty}. O estoque vai ficar negativo. Continuar mesmo assim?`,
+          confirmLabel: 'Continuar',
+          variant: 'danger',
+        });
+        if (!confirmed) return;
       }
     }
     setSubmittingId(item.id);
@@ -212,8 +218,11 @@ export default function EstoquePage() {
     // ('adjust') não se desfazem por aqui.
     const last = [...(item.history ?? [])].reverse().find(m => m.type === 'in' || m.type === 'out');
     if (!last) return;
-    const ok = window.confirm(`Desfazer "${last.type === 'out' ? '−' : '+'}${last.quantity} · ${last.reason}"?`);
-    if (!ok) return;
+    const { confirmed } = await confirmDialog({
+      message: `Desfazer "${last.type === 'out' ? '−' : '+'}${last.quantity} · ${last.reason}"?`,
+      confirmLabel: 'Desfazer',
+    });
+    if (!confirmed) return;
     setSubmittingId(item.id);
     try {
       await reverseMovement(item.id, last);
@@ -291,12 +300,13 @@ export default function EstoquePage() {
       return v !== undefined && Math.abs(v - item.quantity) >= 50;
     });
     if (bigJumps.length > 0) {
-      const ok = window.confirm(
-        `${bigJumps.length === 1 ? 'Um item teve' : `${bigJumps.length} itens tiveram`} uma mudança de 50 unidades ou mais ` +
-        `(ex: "${bigJumps[0].productName}" de ${bigJumps[0].quantity} para ${target(bigJumps[0])}). ` +
-        `Confere se não foi erro de digitação antes de continuar. Salvar mesmo assim?`
-      );
-      if (!ok) return;
+      const { confirmed } = await confirmDialog({
+        message: `${bigJumps.length === 1 ? 'Um item teve' : `${bigJumps.length} itens tiveram`} uma mudança de 50 unidades ou mais`,
+        detail: `Ex: "${bigJumps[0].productName}" de ${bigJumps[0].quantity} para ${target(bigJumps[0])}. Confere se não foi erro de digitação. Salvar mesmo assim?`,
+        confirmLabel: 'Salvar mesmo assim',
+        variant: 'danger',
+      });
+      if (!confirmed) return;
     }
     setSavingCount(true);
     try {

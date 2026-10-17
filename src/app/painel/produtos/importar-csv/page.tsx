@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Papa from 'papaparse';
@@ -374,10 +375,13 @@ export default function ImportarCsvPage() {
   async function deleteAllDrafts() {
     const targets = drafts.filter((d) => d.status !== 'published');
     if (targets.length === 0) return;
-    const ok = window.confirm(
-      `Apagar ${targets.length} rascunho${targets.length !== 1 ? 's' : ''} pendente${targets.length !== 1 ? 's' : ''}? Isso também apaga as imagens já enviadas. Rascunhos já publicados não são afetados.`
-    );
-    if (!ok) return;
+    const { confirmed } = await confirmDialog({
+      message: `Apagar ${targets.length} rascunho${targets.length !== 1 ? 's' : ''} pendente${targets.length !== 1 ? 's' : ''}?`,
+      detail: 'Isso também apaga as imagens já enviadas. Rascunhos já publicados não são afetados.',
+      confirmLabel: 'Apagar rascunhos',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     setDeletingAll(true);
     setDraftsError('');
