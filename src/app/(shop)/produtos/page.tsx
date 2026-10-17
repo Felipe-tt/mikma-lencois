@@ -172,8 +172,8 @@ export default async function ProdutosPage({ searchParams }: Props) {
                   : <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>}
                 title={search ? `Nada encontrado para “${search}”` : 'Nenhum produto encontrado'}
                 description={search
-                  ? 'Confira a grafia ou tente uma palavra mais geral, como "lençol", "casal" ou "percal".'
-                  : categoria ? `Não há produtos em "${categoria}". Tente outra categoria.` : 'Ainda não há produtos cadastrados.'}
+                  ? 'Confira a grafia ou tente uma palavra mais geral, como “lençol”, “casal” ou “percal”.'
+                  : categoria ? `Não há produtos em “${categoria}”. Tente outra categoria.` : 'Ainda não há produtos cadastrados.'}
                 actions={search || categoria ? [
                   { label: 'Ver todos os produtos', href: '/produtos' },
                   ...(search ? [{ label: 'Guia de tamanhos', href: '/guia-de-tamanhos', variant: 'outline' as const }] : []),

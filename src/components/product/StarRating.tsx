@@ -6,7 +6,7 @@ interface Props {
 
 export function StarRating({ value, size = 14, className = '' }: Props) {
   return (
-    <div className={`inline-flex items-center gap-0.5 ${className}`} aria-label={`${value.toFixed(1)} de 5 estrelas`}>
+    <div role="img" className={`inline-flex items-center gap-0.5 ${className}`} aria-label={`${value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5 estrelas`}>
       {Array.from({ length: 5 }).map((_, i) => {
         const fill = Math.max(0, Math.min(1, value - i));
         return (

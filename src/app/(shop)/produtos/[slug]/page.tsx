@@ -323,17 +323,22 @@ export default async function ProductPage({ params }: Props) {
               {/* Selos, especificações e a sanfona formam uma pilha só, com
                   uma linha entre cada bloco (sem linha dupla). */}
               <div>
+              {/* Três colunas só quando a própria coluna da página tem
+                  espaço (container query): no tablet ela fica estreita ao
+                  lado da compra e o texto quebrava uma palavra por linha. */}
               {productTrusts.length > 0 && (
-                <ul className="grid sm:grid-cols-3 rounded-2xl border border-mist bg-warm/30 divide-y sm:divide-y-0 sm:divide-x divide-mist">
+                <div className="@container">
+                <ul className="grid @xl:grid-cols-3 rounded-2xl border border-mist bg-warm/30 divide-y @xl:divide-y-0 @xl:divide-x divide-mist">
                   {productTrusts.map((text, i) => (
-                    <li key={i} className="flex items-center gap-3 px-4 py-4 sm:px-5 text-[13px] text-mid leading-snug">
+                    <li key={i} className="flex items-center gap-3 px-4 py-4 @xl:px-5 text-[13px] text-mid leading-snug min-w-0">
                       <span aria-hidden="true" className="w-9 h-9 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0">
                         {i === 0 ? <TruckIcon /> : i === 1 ? <PackageIcon /> : <PixIcon />}
                       </span>
-                      <span>{text}</span>
+                      <span className="min-w-0 break-words">{text}</span>
                     </li>
                   ))}
                 </ul>
+                </div>
               )}
 
               {/* ── Especificações ── */}

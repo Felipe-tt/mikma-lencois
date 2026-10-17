@@ -199,7 +199,7 @@ export default function RedefinirSenhaPage() {
   return (
     <div className="min-h-screen bg-paper flex">
       <div className="hidden lg:flex w-[42%] flex-col justify-between p-12 xl:p-16 bg-warm border-r border-mist">
-        <Link href="/"><BrandLogo alt="Mikma" className="h-9 w-auto object-contain" /></Link>
+        <Link href="/"><BrandLogo alt="Mikma Lençóis – início" className="h-9 w-auto object-contain" /></Link>
         <div>
           <p className="font-display text-ink font-normal leading-[1.08] mb-4 text-[clamp(1.8rem,2.5vw,2.6rem)]">
             Nova<br /><em className="text-clay not-italic">senha.</em>
@@ -214,7 +214,7 @@ export default function RedefinirSenhaPage() {
       <div className="flex-1 flex flex-col justify-center p-6 sm:p-12 min-h-screen">
         <div className="w-full max-w-[400px] mx-auto">
           <Link href="/" className="flex mb-8 lg:hidden">
-            <BrandLogo alt="Mikma" className="h-8 w-auto object-contain" />
+            <BrandLogo alt="Mikma Lençóis – início" className="h-8 w-auto object-contain" />
           </Link>
           <Suspense fallback={<div className="spinner-dark mx-auto" />}>
             <ResetForm />

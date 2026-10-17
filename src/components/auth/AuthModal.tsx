@@ -12,6 +12,7 @@ import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { BrandLogo } from '@/components/BrandLogo';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
+import { PasswordInput } from '@/components/auth/PasswordInput';
 import { useOverlay } from '@/lib/hooks/useOverlay';
 
 type SignupStep = 'form' | 'awaiting';
@@ -252,21 +253,22 @@ export function AuthModal() {
         data-variant="dialog"
         className="overlay-panel relative w-full max-w-[420px] bg-paper shadow-2xl rounded-3xl p-7 sm:p-9 max-h-[90dvh] overflow-y-auto overscroll-contain"
       >
-        <button type="button" onClick={close} aria-label="Fechar" className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150">
+        <button type="button" onClick={close} aria-label="Fechar" className="absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
 
         <Link href="/" className="flex mb-6">
-          <BrandLogo alt="Mikma" className="h-7 w-auto object-contain" />
+          <BrandLogo alt="Mikma Lençóis – início" className="h-7 w-auto object-contain" />
         </Link>
 
         {/* Contexto de por que o modal abriu (adicionar ao carrinho,
             favoritar...): sem isso a pessoa via só "Entrar" e não ligava
             o pedido de login ao botão que tinha tocado. */}
         {reason && mode !== 'forgot' && (
-          <p className="mb-5 -mt-1 border-l-2 border-clay pl-3 text-[13px] text-mid leading-relaxed">
+          <p className="mb-5 -mt-1 inline-flex items-center gap-2 rounded-full bg-clay/10 text-clay px-3.5 py-1.5 text-[12.5px] font-medium leading-snug">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
             {reason}
           </p>
         )}
@@ -324,18 +326,27 @@ export function AuthModal() {
               <>
                 <form onSubmit={handleLogin} className="flex flex-col gap-4">
                   <div>
-                    <label className="label">E-mail</label>
-                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                    <label htmlFor="modal-login-email" className="label">E-mail</label>
+                    <input id="modal-login-email" type="email" required value={email} onChange={e => setEmail(e.target.value)}
                       className="input" placeholder="seu@email.com" autoComplete="email" autoFocus />
                   </div>
                   <div>
-                    <label className="label">Senha</label>
-                    <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                      className="input" placeholder="Sua senha" autoComplete="current-password" />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label htmlFor="modal-login-senha" className="label !mb-0">Senha</label>
+                      <button
+                        type="button"
+                        onClick={() => { setForgotEmail(email); setForgotStep('email'); setMode('forgot'); }}
+                        className="text-xs text-clay hover:text-clay-d transition-colors"
+                      >
+                        Esqueci minha senha
+                      </button>
+                    </div>
+                    <PasswordInput id="modal-login-senha" required value={password} onChange={e => setPassword(e.target.value)}
+                      placeholder="Sua senha" autoComplete="current-password" />
                   </div>
                   <button type="submit" disabled={loginLoading}
                     className="btn-primary w-full h-12 text-[13px] font-semibold tracking-wide flex items-center justify-center gap-2 mt-1">
-                    {loginLoading ? <><span className="spinner" /><span>Entrando...</span></> : 'Entrar na minha conta'}
+                    {loginLoading ? <><span className="spinner" /><span>Entrando…</span></> : 'Entrar na minha conta'}
                   </button>
                 </form>
 
@@ -343,14 +354,6 @@ export function AuthModal() {
                   <div className="flex-1 divider" /><span className="text-xs text-faint uppercase tracking-wider">ou</span><div className="flex-1 divider" />
                 </div>
                 <GoogleSignInButton onError={setLoginError} />
-
-                <button
-                  type="button"
-                  onClick={() => { setForgotEmail(email); setForgotStep('email'); setMode('forgot'); }}
-                  className="block w-full text-center text-xs text-faint hover:text-mid transition-colors mt-5"
-                >
-                  Esqueci minha senha
-                </button>
               </>
             )}
           </>
@@ -375,8 +378,8 @@ export function AuthModal() {
 
                 <form onSubmit={sendVerification} noValidate className="flex flex-col gap-4">
                   <div>
-                    <label className="label">Seu nome completo</label>
-                    <input type="text" value={name}
+                    <label htmlFor="modal-signup-name" className="label">Seu nome completo</label>
+                    <input id="modal-signup-name" type="text" value={name}
                       onChange={e => { setName(stripNameChars(e.target.value)); setSignupFieldErrors(f => ({ ...f, name: undefined })); }}
                       onBlur={() => { if (!name) return; const r = validateName(name); setSignupFieldErrors(f => ({ ...f, name: r.ok ? undefined : r.error })); }}
                       className="input" placeholder="Maria da Silva" autoComplete="name" autoCapitalize="words"
@@ -386,11 +389,11 @@ export function AuthModal() {
                     {signupFieldErrors.name && <p id="modal-err-name" role="alert" className="mt-1.5 text-xs text-red-600">{signupFieldErrors.name}</p>}
                   </div>
                   <div>
-                    <label className="label">Seu e-mail</label>
-                    <input type="email" value={signupEmail}
+                    <label htmlFor="modal-signup-email" className="label">Seu e-mail</label>
+                    <input id="modal-signup-email" type="email" value={signupEmail}
                       onChange={e => { setSignupEmail(e.target.value.replace(/\s/g, '')); setSignupFieldErrors(f => ({ ...f, email: undefined })); }}
                       onBlur={() => { if (!signupEmail) return; const r = validateEmail(signupEmail); setSignupFieldErrors(f => ({ ...f, email: r.ok ? undefined : r.error })); }}
-                      className="input" placeholder="seuemail@exemplo.com" autoComplete="email" inputMode="email"
+                      className="input" placeholder="seu@email.com" autoComplete="email" inputMode="email"
                       autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={EMAIL_MAX}
                       aria-invalid={!!signupFieldErrors.email} aria-describedby={signupFieldErrors.email ? 'modal-err-email' : undefined} />
                     {signupFieldErrors.email && <p id="modal-err-email" role="alert" className="mt-1.5 text-xs text-red-600">{signupFieldErrors.email}</p>}
@@ -459,9 +462,9 @@ export function AuthModal() {
                 </p>
                 <form onSubmit={sendForgotLink} className="flex flex-col gap-4">
                   <div>
-                    <label className="label">Seu e-mail</label>
-                    <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
-                      className="input" placeholder="seuemail@exemplo.com" autoComplete="email" autoFocus />
+                    <label htmlFor="modal-forgot-email" className="label">Seu e-mail</label>
+                    <input id="modal-forgot-email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                      className="input" placeholder="seu@email.com" autoComplete="email" autoFocus />
                   </div>
                   <button type="submit" disabled={forgotLoading}
                     className="btn-primary w-full h-12 text-[13px] font-semibold tracking-wide flex items-center justify-center gap-2 mt-1">
