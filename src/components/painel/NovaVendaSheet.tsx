@@ -3,7 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { doc, getDoc, writeBatch, increment, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { IconBox, IconCheck, IconX, IconSearch, IconInventory, IconReceipt } from '@/components/ui/Icon';
+import { IconBox, IconCheck, IconX, IconSearch, IconInventory, IconReceipt, IconMinusCircle, IconPlusCircle } from '@/components/ui/Icon';
+import { SIZE_LABEL } from '@/lib/productOptions';
+import { hexToColorName } from '@/lib/colorNames';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import type { MovementLog } from '@/types';
 import { nextTapDelta, shouldConfirmRapidTap, applyTapDelta } from '@/lib/inventoryTap';
 import { useFullscreenOverlay } from '@/lib/hooks/useFullscreenOverlay';
@@ -23,8 +26,11 @@ const COLS_KEY = 'mikma_estoque_grid_cols';
 function normalize(s: string) {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
+// "Único · Algodão · Branco" em vez de "unico · Algodão · #FFFFFF".
 function variantLabel(item: InventoryItem) {
-  return [item.variant.size, item.variant.fabric, item.variant.colorName || item.variant.color].filter(Boolean).join(' · ');
+  const { size, fabric, color, colorName } = item.variant;
+  const colorLabel = colorName || (color?.startsWith('#') ? hexToColorName(color) : color);
+  return [SIZE_LABEL[size] ?? size, fabric, colorLabel].filter(Boolean).join(' · ');
 }
 
 export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
@@ -90,17 +96,18 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(pattern);
   }
 
-  function tap(item: InventoryItem) {
+  async function tap(item: InventoryItem) {
     const cur = deltas[item.id] || 0;
     const next = nextTapDelta(mode, cur);
 
     if (shouldConfirmRapidTap(cur, next)) {
       vibrate([20, 60, 20]);
-      const ok = window.confirm(
-        `${Math.abs(next)} toques seguidos em "${item.productName}", confere se não foi sem querer.\n\n` +
-        `Continuar como ${mode === 'venda' ? `${Math.abs(next)} vendas` : `${Math.abs(next)} chegadas`}?`
-      );
-      if (!ok) return;
+      const { confirmed } = await confirmDialog({
+        message: `${Math.abs(next)} toques seguidos em "${item.productName}"`,
+        detail: `Confere se não foi sem querer. Continuar como ${mode === 'venda' ? `${Math.abs(next)} vendas` : `${Math.abs(next)} chegadas`}?`,
+        confirmLabel: 'Continuar',
+      });
+      if (!confirmed) return;
     } else {
       vibrate(15);
     }
@@ -141,11 +148,13 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
 
     const overAvail = withItems.filter(({ item, delta }) => delta < 0 && Math.abs(delta) > (item.quantity - item.reserved));
     if (overAvail.length > 0) {
-      const ok = window.confirm(
-        `${overAvail.length === 1 ? 'Um item vai ficar' : `${overAvail.length} itens vão ficar`} negativo no estoque ` +
-        `(ex: "${overAvail[0].item.productName} · ${variantLabel(overAvail[0].item)}"). Confere antes de continuar. Salvar mesmo assim?`
-      );
-      if (!ok) return;
+      const { confirmed } = await confirmDialog({
+        message: `${overAvail.length === 1 ? 'Um item vai ficar' : `${overAvail.length} itens vão ficar`} negativo no estoque`,
+        detail: `Ex: "${overAvail[0].item.productName} · ${variantLabel(overAvail[0].item)}". Confere antes de continuar. Salvar mesmo assim?`,
+        confirmLabel: 'Salvar mesmo assim',
+        variant: 'danger',
+      });
+      if (!confirmed) return;
     }
 
     setSaving(true);
@@ -242,11 +251,11 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         <div className="grid grid-cols-2 border border-mist p-1 bg-white dark:bg-warm rounded-xl">
           <button onClick={() => setMode('venda')}
             className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
-            <IconX size={14} /> Vender
+            <IconMinusCircle size={15} /> Vender
           </button>
           <button onClick={() => setMode('reposicao')}
             className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
-            <IconCheck size={14} /> Chegou mercadoria
+            <IconPlusCircle size={15} /> Chegou mercadoria
           </button>
         </div>
 
@@ -268,7 +277,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
             </span>
             {(isMobile ? COL_OPTIONS_MOBILE : COL_OPTIONS_DESKTOP).map(n => (
               <button key={n} onClick={() => changeCols(n)} title={`${n} fotos por linha`}
-                className={`w-7 h-8 text-[12px] font-bold ${cols === n ? 'bg-ink text-paper' : 'text-mid'}`}>
+                className={`w-10 h-10 text-[12.5px] font-bold rounded-lg transition-colors ${cols === n ? 'bg-ink text-paper' : 'text-mid hover:bg-warm'}`}>
                 {n}
               </button>
             ))}
@@ -336,11 +345,17 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
             Limpar
           </button>
         )}
-        <button onClick={confirmAll} disabled={pendingCount === 0 || saving}
-          className="flex-1 h-12 bg-ink text-paper text-[13px] font-bold flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-ink/80 transition-colors rounded-xl">
-          <IconCheck size={15} />
-          {saving ? 'Salvando...' : pendingCount === 0 ? 'Toque nos produtos acima' : `Confirmar (${pendingCount} ${pendingCount === 1 ? 'produto' : 'produtos'} · ${pendingUnits} ${pendingUnits === 1 ? 'peça' : 'peças'})`}
-        </button>
+        {pendingCount === 0 && !saving ? (
+          // Sem nada marcado: só a dica (antes era um botão apagado com ✓,
+          // parecia quebrado).
+          <p className="flex-1 h-12 flex items-center justify-center text-[13px] text-faint">Toque nos produtos acima</p>
+        ) : (
+          <button onClick={confirmAll} disabled={saving}
+            className="flex-1 h-12 bg-ink text-paper text-[13px] font-bold flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-ink/80 transition-colors rounded-xl animate-fade-in">
+            <IconCheck size={15} />
+            {saving ? 'Salvando...' : `Confirmar (${pendingCount} ${pendingCount === 1 ? 'produto' : 'produtos'} · ${pendingUnits} ${pendingUnits === 1 ? 'peça' : 'peças'})`}
+          </button>
+        )}
       </div>
     </div>
   );

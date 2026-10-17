@@ -53,12 +53,24 @@ export default function ConfiguracoesPage() {
   // formulário inteiro incluía valores padrão de campos que nunca foram
   // gravados (ex.: desconto PIX), e as regras recusavam o vendedor.
   const savedRef = useRef<StoreSettings>(STORE_DEFAULTS);
+  // Cópia em estado do último salvo, pra saber na tela se há mudança pendente.
+  const [savedSnapshot, setSavedSnapshot] = useState<StoreSettings>(STORE_DEFAULTS);
   const [loadError, setLoadError] = useState(false);
+  const dirty = JSON.stringify(settings) !== JSON.stringify(savedSnapshot);
+
+  // Avisa antes de sair da página com mudanças não salvas.
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty]);
 
   useEffect(() => {
     getDoc(doc(db, 'settings', 'store')).then(snap => {
       const merged = snap.exists() ? { ...STORE_DEFAULTS, ...snap.data() } as StoreSettings : STORE_DEFAULTS;
       savedRef.current = merged;
+      setSavedSnapshot(merged);
       setSettings(merged);
     }).catch(err => {
       console.error('[configuracoes] falha ao carregar', err);
@@ -113,6 +125,7 @@ export default function ConfiguracoesPage() {
     try {
       await setDoc(doc(db, 'settings', 'store'), changed, { merge: true });
       savedRef.current = settings;
+      setSavedSnapshot(settings);
     } catch (err) {
       console.error('[configuracoes] falha ao salvar', err);
       setSaving(false);
@@ -160,27 +173,28 @@ export default function ConfiguracoesPage() {
       {/* Título */}
       <div className="mb-6">
         <h1 className="font-display font-normal text-ink text-2xl">Configurações</h1>
-        <p className="text-[13px] text-faint mt-1">Personalize sua loja. As mudanças aparecem no site em até 10 minutos.</p>
+        <p className="text-[13px] text-faint mt-1">Personalize sua loja. As mudanças aparecem no site logo depois de salvar.</p>
       </div>
 
       {/* Tabs */}
-      <div className="grid gap-1.5 mb-8 p-1 bg-warm rounded-sm"
-        style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}>
+      {/* No celular vira uma fila de chips que rola; no desktop, grade. */}
+      <div className="flex sm:grid gap-1.5 mb-8 p-1 bg-warm rounded-2xl overflow-x-auto scrollbar-none sm:[grid-template-columns:var(--tab-cols)]"
+        style={{ '--tab-cols': `repeat(${visibleTabs.length}, minmax(0, 1fr))` } as React.CSSProperties}>
         {visibleTabs.map(t => {
           const TabIcon = CARD_ICON_MAP[t.icon];
           return (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex flex-col items-center gap-1 py-3 px-1 text-center rounded-sm transition-all ${
+              className={`shrink-0 flex sm:flex-col items-center gap-2 sm:gap-1 py-2.5 sm:py-3 px-4 sm:px-1 text-center rounded-xl transition-colors ${
                 tab === t.id
                   ? 'bg-ink text-paper shadow-sm'
-                  : 'text-mid hover:bg-[#E8DFD3]'
+                  : 'text-mid hover:bg-mist'
               }`}
             >
               {TabIcon && (
                 <TabIcon size={18} className={tab === t.id ? 'text-paper' : 'text-faint'} />
               )}
               <span className="text-[12px] font-bold leading-tight">{t.label}</span>
-              <span className={`text-[10px] leading-tight ${tab === t.id ? 'text-paper/50' : 'text-faint'}`}>{t.sub}</span>
+              <span className={`hidden sm:block text-[10px] leading-tight ${tab === t.id ? 'text-paper/50' : 'text-faint'}`}>{t.sub}</span>
             </button>
           );
         })}
@@ -196,7 +210,7 @@ export default function ConfiguracoesPage() {
             desc="Como sua loja aparece para os clientes"
             onPreview={() => setPreview('footer')}
           >
-            <F label="Nome da loja" hint="Ex: Mikma Lençóis"
+            <F label="Nome da loja" placeholder="Mikma Lençóis"
               value={settings.storeName} onChange={v => set('storeName', v)} />
             <F label="Slogan" hint="Uma frase curta que resume o que você faz"
               value={settings.storeSlogan} onChange={v => set('storeSlogan', v)}
@@ -551,16 +565,18 @@ export default function ConfiguracoesPage() {
       <div className="fixed above-panel-tabbar left-0 right-0 z-30 md:relative md:bottom-auto md:mt-8">
         <div className="bg-paper border-t border-mist md:border-0 px-4 py-3 md:px-0 md:py-0">
           {saveError && <p className="text-center text-[12px] text-red-600 mb-2">{saveError}</p>}
-          <button onClick={handleSave} disabled={saving}
-            className="w-full bg-ink text-paper text-sm font-semibold py-4 disabled:opacity-50 hover:bg-[#2E2010] transition-colors flex items-center justify-center gap-2 rounded-xl"
+          <button onClick={handleSave} disabled={saving || (!dirty && !saved)}
+            className="w-full bg-ink text-paper text-sm font-semibold py-4 disabled:opacity-50 hover:bg-ink/85 transition-colors flex items-center justify-center gap-2 rounded-xl"
           >
             {saving
               ? <><span className="spinner" />Salvando…</>
               : saved
               ? 'Salvo com sucesso!'
-              : 'Salvar alterações'}
+              : dirty
+              ? 'Salvar alterações'
+              : 'Nenhuma alteração'}
           </button>
-          {saved && <p className="text-center text-[11px] text-faint mt-2">Mudanças podem levar até 10 min para aparecer no site.</p>}
+          {dirty && !saving && <p className="text-center text-[11px] text-clay mt-2">Você tem mudanças não salvas.</p>}
         </div>
       </div>
       )}
@@ -630,6 +646,14 @@ function Info({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+// Exemplos nos campos com "Ex.:" e mais claros: sem isso "Rua das Flores",
+// "Centro" etc. pareciam valores já salvos. Formatos (CNPJ, CEP, URL) ficam
+// como estão.
+function examplePlaceholder(p?: string) {
+  if (!p || /^https?:/.test(p) || /0{3,}/.test(p)) return p;
+  return `Ex.: ${p}`;
+}
+
 function F({ label, value, onChange, hint, placeholder, maxLength, type='text' }: {
   label:string; value:string; onChange:(v:string)=>void;
   hint?:string; placeholder?:string; maxLength?:number; type?:string;
@@ -639,8 +663,8 @@ function F({ label, value, onChange, hint, placeholder, maxLength, type='text' }
     <div>
       <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
       <input id={id} type={type} value={value} onChange={e=>onChange(e.target.value)}
-        placeholder={placeholder} maxLength={maxLength}
-        className="panel-input placeholder:text-faint" />
+        placeholder={examplePlaceholder(placeholder)} maxLength={maxLength}
+        className="panel-input placeholder:text-faint/60 placeholder:italic" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>
   );
@@ -652,8 +676,8 @@ function TA({ label, value, onChange, rows=3, placeholder, hint }: {
   return (
     <div>
       <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
-      <textarea id={id} value={value} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={placeholder}
-        className="panel-input resize-y placeholder:text-faint" />
+      <textarea id={id} value={value} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={examplePlaceholder(placeholder)}
+        className="panel-input resize-y placeholder:text-faint/60 placeholder:italic" />
       {hint && <p className="mt-1.5 text-[11px] text-faint">{hint}</p>}
     </div>
   );

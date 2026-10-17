@@ -337,11 +337,13 @@ export default function PainelPedidos() {
             </p>
           </div>
         ) : filtered.map(order => (
-          <div key={order.id} className="px-5 py-4 hover:bg-paper transition-colors bg-white dark:bg-warm">
+          // Linha inteira clicável (link "esticado" por cima); botões de ação
+          // ficam acima dele com z-index.
+          <div key={order.id} className="relative px-5 py-4 hover:bg-paper active:bg-warm transition-colors bg-white dark:bg-warm [&_button]:relative [&_button]:z-[1]">
 
             {/* Linha principal */}
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div className="flex flex-col gap-1.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1.5 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[11px] font-mono text-faint bg-warm px-1.5 py-0.5 rounded-md">
                     #{order.id.slice(-8).toUpperCase()}
@@ -378,8 +380,9 @@ export default function PainelPedidos() {
               </div>
 
               <Link href={`/painel/pedidos/${order.id}`}
-                className="shrink-0 text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors border border-clay-l/30 px-3 py-1.5 hover:bg-clay-l/5 rounded-lg">
-                Ver detalhes
+                aria-label={`Ver pedido #${order.id.slice(-8).toUpperCase()}`}
+                className="shrink-0 self-center w-9 h-9 flex items-center justify-center rounded-full text-faint hover:text-ink hover:bg-warm transition-colors after:absolute after:inset-0 after:content-['']">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
               </Link>
             </div>
 

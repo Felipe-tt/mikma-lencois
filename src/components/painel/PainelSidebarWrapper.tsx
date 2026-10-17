@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { PainelSidebar, TABBAR_NAV } from './PainelSidebar';
+import { PainelSidebar, NAV, TABBAR_NAV } from './PainelSidebar';
 import { NotificationBell } from './NotificationBell';
 import { IconSettings } from '@/components/ui/Icon';
 import { useOverlayBehavior } from '@/lib/hooks/useOverlay';
@@ -61,8 +61,12 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
     };
   }, [open]);
 
-  const currentTitle = TABBAR_NAV.find(n => n.exact ? pathname === n.href : pathname.startsWith(n.href))?.label
-    ?? 'Painel';
+  // Título vem da lista completa (antes só da barra inferior, e Cupons,
+  // Trocas etc. apareciam como "Painel").
+  const isActive = (n: { href: string; exact?: boolean }) => n.exact ? pathname === n.href : pathname.startsWith(n.href);
+  const currentTitle = NAV.find(isActive)?.label ?? 'Painel';
+  // Rotas fora da barra inferior marcam o "Mais" como ativo.
+  const moreActive = !TABBAR_NAV.some(isActive);
 
   return (
     <div className="painel-scope flex min-h-screen bg-warm">
@@ -103,7 +107,7 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="p-2 -ml-2 text-mid hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150 rounded-xl"
+            className="w-10 h-10 -ml-2 flex items-center justify-center text-mid hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150 rounded-xl"
             aria-label="Abrir menu"
             aria-expanded={open}
           >
@@ -121,14 +125,17 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
           {children}
         </main>
 
-        {/* Barra inferior mobile — navegação tipo app nativo. Some quando o
-            drawer está aberto, senão ela fica visível e "por cima" do
-            overlay que escurece o resto da tela (mesmo z-index, mas depois
-            no DOM), dando a impressão de dois menus ao mesmo tempo. */}
-        {!open && (
-          <nav data-no-print aria-label="Navegação principal" className="panel-tabbar lg:hidden">
+        {/* Barra inferior mobile — navegação tipo app nativo. Some (com fade)
+            quando o drawer está aberto, senão fica "por cima" do overlay e
+            parece que há dois menus ao mesmo tempo. */}
+        <nav
+          data-no-print
+          aria-label="Navegação principal"
+          inert={open}
+          className={`panel-tabbar lg:hidden transition-[opacity,translate] duration-200 ${open ? 'opacity-0 translate-y-3 pointer-events-none' : ''}`}
+        >
             {TABBAR_NAV.map(({ href, label, exact, Icon }) => {
-              const active = exact ? pathname === href : pathname.startsWith(href);
+              const active = isActive({ href, exact });
               return (
                 <Link key={href} href={href} aria-current={active ? 'page' : undefined} className={`panel-tabbar-item ${active ? 'is-active' : ''}`}>
                   <Icon size={19} />
@@ -137,13 +144,12 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
                 </Link>
               );
             })}
-            <button onClick={() => setOpen(true)} className="panel-tabbar-item" aria-label="Mais opções">
+            <button onClick={() => setOpen(true)} className={`panel-tabbar-item ${moreActive ? 'is-active' : ''}`} aria-label="Mais opções">
               <IconSettings size={19} />
               <span className="text-[10px] font-semibold leading-none">Mais</span>
               <span className="panel-tabbar-dot" />
             </button>
-          </nav>
-        )}
+        </nav>
       </div>
     </div>
   );
