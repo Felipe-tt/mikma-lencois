@@ -75,17 +75,22 @@ export default async function SobrePage() {
     <div>
       <JsonLd data={localBusinessJsonLd} />
       {/* ── Hero ── */}
-      <div className="relative overflow-hidden bg-warm border-b border-mist">
+      {/* Foto real da fábrica, nítida, com degradê escuro pro texto. Antes
+          ficava com 18% de opacidade atrás do título, lavada e sem leitura. */}
+      <div className="theme-locked relative overflow-hidden bg-ink">
         <div className="absolute inset-0 pointer-events-none select-none">
-          <Image src="/sobre-bg.jpg" alt="" aria-hidden="true" fill sizes="100vw" className="object-cover object-center opacity-[0.18]" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-warm)_0%,transparent_50%,var(--color-warm)_100%)]" />
+          <Image src="/sobre-bg.jpg" alt="Fachada da fábrica da Mikma em Blumenau" fill priority sizes="100vw" className="object-cover object-center" />
+          <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(30,18,8,0.88)_0%,rgba(30,18,8,0.7)_42%,rgba(30,18,8,0.15)_100%)]" />
         </div>
-        <div className="container-shop py-20 sm:py-28 relative z-10">
-          <div className="flex flex-col gap-6 max-w-2xl">
-            <p className="page-label">Sobre nós</p>
-            <h1 className="font-display font-normal leading-[1.02]">
-              <em className="text-clay not-italic text-5xl sm:text-6xl lg:text-[5.5rem] block">{heroLine1}</em>
-              <span className="text-ink/70 text-3xl sm:text-4xl lg:text-[3.6rem] block mt-1">{heroLine2}</span>
+        <div className="container-shop relative z-10 pt-24 pb-16 sm:pt-36 sm:pb-24 lg:pt-44 lg:pb-28">
+          <div className="flex flex-col gap-6 max-w-2xl animate-fade-up">
+            <p className="flex items-center gap-3 font-mono text-[10px] tracking-[0.26em] uppercase text-paper/70">
+              <span className="h-px w-8 bg-clay-l" aria-hidden="true" />
+              Sobre nós
+            </p>
+            <h1 className="font-display font-normal leading-[1.02] tracking-[-0.02em]">
+              <span className="text-paper text-[2.8rem] sm:text-6xl lg:text-[5.5rem] block">{heroLine1}</span>
+              <em className="text-clay-l text-[1.9rem] sm:text-4xl lg:text-[3.4rem] block mt-1">{heroLine2}</em>
             </h1>
           </div>
         </div>
@@ -161,9 +166,6 @@ export default async function SobrePage() {
               </svg>
             </a>
 
-            <div className="flex justify-center pt-2 pb-1">
-              <BrandLogo alt={s.storeName ?? ''} className="h-9 w-auto object-contain opacity-15" width={600} height={180} />
-            </div>
           </div>
         </div>
       </div>
