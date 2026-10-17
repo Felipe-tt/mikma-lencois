@@ -65,7 +65,7 @@ export default function ContaPage() {
   const [address, setAddress] = useState<Address | null | undefined>(undefined);
 
   useEffect(() => {
-    if (!loading && !user) { setReturnTo('/conta'); router.push('/entrar'); }
+    if (!loading && !user) { setReturnTo('/conta'); router.replace('/entrar'); }
   }, [user, loading, router]);
 
   // Últimos pedidos (pro cartão do pedido em andamento e a contagem) e o
@@ -132,7 +132,7 @@ export default function ContaPage() {
         </section>
 
         {/* ── Resumo rápido ── */}
-        <section aria-label="Resumo da conta" className="grid grid-cols-3 gap-2.5 sm:gap-4 animate-fade-up [animation-delay:120ms]">
+        <section aria-label="Resumo da conta" className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 animate-fade-up [animation-delay:120ms]">
           <Stat href="/conta/pedidos" label={placed === 1 ? 'Pedido' : 'Pedidos'} value={placed} />
           <Stat href="/favoritos" label={productIds.length === 1 ? 'Favorito' : 'Favoritos'} value={productIds.length} />
           <Stat
@@ -141,6 +141,7 @@ export default function ContaPage() {
             value={address === undefined ? undefined : address ? address.city : '—'}
             hint={address ? address.state : address === null ? 'Nenhum salvo' : undefined}
             small
+            className="col-span-2 sm:col-span-1"
           />
         </section>
 
@@ -177,9 +178,9 @@ export default function ContaPage() {
   );
 }
 
-function Stat({ href, label, value, hint, small }: { href: string; label: string; value: number | string | undefined; hint?: string; small?: boolean }) {
+function Stat({ href, label, value, hint, small, className = '' }: { href: string; label: string; value: number | string | undefined; hint?: string; small?: boolean; className?: string }) {
   return (
-    <Link href={href} className="group rounded-2xl border border-mist bg-paper px-4 py-4 sm:px-6 sm:py-5 hover:border-mist-d hover:bg-warm/50 transition-colors duration-200 min-w-0">
+    <Link href={href} className={`group rounded-2xl border border-mist bg-paper px-4 py-4 sm:px-6 sm:py-5 hover:border-mist-d hover:bg-warm/50 transition-colors duration-200 min-w-0 ${className}`}>
       <span className="block text-[10px] sm:text-[11px] font-semibold tracking-[0.1em] uppercase text-faint">{label}</span>
       {value === undefined ? (
         <span className="skeleton block h-7 w-12 mt-2" />

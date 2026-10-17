@@ -38,7 +38,7 @@ export default function PerfilPage() {
   }, [userData?.name, user?.displayName, nameTouched]);
 
   useEffect(() => {
-    if (!loading && !user) { setReturnTo('/perfil'); router.push('/entrar'); }
+    if (!loading && !user) { setReturnTo('/perfil'); router.replace('/entrar'); }
   }, [loading, user, router]);
 
   // Endereço e telefone que o checkout salvou no perfil.
