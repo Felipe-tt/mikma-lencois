@@ -78,14 +78,14 @@ function TimelineIcon({ status }: { status: string }) {
 // anteriores ficam neutros, evita efeito confete numa lista longa.
 const TIMELINE_TONE: Record<string, string> = {
   created:            'bg-stone-100 text-stone-500',
-  payment_initiated:  'bg-blue-50 text-blue-700',
+  payment_initiated:  'bg-warm text-mid',
   payment_confirmed:  'bg-emerald-50 text-emerald-700',
   payment_expired:    'bg-amber-50 text-amber-700',
   payment_failed:     'bg-red-50 text-red-700',
   pending_payment:    'bg-amber-50 text-amber-700',
   paid:               'bg-emerald-50 text-emerald-700',
-  preparing:          'bg-blue-50 text-blue-700',
-  shipped:            'bg-violet-50 text-violet-700',
+  preparing:          'bg-clay/10 text-clay',
+  shipped:            'bg-clay/10 text-clay',
   delivery_cancelled: 'bg-amber-50 text-amber-700',
   delivered:          'bg-emerald-50 text-emerald-700',
   cancelled:          'bg-red-50 text-red-700',
@@ -319,14 +319,14 @@ export default function OrderDetailPage() {
 
   return (
     <div>
-      <div className="border-b border-mist">
-        <div className="container-shop py-8 sm:py-10">
-          <Link href="/conta/pedidos" className="group inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-faint hover:text-ink transition-colors duration-150 mb-3">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+      <div className="border-b border-mist bg-warm/60">
+        <div className="container-shop py-8 sm:py-12">
+          <Link href="/conta/pedidos" className="group inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             Meus pedidos
           </Link>
           <div className="flex items-center gap-3 flex-wrap pb-1">
-            <h1 className="font-display font-normal text-ink text-3xl sm:text-4xl tabular-nums">
+            <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-5xl leading-[1.05] tracking-[-0.015em] tabular-nums">
               Pedido #{order.id.slice(-8).toUpperCase()}
             </h1>
             {isCancelled && (
@@ -335,10 +335,17 @@ export default function OrderDetailPage() {
               </span>
             )}
           </div>
+          <p className="text-[13px] text-mid mt-2 flex flex-wrap gap-x-2 gap-y-1">
+            {order.createdAt && <span>Feito em {formatTsDateTime(order.createdAt)}</span>}
+            <span className="text-mist-d" aria-hidden="true">·</span>
+            <span>{order.items.reduce((n, it) => n + it.quantity, 0)} {order.items.reduce((n, it) => n + it.quantity, 0) === 1 ? 'item' : 'itens'}</span>
+            <span className="text-mist-d" aria-hidden="true">·</span>
+            <span className="text-ink font-medium tabular-nums">{formatCurrency(order.totalCents)}</span>
+          </p>
         </div>
       </div>
 
-      <div className="container-shop py-8 max-w-3xl">
+      <div className="container-shop py-8 sm:py-12 [&>*]:max-w-4xl">
 
         {/* ── Progress bar ─────────────────────────────────────────── */}
         {!isCancelled && (
@@ -424,7 +431,7 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6 lg:gap-8 items-start">
 
           {/* ── Coluna principal ──────────────────────────────────── */}
           <div className="flex flex-col gap-6">
@@ -434,8 +441,11 @@ export default function OrderDetailPage() {
               <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Itens</h2>
               <div className="flex flex-col divide-y divide-mist rounded-2xl border border-mist overflow-hidden">
                 {order.items.map(item => (
-                  <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex justify-between items-center px-5 py-4 gap-4">
-                    <div>
+                  <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex items-center px-5 py-4 gap-4">
+                    <span className="w-12 h-[60px] shrink-0 rounded-lg overflow-hidden bg-warm">
+                      {item.image && <img src={item.image} alt="" className="w-full h-full object-cover" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-ink">{item.productName}</p>
                       <p className="text-xs text-faint mt-0.5">
                         {item.variant.size}
@@ -564,7 +574,7 @@ export default function OrderDetailPage() {
                 {order.address.street}, {order.address.number}
                 {order.address.complement && ` · ${order.address.complement}`}<br />
                 {order.address.neighborhood}, {order.address.city} · {order.address.state}<br />
-                CEP {order.address.cep}
+                CEP {order.address.cep.replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2')}
               </address>
             </section>
 
