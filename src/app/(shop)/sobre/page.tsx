@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: '/sobre' },
-    ...shareMeta({ title: `Sobre a ${name}`, description, path: '/sobre' }),
+    ...shareMeta({ title: 'Sobre nós', description, path: '/sobre' }),
   };
 }
 

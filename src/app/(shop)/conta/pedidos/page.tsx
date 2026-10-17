@@ -150,7 +150,7 @@ export default function PedidosPage() {
                       </div>
                     )}
                     <div>
-                      <p className="text-[11px] text-faint font-mono mb-1">#{order.id.slice(-10).toUpperCase()}</p>
+                      <p className="text-[11px] text-faint font-mono mb-1">#{order.id.slice(-8).toUpperCase()}</p>
                       <p className="font-display text-xl sm:text-2xl text-ink">{formatCurrency(order.totalCents)}</p>
                       <p className="text-[11px] text-faint mt-1 whitespace-nowrap">
                         {order.createdAt ? formatTsDateTime(order.createdAt) : '-'}

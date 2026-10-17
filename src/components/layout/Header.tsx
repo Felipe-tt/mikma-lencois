@@ -108,7 +108,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Logo */}
           <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <BrandLogo alt="Mikma Lençóis" className="h-8 w-auto object-contain" priority />
+            <BrandLogo alt="Mikma Lençóis" className="h-8 w-auto object-contain" />
           </NavLink>
 
           {/* Desktop nav, right next to the logo */}

@@ -130,6 +130,13 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [pixTimeUp, setPixTimeUp] = useState(false);
+  const [storeWa, setStoreWa] = useState<string | null>(null);
+  useEffect(() => {
+    fetch('/api/settings/public').then(r => r.json()).then(d => {
+      const url = d.whatsappUrl || (d.storePhone ? `https://wa.me/55${String(d.storePhone).replace(/\D/g, '').replace(/^55/, '')}` : null);
+      setStoreWa(url);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!order || order.payment.method !== 'pix' || order.status !== 'pending_payment') return;
@@ -359,6 +366,24 @@ export default function OrderDetailPage() {
 
       <div className="container-shop py-8 sm:py-12 [&>*]:max-w-4xl">
 
+        {/* ── Cancelado: motivo e reembolso (antes só um selo vermelho) ── */}
+        {isCancelled && (() => {
+          const reason = [...(order.timeline ?? [])].reverse().find(e => e.status === 'cancelled' && e.note)?.note;
+          const wasPaid = !!order.payment.paidAt;
+          return (
+            <div className="mb-8 rounded-3xl border border-red-200 bg-red-50/60 dark:bg-red-500/10 dark:border-red-500/30 p-5 sm:p-6">
+              <p className="font-display text-[1.3rem] text-ink leading-tight">Este pedido foi cancelado</p>
+              {reason && <p className="text-[13.5px] text-mid mt-1.5 leading-relaxed">{reason}</p>}
+              <p className="text-[13.5px] text-ink mt-3 leading-relaxed">
+                {wasPaid
+                  ? `O reembolso de ${formatCurrency(order.totalCents)} será feito pelo mesmo meio de pagamento.`
+                  : 'Nenhuma cobrança foi feita.'}
+              </p>
+              <Link href="/produtos" className="btn-primary mt-5">Ver produtos</Link>
+            </div>
+          );
+        })()}
+
         {/* ── Progress bar ─────────────────────────────────────────── */}
         {!isCancelled && (
           <div className="mb-10">
@@ -374,13 +399,13 @@ export default function OrderDetailPage() {
                   )}
                   {/* círculo */}
                   <div className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center text-sm border-2 transition-all ${
-                    i < currentStep
+                    i < currentStep || (i === currentStep && order.status === 'delivered')
                       ? 'bg-clay-l border-clay-l text-paper'
                       : i === currentStep
                         ? 'bg-white dark:bg-warm border-clay-l text-clay-l shadow-sm'
                         : 'bg-white dark:bg-warm border-mist text-faint'
                   }`}>
-                    {i < currentStep
+                    {i < currentStep || (i === currentStep && order.status === 'delivered')
                       ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                       : <StepIcon status={step.status} active={i === currentStep} />
                     }
@@ -513,6 +538,42 @@ export default function OrderDetailPage() {
 
           {/* ── Sidebar ───────────────────────────────────────────── */}
           <aside className="flex flex-col gap-4">
+            {/* Ajuda com o pedido: avaliar, trocar, falar com a loja */}
+            {['paid', 'preparing', 'shipped', 'delivered'].includes(order.status) && (() => {
+              const shortId = order.id.slice(-8).toUpperCase();
+              const deliveredAt = order.delivery?.deliveredAt ? new Date(order.delivery.deliveredAt) : null;
+              const returnBy = deliveredAt ? new Date(deliveredAt.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
+              const waHref = storeWa ? `${storeWa}${storeWa.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Preciso de ajuda com o pedido #${shortId}.`)}` : null;
+              const waTroca = storeWa ? `${storeWa}${storeWa.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Quero solicitar troca ou devolução do pedido #${shortId}.`)}` : null;
+              const row = 'group flex items-center justify-between rounded-xl px-3 py-2.5 -mx-3 text-[13.5px] text-ink hover:bg-warm transition-colors';
+              const arrow = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" className="text-faint transition-transform duration-200 group-hover:translate-x-0.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>;
+              return (
+                <section className="rounded-2xl border border-mist p-5">
+                  <h2 className="font-display font-normal text-ink text-[1.15rem] leading-tight mb-3">Ajuda com este pedido</h2>
+                  <ul className="flex flex-col gap-0.5">
+                    {order.status === 'delivered' && order.items[0] && (
+                      <li><Link href={`/produtos/${order.items[0].productId}#avaliacoes`} className={row}>Avaliar produtos{arrow}</Link></li>
+                    )}
+                    {order.status === 'delivered' && (
+                      <li>
+                        {waTroca
+                          ? <a href={waTroca} target="_blank" rel="noopener noreferrer" className={row}>Solicitar troca ou devolução{arrow}</a>
+                          : <Link href="/trocas-e-devolucoes" className={row}>Solicitar troca ou devolução{arrow}</Link>}
+                      </li>
+                    )}
+                    {waHref && (
+                      <li><a href={waHref} target="_blank" rel="noopener noreferrer" className={row}>Falar com a loja no WhatsApp{arrow}</a></li>
+                    )}
+                    <li><Link href="/trocas-e-devolucoes" className={row}>Política de trocas{arrow}</Link></li>
+                  </ul>
+                  {returnBy && returnBy.getTime() > Date.now() && (
+                    <p className="text-[12px] text-mid mt-3 leading-relaxed">
+                      Você pode desistir da compra sem custo até {returnBy.toLocaleDateString('pt-BR')}.
+                    </p>
+                  )}
+                </section>
+              );
+            })()}
 
             {/* Entrega */}
             {carrier && carrier !== 'pickup' && (
@@ -581,7 +642,7 @@ export default function OrderDetailPage() {
             {/* Pagamento */}
             <section className="rounded-2xl border border-mist p-5">
               <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Pagamento</h2>
-              <p className="text-sm text-ink capitalize">{order.payment.method === 'pix' ? 'PIX' : 'Cartão de crédito'}</p>
+              <p className="text-sm text-ink">{order.payment.method === 'pix' ? 'PIX' : `Cartão de crédito${order.payment.installments > 1 ? ` · ${order.payment.installments}x` : ' · à vista'}`}</p>
               {order.payment.paidAt && (
                 <p className="text-xs text-faint mt-1">
                   Confirmado em {formatTsDateTime(order.payment.paidAt)}
@@ -589,9 +650,6 @@ export default function OrderDetailPage() {
               )}
             </section>
 
-            <p className="text-xs text-faint px-1">
-              Pedido em {formatTsDateTime(order.createdAt)}
-            </p>
           </aside>
 
         </div>
