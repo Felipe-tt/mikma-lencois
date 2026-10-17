@@ -1,5 +1,6 @@
 import { escapeHtml } from '@/lib/html';
 import { formatCurrency } from '@/lib/utils/format';
+import { SIZE_LABEL } from '@/lib/productOptions';
 
 /**
  * Layout único dos e-mails pro cliente. Antes havia três (cabeçalho claro de
@@ -95,7 +96,7 @@ export function emailSignature(): string {
   </div>`;
 }
 
-interface EmailItem {
+export interface EmailItem {
   productName: string;
   quantity: number;
   unitPrice: number;
@@ -105,7 +106,7 @@ interface EmailItem {
 export function emailItemsTable(items: EmailItem[], totalCents: number): string {
   const rows = items.map(it => {
     const v = it.variant;
-    const meta = v ? [v.size, v.colorName || v.color, v.fabric].filter(Boolean).map(x => escapeHtml(String(x))).join(' · ') : '';
+    const meta = v ? [v.size ? (SIZE_LABEL[v.size] ?? v.size) : undefined, v.colorName || v.color, v.fabric].filter(Boolean).map(x => escapeHtml(String(x))).join(' · ') : '';
     return `
     <tr>
       <td style="padding:10px 0;border-bottom:1px solid #F0EBE1;font-size:13px;color:#1E1208;">

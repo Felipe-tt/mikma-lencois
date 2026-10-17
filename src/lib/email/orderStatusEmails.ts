@@ -4,7 +4,7 @@ import type { Order } from '@/types';
 import { escapeHtml } from '@/lib/html';
 import {
   BASE_URL, emailCallout, emailCta, emailItemsTable, emailLayout, emailParagraph,
-  emailSection, emailSignature, orderSubject, shortOrderId,
+  emailSection, emailSignature, orderSubject, shortOrderId, type EmailItem,
 } from './layout';
 
 type EmailPayload = { subject: string; html: string; text: string };
@@ -104,7 +104,7 @@ export function buildDelivered(order: Order, name: string): EmailPayload {
 
 /** Pagamento confirmado (PIX ou cartão). */
 export function buildConfirmed(
-  order: Pick<Order, 'id' | 'items' | 'totalCents'> & { payment: { method: string } },
+  order: { id: string; items: EmailItem[]; totalCents: number; payment: { method: string } },
   name: string,
 ): EmailPayload {
   const id = shortOrderId(order.id);
@@ -138,7 +138,7 @@ export function buildConfirmed(
 
 /** Pedido criado com PIX gerado, falta pagar. */
 export function buildPixPending(
-  order: Pick<Order, 'id' | 'items' | 'totalCents'>,
+  order: { id: string; items: EmailItem[]; totalCents: number },
   name: string,
   pix: { copyPaste: string; expiresAt?: string | Date | null },
 ): EmailPayload {
@@ -204,7 +204,7 @@ export function buildPixExpired(order: Pick<Order, 'id' | 'totalCents'>, name: s
 
 /** Pedido cancelado (pela loja ou pelo cliente). */
 export function buildCancelled(
-  order: Pick<Order, 'id' | 'items' | 'totalCents'>,
+  order: { id: string; items: EmailItem[]; totalCents: number },
   name: string,
   { refund, byCustomer = false, reason }: { refund: boolean; byCustomer?: boolean; reason?: string },
 ): EmailPayload {
@@ -215,7 +215,7 @@ export function buildCancelled(
     ? `Olá, <strong>${escapeHtml(name)}</strong>. Confirmamos o cancelamento do seu pedido #${id}, como você pediu.`
     : `Olá, <strong>${escapeHtml(name)}</strong>. Seu pedido #${id} foi cancelado.`;
   const money = refund
-    ? `O valor de <strong>${total}</strong> será devolvido pelo mesmo meio de pagamento em até 7 dias úteis.`
+    ? `O valor de <strong>${total}</strong> será devolvido pelo mesmo meio de pagamento.`
     : 'Nenhuma cobrança foi feita.';
   const html = emailLayout(`
     ${emailSection({
@@ -236,7 +236,7 @@ export function buildCancelled(
     text: [
       byCustomer ? `Olá, ${name}. Confirmamos o cancelamento do seu pedido #${id}.` : `Olá, ${name}. Seu pedido #${id} foi cancelado.`,
       ...(reason ? [`Motivo: ${reason}`] : []),
-      refund ? `O valor de ${total} será devolvido pelo mesmo meio de pagamento em até 7 dias úteis.` : 'Nenhuma cobrança foi feita.',
+      refund ? `O valor de ${total} será devolvido pelo mesmo meio de pagamento.` : 'Nenhuma cobrança foi feita.',
       '', 'Dúvidas? Responda este e-mail.', `Pedido: ${url}`,
     ].join('\n'),
   };

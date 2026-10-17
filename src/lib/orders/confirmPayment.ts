@@ -7,8 +7,7 @@ import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { recordShippingCollected } from '@/lib/shipping-ledger';
 import { buildConfirmed } from '@/lib/email/orderStatusEmails';
-import { CONTACT_EMAIL } from '@/lib/email/layout';
-import type { Order } from '@/types';
+import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -196,7 +195,7 @@ export async function confirmOrderPaid(
       // template (antes entravam crus no HTML). replyTo: o e-mail convida a
       // responder, e antes a resposta ia pro noreply e se perdia.
       const payload = buildConfirmed(
-        { id: orderId, items: order.items as Order['items'], totalCents: order.totalCents as number, payment: order.payment as { method: string } },
+        { id: orderId, items: order.items as EmailItem[], totalCents: order.totalCents as number, payment: order.payment as { method: string } },
         customerName,
       );
       await sendEmail({

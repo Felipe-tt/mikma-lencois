@@ -1,8 +1,7 @@
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { sendEmail, emailEnabled } from '@/lib/email';
 import { buildCancelled } from '@/lib/email/orderStatusEmails';
-import { CONTACT_EMAIL } from '@/lib/email/layout';
-import type { Order } from '@/types';
+import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
 
 /**
  * Avisa o cliente que o pedido foi cancelado (pela loja ou por ele mesmo).
@@ -28,7 +27,7 @@ export async function notifyOrderCancelled(
     if (!email) return;
     const firstName = String(userData.name ?? userData.displayName ?? '').split(' ')[0] || 'cliente';
     const payload = buildCancelled(
-      { id: orderId, items: (order.items ?? []) as Order['items'], totalCents: order.totalCents ?? 0 },
+      { id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents ?? 0 },
       firstName,
       opts,
     );
