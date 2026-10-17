@@ -123,9 +123,13 @@ service cloud.firestore {
       // campo do pedido direto, inclusive marcar como pago sem passar pelo
       // fluxo de confirmação. O front só apaga (delete abaixo).
       allow update: if false;
-      // Delete: admin sempre; seller só pode deletar pedidos cancelados
+      // Delete: admin sempre; seller só pode deletar pedidos cancelados que
+      // nunca receberam dinheiro (pago antes de cancelar ou pagamento que
+      // chegou depois). Esses ficam pros relatórios e pro registro de estorno.
       allow delete: if hasRole('admin') || (
         hasRole('seller') && resource.data.status == 'cancelled'
+        && resource.data.get('payment', {}).get('paidAt', null) == null
+        && resource.data.get('payment', {}).get('lateCaptureTxId', null) == null
       );
     }
 

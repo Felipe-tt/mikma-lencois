@@ -164,6 +164,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
+  const [refunding, setRefunding] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
   const [copied, setCopied]       = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [cancellingDelivery, setCancellingDelivery] = useState(false);
@@ -182,7 +184,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
       router.push('/entrar'); return;
     }
-    return onSnapshot(doc(db, 'orders', id), async snap => {
+    return onSnapshot(doc(db, 'orders', id), snap => {
       if (snap.exists()) {
         const raw = snap.data();
 
@@ -203,6 +205,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           payment: raw.payment ? {
             ...raw.payment,
             paidAt: normalizeDate(raw.payment.paidAt),
+            lateCaptureAt: normalizeDate(raw.payment.lateCaptureAt),
+            refundedAt: normalizeDate(raw.payment.refundedAt),
           } : raw.payment,
           delivery: raw.delivery ? {
             ...raw.delivery,
@@ -216,28 +220,36 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         } as Order;
 
         setOrder(o);
-        if (o.userId) {
-          try {
-            const uSnap = await getDoc(doc(db, 'users', o.userId));
-            if (uSnap.exists()) {
-              const ur = uSnap.data();
-              setCustomer({
-                uid: uSnap.id,
-                ...ur,
-                createdAt: normalizeDate(ur.createdAt) ?? '',
-                updatedAt: normalizeDate(ur.updatedAt),
-              } as User);
-            }
-          } catch (err) {
-            // Não deixa uma falha ao buscar dados do cliente travar a tela
-            // inteira, o pedido em si já carregou e pode ser exibido.
-            console.error('Erro ao buscar dados do cliente:', err);
-          }
-        }
       }
       setLoading(false);
     });
   }, [id, user, router]);
+
+  // Cliente buscado uma vez por pedido, não a cada snapshot (antes cada
+  // mudança de status refazia a leitura do usuário).
+  const orderUserId = order?.userId;
+  useEffect(() => {
+    if (!orderUserId) return;
+    let alive = true;
+    getDoc(doc(db, 'users', orderUserId)).then(uSnap => {
+      if (!alive || !uSnap.exists()) return;
+      const ur = uSnap.data();
+      const toIso = (v: unknown) => (typeof v === 'object' && v !== null && 'seconds' in v)
+        ? new Date((v as { seconds: number }).seconds * 1000).toISOString()
+        : typeof v === 'string' ? v : undefined;
+      setCustomer({
+        uid: uSnap.id,
+        ...ur,
+        createdAt: toIso(ur.createdAt) ?? '',
+        updatedAt: toIso(ur.updatedAt),
+      } as User);
+    }).catch(err => {
+      // Não deixa uma falha ao buscar dados do cliente travar a tela
+      // inteira, o pedido em si já carregou e pode ser exibido.
+      console.error('Erro ao buscar dados do cliente:', err);
+    });
+    return () => { alive = false; };
+  }, [orderUserId]);
 
   // Sinais de fraude leve (endereço/IP compartilhado com outra conta),
   // ver src/lib/fraudSignals.ts. Não bloqueia nada, só avisa o vendedor.
@@ -325,12 +337,26 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     setMarkPaidError(null);
     try {
       const token = await user!.getIdToken();
-      const res = await fetch(`/api/orders/${id}/mark-paid-manually`, {
+      const send = (force: boolean) => fetch(`/api/orders/${id}/mark-paid-manually`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ note: note.trim() }),
+        body: JSON.stringify({ note: note.trim(), force }),
       });
-      const data = await res.json().catch(() => ({}));
+      let res = await send(false);
+      let data = await res.json().catch(() => ({}));
+      // PIX expirado: a reserva já tinha sido liberada e o item pode ter
+      // sido vendido pra outra pessoa nesse meio tempo.
+      if (res.status === 409 && data.code === 'INSUFFICIENT_STOCK') {
+        const { confirmed: force } = await confirmDialog({
+          message: 'Estoque insuficiente',
+          detail: 'O PIX deste pedido venceu e a reserva foi liberada. Parte dos itens já não tem estoque livre (pode ter sido vendida pra outro cliente). Se confirmar, o estoque fica negativo e você precisa repor ou ajustar outro pedido.',
+          confirmLabel: 'Marcar como pago mesmo assim',
+          variant: 'danger',
+        });
+        if (!force) return;
+        res = await send(true);
+        data = await res.json().catch(() => ({}));
+      }
       if (!res.ok) {
         setMarkPaidError(data.error ?? 'Não foi possível confirmar o pagamento.');
         return;
@@ -474,7 +500,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     const willReturnStock = order.status !== 'pending_payment' && order.status !== 'payment_expired';
     const { confirmed, value: reason } = await confirmDialog({
       message: 'Cancelar este pedido?',
-      detail: `${willReturnStock ? 'O estoque será devolvido. ' : ''}Esta ação não tem como desfazer.`,
+      detail: `${willReturnStock ? 'O estoque será devolvido. ' : ''}${order.payment.paidAt ? `O cliente já pagou ${formatCurrency(order.totalCents)}: depois de cancelar, devolva o valor pelo mesmo meio de pagamento. O cliente recebe um e-mail avisando do cancelamento. ` : ''}Esta ação não tem como desfazer.`,
       withInput: true,
       inputPlaceholder: 'Motivo do cancelamento (opcional)',
       confirmLabel: 'Cancelar pedido',
@@ -503,8 +529,61 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     }
   }
 
+  async function markRefunded() {
+    if (!order) return;
+    const { confirmed, value: note } = await confirmDialog({
+      message: 'Marcar o estorno como feito?',
+      detail: `Confirme só depois de devolver ${formatCurrency(order.totalCents)} ao cliente. Fica registrado no histórico do pedido.`,
+      withInput: true,
+      inputPlaceholder: 'Como foi devolvido (opcional)',
+      confirmLabel: 'Estorno feito',
+    });
+    if (!confirmed) return;
+    setRefunding(true);
+    setRefundError(null);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch(`/api/orders/${order.id}/mark-refunded`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ note: (note ?? '').trim() || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setRefundError(data.error ?? 'Não foi possível registrar o estorno.');
+    } catch {
+      setRefundError('Erro de conexão. Tente novamente.');
+    } finally {
+      setRefunding(false);
+    }
+  }
+
+  async function fixTrackingCode() {
+    if (!order) return;
+    const { confirmed, value } = await confirmDialog({
+      message: 'Corrigir código de rastreio',
+      detail: `Código atual: ${order.delivery?.trackingCode ?? 'nenhum'}. O cliente vê o novo código na página do pedido; nenhum e-mail novo é enviado.`,
+      withInput: true,
+      inputPlaceholder: 'Novo código de rastreio',
+      confirmLabel: 'Salvar código',
+    });
+    if (!confirmed || !value?.trim()) return;
+    setCancelDeliveryError(null);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch(`/api/orders/${order.id}/tracking-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ trackingCode: value.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setCancelDeliveryError(data.error ?? 'Não foi possível corrigir o código.');
+    } catch {
+      setCancelDeliveryError('Erro de conexão. Tente novamente.');
+    }
+  }
+
   async function handleDelete() {
-    if (!order || order.status !== 'cancelled') return;
+    if (!order || order.status !== 'cancelled' || hasMoneyHistory(order)) return;
     const { confirmed } = await confirmDialog({
       message: 'Apagar permanentemente este pedido?',
       detail: 'Esta ação não tem como desfazer.',
@@ -568,6 +647,46 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </div>
         )}
 
+        {/* ── Pagamento recebido com o pedido já cancelado/expirado ── */}
+        {order.payment.lateCaptureTxId && !order.payment.paidAt && order.payment.refundStatus !== 'done' && (
+          <div role="alert" className="border-2 border-red-400 bg-red-50 px-5 py-4 rounded-2xl">
+            <p className="text-[14px] font-bold text-ink mb-1">Pagamento recebido depois do {order.status === 'payment_expired' ? 'vencimento' : 'cancelamento'}</p>
+            <p className="text-[13px] text-ink/80 leading-relaxed">
+              O cliente pagou {formatCurrency(order.totalCents)}{order.payment.lateCaptureAt ? ` em ${formatDateTime(order.payment.lateCaptureAt)}` : ''}, mas o pedido já estava {order.status === 'payment_expired' ? 'com o PIX vencido' : 'cancelado'}.
+              {order.status === 'payment_expired'
+                ? ' Se ainda tiver os itens, marque como pago logo abaixo, em Pagamento. Se não, devolva o valor ao cliente.'
+                : ' Devolva o valor ao cliente pelo mesmo meio de pagamento.'}
+            </p>
+            <button onClick={markRefunded} disabled={refunding}
+              className="mt-3 w-full sm:w-auto px-5 border border-red-300 bg-white text-red-700 text-[13px] font-semibold py-2.5 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-full">
+              {refunding ? 'Salvando…' : 'Já devolvi o valor'}
+            </button>
+            {refundError && <p className="text-[12px] text-red-600 mt-2">{refundError}</p>}
+          </div>
+        )}
+
+        {/* ── Pedido pago e cancelado: estorno pendente ── */}
+        {order.status === 'cancelled' && order.payment.paidAt && (
+          order.payment.refundStatus === 'done' ? (
+            <div className="border border-mist bg-warm px-5 py-3.5 rounded-2xl text-[13px] text-mid">
+              <span className="font-semibold text-ink">Estorno registrado</span>
+              {order.payment.refundedAt ? ` em ${formatDateTime(order.payment.refundedAt)}` : ''}.
+            </div>
+          ) : (
+            <div className="border-2 border-amber-400 bg-amber-50 px-5 py-4 rounded-2xl">
+              <p className="text-[14px] font-bold text-ink mb-1">Devolva {formatCurrency(order.totalCents)} ao cliente</p>
+              <p className="text-[13px] text-ink/80 leading-relaxed">
+                Este pedido foi pago e depois cancelado. Faça o estorno pelo mesmo meio de pagamento ({order.payment.method === 'pix' ? 'PIX' : 'cartão'}) e marque aqui quando terminar.
+              </p>
+              <button onClick={markRefunded} disabled={refunding}
+                className="mt-3 w-full sm:w-auto px-5 bg-ink text-paper text-[13px] font-semibold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-full">
+                {refunding ? 'Salvando…' : 'Marcar estorno como feito'}
+              </button>
+              {refundError && <p className="text-[12px] text-red-600 mt-2">{refundError}</p>}
+            </div>
+          )
+        )}
+
         {/* ── Alerta de ação necessária ── */}
         {order.status === 'paid' && (
           <div className="border-2 border-clay-l bg-clay-l/5 px-5 py-4 rounded-xl">
@@ -626,7 +745,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
               {isPickup ? (
                 <p className="text-[12px] text-mid">
-                  O cliente vai retirar na loja. Quando ele buscar o pedido, clique em &quot;Confirmar retirada&quot;.
+                  O cliente vai retirar na loja. Quando ele buscar o pedido, clique em &quot;Confirmar retirada&quot;: o pedido fica como entregue e o cliente recebe o e-mail.
                 </p>
               ) : isUberDirect ? (
                 <p className="text-[11px] text-faint">
@@ -776,10 +895,16 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   <p className="text-[10px] text-faint mb-0.5">Código de rastreio</p>
                   <p className="text-[13px] font-mono font-bold text-ink">{order.delivery.trackingCode}</p>
                 </div>
-                <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
-                  className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
-                  {copied === 'tracking' ? 'Copiado!' : 'Copiar'}
-                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={fixTrackingCode}
+                    className="text-[11px] font-semibold text-mid hover:text-ink transition-colors">
+                    Corrigir
+                  </button>
+                  <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
+                    className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
+                    {copied === 'tracking' ? 'Copiado!' : 'Copiar'}
+                  </button>
+                </div>
               </div>
             )}
             {order.delivery?.trackingUrl && order.delivery?.carrier !== 'uber_direct' && (
@@ -898,6 +1023,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           {/* Status do PAGAMENTO, não do pedido: "A caminho" aqui confundia. */}
           <Row label="Status" value={
             order.payment.paidAt ? 'Pago'
+              : order.payment.lateCaptureTxId ? 'Recebido depois do cancelamento'
               : order.status === 'payment_expired' ? 'PIX expirado'
               : order.status === 'cancelled' ? 'Não pago'
               : 'Aguardando pagamento'
@@ -909,7 +1035,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           {order.payment.method === 'card' && (
             <Row label="Parcelas" value={`${order.payment.installments}x`} />
           )}
-          {order.payment.method === 'pix' && order.payment.pixCopyPaste && (
+          {order.payment.method === 'pix' && order.payment.pixCopyPaste && order.status === 'pending_payment' && (
             <div className="py-2.5 border-b border-warm">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[12px] text-faint">PIX Copia e Cola</span>
@@ -977,11 +1103,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               className="w-full border border-mist text-mid text-[12px] font-semibold py-2 hover:bg-warm transition-colors rounded-xl">
               {copied === 'address' ? 'Endereço copiado!' : 'Copiar endereço completo'}
             </button>
+            {order.payment.paidAt && order.status !== 'cancelled' && (
             <Link
               href={`/painel/pedidos/${order.id}/etiqueta`}
               className="flex items-center justify-center gap-1.5 w-full bg-ink text-paper text-[12px] font-semibold py-2 hover:bg-ink/80 transition-colors rounded-xl">
               <IconPrint size={13} /> Imprimir nota de separação (uso interno)
             </Link>
+            )}
           </div>
         </Card>
 
@@ -1118,7 +1246,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         )}
 
         {/* ── Apagar se cancelado ── */}
-        {order.status === 'cancelled' && (
+        {/* Pedido que teve dinheiro envolvido fica: some dos relatórios e do
+            registro de estorno se for apagado. */}
+        {order.status === 'cancelled' && !hasMoneyHistory(order) && (
           <button onClick={handleDelete} disabled={deleting}
             className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-xl">
             {deleting ? 'Apagando…' : 'Apagar este pedido cancelado'}
@@ -1136,4 +1266,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       )}
     </div>
   );
+}
+
+// Pedido que chegou a receber dinheiro (pago antes de cancelar, ou pagamento
+// que caiu depois do cancelamento) não pode ser apagado.
+function hasMoneyHistory(order: Order): boolean {
+  return !!order.payment?.paidAt || !!order.payment?.lateCaptureTxId;
 }

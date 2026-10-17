@@ -127,7 +127,7 @@ export interface Order {
   userId: string
   items: OrderItem[]
   status: OrderStatus
-  payment: {
+  payment: ({
     method: 'pix'
     txId: string
     pixQrCode?: string
@@ -144,6 +144,13 @@ export interface Order {
     abacateSandbox?: boolean
     confirmedManuallyBy?: string
     confirmedManuallyNote?: string
+  }) & {
+    // Pagamento que chegou com o pedido já cancelado/expirado.
+    lateCaptureTxId?: string
+    lateCaptureAt?: string
+    // Pedido pago e cancelado: 'pending' até o lojista marcar o estorno.
+    refundStatus?: 'pending' | 'done'
+    refundedAt?: string
   }
   delivery: {
     carrier: 'melhor_envio' | 'correios_pac' | 'correios_sedex' | 'jadlog_package' | 'jadlog_expresso' | 'pickup' | 'uber_direct' | 'manual' | null

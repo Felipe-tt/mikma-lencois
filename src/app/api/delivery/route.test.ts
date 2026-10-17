@@ -133,14 +133,14 @@ describe('POST /api/delivery (despacho)', () => {
     expect(res.status).toBe(409);
   });
 
-  it('retirada na loja: avança pra shipped', async () => {
+  it('retirada na loja: vai direto pra delivered', async () => {
     orders['order-1'] = { status: 'paid', items: [], delivery: { carrier: 'pickup' } };
     const res = await POST(req('POST', { orderId: 'order-1' }));
     const json = await res.json();
 
     expect(res.status).toBe(200);
     expect(json.carrier).toBe('pickup');
-    expect(orders['order-1'].status).toBe('shipped');
+    expect(orders['order-1'].status).toBe('delivered');
   });
 
   it('Correios/Jadlog: não despacha por aqui (é manual, com código de rastreio)', async () => {
