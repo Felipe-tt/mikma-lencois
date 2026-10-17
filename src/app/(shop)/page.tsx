@@ -72,19 +72,23 @@ export default async function HomePage() {
           do lado direito, longe do título.
       ═══════════════════════════════════════════════════════════ */}
       <section className="relative overflow-hidden bg-paper">
-        {/* No desktop a foto ocupa só os 70% da direita: o "MIKMA" da
-            parede fica longe do título. */}
-        <div className="absolute inset-y-0 right-0 left-0 lg:left-[30%] pointer-events-none select-none overflow-hidden">
+        {/* No desktop a foto começa a partir da coluna do texto (não de uma
+            % da tela) e termina num quadro de no máximo 1920px: em telas
+            ultrawide ela começava muito à esquerda, embaixo do título, e
+            sobrava uma faixa vazia enorme. */}
+        <div className="hidden lg:block absolute inset-y-0 pointer-events-none select-none overflow-hidden left-[calc(max(0px,50%-640px)+min(100%,1280px)*0.34)] right-[max(0px,50%-960px)]">
           <Image
             src="/hero-bg.jpg"
             alt=""
             aria-hidden="true"
             fill
             priority
-            sizes="(min-width: 1024px) 70vw, 100vw"
-            className="object-cover object-[70%_center] lg:object-center animate-hero-zoom"
+            sizes="70vw"
+            className="object-cover object-center animate-hero-zoom"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-paper/85 via-paper/75 to-paper lg:bg-gradient-to-r lg:from-paper lg:from-0% lg:via-paper/50 lg:via-35% lg:to-paper/0 lg:to-70%" />
+          <div className="absolute inset-0 bg-gradient-to-r from-paper from-0% via-paper/50 via-30% to-paper/0 to-60%" />
+          {/* Borda direita some no fundo quando a tela passa de 1920px */}
+          <div className="hidden min-[1921px]:block absolute inset-y-0 right-0 w-40 bg-gradient-to-l from-paper to-transparent" />
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-paper to-transparent" />
         </div>
 
@@ -120,11 +124,17 @@ export default async function HomePage() {
             </div>
           </div>
 
+          {/* No celular a foto vira um cartão nítido abaixo do texto (de
+              fundo ela ficava lavada pelo degradê e quase sumia). */}
+          <div className="lg:hidden relative mt-10 aspect-[4/3] sm:aspect-[16/9] rounded-3xl overflow-hidden bg-warm animate-fade-in">
+            <Image src="/hero-bg.jpg" alt="Cama arrumada com lençóis Mikma" fill priority sizes="100vw" className="object-cover object-[60%_center]" />
+          </div>
+
           {/* Diferenciais em pílulas translúcidas no pé do hero */}
           {trustItems.length > 0 && (
-            <ul className="mt-12 sm:mt-16 lg:mt-auto lg:pt-12 flex flex-wrap gap-2 sm:gap-2.5 animate-fade-in">
+            <ul className="mt-6 sm:mt-10 lg:mt-auto lg:pt-12 grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-2.5 animate-fade-in">
               {trustItems.map((t, i) => (
-                <li key={t} className="inline-flex items-center gap-2.5 rounded-full border border-mist-d/60 bg-paper/75 backdrop-blur-md pl-1.5 pr-4 py-1.5 text-[12.5px] text-ink">
+                <li key={t} className="flex sm:inline-flex items-center gap-2.5 rounded-2xl sm:rounded-full border border-mist-d/60 bg-paper/75 backdrop-blur-md p-2.5 sm:pl-1.5 sm:pr-4 sm:py-1.5 text-[12px] sm:text-[12.5px] leading-snug text-ink">
                   <span className="w-7 h-7 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0" aria-hidden="true">
                     {TRUST_ICONS[i % TRUST_ICONS.length]}
                   </span>
@@ -159,7 +169,7 @@ export default async function HomePage() {
         {/* Categorias em pílulas arredondadas */}
         {categories.length > 1 && (
           <nav aria-label="Categorias" className="container-shop mb-8 sm:mb-10">
-            <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1 py-1">
+            <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1 py-1 pr-8 sm:pr-1 [mask-image:linear-gradient(to_right,black_82%,transparent)] sm:[mask-image:none]">
               <Link href="/produtos"
                 className="shrink-0 h-9 px-4 inline-flex items-center rounded-full bg-ink text-paper text-[13px] font-medium">
                 Todos
@@ -207,7 +217,10 @@ export default async function HomePage() {
       ═══════════════════════════════════════════════════════════ */}
       <section className="bg-paper pb-16 sm:pb-24">
         <div className="container-shop">
-          <div className="theme-locked relative overflow-hidden rounded-[28px] bg-ink px-7 py-14 sm:px-14 sm:py-20 lg:px-20">
+          {/* Sombra funda e um brilho terracota no canto: no tema escuro o
+              cartão tinha a mesma cor do fundo e virava um bloco chapado. */}
+          <div className="theme-locked relative overflow-hidden rounded-[28px] bg-ink px-7 py-14 sm:px-14 sm:py-20 lg:px-20 ring-1 ring-black/5 dark:ring-white/[0.07] shadow-[0_40px_90px_-40px_rgba(30,18,8,0.55)] dark:shadow-[0_40px_100px_-30px_rgba(0,0,0,0.85)]">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_120%_at_100%_0%,rgba(204,122,71,0.22),transparent_60%)]" />
             <Image
               src="/logo-moon-transparent.png"
               alt=""

@@ -149,6 +149,8 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
         data-variant="responsive"
         className="overlay-panel w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-paper shadow-2xl flex flex-col max-h-[95dvh] sm:max-h-[90vh] overflow-hidden pb-[env(safe-area-inset-bottom)] sm:pb-0"
       >
+        {/* Alça do bottom sheet no celular */}
+        <span aria-hidden="true" className="sm:hidden mx-auto mt-2.5 mb-0.5 block h-1 w-10 rounded-full bg-mist-d shrink-0" />
 
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-5 border-b border-mist shrink-0">

@@ -52,6 +52,8 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
             className="overlay-panel w-full sm:max-w-xl bg-paper sm:mx-4 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[88dvh] flex flex-col pb-[env(safe-area-inset-bottom)] sm:pb-0"
             onClick={e => e.stopPropagation()}
           >
+            {/* Alça do bottom sheet no celular */}
+            <span aria-hidden="true" className="sm:hidden mx-auto mt-2.5 mb-0.5 block h-1 w-10 rounded-full bg-mist-d shrink-0" />
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-mist shrink-0">
               <div>
