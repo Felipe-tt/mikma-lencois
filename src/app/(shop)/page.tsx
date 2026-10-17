@@ -72,9 +72,11 @@ export default async function HomePage() {
           do lado direito, longe do título.
       ═══════════════════════════════════════════════════════════ */}
       <section className="relative overflow-hidden bg-paper">
-        {/* No desktop a foto ocupa só os 70% da direita: o "MIKMA" da
-            parede fica longe do título. */}
-        <div className="hidden lg:block absolute inset-y-0 right-0 left-[30%] pointer-events-none select-none overflow-hidden">
+        {/* No desktop a foto começa a partir da coluna do texto (não de uma
+            % da tela) e termina num quadro de no máximo 1920px: em telas
+            ultrawide ela começava muito à esquerda, embaixo do título, e
+            sobrava uma faixa vazia enorme. */}
+        <div className="hidden lg:block absolute inset-y-0 pointer-events-none select-none overflow-hidden left-[calc(max(0px,50%-640px)+min(100%,1280px)*0.34)] right-[max(0px,50%-960px)]">
           <Image
             src="/hero-bg.jpg"
             alt=""
@@ -84,7 +86,9 @@ export default async function HomePage() {
             sizes="70vw"
             className="object-cover object-center animate-hero-zoom"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-paper from-0% via-paper/50 via-35% to-paper/0 to-70%" />
+          <div className="absolute inset-0 bg-gradient-to-r from-paper from-0% via-paper/50 via-30% to-paper/0 to-60%" />
+          {/* Borda direita some no fundo quando a tela passa de 1920px */}
+          <div className="hidden min-[1921px]:block absolute inset-y-0 right-0 w-40 bg-gradient-to-l from-paper to-transparent" />
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-paper to-transparent" />
         </div>
 
@@ -213,7 +217,10 @@ export default async function HomePage() {
       ═══════════════════════════════════════════════════════════ */}
       <section className="bg-paper pb-16 sm:pb-24">
         <div className="container-shop">
-          <div className="theme-locked relative overflow-hidden rounded-[28px] bg-ink px-7 py-14 sm:px-14 sm:py-20 lg:px-20">
+          {/* Sombra funda e um brilho terracota no canto: no tema escuro o
+              cartão tinha a mesma cor do fundo e virava um bloco chapado. */}
+          <div className="theme-locked relative overflow-hidden rounded-[28px] bg-ink px-7 py-14 sm:px-14 sm:py-20 lg:px-20 ring-1 ring-black/5 dark:ring-white/[0.07] shadow-[0_40px_90px_-40px_rgba(30,18,8,0.55)] dark:shadow-[0_40px_100px_-30px_rgba(0,0,0,0.85)]">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_120%_at_100%_0%,rgba(204,122,71,0.22),transparent_60%)]" />
             <Image
               src="/logo-moon-transparent.png"
               alt=""
