@@ -57,16 +57,16 @@ export function Footer({
 
             {/* Social */}
             {(instagramUrl || wa) && (
-              <div className="flex items-center gap-4 mt-1">
+              <div className="flex items-center gap-2 mt-1">
                 {instagramUrl && (
                   <a href={instagramUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/60 hover:text-paper transition-colors duration-150">
+                    className="rounded-full border border-paper/15 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/70 hover:text-paper hover:border-paper/40 transition-colors duration-150">
                     Instagram
                   </a>
                 )}
                 {wa && (
                   <a href={wa} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/60 hover:text-paper transition-colors duration-150">
+                    className="rounded-full border border-paper/15 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.12em] uppercase text-paper/70 hover:text-paper hover:border-paper/40 transition-colors duration-150">
                     WhatsApp
                   </a>
                 )}

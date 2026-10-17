@@ -114,13 +114,13 @@ export default async function SobrePage() {
               <div>
                 <p className="page-label mb-8">{timelineTitle}</p>
                 <div className="relative">
-                  <div className="absolute left-[50px] top-3 bottom-3 w-px bg-mist" />
+                  <div className="absolute left-[25px] top-3 bottom-3 w-px bg-mist" />
                   <div className="flex flex-col gap-9">
                     {timeline.map((item, i) => (
                       <div key={i} className="flex gap-7 items-start">
                         <div className="shrink-0 w-[50px] flex flex-col items-center pt-0.5">
-                          <div className="w-2.5 h-2.5 bg-clay shrink-0 relative z-10 rotate-45" />
-                          <span className="font-display text-[1rem] text-clay/60 leading-none mt-2.5 font-normal tabular-nums">{item.year}</span>
+                          <div className="w-2.5 h-2.5 rounded-full bg-clay shrink-0 relative z-10 ring-4 ring-paper" />
+                          <span className="relative z-10 bg-paper px-1 py-0.5 font-display text-[1rem] text-clay/60 leading-none mt-2 font-normal tabular-nums">{item.year}</span>
                         </div>
                         <div className="pb-2 border-b border-mist/60 flex-1">
                           <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-ink mb-1.5">{item.label}</p>
@@ -136,7 +136,7 @@ export default async function SobrePage() {
 
           {/* Sidebar */}
           <div className="flex flex-col gap-4 lg:sticky lg:top-24">
-            <div className="border border-mist divide-y divide-mist">
+            <div className="border border-mist rounded-2xl overflow-hidden divide-y divide-mist">
               {stats.map(({ label, value }) => (
                 <div key={label} className="px-6 py-5 flex flex-col gap-1.5 hover:bg-warm transition-colors duration-150">
                   <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint">{label}</p>
@@ -148,7 +148,7 @@ export default async function SobrePage() {
             <BusinessHoursCard businessHours={s.businessHours} timezone={s.businessHoursTimezone} />
 
             {s.storeAddress && (
-              <div className="border border-mist px-6 py-5">
+              <div className="border border-mist rounded-2xl px-6 py-5">
                 <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint mb-3">Endereço</p>
                 <address className="text-[14px] text-mid leading-relaxed not-italic">
                   {s.storeAddress}{s.storeNumber && `, ${s.storeNumber}`}{s.storeComplement && `, ${s.storeComplement}`}<br />
@@ -159,7 +159,7 @@ export default async function SobrePage() {
             )}
 
             <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-between px-6 py-4 bg-ink text-paper hover:bg-clay transition-colors duration-200 group">
+              className="flex items-center justify-between rounded-full pl-7 pr-6 py-4 bg-ink text-paper hover:bg-clay transition-colors duration-200 group">
               <span className="text-[13px] font-semibold">{whatsappLabel}</span>
               <svg className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />

@@ -74,9 +74,9 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
   }
 
   return (
-    <Overlay onClose={onClose} labelledBy="forgot-title" className="relative w-full max-w-sm bg-paper shadow-2xl p-8">
+    <Overlay onClose={onClose} labelledBy="forgot-title" className="relative w-full max-w-sm bg-paper shadow-2xl p-8 rounded-3xl">
       {close => (<>
-        <button type="button" onClick={close} aria-label="Fechar" className="absolute top-3 right-3 w-9 h-9 flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150">
+        <button type="button" onClick={close} aria-label="Fechar" className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
@@ -88,7 +88,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
             <p className="text-sm text-mid mb-6 leading-relaxed">
               Informe seu e-mail e enviaremos um link com um botão para criar uma nova senha.
             </p>
-            {error && <p role="alert" className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
+            {error && <p role="alert" className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
             <form onSubmit={sendLink} className="flex flex-col gap-4">
               <div>
                 <label htmlFor="forgot-email" className="label">Seu e-mail</label>
@@ -105,7 +105,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
 
         {step === 'sent' && (
           <>
-            <div className="w-14 h-14 bg-clay/10 flex items-center justify-center mb-5">
+            <div className="w-14 h-14 rounded-full bg-clay/10 flex items-center justify-center mb-5">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                 <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
               </svg>
@@ -288,22 +288,22 @@ export default function LoginPage() {
             </p>
 
             {challengeExpired && (
-              <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 text-sm text-amber-700 flex items-center gap-2 rounded-sm">
+              <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 text-sm text-amber-700 flex items-center gap-2 rounded-xl">
                 <IconAlert size={16} className="shrink-0" />
                 O link de confirmação expirou. Tente entrar novamente.
               </div>
             )}
 
             {error && (
-              <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-center gap-2 rounded-sm">
+              <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-center gap-2 rounded-xl">
                 <IconAlert size={16} className="shrink-0" />
                 {error}
               </div>
             )}
 
             {awaitingChallenge ? (
-              <div className="border border-mist bg-warm px-6 py-8 text-center">
-                <div className="w-14 h-14 bg-clay/10 flex items-center justify-center mx-auto mb-5">
+              <div className="border border-mist bg-warm rounded-2xl px-6 py-8 text-center">
+                <div className="w-14 h-14 rounded-full bg-clay/10 flex items-center justify-center mx-auto mb-5">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                     <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
                   </svg>

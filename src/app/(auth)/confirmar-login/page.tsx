@@ -55,7 +55,7 @@ function ConfirmContent() {
 
       {state === 'ok' && (
         <>
-          <div className="w-20 h-20 bg-green-50 border border-green-100 flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mx-auto mb-6">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-green-500">
               <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
             </svg>
@@ -70,7 +70,7 @@ function ConfirmContent() {
 
       {state === 'error' && (
         <>
-          <div className="w-20 h-20 bg-red-50 border border-red-100 flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 rounded-full bg-red-50 border border-red-100 flex items-center justify-center mx-auto mb-6">
             <IconAlert size={40} strokeWidth={1.5} className="text-red-500" />
           </div>
           <h1 className="font-display font-normal text-ink text-2xl mb-2">Não foi possível confirmar</h1>

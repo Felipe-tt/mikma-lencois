@@ -55,7 +55,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
         className="block focus-visible:outline-offset-4"
       >
         {/* Imagem */}
-        <div className="relative aspect-[4/5] overflow-hidden bg-warm">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-warm [transform:translateZ(0)]">
           {img0 && !imgError ? (
             <>
               <Image
@@ -86,12 +86,12 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           {(badge || lowStock) && (
             <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
               {badge && (
-                <span className={`text-[9px] font-semibold tracking-[0.16em] uppercase px-2 py-[5px] leading-none ${
+                <span className={`text-[9px] font-semibold tracking-[0.16em] uppercase px-2.5 py-[5px] leading-none rounded-full ${
                   isNew ? 'bg-paper/95 text-ink' : 'bg-ink text-paper'
                 }`}>{badge}</span>
               )}
               {lowStock && (
-                <span className="bg-paper/95 text-clay text-[9px] font-semibold tracking-[0.16em] uppercase px-2 py-[5px] leading-none">
+                <span className="bg-paper/95 text-clay text-[9px] font-semibold tracking-[0.16em] uppercase px-2.5 py-[5px] leading-none rounded-full">
                   Últimas peças
                 </span>
               )}
@@ -99,7 +99,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           )}
 
           {/* "Ver produto" que sobe no hover (só em quem tem mouse) */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-x-3 bottom-3 hidden [@media(hover:hover)]:flex items-center justify-between bg-paper/90 backdrop-blur-sm px-3.5 py-2.5 text-[10px] font-semibold tracking-[0.16em] uppercase text-ink opacity-0 translate-y-2 transition-[opacity,transform] duration-300 ease-out group-hover:opacity-100 group-hover:translate-y-0">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-3 bottom-3 hidden [@media(hover:hover)]:flex items-center justify-between bg-paper/90 backdrop-blur-sm rounded-full px-4 py-2.5 text-[10px] font-semibold tracking-[0.16em] uppercase text-ink opacity-0 translate-y-2 transition-[opacity,transform] duration-300 ease-out group-hover:opacity-100 group-hover:translate-y-0">
             Ver produto
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </div>

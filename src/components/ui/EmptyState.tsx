@@ -18,9 +18,9 @@ interface Props {
 
 export function EmptyState({ icon, title, description, actions, className = '' }: Props) {
   return (
-    <div className={`flex flex-col items-center justify-center py-20 sm:py-28 px-6 text-center border border-mist ${className}`}>
+    <div className={`flex flex-col items-center justify-center py-20 sm:py-28 px-6 text-center rounded-3xl border border-dashed border-mist-d ${className}`}>
       {icon && (
-        <div className="text-faint mb-5 opacity-40">
+        <div className="w-16 h-16 rounded-full bg-warm text-mid flex items-center justify-center mb-5 [&_svg]:w-7 [&_svg]:h-7">
           {icon}
         </div>
       )}

@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { searchProducts } from '@/lib/productSearch';
 import { ProductCard } from '@/components/product/ProductCard';
 import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
 import { SortSelect } from '@/components/product/SortSelect';
@@ -50,11 +51,15 @@ async function getCategories(): Promise<{ name: string; count: number }[]> {
   return data;
 }
 
-async function getProducts(cat?: string, ordem?: string): Promise<Product[]> {
+async function getProducts(cat?: string, ordem?: string, search?: string): Promise<Product[]> {
   let q = adminDb.collection('products').where('active','==',true);
   if (cat) q = q.where('category','==',cat) as typeof q;
-  const snap = await q.orderBy('createdAt','desc').limit(48).get();
-  const products = snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
+  // Na busca olha o catálogo inteiro (até 300), não só os 48 mais novos.
+  const snap = await q.orderBy('createdAt','desc').limit(search ? 300 : 48).get();
+  const all = snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
+  // Antes o termo aparecia no título mas não filtrava nada: toda busca
+  // devolvia o catálogo inteiro.
+  const products = search ? searchProducts(all, search) : all;
   if (ordem === 'preco_asc')  return [...products].sort((a, b) => a.price - b.price);
   if (ordem === 'preco_desc') return [...products].sort((a, b) => b.price - a.price);
   return products;
@@ -62,9 +67,10 @@ async function getProducts(cat?: string, ordem?: string): Promise<Product[]> {
 
 export default async function ProdutosPage({ searchParams }: Props) {
   const { categoria, q, ordem } = await searchParams;
-  const [products, categories] = await Promise.all([getProducts(categoria, ordem), getCategories()]);
+  const search = q?.trim() || undefined;
+  const [products, categories] = await Promise.all([getProducts(categoria, ordem, search), getCategories()]);
   const catNames = categories.map(c => c.name);
-  const heading = q ? `"${q}"` : (categoria ?? 'Todos os produtos');
+  const heading = search ? `"${search}"` : (categoria ?? 'Todos os produtos');
 
   return (
     <div>
@@ -74,13 +80,13 @@ export default async function ProdutosPage({ searchParams }: Props) {
           <div className="flex items-end justify-between gap-4">
             <div>
               <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-faint mb-3">
-                {categoria ? `Catálogo / ${categoria}` : 'Catálogo'}
+                {search ? 'Resultado da busca' : categoria ? `Catálogo / ${categoria}` : 'Catálogo'}
               </p>
               <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">
                 {heading}
               </h1>
               <p className="text-[12px] text-faint mt-2 font-mono">
-                {products.length} produto{products.length !== 1 ? 's' : ''}
+                {products.length} {search ? (products.length === 1 ? 'resultado' : 'resultados') : (products.length === 1 ? 'produto' : 'produtos')}
               </p>
             </div>
             <div className="flex items-center gap-2 pb-1 shrink-0">
@@ -105,7 +111,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                 <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-faint mb-4">Categorias</p>
                 <div className="flex flex-col">
                   <Link href="/produtos"
-                    className={`flex items-center justify-between px-3 py-2 text-[13px] transition-colors duration-150 ${
+                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${
                       !categoria ? 'text-ink font-medium bg-warm' : 'text-mid hover:text-ink hover:bg-warm/60'
                     }`}>
                     <span>Todos</span>
@@ -113,7 +119,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                   </Link>
                   {categories.map(cat => (
                     <Link key={cat.name} href={`/produtos?categoria=${encodeURIComponent(cat.name)}`}
-                      className={`flex items-center justify-between px-3 py-2 text-[13px] transition-colors duration-150 ${
+                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${
                         categoria === cat.name ? 'text-ink font-medium bg-warm' : 'text-mid hover:text-ink hover:bg-warm/60'
                       }`}>
                       <span>{cat.name}</span>
@@ -137,11 +143,16 @@ export default async function ProdutosPage({ searchParams }: Props) {
 
             {products.length === 0 ? (
               <EmptyState
-                icon={<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>}
-                title="Nenhum produto encontrado"
-                description={categoria ? `Não há produtos em "${categoria}". Tente outra categoria.` : 'Ainda não há produtos cadastrados.'}
-                actions={categoria ? [
+                icon={search
+                  ? <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  : <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>}
+                title={search ? `Nada encontrado para "${search}"` : 'Nenhum produto encontrado'}
+                description={search
+                  ? 'Confira a grafia ou tente uma palavra mais geral, como "lençol", "casal" ou "percal".'
+                  : categoria ? `Não há produtos em "${categoria}". Tente outra categoria.` : 'Ainda não há produtos cadastrados.'}
+                actions={search || categoria ? [
                   { label: 'Ver todos os produtos', href: '/produtos' },
+                  ...(search ? [{ label: 'Guia de tamanhos', href: '/guia-de-tamanhos', variant: 'outline' as const }] : []),
                 ] : []}
               />
             ) : (

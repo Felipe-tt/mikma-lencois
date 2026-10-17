@@ -53,7 +53,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
   return (
     <div className="flex flex-col gap-4">
       {fronhaOptions.length > 0 && (
-        <div className="border border-mist p-5 flex flex-col gap-3">
+        <div className="border border-mist rounded-2xl p-5 flex flex-col gap-3">
           <div>
             <p className="eyebrow text-clay mb-1">Fronha</p>
             <p className="text-[13px] text-faint">
@@ -89,7 +89,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
                   className="w-4 h-4 accent-clay shrink-0"
                 />
                 {f.images[0] && (
-                  <div className="relative w-9 h-9 shrink-0 bg-warm/60">
+                  <div className="relative w-9 h-9 shrink-0 rounded-lg overflow-hidden bg-warm/60">
                     <Image src={f.images[0]} alt={f.name} fill className="object-cover" sizes="36px" />
                   </div>
                 )}

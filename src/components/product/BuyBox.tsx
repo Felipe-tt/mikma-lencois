@@ -189,7 +189,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   return (
     <>
       {/* ── Buy box: cartão único, estilo Amazon/ML, com tudo que decide a compra ── */}
-      <div className="border border-mist bg-paper p-5 sm:p-6 pb-24 sm:pb-6 flex flex-col gap-5">
+      <div className="border border-mist bg-paper rounded-3xl p-5 sm:p-7 pb-24 sm:pb-7 flex flex-col gap-5">
 
         {/* Preço */}
         <div>
@@ -202,7 +202,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             </p>
           )}
           {pixDiscountThresholdCents > 0 && (
-            <p className="mt-3 flex items-start gap-2 bg-warm/70 px-3 py-2.5 text-[12px] text-mid leading-snug">
+            <p className="mt-3 flex items-start gap-2 bg-warm/70 rounded-xl px-3.5 py-2.5 text-[12px] text-mid leading-snug">
               <svg width="14" height="14" viewBox="0 0 512 512" className="shrink-0 mt-px fill-[#32BCAD]" aria-hidden="true"><path d="M242.4 292.5C247.8 287.1 257.1 287.1 262.5 292.5L339.5 369.5C353.7 383.7 372.6 391.5 392.6 391.5H407.7L310.6 488.6C280.3 518.1 231.1 518.1 200.8 488.6L103.3 391.2H112.6C132.6 391.2 151.5 383.4 165.7 369.2L242.4 292.5zM262.5 218.9C256.1 224.4 247.9 224.5 242.4 218.9L165.7 142.2C151.5 127.1 132.6 120.2 112.6 120.2H103.3L200.7 22.76C231.1-7.586 280.3-7.586 310.6 22.76L407.8 119.9H392.6C372.6 119.9 353.7 127.7 339.5 141.9L262.5 218.9zM112.6 142.7C126.4 142.7 139.1 148.3 149.7 158.1L226.4 234.8C233.6 241.1 243 245.6 252.5 245.6C261.9 245.6 271.3 241.1 278.5 234.8L355.5 157.8C365.3 148.1 378.8 142.5 392.6 142.5H430.3L488.6 200.8C518.9 231.1 518.9 280.3 488.6 310.6L430.3 368.9H392.6C378.8 368.9 365.3 363.3 355.5 353.5L278.5 276.5C264.6 262.6 240.3 262.6 226.4 276.6L149.7 353.2C139.1 363 126.4 368.6 112.6 368.6H80.78L22.76 310.6C-7.586 280.3-7.586 231.1 22.76 200.8L80.78 142.7H112.6z"/></svg>
               <span>
                 {pixEligible ? (
@@ -240,7 +240,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                   disabled={unavailable}
                   title={unavailable ? 'Fora de estoque' : undefined}
                   className={[
-                    'relative border px-4 py-2.5 text-[13px] font-medium transition-all duration-150',
+                    'relative rounded-full border px-4 py-2.5 text-[13px] font-medium transition-all duration-150',
                     isSelected
                       ? 'border-ink bg-ink text-paper'
                       : unavailable
@@ -249,7 +249,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                   ].join(' ')}
                 >
                   {unavailable && (
-                    <span className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
                       <span className="absolute top-[calc(50%-0.5px)] left-0 w-[141%] h-px bg-mist origin-left rotate-[-27deg] translate-x-[-10%]" />
                     </span>
                   )}
@@ -277,10 +277,10 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
         {!outOfStock && (
           <div className="flex items-center justify-between border-t border-mist pt-5">
             <p className="label">Quantidade</p>
-            <div className="flex items-center border border-mist">
+            <div className="flex items-center rounded-full border border-mist overflow-hidden">
               <button
                 onClick={() => setQty(q => Math.max(1, q - 1))}
-                className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
                 aria-label="Diminuir"
               >
                 −
@@ -288,7 +288,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               <span className="w-10 text-center text-[13px] font-semibold text-ink tabular-nums">{qty}</span>
               <button
                 onClick={() => setQty(q => Math.min(availableStock, q + 1))}
-                className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
                 aria-label="Aumentar"
               >
                 +
@@ -304,7 +304,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             onClick={buyNow}
             disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
             className={[
-              'w-full h-13 py-3.5 text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
+              'w-full h-13 py-3.5 rounded-full text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
               outOfStock || !selectedVariant
                 ? 'cursor-not-allowed bg-warm text-faint border-mist'
                 : buyingNow
@@ -318,7 +318,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             onClick={addToCart}
             disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
             className={[
-              'w-full h-13 py-3.5 text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
+              'w-full h-13 py-3.5 rounded-full text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
               outOfStock || !selectedVariant
                 ? 'cursor-not-allowed bg-warm text-faint border-mist'
                 : adding
@@ -346,12 +346,12 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               placeholder="00000-000"
               inputMode="numeric"
               maxLength={9}
-              className="flex-1 min-w-0 h-10 px-3 border border-mist bg-paper text-[13px] text-ink placeholder:text-faint focus:outline-none focus:border-ink transition-colors appearance-none"
+              className="flex-1 min-w-0 h-10 px-4 rounded-full border border-mist bg-paper text-[13px] text-ink placeholder:text-faint focus:outline-none focus:border-ink transition-colors appearance-none"
             />
             <button
               onClick={calcShipping}
               disabled={shipLoading}
-              className="px-4 h-10 text-[12px] font-semibold border border-ink text-ink hover:bg-warm transition-colors disabled:opacity-50 shrink-0"
+              className="px-5 h-10 rounded-full text-[12px] font-semibold border border-ink text-ink hover:bg-warm transition-colors disabled:opacity-50 shrink-0"
             >
               {shipLoading ? '…' : 'Calcular'}
             </button>
@@ -367,7 +367,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           {shipError && <p className="text-[12px] text-red-600 mt-2">{shipError}</p>}
 
           {shipOptions && shipOptions.length > 0 && (
-            <div className="mt-3 flex flex-col divide-y divide-mist border border-mist">
+            <div className="mt-3 flex flex-col divide-y divide-mist border border-mist rounded-2xl overflow-hidden">
               {shipOptions.map((o, i) => (
                 <div key={i} className="flex items-center justify-between px-3 py-2.5">
                   <div>
@@ -406,7 +406,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             disabled={adding || buyingNow || !selectedVariant || loading}
             aria-label="Adicionar ao carrinho"
             title="Adicionar ao carrinho"
-            className="w-11 h-11 shrink-0 flex items-center justify-center border border-ink text-ink hover:bg-warm active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
+            className="w-11 h-11 shrink-0 rounded-full flex items-center justify-center border border-ink text-ink hover:bg-warm active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
           >
             {adding ? (
               <span className="spinner-dark" />
@@ -422,7 +422,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           onClick={buyNow}
           disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
           className={[
-            'flex-1 h-11 text-[13px] font-semibold tracking-[0.04em] transition-[background-color,transform] duration-150',
+            'flex-1 h-11 rounded-full text-[13px] font-semibold tracking-[0.04em] transition-[background-color,transform] duration-150',
             outOfStock || !selectedVariant
               ? 'cursor-not-allowed bg-warm text-faint'
               : 'bg-ink text-paper active:scale-[0.98]',
@@ -446,7 +446,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             aria-modal="true"
             aria-labelledby="added-title"
             data-variant="responsive"
-            className="overlay-panel w-full sm:max-w-sm bg-paper sm:mx-4 overflow-hidden shadow-modal pb-[env(safe-area-inset-bottom)] sm:pb-0"
+            className="overlay-panel w-full sm:max-w-sm bg-paper sm:mx-4 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-modal pb-[env(safe-area-inset-bottom)] sm:pb-0"
             onClick={e => e.stopPropagation()}
           >
             <div className="px-6 pt-7 pb-6 text-center">
@@ -464,14 +464,14 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                 type="button"
                 autoFocus
                 onClick={() => router.push('/carrinho')}
-                className="w-full h-12 text-[13px] font-semibold tracking-[0.06em] bg-ink text-paper border border-ink hover:bg-clay hover:border-clay active:scale-[0.98] transition-[background-color,border-color,transform] duration-150"
+                className="w-full h-12 rounded-full text-[13px] font-semibold tracking-[0.06em] bg-ink text-paper border border-ink hover:bg-clay hover:border-clay active:scale-[0.98] transition-[background-color,border-color,transform] duration-150"
               >
                 Ver carrinho
               </button>
               <button
                 type="button"
                 onClick={closeAdded}
-                className="w-full h-12 text-[13px] font-semibold tracking-[0.06em] text-mid border border-mist hover:border-ink/50 hover:text-ink active:scale-[0.98] transition-[border-color,color,transform] duration-150"
+                className="w-full h-12 rounded-full text-[13px] font-semibold tracking-[0.06em] text-mid border border-mist hover:border-ink/50 hover:text-ink active:scale-[0.98] transition-[border-color,color,transform] duration-150"
               >
                 Continuar comprando
               </button>

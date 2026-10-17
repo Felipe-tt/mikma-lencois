@@ -154,7 +154,7 @@ html.dark {
    animava também padding/largura quando o texto do botão trocava
    ("Salvar" -> "Salvando…") e o botão "escorregava" de tamanho. */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2
+  @apply inline-flex items-center justify-center gap-2 rounded-full
          font-sans text-[13px] font-medium tracking-[0.03em]
          border transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-150 ease-out
          disabled:opacity-40 disabled:pointer-events-none
@@ -162,11 +162,11 @@ html.dark {
 }
 
 @utility badge {
-  @apply inline-flex items-center px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.08em] uppercase;
+  @apply inline-flex items-center rounded-full px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.08em] uppercase;
 }
 
 @utility chip {
-  @apply inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer;
+  @apply inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase border transition-all duration-150 cursor-pointer;
 }
 
 @layer components {
@@ -211,7 +211,7 @@ html.dark {
            active:scale-[0.98];
   }
   .btn-icon {
-    @apply inline-flex items-center justify-center
+    @apply inline-flex items-center justify-center rounded-full
            w-9 h-9 border border-mist bg-paper text-mid
            hover:border-clay hover:text-clay hover:bg-warm
            active:scale-[0.94]
@@ -227,7 +227,7 @@ html.dark {
            focus:border-clay/60 focus:ring-2 focus:ring-clay/[0.12]
            hover:border-ink/20
            transition-all duration-150;
-    border-radius: 2px;
+    border-radius: 12px;
   }
   .input-sm {
     @apply w-full px-3 py-2.5 text-sm bg-white dark:bg-warm text-ink
@@ -236,7 +236,7 @@ html.dark {
            focus:border-clay/60 focus:ring-1 focus:ring-clay/[0.12]
            hover:border-ink/20
            transition-all duration-150;
-    border-radius: 2px;
+    border-radius: 12px;
   }
   .label {
     @apply block text-[10px] font-semibold tracking-[0.14em] uppercase text-ink/60 mb-1.5;
@@ -247,7 +247,7 @@ html.dark {
            focus:border-clay/60 focus:ring-2 focus:ring-clay/[0.12]
            hover:border-ink/20
            transition-all duration-150 cursor-pointer;
-    border-radius: 2px;
+    border-radius: 12px;
   }
 
   /* ─── Product card ────────────────────────────────────────────── */
@@ -321,10 +321,10 @@ html.dark {
 
   /* ─── Free shipping bar ───────────────────────────────────────── */
   .shipping-bar-track {
-    @apply h-0.5 w-full bg-mist overflow-hidden;
+    @apply h-1 w-full rounded-full bg-mist overflow-hidden;
   }
   .shipping-bar-fill {
-    @apply h-full bg-clay transition-all duration-500 ease-out;
+    @apply h-full rounded-full bg-clay transition-all duration-500 ease-out;
   }
 
   /* ─── Spinners ────────────────────────────────────────────────── */
@@ -334,7 +334,7 @@ html.dark {
 
   /* ─── Skeleton ────────────────────────────────────────────────── */
   .skeleton {
-    @apply relative overflow-hidden bg-warm;
+    @apply relative overflow-hidden bg-warm rounded-md;
   }
   .skeleton::after {
     content: '';

@@ -56,6 +56,7 @@ const config: Config = {
       },
       keyframes: {
         fadeUp:   { '0%': { opacity: '0', transform: 'translateY(14px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        heroZoom: { '0%': { transform: 'scale(1.06)' }, '100%': { transform: 'scale(1)' } },
         fadeDown: { '0%': { opacity: '0', transform: 'translateY(-8px)'  }, '100%': { opacity: '1', transform: 'translateY(0)' } },
         fadeIn:   { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
         slideIn:  { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(0)' } },
@@ -65,6 +66,7 @@ const config: Config = {
       },
       animation: {
         'fade-up':   'fadeUp 0.5s cubic-bezier(0.4,0,0.2,1) both',
+        'hero-zoom': 'heroZoom 1.8s cubic-bezier(0.22,1,0.36,1) both',
         'fade-down': 'fadeDown 0.28s cubic-bezier(0.4,0,0.2,1) both',
         'fade-in':   'fadeIn 0.25s ease both',
         'slide-in':  'slideIn 0.3s cubic-bezier(0.4,0,0.2,1) both',

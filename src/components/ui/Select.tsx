@@ -107,10 +107,10 @@ export function Select({
     : 'px-4 py-3 text-sm';
 
   const defaultTrigger = `w-full ${sizeClasses} bg-white dark:bg-warm text-ink text-left
-    border border-mist outline-none flex items-center justify-between gap-2
+    border border-mist rounded-xl outline-none flex items-center justify-between gap-2
     focus:border-clay/60 focus:ring-2 focus:ring-clay/[0.12]
     hover:border-ink/20 transition-all duration-150
-    disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer rounded-[2px]`;
+    disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`;
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
@@ -146,10 +146,10 @@ export function Select({
           tabIndex={-1}
           onKeyDown={handleListKeyDown}
           className="absolute z-50 mt-1 w-full max-h-64 overflow-auto bg-white dark:bg-warm
-            border border-mist rounded-[2px] shadow-lg py-1 focus:outline-none"
+            border border-mist rounded-xl shadow-lg p-1 focus:outline-none"
         >
           {options.length === 0 && (
-            <li className="px-3 py-2 text-sm text-faint italic select-none">Nenhuma opção</li>
+            <li className="px-3 py-2 rounded-lg text-sm text-faint italic select-none">Nenhuma opção</li>
           )}
           {options.map((opt, i) => {
             const isSelected = opt.value === value;
@@ -165,7 +165,7 @@ export function Select({
                   onChange(opt.value);
                   setOpen(false);
                 }}
-                className={`px-3 py-2 text-sm cursor-pointer select-none flex items-center justify-between gap-2
+                className={`px-3 py-2 rounded-lg text-sm cursor-pointer select-none flex items-center justify-between gap-2
                   ${opt.disabled ? 'opacity-40 cursor-not-allowed' : ''}
                   ${isActive ? 'bg-clay/10 text-ink' : 'text-ink'}
                   ${isSelected ? 'font-semibold' : ''}`}

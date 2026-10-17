@@ -38,11 +38,11 @@ export function BusinessHoursCard({ businessHours, timezone = 'America/Sao_Paulo
   const groups = groupConsecutiveDays(hours);
 
   return (
-    <div className="border border-mist px-6 py-5" data-now={now ?? undefined}>
+    <div className="border border-mist rounded-2xl px-6 py-5" data-now={now ?? undefined}>
       <div className="flex items-center justify-between mb-3">
         <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint">Horário de funcionamento</p>
         {status && (
-          <span className={`flex items-center gap-1.5 text-[10px] font-bold tracking-wide uppercase px-2 py-1 shrink-0 ${
+          <span className={`flex items-center gap-1.5 rounded-full text-[10px] font-bold tracking-wide uppercase px-2.5 py-1 shrink-0 ${
             status.isOpen ? 'bg-green-100 text-green-700' : 'bg-warm text-faint'
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${status.isOpen ? 'bg-green-500' : 'bg-faint'}`} />

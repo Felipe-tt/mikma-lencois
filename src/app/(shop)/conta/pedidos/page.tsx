@@ -100,24 +100,24 @@ export default function PedidosPage() {
 
   return (
     <div>
-      <div className="border-b border-mist">
-        <div className="container-shop py-8 sm:py-10 flex items-end justify-between gap-4">
+      <div className="border-b border-mist bg-warm/60">
+        <div className="container-shop py-8 sm:py-12 flex items-end justify-between gap-4">
           <div>
-            <Link href="/conta" className="group inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-faint hover:text-ink transition-colors duration-150 mb-3">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+            <Link href="/conta" className="group inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
               Área do cliente
             </Link>
-            <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl">Meus pedidos</h1>
+            <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-5xl leading-[1.05] tracking-[-0.015em]">Meus pedidos</h1>
           </div>
-          <Link href="/perfil" className="text-sm text-mid hover:text-ink transition-colors font-medium hidden sm:block border-b border-mist-d hover:border-ink pb-px mb-1.5">
-            Meu perfil
+          <Link href="/perfil" className="hidden sm:inline-flex items-center h-9 px-4 rounded-full border border-mist-d text-[13px] font-medium text-mid hover:text-ink hover:border-ink hover:bg-paper transition-colors mb-1">
+            Meus dados
           </Link>
         </div>
       </div>
 
-      <div className="container-shop py-8 sm:py-12 pb-20 max-w-3xl">
+      <div className="container-shop py-8 sm:py-12 pb-20 [&>*]:max-w-3xl">
         {listError ? (
-          <div role="alert" className="border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-4 flex items-center justify-between gap-3">
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-4 flex items-center justify-between gap-3">
             <span>Não foi possível carregar seus pedidos. Verifique sua conexão.</span>
             <button type="button" onClick={() => window.location.reload()} className="shrink-0 text-xs font-semibold underline underline-offset-2">Tentar de novo</button>
           </div>
@@ -133,16 +133,16 @@ export default function PedidosPage() {
         ) : (
           <div className="flex flex-col gap-4">
             {orders.map(order => (
-              <div key={order.id} className="border border-mist bg-paper">
+              <div key={order.id} className="rounded-2xl overflow-hidden border border-mist bg-paper">
                 {/* Header do pedido */}
                 <div className="flex items-start justify-between gap-4 px-5 sm:px-6 pt-5 sm:pt-6 pb-4">
                   <div className="flex items-start gap-4">
                     {/* Thumbnail do primeiro item */}
                     {order.items[0]?.image && (
-                      <div className="relative w-12 h-[60px] shrink-0 overflow-hidden bg-warm border border-mist/60">
+                      <div className="relative w-12 h-[60px] shrink-0 overflow-hidden rounded-lg bg-warm border border-mist/60">
                         <img src={order.items[0].image} alt={order.items[0].productName} className="w-full h-full object-cover" />
                         {order.items.length > 1 && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-ink/80 text-paper text-[9px] font-bold flex items-center justify-center rounded-[1px]">
+                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-ink/80 text-paper text-[9px] font-bold flex items-center justify-center rounded-full">
                             +{order.items.length - 1}
                           </span>
                         )}

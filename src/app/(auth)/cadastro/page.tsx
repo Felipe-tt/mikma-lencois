@@ -67,7 +67,7 @@ function FieldError({ id, msg }: { id: string; msg?: string }) {
 
 function ErrorBox({ msg }: { msg: string }) {
   return (
-    <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2.5">
+    <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-start gap-2.5">
       <IconAlert size={16} className="shrink-0 mt-0.5" />
       <span>{msg}</span>
     </div>
@@ -375,7 +375,7 @@ function RegisterContent() {
 
               {error && <ErrorBox msg={error} />}
 
-              <div className="bg-warm border border-mist px-4 py-3.5 mb-6">
+              <div className="bg-warm border border-mist rounded-2xl px-4 py-3.5 mb-6">
                 <p className="text-xs text-mid leading-relaxed">
                   Assim que você confirmar pelo e-mail, esta aba pode ser fechada, o link já leva direto para o próximo passo.
                 </p>
@@ -403,7 +403,7 @@ function RegisterContent() {
           {/* ── ETAPA 3: senha e dados extras ── */}
           {step === 'password' && (
             <>
-              <div className="flex items-center gap-3 mb-6 p-3 bg-green-50 border border-green-200">
+              <div className="flex items-center gap-3 mb-6 p-3 bg-green-50 border border-green-200 rounded-xl">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 shrink-0">
                   <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
                 </svg>
@@ -451,7 +451,7 @@ function RegisterContent() {
                 </div>
 
                 {/* Dados opcionais em accordeon */}
-                <details id="optional-data" className="border border-mist">
+                <details id="optional-data" className="border border-mist rounded-2xl overflow-hidden">
                   <summary className="px-4 py-3 text-sm text-mid cursor-pointer select-none hover:text-ink transition-colors">
                     + Adicionar telefone e CPF (opcional)
                   </summary>
@@ -480,7 +480,7 @@ function RegisterContent() {
                 <label className="flex items-start gap-3 cursor-pointer group">
                   <div
                     onClick={() => { setLgpd(p => !p); if (fieldErrors.lgpd) setFieldError('lgpd'); }}
-                    className={`mt-0.5 w-5 h-5 rounded-sm border shrink-0 flex items-center justify-center transition-colors
+                    className={`mt-0.5 w-5 h-5 rounded-md border shrink-0 flex items-center justify-center transition-colors
                       ${lgpd ? 'bg-clay border-clay' : 'border-mist group-hover:border-clay/60'}`}
                   >
                     {lgpd && <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2.5"><polyline points="2 6 5 9 10 3"/></svg>}
@@ -506,7 +506,7 @@ function RegisterContent() {
           {/* ── DONE ── */}
           {step === 'done' && (
             <div className="text-center py-10">
-              <div className="w-20 h-20 bg-green-50 border border-green-100 flex items-center justify-center mx-auto mb-6">
+              <div className="w-20 h-20 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mx-auto mb-6">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-green-500">
                   <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
                 </svg>

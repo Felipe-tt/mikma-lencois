@@ -23,7 +23,7 @@ export function SortSelect({ current }: Props) {
       value={current ?? ''}
       onChange={handleChange}
       options={options}
-      triggerClassName="text-[12px] text-mid border border-mist bg-paper px-3 py-2 cursor-pointer hover:border-ink/20 transition-colors focus:outline-none focus:border-clay/40 rounded-[2px] flex items-center justify-between gap-2 min-w-[150px]"
+      triggerClassName="text-[12px] text-mid border border-mist bg-paper pl-4 pr-3 py-2 cursor-pointer hover:border-ink/20 transition-colors focus:outline-none focus:border-clay/40 rounded-full flex items-center justify-between gap-2 min-w-[150px]"
     />
   );
 }

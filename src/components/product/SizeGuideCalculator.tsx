@@ -106,10 +106,10 @@ export function SizeGuideCalculator({ products, widths }: Props) {
       {/* Seletor de modo: controle segmentado com o fundo escuro deslizando
           entre as opções. Antes eram dois botões soltos de larguras
           diferentes, que pareciam ações independentes. */}
-      <div className="relative grid grid-cols-2 w-full max-w-[380px] mx-auto border border-mist-d p-1" role="group" aria-label="Como você quer descobrir o tamanho">
+      <div className="relative grid grid-cols-2 w-full max-w-[380px] mx-auto rounded-full border border-mist-d p-1" role="group" aria-label="Como você quer descobrir o tamanho">
         <span
           aria-hidden="true"
-          className="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-ink transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none"
+          className="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-full bg-ink transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none"
           style={{ transform: mode === 'nome' ? 'translateX(100%)' : 'translateX(0)' }}
         />
         {([['medir', 'Vou medir agora'], ['nome', 'Já sei o nome']] as const).map(([key, label]) => (
@@ -122,7 +122,7 @@ export function SizeGuideCalculator({ products, widths }: Props) {
       </div>
 
       {mode === 'medir' ? (
-        <form onSubmit={handleMeasure} className="bg-paper border border-mist p-5 sm:p-6 flex flex-col gap-4 animate-fade-in">
+        <form onSubmit={handleMeasure} className="bg-paper border border-mist rounded-3xl p-5 sm:p-7 flex flex-col gap-4 animate-fade-in">
           <p className="text-[13px] text-mid leading-relaxed">
             Passe a fita de uma lateral à outra do <strong className="text-ink font-semibold">colchão</strong>, por cima. A altura é opcional, mas ajuda se o seu colchão for bem alto ou bem fino.
           </p>
@@ -130,16 +130,16 @@ export function SizeGuideCalculator({ products, widths }: Props) {
             <div className="flex flex-col gap-1.5">
               <label htmlFor="guia-largura" className="text-[11px] font-bold text-mid uppercase tracking-wide">Largura (cm)</label>
               <input id="guia-largura" value={width} onChange={e => setWidth(e.target.value)} inputMode="decimal" placeholder="138"
-                className="h-12 min-w-0 border border-mist-d px-3 text-[16px] sm:text-[14px] outline-none focus:border-ink transition-colors duration-150 bg-white dark:bg-warm" />
+                className="h-12 min-w-0 rounded-xl border border-mist-d px-4 text-[16px] sm:text-[14px] outline-none focus:border-ink transition-colors duration-150 bg-white dark:bg-warm" />
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="guia-altura" className="text-[11px] font-bold text-mid uppercase tracking-wide">Altura (cm, opcional)</label>
               <input id="guia-altura" value={height} onChange={e => setHeight(e.target.value)} inputMode="decimal" placeholder="25"
-                className="h-12 min-w-0 border border-mist-d px-3 text-[16px] sm:text-[14px] outline-none focus:border-ink transition-colors duration-150 bg-white dark:bg-warm" />
+                className="h-12 min-w-0 rounded-xl border border-mist-d px-4 text-[16px] sm:text-[14px] outline-none focus:border-ink transition-colors duration-150 bg-white dark:bg-warm" />
             </div>
           </div>
           {error && <p role="alert" className="text-[12px] text-red-600 animate-fade-in">{error}</p>}
-          <button type="submit" className="h-12 bg-ink text-paper text-[13px] font-semibold tracking-[0.03em] hover:bg-clay active:scale-[0.99] transition-[background-color,transform] duration-200">
+          <button type="submit" className="h-12 rounded-full bg-ink text-paper text-[13px] font-semibold tracking-[0.03em] hover:bg-clay active:scale-[0.99] transition-[background-color,transform] duration-200">
             Descobrir meu tamanho
           </button>
         </form>
@@ -148,7 +148,7 @@ export function SizeGuideCalculator({ products, widths }: Props) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {SIZE_BUTTONS.map(b => (
               <button key={b.key} type="button" aria-pressed={result === b.key} onClick={() => handlePickName(b.key)}
-                className={`border p-4 text-center active:scale-[0.98] transition-[background-color,border-color,color,transform] duration-150 ${result === b.key ? 'bg-ink text-paper border-ink' : 'border-mist-d bg-paper hover:border-ink text-ink'}`}>
+                className={`rounded-2xl border p-4 text-center active:scale-[0.98] transition-[background-color,border-color,color,transform] duration-150 ${result === b.key ? 'bg-ink text-paper border-ink' : 'border-mist-d bg-paper hover:border-ink text-ink'}`}>
                 <p className="text-[14px] font-semibold">{b.label}</p>
                 <p className={`text-[11px] mt-0.5 ${result === b.key ? 'text-paper/70' : 'text-faint'}`}>{b.desc}</p>
               </button>
@@ -157,8 +157,8 @@ export function SizeGuideCalculator({ products, widths }: Props) {
           <form onSubmit={handleOtherName} className="flex flex-wrap gap-2 items-center justify-center">
             <span className="text-[12px] text-faint">Ouviu outro nome (viúva, solteirão)?</span>
             <input value={otherName} onChange={e => setOtherName(e.target.value)} placeholder="ex: viúva" aria-label="Outro nome de tamanho"
-              className="h-10 border border-mist-d px-3 text-[16px] sm:text-[13px] outline-none focus:border-ink transition-colors duration-150 bg-white dark:bg-warm w-36" />
-            <button type="submit" className="h-10 px-4 border border-ink text-[12px] font-semibold text-ink hover:bg-ink hover:text-paper transition-colors duration-150">Ver</button>
+              className="h-10 rounded-full border border-mist-d px-4 text-[16px] sm:text-[13px] outline-none focus:border-ink transition-colors duration-150 bg-white dark:bg-warm w-36" />
+            <button type="submit" className="h-10 px-5 rounded-full border border-ink text-[12px] font-semibold text-ink hover:bg-ink hover:text-paper transition-colors duration-150">Ver</button>
           </form>
           {error && <p role="alert" className="text-[12px] text-red-600 text-center animate-fade-in">{error}</p>}
         </div>

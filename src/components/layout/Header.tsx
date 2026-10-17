@@ -120,7 +120,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Search inline */}
           <div inert={!searchOpen} className={`hidden md:flex items-center flex-1 mx-8 transition-all duration-200 ${searchOpen ? 'opacity-100' : 'opacity-0 pointer-events-none w-0 overflow-hidden mx-0'}`}>
-            <form onSubmit={handleSearch} className="flex items-center gap-2.5 flex-1 border-b-2 border-ink/20 pb-1 focus-within:border-clay/50 transition-colors">
+            <form onSubmit={handleSearch} className="flex items-center gap-2.5 flex-1 h-10 px-4 rounded-full bg-warm/70 border border-transparent focus-within:border-mist-d focus-within:bg-paper transition-colors">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
@@ -148,7 +148,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             {/* Search */}
             <button
               type="button"
-              className={`p-2 active:scale-90 transition-[color,background-color,transform] duration-150 ${isDark ? 'text-paper/50 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`}
+              className={`w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-[color,background-color,transform] duration-150 ${isDark ? 'text-paper/50 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`}
               onClick={onSearchButton} aria-label={searchOpen ? 'Fechar busca' : 'Buscar'} aria-expanded={searchOpen}
             >
               {searchOpen
@@ -165,17 +165,21 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             ) : user ? (
               <>
                 {(user.role === 'seller' || user.role === 'admin') && (
-                  <NavLink href="/painel" className={`hidden md:flex text-[10px] font-bold tracking-[0.14em] uppercase px-2 py-1.5 transition-colors ${isDark ? 'text-paper/40 hover:text-paper' : 'text-mid hover:text-ink'}`}>Painel</NavLink>
+                  <NavLink href="/painel" className={`hidden md:inline-flex items-center h-8 px-3 mr-1 rounded-full border text-[12px] font-medium transition-colors ${isDark ? 'border-paper/20 text-paper/70 hover:text-paper hover:bg-paper/10' : 'border-mist text-mid hover:text-ink hover:bg-warm'}`}>Painel</NavLink>
                 )}
-                <NavLink href="/conta" className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>
-                  {user.displayName?.split(' ')[0] ?? 'Conta'}
+                {/* Pílula com a inicial: leva pra área do cliente (o "Sair"
+                    fica lá e no menu, longe de um clique sem querer). */}
+                <NavLink href="/conta" aria-label="Minha conta" className={`hidden md:inline-flex items-center gap-2 h-9 pl-1 pr-3.5 mr-1 rounded-full border transition-colors ${isDark ? 'border-paper/20 text-paper hover:bg-paper/10' : 'border-mist text-ink hover:bg-warm hover:border-mist-d'}`}>
+                  <span aria-hidden="true" className="w-7 h-7 rounded-full bg-clay text-paper font-display text-[0.95rem] flex items-center justify-center">
+                    {(user.displayName || user.email || '?').trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span className="text-[13px] font-medium max-w-[110px] truncate">{user.displayName?.split(' ')[0] || 'Conta'}</span>
                 </NavLink>
-                <button onClick={logout} className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/30 hover:text-paper/60' : 'text-faint hover:text-mid'}`}>Sair</button>
               </>
             ) : (
               <>
-                <NavLink href="/entrar" className={`hidden md:block text-[13px] px-2 py-1.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>Entrar</NavLink>
-                <NavLink href="/cadastro" className={`hidden md:flex text-[10px] font-bold tracking-[0.1em] uppercase px-4 py-2 ml-1 border transition-all ${isDark ? 'border-paper/20 text-paper hover:bg-paper/10' : 'border-mist text-ink hover:bg-warm'}`}>
+                <NavLink href="/entrar" className={`hidden md:block text-[13px] px-3 py-1.5 rounded-full transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>Entrar</NavLink>
+                <NavLink href="/cadastro" className={`hidden md:inline-flex items-center h-9 px-4 ml-1 mr-1 rounded-full text-[13px] font-medium transition-colors ${isDark ? 'bg-paper text-ink hover:bg-paper/85' : 'bg-ink text-paper hover:bg-clay'}`}>
                   Cadastrar
                 </NavLink>
               </>
@@ -186,7 +190,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
             {/* Favoritos */}
             {user && (
-              <NavLink href="/favoritos" className={`relative p-2 ml-0.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`} aria-label="Favoritos">
+              <NavLink href="/favoritos" className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`} aria-label="Favoritos">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" />
                 </svg>
@@ -194,14 +198,14 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             )}
 
             {/* Cart */}
-            <NavLink href="/carrinho" className={`relative p-2 ml-0.5 transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`} aria-label={count > 0 ? `Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}` : 'Carrinho'}>
+            <NavLink href="/carrinho" className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`} aria-label={count > 0 ? `Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}` : 'Carrinho'}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
               {count > 0 && (
-                <span key={count} className="animate-badge-bump absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-clay text-paper text-[9px] font-bold flex items-center justify-center leading-none px-[3px] rounded-[2px]">
+                <span key={count} className="animate-badge-bump absolute top-0 right-0 min-w-[17px] h-[17px] bg-clay text-paper text-[9px] font-bold flex items-center justify-center leading-none px-[4px] rounded-full ring-2 ring-paper">
                   {count > 9 ? '9+' : count}
                 </span>
               )}
@@ -213,8 +217,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
         {showFreeShippingBar && (
           <div className="border-t border-mist/60 bg-warm/50">
             <div className="container-shop py-1.5 flex items-center gap-3">
-              <div className="flex-1 h-[3px] bg-mist overflow-hidden rounded-[2px]">
-                <div className="h-full bg-clay transition-all duration-500 ease-out w-[var(--w)]" style={{ '--w': `${progress}%` } as React.CSSProperties} />
+              <div className="flex-1 h-1 bg-mist overflow-hidden rounded-full">
+                <div className="h-full rounded-full bg-clay transition-all duration-500 ease-out w-[var(--w)]" style={{ '--w': `${progress}%` } as React.CSSProperties} />
               </div>
               <span className="text-[10px] font-medium text-mid shrink-0">
                 {freeShippingUnlocked
@@ -241,14 +245,14 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             aria-modal="true"
             aria-label="Menu"
             data-variant="drawer-left"
-            className="overlay-panel absolute top-0 left-0 w-[300px] max-w-[85vw] h-full bg-paper shadow-modal flex flex-col pb-[env(safe-area-inset-bottom)]"
+            className="overlay-panel absolute top-0 left-0 w-[300px] max-w-[85vw] h-full bg-paper rounded-r-3xl overflow-hidden shadow-modal flex flex-col pb-[env(safe-area-inset-bottom)]"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 h-[60px] border-b border-mist">
               <NavLink href="/" onClick={() => setMenuOpen(false)}>
                 <BrandLogo alt="Logo" className="h-9 w-auto object-contain" />
               </NavLink>
-              <button type="button" className="btn-ghost p-2" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
+              <button type="button" className="btn-ghost w-9 h-9 !p-0" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
@@ -257,7 +261,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
             {/* Search mobile */}
             <div className="px-4 py-3 border-b border-mist">
-              <form onSubmit={handleSearch} className="flex items-center gap-2 px-3 h-11 border border-mist-d bg-paper focus-within:border-ink transition-colors duration-150">
+              <form onSubmit={handleSearch} className="flex items-center gap-2 px-4 h-11 rounded-full border border-mist-d bg-paper focus-within:border-ink transition-colors duration-150">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>

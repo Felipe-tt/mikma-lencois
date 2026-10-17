@@ -32,7 +32,7 @@ export function ThemeToggle() {
       onClick={toggle}
       aria-label={dark ? 'Ativar modo claro' : 'Ativar modo escuro'}
       title={dark ? 'Modo claro' : 'Modo escuro'}
-      className="p-2 transition-colors duration-150 text-mid hover:text-ink hover:bg-warm"
+      className="p-2 rounded-full transition-colors duration-150 text-mid hover:text-ink hover:bg-warm"
     >
       {dark ? (
         /* Sol */

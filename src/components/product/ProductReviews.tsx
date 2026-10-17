@@ -91,7 +91,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
         <div className="grid lg:grid-cols-[300px_1fr] gap-10 lg:gap-16 items-start">
           {/* Resumo: média grande, estrelas e distribuição. Antes era uma
               linha solta no canto e a lista ocupava a largura toda. */}
-          <aside className="bg-warm/50 border border-mist p-6">
+          <aside className="bg-warm/50 border border-mist rounded-3xl p-6 sm:p-7">
             {count > 0 ? (
               <>
                 <div className="flex items-end gap-3">
@@ -133,13 +133,13 @@ export function ProductReviews({ productId, initialReviews }: Props) {
 
           <div className="min-w-0">
             {done && (
-              <div role="status" className="border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] px-5 py-4 mb-8 animate-fade-in">
+              <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] px-5 py-4 mb-8 animate-fade-in">
                 Obrigado! Sua avaliação foi publicada.
               </div>
             )}
 
             {formOpen && (
-              <div className="border border-mist px-5 py-5 mb-8 animate-fade-in">
+              <div className="rounded-3xl border border-mist px-5 py-5 sm:px-6 sm:py-6 mb-8 animate-fade-in">
                 <p className="text-[12px] font-semibold text-ink mb-3">Sua nota</p>
                 <div className="flex items-center gap-1 mb-4" onMouseLeave={() => setHoverRating(0)}>
                   {[1, 2, 3, 4, 5].map(n => (
@@ -167,7 +167,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
                   maxLength={1000}
                   rows={3}
                   placeholder="Conte como foi sua experiência com o produto (opcional)"
-                  className="w-full border border-mist-d bg-paper px-3 py-2.5 text-[14px] text-ink placeholder:text-faint focus:outline-none focus:border-ink transition-colors resize-none"
+                  className="w-full rounded-xl border border-mist-d bg-paper px-4 py-3 text-[14px] text-ink placeholder:text-faint focus:outline-none focus:border-ink transition-colors resize-none"
                 />
                 {error && <p role="alert" className="text-xs text-red-600 mt-2">{error}</p>}
                 <div className="flex items-center gap-4 mt-4">
