@@ -241,3 +241,33 @@ export function buildCancelled(
     ].join('\n'),
   };
 }
+
+/** Aviso do cron: pedido sem pagamento há 24h, cancelado em mais 24h. */
+export function buildPaymentReminder(
+  order: { id: string; items: EmailItem[]; totalCents: number },
+  name: string,
+): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
+  const total = formatCurrency(order.totalCents);
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Seu pedido ainda espera o pagamento',
+      html: `
+        ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>. Seu pedido #${id} (${total}) ainda não foi pago.`)}
+        ${emailCallout(`<p style="margin:0;font-size:14px;color:#2C1F14;line-height:1.6;">Se o pagamento não for feito em <strong>24 horas</strong>, o pedido é cancelado e os itens voltam para a loja.</p>`)}
+        ${emailItemsTable(order.items, order.totalCents)}
+        ${emailCta('Pagar agora', url)}`,
+    })}
+    ${emailSignature()}`);
+  return {
+    subject: orderSubject(id, 'aguardando pagamento'),
+    html,
+    text: [
+      `Olá, ${name}. Seu pedido #${id} (${total}) ainda não foi pago.`,
+      'Se o pagamento não for feito em 24 horas, o pedido é cancelado.',
+      '', `Pagar agora: ${url}`,
+    ].join('\n'),
+  };
+}
