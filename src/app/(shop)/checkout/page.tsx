@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { doc, onSnapshot, getDoc, setDoc, collection, query, where, getDocs, documentId } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { setReturnTo } from '@/lib/auth/returnTo';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Cart, Address } from '@/types';
 import { PIXModal } from '@/components/checkout/PIXModal';
@@ -224,7 +225,8 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { router.push('/entrar'); return; }
+    // Volta pro checkout depois do login (antes caía na home).
+    if (!user) { setReturnTo('/checkout'); router.push('/entrar'); return; }
     const unsub = onSnapshot(doc(db, 'carts', user.uid), snap => {
       if (!snap.exists() || !snap.data()?.items?.length) {
         if (!pixShownRef.current) router.push('/carrinho');
@@ -240,6 +242,10 @@ export default function CheckoutPage() {
           c.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0)
         );
       }
+    }, () => {
+      // Leitura do carrinho falhou: sem isso o esqueleto ficava pra sempre.
+      setCL(false);
+      setApiErr('Não conseguimos carregar seu carrinho. Verifique a conexão e recarregue a página.');
     });
     getDoc(doc(db, 'users', user.uid)).then(s => {
       const d = s.data();
@@ -332,6 +338,14 @@ export default function CheckoutPage() {
     if (isValidCep(addr.cep)) quoteShipping(addr.cep);
   }
 
+  // Voltar do pagamento pelo botão do navegador restaura a página do cache
+  // com o botão ainda em "enviando": libera de novo.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setSub(false); };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedShipping || !user || !cart) return;
@@ -361,11 +375,17 @@ export default function CheckoutPage() {
         });
         const d = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(d.error ?? 'Erro ao gerar checkout. Tente novamente.');
+        // Fica "enviando" até a página do pagamento abrir: antes o botão
+        // voltava a ficar clicável durante o redirecionamento e um segundo
+        // clique criava outro pedido.
         window.location.href = d.checkoutUrl;
+        return;
       }
+      setSub(false);
     } catch (err: unknown) {
       setApiErr(err instanceof Error ? err.message : 'Erro ao finalizar pedido.');
-    } finally { setSub(false); }
+      setSub(false);
+    }
   }
 
   const items       = cart?.items ?? [];

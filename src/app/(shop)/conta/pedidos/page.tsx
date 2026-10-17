@@ -109,7 +109,7 @@ export default function PedidosPage() {
             </Link>
             <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-5xl leading-[1.05] tracking-[-0.015em]">Meus pedidos</h1>
           </div>
-          <Link href="/perfil" className="hidden sm:inline-flex items-center h-9 px-4 rounded-full border border-mist-d text-[13px] font-medium text-mid hover:text-ink hover:border-ink hover:bg-paper transition-colors mb-1">
+          <Link href="/perfil" className="inline-flex items-center h-9 px-4 shrink-0 rounded-full border border-mist-d text-[13px] font-medium text-mid hover:text-ink hover:border-ink hover:bg-paper transition-colors mb-1">
             Meus dados
           </Link>
         </div>

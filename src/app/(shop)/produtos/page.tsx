@@ -12,7 +12,9 @@ import { serialize } from '@/lib/utils/serialize';
 // ISR: revalida a cada 5 minutos, reduz invocações de Cloud Functions e leituras Firestore
 export const revalidate = 600;
 
-interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string }> }
+interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string; pagina?: string }> }
+
+const PAGE_SIZE = 48;
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { categoria, q } = await searchParams;
@@ -51,24 +53,43 @@ async function getCategories(): Promise<{ name: string; count: number }[]> {
   return data;
 }
 
-async function getProducts(cat?: string, ordem?: string, search?: string): Promise<Product[]> {
+async function getProducts(cat?: string, ordem?: string, search?: string, page = 1): Promise<{ products: Product[]; hasMore: boolean }> {
   let q = adminDb.collection('products').where('active','==',true);
   if (cat) q = q.where('category','==',cat) as typeof q;
-  // Na busca olha o catálogo inteiro (até 300), não só os 48 mais novos.
-  const snap = await q.orderBy('createdAt','desc').limit(search ? 300 : 48).get();
-  const all = snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
+  // Busca e ordem por preço precisam do catálogo inteiro (até 300): antes
+  // "Menor preço" ordenava só os 48 mais novos. Sem isso, pagina de 48 em 48.
+  const wantsAll = !!search || ordem === 'preco_asc' || ordem === 'preco_desc';
+  const max = wantsAll ? 300 : PAGE_SIZE * page;
+  const snap = await q.orderBy('createdAt','desc').limit(max + 1).get();
+  const hasMore = !wantsAll && snap.size > max;
+  const docs = snap.docs.slice(0, max);
+  const all = docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
   // Antes o termo aparecia no título mas não filtrava nada: toda busca
   // devolvia o catálogo inteiro.
   const products = search ? searchProducts(all, search) : all;
-  if (ordem === 'preco_asc')  return [...products].sort((a, b) => a.price - b.price);
-  if (ordem === 'preco_desc') return [...products].sort((a, b) => b.price - a.price);
-  return products;
+  if (ordem === 'preco_asc')  return { products: [...products].sort((a, b) => a.price - b.price), hasMore };
+  if (ordem === 'preco_desc') return { products: [...products].sort((a, b) => b.price - a.price), hasMore };
+  return { products, hasMore };
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
-  const { categoria, q, ordem } = await searchParams;
+  const { categoria, q, ordem, pagina } = await searchParams;
   const search = q?.trim() || undefined;
-  const [products, categories] = await Promise.all([getProducts(categoria, ordem, search), getCategories()]);
+  const page = Math.min(10, Math.max(1, Number(pagina) || 1));
+  const [{ products, hasMore }, categories] = await Promise.all([getProducts(categoria, ordem, search, page), getCategories()]);
+  // Total real da categoria (a lista pode estar paginada), não só o que veio.
+  const catalogTotal = categoria
+    ? categories.find(c => c.name === categoria)?.count ?? products.length
+    : categories.reduce((n, c) => n + c.count, 0);
+  const shownTotal = search ? products.length : Math.max(products.length, catalogTotal);
+  // Links mantêm busca e ordem (antes a lateral do desktop perdia os dois).
+  const hrefWith = (changes: Record<string, string | undefined>) => {
+    const params = new URLSearchParams();
+    const merged = { categoria, q: search, ordem, ...changes };
+    for (const [k, v] of Object.entries(merged)) if (v) params.set(k, v);
+    const qs = params.toString();
+    return qs ? `/produtos?${qs}` : '/produtos';
+  };
   const catNames = categories.map(c => c.name);
   const heading = search ? `"${search}"` : (categoria ?? 'Todos os produtos');
 
@@ -86,7 +107,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                 {heading}
               </h1>
               <p className="text-[12px] text-faint mt-2 font-mono">
-                {products.length} {search ? (products.length === 1 ? 'resultado' : 'resultados') : (products.length === 1 ? 'produto' : 'produtos')}
+                {shownTotal} {search ? (shownTotal === 1 ? 'resultado' : 'resultados') : (shownTotal === 1 ? 'produto' : 'produtos')}
               </p>
             </div>
             <div className="flex items-center gap-2 pb-1 shrink-0">
@@ -110,20 +131,21 @@ export default async function ProdutosPage({ searchParams }: Props) {
               <div>
                 <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-faint mb-4">Categorias</p>
                 <div className="flex flex-col">
-                  <Link href="/produtos"
+                  <Link href={hrefWith({ categoria: undefined })}
                     className={`flex items-center justify-between rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${
                       !categoria ? 'text-ink font-medium bg-warm' : 'text-mid hover:text-ink hover:bg-warm/60'
                     }`}>
                     <span>Todos</span>
-                    <span className="text-[11px] text-faint">{categories.reduce((s,c)=>s+c.count,0)}</span>
+                    {!search && <span className="text-[11px] text-faint">{categories.reduce((s,c)=>s+c.count,0)}</span>}
                   </Link>
                   {categories.map(cat => (
-                    <Link key={cat.name} href={`/produtos?categoria=${encodeURIComponent(cat.name)}`}
+                    <Link key={cat.name} href={hrefWith({ categoria: cat.name })}
                       className={`flex items-center justify-between rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${
                         categoria === cat.name ? 'text-ink font-medium bg-warm' : 'text-mid hover:text-ink hover:bg-warm/60'
                       }`}>
                       <span>{cat.name}</span>
-                      <span className="text-[11px] text-faint">{cat.count}</span>
+                      {/* Na busca a contagem do catálogo não bate com o resultado */}
+                      {!search && <span className="text-[11px] text-faint">{cat.count}</span>}
                     </Link>
                   ))}
                 </div>
@@ -160,6 +182,14 @@ export default async function ProdutosPage({ searchParams }: Props) {
                 {/* Prioridade alta só nas 2 primeiras (primeira linha no mobile);
                     mais que isso dilui o ganho e disputa banda com o LCP. */}
                 {products.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 2} />)}
+              </div>
+            )}
+            {hasMore && (
+              <div className="mt-14 flex flex-col items-center gap-3">
+                <p className="text-[12.5px] text-faint tabular-nums">Mostrando {products.length} de {shownTotal}</p>
+                <Link href={hrefWith({ pagina: String(page + 1) })} scroll={false} className="btn-outline">
+                  Ver mais produtos
+                </Link>
               </div>
             )}
           </div>

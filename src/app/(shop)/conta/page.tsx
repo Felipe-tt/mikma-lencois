@@ -8,6 +8,7 @@ import { auth, db } from '@/lib/firebase/client';
 import { useWishlist } from '@/lib/hooks/useWishlist';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import { AccountSkeleton } from '@/components/ui/Skeleton';
+import { setReturnTo } from '@/lib/auth/returnTo';
 import type { Address, Order, OrderStatus } from '@/types';
 
 const ICON = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -64,7 +65,7 @@ export default function ContaPage() {
   const [address, setAddress] = useState<Address | null | undefined>(undefined);
 
   useEffect(() => {
-    if (!loading && !user) router.push('/entrar');
+    if (!loading && !user) { setReturnTo('/conta'); router.push('/entrar'); }
   }, [user, loading, router]);
 
   // Últimos pedidos (pro cartão do pedido em andamento e a contagem) e o

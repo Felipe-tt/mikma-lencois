@@ -49,6 +49,9 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
   // de troca sem reserva de estoque correspondente por trás dele.
   const swapSku = chosenFronha && chosenVariant ? `${chosenFronha.id}_${chosenVariant.id}` : undefined;
   const note = swapSku ? `Fronha trocada: ${chosenFronha!.name}` : undefined;
+  // Quantos jogos a fronha escolhida cobre: com 2 fronhas por jogo e 3 em
+  // estoque, dá pra levar 1 jogo com essa troca.
+  const swapMaxQty = chosenFronha ? Math.floor(availableStock(chosenFronha) / fronhaCount) : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -115,6 +118,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
         note={note}
         swapSku={swapSku}
         swapQtyPerUnit={swapSku ? fronhaCount : undefined}
+        maxQty={swapSku ? swapMaxQty : undefined}
       />
     </div>
   );
