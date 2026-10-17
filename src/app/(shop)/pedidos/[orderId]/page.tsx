@@ -447,7 +447,7 @@ export default function OrderDetailPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-ink">{item.productName}</p>
-                      <p className="text-xs text-faint mt-0.5">
+                      <p className="text-xs text-faint mt-0.5 first-letter:uppercase">
                         {item.variant.size}
                         {(item.variant.colorName || item.variant.color) ? ` · ${item.variant.colorName || item.variant.color}` : ''}
                         {item.variant.fabric ? ` · ${item.variant.fabric}` : ''}

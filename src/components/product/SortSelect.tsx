@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/Select';
 
 interface Props { current?: string; }
@@ -11,11 +12,16 @@ export function SortSelect({ current }: Props) {
     { value: 'preco_desc', label: 'Maior preço' },
   ];
 
+  const router = useRouter();
+
+  // Navegação do Next em vez de recarregar a página inteira; volta pra
+  // primeira página da lista quando muda a ordem.
   function handleChange(value: string) {
     const url = new URL(window.location.href);
     if (value) url.searchParams.set('ordem', value);
     else url.searchParams.delete('ordem');
-    window.location.href = url.toString();
+    url.searchParams.delete('pagina');
+    router.push(`${url.pathname}${url.search}`, { scroll: false });
   }
 
   return (
@@ -23,7 +29,7 @@ export function SortSelect({ current }: Props) {
       value={current ?? ''}
       onChange={handleChange}
       options={options}
-      triggerClassName="text-[12px] text-mid border border-mist bg-paper pl-4 pr-3 py-2 cursor-pointer hover:border-ink/20 transition-colors focus:outline-none focus:border-clay/40 rounded-full flex items-center justify-between gap-2 min-w-[150px]"
+      triggerClassName="h-10 text-[12.5px] text-ink border border-mist-d bg-paper pl-4 pr-3 cursor-pointer hover:bg-warm transition-colors focus:outline-none focus:border-clay/40 rounded-full flex items-center justify-between gap-2 min-w-[150px]"
     />
   );
 }

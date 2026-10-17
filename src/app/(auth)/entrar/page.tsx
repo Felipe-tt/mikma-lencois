@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { auth } from '@/lib/firebase/client';
@@ -8,7 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
-import { consumeReturnTo } from '@/lib/auth/returnTo';
+import { consumeReturnTo, peekReturnTo, returnToReason } from '@/lib/auth/returnTo';
 import { Overlay } from '@/components/ui/Overlay';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
@@ -131,6 +131,8 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
 }
 
 
+const noopSubscribe = () => () => {};
+
 export default function LoginPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -146,6 +148,10 @@ export default function LoginPage() {
   // sozinha assim que a pessoa clica no link do e-mail, via polling.
   const [awaitingChallenge, setAwaitingChallenge] = useState(false);
   const [challengeExpired, setChallengeExpired] = useState(false);
+
+  // Por que caiu aqui (ex: tentou abrir o carrinho deslogado). Só no
+  // navegador: no servidor não há sessionStorage.
+  const returnReason = useSyncExternalStore(noopSubscribe, () => returnToReason(peekReturnTo()), () => null);
 
   useEffect(() => { if (user) router.push(consumeReturnTo() ?? '/'); }, [user, router]);
 
@@ -281,6 +287,12 @@ export default function LoginPage() {
               <BrandLogo alt="Mikma" className="h-8 w-auto object-contain" />
             </Link>
 
+            {returnReason && (
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-clay/10 text-clay px-3.5 py-1.5 text-[12.5px] font-medium animate-fade-in">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                {returnReason}
+              </p>
+            )}
             <h1 className="font-display font-normal text-ink text-[2.2rem] mb-2 leading-tight">Entrar</h1>
             <p className="text-[14px] text-mid mb-8">
               Não tem conta?{' '}
@@ -346,7 +358,7 @@ export default function LoginPage() {
                 <div className="relative">
                   <input id="login-senha" type={showPass ? 'text' : 'password'} required value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="input pr-10" placeholder="••••••••" autoComplete="current-password" />
+                    className="input pr-10" placeholder="Sua senha" autoComplete="current-password" />
                   <button type="button" onClick={() => setShowPass(p => !p)} aria-label={showPass ? "Ocultar senha" : "Mostrar senha"} aria-pressed={showPass}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-mid transition-colors">
                     <EyeIcon open={showPass} />

@@ -184,7 +184,7 @@ function Stat({ href, label, value, hint, small }: { href: string; label: string
       {value === undefined ? (
         <span className="skeleton block h-7 w-12 mt-2" />
       ) : (
-        <span className={`block font-display text-ink leading-none mt-2 tabular-nums break-words ${small ? 'text-[1.05rem] sm:text-[1.6rem] leading-tight' : 'text-[1.8rem] sm:text-[2.2rem]'}`}>{value}</span>
+        <span title={typeof value === 'string' ? value : undefined} className={`block font-display text-ink leading-none mt-2 tabular-nums truncate ${small ? 'text-[1.05rem] sm:text-[1.6rem] leading-tight' : 'text-[1.8rem] sm:text-[2.2rem]'}`}>{value}</span>
       )}
       {hint && <span className="block text-[11px] sm:text-[12px] text-faint mt-1.5 truncate">{hint}</span>}
     </Link>

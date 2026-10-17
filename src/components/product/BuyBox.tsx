@@ -214,7 +214,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   return (
     <>
       {/* ── Buy box: cartão único, estilo Amazon/ML, com tudo que decide a compra ── */}
-      <div className="border border-mist bg-paper rounded-3xl p-5 sm:p-7 pb-24 sm:pb-7 flex flex-col gap-5">
+      <div className="border border-mist bg-paper rounded-3xl p-5 sm:p-7 flex flex-col gap-5">
 
         {/* Preço */}
         <div>
@@ -426,7 +426,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           </p>
         )}
         <div className="min-w-0">
-          <p className="text-[15px] font-bold text-ink leading-none">{formatCurrency(product.price)}</p>
+          <p className="font-display text-[1.2rem] text-ink leading-none tabular-nums">{formatCurrency(product.price)}</p>
           {maxInstall > 1 && <p className="text-[10px] text-faint mt-1">{maxInstall}x de {formatCurrency(installVal)}</p>}
         </div>
         {!outOfStock && (

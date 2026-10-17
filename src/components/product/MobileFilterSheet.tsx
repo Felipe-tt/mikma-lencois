@@ -19,7 +19,7 @@ export function MobileFilterSheet({ categories, active }: Props) {
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        className="btn-outline flex items-center gap-2 text-xs py-2 px-4"
+        className="h-10 inline-flex items-center gap-2 rounded-full border border-mist-d bg-paper px-4 text-[12.5px] font-medium text-ink hover:bg-warm active:scale-[0.98] transition-[background-color,transform] duration-150"
       >
         <FilterIcon />
         Filtrar
