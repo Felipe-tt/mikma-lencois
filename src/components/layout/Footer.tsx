@@ -170,7 +170,7 @@ export function Footer({
             © {year} {storeName} · Todos os direitos reservados
           </p>
           <div className="flex items-center gap-4">
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/55 uppercase">Pagamento via PIX</span>
+            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/55 uppercase">PIX · Cartão de crédito</span>
             {storeCity && (
               <>
                 <span aria-hidden className="text-paper/25">·</span>

@@ -268,6 +268,16 @@ export default async function ProductPage({ params }: Props) {
               <h1 className="font-display font-normal text-ink leading-[1.1] text-[1.75rem] sm:text-[2rem]">
                 {product.name}
               </h1>
+              {reviews.length > 0 && (() => {
+                const avg = reviews.reduce((n, r) => n + r.rating, 0) / reviews.length;
+                return (
+                  <a href="#avaliacoes" className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-mid hover:text-ink transition-colors">
+                    <span className="text-clay" aria-hidden="true">★</span>
+                    <span className="font-medium text-ink tabular-nums">{avg.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+                    <span className="underline underline-offset-4 decoration-mist-d">({reviews.length} {reviews.length === 1 ? 'avaliação' : 'avaliações'})</span>
+                  </a>
+                );
+              })()}
             </div>
             {product.category === 'Jogos de cama' && fronhaOptions.length > 0 ? (
               <JogoDeCamaBuyBox
