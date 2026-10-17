@@ -7,6 +7,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { adminCancelSchema } from './schema';
 import { expandStockLines } from '@/lib/orderStockLines';
+import { orderStockLog } from '@/lib/stockHistory';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { uberCancelDelivery } from '@/lib/uber-direct';
 import { notifyOrderCancelled } from '@/lib/email/cancelledEmail';
@@ -121,7 +122,11 @@ export async function POST(
         if (!invSnaps[i].exists) continue;
         tx.update(invRefs[i], mode === 'release'
           ? { reserved: FieldValue.increment(-lines[i].quantity), updatedAt: FieldValue.serverTimestamp() }
-          : { quantity: FieldValue.increment(lines[i].quantity), updatedAt: FieldValue.serverTimestamp() });
+          : {
+              quantity: FieldValue.increment(lines[i].quantity),
+              history: FieldValue.arrayUnion(orderStockLog(orderId, 'order_cancel', lines[i].quantity, i, now)),
+              updatedAt: FieldValue.serverTimestamp(),
+            });
       }
     });
   } catch (err) {

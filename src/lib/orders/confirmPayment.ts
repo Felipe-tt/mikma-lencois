@@ -5,6 +5,7 @@ import { sendEmail } from '@/lib/email';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { expandStockLines } from '@/lib/orderStockLines';
+import { orderStockLog } from '@/lib/stockHistory';
 import { recordShippingCollected } from '@/lib/shipping-ledger';
 import { buildConfirmed } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
@@ -81,6 +82,9 @@ export async function confirmOrderPaid(
         tx.update(orderRef, {
           'payment.lateCaptureTxId': txId,
           'payment.lateCaptureAt': FieldValue.serverTimestamp(),
+          // Entra na lista de estornos pendentes do painel até o lojista
+          // devolver ou marcar o pedido como pago.
+          'payment.refundStatus': 'pending',
           updatedAt: FieldValue.serverTimestamp(),
           timeline: FieldValue.arrayUnion({
             status: data.status,
@@ -128,6 +132,8 @@ export async function confirmOrderPaid(
         'payment.paidAt': FieldValue.serverTimestamp(),
         'payment.txId': txId,
         ...(txMismatch ? { 'payment.txIdMismatch': true, 'payment.previousTxId': registeredTxId } : {}),
+        // Pagamento atrasado aceito: não há mais o que estornar.
+        ...((data.payment as { lateCaptureTxId?: string } | undefined)?.lateCaptureTxId ? { 'payment.refundStatus': FieldValue.delete() } : {}),
         ...(manual ? {
           'payment.confirmedManuallyBy': manual.uid,
           'payment.confirmedManuallyNote': manual.note,
@@ -150,6 +156,7 @@ export async function confirmOrderPaid(
         tx.update(invRefs[i], {
           quantity: FieldValue.increment(-line.quantity),
           ...(wasExpired ? {} : { reserved: FieldValue.increment(-line.quantity) }),
+          history: FieldValue.arrayUnion(orderStockLog(orderId, 'online_sale', line.quantity, i, now)),
           updatedAt: FieldValue.serverTimestamp(),
         });
       });

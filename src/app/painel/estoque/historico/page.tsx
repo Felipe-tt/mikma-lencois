@@ -6,8 +6,9 @@ import { db } from '@/lib/firebase/client';
 import Link from 'next/link';
 import { Select } from '@/components/ui/Select';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
+import { ORDER_STOCK_SOURCE_LABEL, type OrderStockSource } from '@/lib/stockHistory';
 
-type MovementLog = { type: 'in' | 'out' | 'adjust'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
+type MovementLog = { type: 'in' | 'out' | 'adjust'; quantity: number; reason: string; date: string; by?: string; saleId?: string; source?: OrderStockSource };
 type InventoryItem = {
   id: string; productId: string; productName?: string;
   variant: { size: string; fabric: string; color: string; colorName?: string };
@@ -71,6 +72,7 @@ export default function HistoricoEstoquePage() {
       .filter(m => !search
         || m.productName.toLowerCase().includes(search.toLowerCase())
         || m.reason.toLowerCase().includes(search.toLowerCase())
+        || (m.source ? ORDER_STOCK_SOURCE_LABEL[m.source].toLowerCase().includes(search.toLowerCase()) : false)
         || (m.by || '').toLowerCase().includes(search.toLowerCase()))
       .slice(0, 300);
   }, [items, search, typeFilter]);
@@ -146,7 +148,7 @@ export default function HistoricoEstoquePage() {
             { value: 'out', label: 'Só saídas' },
             { value: 'in', label: 'Só entradas' },
           ]}
-          triggerClassName="border border-mist bg-paper px-3 py-2.5 text-sm focus:outline-none rounded-[2px] flex items-center justify-between gap-2 cursor-pointer hover:border-ink/20 transition-all min-w-[160px]"
+          triggerClassName="border border-mist bg-paper px-3 py-2.5 text-sm focus:outline-none rounded-xl flex items-center justify-between gap-2 cursor-pointer hover:border-ink/20 transition-all min-w-[160px]"
         />
       </div>
 
@@ -161,7 +163,14 @@ export default function HistoricoEstoquePage() {
             <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="min-w-0">
                 <p className="text-[13px] font-semibold text-ink truncate">{row.m.productName} <span className="font-normal text-faint">· {row.m.variantLabel}</span></p>
-                <p className="text-[11px] text-faint truncate">{row.m.reason}{row.m.by ? `, ${row.m.by}` : ''}</p>
+                <p className="text-[11px] text-faint truncate">
+                  {row.m.source && (
+                    <span className={`inline-block mr-1.5 px-1.5 py-px rounded-full text-[10px] font-semibold ${row.m.source === 'online_sale' ? 'bg-clay-l/10 text-clay-d' : 'bg-warm text-mid'}`}>
+                      {ORDER_STOCK_SOURCE_LABEL[row.m.source]}
+                    </span>
+                  )}
+                  {row.m.reason}{row.m.by ? `, ${row.m.by}` : ''}
+                </p>
               </div>
               <div className="text-right shrink-0">
                 <p className={`text-[13px] font-bold ${row.m.type === 'out' ? 'text-red-600' : row.m.type === 'adjust' ? 'text-faint' : 'text-emerald-700'}`}>{row.m.type === 'out' ? '−' : row.m.type === 'adjust' ? '±' : '+'}{row.m.quantity}</p>

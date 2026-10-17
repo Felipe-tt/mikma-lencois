@@ -12,8 +12,9 @@ import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Link from 'next/link';
 import { staffActor } from '@/lib/staffActor';
+import { ORDER_STOCK_SOURCE_LABEL, type OrderStockSource } from '@/lib/stockHistory';
 
-type MovementLog = { type: 'in' | 'out' | 'adjust'; quantity: number; reason: string; date: string; by?: string; saleId?: string };
+type MovementLog = { type: 'in' | 'out' | 'adjust'; quantity: number; reason: string; date: string; by?: string; saleId?: string; source?: OrderStockSource };
 type InventoryItem = {
   id: string; productId: string; productName?: string; sku: string;
   variant: { size: string; fabric: string; color: string; colorName?: string };
@@ -195,8 +196,11 @@ export default function EstoquePage() {
     setSubmittingId(item.id);
     const log = baseLog(diff > 0 ? 'in' : 'out', Math.abs(diff), reason || 'Correção manual de contagem');
     try {
+      // Grava a diferença em relação ao que estava na tela, não o valor
+      // absoluto: um pagamento confirmado entre abrir o formulário e salvar
+      // já debitou a peça, e o valor absoluto apagava esse débito.
       await updateDoc(doc(db, 'inventory', item.id), {
-        quantity: newQty,
+        quantity: increment(diff),
         history: arrayUnion(log),
         updatedAt: serverTimestamp(),
       });
@@ -216,7 +220,9 @@ export default function EstoquePage() {
   async function undoLast(item: InventoryItem) {
     // Última movimentação de peças: correções de reserva da auditoria
     // ('adjust') não se desfazem por aqui.
-    const last = [...(item.history ?? [])].reverse().find(m => m.type === 'in' || m.type === 'out');
+    // Movimentações de pedido (venda online, cancelamento) também ficam de
+    // fora: desfazê-las aqui deixaria o estoque diferente do pedido.
+    const last = [...(item.history ?? [])].reverse().find(m => (m.type === 'in' || m.type === 'out') && !m.source);
     if (!last) return;
     const { confirmed } = await confirmDialog({
       message: `Desfazer "${last.type === 'out' ? '−' : '+'}${last.quantity} · ${last.reason}"?`,
@@ -317,8 +323,11 @@ export default function EstoquePage() {
         if (newQty === undefined || newQty === item.quantity) continue;
         const diff = newQty - item.quantity;
         changed++;
+        // Diferença, não valor absoluto: um pagamento confirmado entre a
+        // leitura dos pedidos e o commit já debitou a peça; gravar newQty
+        // apagava esse débito e criava estoque fantasma.
         batch.update(doc(db, 'inventory', item.id), {
-          quantity: newQty,
+          quantity: increment(diff),
           history: arrayUnion(baseLog(diff > 0 ? 'in' : 'out', Math.abs(diff), 'Contagem geral do estoque')),
           updatedAt: serverTimestamp(),
         });
@@ -592,11 +601,11 @@ export default function EstoquePage() {
                         ) : history.map((m, i) => (
                           <div key={i} className="flex items-center justify-between text-[11px]">
                             <span className={m.type === 'out' ? 'text-red-600' : m.type === 'adjust' ? 'text-faint' : 'text-emerald-700'}>
-                              {m.type === 'out' ? '−' : m.type === 'adjust' ? '±' : '+'}{m.quantity} · {m.reason}{m.by ? ` (${m.by})` : ''}
+                              {m.type === 'out' ? '−' : m.type === 'adjust' ? '±' : '+'}{m.quantity} · {m.source ? `${ORDER_STOCK_SOURCE_LABEL[m.source]} · ` : ''}{m.reason}{m.by ? ` (${m.by})` : ''}
                             </span>
                             <span className="text-faint shrink-0 ml-2 flex items-center gap-2">
                               {timeAgo(m.date)}
-                              {i === 0 && (
+                              {i === 0 && m.type !== 'adjust' && !m.source && (
                                 <button onClick={() => undoLast(item)} disabled={busy}
                                   className="text-red-500 underline disabled:opacity-50">
                                   Desfazer

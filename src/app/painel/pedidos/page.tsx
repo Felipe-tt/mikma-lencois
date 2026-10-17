@@ -42,6 +42,7 @@ const FILTERS: { id: string; label: string; Icon?: React.FC<React.SVGProps<SVGSV
   { id: 'shipped',         label: 'A caminho',          Icon: IconTruck },
   { id: 'delivered',       label: 'Entregues',          Icon: IconCheck },
   { id: 'pending_payment', label: 'Aguardando pgto',    Icon: IconHourglass },
+  { id: 'payment_expired', label: 'PIX expirado',       Icon: IconHourglass },
   { id: 'cancelled',       label: 'Cancelados',         Icon: IconX },
 ];
 
@@ -81,7 +82,20 @@ export default function PainelPedidos() {
   const [customers, setCustomers] = useState<Record<string, { name?: string; email?: string }>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [filter, setFilter] = useState('todos');
+  const [filter, setFilterState] = useState('todos');
+  // Filtro na URL (?status=paid): os avisos do início abrem a lista já
+  // filtrada, e voltar do pedido mantém o filtro em que a pessoa estava.
+  // Lido do location depois de montar (useSearchParams exigiria Suspense).
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get('status');
+    if (s && FILTERS.some(f => f.id === s)) setFilterState(s);
+  }, []);
+  function setFilter(id: string) {
+    setFilterState(id);
+    const url = new URL(window.location.href);
+    if (id === 'todos') url.searchParams.delete('status'); else url.searchParams.set('status', id);
+    window.history.replaceState(window.history.state, '', url);
+  }
   const [search, setSearch] = useState('');
   const [dispatching, setDispatching] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -256,10 +270,13 @@ export default function PainelPedidos() {
 
   const needActionCount  = active.filter(o => o.status === 'paid').length;
   const cancelledCount   = orders.filter(o => o.status === 'cancelled').length;
-  const todayCount       = orders.filter(o => {
-    const d = o.createdAt;
-    if (!d) return false;
-    const date = typeof d === 'object' && 'seconds' in d ? new Date((d as {seconds:number}).seconds * 1000) : new Date(d as string);
+  // Mesmo critério do início: pagos hoje (antes contava também cancelados
+  // e PIX não pagos criados hoje, e os dois números não batiam).
+  const todayCount       = [...active, ...page].filter((o, i, all) => {
+    if (all.findIndex(x => x.id === o.id) !== i) return false;
+    const d = o.payment?.paidAt as unknown;
+    if (!d || o.status === 'cancelled') return false;
+    const date = typeof d === 'object' && 'seconds' in (d as object) ? new Date((d as {seconds:number}).seconds * 1000) : new Date(d as string);
     return date.toDateString() === new Date().toDateString();
   }).length;
 
@@ -274,7 +291,7 @@ export default function PainelPedidos() {
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Pedidos</h1>
           <p className="text-[13px] text-faint mt-1">
-            {todayCount} pedido{todayCount === 1 ? '' : 's'} hoje
+            {todayCount} pedido{todayCount === 1 ? '' : 's'} pago{todayCount === 1 ? '' : 's'} hoje
           </p>
         </div>
       </div>
@@ -303,7 +320,7 @@ export default function PainelPedidos() {
             if (count === 0 && filter !== f.id) return null;
             return (
               <button key={f.id} onClick={() => setFilter(f.id)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border transition-colors ${ filter === f.id ? 'bg-ink text-paper border-ink' : 'bg-paper text-mid border-mist hover:bg-warm' } rounded-xl`}>
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border transition-colors ${ filter === f.id ? 'bg-ink text-paper border-ink' : 'bg-paper text-mid border-mist hover:bg-warm' } rounded-full`}>
                 {f.Icon && <f.Icon size={11} className="shrink-0" />}
                 {f.label}
                 {count !== null && <span className={`text-[9px] font-bold ${filter === f.id ? 'opacity-40' : 'opacity-50'}`}>{count}</span>}

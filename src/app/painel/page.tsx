@@ -6,7 +6,7 @@ import type { Order } from '@/types';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import Link from 'next/link';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
-import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProducts, IconArrowRight } from '@/components/ui/Icon';
+import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProducts, IconArrowRight, IconTruck } from '@/components/ui/Icon';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { useAuth } from '@/lib/auth/AuthContext';
 
@@ -49,6 +49,9 @@ export default function PainelDashboard() {
   // Pedidos que pedem ação, sem corte de data: um pedido pago no dia 31
   // sumia do aviso "para separar" no dia 1º.
   const [pending, setPending] = useState<Order[] | null>(null);
+  // Pedidos pagos e cancelados (ou pagos depois do cancelamento) com o
+  // dinheiro ainda por devolver.
+  const [refunds, setRefunds] = useState<Order[] | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
@@ -63,26 +66,39 @@ export default function PainelDashboard() {
       err => { console.error('[painel] pedidos do mês:', err); setMonthly([]); setLoadError(true); }
     );
     const unsubPending = onSnapshot(
-      query(collection(db, 'orders'), where('status', 'in', ['paid', 'pending_payment'])),
+      query(collection(db, 'orders'), where('status', 'in', ['paid', 'preparing', 'pending_payment'])),
       snap => setPending(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))),
       err => { console.error('[painel] pedidos pendentes:', err); setPending([]); setLoadError(true); }
     );
-    return () => { unsubRecent(); unsubMonthly(); unsubPending(); };
+    const unsubRefunds = onSnapshot(
+      query(collection(db, 'orders'), where('payment.refundStatus', '==', 'pending')),
+      snap => setRefunds(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))),
+      err => { console.error('[painel] estornos pendentes:', err); setRefunds([]); }
+    );
+    return () => { unsubRecent(); unsubMonthly(); unsubPending(); unsubRefunds(); };
   }, []);
 
   // Sem isso, uma falha de rede/permissão mostrava a tela zerada como se
   // não houvesse nenhuma venda.
   if (loadError) return <PanelErrorState message="Não foi possível carregar o resumo da loja." onRetry={() => window.location.reload()} />;
-  if (recent === null || monthly === null || pending === null) return <DashboardSkeleton />;
+  if (recent === null || monthly === null || pending === null || refunds === null) return <DashboardSkeleton />;
 
   // Só pedidos efetivamente pagos (antes payment_expired entrava como receita).
   const PAID = new Set(['paid', 'preparing', 'shipped', 'delivered']);
   const counted = monthly.filter(o => PAID.has(o.status));
-  const todayStr = startOfTodayISO();
-  const today = counted.filter(o => o.createdAt >= todayStr);
+  // "Hoje" é pelo dia do PAGAMENTO: um PIX gerado ontem e pago hoje é
+  // venda de hoje. Pedido sem paidAt (antigos) cai no createdAt.
+  const todayStart = Date.parse(startOfTodayISO());
+  const paidMs = (o: Order) => {
+    const p = o.payment?.paidAt as unknown;
+    if (p && typeof p === 'object' && 'seconds' in p) return (p as { seconds: number }).seconds * 1000;
+    return Date.parse(String(p ?? o.createdAt)) || 0;
+  };
+  const today = counted.filter(o => paidMs(o) >= todayStart);
 
   const waiting = pending.filter(o => o.status === 'pending_payment').length;
   const needAction = pending.filter(o => o.status === 'paid').length;
+  const readyToShip = pending.filter(o => o.status === 'preparing').length;
 
   const kpis = [
     { label: 'Pedidos hoje',    value: today.length,                                      fmt: 'n' as const, desc: 'pedidos pagos',  Icon: IconBox },
@@ -101,10 +117,28 @@ export default function PainelDashboard() {
         </p>
       </div>
 
-      {(waiting > 0 || needAction > 0) && (
+      {(waiting > 0 || needAction > 0 || readyToShip > 0 || refunds.length > 0) && (
         <div className="flex flex-col gap-2.5 mb-7">
+          {refunds.length > 0 && (
+            <Link href={refunds.length === 1 ? `/painel/pedidos/${refunds[0].id}` : '/painel/pedidos?status=cancelled'} className="group flex items-center justify-between gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-300 px-5 py-4 rounded-2xl hover:bg-red-100 dark:hover:bg-red-500/15 transition-colors duration-200">
+              <span className="flex items-center gap-3 min-w-0">
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-red-500/15 shrink-0">
+                  <IconMoney size={17} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-bold">
+                    {refunds.length} {refunds.length === 1 ? 'estorno pendente' : 'estornos pendentes'}
+                  </span>
+                  <span className="block text-[11px] opacity-75">
+                    {formatCurrency(refunds.reduce((s, o) => s + o.totalCents, 0))} a devolver para clientes de pedidos cancelados
+                  </span>
+                </span>
+              </span>
+              <IconArrowRight size={16} className="shrink-0 opacity-50 group-hover:opacity-90 transition-opacity" />
+            </Link>
+          )}
           {needAction > 0 && (
-            <Link href="/painel/pedidos" className="group flex items-center justify-between gap-3 bg-clay-l text-paper px-5 py-4 rounded-2xl hover:bg-clay-d transition-colors duration-200 shadow-card hover:shadow-card-hover">
+            <Link href="/painel/pedidos?status=paid" className="group flex items-center justify-between gap-3 bg-clay-l text-paper px-5 py-4 rounded-2xl hover:bg-clay-d transition-colors duration-200 shadow-card hover:shadow-card-hover">
               <span className="flex items-center gap-3 min-w-0">
                 <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-paper/15 shrink-0">
                   <IconBox size={17} />
@@ -119,8 +153,24 @@ export default function PainelDashboard() {
               <IconArrowRight size={16} className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" />
             </Link>
           )}
+          {readyToShip > 0 && (
+            <Link href="/painel/pedidos?status=preparing" className="group flex items-center justify-between gap-3 bg-paper border border-mist text-ink px-5 py-4 rounded-2xl hover:bg-warm transition-colors duration-200">
+              <span className="flex items-center gap-3 min-w-0">
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-warm shrink-0">
+                  <IconTruck size={17} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-bold">
+                    {readyToShip} {readyToShip === 1 ? 'pedido separado' : 'pedidos separados'}, pronto{readyToShip === 1 ? '' : 's'} para despachar
+                  </span>
+                  <span className="block text-[11px] text-faint">Poste nos Correios ou chame o motoboy e informe no pedido</span>
+                </span>
+              </span>
+              <IconArrowRight size={16} className="shrink-0 text-faint opacity-60 group-hover:opacity-100 transition-opacity" />
+            </Link>
+          )}
           {waiting > 0 && (
-            <Link href="/painel/pedidos" className="group flex items-center justify-between gap-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 px-5 py-4 rounded-2xl hover:bg-amber-100 dark:hover:bg-amber-500/15 transition-colors duration-200">
+            <Link href="/painel/pedidos?status=pending_payment" className="group flex items-center justify-between gap-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 px-5 py-4 rounded-2xl hover:bg-amber-100 dark:hover:bg-amber-500/15 transition-colors duration-200">
               <span className="flex items-center gap-3 min-w-0">
                 <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-amber-500/15 shrink-0">
                   <IconHourglass size={17} />
