@@ -109,7 +109,7 @@ export default function PerfilPage() {
 
       <div className="container-shop py-12 max-w-lg">
         {/* Dados pessoais */}
-        <div className="border border-mist p-6 mb-4">
+        <div className="rounded-2xl border border-mist p-6 mb-4">
           <h2 className="font-sans text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-5">Dados pessoais</h2>
           <div className="flex flex-col gap-4">
             <div>
@@ -135,11 +135,11 @@ export default function PerfilPage() {
         </div>
 
         {error && (
-          <p role="alert" className="mb-4 border border-red-200 bg-red-50 text-red-700 text-[13px] px-4 py-3">{error}</p>
+          <p role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 text-red-700 text-[13px] px-4 py-3">{error}</p>
         )}
 
         {/* LGPD */}
-        <div className="border border-mist p-6 mb-4">
+        <div className="rounded-2xl border border-mist p-6 mb-4">
           <h2 className="font-sans text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-2">Privacidade e dados (LGPD)</h2>
           <p className="text-[13px] text-mid mb-5 leading-relaxed">
             Você tem direito de exportar todos os seus dados ou solicitar a exclusão completa da sua conta.
@@ -150,7 +150,7 @@ export default function PerfilPage() {
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
-              className="border border-red-200 text-red-600 px-4 py-2 text-[13px] font-medium hover:bg-red-50 transition-colors"
+              className="rounded-full border border-red-200 text-red-600 px-5 py-2 text-[13px] font-medium hover:bg-red-50 transition-colors"
             >
               Excluir conta
             </button>
@@ -159,7 +159,7 @@ export default function PerfilPage() {
 
         {/* Confirmação de exclusão */}
         {confirmDelete && (
-          <div className="border border-red-200 bg-red-50 p-5 mb-4">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 mb-4">
             <p className="text-[13px] font-semibold text-red-800 mb-1">Tem certeza?</p>
             <p className="text-[12px] text-red-600 mb-4 leading-relaxed">
               Esta ação é irreversível. Todos os seus dados serão removidos permanentemente.
@@ -168,7 +168,7 @@ export default function PerfilPage() {
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="bg-red-600 text-white px-4 py-2.5 text-[13px] font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="rounded-full bg-red-600 text-white px-5 py-2.5 text-[13px] font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
                 {deleting ? 'Excluindo…' : 'Sim, excluir minha conta'}
               </button>

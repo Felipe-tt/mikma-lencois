@@ -117,7 +117,7 @@ export default function PedidosPage() {
 
       <div className="container-shop py-8 sm:py-12 pb-20 max-w-3xl">
         {listError ? (
-          <div role="alert" className="border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-4 flex items-center justify-between gap-3">
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-4 flex items-center justify-between gap-3">
             <span>Não foi possível carregar seus pedidos. Verifique sua conexão.</span>
             <button type="button" onClick={() => window.location.reload()} className="shrink-0 text-xs font-semibold underline underline-offset-2">Tentar de novo</button>
           </div>
@@ -133,16 +133,16 @@ export default function PedidosPage() {
         ) : (
           <div className="flex flex-col gap-4">
             {orders.map(order => (
-              <div key={order.id} className="border border-mist bg-paper">
+              <div key={order.id} className="rounded-2xl overflow-hidden border border-mist bg-paper">
                 {/* Header do pedido */}
                 <div className="flex items-start justify-between gap-4 px-5 sm:px-6 pt-5 sm:pt-6 pb-4">
                   <div className="flex items-start gap-4">
                     {/* Thumbnail do primeiro item */}
                     {order.items[0]?.image && (
-                      <div className="relative w-12 h-[60px] shrink-0 overflow-hidden bg-warm border border-mist/60">
+                      <div className="relative w-12 h-[60px] shrink-0 overflow-hidden rounded-lg bg-warm border border-mist/60">
                         <img src={order.items[0].image} alt={order.items[0].productName} className="w-full h-full object-cover" />
                         {order.items.length > 1 && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-ink/80 text-paper text-[9px] font-bold flex items-center justify-center rounded-[1px]">
+                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-ink/80 text-paper text-[9px] font-bold flex items-center justify-center rounded-full">
                             +{order.items.length - 1}
                           </span>
                         )}

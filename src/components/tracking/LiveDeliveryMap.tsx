@@ -101,7 +101,7 @@ export function LiveDeliveryMap({ routePoints, courierLat, courierLng, courierLo
 
   if (!hasRoute && !hasCourier) {
     return (
-      <div className="h-56 flex items-center justify-center bg-paper border border-mist text-[12px] text-faint">
+      <div className="h-56 flex items-center justify-center rounded-2xl bg-paper border border-mist text-[12px] text-faint">
         Mapa aparece assim que o motoboy for atribuído.
       </div>
     );
@@ -111,7 +111,7 @@ export function LiveDeliveryMap({ routePoints, courierLat, courierLng, courierLo
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div ref={containerRef} className="h-56 w-full border border-mist" />
+      <div ref={containerRef} className="h-56 w-full rounded-2xl overflow-hidden border border-mist" />
       {isStale && (
         <p className="text-[11px] text-faint">Última posição recebida há um tempo. Pode estar desatualizada.</p>
       )}

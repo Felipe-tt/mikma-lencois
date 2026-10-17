@@ -161,7 +161,7 @@ export function ConfirmDialogHost() {
         aria-labelledby="confirm-dialog-message"
         aria-describedby={detail ? 'confirm-dialog-detail' : undefined}
         data-variant="dialog"
-        className="overlay-panel bg-paper w-full max-w-[400px] shadow-2xl rounded-none overflow-hidden"
+        className="overlay-panel bg-paper w-full max-w-[400px] shadow-2xl rounded-3xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header stripe */}
@@ -187,7 +187,7 @@ export function ConfirmDialogHost() {
               onChange={e => setInputValue(e.target.value)}
               placeholder={inputPlaceholder ?? ''}
               onKeyDown={e => { if (e.key === 'Enter') resolve(true); }}
-              className="mt-4 w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] outline-none focus:border-clay focus:ring-2 focus:ring-clay/20 transition-[border-color,box-shadow] duration-150 placeholder:text-faint"
+              className="mt-4 w-full rounded-xl border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] outline-none focus:border-clay focus:ring-2 focus:ring-clay/20 transition-[border-color,box-shadow] duration-150 placeholder:text-faint"
             />
           )}
         </div>
@@ -198,7 +198,7 @@ export function ConfirmDialogHost() {
             <button
               type="button"
               onClick={() => resolve(false)}
-              className="px-4 py-2 text-[12px] font-semibold text-mid border border-mist hover:bg-warm hover:text-ink active:scale-[0.97] transition-[background-color,color,transform] duration-150"
+              className="px-5 py-2.5 rounded-full text-[12px] font-semibold text-mid border border-mist hover:bg-warm hover:text-ink active:scale-[0.97] transition-[background-color,color,transform] duration-150"
             >
               {cancelLabel ?? 'Cancelar'}
             </button>
@@ -207,7 +207,7 @@ export function ConfirmDialogHost() {
             ref={confirmBtnRef}
             type="button"
             onClick={() => resolve(true)}
-            className={`px-4 py-2 text-[12px] font-semibold active:scale-[0.97] transition-[background-color,transform] duration-150 ${confirmCls}`}
+            className={`px-5 py-2.5 rounded-full text-[12px] font-semibold active:scale-[0.97] transition-[background-color,transform] duration-150 ${confirmCls}`}
           >
             {confirmLabel ?? (alertOnly ? 'OK' : 'Confirmar')}
           </button>

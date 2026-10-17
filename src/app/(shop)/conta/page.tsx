@@ -62,7 +62,7 @@ export default function ContaPage() {
       </div>
 
       <div className="container-shop py-8 sm:py-12 pb-20">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-mist border border-mist">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-mist border border-mist rounded-2xl overflow-hidden">
           {LINKS.map(({ href, label, desc, icon }) => (
             <Link
               key={href}

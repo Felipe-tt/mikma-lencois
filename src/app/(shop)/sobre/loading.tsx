@@ -20,7 +20,7 @@ export default function SobreLoading() {
           </div>
           <div className="flex flex-col gap-4">
             {[1,2,3].map(i => (
-              <div key={i} className="border border-mist px-6 py-5">
+              <div key={i} className="border border-mist rounded-2xl px-6 py-5">
                 <Skeleton className="h-2.5 w-20 mb-3" />
                 <Skeleton className="h-7 w-32" />
               </div>

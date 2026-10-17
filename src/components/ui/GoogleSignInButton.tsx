@@ -28,7 +28,7 @@ export function GoogleSignInButton({ onError }: Props) {
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className="w-full flex items-center justify-center gap-3 border border-mist bg-paper hover:bg-warm transition-colors py-3 px-4 text-sm font-medium text-ink disabled:opacity-60"
+      className="w-full flex items-center justify-center gap-3 rounded-full border border-mist bg-paper hover:bg-warm transition-colors py-3 px-4 text-sm font-medium text-ink disabled:opacity-60"
     >
       {loading ? (
         <span className="spinner-dark w-5 h-5" />

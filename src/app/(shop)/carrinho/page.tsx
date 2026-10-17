@@ -230,7 +230,7 @@ export default function CartPage() {
           {/* ── Itens ── */}
           <div>
             {itemError && (
-              <p role="alert" className="mb-2 border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-3">{itemError}</p>
+              <p role="alert" className="mb-2 rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-3">{itemError}</p>
             )}
             <div className="divide-y divide-mist/70">
               {items.map(item => {
@@ -241,7 +241,7 @@ export default function CartPage() {
                   className={`flex gap-4 sm:gap-5 py-6 transition-opacity ${removing === lineKey ? 'opacity-40 pointer-events-none' : ''}`}
                 >
                   {/* Imagem */}
-                  <Link href={`/produtos/${item.productId}`} className="relative shrink-0 w-20 h-24 sm:w-24 sm:h-28 bg-warm overflow-hidden border border-mist/60 block">
+                  <Link href={`/produtos/${item.productId}`} className="relative shrink-0 w-20 h-24 sm:w-24 sm:h-28 rounded-xl bg-warm overflow-hidden border border-mist/60 block">
                     {item.image
                       ? <Image src={item.image} alt={item.productName} fill sizes="96px" className="object-cover hover:scale-105 transition-transform duration-300" />
                       : <div className="h-full flex items-center justify-center"><span className="font-display text-2xl text-faint/30">M</span></div>
@@ -300,7 +300,7 @@ export default function CartPage() {
                     >
                       Remover
                     </button>
-                    <div className="flex items-center border border-mist">
+                    <div className="flex items-center rounded-full border border-mist overflow-hidden">
                       <button
                         onClick={() => updateQty(item.sku, item.quantity - 1, item.note)}
                         className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
@@ -337,7 +337,7 @@ export default function CartPage() {
                   Adicionar cupom de desconto
                 </button>
               ) : couponApplied ? (
-                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-sm">
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-2xl">
                   <div className="flex items-center gap-2.5">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                     <div>
@@ -362,7 +362,7 @@ export default function CartPage() {
                     <button
                       onClick={applyCoupon}
                       disabled={couponLoading || !couponCode.trim()}
-                      className="min-w-[84px] inline-flex items-center justify-center px-4 py-2.5 bg-ink text-paper text-xs font-bold tracking-[0.08em] uppercase disabled:opacity-50 disabled:pointer-events-none hover:bg-clay active:scale-[0.97] transition-[background-color,transform] duration-150"
+                      className="min-w-[84px] inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-ink text-paper text-xs font-bold tracking-[0.08em] uppercase disabled:opacity-50 disabled:pointer-events-none hover:bg-clay active:scale-[0.97] transition-[background-color,transform] duration-150"
                     >
                       {couponLoading ? <span className="spinner-sm" /> : 'Aplicar'}
                     </button>
@@ -379,7 +379,7 @@ export default function CartPage() {
 
           {/* ── Resumo, sticky ── */}
           <div className="w-full lg:sticky lg:top-6">
-            <div className="border border-mist bg-warm/30">
+            <div className="rounded-2xl overflow-hidden border border-mist bg-warm/30">
               <div className="px-5 py-4 border-b border-mist">
                 <h2 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-faint">Resumo do pedido</h2>
               </div>
@@ -421,7 +421,7 @@ export default function CartPage() {
                 ) : (
                   <Link
                     href="/checkout"
-                    className="flex items-center justify-center w-full h-14 bg-ink text-paper text-sm font-semibold tracking-[0.05em] hover:bg-clay transition-colors duration-200 active:scale-[0.99]"
+                    className="flex items-center justify-center w-full h-14 rounded-full bg-ink text-paper text-sm font-semibold tracking-[0.05em] hover:bg-clay transition-colors duration-200 active:scale-[0.99]"
                   >
                     Finalizar compra
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-2 opacity-60">

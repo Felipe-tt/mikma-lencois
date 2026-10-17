@@ -247,9 +247,9 @@ export function AuthModal() {
         aria-modal="true"
         aria-label={mode === 'login' ? 'Entrar na sua conta' : mode === 'signup' ? 'Criar conta' : 'Recuperar senha'}
         data-variant="dialog"
-        className="overlay-panel relative w-full max-w-[420px] bg-paper shadow-2xl p-7 sm:p-9 max-h-[90dvh] overflow-y-auto overscroll-contain"
+        className="overlay-panel relative w-full max-w-[420px] bg-paper shadow-2xl rounded-3xl p-7 sm:p-9 max-h-[90dvh] overflow-y-auto overscroll-contain"
       >
-        <button type="button" onClick={close} aria-label="Fechar" className="absolute top-3 right-3 w-9 h-9 flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150">
+        <button type="button" onClick={close} aria-label="Fechar" className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
@@ -279,22 +279,22 @@ export function AuthModal() {
             </p>
 
             {challengeExpired && (
-              <div className="mb-5 px-4 py-3 bg-amber-50 border border-amber-200 text-sm text-amber-700 flex items-center gap-2 rounded-sm">
+              <div className="mb-5 px-4 py-3 bg-amber-50 border border-amber-200 text-sm text-amber-700 flex items-center gap-2 rounded-xl">
                 <IconAlert size={16} className="shrink-0" />
                 O link de confirmação expirou. Tente entrar novamente.
               </div>
             )}
 
             {loginError && (
-              <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-center gap-2 rounded-sm">
+              <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-center gap-2 rounded-xl">
                 <IconAlert size={16} className="shrink-0" />
                 {loginError}
               </div>
             )}
 
             {awaitingChallenge ? (
-              <div className="border border-mist bg-warm px-6 py-8 text-center">
-                <div className="w-14 h-14 bg-clay/10 flex items-center justify-center mx-auto mb-5">
+              <div className="border border-mist bg-warm rounded-2xl px-6 py-8 text-center">
+                <div className="w-14 h-14 rounded-full bg-clay/10 flex items-center justify-center mx-auto mb-5">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                     <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
                   </svg>
@@ -364,7 +364,7 @@ export function AuthModal() {
                 </p>
 
                 {signupError && (
-                  <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-center gap-2 rounded-sm">
+                  <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 flex items-center gap-2 rounded-xl">
                     <IconAlert size={16} className="shrink-0" />
                     {signupError}
                   </div>
@@ -415,7 +415,7 @@ export function AuthModal() {
 
             {signupStep === 'awaiting' && (
               <>
-                <div className="w-14 h-14 bg-clay/10 flex items-center justify-center mx-auto mb-5">
+                <div className="w-14 h-14 rounded-full bg-clay/10 flex items-center justify-center mx-auto mb-5">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                     <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
                   </svg>
@@ -427,7 +427,7 @@ export function AuthModal() {
                 </p>
 
                 {signupError && (
-                  <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 rounded-sm">{signupError}</div>
+                  <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 rounded-xl">{signupError}</div>
                 )}
 
                 <div className="text-center">
@@ -474,7 +474,7 @@ export function AuthModal() {
 
             {forgotStep === 'sent' && (
               <>
-                <div className="w-14 h-14 bg-clay/10 flex items-center justify-center mb-5">
+                <div className="w-14 h-14 rounded-full bg-clay/10 flex items-center justify-center mb-5">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                     <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
                   </svg>

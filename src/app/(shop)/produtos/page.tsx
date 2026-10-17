@@ -105,7 +105,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                 <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-faint mb-4">Categorias</p>
                 <div className="flex flex-col">
                   <Link href="/produtos"
-                    className={`flex items-center justify-between px-3 py-2 text-[13px] transition-colors duration-150 ${
+                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${
                       !categoria ? 'text-ink font-medium bg-warm' : 'text-mid hover:text-ink hover:bg-warm/60'
                     }`}>
                     <span>Todos</span>
@@ -113,7 +113,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                   </Link>
                   {categories.map(cat => (
                     <Link key={cat.name} href={`/produtos?categoria=${encodeURIComponent(cat.name)}`}
-                      className={`flex items-center justify-between px-3 py-2 text-[13px] transition-colors duration-150 ${
+                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${
                         categoria === cat.name ? 'text-ink font-medium bg-warm' : 'text-mid hover:text-ink hover:bg-warm/60'
                       }`}>
                       <span>{cat.name}</span>

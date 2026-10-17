@@ -35,7 +35,7 @@ export function MobileFilterSheet({ categories, active }: Props) {
             aria-modal="true"
             aria-labelledby="filter-sheet-title"
             data-variant="sheet"
-            className="overlay-panel w-full bg-paper border-t border-mist shadow-2xl max-h-[75dvh] flex flex-col pb-[env(safe-area-inset-bottom)]"
+            className="overlay-panel w-full bg-paper border-t border-mist rounded-t-3xl overflow-hidden shadow-2xl max-h-[75dvh] flex flex-col pb-[env(safe-area-inset-bottom)]"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-mist shrink-0">
@@ -44,7 +44,7 @@ export function MobileFilterSheet({ categories, active }: Props) {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Fechar filtros"
-                className="w-9 h-9 -mr-2 flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150"
+                className="w-9 h-9 -mr-2 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12"/>

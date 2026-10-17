@@ -245,7 +245,7 @@ export default function OrderDetailPage() {
           <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
             Rastreamento
           </h2>
-          <div className="border border-mist p-5">
+          <div className="rounded-2xl border border-mist p-5">
             <TrackingTimeline
               trackingCode={useCorreiosTracking ? trackCode : undefined}
               orderId={useCorreiosTracking ? undefined : orderId}
@@ -261,7 +261,7 @@ export default function OrderDetailPage() {
           <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
             Acompanhe a entrega
           </h2>
-          <div className="border border-mist p-5 flex flex-col gap-4">
+          <div className="rounded-2xl border border-mist p-5 flex flex-col gap-4">
             {order.delivery?.courierName ? (
               <div className="flex items-center gap-3">
                 {order.delivery.courierPhoto ? (
@@ -305,7 +305,7 @@ export default function OrderDetailPage() {
                 href={order.delivery.trackingUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-paper text-[13px] font-semibold hover:bg-ink/80 transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-full bg-ink text-paper text-[13px] font-semibold hover:bg-ink/80 transition-colors"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
                 Abrir rastreio da Uber em outra aba
@@ -330,7 +330,7 @@ export default function OrderDetailPage() {
               Pedido #{order.id.slice(-8).toUpperCase()}
             </h1>
             {isCancelled && (
-              <span className="text-xs font-bold text-red-600 border border-red-200 bg-red-50 px-2.5 py-1">
+              <span className="text-xs font-bold text-red-600 rounded-full border border-red-200 bg-red-50 px-2.5 py-1">
                 Cancelado
               </span>
             )}
@@ -354,7 +354,7 @@ export default function OrderDetailPage() {
                     }`} />
                   )}
                   {/* círculo */}
-                  <div className={`relative z-10 w-9 h-9 flex items-center justify-center text-sm border-2 transition-all ${
+                  <div className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center text-sm border-2 transition-all ${
                     i < currentStep
                       ? 'bg-clay-l border-clay-l text-paper'
                       : i === currentStep
@@ -387,7 +387,7 @@ export default function OrderDetailPage() {
 
         {/* ── PIX expirado: gerar outro sem refazer o pedido ───────── */}
         {order.payment.method === 'pix' && (order.status === 'payment_expired' || (order.status === 'pending_payment' && !order.payment.pixCopyPaste)) && (
-          <div className="mb-8 border border-amber-200 bg-amber-50/50 p-6 flex flex-col items-center gap-3 text-center">
+          <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50/50 p-6 flex flex-col items-center gap-3 text-center">
             <p className="text-sm font-semibold text-ink">
               {order.status === 'payment_expired' ? 'O PIX deste pedido expirou' : 'Pague para confirmar o pedido'}
             </p>
@@ -403,13 +403,13 @@ export default function OrderDetailPage() {
 
         {/* ── PIX pendente ─────────────────────────────────────────── */}
         {order.status === 'pending_payment' && order.payment.method === 'pix' && order.payment.pixCopyPaste && (
-          <div className="mb-8 border border-amber-200 bg-amber-50/50 p-6 flex flex-col items-center gap-4">
+          <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50/50 p-6 flex flex-col items-center gap-4">
             <p className="text-sm font-semibold text-ink">Pague para confirmar o pedido</p>
             <p className="text-xs text-mid">
               Total: <span className="font-bold text-ink">{formatCurrency(order.totalCents)}</span>
             </p>
             {order.payment.pixQrCode && (
-              <img src={order.payment.pixQrCode} alt="QR Code PIX" className="w-44 h-44 border border-mist bg-white p-2" />
+              <img src={order.payment.pixQrCode} alt="QR Code PIX" className="w-44 h-44 rounded-xl border border-mist bg-white p-2" />
             )}
             <div className="w-full flex gap-2">
               <input readOnly value={order.payment.pixCopyPaste}
@@ -432,7 +432,7 @@ export default function OrderDetailPage() {
             {/* Itens */}
             <section>
               <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Itens</h2>
-              <div className="flex flex-col divide-y divide-mist border border-mist">
+              <div className="flex flex-col divide-y divide-mist rounded-2xl border border-mist overflow-hidden">
                 {order.items.map(item => (
                   <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex justify-between items-center px-5 py-4 gap-4">
                     <div>
@@ -467,7 +467,7 @@ export default function OrderDetailPage() {
             {timeline.length > 0 && (
               <section>
                 <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Histórico</h2>
-                <div className="border border-mist p-5">
+                <div className="rounded-2xl border border-mist p-5">
                   <div className="relative">
                     {timeline.length > 1 && (
                       <div className="absolute left-[15px] top-4 bottom-4 w-px bg-mist" />
@@ -506,7 +506,7 @@ export default function OrderDetailPage() {
 
             {/* Entrega */}
             {carrier && carrier !== 'pickup' && (
-              <section className="border border-mist p-5">
+              <section className="rounded-2xl border border-mist p-5">
                 <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Entrega</h2>
                 <p className="text-sm font-medium text-ink">{carrierName(carrier)}</p>
                 {order.delivery?.dispatchedAt && (
@@ -535,7 +535,7 @@ export default function OrderDetailPage() {
                     <button
                       onClick={confirmReceived}
                       disabled={confirmingReceived}
-                      className="w-full bg-ink text-paper text-[13px] font-bold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors"
+                      className="w-full rounded-full bg-ink text-paper text-[13px] font-bold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors"
                     >
                       {confirmingReceived ? 'Confirmando…' : 'Já recebi meu pedido'}
                     </button>
@@ -551,14 +551,14 @@ export default function OrderDetailPage() {
             )}
 
             {carrier === 'pickup' && (
-              <section className="border border-mist p-5">
+              <section className="rounded-2xl border border-mist p-5">
                 <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-2">Entrega</h2>
                 <p className="text-sm text-ink">Retirada na loja</p>
               </section>
             )}
 
             {/* Endereço */}
-            <section className="border border-mist p-5">
+            <section className="rounded-2xl border border-mist p-5">
               <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Endereço</h2>
               <address className="text-sm text-mid not-italic leading-relaxed">
                 {order.address.street}, {order.address.number}
@@ -569,7 +569,7 @@ export default function OrderDetailPage() {
             </section>
 
             {/* Pagamento */}
-            <section className="border border-mist p-5">
+            <section className="rounded-2xl border border-mist p-5">
               <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Pagamento</h2>
               <p className="text-sm text-ink capitalize">{order.payment.method === 'pix' ? 'PIX' : 'Cartão de crédito'}</p>
               {order.payment.paidAt && (

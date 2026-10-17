@@ -61,9 +61,9 @@ export default function FavoritosPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="animate-pulse">
-                <div className="aspect-[3/4] bg-warm" />
-                <div className="h-3 bg-warm mt-3 w-3/4" />
-                <div className="h-4 bg-warm mt-2 w-1/3" />
+                <div className="aspect-[4/5] rounded-2xl bg-warm" />
+                <div className="h-3 rounded-full bg-warm mt-3 w-3/4" />
+                <div className="h-4 rounded-full bg-warm mt-2 w-1/3" />
               </div>
             ))}
           </div>

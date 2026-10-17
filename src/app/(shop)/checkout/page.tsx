@@ -99,7 +99,7 @@ function Input({
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
         onBlur={() => { setTouched(true); onBlur?.(); }}
-        className={`w-full border px-3.5 py-3 text-sm text-ink placeholder:text-faint focus:outline-none transition-[border-color,box-shadow,background-color] duration-150 ${
+        className={`w-full rounded-xl border px-3.5 py-3 text-sm text-ink placeholder:text-faint focus:outline-none transition-[border-color,box-shadow,background-color] duration-150 ${
           hasError && touched
             ? 'border-red-400 bg-red-50/40 focus:border-red-400 focus:ring-2 focus:ring-red-100'
             : valid
@@ -127,7 +127,7 @@ function Section({
   const editable = !!done && !open && !!onEdit;
   const HeaderTag = editable ? 'button' : 'div';
   return (
-    <div className={`border transition-colors ${open ? 'border-ink/20' : 'border-mist'}`}>
+    <div className={`rounded-2xl overflow-hidden border transition-colors ${open ? 'border-ink/20' : 'border-mist'}`}>
       <HeaderTag
         {...(editable ? { type: 'button' as const, onClick: onEdit, 'aria-label': `Editar ${label}` } : {})}
         className={`flex items-center gap-3 px-5 py-4 w-full text-left ${editable ? 'cursor-pointer hover:bg-paper/60 transition-colors' : ''}`}
@@ -432,7 +432,7 @@ export default function CheckoutPage() {
               <span className="font-mono text-[11px] text-faint tabular-nums">{step}/3</span>
               <span className="flex gap-1" aria-hidden="true">
                 {[1, 2, 3].map(n => (
-                  <span key={n} className={`h-1 w-6 transition-colors duration-300 ${n <= step ? 'bg-ink' : 'bg-mist'}`} />
+                  <span key={n} className={`h-1 w-6 rounded-full transition-colors duration-300 ${n <= step ? 'bg-ink' : 'bg-mist'}`} />
                 ))}
               </span>
             </span>
@@ -461,7 +461,7 @@ export default function CheckoutPage() {
           <form onSubmit={submit} className="flex flex-col gap-3 w-full">
 
             {apiError && (
-              <div ref={apiErrorRef} role="alert" className="scroll-mt-20 flex items-start gap-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3.5 text-sm rounded-sm">
+              <div ref={apiErrorRef} role="alert" className="scroll-mt-20 flex items-start gap-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3.5 text-sm rounded-2xl">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 mt-px text-red-500"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
                 {apiError}
               </div>
@@ -494,7 +494,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <button type="button" onClick={advanceToStep2}
-                  className="w-full h-12 bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
+                  className="w-full h-12 rounded-full bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
                   Continuar para endereço
                 </button>
               </div>
@@ -563,13 +563,13 @@ export default function CheckoutPage() {
                       value={addr.state}
                       onChange={v => setAddr(a => ({ ...a, state: v }))}
                       options={[{ value: '', label: '--' }, ...BR_STATES.map(uf => ({ value: uf, label: uf }))]}
-                      triggerClassName={`w-full border px-3 py-3 text-sm bg-white dark:bg-warm focus:outline-none focus:ring-2 transition-all flex items-center justify-between gap-2 rounded-[2px] cursor-pointer ${errors.state ? 'border-red-400 focus:ring-red-100' : 'border-mist hover:border-ink/20 focus:border-ink/40 focus:ring-ink/5'}`}
+                      triggerClassName={`w-full border px-3 py-3 text-sm bg-white dark:bg-warm focus:outline-none focus:ring-2 transition-all flex items-center justify-between gap-2 rounded-xl cursor-pointer ${errors.state ? 'border-red-400 focus:ring-red-100' : 'border-mist hover:border-ink/20 focus:border-ink/40 focus:ring-ink/5'}`}
                     />
                     <Err msg={errors.state} />
                   </div>
                 </div>
                 <button type="button" onClick={advanceToStep3}
-                  className="w-full h-12 bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
+                  className="w-full h-12 rounded-full bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
                   Continuar para entrega
                 </button>
               </div>
@@ -583,12 +583,12 @@ export default function CheckoutPage() {
                 <div>
                   <p className="text-xs font-bold text-mid tracking-[0.05em] uppercase mb-3">Opção de entrega</p>
                   {shippingLoading ? (
-                    <div className="flex items-center gap-3 border border-mist bg-white dark:bg-warm px-4 py-4 text-sm text-faint">
+                    <div className="flex items-center gap-3 rounded-2xl border border-mist bg-white dark:bg-warm px-4 py-4 text-sm text-faint">
                       <span className="spinner shrink-0" />
                       Calculando opções para o CEP {addr.cep}…
                     </div>
                   ) : shippingError ? (
-                    <div className="border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-600 flex items-center justify-between">
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-600 flex items-center justify-between">
                       {shippingError}
                       <button type="button" onClick={() => { setQuotedCep(''); quoteShipping(addr.cep); }}
                         className="ml-3 text-red-700 font-semibold underline text-xs shrink-0">
@@ -596,7 +596,7 @@ export default function CheckoutPage() {
                       </button>
                     </div>
                   ) : shippingOptions.length > 0 ? (
-                    <div role="radiogroup" aria-label="Opção de entrega" className="flex flex-col divide-y divide-mist border border-mist bg-white dark:bg-warm overflow-hidden">
+                    <div role="radiogroup" aria-label="Opção de entrega" className="flex flex-col divide-y divide-mist rounded-2xl border border-mist bg-white dark:bg-warm overflow-hidden">
                       {shippingOptions.map(opt => {
                         const sel = selectedShipping?.carrier === opt.carrier;
                         return (
@@ -620,7 +620,7 @@ export default function CheckoutPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-[13px] font-semibold text-ink">{opt.label}</span>
-                                {opt.tag && opt.tag !== 'local' && <span className={`text-[10px] font-bold tracking-[0.06em] uppercase px-2 py-0.5 ${TAG[opt.tag]?.cls}`}>{TAG[opt.tag]?.label}</span>}
+                                {opt.tag && opt.tag !== 'local' && <span className={`text-[10px] font-bold tracking-[0.06em] uppercase rounded-full px-2.5 py-0.5 ${TAG[opt.tag]?.cls}`}>{TAG[opt.tag]?.label}</span>}
                               </div>
                               <p className="text-[11px] text-faint mt-0.5">
                                 {opt.carrier === 'pickup'
@@ -646,7 +646,7 @@ export default function CheckoutPage() {
                 {/* Pagamento */}
                 <div>
                   <p className="text-xs font-bold text-mid tracking-[0.05em] uppercase mb-3">Forma de pagamento</p>
-                  <div role="radiogroup" aria-label="Forma de pagamento" className="flex flex-col divide-y divide-mist border border-mist bg-white dark:bg-warm overflow-hidden">
+                  <div role="radiogroup" aria-label="Forma de pagamento" className="flex flex-col divide-y divide-mist rounded-2xl border border-mist bg-white dark:bg-warm overflow-hidden">
 
                     {/* PIX */}
                     <button type="button" role="radio" aria-checked={payMethod === 'pix'} onClick={() => setPayMethod('pix')}
@@ -708,7 +708,7 @@ export default function CheckoutPage() {
                                 return (
                                   <button key={n} type="button" role="radio" aria-checked={installments === n}
                                     onClick={() => setInstall(n)}
-                                    className={`px-3 py-2 border text-xs font-medium active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-150 ${
+                                    className={`px-3.5 py-2 rounded-full border text-xs font-medium active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-150 ${
                                       installments === n
                                         ? 'border-ink bg-ink text-paper'
                                         : 'border-mist text-mid hover:border-ink/40'
@@ -730,7 +730,7 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Resumo de valores (mobile repetition) */}
-                <div className="border border-mist bg-white dark:bg-warm p-4 lg:hidden">
+                <div className="rounded-2xl border border-mist bg-white dark:bg-warm p-4 lg:hidden">
                   <div className="flex flex-col gap-2 text-sm">
                     <div className="flex justify-between text-mid">
                       <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
@@ -776,7 +776,7 @@ export default function CheckoutPage() {
                   <button
                     type="submit"
                     disabled={submitting || !selectedShipping}
-                    className="flex items-center justify-center gap-2.5 w-full h-14 bg-ink text-paper text-[15px] font-bold tracking-[0.03em] hover:bg-mid disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 active:scale-[0.99]"
+                    className="flex items-center justify-center gap-2.5 w-full h-14 rounded-full bg-ink text-paper text-[15px] font-bold tracking-[0.03em] hover:bg-mid disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 active:scale-[0.99]"
                   >
                     {submitting
                       ? <><span className="spinner mr-1" />{payMethod === 'credit' ? 'Redirecionando…' : 'Gerando PIX…'}</>
@@ -801,7 +801,7 @@ export default function CheckoutPage() {
 
           {/* ── Order summary sticky ── */}
           <div className="w-full hidden lg:block lg:sticky lg:top-[72px]">
-            <div className="bg-white dark:bg-warm border border-mist">
+            <div className="bg-white dark:bg-warm border border-mist rounded-2xl overflow-hidden">
               {/* Header */}
               <div className="px-5 py-4 border-b border-mist flex items-center justify-between">
                 <h2 className="font-sans text-[10px] font-bold tracking-[0.2em] uppercase text-faint">Seu pedido</h2>
@@ -815,7 +815,7 @@ export default function CheckoutPage() {
                     {/* Badge de quantidade fora do overflow-hidden da foto: dentro dele
                         o canto era cortado e o número sumia. */}
                     <div className="relative shrink-0 w-12 h-14">
-                      <div className="absolute inset-0 bg-paper border border-mist overflow-hidden">
+                      <div className="absolute inset-0 rounded-lg bg-paper border border-mist overflow-hidden">
                         {item.image
                           ? <Image src={item.image} alt={item.productName} fill sizes="48px" className="object-cover" />
                           : <div className="h-full flex items-center justify-center text-faint text-xs font-display">M</div>

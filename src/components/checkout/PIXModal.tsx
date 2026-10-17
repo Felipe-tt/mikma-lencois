@@ -147,7 +147,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
         aria-modal="true"
         aria-labelledby="pix-modal-title"
         data-variant="responsive"
-        className="overlay-panel w-full sm:max-w-md bg-paper shadow-2xl flex flex-col max-h-[95dvh] sm:max-h-[90vh] overflow-hidden pb-[env(safe-area-inset-bottom)] sm:pb-0"
+        className="overlay-panel w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-paper shadow-2xl flex flex-col max-h-[95dvh] sm:max-h-[90vh] overflow-hidden pb-[env(safe-area-inset-bottom)] sm:pb-0"
       >
 
         {/* ── Header ── */}
@@ -184,7 +184,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
                     Seu pedido foi confirmado e já está sendo preparado.
                   </p>
                 </div>
-                <div className="w-full border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 font-medium text-center">
+                <div className="w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 font-medium text-center">
                   Acompanhe em <span className="underline">Meus pedidos</span>
                 </div>
               </div>
@@ -227,7 +227,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
             {!confirmed && !expired && !failed && (
               <>
                 {/* Status + Countdown */}
-                <div className={`w-full flex items-center justify-between px-4 py-3 rounded-sm border ${urgency ? 'border-amber-200 bg-amber-50' : 'border-mist bg-warm/40'}`}>
+                <div className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border ${urgency ? 'border-amber-200 bg-amber-50' : 'border-mist bg-warm/40'}`}>
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2.5 w-2.5 shrink-0">
                       <span className="absolute inline-flex h-full w-full rounded-full bg-clay opacity-50 animate-ping"/>
@@ -247,11 +247,11 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
                   {/* Fundo branco também no modo escuro: o QR do PIX é preto
                       (às vezes com fundo transparente) e some num fundo escuro,
                       o app do banco não consegue ler. */}
-                  <div className="border-2 border-mist p-3 bg-white">
+                  <div className="rounded-2xl border-2 border-mist p-3 bg-white">
                     {qrCode ? (
                       <img src={qrCode} alt="QR Code PIX" className="w-44 h-44 block" width={176} height={176}/>
                     ) : (
-                      <div className="w-44 h-44 flex items-center justify-center bg-warm">
+                      <div className="w-44 h-44 rounded-xl flex items-center justify-center bg-warm">
                         <span className="text-faint text-xs text-center px-4">QR Code indisponível</span>
                       </div>
                     )}
@@ -270,20 +270,20 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
 
                 {/* Copia e cola */}
                 <div className="w-full flex flex-col gap-2">
-                  <div className="flex items-center border border-mist bg-warm/40 overflow-hidden">
+                  <div className="flex items-center gap-1 rounded-full border border-mist bg-warm/40 overflow-hidden p-1">
                     <input
                       ref={copyInputRef}
                       readOnly
                       value={copyPaste}
                       onFocus={e => e.currentTarget.select()}
-                      className="flex-1 px-3 py-2.5 text-[11px] font-mono text-ink bg-transparent truncate focus:outline-none"
+                      className="flex-1 min-w-0 pl-3 pr-1 py-2 text-[11px] font-mono text-ink bg-transparent truncate focus:outline-none"
                       aria-label="Código PIX copia e cola"
                     />
                     <button
                       type="button"
                       onClick={copy}
                       aria-live="polite"
-                      className={`shrink-0 px-4 py-2.5 text-xs font-bold tracking-[0.08em] uppercase active:scale-[0.97] transition-[background-color,transform] duration-150 ${
+                      className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold tracking-[0.08em] uppercase active:scale-[0.97] transition-[background-color,transform] duration-150 ${
                         copied ? 'bg-emerald-600 text-paper' : 'bg-ink text-paper hover:bg-clay'
                       }`}
                     >

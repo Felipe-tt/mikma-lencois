@@ -66,7 +66,7 @@ export function LegalPage({
                   key={p.href}
                   href={p.href}
                   aria-current={active ? 'page' : undefined}
-                  className={`shrink-0 border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors ${
+                  className={`shrink-0 rounded-full border px-4 py-1.5 text-[13px] whitespace-nowrap transition-colors ${
                     active
                       ? 'border-ink bg-ink text-paper'
                       : 'border-mist text-mid hover:border-ink hover:text-ink'
@@ -186,7 +186,7 @@ export function A({ href, children }: { href: string; children: ReactNode }) {
 
 export function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
   return (
-    <div className="overflow-x-auto border border-mist">
+    <div className="overflow-x-auto border border-mist rounded-2xl">
       <table className="w-full min-w-[34rem] text-left text-[13.5px] leading-snug">
         <thead className="bg-warm/60 text-ink">
           <tr>
