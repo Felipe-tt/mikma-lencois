@@ -259,7 +259,7 @@ function RegisterContent() {
           aria-hidden="true"
           className="pointer-events-none select-none absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[72%] max-w-[460px] h-auto object-contain opacity-[0.07] dark:opacity-[0.06]"
         />
-        <Link href="/" className="relative z-10"><BrandLogo alt="Mikma" className="h-9 w-auto object-contain" /></Link>
+        <Link href="/" className="relative z-10"><BrandLogo alt="Mikma Lençóis – início" className="h-9 w-auto object-contain" /></Link>
         <div className="relative z-10">
           {/* Texto no pé do painel: no meio ele caía em cima da lua e
               colidia com o "Mikma" dentro dela. */}
@@ -276,7 +276,7 @@ function RegisterContent() {
         <div className="w-full max-w-[400px] mx-auto py-10">
 
           <Link href="/" className="flex mb-8 lg:hidden">
-            <BrandLogo alt="Mikma" className="h-8 w-auto object-contain" />
+            <BrandLogo alt="Mikma Lençóis – início" className="h-8 w-auto object-contain" />
           </Link>
 
           {/* Indicador de progresso */}
@@ -330,7 +330,7 @@ function RegisterContent() {
                   <input id="cad-email" type="email" value={email}
                     onChange={e => { setEmail(e.target.value.replace(/\s/g, '')); if (fieldErrors.email) setFieldError('email'); }}
                     onBlur={() => email && blurValidate('email', validateEmail(email))}
-                    className="input text-base" placeholder="seuemail@exemplo.com"
+                    className="input text-base" placeholder="seu@email.com"
                     autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off"
                     spellCheck={false} maxLength={EMAIL_MAX}
                     aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'err-email' : undefined} />

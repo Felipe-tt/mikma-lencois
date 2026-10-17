@@ -46,7 +46,7 @@ function ConfirmContent() {
   return (
     <div className="w-full max-w-[420px] mx-auto text-center py-10">
       <Link href="/" className="flex justify-center mb-10">
-        <BrandLogo alt="Mikma" className="h-9 w-auto object-contain" />
+        <BrandLogo alt="Mikma Lençóis – início" className="h-9 w-auto object-contain" />
       </Link>
 
       {state === 'checking' && (

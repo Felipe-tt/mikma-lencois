@@ -54,7 +54,7 @@ function CarrierIcon({ carrier }: { carrier: string }) {
 
 const TAG: Record<string, { label: string; cls: string }> = {
   rapido:    { label: 'Mais rápido',    cls: 'bg-ink/[0.06] text-ink' },
-  economico: { label: 'Mais econômico', cls: 'bg-clay/10 text-clay' },
+  economico: { label: 'Econômico', cls: 'bg-clay/10 text-clay' },
 };
 
 // ── Field components ─────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ function Section({
   const editable = !!done && !open && !!onEdit;
   const HeaderTag = editable ? 'button' : 'div';
   return (
-    <div className={`rounded-2xl overflow-hidden border transition-colors ${open ? 'border-ink/20' : 'border-mist'}`}>
+    <div className={`scroll-mt-36 rounded-2xl overflow-hidden border transition-colors ${open ? 'border-ink/20' : 'border-mist'}`}>
       <HeaderTag
         {...(editable ? { type: 'button' as const, onClick: onEdit, 'aria-label': `Editar ${label}` } : {})}
         className={`flex items-center gap-3 px-5 py-4 w-full text-left ${editable ? 'cursor-pointer hover:bg-paper/60 transition-colors' : ''}`}
@@ -149,7 +149,7 @@ function Section({
           }
         </span>
         <div className="flex-1 min-w-0">
-          <h2 className={`font-display font-normal text-[1.15rem] leading-none transition-colors ${open ? 'text-ink' : done ? 'text-mid' : 'text-faint'}`}>
+          <h2 id={`co-step-${num}`} tabIndex={-1} className={`font-display font-normal text-[1.15rem] leading-none transition-colors focus:outline-none ${open ? 'text-ink' : done ? 'text-mid' : 'text-faint'}`}>
             {label}
           </h2>
         </div>
@@ -176,6 +176,7 @@ export default function CheckoutPage() {
   const [step, setStep]       = useState<1 | 2 | 3>(1); // 1=dados, 2=endereço, 3=entrega
   const [s1done, setS1Done]   = useState(false);
   const [s2done, setS2Done]   = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   const [addr, setAddr]       = useState<Address>({ cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' });
   const [customer, setCustomer] = useState<CustomerData>({ name: '', cpf: '', phone: '', email: '' });
@@ -234,10 +235,12 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (loading) return;
     // Volta pro checkout depois do login (antes caía na home).
-    if (!user) { setReturnTo('/checkout'); router.push('/entrar'); return; }
+    // replace: com push, Voltar no login reabria o checkout, que mandava
+    // pro login de novo.
+    if (!user) { setReturnTo('/checkout'); router.replace('/entrar'); return; }
     const unsub = onSnapshot(doc(db, 'carts', user.uid), snap => {
       if (!snap.exists() || !snap.data()?.items?.length) {
-        if (!pixShownRef.current) router.push('/carrinho');
+        if (!pixShownRef.current) router.replace('/carrinho');
         return;
       }
       const c = snap.data() as Cart;
@@ -257,7 +260,7 @@ export default function CheckoutPage() {
     });
     getDoc(doc(db, 'users', user.uid)).then(s => {
       const d = s.data();
-      if (d?.address) setAddr(d.address);
+      if (d?.address) setAddr({ ...d.address, cep: maskCep(d.address.cep ?? '') });
       setCustomer({
         name: d?.name ?? user.displayName ?? '',
         cpf: d?.cpf ? maskCpf(d.cpf) : '',
@@ -297,7 +300,7 @@ export default function CheckoutPage() {
         if (cancelled) return;
         const foundActive = new Set(snap.docs.filter(d => d.data().active !== false).map(d => d.id));
         const hasUnavailable = productIds.some(id => !foundActive.has(id));
-        if (hasUnavailable) router.push('/carrinho');
+        if (hasUnavailable) router.replace('/carrinho');
       })
       .catch(() => { /* falha na checagem não deve travar o checkout */ });
     return () => { cancelled = true; };
@@ -349,15 +352,25 @@ export default function CheckoutPage() {
     return runValidation(['cep', 'street', 'number', 'neighborhood', 'city', 'state']);
   }
 
+  // Troca de etapa leva o foco ao título da etapa aberta: antes caía no
+  // <body> e o leitor de tela não anunciava a mudança.
+  function goToStep(n: 1 | 2 | 3) {
+    setStep(n);
+    requestAnimationFrame(() => {
+      const h = document.getElementById(`co-step-${n}`);
+      h?.focus({ preventScroll: true });
+      h?.closest('.scroll-mt-36')?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    });
+  }
   function advanceToStep2() {
     if (!validateStep1()) return;
     setS1Done(true);
-    setStep(2);
+    goToStep(2);
   }
   function advanceToStep3() {
     if (!validateStep2()) return;
     setS2Done(true);
-    setStep(3);
+    goToStep(3);
     if (isValidCep(addr.cep)) quoteShipping(addr.cep);
   }
 
@@ -479,6 +492,112 @@ export default function CheckoutPage() {
     />
   );
 
+  const itemRows = items.map(item => (
+    <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex items-start gap-4">
+      {/* Badge de quantidade fora do overflow-hidden da foto: dentro dele
+          o canto era cortado e o número sumia. */}
+      <div className="relative shrink-0 w-14 h-[68px]">
+        <div className="absolute inset-0 rounded-xl bg-paper border border-mist overflow-hidden">
+          {item.image
+            ? <Image src={item.image} alt={item.productName} fill sizes="56px" className="object-cover" />
+            : <div className="h-full flex items-center justify-center text-faint text-xs font-display">M</div>
+          }
+        </div>
+        <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 bg-ink text-paper text-[10px] font-bold tabular-nums flex items-center justify-center rounded-full ring-2 ring-paper">
+          {item.quantity}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-medium text-ink leading-snug line-clamp-2 pr-2">{item.productName}</p>
+        {item.variant?.size && <p className="text-[11.5px] text-faint mt-0.5">{[SIZE_LABEL[item.variant.size] ?? item.variant.size, item.variant.colorName].filter(Boolean).join(' · ')}</p>}
+        {item.note && <p className="text-[11px] text-clay font-medium mt-0.5">{item.note}</p>}
+      </div>
+      <span className="font-display text-[0.98rem] text-ink shrink-0 tabular-nums pt-0.5">{formatCurrency(item.unitPrice * item.quantity)}</span>
+    </div>
+  ));
+  const totalRows = (
+    <>
+      <div className="flex justify-between text-sm text-mid">
+        <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
+      </div>
+      {pixDiscount > 0 && payMethod === 'pix' && (
+        <div className="flex justify-between text-sm text-emerald-700 font-medium">
+          <span>Desconto PIX ({pixDiscountPct}%)</span><span>-{formatCurrency(pixDiscount)}</span>
+        </div>
+      )}
+      {couponDiscount > 0 && (
+        <div className="flex justify-between text-sm text-emerald-700 font-medium">
+          <span>Cupom {couponApplied?.code}</span><span>-{formatCurrency(couponDiscount)}</span>
+        </div>
+      )}
+      {payMethod === 'credit' && creditFees > 0 && (
+        <div className="flex justify-between text-sm text-mid">
+          <span>Juros ({installments}x)</span><span>+{formatCurrency(creditFees)}</span>
+        </div>
+      )}
+      <div className="flex justify-between text-sm">
+        <span className="text-faint">Frete</span>
+        {shippingLoading
+          ? <span className="text-faint text-xs animate-pulse">calculando…</span>
+          : selectedShipping
+            ? <span className={selectedShipping.priceCents === 0 ? 'text-emerald-700 font-semibold text-xs' : 'text-ink'}>
+                {selectedShipping.priceCents === 0 ? 'Grátis' : formatCurrency(selectedShipping.priceCents)}
+              </span>
+            : <span className="text-faint text-xs">a calcular</span>
+        }
+      </div>
+      {selectedShipping && (
+        <div className="flex justify-between text-xs text-faint">
+          <span>{selectedShipping.label}</span>
+          <span>{selectedShipping.estimatedDays === 0 ? 'hoje' : `${selectedShipping.estimatedDays} d.u.`}</span>
+        </div>
+      )}
+    </>
+  );
+
+  // Abaixo de lg o resumo lateral some: esta barra mostra o que está sendo
+  // comprado (antes, no celular, só se via o total no último passo).
+  const mobileSummary = (
+    <div className="lg:hidden w-full rounded-2xl border border-mist bg-white dark:bg-warm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setSummaryOpen(o => !o)}
+        aria-expanded={summaryOpen}
+        aria-controls="co-mobile-summary"
+        className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-paper/60 transition-colors"
+      >
+        <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+          {summaryOpen ? 'Ocultar resumo' : 'Ver resumo'}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"
+            className={`text-faint transition-transform duration-300 motion-reduce:transition-none ${summaryOpen ? 'rotate-180' : ''}`}>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </span>
+        <span className="text-[13px] text-mid tabular-nums">
+          {totalItems} {totalItems === 1 ? 'item' : 'itens'} · <span className="font-semibold text-ink">{formatCurrency(total)}</span>
+        </span>
+      </button>
+      <div
+        id="co-mobile-summary"
+        inert={!summaryOpen}
+        className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${summaryOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <div className="px-5 pt-1 pb-4 flex flex-col gap-4 border-t border-mist">
+            <div className="pt-4 flex flex-col gap-4">{itemRows}</div>
+            <div className="pt-4 border-t border-mist flex flex-col gap-2.5">
+              {totalRows}
+              <div className="flex justify-between items-baseline pt-2.5 border-t border-mist">
+                <span className="text-sm font-bold text-ink">Total</span>
+                <span className="font-display text-xl text-ink tabular-nums">{formatCurrency(total)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-paper">
 
@@ -533,6 +652,8 @@ export default function CheckoutPage() {
           {/* ── Formulário accordion ── */}
           <form onSubmit={submit} className="flex flex-col gap-3 w-full">
 
+            {mobileSummary}
+
             {apiError && (
               <div ref={apiErrorRef} role="alert" className="scroll-mt-20 flex items-start gap-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3.5 text-sm rounded-2xl">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 mt-px text-red-500"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
@@ -541,7 +662,7 @@ export default function CheckoutPage() {
             )}
 
             {/* ── Seção 1: Identificação ── */}
-            <Section num={1} label="Identificação" open={step === 1} done={s1done} onEdit={() => setStep(1)}>
+            <Section num={1} label="Identificação" open={step === 1} done={s1done} onEdit={() => goToStep(1)}>
               <div className="flex flex-col gap-4">
                 <div>
                   <Label htmlFor="co-name">Nome completo</Label>
@@ -574,7 +695,7 @@ export default function CheckoutPage() {
             </Section>
 
             {/* ── Seção 2: Endereço ── */}
-            <Section num={2} label="Endereço de entrega" open={step === 2} done={s2done} onEdit={() => setStep(2)}>
+            <Section num={2} label="Endereço de entrega" open={step === 2} done={s2done} onEdit={() => goToStep(2)}>
               <div className="flex flex-col gap-4">
                 {/* CEP */}
                 <div>
@@ -693,18 +814,18 @@ export default function CheckoutPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-[13px] font-semibold text-ink">{opt.label}</span>
-                                {opt.tag && opt.tag !== 'local' && <span className={`text-[10px] font-bold tracking-[0.06em] uppercase rounded-full px-2.5 py-0.5 ${TAG[opt.tag]?.cls}`}>{TAG[opt.tag]?.label}</span>}
+                                {opt.tag && opt.tag !== 'local' && <span className={`whitespace-nowrap text-[10px] font-bold tracking-[0.06em] uppercase rounded-full px-2.5 py-0.5 ${TAG[opt.tag]?.cls}`}>{TAG[opt.tag]?.label}</span>}
                               </div>
                               <p className="text-[11px] text-faint mt-0.5">
                                 {opt.carrier === 'pickup'
-                                  ? 'Pronto pra retirar hoje, no horário da loja'
+                                  ? 'Pronto para retirar hoje, no horário da loja'
                                   : opt.estimatedDays === 0
                                   ? 'Chega hoje'
                                   : `Recebe ${estimatedDate(opt.estimatedDays)}`}
                               </p>
                             </div>
                             {/* Preço */}
-                            <span className={`text-sm font-bold shrink-0 ${opt.priceCents === 0 ? 'text-emerald-600' : 'text-ink'}`}>
+                            <span className={`text-sm font-bold shrink-0 ${opt.priceCents === 0 ? 'text-emerald-700' : 'text-ink'}`}>
                               {opt.priceCents === 0 ? 'Grátis' : formatCurrency(opt.priceCents)}
                             </span>
                           </button>
@@ -805,16 +926,29 @@ export default function CheckoutPage() {
                 {/* Resumo de valores (mobile repetition) */}
                 <div className="rounded-2xl border border-mist bg-white dark:bg-warm p-4 lg:hidden">
                   <div className="flex flex-col gap-2 text-sm">
+                    {/* O que está sendo pago, logo acima do botão: antes só havia os valores. */}
+                    <ul className="flex flex-col gap-1.5 pb-3 mb-1 border-b border-mist" aria-label="Itens do pedido">
+                      {items.map(item => (
+                        <li key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex justify-between gap-3 text-[13px]">
+                          <span className="min-w-0 text-ink">
+                            <span className="tabular-nums text-faint">{item.quantity}×</span>{' '}
+                            {item.productName}
+                            {item.variant?.size && <span className="text-faint"> · {SIZE_LABEL[item.variant.size] ?? item.variant.size}</span>}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-mid">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                        </li>
+                      ))}
+                    </ul>
                     <div className="flex justify-between text-mid">
                       <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
                     </div>
                     {pixDiscount > 0 && payMethod === 'pix' && (
-                      <div className="flex justify-between text-emerald-600 font-medium">
+                      <div className="flex justify-between text-emerald-700 font-medium">
                         <span>Desconto PIX ({pixDiscountPct}%)</span><span>-{formatCurrency(pixDiscount)}</span>
                       </div>
                     )}
                     {couponDiscount > 0 && (
-                      <div className="flex justify-between text-emerald-600 font-medium">
+                      <div className="flex justify-between text-emerald-700 font-medium">
                         <span>Cupom {couponApplied?.code}</span><span>-{formatCurrency(couponDiscount)}</span>
                       </div>
                     )}
@@ -825,7 +959,7 @@ export default function CheckoutPage() {
                     )}
                     <div className="flex justify-between text-mid">
                       <span>Frete</span>
-                      <span className={selectedShipping?.priceCents === 0 ? 'text-emerald-600 font-semibold' : ''}>
+                      <span className={selectedShipping?.priceCents === 0 ? 'text-emerald-700 font-semibold' : ''}>
                         {selectedShipping ? (selectedShipping.priceCents === 0 ? 'Grátis' : formatCurrency(selectedShipping.priceCents)) : '-'}
                       </span>
                     </div>
@@ -883,68 +1017,12 @@ export default function CheckoutPage() {
 
               {/* Items */}
               <div className="px-5 py-4 flex flex-col gap-4">
-                {items.map(item => (
-                  <div key={item.note ? `${item.sku}::${item.note}` : item.sku} className="flex items-start gap-4">
-                    {/* Badge de quantidade fora do overflow-hidden da foto: dentro dele
-                        o canto era cortado e o número sumia. */}
-                    <div className="relative shrink-0 w-14 h-[68px]">
-                      <div className="absolute inset-0 rounded-xl bg-paper border border-mist overflow-hidden">
-                        {item.image
-                          ? <Image src={item.image} alt={item.productName} fill sizes="56px" className="object-cover" />
-                          : <div className="h-full flex items-center justify-center text-faint text-xs font-display">M</div>
-                        }
-                      </div>
-                      <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 bg-ink text-paper text-[10px] font-bold tabular-nums flex items-center justify-center rounded-full ring-2 ring-paper">
-                        {item.quantity}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-ink leading-snug line-clamp-2 pr-2">{item.productName}</p>
-                      {item.variant?.size && <p className="text-[11.5px] text-faint mt-0.5">{[SIZE_LABEL[item.variant.size] ?? item.variant.size, item.variant.colorName].filter(Boolean).join(' · ')}</p>}
-                      {item.note && <p className="text-[11px] text-clay font-medium mt-0.5">{item.note}</p>}
-                    </div>
-                    <span className="font-display text-[0.98rem] text-ink shrink-0 tabular-nums pt-0.5">{formatCurrency(item.unitPrice * item.quantity)}</span>
-                  </div>
-                ))}
+                {itemRows}
               </div>
 
               {/* Totais */}
               <div className="px-5 py-4 border-t border-mist flex flex-col gap-2.5">
-                <div className="flex justify-between text-sm text-mid">
-                  <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
-                </div>
-                {pixDiscount > 0 && payMethod === 'pix' && (
-                  <div className="flex justify-between text-sm text-emerald-600 font-medium">
-                    <span>Desconto PIX ({pixDiscountPct}%)</span><span>-{formatCurrency(pixDiscount)}</span>
-                  </div>
-                )}
-                {couponDiscount > 0 && (
-                  <div className="flex justify-between text-sm text-emerald-600 font-medium">
-                    <span>Cupom {couponApplied?.code}</span><span>-{formatCurrency(couponDiscount)}</span>
-                  </div>
-                )}
-                {payMethod === 'credit' && creditFees > 0 && (
-                  <div className="flex justify-between text-sm text-mid">
-                    <span>Juros ({installments}x)</span><span>+{formatCurrency(creditFees)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-faint">Frete</span>
-                  {shippingLoading
-                    ? <span className="text-faint text-xs animate-pulse">calculando…</span>
-                    : selectedShipping
-                      ? <span className={selectedShipping.priceCents === 0 ? 'text-emerald-600 font-semibold text-xs' : 'text-ink'}>
-                          {selectedShipping.priceCents === 0 ? 'Grátis' : formatCurrency(selectedShipping.priceCents)}
-                        </span>
-                      : <span className="text-faint text-xs">a calcular</span>
-                  }
-                </div>
-                {selectedShipping && (
-                  <div className="flex justify-between text-xs text-faint">
-                    <span>{selectedShipping.label}</span>
-                    <span>{selectedShipping.estimatedDays === 0 ? 'hoje' : `${selectedShipping.estimatedDays} d.u.`}</span>
-                  </div>
-                )}
+                {totalRows}
               </div>
 
               {/* Total */}
@@ -986,7 +1064,7 @@ function Crumb({ state, label }: { state: 'done' | 'active' | 'pending'; label: 
   return (
     <span aria-current={state === 'active' ? 'step' : undefined} className={`flex items-center gap-1.5 shrink-0 transition-opacity duration-200 ${state === 'pending' ? 'opacity-40' : ''}`}>
       {state === 'done' && (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-emerald-600">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-emerald-700">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       )}

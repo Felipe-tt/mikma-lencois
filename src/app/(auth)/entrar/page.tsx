@@ -12,18 +12,8 @@ import { consumeReturnTo, peekReturnTo, returnToReason } from '@/lib/auth/return
 import { Overlay } from '@/components/ui/Overlay';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
+import { PasswordInput } from '@/components/auth/PasswordInput';
 
-function EyeIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
-    </svg>
-  ) : (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>
-    </svg>
-  );
-}
 
 // ── Modal recuperação de senha ────────────────────────────────────────────────
 function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; onClose: () => void }) {
@@ -93,7 +83,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
               <div>
                 <label htmlFor="forgot-email" className="label">Seu e-mail</label>
                 <input id="forgot-email" ref={inputRef} autoFocus type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  className="input text-base" placeholder="seuemail@exemplo.com" autoComplete="email" />
+                  className="input text-base" placeholder="seu@email.com" autoComplete="email" />
               </div>
               <button type="submit" disabled={loading}
                 className="btn-primary w-full h-12 text-sm font-semibold flex items-center justify-center gap-2">
@@ -138,7 +128,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [showPass, setShowPass] = useState(false);
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [showForgot, setShowForgot] = useState(false);
@@ -273,7 +262,7 @@ export default function LoginPage() {
             className="pointer-events-none select-none absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[72%] max-w-[460px] h-auto object-contain opacity-[0.07] dark:opacity-[0.06]"
           />
           <Link href="/" className="relative z-10">
-            <BrandLogo alt="Mikma" className="h-9 w-auto object-contain" />
+            <BrandLogo alt="Mikma Lençóis – início" className="h-9 w-auto object-contain" />
           </Link>
 
           <div className="relative z-10">
@@ -291,7 +280,7 @@ export default function LoginPage() {
         <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-paper">
           <div className="w-full max-w-[400px]">
             <Link href="/" className="flex mb-10 lg:hidden">
-              <BrandLogo alt="Mikma" className="h-8 w-auto object-contain" />
+              <BrandLogo alt="Mikma Lençóis – início" className="h-8 w-auto object-contain" />
             </Link>
 
             {returnReason && (
@@ -362,20 +351,14 @@ export default function LoginPage() {
                     Esqueci minha senha
                   </button>
                 </div>
-                <div className="relative">
-                  <input id="login-senha" type={showPass ? 'text' : 'password'} required value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="input pr-10" placeholder="Sua senha" autoComplete="current-password" />
-                  <button type="button" onClick={() => setShowPass(p => !p)} aria-label={showPass ? "Ocultar senha" : "Mostrar senha"} aria-pressed={showPass}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-mid transition-colors">
-                    <EyeIcon open={showPass} />
-                  </button>
-                </div>
+                <PasswordInput id="login-senha" required value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Sua senha" autoComplete="current-password" />
               </div>
 
               <button type="submit" disabled={loading}
                 className="btn-primary w-full h-12 text-[13px] font-semibold tracking-wide flex items-center justify-center gap-2">
-                {loading ? <><span className="spinner" /><span>Entrando...</span></> : 'Entrar na minha conta'}
+                {loading ? <><span className="spinner" /><span>Entrando…</span></> : 'Entrar na minha conta'}
               </button>
             </form>
             )}

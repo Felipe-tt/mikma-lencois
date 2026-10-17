@@ -158,7 +158,7 @@ export default function OrderDetailPage() {
   useEffect(() => {
     // Link do e-mail ("Gerar novo PIX", "Pedido enviado"): depois do login
     // o cliente volta pra este pedido, não pra home.
-    if (!loading && !user) { setReturnTo(window.location.pathname); router.push('/entrar'); }
+    if (!loading && !user) { setReturnTo(window.location.pathname); router.replace('/entrar'); }
   }, [user, loading, router]);
 
   useEffect(() => {
@@ -388,9 +388,9 @@ export default function OrderDetailPage() {
         {!isCancelled && (
           <div className="mb-10">
             {/* Steps */}
-            <div className="flex items-start">
+            <ol className="flex items-start" aria-label="Andamento do pedido">
               {STATUS_STEPS.map((step, i) => (
-                <div key={step.status} className="flex-1 flex flex-col items-center relative">
+                <li key={step.status} aria-current={i === currentStep ? 'step' : undefined} className="flex-1 flex flex-col items-center relative">
                   {/* linha conectora */}
                   {i > 0 && (
                     <div className={`absolute top-[18px] right-1/2 w-full h-[2px] ${
@@ -416,9 +416,9 @@ export default function OrderDetailPage() {
                   }`}>
                     {step.label}
                   </span>
-                </div>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         )}
 
@@ -485,12 +485,37 @@ export default function OrderDetailPage() {
                     </span>
                   </div>
                 ))}
-                {(order.discountCents ?? 0) > 0 && (
-                  <div className="flex justify-between px-5 py-3 text-sm text-emerald-700">
-                    <span>Desconto{order.couponCode ? ` (${order.couponCode})` : ''}</span>
-                    <span>− {formatCurrency(order.discountCents!)}</span>
-                  </div>
-                )}
+                {/* Conta fechada como no checkout: antes os itens somavam
+                    R$ 379,80 e o total dizia R$ 404,80, sem o frete. */}
+                {(() => {
+                  const o = order as typeof order & { productsCents?: number; shippingCents?: number; pixDiscountCents?: number; couponDiscountCents?: number };
+                  const products = o.productsCents ?? order.items.reduce((t, i) => t + i.unitPrice * i.quantity, 0);
+                  const discount = order.discountCents ?? 0;
+                  const shipping = o.shippingCents ?? Math.max(0, order.totalCents - products + discount);
+                  const pix = o.pixDiscountCents ?? 0;
+                  const coupon = o.couponDiscountCents ?? (discount - pix);
+                  return (
+                    <div className="px-5 py-3.5 flex flex-col gap-2 text-sm">
+                      <div className="flex justify-between text-mid">
+                        <span>Subtotal</span><span className="tabular-nums">{formatCurrency(products)}</span>
+                      </div>
+                      <div className="flex justify-between text-mid">
+                        <span>Frete</span>
+                        <span className={`tabular-nums ${shipping === 0 ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>{shipping === 0 ? 'Grátis' : formatCurrency(shipping)}</span>
+                      </div>
+                      {pix > 0 && (
+                        <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+                          <span>Desconto no PIX</span><span className="tabular-nums">− {formatCurrency(pix)}</span>
+                        </div>
+                      )}
+                      {coupon > 0 && (
+                        <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+                          <span>Cupom{order.couponCode ? ` ${order.couponCode}` : ''}</span><span className="tabular-nums">− {formatCurrency(coupon)}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex justify-between px-5 py-4 font-semibold text-ink">
                   <span>Total</span>
                   <span className="font-display text-xl">{formatCurrency(order.totalCents)}</span>
@@ -513,10 +538,10 @@ export default function OrderDetailPage() {
                         const tone = isLatest ? (TIMELINE_TONE[ev.status] ?? TIMELINE_TONE_MUTED) : TIMELINE_TONE_MUTED;
                         return (
                           <div key={i} className="flex items-start gap-3.5">
-                            <div className={`shrink-0 rounded-full flex items-center justify-center relative z-10 ${tone} ${isLatest ? 'w-8 h-8' : 'w-7 h-7'}`}>
+                            <div className={`shrink-0 rounded-full flex items-center justify-center relative z-10 ${tone} w-8 h-8 ${isLatest ? 'ring-4 ring-paper' : ''}`}>
                               <TimelineIcon status={ev.status} />
                             </div>
-                            <div className={isLatest ? 'pt-1' : 'pt-0.5'}>
+                            <div className="pt-1">
                               <p className={isLatest ? 'text-sm font-semibold text-ink' : 'text-sm font-medium text-mid'}>
                                 {TIMELINE_LABEL[ev.status] ?? ev.status}
                               </p>
@@ -594,7 +619,7 @@ export default function OrderDetailPage() {
                         href={rastreioUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors"                      >
+                        className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-clay hover:text-clay-d min-h-10 transition-colors"                      >
                         Rastrear
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                       </a>

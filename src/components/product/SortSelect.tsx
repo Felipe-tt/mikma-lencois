@@ -29,7 +29,8 @@ export function SortSelect({ current }: Props) {
       value={current ?? ''}
       onChange={handleChange}
       options={options}
-      triggerClassName="h-10 text-[12.5px] text-ink border border-mist-d bg-paper pl-4 pr-3 cursor-pointer hover:bg-warm transition-colors focus:outline-none focus:border-clay/40 rounded-full flex items-center justify-between gap-2 min-w-[150px]"
+      fitContentEnd
+      triggerClassName="h-10 text-[12.5px] text-ink border border-mist-d bg-paper pl-4 pr-3 cursor-pointer hover:bg-warm transition-colors rounded-full flex items-center justify-between gap-2 min-w-[150px]"
     />
   );
 }

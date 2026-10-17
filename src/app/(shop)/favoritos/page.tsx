@@ -18,7 +18,7 @@ export default function FavoritosPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { setReturnTo('/favoritos'); router.push('/entrar'); return; }
+    if (!user) { setReturnTo('/favoritos'); router.replace('/entrar'); return; }
   }, [user, loading, router]);
 
   // Produtos já buscados ficam guardados: desfavoritar um card só tira ele

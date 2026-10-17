@@ -3,7 +3,7 @@ import { IconMail, IconMessages, IconAlert, IconTrash } from '@/components/ui/Ic
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, limit } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import { formatTsDateTime } from '@/lib/utils/format';
 import type { EmailMessage, EmailAttachment, Conversation } from '@/types';
@@ -11,23 +11,30 @@ import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { escapeHtml } from '@/lib/html';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 
+const PAGE = 30;
+
 export default function PainelMensagens() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
+  // De 30 em 30: antes o listener trazia todas as conversas já recebidas,
+  // e o painel ficava mais lento a cada e-mail.
+  const [pageSize, setPageSize] = useState(PAGE);
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
     return onSnapshot(
-      query(collection(db, 'conversations'), orderBy('lastMessageAt', 'desc')),
+      query(collection(db, 'conversations'), orderBy('lastMessageAt', 'desc'), limit(pageSize)),
       snap => {
         setConversations(snap.docs.map(d => ({ id: d.id, ...d.data() } as Conversation)));
+        setHasMore(snap.size >= pageSize);
         setLoading(false);
         setLoadError(false);
       },
       err => { console.error('[mensagens] onSnapshot:', err); setLoading(false); setLoadError(true); }
     );
-  }, []);
+  }, [pageSize]);
 
   const selected = useMemo(
     () => conversations.find(c => c.id === selectedId) ?? null,
@@ -94,7 +101,7 @@ export default function PainelMensagens() {
         <div className={`w-full sm:w-[300px] shrink-0 border-r border-mist flex flex-col overflow-hidden ${selected ? 'hidden sm:flex' : ''}`}>
           <div className="px-4 py-3 border-b border-mist bg-warm shrink-0">
             <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint">
-              {conversations.length} conversa{conversations.length !== 1 ? 's' : ''}
+              {hasMore ? 'Conversas mais recentes' : `${conversations.length} conversa${conversations.length !== 1 ? 's' : ''}`}
             </p>
           </div>
 
@@ -119,7 +126,7 @@ export default function PainelMensagens() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     {/* Avatar inicial */}
-                    <div className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
                       selectedId === conv.id ? 'bg-paper/20 text-paper' : 'bg-mist text-mid'
                     }`}>
                       {(conv.customerName || conv.customerEmail)[0].toUpperCase()}
@@ -163,6 +170,14 @@ export default function PainelMensagens() {
                 </button>
               </div>
             ))}
+            {hasMore && (
+              <div className="p-3">
+                <button onClick={() => setPageSize(n => n + PAGE)}
+                  className="w-full border border-mist text-mid text-[12px] font-semibold py-2.5 hover:bg-warm transition-colors rounded-full">
+                  Carregar conversas mais antigas
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

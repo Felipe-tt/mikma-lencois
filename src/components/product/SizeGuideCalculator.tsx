@@ -170,8 +170,8 @@ export function SizeGuideCalculator({ products, widths }: Props) {
             <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-2">Recomendação</p>
             <p className="font-display text-3xl text-ink mb-2">{widths[result].label}</p>
             {confidenceMsg && <p className="text-[13px] text-mid max-w-[48ch] mx-auto leading-relaxed">{confidenceMsg}</p>}
-            {aliasNote && <p className="text-[13px] text-clay-l max-w-[48ch] mx-auto leading-relaxed mt-2">{aliasNote}</p>}
-            {heightWarning && <p className="text-[13px] text-clay-l max-w-[48ch] mx-auto leading-relaxed mt-2">{heightWarning}</p>}
+            {aliasNote && <p className="text-[13px] text-clay max-w-[48ch] mx-auto leading-relaxed mt-2">{aliasNote}</p>}
+            {heightWarning && <p className="text-[13px] text-clay max-w-[48ch] mx-auto leading-relaxed mt-2">{heightWarning}</p>}
           </div>
 
           {matchingProducts.length > 0 ? (

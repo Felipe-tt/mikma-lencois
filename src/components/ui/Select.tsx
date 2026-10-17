@@ -17,6 +17,12 @@ type Props = {
   disabled?: boolean;
   name?: string;
   size?: 'sm' | 'md';
+  /**
+   * Lista na largura do maior rótulo (sem quebrar linha) e alinhada pela
+   * direita do botão. Pra selects pequenos no canto direito, como o
+   * "Ordenar", onde "Mais recentes" quebrava em duas linhas.
+   */
+  fitContentEnd?: boolean;
 };
 
 /**
@@ -38,6 +44,7 @@ export function Select({
   triggerId,
   disabled,
   name,
+  fitContentEnd = false,
   size = 'md',
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -145,8 +152,8 @@ export function Select({
           role="listbox"
           tabIndex={-1}
           onKeyDown={handleListKeyDown}
-          className="absolute z-50 mt-1 w-full max-h-64 overflow-auto bg-white dark:bg-warm
-            border border-mist rounded-xl shadow-lg p-1 focus:outline-none"
+          className={`absolute z-50 mt-1 ${fitContentEnd ? 'right-0 min-w-full w-max max-w-[calc(100vw-2rem)]' : 'w-full'} max-h-64 overflow-auto bg-white dark:bg-warm
+            border border-mist rounded-xl shadow-lg p-1 focus:outline-none`}
         >
           {options.length === 0 && (
             <li className="px-3 py-2 rounded-lg text-sm text-faint italic select-none">Nenhuma opção</li>
@@ -170,7 +177,7 @@ export function Select({
                   ${isActive ? 'bg-clay/10 text-ink' : 'text-ink'}
                   ${isSelected ? 'font-semibold' : ''}`}
               >
-                <span>{opt.label}</span>
+                <span className={fitContentEnd ? 'whitespace-nowrap' : undefined}>{opt.label}</span>
                 {isSelected && (
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-clay shrink-0">
                     <path d="M20 6L9 17l-5-5" />

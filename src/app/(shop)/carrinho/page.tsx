@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -32,6 +32,14 @@ export default function CartPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const [itemError, setItemError] = useState('');
+  // Estoque carregado ao menos uma vez: até lá fica o esqueleto. Antes o
+  // aviso "Só restam N" aparecia depois e empurrava preço e quantidade.
+  const [stockReady, setStockReady] = useState(false);
+  // Item removido, com a posição, pra desfazer por alguns segundos.
+  const [lastRemoved, setLastRemoved] = useState<{ item: CartItem; index: number } | null>(null);
+  // Linha que recebe o foco depois de remover (o botão some junto com o item).
+  const focusAfterRemove = useRef<number | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
@@ -41,7 +49,9 @@ export default function CartPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { setReturnTo('/carrinho'); router.push('/entrar'); return; }
+    // replace: com push, voltar do login caía no carrinho, que mandava
+    // pro login de novo, e o botão Voltar ficava preso.
+    if (!user) { setReturnTo('/carrinho'); router.replace('/entrar'); return; }
     return onSnapshot(doc(db, 'carts', user.uid), snap => {
       setCart(snap.exists() ? snap.data() as Cart : null);
       setCartError(false);
@@ -56,7 +66,7 @@ export default function CartPage() {
   // Busca estoque disponível para todos os SKUs do carrinho
   useEffect(() => {
     const items: CartItem[] = cart?.items ?? [];
-    if (items.length === 0) { setStockMap({}); return; }
+    if (items.length === 0) { setStockMap({}); setStockReady(true); return; }
     // Inclui a fronha trocada (Jogo de Cama): ela também precisa ter estoque.
     const skus = Array.from(new Set(items.flatMap(i => i.swapSku ? [i.sku, i.swapSku] : [i.sku])));
     Promise.all(
@@ -68,7 +78,29 @@ export default function CartPage() {
       )
     ).then(results => {
       setStockMap(Object.fromEntries(results.map(r => [r.sku, r.available])));
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setStockReady(true));
+  }, [cart]);
+
+  // "Desfazer" some sozinho depois de alguns segundos.
+  useEffect(() => {
+    if (!lastRemoved) return;
+    const t = setTimeout(() => setLastRemoved(null), 6000);
+    return () => clearTimeout(t);
+  }, [lastRemoved]);
+
+  // Depois que o item sai da lista, o foco vai pro botão de remover da
+  // linha que ocupou o lugar dele (ou da anterior, ou o título). Sem isso
+  // o foco caía no <body> e o teclado voltava pro topo da página.
+  useEffect(() => {
+    const i = focusAfterRemove.current;
+    if (i === null) return;
+    focusAfterRemove.current = null;
+    const count = cart?.items?.length ?? 0;
+    const target = count === 0 ? null : Math.min(i, count - 1);
+    const visible = target === null ? undefined : Array.from(
+      document.querySelectorAll<HTMLButtonElement>(`[data-remove-index="${target}"]`),
+    ).find(b => b.offsetParent !== null);
+    (visible ?? headingRef.current ?? document.getElementById('cart-empty-title'))?.focus();
   }, [cart]);
 
   // Produto pode ter sido desativado (removido do catálogo) depois de já
@@ -125,14 +157,34 @@ export default function CartPage() {
     if (!user || !cart) return;
     setRemoving(note ? `${sku}::${note}` : sku);
     setItemError('');
+    const index = cart.items.findIndex(i => i.sku === sku && i.note === note);
     try {
+      focusAfterRemove.current = index;
       await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.filter(i => !(i.sku === sku && i.note === note)) });
+      if (index >= 0) setLastRemoved({ item: cart.items[index], index });
     } catch {
+      focusAfterRemove.current = null;
       setItemError('Não foi possível remover o item. Verifique sua conexão e tente de novo.');
     } finally {
       setRemoving(null);
     }
   }
+  async function undoRemove() {
+    if (!user || !lastRemoved) return;
+    const { item, index } = lastRemoved;
+    setLastRemoved(null);
+    const current = cart?.items ?? [];
+    // Já voltou por outro caminho (outra aba): não duplica.
+    if (current.some(i => i.sku === item.sku && i.note === item.note)) return;
+    const next = [...current];
+    next.splice(Math.min(index, next.length), 0, item);
+    try {
+      await updateDoc(doc(db, 'carts', user.uid), { items: next });
+    } catch {
+      setItemError('Não foi possível devolver o item. Adicione de novo pela página do produto.');
+    }
+  }
+
   async function updateQty(sku: string, qty: number, note?: string) {
     if (!user || !cart) return;
     if (qty < 1) { await removeItem(sku, note); return; }
@@ -182,7 +234,20 @@ export default function CartPage() {
   const freeShip = threshold > 0 && subtotal >= threshold;
   const totalItems = items.reduce((a, i) => a + i.quantity, 0);
 
-  if (loading || cartLoading) return <CartSkeleton />;
+  if (loading || cartLoading || (items.length > 0 && !stockReady)) return <CartSkeleton />;
+
+  const undoBar = lastRemoved && (
+    <div role="status" className="fixed z-40 left-1/2 -translate-x-1/2 top-[72px] sm:top-auto sm:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] w-[calc(100%-2rem)] max-w-sm flex items-center gap-3 rounded-full bg-ink text-paper pl-5 pr-1.5 py-1.5 shadow-lg animate-fade-up">
+      <span className="flex-1 min-w-0 text-[13px] truncate">
+        <span className="font-semibold">Item removido</span>
+        <span className="text-paper/60"> · {lastRemoved.item.productName}</span>
+      </span>
+      <button type="button" onClick={undoRemove}
+        className="shrink-0 h-10 px-4 rounded-full text-[13px] font-semibold text-paper bg-paper/10 hover:bg-paper/20 transition-colors">
+        Desfazer
+      </button>
+    </div>
+  );
 
   if (cartError) return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-6 text-center">
@@ -200,9 +265,10 @@ export default function CartPage() {
           <path d="M16 10a4 4 0 01-8 0"/>
         </svg>
       </div>
-      <h2 className="font-display font-normal text-ink text-3xl mb-3">Carrinho vazio</h2>
+      <h2 id="cart-empty-title" tabIndex={-1} className="font-display font-normal text-ink text-3xl mb-3 focus:outline-none">Carrinho vazio</h2>
       <p className="text-sm text-mid mb-8 max-w-[28ch] leading-relaxed">Explore nossos produtos e escolha os seus lençóis.</p>
       <Link href="/produtos" className="btn-primary px-8 py-3.5 text-sm font-semibold tracking-wide">Ver produtos</Link>
+      {undoBar}
     </div>
   );
 
@@ -213,7 +279,7 @@ export default function CartPage() {
         {/* Mesmo cabeçalho do catálogo: rótulo, título e contagem embaixo */}
         <div className="container-shop py-8 sm:py-12">
           <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-faint mb-3">Seu carrinho</p>
-          <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">Carrinho</h1>
+          <h1 ref={headingRef} tabIndex={-1} className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight focus:outline-none">Carrinho</h1>
           <p className="text-[12px] text-faint mt-2 font-mono tabular-nums">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</p>
         </div>
       </div>
@@ -255,7 +321,7 @@ export default function CartPage() {
               <p role="alert" className="mb-2 rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-3">{itemError}</p>
             )}
             <div className="divide-y divide-mist/70">
-              {items.map(item => {
+              {items.map((item, index) => {
                 const lineKey = item.note ? `${item.sku}::${item.note}` : item.sku;
                 const stepper = (
                     <div className="flex items-center rounded-full border border-mist overflow-hidden">
@@ -292,7 +358,7 @@ export default function CartPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                    <Link href={`/produtos/${item.productId}`} className="text-sm font-semibold text-ink leading-snug hover:text-clay transition-colors line-clamp-2 pr-9 sm:pr-0">
+                    <Link href={`/produtos/${item.productId}`} className="text-sm font-semibold text-ink leading-snug hover:text-clay transition-colors line-clamp-2 pr-10 sm:pr-0">
                       {item.productName}
                     </Link>
                     {(item.variant?.size || item.variant?.fabric || item.variant?.colorName || item.variant?.color) && (
@@ -305,12 +371,12 @@ export default function CartPage() {
                     )}
                     {(() => {
                       if (activeMap[item.productId] === false) {
-                        return <p className="text-xs text-red-500 font-semibold">Produto não está mais disponível, remova do carrinho</p>;
+                        return <p className="text-xs text-red-600 font-semibold">Produto não está mais disponível, remova do carrinho</p>;
                       }
                       const avail = stockMap[item.sku];
-                      if (avail === 0) return <p className="text-xs text-red-500 font-semibold">Fora de estoque, remova do carrinho</p>;
+                      if (avail === 0) return <p className="text-xs text-red-600 font-semibold">Fora de estoque, remova do carrinho</p>;
                       if (avail !== undefined && avail < item.quantity) {
-                        return <p className="text-xs text-red-500 font-semibold">Só {avail} disponíve{avail === 1 ? 'l' : 'is'}, diminua a quantidade</p>;
+                        return <p className="text-xs text-red-600 font-semibold">Só {avail} disponíve{avail === 1 ? 'l' : 'is'}, diminua a quantidade</p>;
                       }
                       const urgency = avail !== undefined ? getStockUrgency(avail) : null;
                       if (urgency) {
@@ -342,14 +408,17 @@ export default function CartPage() {
                   <button
                     onClick={() => removeItem(item.sku, item.note)}
                     aria-label={`Remover ${item.productName}`}
-                    className="sm:hidden absolute top-5 right-0 w-8 h-8 rounded-full flex items-center justify-center text-faint hover:text-red-500 hover:bg-warm transition-colors"
+                    data-remove-index={index}
+                    className="sm:hidden absolute top-4 -right-1.5 w-10 h-10 rounded-full flex items-center justify-center text-faint hover:text-red-600 hover:bg-warm transition-colors"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
                   </button>
                   <div className="hidden sm:flex flex-col items-end justify-between shrink-0">
                     <button
                       onClick={() => removeItem(item.sku, item.note)}
-                      className="text-xs text-faint hover:text-red-500 transition-colors font-medium"
+                      aria-label={`Remover ${item.productName}`}
+                      data-remove-index={index}
+                      className="text-xs text-faint hover:text-red-600 hover:bg-warm transition-colors font-medium py-3 -my-3 px-3 -mx-3 rounded-full"
                     >
                       Remover
                     </button>
@@ -364,7 +433,7 @@ export default function CartPage() {
               {!couponOpen && !couponApplied ? (
                 <button
                   onClick={() => setCouponOpen(true)}
-                  className="flex items-center gap-2 text-xs text-mid hover:text-clay transition-colors font-medium"
+                  className="flex items-center gap-2 text-xs text-mid hover:text-clay transition-colors font-medium py-3 -my-3 pr-3 rounded-full"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                     <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
@@ -375,10 +444,10 @@ export default function CartPage() {
               ) : couponApplied ? (
                 <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-2xl">
                   <div className="flex items-center gap-2.5">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-700 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                     <div>
                       <span className="text-xs font-bold tracking-[0.1em] text-emerald-800">{couponApplied.code}</span>
-                      <span className="text-xs text-emerald-600 ml-2">{formatCurrency(couponApplied.discount)} de desconto</span>
+                      <span className="text-xs text-emerald-700 ml-2">{formatCurrency(couponApplied.discount)} de desconto</span>
                     </div>
                   </div>
                   <button onClick={() => { removeCoupon(); setCouponOpen(false); }} className="text-xs text-mid hover:text-red-600 font-medium py-2 -my-2 px-2 -mx-2 rounded-full transition-colors">Remover</button>
@@ -398,18 +467,18 @@ export default function CartPage() {
                     <button
                       onClick={applyCoupon}
                       disabled={couponLoading || !couponCode.trim()}
-                      className="min-w-[84px] inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-ink text-paper text-xs font-bold tracking-[0.08em] uppercase disabled:opacity-50 disabled:pointer-events-none hover:bg-clay active:scale-[0.97] transition-[background-color,transform] duration-150"
+                      className="min-w-[84px] inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-ink text-paper text-[13px] font-semibold disabled:opacity-50 disabled:pointer-events-none hover:bg-clay active:scale-[0.97] transition-[background-color,transform] duration-150"
                     >
                       {couponLoading ? <span className="spinner-sm" /> : 'Aplicar'}
                     </button>
-                    <button type="button" aria-label="Fechar cupom" onClick={() => { setCouponOpen(false); setCouponError(''); }} className="text-faint hover:text-ink transition-colors px-1">
+                    <button type="button" aria-label="Fechar cupom" onClick={() => { setCouponOpen(false); setCouponError(''); }} className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm transition-colors">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                   </div>
-                  {couponError && <p role="alert" className="text-xs text-red-500">{couponError}</p>}
+                  {couponError && <p role="alert" className="text-xs text-red-600">{couponError}</p>}
                 </div>
               )}
-              {!couponOpen && couponError && <p role="alert" className="text-xs text-red-500 mt-2">{couponError}</p>}
+              {!couponOpen && couponError && <p role="alert" className="text-xs text-red-600 mt-2">{couponError}</p>}
             </div>
           </div>
 
@@ -427,7 +496,7 @@ export default function CartPage() {
                 </div>
 
                 {couponApplied && (
-                  <div className="flex justify-between text-sm text-emerald-600">
+                  <div className="flex justify-between text-sm text-emerald-700">
                     <span>Desconto ({couponApplied.code})</span>
                     <span className="font-semibold">−{formatCurrency(couponApplied.discount)}</span>
                   </div>
@@ -435,7 +504,7 @@ export default function CartPage() {
 
                 <div className="flex justify-between text-sm">
                   <span className="text-faint">Frete</span>
-                  <span className={freeShip ? 'text-emerald-600 font-semibold text-xs' : 'text-faint text-xs'}>
+                  <span className={freeShip ? 'text-emerald-700 font-semibold text-xs' : 'text-faint text-xs'}>
                     {freeShip ? 'Grátis' : 'Calculado no checkout'}
                   </span>
                 </div>
@@ -489,6 +558,7 @@ export default function CartPage() {
 
         </div>
       </div>
+      {undoBar}
     </div>
   );
 }

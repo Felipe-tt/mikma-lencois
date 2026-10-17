@@ -5,6 +5,13 @@ import type { Product } from '@/types';
 import Link from 'next/link';
 import Image, { getImageProps } from 'next/image';
 import { serialize } from '@/lib/utils/serialize';
+import { AggregateField } from 'firebase-admin/firestore';
+import type { Review } from '@/types';
+import { toPublicReview } from '@/lib/reviews';
+import { CategoryTiles } from '@/components/home/CategoryTiles';
+import { FabricGuide } from '@/components/home/FabricGuide';
+import { OriginSection } from '@/components/home/OriginSection';
+import { HomeReviews } from '@/components/home/HomeReviews';
 
 // Foto do hero: uma versão de fundo no desktop e um cartão no celular. As
 // duas eram "priority" e o navegador baixava as duas em qualquer tela. Agora
@@ -37,23 +44,68 @@ async function getFeatured(): Promise<Product[]> {
   } catch { return []; }
 }
 
-async function getCategories(): Promise<string[]> {
+// Uma leitura leve do catálogo inteiro (só os campos usados) pra montar as
+// categorias com foto, a lista de tecidos e os nomes nas avaliações.
+type CatalogItem = Pick<Product, 'id' | 'name' | 'category' | 'images' | 'variants'>;
+async function getCatalog(): Promise<CatalogItem[]> {
   try {
     const snap = await adminDb
       .collection('products')
       .where('active', '==', true)
-      .select('category')
+      .select('name', 'category', 'images', 'variants')
       .get();
-    return Array.from(new Set(
-      snap.docs.map(d => d.data().category as string).filter(Boolean)
-    )).sort();
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<CatalogItem, 'id'>) }));
   } catch { return []; }
 }
 
+async function getReviews(): Promise<{ list: Review[]; average: number; total: number }> {
+  try {
+    const col = adminDb.collection('reviews');
+    const [snap, agg] = await Promise.all([
+      col.orderBy('createdAt', 'desc').limit(40).get(),
+      col.aggregate({ avg: AggregateField.average('rating'), n: AggregateField.count() }).get(),
+    ]);
+    const data = agg.data();
+    return {
+      list: snap.docs.map(d => serialize<Review>({ id: d.id, ...d.data() })),
+      average: data.avg ?? 0,
+      total: data.n ?? 0,
+    };
+  } catch { return { list: [], average: 0, total: 0 }; }
+}
+
 export default async function HomePage() {
-  const [products, categories, s] = await Promise.all([
-    getFeatured(), getCategories(), getSettings(),
+  const [products, catalog, reviewData, s] = await Promise.all([
+    getFeatured(), getCatalog(), getReviews(), getSettings(),
   ]);
+
+  // Categorias por quantidade de peças, cada uma com a foto da primeira.
+  const byCategory = new Map<string, { count: number; image?: string }>();
+  for (const p of catalog) {
+    if (!p.category) continue;
+    const c = byCategory.get(p.category) ?? { count: 0 };
+    c.count++;
+    c.image ??= p.images?.[0];
+    byCategory.set(p.category, c);
+  }
+  const categoryTiles = [...byCategory].map(([name, c]) => ({ name, ...c })).sort((a, b) => b.count - a.count);
+
+  // Tecidos do catálogo, do mais vendido em peças pro menos.
+  const fabricCount = new Map<string, number>();
+  for (const p of catalog) {
+    for (const f of new Set((p.variants ?? []).map(v => v.fabric?.trim()).filter(Boolean))) {
+      const key = f.charAt(0).toUpperCase() + f.slice(1);
+      fabricCount.set(key, (fabricCount.get(key) ?? 0) + 1);
+    }
+  }
+  const fabrics = [...fabricCount].sort((a, b) => b[1] - a[1]).map(([f]) => f);
+
+  const productName = new Map(catalog.map(p => [p.id, p.name]));
+  const reviews = reviewData.list
+    .filter(r => r.rating >= 4 && (r.comment ?? '').trim().length >= 20 && productName.has(r.productId))
+    .map(r => ({ ...toPublicReview(r), productName: productName.get(r.productId) }));
+  const reviewsAvg = reviewData.average;
+  const reviewsTotal = reviewData.total;
 
   const city      = s.storeCity?.split(',')[0] || 'Blumenau';
 
@@ -142,79 +194,68 @@ export default async function HomePage() {
             <Image src="/hero-bg.jpg" alt="Cama arrumada com lençóis Mikma" fill loading="lazy" fetchPriority="high" sizes={HERO_SIZES_MOBILE} className="object-cover object-[60%_center]" />
           </div>
 
-          {/* Diferenciais em pílulas translúcidas no pé do hero */}
-          {trustItems.length > 0 && (
-            <ul className="mt-6 sm:mt-10 lg:mt-auto lg:pt-12 grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-2.5 animate-fade-in">
-              {trustItems.map((t, i) => (
-                <li key={t} className="flex sm:inline-flex items-center gap-2.5 rounded-2xl sm:rounded-full border border-mist-d/60 bg-paper/75 backdrop-blur-md p-2.5 sm:pl-1.5 sm:pr-4 sm:py-1.5 text-[12px] sm:text-[12.5px] leading-snug text-ink">
-                  <span className="w-7 h-7 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0" aria-hidden="true">
-                    {TRUST_ICONS[i % TRUST_ICONS.length]}
-                  </span>
-                  {t}
-                </li>
-              ))}
-            </ul>
+          {/* Prova social discreta no pé do hero, só com avaliação real. */}
+          {reviewsTotal >= 3 && (
+            <a href="#avaliacoes-titulo" className="mt-8 lg:mt-auto lg:pt-12 self-start inline-flex items-center gap-2.5 text-[13px] text-mid hover:text-ink transition-colors animate-fade-in">
+              <span className="inline-flex gap-0.5 text-clay" aria-hidden="true">
+                {[0, 1, 2, 3, 4].map(i => <svg key={i} width="13" height="13" viewBox="0 0 24 24" className="fill-current"><path d="M12 2.5l2.9 6.2 6.6.8-4.9 4.6 1.3 6.6L12 17.4l-5.9 3.3 1.3-6.6L2.5 9.5l6.6-.8z"/></svg>)}
+              </span>
+              <span><strong className="font-semibold text-ink">{reviewsAvg.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> de 5 · {reviewsTotal} avaliações de clientes</span>
+            </a>
           )}
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
-          PRODUTOS, imediatamente após o hero
-          Sem seção intermediária. O produto fala por si.
+          DIFERENCIAIS: uma faixa calma logo abaixo do hero, em vez das
+          pílulas que disputavam atenção com o título.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="bg-paper">
-        {/* Header da seção, minimal */}
-        <div className="container-shop pt-16 sm:pt-24 pb-6 sm:pb-8 flex items-end justify-between gap-6">
-          <div>
-            <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-clay mb-3">Coleção</p>
-            <h2 className="font-display font-normal text-ink text-[2rem] sm:text-[2.6rem] leading-[1.05] tracking-[-0.015em]">
-              {s.featuredTitle || 'Destaques'}
-            </h2>
-          </div>
-          <Link href="/produtos"
-            className="group hidden sm:inline-flex items-center gap-2 text-[13px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-1.5">
-            Ver todos
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:translate-x-0.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </Link>
-        </div>
-
-        {/* Categorias em pílulas arredondadas */}
-        {categories.length > 1 && (
-          <nav aria-label="Categorias" className="container-shop mb-8 sm:mb-10">
-            <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1 py-1 pr-8 sm:pr-1 [mask-image:linear-gradient(to_right,black_82%,transparent)] sm:[mask-image:none]">
-              <Link href="/produtos"
-                className="shrink-0 h-9 px-4 inline-flex items-center rounded-full bg-ink text-paper text-[13px] font-medium">
-                Todos
-              </Link>
-              {categories.map(cat => (
-                <Link key={cat}
-                  href={`/produtos?categoria=${encodeURIComponent(cat)}`}
-                  className="shrink-0 h-9 px-4 inline-flex items-center rounded-full border border-mist-d text-[13px] text-mid hover:text-ink hover:border-ink hover:bg-warm transition-colors duration-200">
-                  {cat}
-                </Link>
+      {trustItems.length > 0 && (
+        <section aria-label="Por que comprar na Mikma" className="bg-paper">
+          <div className="container-shop">
+            <ul className="grid grid-cols-2 lg:grid-cols-4 border-y border-mist divide-mist [&>li]:border-mist max-lg:[&>li:nth-child(odd)]:border-r max-lg:[&>li:nth-child(-n+2)]:border-b lg:divide-x">
+              {trustItems.map((t, i) => (
+                <li key={t} className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3.5 px-3 sm:px-6 py-5 sm:py-6 first:pl-0 max-lg:[&:nth-child(3)]:pl-0">
+                  <span className="w-10 h-10 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0" aria-hidden="true">
+                    {TRUST_ICONS[i % TRUST_ICONS.length]}
+                  </span>
+                  <span className="text-[13px] sm:text-[14px] leading-snug text-ink">{t}</span>
+                </li>
               ))}
-            </div>
-          </nav>
-        )}
+            </ul>
+          </div>
+        </section>
+      )}
 
-        {/* Grid */}
-        <div className="container-shop pb-20">
+      <CategoryTiles categories={categoryTiles} />
+
+      {/* ═══════════════════════════════════════════════════════════
+          NOVIDADES
+      ═══════════════════════════════════════════════════════════ */}
+      <section aria-labelledby="novidades-titulo" className="bg-paper">
+        <div className="container-shop py-20 sm:py-28">
+          <div className="flex items-end justify-between gap-6 mb-8 sm:mb-10">
+            <div>
+              <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-clay mb-4">Acabou de chegar</p>
+              <h2 id="novidades-titulo" className="font-display font-normal text-ink leading-[1.05] tracking-[-0.02em] text-[clamp(2rem,4vw,3.2rem)]">
+                Novidades da fábrica
+              </h2>
+            </div>
+            <Link href="/produtos" className="hidden sm:inline-flex shrink-0 items-center gap-1.5 h-10 text-[13px] font-medium text-mid hover:text-ink transition-colors">
+              Ver todos
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </Link>
+          </div>
           {products.length === 0 ? (
             <div className="py-20 text-center border border-mist rounded-2xl">
-              <p className="font-display text-2xl text-faint font-normal">
-                Nenhum produto cadastrado ainda.
-              </p>
+              <p className="font-display text-2xl text-faint font-normal">Nenhum produto cadastrado ainda.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
-              {products.map((p) => (
-                // Grid fica abaixo do hero: sem prioridade alta (só o hero tem),
-                // pra não disputar banda com o candidato a LCP.
-                <ProductCard key={p.id} product={p} />
-              ))}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
+              {products.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
-          <div className="mt-8 sm:hidden text-center">
+          <div className="mt-10 sm:hidden text-center">
             <Link href="/produtos"
               className="inline-flex items-center justify-center h-11 px-6 rounded-full border border-ink text-ink text-[13px] font-medium hover:bg-ink hover:text-paper transition-colors duration-200">
               Ver todos os produtos
@@ -222,6 +263,10 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <FabricGuide fabrics={fabrics} />
+      <OriginSection city={city} foundedYear={s.foundedYear} />
+      <HomeReviews reviews={reviews} average={reviewsAvg} total={reviewsTotal} />
 
       {/* ═══════════════════════════════════════════════════════════
           PROPOSTA: cartão escuro arredondado, solto do rodapé (antes era

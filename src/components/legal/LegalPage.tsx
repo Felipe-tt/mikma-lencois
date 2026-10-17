@@ -57,7 +57,7 @@ export function LegalPage({
           {/* Mobile: atalhos para as outras políticas */}
           <nav
             aria-label="Políticas e termos"
-            className="lg:hidden -mx-5 px-5 sm:-mx-8 sm:px-8 flex gap-2 overflow-x-auto pb-1"
+            className="lg:hidden flex flex-wrap gap-2"
           >
             {LEGAL_PAGES.map(p => {
               const active = p.href === current;
@@ -66,7 +66,7 @@ export function LegalPage({
                   key={p.href}
                   href={p.href}
                   aria-current={active ? 'page' : undefined}
-                  className={`shrink-0 rounded-full border px-4 py-1.5 text-[13px] whitespace-nowrap transition-colors ${
+                  className={`inline-flex items-center min-h-10 rounded-full border px-4 py-2 text-[13px] transition-colors ${
                     active
                       ? 'border-ink bg-ink text-paper'
                       : 'border-mist text-mid hover:border-ink hover:text-ink'

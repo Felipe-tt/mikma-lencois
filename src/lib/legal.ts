@@ -3,14 +3,20 @@ import type { StoreSettings } from '@/lib/store-settings';
 /**
  * Data da última atualização material dos documentos legais (AAAA-MM-DD).
  *
- * Ao visitante mostramos só o ano ("Última atualização: 2026"), como as
- * lojas em geral. A data completa fica guardada em
+ * Ao visitante mostramos a data por extenso ("7 de outubro de 2026"); só o
+ * ano parecia texto esquecido. A mesma data fica guardada em
  * users/{uid}.lgpdConsent.version no cadastro, para provar a qual texto cada
  * cliente deu o aceite. Atualizar sempre que houver mudança relevante.
  */
 export const LEGAL_UPDATED_AT = '2026-10-07';
 export const LEGAL_VERSION = LEGAL_UPDATED_AT;
-export const LEGAL_UPDATED_LABEL = LEGAL_UPDATED_AT.slice(0, 4);
+const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+// Montado à mão a partir da string: new Date('2026-10-07') é meia-noite UTC
+// e no fuso do Brasil viraria 6 de outubro.
+export const LEGAL_UPDATED_LABEL = (() => {
+  const [y, m, d] = LEGAL_UPDATED_AT.split('-').map(Number);
+  return `${d} de ${MONTHS[m - 1]} de ${y}`;
+})();
 
 /** Documentos que aparecem no menu lateral das páginas legais. */
 export const LEGAL_PAGES = [

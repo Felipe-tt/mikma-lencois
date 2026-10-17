@@ -10,6 +10,10 @@ import type { Order } from '@/types';
 type Period = '7d' | '30d' | '90d';
 type Stats = {
   revenue: number; orders: number; avgTicket: number;
+  // Faturamento separado: frete é repassado à transportadora, então
+  // "Faturamento" sozinho fazia a loja parecer vender mais do que vende.
+  productsCents: number; shippingCents: number; discountCents: number;
+  rows: Order[];
   topProducts: { name: string; qty: number; revenue: number }[];
   byCarrier: { name: string; count: number }[];
 };
@@ -21,6 +25,47 @@ const PERIODS: { id: Period; label: string; days: number }[] = [
   { id: '30d', label: '30 dias', days: 30 },
   { id: '90d', label: '90 dias', days: 90 },
 ];
+
+// Frete = total - produtos + desconto: bate sempre com o total, mesmo em
+// pedido antigo sem shippingCents gravado.
+function shippingOf(o: Order): { carrier?: string; cents: number } {
+  const x = o as Order & { selectedShipping?: { carrier?: string } };
+  const products = o.items.reduce((t, i) => t + i.unitPrice * i.quantity, 0);
+  return { carrier: x.selectedShipping?.carrier, cents: Math.max(0, o.totalCents - products + (o.discountCents ?? 0)) };
+}
+
+const STATUS_PT: Record<string, string> = {
+  paid: 'Pago', preparing: 'Separando', shipped: 'Enviado', delivered: 'Entregue',
+};
+
+// CSV no formato que o Excel brasileiro abre direto: ";" como separador,
+// vírgula decimal e BOM pra acentuação.
+function exportCsv(rows: Order[], periodLabel: string) {
+  const money = (c: number) => (c / 100).toFixed(2).replace('.', ',');
+  const cell = (v: string) => /[";\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  const header = ['Pedido', 'Data', 'Status', 'Pagamento', 'Itens', 'Produtos (R$)', 'Frete (R$)', 'Desconto (R$)', 'Total (R$)'];
+  const lines = rows.map(o => {
+    const products = o.items.reduce((t, i) => t + i.unitPrice * i.quantity, 0);
+    return [
+      o.id.slice(-8).toUpperCase(),
+      new Date(String(o.createdAt)).toLocaleString('pt-BR'),
+      STATUS_PT[o.status] ?? o.status,
+      o.payment?.method === 'card' ? 'Cartão' : 'PIX',
+      o.items.map(i => `${i.quantity}x ${i.productName}`).join(' + '),
+      money(products),
+      money(shippingOf(o).cents),
+      money(o.discountCents ?? 0),
+      money(o.totalCents),
+    ].map(v => cell(String(v))).join(';');
+  });
+  const blob = new Blob(['\uFEFF' + [header.join(';'), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vendas-mikma-${periodLabel.replace(' ', '-')}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function RelatoriosPage() {
   const [period, setPeriod] = useState<Period>('30d');
@@ -73,8 +118,9 @@ export default function RelatoriosPage() {
       const carrierMap: Record<string, number> = {};
       for (const order of orders) {
         // carrierName traduz a chave interna (uber_direct, correios_pac)
-        // pro nome que a pessoa reconhece.
-        const key = order.delivery?.carrier;
+        // pro nome que a pessoa reconhece. Pedido ainda não despachado usa
+        // a escolha do cliente no checkout.
+        const key = order.delivery?.carrier ?? shippingOf(order).carrier;
         const name = key ? carrierNameVendor(key as CarrierKey) : 'Não informado';
         carrierMap[name] = (carrierMap[name] ?? 0) + 1;
       }
@@ -84,6 +130,10 @@ export default function RelatoriosPage() {
         revenue,
         orders: orders.length,
         avgTicket: orders.length ? revenue / orders.length : 0,
+        productsCents: orders.reduce((s, o) => s + o.items.reduce((t, i) => t + i.unitPrice * i.quantity, 0), 0),
+        shippingCents: orders.reduce((s, o) => s + shippingOf(o).cents, 0),
+        discountCents: orders.reduce((s, o) => s + (o.discountCents ?? 0), 0),
+        rows: orders,
         topProducts: Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10),
         byCarrier: Object.entries(carrierMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
       });
@@ -103,9 +153,16 @@ export default function RelatoriosPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="font-display font-normal text-ink text-2xl">Relatórios</h1>
-        <p className="text-[13px] text-faint mt-1">Como a loja se saiu nos últimos {periodLabel}.</p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-display font-normal text-ink text-2xl">Relatórios</h1>
+          <p className="text-[13px] text-faint mt-1">Como a loja se saiu nos últimos {periodLabel}.</p>
+        </div>
+        {stats && stats.orders > 0 && !loading && (
+          <button onClick={() => exportCsv(stats.rows, periodLabel)} className="btn-outline text-[12px] px-4 py-2">
+            Baixar planilha (CSV)
+          </button>
+        )}
       </div>
 
       <div
@@ -163,6 +220,20 @@ export default function RelatoriosPage() {
               </div>
             ))}
           </div>
+
+          <section className="panel-card px-5 py-4 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+            {[
+              { label: 'Produtos', value: stats.productsCents, hint: 'o que a loja vendeu' },
+              { label: 'Frete cobrado', value: stats.shippingCents, hint: 'repassado às transportadoras' },
+              { label: 'Descontos', value: -stats.discountCents, hint: 'cupons usados' },
+            ].map(r => (
+              <div key={r.label} className="flex sm:flex-col items-baseline sm:items-start justify-between gap-1">
+                <span className="text-[11px] font-semibold text-faint">{r.label}</span>
+                <span className="text-[15px] font-semibold text-ink tabular-nums">{r.value < 0 ? `− ${fmt(-r.value)}` : fmt(Math.abs(r.value))}</span>
+                <span className="hidden sm:block text-[10.5px] text-faint">{r.hint}</span>
+              </div>
+            ))}
+          </section>
 
           <section className="panel-card overflow-hidden">
             <header className="panel-card-header">

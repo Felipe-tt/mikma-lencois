@@ -45,7 +45,7 @@ export function MobileFilterSheet({ categories, active }: Props) {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Fechar filtros"
-                className="w-9 h-9 -mr-2 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150"
+                className="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12"/>

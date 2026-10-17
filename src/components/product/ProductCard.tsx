@@ -31,7 +31,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   const badge        = isNew ? 'Novo' : isBestSeller ? 'Destaque' : null;
 
   function handleFavoriteClick() {
-    requireAuth(() => { setPops(n => n + 1); void toggle(product.id); }, 'Entre pra salvar nos favoritos.');
+    requireAuth(() => { setPops(n => n + 1); void toggle(product.id); }, 'Entre para salvar nos favoritos.');
   }
 
   // O botão de favoritar fica como irmão do link (não dentro dele): botão
@@ -118,7 +118,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
               {formatCurrency(product.price)}
             </p>
             {swatches.length > 0 && (
-              <span className="flex items-center -space-x-1" aria-label={`${swatches.length} ${swatches.length === 1 ? 'cor' : 'cores'}`}>
+              <span role="img" className="flex items-center -space-x-1" aria-label={`${swatches.length} ${swatches.length === 1 ? 'cor' : 'cores'}`}>
                 {swatches.map(c => (
                   <span key={c} className="w-3 h-3 rounded-full ring-1 ring-ink/15 ring-offset-1 ring-offset-paper" style={{ backgroundColor: c }} />
                 ))}
@@ -134,7 +134,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
         onClick={handleFavoriteClick}
         aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
         aria-pressed={favorite}
-        className={`theme-locked absolute top-3 right-3 z-10 w-9 h-9 flex items-center justify-center bg-paper/85 backdrop-blur-sm rounded-full transition-[opacity,transform] duration-200 hover:scale-110 active:scale-90 focus-visible:opacity-100 ${
+        className={`theme-locked absolute top-2.5 right-2.5 z-10 w-10 h-10 flex items-center justify-center bg-paper/85 backdrop-blur-sm rounded-full transition-[opacity,transform] duration-200 hover:scale-110 active:scale-90 focus-visible:opacity-100 ${
           favorite ? '' : '[@media(hover:hover)]:opacity-0 group-hover:opacity-100'
         }`}
       >

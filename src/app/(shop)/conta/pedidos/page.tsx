@@ -51,7 +51,7 @@ export default function PedidosPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { setReturnTo('/conta/pedidos'); router.push('/entrar'); return; }
+    if (!user) { setReturnTo('/conta/pedidos'); router.replace('/entrar'); return; }
     return onSnapshot(
       query(collection(db, 'orders'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')),
       snap => { setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); setOL(false); setListError(false); },
@@ -209,7 +209,7 @@ export default function PedidosPage() {
                           setTimeout(() => setCopiedId(c => (c === order.id ? null : c)), 2000);
                         }
                       }}
-                      className="shrink-0 text-[10px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.08em]"
+                      className="shrink-0 inline-flex items-center min-h-10 px-2 -mr-2 text-[11px] font-semibold text-clay hover:text-clay-d transition-colors"
                     >
                       {copiedId === order.id ? 'Copiado' : 'Copiar'}
                     </button>
@@ -246,7 +246,7 @@ export default function PedidosPage() {
                       <button
                         onClick={() => handleCancel(order)}
                         disabled={actionOrderId === order.id}
-                        className="text-xs text-mid hover:text-red-600 transition-colors font-medium underline underline-offset-2"
+                        className="inline-flex items-center min-h-10 px-1 text-xs text-mid hover:text-red-600 transition-colors font-medium underline underline-offset-2"
                       >
                         Cancelar pedido
                       </button>
@@ -256,9 +256,9 @@ export default function PedidosPage() {
 
                 {/* Link para detalhe */}
                 {order.status !== 'pending_payment' && (
-                  <div className="border-t border-mist px-5 sm:px-6 py-3">
-                    <Link href={`/pedidos/${order.id}`} className="text-xs font-medium text-mid hover:text-clay transition-colors">
-                      Ver detalhes
+                  <div className="border-t border-mist px-5 sm:px-6 py-1">
+                    <Link href={`/pedidos/${order.id}`} className="inline-flex items-center gap-1 min-h-10 text-xs font-medium text-mid hover:text-clay transition-colors">
+                      Ver detalhes <span aria-hidden="true">→</span>
                     </Link>
                   </div>
                 )}

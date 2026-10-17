@@ -1,6 +1,7 @@
 'use client';
 
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { parseBRL } from '@/lib/parseBRL';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Papa from 'papaparse';
@@ -302,7 +303,7 @@ export default function ImportarCsvPage() {
         fabric: it.fabric,
         colorName: it.colorName,
         colorHex: it.colorHex,
-        priceBRL: it.priceInput ? parseFloat(it.priceInput.replace(',', '.')) : null,
+        priceBRL: it.priceInput && Number.isFinite(parseBRL(it.priceInput)) ? parseBRL(it.priceInput) : null,
         weightKg: it.weightInput ? parseFloat(it.weightInput.replace(',', '.')) : null,
         pieceCount: it.pieceCountInput ? parseInt(it.pieceCountInput, 10) : null,
         sourceRaw: it.sourceRaw,
@@ -723,7 +724,7 @@ export default function ImportarCsvPage() {
                         onChange={(e) => {
                           const raw = e.target.value;
                           setPriceTextById((p) => ({ ...p, [d.id]: raw }));
-                          const v = parseFloat(raw.replace(',', '.'));
+                          const v = parseBRL(raw);
                           updateDraftLocal(d.id, { priceBRL: Number.isFinite(v) ? v : null });
                         }}
                         onBlur={() => {

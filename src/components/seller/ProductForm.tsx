@@ -22,6 +22,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { parseBRL, centsToInput } from '@/lib/parseBRL';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, limit as fbLimit, getDocs, type DocumentReference } from 'firebase/firestore';
@@ -111,7 +112,7 @@ export default function ProductForm({ initial }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [nameEditedManually, setNameEditedManually] = useState(isEdit);
   const [description, setDescription] = useState(initial?.description ?? '');
-  const [price, setPrice] = useState(initial?.price ? (initial.price / 100).toFixed(2) : '');
+  const [price, setPrice] = useState(initial?.price ? centsToInput(initial.price) : '');
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0]);
   const [fronhaCount, setFronhaCount] = useState(initial?.fronhaCount ?? 2);
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
@@ -415,7 +416,7 @@ export default function ProductForm({ initial }: Props) {
   function applyDuplicateSource(p: Product) {
     setName(p.name + ' (cópia)'); setNameEditedManually(true);
     setDescription(p.description ?? '');
-    setPrice(p.price ? (p.price / 100).toFixed(2) : '');
+    setPrice(p.price ? centsToInput(p.price) : '');
     setCategory((p.category as typeof CATEGORIES[number]) ?? CATEGORIES[0]);
     if (p.variants?.[0]?.size) setSize(p.variants[0].size as Size);
     if (p.fronhaCount) setFronhaCount(p.fronhaCount);
@@ -504,8 +505,8 @@ export default function ProductForm({ initial }: Props) {
     setPendingColorTargetFabric(null);
   }
 
-  const priceValid = !!price && !isNaN(parseFloat(price.replace(',', '.')));
-  const weightKgValid = !!weightKg && !isNaN(parseFloat(weightKg)) && parseFloat(weightKg) > 0;
+  const priceValid = !!price && parseBRL(price) > 0;
+  const weightKgValid = parseDecimal(weightKg) > 0;
 
   // ── Checklist de progresso: orienta quem não conhece o formulário sobre
   // onde está e quanto falta, sem precisar rolar a tela pra descobrir o
@@ -591,7 +592,7 @@ export default function ProductForm({ initial }: Props) {
       const uploaded = await uploadNewPhotos;
       const uploadedUrls: string[] = uploaded.filter((u): u is string => !!u);
 
-      const priceCents = Math.round(parseFloat(price.replace(',', '.')) * 100);
+      const priceCents = Math.round(parseBRL(price) * 100);
       const tagArr = tags.split(',').map(t => t.trim()).filter(Boolean);
       const builtVariants = rows.map(({ fabric, color, colorName }) => ({
         id: variantIdFor(size, fabric),
@@ -605,7 +606,7 @@ export default function ProductForm({ initial }: Props) {
         name: formatProductName(name),
         description,
         price: priceCents,
-        weightKg: parseFloat(weightKg),
+        weightKg: parseDecimal(weightKg),
         category,
         tags: tagArr,
         images: uploadedUrls,
@@ -932,11 +933,11 @@ export default function ProductForm({ initial }: Props) {
                 {priceSuggestion !== null && !price && (
                   <button
                     type="button"
-                    onClick={() => setPrice((priceSuggestion / 100).toFixed(2))}
+                    onClick={() => setPrice(centsToInput(priceSuggestion))}
                     className="text-[11px] text-clay hover:text-clay-d font-medium mt-1 flex items-center gap-1"
                   >
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                    Sugestão: R$ {(priceSuggestion / 100).toFixed(2)} <span className="text-faint font-normal">(baseado em produtos parecidos)</span>
+                    Sugestão: {formatCurrency(priceSuggestion)} <span className="text-faint font-normal">(baseado em produtos parecidos)</span>
                   </button>
                 )}
               </div>
@@ -988,12 +989,10 @@ export default function ProductForm({ initial }: Props) {
               <div className="relative max-w-[10rem]">
                 <input
                   id="prod-peso"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
+                  type="text"
                   value={weightKg}
                   onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); setWeightTypedByHand(true); }}
-                  placeholder="1.20"
+                  placeholder="1,20"
                   inputMode="decimal"
                   className={`input ${weightKg && !weightKgValid ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
                 />
@@ -1077,7 +1076,7 @@ export default function ProductForm({ initial }: Props) {
                       {name || 'Nome do produto'}
                     </p>
                     <p className="font-display text-[0.95rem] text-ink font-normal leading-none tracking-[-0.01em]">
-                      {priceValid ? formatCurrency(Math.round(parseFloat(price.replace(',', '.')) * 100)) : 'R$ —'}
+                      {priceValid ? formatCurrency(Math.round(parseBRL(price) * 100)) : 'R$ —'}
                     </p>
                   </div>
                 </div>
@@ -1300,4 +1299,10 @@ export default function ProductForm({ initial }: Props) {
       </div>
     </>
   );
+}
+
+// Peso aceita vírgula ou ponto como decimal ("0,6" ou "0.6"), nunca milhar.
+function parseDecimal(s: string): number {
+  const t = s.trim();
+  return /^\d+([.,]\d+)?$/.test(t) ? Number(t.replace(',', '.')) : NaN;
 }

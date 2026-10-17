@@ -145,7 +145,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
   async function addToCart() {
     if (loading) return;
-    if (!user) { requireAuth(() => setAfterLogin('cart'), 'Entre pra adicionar ao carrinho. Depois disso o produto já entra sozinho.'); return; }
+    if (!user) { requireAuth(() => setAfterLogin('cart'), 'Entre para adicionar ao carrinho. Depois disso o produto já entra sozinho.'); return; }
     if (!selectedVariant || outOfStock) return;
     setAdding(true);
     setCartError(null);
@@ -168,7 +168,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
   async function buyNow() {
     if (loading) return;
-    if (!user) { requireAuth(() => setAfterLogin('buy'), 'Entre pra finalizar a compra. Você continua de onde parou.'); return; }
+    if (!user) { requireAuth(() => setAfterLogin('buy'), 'Entre para finalizar a compra. Você continua de onde parou.'); return; }
     if (!selectedVariant || outOfStock) return;
     setBuyingNow(true);
     setCartError(null);
@@ -505,7 +505,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             <span aria-hidden="true" className="sm:hidden mx-auto mt-2.5 block h-1 w-10 rounded-full bg-mist-d" />
             <div className="px-6 pt-5 sm:pt-6 pb-5">
               <div className="flex items-center gap-2.5 mb-4">
-                <span className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center shrink-0 animate-heart-pop">
+                <span className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center shrink-0 animate-heart-pop">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
                 </span>
                 <h3 id="added-title" className="font-display font-normal text-ink text-[1.25rem] leading-none">Adicionado ao carrinho</h3>

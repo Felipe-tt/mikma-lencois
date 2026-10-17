@@ -95,7 +95,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
             {count > 0 ? (
               <>
                 <div className="flex items-end gap-3">
-                  <p className="font-display text-[3.4rem] leading-[0.85] text-ink tabular-nums">{average.toFixed(1)}</p>
+                  <p className="font-display text-[3.4rem] leading-[0.85] text-ink tabular-nums">{average.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</p>
                   <div className="pb-1">
                     <StarRating value={average} size={15} />
                     <p className="text-[12px] text-faint mt-1">{count} avaliaç{count === 1 ? 'ão' : 'ões'}</p>
@@ -123,7 +123,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
             {/* CTA de avaliar (só se comprou, recebeu e ainda não avaliou) */}
             {eligibleOrderId && !formOpen && (
               <div className="mt-6 pt-6 border-t border-mist">
-                <p className="text-[13px] text-mid leading-relaxed mb-3">Você recebeu este produto. Conte pra outros clientes o que achou.</p>
+                <p className="text-[13px] text-mid leading-relaxed mb-3">Você recebeu este produto. Conte para outros clientes o que achou.</p>
                 <button onClick={() => setFormOpen(true)} className="btn-clay w-full justify-center text-xs py-3 font-semibold tracking-wide">
                   Avaliar produto
                 </button>

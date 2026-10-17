@@ -108,7 +108,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Logo */}
           <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <BrandLogo alt="Mikma Lençóis" className="h-8 w-auto object-contain" />
+            <BrandLogo alt="Mikma Lençóis – início" className="h-8 w-auto object-contain" />
           </NavLink>
 
           {/* Desktop nav, right next to the logo */}
@@ -237,7 +237,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                       Frete grátis desbloqueado!
                     </span>
-                  : <span>Frete grátis faltam <strong className="text-ink">{formatCurrency(remaining)}</strong></span>
+                  : <span>Faltam <strong className="text-ink">{formatCurrency(remaining)}</strong> para frete grátis</span>
                 }
               </span>
             </div>
@@ -261,9 +261,9 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           >
             <div className="flex items-center justify-between px-5 h-[60px] border-b border-mist">
               <NavLink href="/" onClick={() => setMenuOpen(false)}>
-                <BrandLogo alt="Logo" className="h-9 w-auto object-contain" />
+                <BrandLogo alt="Mikma Lençóis – início" className="h-9 w-auto object-contain" />
               </NavLink>
-              <button type="button" className="btn-ghost w-9 h-9 !p-0" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
+              <button type="button" className="btn-ghost w-10 h-10 !p-0" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
@@ -321,7 +321,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                   </>
                 ) : (
                   <>
-                    <p className="text-[13px] text-mid leading-relaxed mb-4">Entre pra acompanhar pedidos e salvar favoritos.</p>
+                    <p className="text-[13px] text-mid leading-relaxed mb-4">Entre para acompanhar pedidos e salvar favoritos.</p>
                     <div className="grid grid-cols-2 gap-2">
                       <NavLink href="/entrar" onClick={rememberHere} className="btn-outline justify-center text-[13px] py-3">Entrar</NavLink>
                       <NavLink href="/cadastro" onClick={rememberHere} className="btn-clay justify-center text-[13px] py-3">Criar conta</NavLink>
