@@ -108,13 +108,13 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Logo */}
           <NavLink href="/" className="shrink-0 mr-auto md:mr-0">
-            <BrandLogo alt="Mikma Lençóis" className="h-8 w-auto object-contain" />
+            <BrandLogo alt="Mikma Lençóis" className="h-8 w-auto object-contain" priority />
           </NavLink>
 
           {/* Desktop nav, right next to the logo */}
           {/* Com a busca aberta o menu sai do fluxo (antes só ficava invisível,
               ocupando espaço, e empurrava carrinho e conta pra fora da tela). */}
-          <nav className={`hidden items-center gap-6 lg:gap-9 ml-6 lg:ml-8 ${searchOpen ? '' : 'md:flex'}`}>
+          <nav aria-label="Principal" className={`hidden items-center gap-6 lg:gap-9 ml-6 lg:ml-8 ${searchOpen ? '' : 'md:flex'}`}>
             {NAV_LINKS.map(({ href, label }) => (
               <NavLink key={href} href={href}
                 className={`whitespace-nowrap text-[13px] font-medium tracking-[0.01em] transition-colors duration-150 relative pb-0.5
@@ -285,7 +285,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             {/* Links principais em tipo de título, cada um numa linha com
                 seta; conta e atalhos ficam embaixo, menores. Antes era uma
                 lista de texto 15px solta num painel quase vazio. */}
-            <nav className="flex-1 flex flex-col overflow-y-auto">
+            <nav aria-label="Menu" className="flex-1 flex flex-col overflow-y-auto">
               <ul className="px-5 pt-2">
                 {NAV_LINKS.map(({ href, label }, i) => {
                   const active = pathname.startsWith(href);

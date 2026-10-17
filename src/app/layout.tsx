@@ -3,6 +3,8 @@ import './globals.css';
 import { Providers } from '@/components/Providers';
 import { ThemeScript } from '@/components/ThemeScript';
 import { Analytics } from '@/components/Analytics';
+import { fontSans, fontDisplay } from '@/lib/fonts';
+import { baseOpenGraph } from '@/lib/seo';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br'),
@@ -24,13 +26,10 @@ export const metadata: Metadata = {
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
   },
   openGraph: {
-    type: 'website',
-    locale: 'pt_BR',
-    url: 'https://mikma.com.br',
-    siteName: 'Mikma Lençóis',
+    ...baseOpenGraph,
+    url: '/',
     title: 'Mikma Lençóis · Blumenau SC',
     description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
-    images: [{ url: '/og-image.jpg', width: 1200, height: 630, alt: 'Mikma Lençóis · Lençóis e jogos de cama' }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -42,7 +41,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang="pt-BR" data-scroll-behavior="smooth" className={`${fontSans.variable} ${fontDisplay.variable}`} suppressHydrationWarning>
       <head>
         <ThemeScript />
         <link rel="icon" href="/favicon.ico" sizes="32x32" />

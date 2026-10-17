@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { parseBusinessHours, WEEKDAYS } from '@/lib/business-hours';
 import type { Metadata } from 'next';
+import { shareMeta } from '@/lib/seo';
 
 // Sem isso a página herdava o título e a descrição da home.
 export async function generateMetadata(): Promise<Metadata> {
@@ -18,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: '/sobre' },
-    openGraph: { title: `Sobre a ${name}`, description, url: '/sobre', type: 'website' },
+    ...shareMeta({ title: `Sobre a ${name}`, description, path: '/sobre' }),
   };
 }
 

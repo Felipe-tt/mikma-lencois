@@ -47,6 +47,7 @@ export function Footer({
               alt={storeName}
               width={800}
               height={242}
+              sizes="120px"
               className="h-7 w-auto object-contain object-left opacity-80 self-start"
             />
             <p className="text-[13px] text-paper/60 leading-relaxed max-w-[28ch]">

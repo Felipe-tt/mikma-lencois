@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
-
 @import 'tailwindcss';
 @config '../../tailwind.config.ts';
 
@@ -21,7 +19,9 @@
   --c-warm:     240 234 225;  /* #F0EAE1, superfície elevada (cards, header) */
   --c-warm-d:   229 221 210;  /* #E5DDD2, superfície elevada, variante */
   --c-linen:    216 207 191;  /* #D8CFBF */
-  --c-clay:     184 98 47;    /* #B8622F, cor de destaque (accent) */
+  --c-clay:     163 84 40;    /* #A35428, cor de destaque (accent). Era #B8622F,
+                                  4.1:1 sobre o papel (reprovava AA em texto);
+                                  agora 5.1:1 no papel e 4.6:1 no warm. */
   --c-clay-d:   150 80 30;    /* #96501E, accent, hover/escuro */
   --c-clay-l:   204 122 71;   /* #CC7A47, accent, claro */
   --c-mist:     230 223 213;  /* #E6DFD5, bordas/divisórias */
@@ -60,7 +60,9 @@ html.dark {
   --c-mist:     56 45 33;     /* bordas/divisórias sobre fundo escuro */
   --c-mist-d:   70 57 42;     /* bordas, variante (mais visível) */
   --c-mid:      184 166 148;  /* texto secundário */
-  --c-faint:    138 118 100;  /* texto terciário/placeholder */
+  --c-faint:    158 138 120;  /* texto terciário/placeholder. Era 138 118 100
+                                  (4.0:1 no warm); agora ≥4.8:1 em todas as
+                                  superfícies escuras. */
   --c-faint-l:  164 145 126;
 }
 

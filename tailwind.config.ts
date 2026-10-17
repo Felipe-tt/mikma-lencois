@@ -6,8 +6,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans:    ['Inter', 'system-ui', 'sans-serif'],
-        display: ['DM Serif Display', 'Georgia', 'serif'],
+        sans:    ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['var(--font-dm-serif)', 'DM Serif Display', 'Georgia', 'serif'],
         mono:    ['ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {

@@ -1,4 +1,6 @@
+import type { Metadata } from 'next';
 import { adminDb } from '@/lib/firebase/admin';
+import { shareMeta } from '@/lib/seo';
 import type { Product } from '@/types';
 import { serialize } from '@/lib/utils/serialize';
 import { SizeGuideCalculator } from '@/components/product/SizeGuideCalculator';
@@ -12,9 +14,15 @@ async function getActiveProducts(): Promise<Product[]> {
   return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
 }
 
-export const metadata = {
-  title: 'Guia de tamanhos: qual lençol comprar | Mikma Lençóis',
-  description: 'Não sabe se seu colchão é Solteiro, Casal, Queen ou King? Informe as medidas e a gente te mostra o tamanho certo, sem achismo.',
+const GUIA_DESCRIPTION = 'Não sabe se seu colchão é Solteiro, Casal, Queen ou King? Informe as medidas e a gente te mostra o tamanho certo, sem achismo.';
+
+// Sem o "| Mikma Lençóis" no título: o template do layout já adiciona
+// (antes saía "… | Mikma Lençóis | Mikma Lençóis").
+export const metadata: Metadata = {
+  title: 'Guia de tamanhos: qual lençol comprar',
+  description: GUIA_DESCRIPTION,
+  alternates: { canonical: '/guia-de-tamanhos' },
+  ...shareMeta({ title: 'Guia de tamanhos', description: GUIA_DESCRIPTION, path: '/guia-de-tamanhos' }),
 };
 
 export default async function GuiaDeTamanhosPage() {
