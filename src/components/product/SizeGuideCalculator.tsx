@@ -103,22 +103,28 @@ export function SizeGuideCalculator({ products, widths }: Props) {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Seletor de modo */}
-      <div className="flex gap-2 justify-center" role="group" aria-label="Como você quer descobrir o tamanho">
-        <button type="button" aria-pressed={mode === 'medir'} onClick={() => { setMode('medir'); setResult(null); setError(''); }}
-          className={`h-11 px-5 text-[12px] font-semibold border active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-150 ${mode === 'medir' ? 'bg-ink text-paper border-ink' : 'border-mist-d text-mid hover:border-ink hover:text-ink'}`}>
-          Vou medir agora
-        </button>
-        <button type="button" aria-pressed={mode === 'nome'} onClick={() => { setMode('nome'); setResult(null); setError(''); }}
-          className={`h-11 px-5 text-[12px] font-semibold border active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-150 ${mode === 'nome' ? 'bg-ink text-paper border-ink' : 'border-mist-d text-mid hover:border-ink hover:text-ink'}`}>
-          Já sei o nome
-        </button>
+      {/* Seletor de modo: controle segmentado com o fundo escuro deslizando
+          entre as opções. Antes eram dois botões soltos de larguras
+          diferentes, que pareciam ações independentes. */}
+      <div className="relative grid grid-cols-2 w-full max-w-[380px] mx-auto border border-mist-d p-1" role="group" aria-label="Como você quer descobrir o tamanho">
+        <span
+          aria-hidden="true"
+          className="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-ink transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none"
+          style={{ transform: mode === 'nome' ? 'translateX(100%)' : 'translateX(0)' }}
+        />
+        {([['medir', 'Vou medir agora'], ['nome', 'Já sei o nome']] as const).map(([key, label]) => (
+          <button key={key} type="button" aria-pressed={mode === key}
+            onClick={() => { setMode(key); setResult(null); setError(''); }}
+            className={`relative z-10 h-10 text-[12px] font-semibold transition-colors duration-300 ${mode === key ? 'text-paper' : 'text-mid hover:text-ink'}`}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {mode === 'medir' ? (
         <form onSubmit={handleMeasure} className="bg-paper border border-mist p-5 sm:p-6 flex flex-col gap-4 animate-fade-in">
-          <p className="text-[12px] text-faint leading-relaxed">
-            Passe a fita de uma lateral à outra do <strong className="text-mid">colchão</strong>, por cima. A altura é opcional, mas ajuda se o seu colchão for bem alto ou bem fino.
+          <p className="text-[13px] text-mid leading-relaxed">
+            Passe a fita de uma lateral à outra do <strong className="text-ink font-semibold">colchão</strong>, por cima. A altura é opcional, mas ajuda se o seu colchão for bem alto ou bem fino.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
@@ -169,7 +175,7 @@ export function SizeGuideCalculator({ products, widths }: Props) {
           </div>
 
           {matchingProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
               {matchingProducts.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           ) : (
