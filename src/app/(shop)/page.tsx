@@ -67,20 +67,35 @@ export default async function HomePage() {
   return (
     <>
       {/* ═══════════════════════════════════════════════════════════
-          HERO: texto à esquerda, foto nítida à direita.
-          Antes a foto ficava atrás do título com 22% de opacidade: lavada,
-          e o "MIKMA" da parede da foto colidia com as letras do título.
+          HERO: foto da cama em tela cheia, com um degradê na cor do fundo
+          vindo da esquerda pro texto ler bem. A parede com o "MIKMA" fica
+          do lado direito, longe do título.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="bg-paper border-b border-mist overflow-hidden">
-        <div className="container-shop grid lg:grid-cols-[1.08fr_0.92fr] gap-10 lg:gap-16 xl:gap-24 items-center pt-10 sm:pt-14 lg:pt-16 pb-12 sm:pb-16 lg:pb-20">
+      <section className="relative overflow-hidden bg-paper">
+        {/* No desktop a foto ocupa só os 70% da direita: o "MIKMA" da
+            parede fica longe do título. */}
+        <div className="absolute inset-y-0 right-0 left-0 lg:left-[30%] pointer-events-none select-none overflow-hidden">
+          <Image
+            src="/hero-bg.jpg"
+            alt=""
+            aria-hidden="true"
+            fill
+            priority
+            sizes="(min-width: 1024px) 70vw, 100vw"
+            className="object-cover object-[70%_center] lg:object-center animate-hero-zoom"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-paper/85 via-paper/75 to-paper lg:bg-gradient-to-r lg:from-paper lg:from-0% lg:via-paper/50 lg:via-35% lg:to-paper/0 lg:to-70%" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-paper to-transparent" />
+        </div>
 
-          <div className="animate-fade-up">
-            <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.22em] uppercase text-faint mb-8 sm:mb-10">
-              <span className="h-px w-8 bg-clay" aria-hidden="true" />
-              {city}, SC · Fábrica própria
+        <div className="container-shop relative pt-14 sm:pt-20 lg:pt-20 pb-10 sm:pb-14 lg:min-h-[min(84vh,760px)] flex flex-col">
+          <div className="max-w-[760px] animate-fade-up">
+            <p className="inline-flex items-center gap-2 rounded-full border border-mist-d/70 bg-paper/70 backdrop-blur-sm px-3.5 py-1.5 text-[11px] font-medium tracking-[0.08em] text-mid mb-8 sm:mb-10">
+              <span className="w-1.5 h-1.5 rounded-full bg-clay" aria-hidden="true" />
+              {city}, SC · Fábrica própria{s.foundedYear ? ` desde ${s.foundedYear}` : ''}
             </p>
 
-            <h1 className="font-display font-normal text-ink leading-[0.98] tracking-[-0.025em] text-[clamp(2.6rem,6.2vw,5.6rem)]">
+            <h1 className="font-display font-normal text-ink leading-[0.98] tracking-[-0.025em] text-[clamp(2.7rem,6.4vw,5.6rem)]">
               <span className="block">{heroLine1}</span>
               <span className="block italic text-clay">{heroLine2}</span>
               <span className="block">{heroLine3}</span>
@@ -90,55 +105,36 @@ export default async function HomePage() {
               {heroSubtitle}
             </p>
 
-            <div className="mt-8 sm:mt-10 flex flex-wrap items-center gap-x-7 gap-y-4">
+            <div className="mt-8 sm:mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Link href="/produtos"
-                className="group inline-flex items-center justify-center gap-2.5 h-[52px] px-8 bg-ink text-paper text-[13px] font-medium tracking-[0.06em] hover:bg-clay active:scale-[0.98] transition-[background-color,transform] duration-200">
+                className="group inline-flex items-center justify-center gap-2.5 h-[52px] pl-7 pr-2 rounded-full bg-ink text-paper text-[13.5px] font-medium tracking-[0.02em] shadow-[0_14px_30px_-14px_rgba(30,18,8,0.55)] hover:bg-clay active:scale-[0.98] transition-[background-color,transform] duration-200">
                 Ver produtos
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:translate-x-1"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                <span className="w-9 h-9 rounded-full bg-paper/15 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </span>
               </Link>
               <Link href="/guia-de-tamanhos"
-                className="text-[13px] text-mid hover:text-ink transition-colors duration-200 border-b border-mist-d hover:border-ink pb-0.5">
+                className="text-[13.5px] text-mid hover:text-ink transition-colors duration-200 underline decoration-mist-d underline-offset-[6px] hover:decoration-ink">
                 Qual tamanho eu preciso?
               </Link>
             </div>
           </div>
 
-          <div className="relative animate-fade-in">
-            <div className="relative aspect-[4/3] sm:aspect-[16/11] lg:aspect-[4/5] overflow-hidden bg-warm">
-              <Image
-                src="/hero-bg.jpg"
-                alt="Cama arrumada com lençóis Mikma"
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 45vw"
-                className="object-cover object-center"
-              />
-            </div>
-            {/* Cartão flutuante: âncora de confiança junto da foto */}
-            <div className="absolute -bottom-4 sm:-bottom-5 left-3 sm:left-6 lg:-left-8 bg-paper border border-mist px-4 py-3 sm:px-5 sm:py-4 shadow-[0_18px_40px_-24px_rgba(30,18,8,0.35)] max-w-[190px] sm:max-w-[230px]">
-              <p className="font-display text-[1.25rem] sm:text-[1.6rem] leading-none text-ink">{s.foundedYear ? `Desde ${s.foundedYear}` : 'Fábrica própria'}</p>
-              <p className="mt-1.5 text-[11px] sm:text-[12px] text-mid leading-snug">Costurado em {city}, sem intermediários.</p>
-            </div>
-          </div>
+          {/* Diferenciais em pílulas translúcidas no pé do hero */}
+          {trustItems.length > 0 && (
+            <ul className="mt-12 sm:mt-16 lg:mt-auto lg:pt-12 flex flex-wrap gap-2 sm:gap-2.5 animate-fade-in">
+              {trustItems.map((t, i) => (
+                <li key={t} className="inline-flex items-center gap-2.5 rounded-full border border-mist-d/60 bg-paper/75 backdrop-blur-md pl-1.5 pr-4 py-1.5 text-[12.5px] text-ink">
+                  <span className="w-7 h-7 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0" aria-hidden="true">
+                    {TRUST_ICONS[i % TRUST_ICONS.length]}
+                  </span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
-
-      {/* Diferenciais em faixa própria, legíveis (antes eram 12px soltos
-          embaixo do título). */}
-      {trustItems.length > 0 && (
-        <section className="bg-warm/50 border-b border-mist">
-          <div className="container-shop grid grid-cols-2 lg:grid-cols-4">
-            {trustItems.map((t, i) => (
-              <div key={t} className={`flex items-center gap-3.5 py-5 sm:py-6 ${i % 2 === 1 ? 'pl-4 sm:pl-6' : 'pr-4'} lg:px-6 lg:first:pl-0 ${i < 2 ? 'border-b lg:border-b-0' : ''} ${i % 2 === 0 ? 'border-r' : ''} lg:border-r lg:last:border-r-0 border-mist`}>
-                <span className="w-9 h-9 shrink-0 rounded-full border border-mist-d flex items-center justify-center text-clay">
-                  {TRUST_ICONS[i % TRUST_ICONS.length]}
-                </span>
-                <span className="text-[12.5px] sm:text-[13px] text-ink font-medium leading-snug">{t}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* ═══════════════════════════════════════════════════════════
           PRODUTOS, imediatamente após o hero
@@ -160,14 +156,18 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        {/* Categorias, se existirem */}
+        {/* Categorias em pílulas arredondadas */}
         {categories.length > 1 && (
           <nav aria-label="Categorias" className="container-shop mb-8 sm:mb-10">
-            <div className="flex gap-6 sm:gap-8 overflow-x-auto scrollbar-none border-b border-mist">
+            <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1 py-1">
+              <Link href="/produtos"
+                className="shrink-0 h-9 px-4 inline-flex items-center rounded-full bg-ink text-paper text-[13px] font-medium">
+                Todos
+              </Link>
               {categories.map(cat => (
                 <Link key={cat}
                   href={`/produtos?categoria=${encodeURIComponent(cat)}`}
-                  className="shrink-0 -mb-px py-3 text-[13px] text-mid hover:text-ink border-b border-transparent hover:border-ink transition-colors duration-200">
+                  className="shrink-0 h-9 px-4 inline-flex items-center rounded-full border border-mist-d text-[13px] text-mid hover:text-ink hover:border-ink hover:bg-warm transition-colors duration-200">
                   {cat}
                 </Link>
               ))}
@@ -178,7 +178,7 @@ export default async function HomePage() {
         {/* Grid */}
         <div className="container-shop pb-20">
           {products.length === 0 ? (
-            <div className="py-20 text-center border border-mist">
+            <div className="py-20 text-center border border-mist rounded-2xl">
               <p className="font-display text-2xl text-faint font-normal">
                 Nenhum produto cadastrado ainda.
               </p>
@@ -194,7 +194,7 @@ export default async function HomePage() {
           )}
           <div className="mt-8 sm:hidden text-center">
             <Link href="/produtos"
-              className="inline-flex items-center justify-center h-11 px-6 border border-ink text-ink text-[13px] font-medium hover:bg-ink hover:text-paper transition-colors duration-200">
+              className="inline-flex items-center justify-center h-11 px-6 rounded-full border border-ink text-ink text-[13px] font-medium hover:bg-ink hover:text-paper transition-colors duration-200">
               Ver todos os produtos
             </Link>
           </div>
@@ -202,39 +202,40 @@ export default async function HomePage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
-          PROPOSTA, uma frase e dois botões. Sem stats, sem grade.
-          Fundo escuro como ponto final da página.
+          PROPOSTA: cartão escuro arredondado, solto do rodapé (antes era
+          uma faixa terracota de ponta a ponta colada nele).
       ═══════════════════════════════════════════════════════════ */}
-      <section className="theme-locked relative overflow-hidden bg-clay-d">
-        {/* Lua da marca como marca d'água: preenche o lado direito, que
-            antes ficava vazio. Terracota em vez de marrom escuro: a faixa
-            colava no rodapé (mesma cor) e virava um bloco só. */}
-        <Image
-          src="/logo-moon-transparent.png"
-          alt=""
-          aria-hidden="true"
-          width={560}
-          height={560}
-          className="pointer-events-none select-none absolute -right-16 sm:right-0 lg:right-[6%] top-1/2 -translate-y-1/2 w-[300px] sm:w-[420px] lg:w-[520px] h-auto brightness-0 invert opacity-[0.12]"
-        />
-        <div className="container-shop relative py-16 sm:py-24">
-          <p className="flex items-center gap-3 font-mono text-[10px] tracking-[0.28em] uppercase text-paper/70 mb-8">
-            <span className="h-px w-8 bg-paper/50" aria-hidden="true" />
-            {s.foundedYear ? `${city} · Est. ${s.foundedYear}` : city}
-          </p>
-          <h2 className="font-display font-normal text-paper leading-[1.02] tracking-[-0.02em] mb-9 sm:mb-11 max-w-2xl text-[clamp(2.3rem,5.2vw,4.4rem)]">
-            {ctaLine1}<br /><em className="text-paper/75">{ctaLine2}</em>
-          </h2>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <Link href="/produtos"
-              className="group inline-flex items-center justify-center gap-2.5 h-[52px] px-8 bg-paper text-ink text-[13px] font-medium tracking-[0.05em] hover:bg-ink hover:text-paper active:scale-[0.98] transition-[background-color,color,transform] duration-200">
-              {ctaBtn1}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:translate-x-1"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            </Link>
-            <Link href="/sobre"
-              className="inline-flex items-center justify-center h-[52px] px-8 border border-paper/40 text-paper text-[13px] font-medium hover:border-paper hover:bg-paper/10 active:scale-[0.98] transition-[background-color,border-color,transform] duration-200">
-              {ctaBtn2}
-            </Link>
+      <section className="bg-paper pb-16 sm:pb-24">
+        <div className="container-shop">
+          <div className="theme-locked relative overflow-hidden rounded-[28px] bg-ink px-7 py-14 sm:px-14 sm:py-20 lg:px-20">
+            <Image
+              src="/logo-moon-transparent.png"
+              alt=""
+              aria-hidden="true"
+              width={560}
+              height={560}
+              className="pointer-events-none select-none absolute -right-20 sm:right-[4%] top-1/2 -translate-y-1/2 w-[300px] sm:w-[400px] lg:w-[460px] h-auto brightness-0 invert opacity-[0.07]"
+            />
+            <div className="relative">
+              <p className="inline-flex items-center gap-2 rounded-full border border-paper/15 px-3.5 py-1.5 text-[11px] font-medium tracking-[0.08em] text-paper/70 mb-8">
+                <span className="w-1.5 h-1.5 rounded-full bg-clay-l" aria-hidden="true" />
+                {s.foundedYear ? `${city} · desde ${s.foundedYear}` : city}
+              </p>
+              <h2 className="font-display font-normal text-paper leading-[1.02] tracking-[-0.02em] mb-9 sm:mb-11 max-w-2xl text-[clamp(2.3rem,5vw,4.2rem)]">
+                {ctaLine1}<br /><em className="text-clay-l">{ctaLine2}</em>
+              </h2>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link href="/produtos"
+                  className="group inline-flex items-center justify-center gap-2.5 h-[52px] px-8 rounded-full bg-paper text-ink text-[13.5px] font-medium hover:bg-clay-l active:scale-[0.98] transition-[background-color,transform] duration-200">
+                  {ctaBtn1}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:translate-x-1"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </Link>
+                <Link href="/sobre"
+                  className="inline-flex items-center justify-center h-[52px] px-8 rounded-full border border-paper/25 text-paper text-[13.5px] font-medium hover:border-paper/60 hover:bg-paper/[0.06] active:scale-[0.98] transition-[background-color,border-color,transform] duration-200">
+                  {ctaBtn2}
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>

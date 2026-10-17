@@ -302,9 +302,9 @@ export default async function ProductPage({ params }: Props) {
                   uma linha entre cada bloco (sem linha dupla). */}
               <div>
               {productTrusts.length > 0 && (
-                <ul className="grid sm:grid-cols-3 border-y border-mist divide-y sm:divide-y-0 sm:divide-x divide-mist">
+                <ul className="grid sm:grid-cols-3 rounded-2xl border border-mist bg-warm/30 divide-y sm:divide-y-0 sm:divide-x divide-mist">
                   {productTrusts.map((text, i) => (
-                    <li key={i} className="flex items-center gap-3 py-4 sm:px-5 sm:first:pl-0 sm:last:pr-0 text-[13px] text-mid leading-snug">
+                    <li key={i} className="flex items-center gap-3 px-4 py-4 sm:px-5 text-[13px] text-mid leading-snug">
                       <span aria-hidden="true" className="w-9 h-9 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0">
                         {i === 0 ? <TruckIcon /> : i === 1 ? <PackageIcon /> : <PixIcon />}
                       </span>
@@ -316,7 +316,7 @@ export default async function ProductPage({ params }: Props) {
 
               {/* ── Especificações ── */}
               {(product.yarnCount || product.composition || product.weightGsm || specTags.length > 0 || (product.certifications?.length ?? 0) > 0) && (
-                <div className="pt-7 first:pt-0">
+                <div className="pt-8 first:pt-0">
                   <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-3">Especificações do tecido</p>
                   <dl className="grid sm:grid-cols-2 gap-x-10 border-t border-mist">
                     {[
@@ -379,7 +379,7 @@ export default async function ProductPage({ params }: Props) {
 function SizeGuide({ columns, rows }: { columns: string[]; rows: Record<string, string>[] }) {
   if (!columns.length || !rows.length) return null;
   return (
-    <details className="group border-b first:border-t border-mist py-4">
+    <details className="group border-b first:border-t [ul+&]:mt-8 [ul+&]:border-t border-mist py-4">
       <summary className="flex items-center justify-between cursor-pointer list-none text-[12px] font-semibold text-mid tracking-[0.08em] uppercase hover:text-ink transition-colors">
         Tamanhos de cama e colchão
         <svg className="w-3.5 h-3.5 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

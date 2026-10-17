@@ -49,7 +49,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
             aria-modal="true"
             aria-labelledby="size-guide-title"
             data-variant="responsive"
-            className="overlay-panel w-full sm:max-w-xl bg-paper sm:mx-4 overflow-hidden shadow-2xl max-h-[88dvh] flex flex-col pb-[env(safe-area-inset-bottom)] sm:pb-0"
+            className="overlay-panel w-full sm:max-w-xl bg-paper sm:mx-4 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[88dvh] flex flex-col pb-[env(safe-area-inset-bottom)] sm:pb-0"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -61,7 +61,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
               <button
                 onClick={close}
                 type="button"
-                className="w-9 h-9 -mr-2 flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150"
+                className="w-9 h-9 -mr-2 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150"
                 aria-label="Fechar guia de medidas"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>

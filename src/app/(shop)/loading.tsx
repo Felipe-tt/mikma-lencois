@@ -19,10 +19,10 @@ export default function ShopLoading() {
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-2/3" />
             </div>
-            <Skeleton className="h-12 w-44" />
+            <Skeleton className="h-[52px] w-44 !rounded-full" />
           </div>
           <div className="mt-12 pt-8 border-t border-mist-d/70 grid grid-cols-2 sm:flex gap-4 sm:gap-10">
-            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-4 w-36" />)}
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-10 w-44 !rounded-full" />)}
           </div>
         </div>
       </section>

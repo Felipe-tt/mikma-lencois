@@ -111,7 +111,7 @@ export function ProductGallery({ images, name, tag }: Props) {
               key={i}
               type="button"
               onClick={() => setActive(i)}
-              className={`relative aspect-[4/5] shrink-0 overflow-hidden bg-warm transition-[opacity,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 ${
+              className={`relative aspect-[4/5] shrink-0 overflow-hidden rounded-xl bg-warm transition-[opacity,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 ${
                 active === i ? 'opacity-100 ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'opacity-55 hover:opacity-100'
               }`}
               aria-label={`Ver foto ${i + 1}`}
@@ -125,7 +125,7 @@ export function ProductGallery({ images, name, tag }: Props) {
 
       <div className="flex-1 min-w-0 flex flex-col gap-2">
         <div
-          className={`group relative aspect-[4/5] overflow-hidden bg-warm select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
+          className={`group relative aspect-[4/5] overflow-hidden rounded-3xl bg-warm [transform:translateZ(0)] select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={() => { swipe.current = null; }}
@@ -160,7 +160,7 @@ export function ProductGallery({ images, name, tag }: Props) {
           )}
 
           {tag && (
-            <span className="absolute top-4 left-4 bg-ink text-paper text-[9px] font-bold tracking-[0.18em] uppercase px-3 py-1.5 pointer-events-none">
+            <span className="absolute top-4 left-4 bg-ink text-paper text-[9px] font-bold tracking-[0.18em] uppercase px-3 py-1.5 rounded-full pointer-events-none">
               {tag}
             </span>
           )}
@@ -177,7 +177,7 @@ export function ProductGallery({ images, name, tag }: Props) {
             <>
               <button
                 type="button"
-                className="absolute z-[2] left-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 sm:hidden"
+                className="absolute z-[2] left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 sm:hidden"
                 onClick={prev}
                 aria-label="Foto anterior"
               >
@@ -185,7 +185,7 @@ export function ProductGallery({ images, name, tag }: Props) {
               </button>
               <button
                 type="button"
-                className="absolute z-[2] right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 sm:hidden"
+                className="absolute z-[2] right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 sm:hidden"
                 onClick={next}
                 aria-label="Próxima foto"
               >
@@ -195,7 +195,7 @@ export function ProductGallery({ images, name, tag }: Props) {
           )}
 
           {hasImages && (
-            <div className="absolute bottom-3 right-3 flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:gap-1.5 bg-ink/70 backdrop-blur-sm sm:px-2.5 sm:py-1.5 rounded-full sm:rounded-none text-[10px] text-paper font-medium pointer-events-none">
+            <div className="absolute bottom-3 right-3 flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:gap-1.5 bg-ink/70 backdrop-blur-sm sm:px-2.5 sm:py-1.5 rounded-full text-[10px] text-paper font-medium pointer-events-none">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
               <span className="hidden sm:inline">Ampliar</span>
             </div>
@@ -209,7 +209,7 @@ export function ProductGallery({ images, name, tag }: Props) {
                 key={i}
                 type="button"
                 onClick={() => setActive(i)}
-                className={`relative aspect-[4/5] w-14 shrink-0 overflow-hidden bg-warm transition-[opacity,box-shadow] duration-200 ${
+                className={`relative aspect-[4/5] w-14 shrink-0 overflow-hidden rounded-lg bg-warm transition-[opacity,box-shadow] duration-200 ${
                   active === i ? 'opacity-100 ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'opacity-55'
                 }`}
                 aria-label={`Ver foto ${i + 1}`}
