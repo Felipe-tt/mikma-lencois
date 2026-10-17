@@ -115,6 +115,12 @@ html.dark {
     outline: 2px solid rgb(var(--c-clay));
     outline-offset: 2px;
   }
+  /* Links de texto (sem fundo nem cantos próprios): contorno com cantos
+     suaves e um pouco mais de folga, como o resto da loja. */
+  a:not([class*="rounded"]):not([class^="bg-"]):not([class*=" bg-"]):focus-visible {
+    border-radius: 6px;
+    outline-offset: 4px;
+  }
   /* O highlight cinza que o Chrome/Android pinta ao tocar em qualquer
      elemento clicável briga com os estados de :active próprios do
      painel, que é usado no celular o dia todo. */

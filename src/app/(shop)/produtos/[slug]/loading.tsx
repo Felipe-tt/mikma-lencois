@@ -1,37 +1,43 @@
 import { Skeleton } from '@/components/ui/Skeleton';
 
+// Mesmo desenho da página do produto (miniaturas + foto 4:5 à esquerda,
+// nome e caixa de compra à direita), pra nada pular quando ela chega.
 export default function ProductLoading() {
   return (
-    <div>
-      <div className="border-b border-mist">
-        <div className="container-shop py-3.5">
+    <div aria-busy="true" aria-label="Carregando produto">
+      <div className="border-b border-mist bg-warm/40">
+        <div className="container-shop py-4">
           <Skeleton className="h-3 w-64" />
         </div>
       </div>
-      <div className="container-shop py-10 sm:py-14 pb-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20">
-          <div className="flex flex-col gap-3">
-            <Skeleton className="aspect-[4/5] w-full" />
-            <div className="grid grid-cols-4 gap-2">
-              {[1,2,3,4].map(i => <Skeleton key={i} className="aspect-square" />)}
+      <div className="container-shop py-8 pb-28 sm:pb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
+          <div className="flex gap-3 sm:gap-4 min-w-0">
+            <div className="hidden sm:flex flex-col gap-2.5 w-[72px] shrink-0">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="aspect-[4/5] w-full !rounded-xl" />)}
             </div>
+            <Skeleton className="flex-1 aspect-[4/5] !rounded-3xl" />
           </div>
-          <div className="flex flex-col gap-6">
-            <Skeleton className="h-2.5 w-20" />
-            <div>
-              <Skeleton className="h-10 w-full mb-2" />
-              <Skeleton className="h-10 w-3/4 mb-4" />
-              <Skeleton className="h-9 w-32" />
+
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2.5">
+              <Skeleton className="h-2.5 w-20" />
+              <Skeleton className="h-8 w-11/12" />
+              <Skeleton className="h-8 w-2/3" />
             </div>
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-4/6" />
-            <div className="border-t border-mist pt-6 flex flex-col gap-3">
-              <Skeleton className="h-2.5 w-32 mb-1" />
-              <div className="flex gap-2">
-                {[1,2,3].map(i => <Skeleton key={i} className="h-10 w-20" />)}
+            <div className="rounded-3xl border border-mist p-5 sm:p-7 flex flex-col gap-5">
+              <Skeleton className="h-9 w-36" />
+              <Skeleton className="h-12 w-full !rounded-xl" />
+              <div className="border-t border-mist pt-5 flex flex-col gap-3">
+                <Skeleton className="h-2.5 w-28" />
+                <div className="flex gap-2">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-11 w-28 !rounded-full" />)}
+                </div>
               </div>
-              <Skeleton className="h-14 w-full mt-2" />
+              <div className="border-t border-mist pt-5 hidden sm:flex flex-col gap-2">
+                <Skeleton className="h-[52px] w-full !rounded-full" />
+                <Skeleton className="h-[52px] w-full !rounded-full" />
+              </div>
             </div>
           </div>
         </div>

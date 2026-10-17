@@ -92,7 +92,7 @@ export function CartSkeleton() {
         <div className="flex flex-col divide-y divide-mist">
           {[1,2,3].map(i => (
             <div key={i} className="flex gap-5 py-6">
-              <Skeleton className="w-24 h-28 shrink-0" />
+              <Skeleton className="w-24 h-28 shrink-0 !rounded-xl" />
               <div className="flex-1 flex flex-col gap-2.5">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/3" />
@@ -100,7 +100,7 @@ export function CartSkeleton() {
               </div>
               <div className="flex flex-col items-end gap-3 shrink-0">
                 <Skeleton className="h-3 w-14" />
-                <Skeleton className="h-9 w-28" />
+                <Skeleton className="h-9 w-28 !rounded-full" />
               </div>
             </div>
           ))}
