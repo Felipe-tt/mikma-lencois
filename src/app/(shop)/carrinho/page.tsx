@@ -245,7 +245,9 @@ export default function CartPage() {
       )}
 
       <div className="container-shop py-8 pb-24">
-        <div className="flex flex-col lg:grid lg:grid-cols-[1fr_360px] gap-10 lg:gap-16 items-start">
+        {/* Duas colunas a partir do tablet (antes a lista encolhia e o resumo
+            ocupava a largura toda entre 768 e 1023px). */}
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_300px] lg:grid-cols-[minmax(0,1fr)_360px] gap-10 md:gap-8 lg:gap-16 items-start">
 
           {/* ── Itens ── */}
           <div>
@@ -379,7 +381,7 @@ export default function CartPage() {
                       <span className="text-xs text-emerald-600 ml-2">{formatCurrency(couponApplied.discount)} de desconto</span>
                     </div>
                   </div>
-                  <button onClick={() => { removeCoupon(); setCouponOpen(false); }} className="text-xs text-emerald-500 hover:text-emerald-700 font-semibold">Remover</button>
+                  <button onClick={() => { removeCoupon(); setCouponOpen(false); }} className="text-xs text-mid hover:text-red-600 font-medium py-2 -my-2 px-2 -mx-2 rounded-full transition-colors">Remover</button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5">

@@ -243,17 +243,17 @@ export default async function ProductPage({ params }: Props) {
       </div>
 
       <div className="container-shop py-8 pb-28 sm:pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px] gap-8 md:gap-8 lg:gap-12 items-start">
 
           {/* Ordem: no celular foto → nome/compra → detalhes; no desktop foto
               e detalhes à esquerda, nome + compra fixos à direita. Antes o
               nome ficava embaixo da foto e a coluna de compra começava direto
               pelo preço, sem dizer o que estava à venda. */}
-          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+          <div className="min-w-0 md:col-start-1 md:row-start-1">
             <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} />
           </div>
 
-          <div className="flex flex-col gap-5 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24">
+          <div className="flex flex-col gap-5 md:col-start-2 md:row-start-1 md:row-span-2 md:sticky md:top-24">
             <div>
               {product.category && (
                 <Link
@@ -286,7 +286,7 @@ export default async function ProductPage({ params }: Props) {
             )}
           </div>
 
-          <div className="flex flex-col gap-8 min-w-0 lg:col-start-1 lg:row-start-2">
+          <div className="flex flex-col gap-8 min-w-0 md:col-start-1 md:row-start-2">
             {/* Detalhes: antes eram blocos soltos com larguras diferentes
                 (texto 60ch, tabela e selos 520px, sanfona na coluna toda).
                 Agora tudo segue a largura da coluna, com título de seção. */}

@@ -145,7 +145,10 @@ export function AuthModal() {
       if (msg.includes('Muitas tentativas')) setLoginError(msg);
       else if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found')) setLoginError('E-mail ou senha incorretos.');
       else if (msg.includes('auth/network-request-failed')) setLoginError('Erro de conexão. Verifique sua internet.');
-      else setLoginError(msg || 'Erro ao entrar');
+      else if (msg.includes('auth/too-many-requests')) setLoginError('Muitas tentativas. Tente novamente em alguns minutos.');
+      else if (msg.includes('auth/user-disabled')) setLoginError('Esta conta está desativada. Fale com a loja pelo WhatsApp.');
+      else if (msg.includes('auth/invalid-email')) setLoginError('Confira o e-mail digitado.');
+      else setLoginError(!msg || /^(Firebase|auth\/)/i.test(msg) ? 'Não foi possível entrar. Tente de novo.' : msg);
     } finally {
       setLoginLoading(false);
     }

@@ -144,7 +144,7 @@ export default function TrocasPage() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`text-[11px] font-bold uppercase tracking-[0.06em] px-3.5 py-2 border transition-colors ${ filter === f.key ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:bg-warm' } rounded-full`}
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 min-h-9 text-[11px] font-semibold border transition-colors ${ filter === f.key ? 'bg-ink text-paper border-ink' : 'bg-paper text-mid border-mist hover:bg-warm' } rounded-xl`}
           >
             {f.label} {counts[f.key] ? <span className="opacity-60">({counts[f.key]})</span> : null}
           </button>
@@ -158,7 +158,17 @@ export default function TrocasPage() {
       ) : filtered.length === 0 ? (
         <div className="border border-mist bg-paper py-16 text-center rounded-xl">
           <IconExchange size={32} className="text-mist mx-auto mb-3" />
-          <p className="text-sm text-faint">Nenhuma solicitação {filter !== 'todas' ? `no status "${STATUS_LABEL[filter as ReturnStatus]}"` : 'ainda'}.</p>
+          <p className="text-sm text-ink font-medium">Nenhuma solicitação {filter !== 'todas' ? `no status "${STATUS_LABEL[filter as ReturnStatus]}"` : 'ainda'}.</p>
+          {filter === 'todas' && (
+            <>
+              <p className="text-[13px] text-faint mt-1.5 max-w-[36ch] mx-auto leading-relaxed">
+                Pra registrar uma troca ou devolução, abra um pedido entregue e toque em &quot;Registrar troca ou devolução&quot;.
+              </p>
+              <Link href="/painel/pedidos" className="inline-flex items-center gap-1.5 mt-4 min-h-10 px-4 rounded-xl border border-mist text-[12.5px] font-semibold text-ink hover:bg-warm transition-colors">
+                Ver pedidos
+              </Link>
+            </>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-3">

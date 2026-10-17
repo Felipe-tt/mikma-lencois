@@ -9,13 +9,13 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import type { Product } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function PainelProdutosPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [loadError, setLoadError] = useState(false);
 
@@ -54,11 +54,19 @@ export default function PainelProdutosPage() {
     } finally { setBusyId(null); }
   }
 
-  async function deleteProduct(id: string) {
+  // Mesmo diálogo de Cupons/Avaliações (antes era uma confirmação inline
+  // de 22px de altura, só aqui).
+  async function deleteProduct(id: string, name: string) {
+    const { confirmed } = await confirmDialog({
+      message: `Apagar "${name}"?`,
+      detail: 'O produto sai da loja e do painel. Esta ação não tem como desfazer.',
+      confirmLabel: 'Apagar produto',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     setErrorMsg(''); setBusyId(id);
     try {
       await authedFetch(`/api/products/${id}`, { method: 'DELETE' });
-      setConfirmDeleteId(null);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Não foi possível apagar o produto. Tente novamente.');
     } finally { setBusyId(null); }
@@ -137,11 +145,10 @@ export default function PainelProdutosPage() {
           </div>
           {filtered.map((p, idx) => {
             const isBusy = busyId === p.id;
-            const isConfirming = confirmDeleteId === p.id;
             return (
               <div
                 key={p.id}
-                className={`grid grid-cols-[56px_1fr_auto] sm:grid-cols-[56px_minmax(160px,1fr)_100px_90px_90px_120px] gap-4 px-4 py-3 items-center hover:bg-warm transition-colors sm:min-w-[700px] ${idx < filtered.length - 1 ? 'border-b border-mist' : ''}`}
+                className={`grid grid-cols-[40px_1fr] gap-x-3 gap-y-2.5 sm:gap-4 sm:grid-cols-[56px_minmax(160px,1fr)_100px_90px_90px_120px] px-4 py-3 items-center hover:bg-warm transition-colors sm:min-w-[700px] ${idx < filtered.length - 1 ? 'border-b border-mist' : ''}`}
               >
                 {/* Thumb */}
                 <div className="relative w-10 h-10 bg-warm border border-mist shrink-0 overflow-hidden rounded-xl">
@@ -177,52 +184,34 @@ export default function PainelProdutosPage() {
                   </button>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-3 justify-end">
+                {/* Actions: no celular vão numa segunda linha, senão espremiam
+                    o nome do produto até "Len…". */}
+                <div className="col-span-2 sm:col-span-1 flex items-center gap-3 justify-between sm:justify-end pl-[52px] sm:pl-0">
                   <button
                     onClick={() => toggleActive(p.id, p.active)}
                     disabled={isBusy}
                     aria-pressed={p.active}
-                    className={`sm:hidden min-h-9 text-[11px] font-bold tracking-[0.06em] uppercase px-3 border transition-colors disabled:opacity-50 ${ p.active ? 'border-clay-l text-clay-l' : 'border-mist text-faint' } rounded-full`}
+                    className={`sm:hidden min-h-10 text-[11px] font-bold tracking-[0.06em] uppercase px-3.5 border transition-colors disabled:opacity-50 ${ p.active ? 'border-clay-l text-clay-l' : 'border-mist text-faint' } rounded-full`}
                   >
                     {isBusy ? '…' : p.active ? 'Visível' : 'Oculto'}
                   </button>
 
-                  {isConfirming ? (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => deleteProduct(p.id)}
-                        disabled={isBusy}
-                        className="text-[10px] font-bold uppercase px-2 py-1 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors rounded-full"
-                      >
-                        {isBusy ? 'Apagando…' : 'Confirmar'}
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteId(null)}
-                        disabled={isBusy}
-                        className="text-[10px] font-semibold text-faint hover:text-ink px-1.5 py-1 transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Link
-                        href={`/painel/produtos/${p.id}`}
-                        className="inline-flex items-center min-h-9 px-1 text-[12px] font-semibold text-clay hover:text-clay-d transition-colors"
-                      >
-                        Editar
-                      </Link>
-                      <button
-                        onClick={() => setConfirmDeleteId(p.id)}
-                        disabled={isBusy}
-                        aria-label={`Apagar ${p.name}`}
-                        className="inline-flex items-center min-h-9 px-1 text-[12px] font-semibold text-red-500 hover:text-red-700 disabled:opacity-50 transition-colors"
-                      >
-                        Apagar
-                      </button>
-                    </>
-                  )}
+                  <div className="flex items-center gap-1">
+                    <Link
+                      href={`/painel/produtos/${p.id}`}
+                      className="inline-flex items-center min-h-10 px-3 rounded-xl text-[12.5px] font-semibold text-clay hover:text-clay-d hover:bg-warm transition-colors"
+                    >
+                      Editar
+                    </Link>
+                    <button
+                      onClick={() => deleteProduct(p.id, p.name)}
+                      disabled={isBusy}
+                      aria-label={`Apagar ${p.name}`}
+                      className="inline-flex items-center min-h-10 px-3 rounded-xl text-[12.5px] font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    >
+                      {isBusy ? 'Apagando…' : 'Apagar'}
+                    </button>
+                  </div>
                 </div>
               </div>
             );

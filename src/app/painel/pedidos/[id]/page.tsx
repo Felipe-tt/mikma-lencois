@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { maskCep, maskPhone } from '@/lib/masks';
 import type { Order, User } from '@/types';
 import dynamic from 'next/dynamic';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
@@ -528,13 +529,15 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   if (!order) return <p className="text-sm text-faint py-8 text-center">Pedido não encontrado.</p>;
 
   const timeline = [...(order.timeline ?? [])].reverse();
+  // Só dígitos, sem o 55 (o cadastro guarda o celular com DDD).
+  const customerPhone = ((customer as (User & { phone?: string }) | null)?.phone ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '') || null;
   const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
 
   return (
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-faint hover:text-ink transition-colors p-1 -ml-1">
+        <button onClick={() => router.back()} aria-label="Voltar" className="w-10 h-10 -ml-2 flex items-center justify-center rounded-xl text-faint hover:text-ink hover:bg-paper transition-colors">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
@@ -813,6 +816,18 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <Row label="Nome" value={customer.name} />
               <Row label="E-mail" value={customer.email} />
               <Row label="CPF" value={customer.cpf ? customer.cpf : 'Não informado'} />
+              {customerPhone && (
+                <div className="flex justify-between items-center gap-4 py-2.5 border-b border-warm">
+                  <span className="text-[12px] text-faint shrink-0">Telefone</span>
+                  <span className="flex items-center gap-1.5">
+                    <a href={`tel:+55${customerPhone}`} className="text-[13px] font-medium text-ink hover:text-clay transition-colors">{maskPhone(customerPhone)}</a>
+                    <a href={`https://wa.me/55${customerPhone}`} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center min-h-8 px-2.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold hover:bg-emerald-100 transition-colors">
+                      WhatsApp
+                    </a>
+                  </span>
+                </div>
+              )}
               <Row label="Cliente desde" value={formatDateTime(customer.createdAt)} />
               {customer.address && (
                 <Row label="Endereço cadastrado" value={`${customer.address.street}, ${customer.address.number}, ${customer.address.city}/${customer.address.state}`} />
@@ -877,7 +892,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <span className="text-[10px] text-amber-600">· AbacatePay Dev Mode, nenhum valor real</span>
             </div>
           )}
-          <Row label="Método" value={order.payment.method.toUpperCase()} />
+          <Row label="Método" value={order.payment.method === 'card'
+            ? ((order.payment.installments ?? 1) > 1 ? `Cartão ${order.payment.installments}x` : 'Cartão à vista')
+            : 'PIX'} />
           {/* Status do PAGAMENTO, não do pedido: "A caminho" aqui confundia. */}
           <Row label="Status" value={
             order.payment.paidAt ? 'Pago'
@@ -953,10 +970,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           <Row label="Rua" value={`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}`} />
           <Row label="Bairro" value={order.address.neighborhood} />
           <Row label="Cidade" value={`${order.address.city}, ${order.address.state}`} />
-          <Row label="CEP" value={order.address.cep} />
+          <Row label="CEP" value={maskCep(order.address.cep)} />
           <div className="py-2.5 flex flex-col gap-2">
             <button
-              onClick={() => copy(`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP ${order.address.cep}`, 'address')}
+              onClick={() => copy(`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP ${maskCep(order.address.cep)}`, 'address')}
               className="w-full border border-mist text-mid text-[12px] font-semibold py-2 hover:bg-warm transition-colors rounded-xl">
               {copied === 'address' ? 'Endereço copiado!' : 'Copiar endereço completo'}
             </button>
@@ -990,7 +1007,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     : null;
                   return url ? (
                     <a href={url} target="_blank" rel="noopener noreferrer"
-                      className="text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors">
+                      className="inline-flex items-center min-h-10 text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors">
                       Rastrear na transportadora
                     </a>
                   ) : null;
