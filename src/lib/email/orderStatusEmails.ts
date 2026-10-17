@@ -2,157 +2,242 @@ import { carrierName, trackingUrl as getTrackingUrl } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Order } from '@/types';
 import { escapeHtml } from '@/lib/html';
+import {
+  BASE_URL, emailCallout, emailCta, emailItemsTable, emailLayout, emailParagraph,
+  emailSection, emailSignature, orderSubject, shortOrderId,
+} from './layout';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br';
-const STORE = 'Mikma Lençóis';
+type EmailPayload = { subject: string; html: string; text: string };
 
-function wrap(body: string) {
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;padding:0;background:#F5F0EB;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F0EB;padding:40px 16px;">
-<tr><td align="center">
-<table width="100%" style="max-width:600px;">
-
-  <tr><td style="padding:0 0 24px;">
-    <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td><span style="font-family:Georgia,serif;font-size:22px;color:#1E1208;letter-spacing:.04em;">${STORE}</span></td>
-      <td align="right"><span style="font-size:11px;color:#9C8B7C;letter-spacing:.12em;text-transform:uppercase;">Blumenau, SC</span></td>
-    </tr></table>
-  </td></tr>
-
-  <tr><td style="background:#fff;border-top:3px solid #C4714A;">${body}</td></tr>
-
-  <tr><td style="padding:24px 0 0;">
-    <p style="margin:0;font-size:11px;color:#B09C8C;text-align:center;line-height:1.6;">
-      Dúvidas? <a href="mailto:contato@mikma.com.br" style="color:#C4714A;text-decoration:none;">contato@mikma.com.br</a>
-      &nbsp;·&nbsp;<a href="${BASE_URL}" style="color:#C4714A;text-decoration:none;">mikma.com.br</a>
-    </p>
-  </td></tr>
-
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+/** Mesma conta de dias úteis do checkout ("Recebe sex., 30/10"). */
+export function addBusinessDays(from: Date, days: number): Date {
+  const d = new Date(from);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const wd = d.getDay();
+    if (wd !== 0 && wd !== 6) added++;
+  }
+  return d;
 }
 
-function itemsHtml(order: Order) {
-  const rows = order.items.map(it => `
-    <tr>
-      <td style="padding:10px 0;border-bottom:1px solid #F0EBE1;font-size:13px;color:#1E1208;">
-        ${escapeHtml(it.productName)}<br>
-        <span style="font-size:11px;color:#9C8B7C;">
-          ${escapeHtml(it.variant.size)}${it.variant.color ? ` · ${escapeHtml(it.variant.color)}` : ''}
-          ${it.variant.fabric ? ` · ${escapeHtml(it.variant.fabric)}` : ''} · ${it.quantity}x
-        </span>
-      </td>
-      <td style="padding:10px 0;border-bottom:1px solid #F0EBE1;font-size:13px;color:#1E1208;text-align:right;white-space:nowrap;">
-        ${formatCurrency(it.unitPrice * it.quantity)}
-      </td>
-    </tr>`).join('');
-  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0 8px;">
-    ${rows}
-    <tr>
-      <td style="padding:12px 0 0;font-size:14px;font-weight:bold;color:#1E1208;">Total</td>
-      <td style="padding:12px 0 0;font-size:14px;font-weight:bold;color:#1E1208;text-align:right;">${formatCurrency(order.totalCents)}</td>
-    </tr>
-  </table>`;
+function orderUrl(order: Pick<Order, 'id'>) {
+  return `${BASE_URL}/pedidos/${order.id}`;
 }
 
-function cta(label: string, url: string) {
-  return `<table cellpadding="0" cellspacing="0" style="margin:24px 0 8px;">
-    <tr><td style="background:#C4714A;">
-      <a href="${url}" style="display:inline-block;padding:14px 28px;font-size:13px;font-weight:bold;color:#fff;text-decoration:none;letter-spacing:.04em;">${label}</a>
-    </td></tr>
-  </table>`;
-}
-
-function sig() {
-  return `<div style="padding:20px 36px 28px;border-top:1px solid #F0EBE1;">
-    <p style="margin:0;font-size:12px;color:#9C8B7C;line-height:1.6;">
-      <strong style="color:#1E1208;">${STORE}</strong> · contato@mikma.com.br
-    </p>
-  </div>`;
-}
-
-export function buildPreparing(order: Order, name: string) {
-  const id = order.id.slice(-8).toUpperCase();
-  const url = `${BASE_URL}/pedidos/${order.id}`;
-  const html = wrap(`
-    <div style="padding:36px 36px 4px;">
-      <p style="margin:0 0 4px;font-size:12px;color:#9C8B7C;letter-spacing:.08em;text-transform:uppercase;">Pedido #${id}</p>
-      <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">Pedido em separação!</h1>
-      <p style="margin:0 0 14px;font-size:15px;color:#2C1F14;line-height:1.7;">
-        Olá, <strong>${escapeHtml(name)}</strong>! Nossa equipe já começou a separar e embalar o seu pedido com todo cuidado.
-      </p>
-      <p style="margin:0 0 20px;font-size:14px;color:#705A48;line-height:1.65;">
-        Em breve ele estará a caminho. Você receberá um e-mail assim que for despachado.
-      </p>
-      ${itemsHtml(order)}
-      ${cta('Acompanhar pedido', url)}
-    </div>
-    ${sig()}`);
+export function buildPreparing(order: Order, name: string): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Pedido em separação',
+      html: `
+        ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Nossa equipe já começou a separar e embalar o seu pedido com todo cuidado.`)}
+        ${emailParagraph('Você recebe outro e-mail assim que ele for despachado.', { muted: true })}
+        ${emailItemsTable(order.items, order.totalCents)}
+        ${emailCta('Acompanhar pedido', url)}`,
+    })}
+    ${emailSignature()}`);
   return {
-    subject: `Pedido #${id} em separação, ${STORE}`,
+    subject: orderSubject(id, 'em separação'),
     html,
     text: `Olá, ${name}! Seu pedido #${id} está sendo separado. Acompanhe em: ${url}`,
   };
 }
 
-export function buildShipped(order: Order, name: string) {
-  const id = order.id.slice(-8).toUpperCase();
-  const url = `${BASE_URL}/pedidos/${order.id}`;
+export function buildShipped(order: Order, name: string, now = new Date()): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
   const code = order.delivery?.trackingCode;
   const carrier = order.delivery?.carrier ?? null;
   const rastreioUrl = carrier && code ? getTrackingUrl(carrier, code) : null;
   const carrierLabel = carrier ? carrierName(carrier) : 'transportadora';
-  const trackingBlock = code ? `
-    <div style="background:#F5F0EB;padding:16px 20px;margin:20px 0;border-left:3px solid #C4714A;">
+  // Prazo cotado no checkout (dias úteis), contado a partir do despacho.
+  const days = order.delivery?.estimatedDays;
+  const eta = typeof days === 'number' && days > 0
+    ? addBusinessDays(now, days).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })
+    : null;
+  const trackingBlock = code ? emailCallout(`
       <p style="margin:0 0 4px;font-size:11px;color:#9C8B7C;text-transform:uppercase;letter-spacing:.08em;">Código de rastreio · ${escapeHtml(carrierLabel)}</p>
       <p style="margin:0;font-family:monospace;font-size:18px;font-weight:bold;color:#1E1208;letter-spacing:.12em;">${escapeHtml(code)}</p>
-      ${rastreioUrl ? `<p style="margin:8px 0 0;"><a href="${escapeHtml(rastreioUrl)}" style="font-size:12px;color:#C4714A;text-decoration:none;">Rastrear na ${escapeHtml(carrierLabel)}</a></p>` : ''}
-    </div>` : '';
-  const html = wrap(`
-    <div style="padding:36px 36px 4px;">
-      <p style="margin:0 0 4px;font-size:12px;color:#9C8B7C;letter-spacing:.08em;text-transform:uppercase;">Pedido #${id}</p>
-      <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">Pedido despachado!</h1>
-      <p style="margin:0 0 14px;font-size:15px;color:#2C1F14;line-height:1.7;">
-        Olá, <strong>${escapeHtml(name)}</strong>! Seu pedido saiu e está a caminho. Fique de olho!
-      </p>
-      ${trackingBlock}
-      ${itemsHtml(order)}
-      ${cta('Acompanhar pedido', url)}
-    </div>
-    ${sig()}`);
+      ${rastreioUrl ? `<p style="margin:8px 0 0;"><a href="${escapeHtml(rastreioUrl)}" style="font-size:13px;color:#B45A34;text-decoration:none;font-weight:bold;">Rastrear envio →</a></p>` : ''}`) : '';
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Pedido despachado',
+      html: `
+        ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Seu pedido saiu e está a caminho.`)}
+        ${eta ? emailParagraph(`<strong>Previsão de entrega:</strong> até ${eta}.`, { muted: true }) : ''}
+        ${trackingBlock}
+        ${emailItemsTable(order.items, order.totalCents)}
+        ${emailCta('Acompanhar pedido', url)}`,
+    })}
+    ${emailSignature()}`);
   return {
-    subject: `Pedido #${id} despachado, ${STORE}`,
+    subject: orderSubject(id, 'despachado'),
     html,
-    text: `Olá, ${name}! Pedido #${id} despachado.${code ? ` Rastreio: ${code}` : ''} Veja em: ${url}`,
+    text: `Olá, ${name}! Pedido #${id} despachado.${eta ? ` Previsão de entrega: até ${eta}.` : ''}${code ? ` Rastreio: ${code}` : ''} Veja em: ${url}`,
   };
 }
 
-export function buildDelivered(order: Order, name: string) {
-  const id = order.id.slice(-8).toUpperCase();
-  const url = `${BASE_URL}/pedidos/${order.id}`;
-  const html = wrap(`
-    <div style="padding:36px 36px 4px;">
-      <p style="margin:0 0 4px;font-size:12px;color:#9C8B7C;letter-spacing:.08em;text-transform:uppercase;">Pedido #${id}</p>
-      <h1 style="margin:0 0 20px;font-family:Georgia,serif;font-size:26px;font-weight:normal;color:#1E1208;">Pedido entregue!</h1>
-      <p style="margin:0 0 14px;font-size:15px;color:#2C1F14;line-height:1.7;">
-        Olá, <strong>${escapeHtml(name)}</strong>! Seu pedido chegou. Esperamos que você ame seus novos lençóis!
-      </p>
-      <p style="margin:0 0 20px;font-size:14px;color:#705A48;line-height:1.65;">
-        Qualquer dúvida, é só responder esse e-mail, estamos aqui.
-      </p>
-      ${itemsHtml(order)}
-      ${cta('Ver detalhes do pedido', url)}
-    </div>
-    ${sig()}`);
+export function buildDelivered(order: Order, name: string): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Pedido entregue',
+      html: `
+        ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Seu pedido chegou. Esperamos que você ame seus novos lençóis.`)}
+        ${emailParagraph('Se algo não estiver certo, é só responder este e-mail que a gente resolve.', { muted: true })}
+        ${emailItemsTable(order.items, order.totalCents)}
+        ${emailCta('Ver detalhes do pedido', url)}`,
+    })}
+    ${emailSignature()}`);
   return {
-    subject: `Pedido #${id} entregue, ${STORE}`,
+    subject: orderSubject(id, 'entregue'),
     html,
-    text: `Olá, ${name}! Pedido #${id} entregue com sucesso. Veja em: ${url}`,
+    text: `Olá, ${name}! Pedido #${id} entregue. Se algo não estiver certo, responda este e-mail. Veja em: ${url}`,
+  };
+}
+
+/** Pagamento confirmado (PIX ou cartão). */
+export function buildConfirmed(
+  order: Pick<Order, 'id' | 'items' | 'totalCents'> & { payment: { method: string } },
+  name: string,
+): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
+  const payMethod = order.payment.method === 'pix' ? 'PIX' : 'cartão de crédito';
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Pedido confirmado',
+      html: `
+        ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Recebemos seu pagamento via ${payMethod} e já estamos preparando seu pedido. Obrigado pela compra!`)}
+        ${emailItemsTable(order.items, order.totalCents)}
+        ${emailCta('Acompanhar pedido', url)}`,
+    })}
+    ${emailSignature()}`);
+  const lines = order.items.map(i => `${i.quantity}x ${i.productName}, ${formatCurrency(i.unitPrice * i.quantity)}`);
+  return {
+    subject: orderSubject(id, 'confirmado'),
+    html,
+    text: [
+      `Olá, ${name}!`, '',
+      `Seu pedido #${id} foi confirmado. Obrigado pela compra!`, '',
+      'ITENS:', ...lines, '',
+      `Total: ${formatCurrency(order.totalCents)} via ${payMethod}`, '',
+      `Acompanhe seu pedido: ${url}`, '',
+      'Qualquer dúvida, responda este e-mail.',
+      'Equipe Mikma Lençóis',
+    ].join('\n'),
+  };
+}
+
+/** Pedido criado com PIX gerado, falta pagar. */
+export function buildPixPending(
+  order: Pick<Order, 'id' | 'items' | 'totalCents'>,
+  name: string,
+  pix: { copyPaste: string; expiresAt?: string | Date | null },
+): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
+  const exp = pix.expiresAt ? new Date(pix.expiresAt) : null;
+  const expLabel = exp && !Number.isNaN(exp.getTime())
+    ? exp.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : null;
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Recebemos seu pedido',
+      html: `
+        ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Falta só o pagamento via PIX para confirmar. Total: <strong>${formatCurrency(order.totalCents)}</strong>.`)}
+        ${emailCallout(`
+          <p style="margin:0 0 6px;font-size:11px;color:#9C8B7C;text-transform:uppercase;letter-spacing:.08em;">PIX copia e cola</p>
+          <p style="margin:0;font-family:monospace;font-size:12px;color:#1E1208;word-break:break-all;line-height:1.5;">${escapeHtml(pix.copyPaste)}</p>
+          ${expLabel ? `<p style="margin:10px 0 0;font-size:12px;color:#705A48;">Válido até ${expLabel}. Depois disso, gere um novo código na página do pedido.</p>` : ''}`)}
+        ${emailParagraph('No app do seu banco, escolha Pix → Pix copia e cola, cole o código e confirme. A confirmação é automática.', { muted: true })}
+        ${emailItemsTable(order.items, order.totalCents)}
+        ${emailCta('Ver pedido e QR Code', url)}`,
+    })}
+    ${emailSignature()}`);
+  return {
+    subject: orderSubject(id, 'recebido, falta o PIX'),
+    html,
+    text: [
+      `Olá, ${name}! Recebemos seu pedido #${id}. Falta só o pagamento via PIX (${formatCurrency(order.totalCents)}).`, '',
+      'PIX copia e cola:', pix.copyPaste, '',
+      ...(expLabel ? [`Válido até ${expLabel}.`, ''] : []),
+      `Ver pedido e QR Code: ${url}`,
+    ].join('\n'),
+  };
+}
+
+/** PIX venceu sem pagamento: oferece gerar outro. */
+export function buildPixExpired(order: Pick<Order, 'id' | 'totalCents'>, name: string): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
+  const total = formatCurrency(order.totalCents);
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'O PIX expirou',
+      html: `
+        ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>. O tempo de pagamento do pedido (${total}) acabou, mas ainda dá tempo: gere um novo código PIX na página do pedido.`)}
+        ${emailParagraph('O pedido é cancelado automaticamente se não for pago em até 48h após a criação.', { muted: true })}
+        ${emailCta('Gerar novo PIX', url)}`,
+    })}
+    ${emailSignature()}`);
+  return {
+    subject: orderSubject(id, 'com PIX expirado'),
+    html,
+    text: [
+      `Olá, ${name}.`, '',
+      `O tempo para pagamento do pedido #${id} (${total}) expirou. Você ainda pode pagar: acesse o pedido e gere um novo código PIX.`, '',
+      `Acessar pedido: ${url}`, '',
+      'O pedido será cancelado automaticamente se não for pago em 48h após a criação.',
+    ].join('\n'),
+  };
+}
+
+/** Pedido cancelado (pela loja ou pelo cliente). */
+export function buildCancelled(
+  order: Pick<Order, 'id' | 'items' | 'totalCents'>,
+  name: string,
+  { refund, byCustomer = false, reason }: { refund: boolean; byCustomer?: boolean; reason?: string },
+): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
+  const total = formatCurrency(order.totalCents);
+  const intro = byCustomer
+    ? `Olá, <strong>${escapeHtml(name)}</strong>. Confirmamos o cancelamento do seu pedido #${id}, como você pediu.`
+    : `Olá, <strong>${escapeHtml(name)}</strong>. Seu pedido #${id} foi cancelado.`;
+  const money = refund
+    ? `O valor de <strong>${total}</strong> será devolvido pelo mesmo meio de pagamento em até 7 dias úteis.`
+    : 'Nenhuma cobrança foi feita.';
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Pedido cancelado',
+      html: `
+        ${emailParagraph(intro)}
+        ${reason ? emailParagraph(`Motivo: ${escapeHtml(reason)}`, { muted: true }) : ''}
+        ${emailCallout(`<p style="margin:0;font-size:14px;color:#2C1F14;line-height:1.6;">${money}</p>`)}
+        ${emailParagraph('Se tiver qualquer dúvida, é só responder este e-mail.', { muted: true })}
+        ${emailItemsTable(order.items, order.totalCents)}
+        ${emailCta('Ver pedido', url)}`,
+    })}
+    ${emailSignature()}`);
+  return {
+    subject: orderSubject(id, 'cancelado'),
+    html,
+    text: [
+      byCustomer ? `Olá, ${name}. Confirmamos o cancelamento do seu pedido #${id}.` : `Olá, ${name}. Seu pedido #${id} foi cancelado.`,
+      ...(reason ? [`Motivo: ${reason}`] : []),
+      refund ? `O valor de ${total} será devolvido pelo mesmo meio de pagamento em até 7 dias úteis.` : 'Nenhuma cobrança foi feita.',
+      '', 'Dúvidas? Responda este e-mail.', `Pedido: ${url}`,
+    ].join('\n'),
   };
 }
