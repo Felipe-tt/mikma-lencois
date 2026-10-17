@@ -23,6 +23,7 @@ interface Props {
   pixDiscountPct: number;
   note?: string; // ex: "Fronha trocada: Floral Rosa", escolhida no JogoDeCamaFronhaPicker acima
   swapSku?: string; // SKU da fronha trocada, pra reservar estoque dela junto (ver JogoDeCamaBuyBox)
+  maxQty?: number; // limite extra (ex: estoque da fronha trocada cobre só N jogos)
   swapQtyPerUnit?: number; // quantas fronhas por unidade deste item (não multiplicado aqui — expandStockLines faz isso na hora de reservar/liberar)
 }
 
@@ -34,11 +35,20 @@ interface ShipOption {
   tag?: 'local' | 'economico' | 'rapido';
 }
 
-export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapQtyPerUnit }: Props) {
+export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapQtyPerUnit, maxQty }: Props) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(product.variants[0]?.id ?? null);
-  const [qty, setQty] = useState(1);
+  // Começa no primeiro tamanho com estoque: se o primeiro estivesse
+  // esgotado, a página inteira parecia "Fora de estoque".
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(() => {
+    const inStock = product.variants.find(v => {
+      const inv = inventory.find(i => i.sku === `${product.id}_${v.id}`);
+      return !!inv && inv.quantity - inv.reserved > 0;
+    });
+    return (inStock ?? product.variants[0])?.id ?? null;
+  });
+  const [addedQty, setAddedQty] = useState(0);
+  const [qtyState, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
   const [addedOpen, setAddedOpen] = useState(false);
@@ -64,9 +74,12 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     return Math.max(0, inv.quantity - inv.reserved);
   }
 
-  const availableStock = selectedVariant ? getStock(selectedVariant) : 0;
+  const availableStock = Math.min(selectedVariant ? getStock(selectedVariant) : 0, maxQty ?? Infinity);
   const outOfStock = availableStock === 0;
   const urgency = getStockUrgency(availableStock);
+  // Quantidade nunca passa do estoque atual (ex: trocou pra uma fronha com
+  // menos estoque depois de escolher 3 jogos).
+  const qty = Math.min(qtyState, Math.max(1, availableStock));
 
   const closeAdded = useCallback(() => setAddedOpen(false), []);
   const added = useOverlay({ open: addedOpen, onClose: closeAdded, panelRef: addedPanelRef });
@@ -90,8 +103,9 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const pixDiscount = pixEligible ? Math.round(lineTotal * (pixDiscountPct / 100)) : 0;
   const pixTotal = lineTotal - pixDiscount;
 
-  async function addItemToCart(finalQty: number): Promise<boolean> {
-    if (!user || !selectedVariant) return false;
+  /** Devolve quantas unidades entraram de fato (0 se já estava no limite do estoque). */
+  async function addItemToCart(finalQty: number): Promise<number> {
+    if (!user || !selectedVariant) return 0;
     const sku = `${product.id}_${selectedVariant.id}`;
     // Uma escolha de fronha diferente vira uma linha separada no carrinho,
     // mesmo pro mesmo produto/variante — combinar quantidade ali juntaria
@@ -102,6 +116,8 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     const existingItems: CartItem[] = cartSnap.exists() ? (cartSnap.data().items ?? []) : [];
     const existing = existingItems.find(i => (i.note ? `${i.sku}::${i.note}` : i.sku) === lineKey);
     const newQty = Math.min(availableStock, (existing?.quantity ?? 0) + finalQty);
+    const delta = newQty - (existing?.quantity ?? 0);
+    if (delta <= 0) return 0;
 
     const newItem: CartItem = {
       productId: product.id,
@@ -120,8 +136,8 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       : [...existingItems, newItem];
 
     await setDoc(cartRef, { userId: user.uid, items: updatedItems, updatedAt: serverTimestamp() }, { merge: true });
-    trackAddToCart({ sku, productId: product.id, productName: product.name, unitPriceCents: product.price, quantity: finalQty });
-    return true;
+    trackAddToCart({ sku, productId: product.id, productName: product.name, unitPriceCents: product.price, quantity: delta });
+    return delta;
   }
 
   async function addToCart() {
@@ -131,8 +147,14 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     setAdding(true);
     setCartError(null);
     try {
-      await addItemToCart(qty);
-      setAddedOpen(true);
+      const n = await addItemToCart(qty);
+      if (n === 0) {
+        // Antes mostrava "Adicionado" mesmo sem adicionar nada.
+        setCartError('Você já tem no carrinho todo o estoque disponível deste item.');
+      } else {
+        setAddedQty(n);
+        setAddedOpen(true);
+      }
     } catch (err) {
       console.error('addToCart error:', err);
       setCartError('Não foi possível adicionar ao carrinho. Verifique sua conexão e tente de novo.');
@@ -239,6 +261,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                   onClick={() => { if (!unavailable) { setSelectedVariantId(variant.id); setQty(1); } }}
                   disabled={unavailable}
                   title={unavailable ? 'Fora de estoque' : undefined}
+                  aria-pressed={isSelected}
                   className={[
                     'relative rounded-full border px-4 py-2.5 text-[13px] font-medium transition-all duration-150',
                     isSelected
@@ -279,16 +302,18 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             <p className="label">Quantidade</p>
             <div className="flex items-center rounded-full border border-mist overflow-hidden">
               <button
-                onClick={() => setQty(q => Math.max(1, q - 1))}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
+                onClick={() => setQty(Math.max(1, qty - 1))}
+                disabled={qty <= 1}
+                className="w-9 h-9 rounded-full flex disabled:opacity-30 disabled:pointer-events-none items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
                 aria-label="Diminuir"
               >
                 −
               </button>
               <span className="w-10 text-center text-[13px] font-semibold text-ink tabular-nums">{qty}</span>
               <button
-                onClick={() => setQty(q => Math.min(availableStock, q + 1))}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
+                onClick={() => setQty(Math.min(availableStock, qty + 1))}
+                disabled={qty >= availableStock}
+                className="w-9 h-9 rounded-full flex disabled:opacity-30 disabled:pointer-events-none items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
                 aria-label="Aumentar"
               >
                 +
@@ -344,6 +369,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               onChange={e => setCep(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') calcShipping(); }}
               placeholder="00000-000"
+              aria-label="CEP para calcular o frete"
               inputMode="numeric"
               maxLength={9}
               className="flex-1 min-w-0 h-10 px-4 rounded-full border border-mist bg-paper text-[13px] text-ink placeholder:text-faint focus:outline-none focus:border-ink transition-colors appearance-none"
@@ -456,7 +482,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                 </svg>
               </div>
               <h3 id="added-title" className="font-display font-normal text-ink text-xl leading-none mb-1">Adicionado ao carrinho</h3>
-              <p className="text-[13px] text-faint">{qty} {qty > 1 ? 'unidades' : 'unidade'} de {product.name}{selectedVariant ? ` · ${SIZE_LABEL[selectedVariant.size] ?? selectedVariant.size}${selectedVariant.colorName ? ` · ${selectedVariant.colorName}` : ''}` : ''}</p>
+              <p className="text-[13px] text-faint">{addedQty} {addedQty > 1 ? 'unidades' : 'unidade'} de {product.name}{selectedVariant ? ` · ${SIZE_LABEL[selectedVariant.size] ?? selectedVariant.size}${selectedVariant.colorName ? ` · ${selectedVariant.colorName}` : ''}` : ''}</p>
             </div>
 
             <div className="flex flex-col gap-2 px-6 pb-6">

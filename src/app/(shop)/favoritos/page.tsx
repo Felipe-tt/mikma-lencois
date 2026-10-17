@@ -36,9 +36,13 @@ export default function FavoritosPage() {
     let cancelled = false;
     Promise.all(missing.map(id =>
       fetch(`/api/products/${id}`)
-        .then(r => (r.ok ? r.json() : null))
-        .catch(() => null)
-        .then(p => { cache.set(id, p as Product | null); })
+        .then(async r => {
+          // Só guarda "não existe" pra 404; falha de rede tenta de novo depois
+          // (antes o item sumia da lista até recarregar a página).
+          if (r.ok) cache.set(id, await r.json() as Product);
+          else if (r.status === 404) cache.set(id, null);
+        })
+        .catch(() => {})
     )).finally(() => {
       if (cancelled) return;
       show();
@@ -59,8 +63,8 @@ export default function FavoritosPage() {
           </Link>
           <div className="flex items-end justify-between gap-4">
             <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-5xl leading-[1.05] tracking-[-0.015em]">Favoritos</h1>
-            {productIds.length > 0 && (
-              <p className="text-[13px] text-mid mb-1 tabular-nums">{productIds.length} {productIds.length === 1 ? 'produto salvo' : 'produtos salvos'}</p>
+            {!isLoading && products.length > 0 && (
+              <p className="text-[13px] text-mid mb-1 tabular-nums">{products.length} {products.length === 1 ? 'produto salvo' : 'produtos salvos'}</p>
             )}
           </div>
         </div>

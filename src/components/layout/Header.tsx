@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useOverlay } from '@/lib/hooks/useOverlay';
+import { setReturnTo } from '@/lib/auth/returnTo';
 
 interface Props { topbarText?: string; freeShippingThresholdCents?: number }
 
@@ -51,6 +52,13 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
   useEffect(() => { setMenuOpen(false); setSearchOpen(false); setQuery(''); }, [pathname]);
   useEffect(() => { if (searchOpen) setTimeout(() => searchRef.current?.focus(), 80); }, [searchOpen]);
   useEffect(() => { if (!menuOpen) setFocusSearch(false); }, [menuOpen]);
+
+  // Entrar/Cadastrar pelo header volta pra página onde a pessoa estava
+  // (antes sempre caía na home depois do login).
+  function rememberHere() {
+    if (/^\/(entrar|cadastro|redefinir-senha|confirmar)/.test(pathname)) return;
+    setReturnTo(pathname + window.location.search);
+  }
 
   function onSearchButton() {
     if (window.matchMedia('(min-width: 768px)').matches) { setSearchOpen(v => !v); return; }
@@ -178,8 +186,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               </>
             ) : (
               <>
-                <NavLink href="/entrar" className={`hidden md:block text-[13px] px-3 py-1.5 rounded-full transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>Entrar</NavLink>
-                <NavLink href="/cadastro" className={`hidden md:inline-flex items-center h-9 px-4 ml-1 mr-1 rounded-full text-[13px] font-medium transition-colors ${isDark ? 'bg-paper text-ink hover:bg-paper/85' : 'bg-ink text-paper hover:bg-clay'}`}>
+                <NavLink href="/entrar" onClick={rememberHere} className={`hidden md:block text-[13px] px-3 py-1.5 rounded-full transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>Entrar</NavLink>
+                <NavLink href="/cadastro" onClick={rememberHere} className={`hidden md:inline-flex items-center h-9 px-4 ml-1 mr-1 rounded-full text-[13px] font-medium transition-colors ${isDark ? 'bg-paper text-ink hover:bg-paper/85' : 'bg-ink text-paper hover:bg-clay'}`}>
                   Cadastrar
                 </NavLink>
               </>
@@ -312,8 +320,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                   <>
                     <p className="text-[13px] text-mid leading-relaxed mb-4">Entre pra acompanhar pedidos e salvar favoritos.</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <NavLink href="/entrar" className="btn-outline justify-center text-[13px] py-3">Entrar</NavLink>
-                      <NavLink href="/cadastro" className="btn-clay justify-center text-[13px] py-3">Criar conta</NavLink>
+                      <NavLink href="/entrar" onClick={rememberHere} className="btn-outline justify-center text-[13px] py-3">Entrar</NavLink>
+                      <NavLink href="/cadastro" onClick={rememberHere} className="btn-clay justify-center text-[13px] py-3">Criar conta</NavLink>
                     </div>
                   </>
                 )}

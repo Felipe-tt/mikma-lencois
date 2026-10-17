@@ -13,7 +13,11 @@ import { getStockUrgency } from '@/lib/stockUrgency';
 import { setReturnTo } from '@/lib/auth/returnTo';
 
 export default function CartPage() {
-  const [threshold, setThreshold] = useState(25000);
+  // 0 = loja sem frete grátis. Antes começava em R$ 250 e só trocava se a
+  // config fosse > 0: com frete grátis desligado o carrinho prometia
+  // "Grátis" e o servidor cobrava o frete.
+  const [threshold, setThreshold] = useState(0);
+  const [cartError, setCartError] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
   const [cart, setCart] = useState<Cart | null>(null);
@@ -30,7 +34,7 @@ export default function CartPage() {
 
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
-      if (d.freeShippingThresholdCents > 0) setThreshold(d.freeShippingThresholdCents);
+      setThreshold(Math.max(0, Number(d.freeShippingThresholdCents) || 0));
     }).catch(() => {});
   }, []);
 
@@ -39,6 +43,11 @@ export default function CartPage() {
     if (!user) { setReturnTo('/carrinho'); router.push('/entrar'); return; }
     return onSnapshot(doc(db, 'carts', user.uid), snap => {
       setCart(snap.exists() ? snap.data() as Cart : null);
+      setCartError(false);
+      setCartLoading(false);
+    }, () => {
+      // Sem isso o esqueleto ficava pra sempre se a leitura falhasse.
+      setCartError(true);
       setCartLoading(false);
     });
   }, [user, loading, router]);
@@ -47,7 +56,8 @@ export default function CartPage() {
   useEffect(() => {
     const items: CartItem[] = cart?.items ?? [];
     if (items.length === 0) { setStockMap({}); return; }
-    const skus = items.map(i => i.sku);
+    // Inclui a fronha trocada (Jogo de Cama): ela também precisa ter estoque.
+    const skus = Array.from(new Set(items.flatMap(i => i.swapSku ? [i.sku, i.swapSku] : [i.sku])));
     Promise.all(
       skus.map(sku =>
         getDoc(doc(db, 'inventory', sku)).then(snap => {
@@ -80,16 +90,18 @@ export default function CartPage() {
   // antes passava daqui e o erro só aparecia no último passo do checkout.
   const hasUnavailableItem = (cart?.items ?? []).some(item =>
     activeMap[item.productId] === false ||
-    (stockMap[item.sku] !== undefined && stockMap[item.sku] < item.quantity)
+    (stockMap[item.sku] !== undefined && stockMap[item.sku] < item.quantity) ||
+    (!!item.swapSku && stockMap[item.swapSku] !== undefined && stockMap[item.swapSku] < item.quantity * (item.swapQtyPerUnit ?? 1))
   );
 
   const subtotalForCoupon = (cart?.items ?? []).reduce((a, i) => a + i.unitPrice * i.quantity, 0);
 
-  // Cupom gravado no carrinho (aplicado antes, em outra visita): o servidor
-  // já usa no pagamento, então a tela precisa mostrar o desconto também.
+  // Cupom gravado no carrinho: o servidor usa no pagamento, então a tela
+  // mostra o desconto também, e recalcula quando o subtotal muda (antes o
+  // desconto ficava o da hora em que foi aplicado, mesmo tirando itens).
   useEffect(() => {
     const saved = cart?.couponCode;
-    if (!user || !saved || couponApplied?.code === saved || subtotalForCoupon <= 0) return;
+    if (!user || !saved || subtotalForCoupon <= 0) return;
     let cancelled = false;
     user.getIdToken().then(token => fetch('/api/checkout/validate-coupon', {
       method: 'POST',
@@ -106,7 +118,7 @@ export default function CartPage() {
       }
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [cart?.couponCode, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cart?.couponCode, user, subtotalForCoupon]);
 
   async function removeItem(sku: string, note?: string) {
     if (!user || !cart) return;
@@ -170,6 +182,14 @@ export default function CartPage() {
   const totalItems = items.reduce((a, i) => a + i.quantity, 0);
 
   if (loading || cartLoading) return <CartSkeleton />;
+
+  if (cartError) return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center px-6 text-center">
+      <p className="font-display text-2xl text-ink mb-2">Não conseguimos abrir seu carrinho</p>
+      <p className="text-[14px] text-mid max-w-[36ch] leading-relaxed mb-6">Verifique sua conexão e tente de novo. Seus itens continuam salvos.</p>
+      <button onClick={() => window.location.reload()} className="btn-primary">Tentar de novo</button>
+    </div>
+  );
 
   if (items.length === 0) return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-6 text-center">
