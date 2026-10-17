@@ -9,6 +9,7 @@ import { adminCancelSchema } from './schema';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { uberCancelDelivery } from '@/lib/uber-direct';
+import { notifyOrderCancelled } from '@/lib/email/cancelledEmail';
 
 
 // Statuses que ainda não tiveram o estoque debitado (só reservado)
@@ -65,6 +66,8 @@ export async function POST(
   // tratado como "só reservado" num pedido que já tinha debitado quantity.
   let unpaidCouponCode: string | undefined;
   let uberToCancel: { id: string; sandbox: boolean } | null = null;
+  // Dados pro e-mail ao cliente, enviado só depois do commit.
+  let cancelled: { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean } | null = null;
   try {
     await adminDb.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
@@ -88,6 +91,8 @@ export async function POST(
       uberToCancel = order.status === 'shipped' && uberId
         ? { id: uberId, sandbox: !!order.delivery?.uberSandbox }
         : null;
+
+      cancelled = { userId: order.userId as string | undefined, items: order.items, totalCents: order.totalCents as number | undefined, wasPaid: mode === 'restock' };
 
       // Pedido que nunca foi pago devolve o uso do cupom (fora da transação).
       unpaidCouponCode = mode === 'restock' ? undefined : (order.couponCode as string | undefined);
@@ -142,6 +147,9 @@ export async function POST(
       }).catch(() => {});
     }
   }
+
+  const c = cancelled as { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean } | null;
+  if (c) await notifyOrderCancelled(orderId, c, { refund: c.wasPaid });
 
   return NextResponse.json({ ok: true, ...(uberCancelFailed ? { uberCancelFailed: true } : {}) });
 }

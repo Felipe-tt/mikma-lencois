@@ -23,6 +23,9 @@ import { computeProductsCents, validateCoupon, computePixDiscountCents, computeP
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 import { createPixSchema } from './schema';
+import { sendEmail, emailEnabled } from '@/lib/email';
+import { buildPixPending } from '@/lib/email/orderStatusEmails';
+import { CONTACT_EMAIL } from '@/lib/email/layout';
 
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
@@ -482,6 +485,27 @@ export async function POST(req: NextRequest) {
       'payment.expiresAt': pix.expiresAt ? new Date(pix.expiresAt) : null,
       updatedAt: new Date().toISOString(),
     });
+
+    // "Recebemos seu pedido, falta o PIX": só aqui, na criação do pedido (o
+    // caminho de reaproveitar um PIX recente retorna antes e não reenvia).
+    // Best-effort: falha de e-mail não pode impedir o cliente de pagar.
+    const pendingEmailTo = (userData.email as string | undefined) || decoded.email;
+    if (emailEnabled() && pendingEmailTo && pix.brCode) {
+      const firstName = String(userData.name ?? userData.displayName ?? '').split(' ')[0] || 'cliente';
+      const payload = buildPixPending(
+        { id: orderId, items: verifiedItems, totalCents: amountCents },
+        firstName,
+        { copyPaste: pix.brCode, expiresAt: pix.expiresAt },
+      );
+      await sendEmail({
+        to: pendingEmailTo,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+        from: 'noreply',
+        replyTo: CONTACT_EMAIL,
+      }).catch(err => console.error('[create-pix] falha ao enviar e-mail de pedido recebido (ignorado):', err));
+    }
 
     return NextResponse.json({
       orderId,

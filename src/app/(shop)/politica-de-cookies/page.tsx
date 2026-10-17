@@ -1,5 +1,6 @@
 export const revalidate = 86400; // 24h, conteúdo estático
 
+import { shareMeta } from '@/lib/seo';
 import type { ReactNode } from 'react';
 import { getSettings } from '@/lib/settings';
 import { storeIdentity } from '@/lib/legal';
@@ -9,6 +10,7 @@ import { LegalPage, A, B, Table, clause, contactClause, type LegalSection } from
 export const metadata = {
   title: 'Política de Cookies',
   description: 'Quais cookies o site utiliza, para que servem, por quanto tempo e como gerenciá-los.',
+  ...shareMeta({ title: 'Política de Cookies', description: 'Quais cookies o site utiliza, para que servem, por quanto tempo e como gerenciá-los.', path: '/politica-de-cookies' }),
   alternates: { canonical: '/politica-de-cookies' },
 };
 

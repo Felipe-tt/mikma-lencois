@@ -1,5 +1,6 @@
 export const revalidate = 86400; // 24h, conteúdo estático
 
+import { shareMeta } from '@/lib/seo';
 import { getSettings } from '@/lib/settings';
 import { storeIdentity } from '@/lib/legal';
 import { LegalPage, A, B, clause, contactClause, type LegalSection } from '@/components/legal/LegalPage';
@@ -7,6 +8,7 @@ import { LegalPage, A, B, clause, contactClause, type LegalSection } from '@/com
 export const metadata = {
   title: 'Trocas e Devoluções',
   description: 'Direito de arrependimento, troca por defeito, reembolso e como solicitar.',
+  ...shareMeta({ title: 'Trocas e Devoluções', description: 'Direito de arrependimento, troca por defeito, reembolso e como solicitar.', path: '/trocas-e-devolucoes' }),
   alternates: { canonical: '/trocas-e-devolucoes' },
 };
 

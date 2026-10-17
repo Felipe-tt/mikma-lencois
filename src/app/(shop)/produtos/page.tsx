@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { shareMeta } from '@/lib/seo';
 import { searchProducts } from '@/lib/productSearch';
 import { ProductCard } from '@/components/product/ProductCard';
 import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
@@ -33,7 +34,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     // indexa só a da categoria (ou a geral). Busca não é indexada.
     alternates: { canonical: categoria ? `/produtos?categoria=${encodeURIComponent(categoria)}` : '/produtos' },
     ...(q ? { robots: { index: false, follow: true } } : {}),
-    openGraph: { title, description, type: 'website' },
+    ...shareMeta({ title, description, path: categoria ? `/produtos?categoria=${encodeURIComponent(categoria)}` : '/produtos' }),
   };
 }
 

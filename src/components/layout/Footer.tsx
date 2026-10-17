@@ -47,6 +47,7 @@ export function Footer({
               alt={storeName}
               width={800}
               height={242}
+              sizes="120px"
               className="h-7 w-auto object-contain object-left opacity-80 self-start"
             />
             <p className="text-[13px] text-paper/60 leading-relaxed max-w-[28ch]">
@@ -169,7 +170,7 @@ export function Footer({
             © {year} {storeName} · Todos os direitos reservados
           </p>
           <div className="flex items-center gap-4">
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/55 uppercase">Pagamento via PIX</span>
+            <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/55 uppercase">PIX · Cartão de crédito</span>
             {storeCity && (
               <>
                 <span aria-hidden className="text-paper/25">·</span>

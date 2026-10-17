@@ -1,5 +1,6 @@
 export const revalidate = 86400; // 24h, conteúdo estático
 
+import { shareMeta } from '@/lib/seo';
 import { getSettings } from '@/lib/settings';
 import { storeIdentity } from '@/lib/legal';
 import { LegalPage, A, B, clause, contactClause, type LegalSection } from '@/components/legal/LegalPage';
@@ -7,6 +8,7 @@ import { LegalPage, A, B, clause, contactClause, type LegalSection } from '@/com
 export const metadata = {
   title: 'Termos e Condições de Uso',
   description: 'Condições de uso do site e de compra: cadastro, pagamento, entrega e responsabilidades.',
+  ...shareMeta({ title: 'Termos e Condições de Uso', description: 'Condições de uso do site e de compra: cadastro, pagamento, entrega e responsabilidades.', path: '/termos' }),
   alternates: { canonical: '/termos' },
 };
 

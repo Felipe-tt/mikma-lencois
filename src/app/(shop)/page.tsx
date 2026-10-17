@@ -3,8 +3,17 @@ import { getSettings } from '@/lib/settings';
 import { ProductCard } from '@/components/product/ProductCard';
 import type { Product } from '@/types';
 import Link from 'next/link';
-import Image from 'next/image';
+import Image, { getImageProps } from 'next/image';
 import { serialize } from '@/lib/utils/serialize';
+
+// Foto do hero: uma versão de fundo no desktop e um cartão no celular. As
+// duas eram "priority" e o navegador baixava as duas em qualquer tela. Agora
+// as <img> são lazy (a escondida com display:none nunca baixa) e cada tela
+// pré-carrega só a sua, pelo media do <link rel="preload">.
+const HERO_SIZES_DESKTOP = '70vw';
+const HERO_SIZES_MOBILE = '100vw';
+const heroDesktop = getImageProps({ src: '/hero-bg.jpg', alt: '', fill: true, sizes: HERO_SIZES_DESKTOP }).props;
+const heroMobile = getImageProps({ src: '/hero-bg.jpg', alt: '', fill: true, sizes: HERO_SIZES_MOBILE }).props;
 
 export const revalidate = 900; // ISR: revalida a cada 15 minutos
 
@@ -66,6 +75,8 @@ export default async function HomePage() {
 
   return (
     <>
+      <link rel="preload" as="image" imageSrcSet={heroDesktop.srcSet} imageSizes={HERO_SIZES_DESKTOP} media="(min-width: 1024px)" fetchPriority="high" />
+      <link rel="preload" as="image" imageSrcSet={heroMobile.srcSet} imageSizes={HERO_SIZES_MOBILE} media="(max-width: 1023.98px)" fetchPriority="high" />
       {/* ═══════════════════════════════════════════════════════════
           HERO: foto da cama em tela cheia, com um degradê na cor do fundo
           vindo da esquerda pro texto ler bem. A parede com o "MIKMA" fica
@@ -82,8 +93,9 @@ export default async function HomePage() {
             alt=""
             aria-hidden="true"
             fill
-            priority
-            sizes="70vw"
+            loading="lazy"
+            fetchPriority="high"
+            sizes={HERO_SIZES_DESKTOP}
             className="object-cover object-center animate-hero-zoom"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-paper from-0% via-paper/50 via-30% to-paper/0 to-60%" />
@@ -127,7 +139,7 @@ export default async function HomePage() {
           {/* No celular a foto vira um cartão nítido abaixo do texto (de
               fundo ela ficava lavada pelo degradê e quase sumia). */}
           <div className="lg:hidden relative mt-10 aspect-[4/3] sm:aspect-[16/9] rounded-3xl overflow-hidden bg-warm animate-fade-in">
-            <Image src="/hero-bg.jpg" alt="Cama arrumada com lençóis Mikma" fill priority sizes="100vw" className="object-cover object-[60%_center]" />
+            <Image src="/hero-bg.jpg" alt="Cama arrumada com lençóis Mikma" fill loading="lazy" fetchPriority="high" sizes={HERO_SIZES_MOBILE} className="object-cover object-[60%_center]" />
           </div>
 
           {/* Diferenciais em pílulas translúcidas no pé do hero */}

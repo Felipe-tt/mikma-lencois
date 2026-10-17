@@ -2,6 +2,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { getSettings } from '@/lib/settings';
 import { BrandLogo } from '@/components/BrandLogo';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Página não encontrada',
+  robots: { index: false, follow: true },
+};
 
 // Fica fora do layout da loja (sem header/rodapé), então traz o próprio
 // logo pra pessoa ter por onde voltar. A lua grande e apagada no fundo é

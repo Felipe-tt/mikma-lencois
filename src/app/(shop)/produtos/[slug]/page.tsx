@@ -12,6 +12,7 @@ import { SizeGuideModal } from '@/components/product/SizeGuideModal';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { getSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
+import { shareMeta } from '@/lib/seo';
 import { serialize } from '@/lib/utils/serialize';
 import { TrackViewItem } from '@/components/product/TrackViewItem';
 import { JsonLd } from '@/components/seo/JsonLd';
@@ -109,19 +110,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: p.name,
     description: p.description?.slice(0, 160),
     alternates: { canonical: `/produtos/${p.id}` },
-    openGraph: {
+    // Foto sem width/height: ela não é 1200x630 e dimensão errada faz o
+    // WhatsApp/Facebook cortar a prévia.
+    ...shareMeta({
       title: p.name,
       description: p.description?.slice(0, 160),
-      url: `/produtos/${p.id}`,
-      // Sem width/height: a foto não é 1200x630 e dimensão errada faz o
-      // WhatsApp/Facebook cortar a prévia.
-      images: p.images[0] ? [{ url: p.images[0], alt: p.name }] : [],
-      type: 'website',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      images: p.images[0] ? [p.images[0]] : [],
-    },
+      path: `/produtos/${p.id}`,
+      images: p.images[0] ? [{ url: p.images[0], alt: p.name }] : undefined,
+    }),
   };
 }
 
@@ -163,7 +159,8 @@ export default async function ProductPage({ params }: Props) {
     '@type': 'Product',
     name: product.name,
     description: product.description?.slice(0, 5000),
-    image: product.images,
+    // URLs absolutas: imagem relativa ("/hero-bg.jpg") não vale pro Google.
+    image: product.images.map(u => new URL(u, siteUrl).href),
     sku: product.id,
     category: product.category,
     brand: { '@type': 'Brand', name: 'Mikma Lençóis' },
@@ -172,6 +169,7 @@ export default async function ProductPage({ params }: Props) {
       url: productUrl,
       priceCurrency: 'BRL',
       price: (product.price / 100).toFixed(2),
+      priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       availability: totalStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
       // Direito de arrependimento (CDC art. 49): 7 dias corridos, ver
@@ -223,21 +221,25 @@ export default async function ProductPage({ params }: Props) {
       <div className="border-b border-mist bg-warm/40">
         <div className="container-shop py-4">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.06em] text-faint overflow-x-auto whitespace-nowrap scrollbar-none">
-            <Link href="/" className="hover:text-clay transition-colors shrink-0">Início</Link>
-            <span className="text-mist mx-1">/</span>
-            <Link href="/produtos" className="hover:text-clay transition-colors shrink-0">Produtos</Link>
-            {product.category && (
-              <>
-                <span className="text-mist mx-1">/</span>
-                <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
-                  className="hover:text-clay transition-colors shrink-0 capitalize">
-                  {product.category}
-                </Link>
-              </>
-            )}
-            <span className="text-mist mx-1">/</span>
-            <span className="text-mid truncate max-w-[200px]">{product.name}</span>
+          <nav aria-label="Trilha">
+            <ol className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.06em] text-faint overflow-x-auto whitespace-nowrap scrollbar-none">
+              <li className="shrink-0"><Link href="/" className="hover:text-clay transition-colors">Início</Link></li>
+              <li aria-hidden="true" className="text-mist mx-1">/</li>
+              <li className="shrink-0"><Link href="/produtos" className="hover:text-clay transition-colors">Produtos</Link></li>
+              {product.category && (
+                <>
+                  <li aria-hidden="true" className="text-mist mx-1">/</li>
+                  <li className="shrink-0">
+                    <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
+                      className="hover:text-clay transition-colors capitalize">
+                      {product.category}
+                    </Link>
+                  </li>
+                </>
+              )}
+              <li aria-hidden="true" className="text-mist mx-1">/</li>
+              <li aria-current="page" className="text-mid truncate max-w-[200px]">{product.name}</li>
+            </ol>
           </nav>
         </div>
       </div>
@@ -266,6 +268,16 @@ export default async function ProductPage({ params }: Props) {
               <h1 className="font-display font-normal text-ink leading-[1.1] text-[1.75rem] sm:text-[2rem]">
                 {product.name}
               </h1>
+              {reviews.length > 0 && (() => {
+                const avg = reviews.reduce((n, r) => n + r.rating, 0) / reviews.length;
+                return (
+                  <a href="#avaliacoes" className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-mid hover:text-ink transition-colors">
+                    <span className="text-clay" aria-hidden="true">★</span>
+                    <span className="font-medium text-ink tabular-nums">{avg.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+                    <span className="underline underline-offset-4 decoration-mist-d">({reviews.length} {reviews.length === 1 ? 'avaliação' : 'avaliações'})</span>
+                  </a>
+                );
+              })()}
             </div>
             {product.category === 'Jogos de cama' && fronhaOptions.length > 0 ? (
               <JogoDeCamaBuyBox

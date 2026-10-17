@@ -6,6 +6,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { extractBearer, tooManyRequests } from '@/lib/security';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
+import { notifyOrderCancelled } from '@/lib/email/cancelledEmail';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
@@ -77,6 +78,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
 
   // Pedido nunca pago: devolve o uso do cupom.
   await releaseCouponUse(order.couponCode as string | undefined);
+
+  // Comprovante do cancelamento (só pedidos não pagos chegam aqui: sem reembolso).
+  await notifyOrderCancelled(orderId, order, { refund: false, byCustomer: true });
 
   return NextResponse.json({ ok: true });
 }

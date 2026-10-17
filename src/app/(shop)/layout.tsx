@@ -42,8 +42,12 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <JsonLd data={orgJsonLd} />
       <JsonLd data={websiteJsonLd} />
       <MaintenanceGate />
+      {/* Atalho de teclado: primeiro Tab da página pula o menu */}
+      <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-paper focus:px-5 focus:py-2.5 focus:text-[13px] focus:font-medium">
+        Pular para o conteúdo
+      </a>
       <Header topbarText={s.topbarText} freeShippingThresholdCents={s.freeShippingThresholdCents} />
-      <main className="flex-1">
+      <main id="conteudo" tabIndex={-1} className="flex-1 focus:outline-none">
         <PageTransition>{children}</PageTransition>
       </main>
       <Footer

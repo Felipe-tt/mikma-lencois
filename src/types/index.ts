@@ -132,6 +132,7 @@ export interface Order {
     txId: string
     pixQrCode?: string
     pixCopyPaste?: string
+    expiresAt?: unknown // Timestamp do Firestore (ou ISO, em pedidos antigos)
     paidAt?: string
     abacateSandbox?: boolean
     confirmedManuallyBy?: string
