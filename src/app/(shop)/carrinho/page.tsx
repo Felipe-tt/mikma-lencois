@@ -237,7 +237,7 @@ export default function CartPage() {
   if (loading || cartLoading || (items.length > 0 && !stockReady)) return <CartSkeleton />;
 
   const undoBar = lastRemoved && (
-    <div role="status" className="fixed z-40 left-1/2 -translate-x-1/2 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] w-[calc(100%-2rem)] max-w-sm flex items-center gap-3 rounded-full bg-ink text-paper pl-5 pr-1.5 py-1.5 shadow-lg animate-fade-up">
+    <div role="status" className="fixed z-40 left-1/2 -translate-x-1/2 top-[72px] sm:top-auto sm:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] w-[calc(100%-2rem)] max-w-sm flex items-center gap-3 rounded-full bg-ink text-paper pl-5 pr-1.5 py-1.5 shadow-lg animate-fade-up">
       <span className="flex-1 min-w-0 text-[13px] truncate">
         <span className="font-semibold">Item removido</span>
         <span className="text-paper/60"> · {lastRemoved.item.productName}</span>
