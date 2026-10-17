@@ -105,7 +105,7 @@ export function ProductGallery({ images, name, tag }: Props) {
     <div className="flex gap-3 sm:gap-4">
       {/* Trilha de miniaturas, desktop */}
       {images.length > 1 && (
-        <div className="hidden sm:flex flex-col gap-2.5 w-[72px] shrink-0 max-h-[600px] overflow-y-auto scrollbar-none p-1 -m-1">
+        <div className="hidden lg:flex flex-col gap-2.5 w-[72px] shrink-0 max-h-[600px] overflow-y-auto scrollbar-none p-1 -m-1">
           {images.slice(0, 10).map((img, i) => (
             <button
               key={i}
@@ -166,7 +166,7 @@ export function ProductGallery({ images, name, tag }: Props) {
           )}
 
           {images.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none sm:hidden">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none lg:hidden">
               {images.slice(0, 8).map((_, i) => (
                 <div key={i} className={`rounded-full transition-all duration-200 ${i === active ? 'bg-ink w-5 h-1.5' : 'bg-ink/25 w-1.5 h-1.5'}`} />
               ))}
@@ -177,7 +177,7 @@ export function ProductGallery({ images, name, tag }: Props) {
             <>
               <button
                 type="button"
-                className="absolute z-[2] left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 sm:hidden"
+                className="absolute z-[2] left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 lg:hidden"
                 onClick={prev}
                 aria-label="Foto anterior"
               >
@@ -185,7 +185,7 @@ export function ProductGallery({ images, name, tag }: Props) {
               </button>
               <button
                 type="button"
-                className="absolute z-[2] right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 sm:hidden"
+                className="absolute z-[2] right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 lg:hidden"
                 onClick={next}
                 aria-label="Próxima foto"
               >
@@ -203,7 +203,7 @@ export function ProductGallery({ images, name, tag }: Props) {
         </div>
 
         {images.length > 1 && (
-          <div className="flex sm:hidden gap-2.5 overflow-x-auto scrollbar-none p-1 -m-1">
+          <div className="flex lg:hidden gap-2.5 overflow-x-auto scrollbar-none p-1 -m-1">
             {images.slice(0, 10).map((img, i) => (
               <button
                 key={i}

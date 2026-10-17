@@ -11,9 +11,9 @@ export default function ProductLoading() {
         </div>
       </div>
       <div className="container-shop py-8 pb-28 sm:pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-8 lg:gap-12 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px] gap-8 md:gap-8 lg:gap-12 items-start">
           <div className="flex gap-3 sm:gap-4 min-w-0">
-            <div className="hidden sm:flex flex-col gap-2.5 w-[72px] shrink-0">
+            <div className="hidden lg:flex flex-col gap-2.5 w-[72px] shrink-0">
               {[1, 2, 3].map(i => <Skeleton key={i} className="aspect-[4/5] w-full !rounded-xl" />)}
             </div>
             <Skeleton className="flex-1 aspect-[4/5] !rounded-3xl" />

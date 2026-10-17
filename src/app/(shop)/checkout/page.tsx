@@ -65,10 +65,10 @@ function Label({ children, optional, htmlFor }: { children: React.ReactNode; opt
     </label>
   );
 }
-function Err({ msg }: { msg?: string }) {
+function Err({ msg, id }: { msg?: string; id?: string }) {
   if (!msg) return null;
   return (
-    <p className="mt-1 flex items-center gap-1.5 text-[11px] text-red-600 font-medium">
+    <p id={id} className="mt-1 flex items-center gap-1.5 text-[11px] text-red-600 font-medium">
       <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
       {msg}
     </p>
@@ -76,15 +76,17 @@ function Err({ msg }: { msg?: string }) {
 }
 function Input({
   id, value, onChange, onBlur, placeholder, type = 'text', inputMode,
-  maxLength, required, hasError, disabled, autoComplete,
+  maxLength, required, hasError, disabled, autoComplete, isValid,
 }: {
   id?: string;
   value: string; onChange: (v: string) => void; onBlur?: () => void;
   placeholder?: string; type?: string; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
   maxLength?: number; required?: boolean; hasError?: boolean; disabled?: boolean; autoComplete?: string;
+  /** Quando o campo está de fato certo (CPF com dígitos válidos etc.). Sem
+   *  isso o ✓ verde aparecia pra qualquer coisa digitada, até "123". */
+  isValid?: boolean;
 }) {
-  const [touched, setTouched] = useState(false);
-  const valid = !hasError && value.length > 0;
+  const valid = !hasError && (isValid ?? value.trim().length > 0);
   return (
     <div className="relative">
       <input
@@ -92,7 +94,8 @@ function Input({
         name={id}
         type={type}
         value={value}
-        aria-invalid={hasError && touched ? true : undefined}
+        aria-invalid={hasError || undefined}
+        aria-describedby={hasError && id ? `${id}-err` : undefined}
         required={required}
         disabled={disabled}
         autoComplete={autoComplete}
@@ -100,9 +103,9 @@ function Input({
         maxLength={maxLength}
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
-        onBlur={() => { setTouched(true); onBlur?.(); }}
+        onBlur={onBlur}
         className={`w-full rounded-xl border px-3.5 py-3 text-sm text-ink placeholder:text-faint focus:outline-none transition-[border-color,box-shadow,background-color] duration-150 ${
-          hasError && touched
+          hasError
             ? 'border-red-400 bg-red-50/40 focus:border-red-400 focus:ring-2 focus:ring-red-100'
             : valid
               ? 'border-emerald-400 bg-white dark:bg-warm focus:border-ink/40 focus:ring-2 focus:ring-ink/5'
@@ -307,24 +310,39 @@ export default function CheckoutPage() {
     quoteShipping(raw);
   }
 
-  function validateStep1(): boolean {
+  // Mensagem de erro de cada campo com o valor atual (undefined = ok).
+  function fieldError(key: string): string | undefined {
+    switch (key) {
+      case 'name':         return customer.name.trim() ? undefined : 'Informe seu nome completo';
+      case 'cpf':          return isValidCpf(customer.cpf) ? undefined : 'Confira os 11 dígitos do CPF';
+      case 'phone':        return isValidPhone(customer.phone) ? undefined : 'Informe o celular com DDD';
+      case 'cep':          return isValidCep(addr.cep) ? undefined : 'Confira o CEP (8 dígitos)';
+      case 'street':       return addr.street.trim() ? undefined : 'Informe o logradouro';
+      case 'number':       return addr.number.trim() ? undefined : 'Informe o número (ou S/N)';
+      case 'neighborhood': return addr.neighborhood.trim() ? undefined : 'Informe o bairro';
+      case 'city':         return addr.city.trim() ? undefined : 'Informe a cidade';
+      case 'state':        return addr.state ? undefined : 'Escolha o estado';
+    }
+  }
+  // Erros só aparecem depois de tentar avançar, e somem sozinhos assim que
+  // o campo é corrigido (antes ficavam até clicar em Continuar de novo).
+  const shownErrors: Record<string, string | undefined> = Object.fromEntries(
+    Object.keys(errors).map(k => [k, fieldError(k)]),
+  );
+  function runValidation(keys: string[]): boolean {
     const e: Record<string, string> = {};
-    if (!customer.name.trim())         e.name  = 'Nome é obrigatório';
-    if (!isValidCpf(customer.cpf))     e.cpf   = 'CPF inválido';
-    if (!isValidPhone(customer.phone)) e.phone = 'Telefone inválido';
+    for (const k of keys) { const m = fieldError(k); if (m) e[k] = m; }
     setErrors(e);
-    return Object.keys(e).length === 0;
+    const first = keys.find(k => e[k]);
+    // Leva o foco (e a tela) até o primeiro campo com problema.
+    if (first) requestAnimationFrame(() => document.getElementById(`co-${first}`)?.focus());
+    return !first;
+  }
+  function validateStep1(): boolean {
+    return runValidation(['name', 'cpf', 'phone']);
   }
   function validateStep2(): boolean {
-    const e: Record<string, string> = {};
-    if (!isValidCep(addr.cep))         e.cep   = 'CEP inválido';
-    if (!addr.street.trim())           e.street = 'Rua é obrigatória';
-    if (!addr.number.trim())           e.number = 'Número é obrigatório';
-    if (!addr.neighborhood.trim())     e.neighborhood = 'Bairro é obrigatório';
-    if (!addr.city.trim())             e.city  = 'Cidade é obrigatória';
-    if (!addr.state)                   e.state = 'Estado é obrigatório';
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    return runValidation(['cep', 'street', 'number', 'neighborhood', 'city', 'state']);
   }
 
   function advanceToStep2() {
@@ -496,24 +514,24 @@ export default function CheckoutPage() {
                 <div>
                   <Label htmlFor="co-name">Nome completo</Label>
                   <Input id="co-name" value={customer.name} onChange={v => setCustomer(c => ({ ...c, name: v }))}
-                    placeholder="Como consta no documento" required hasError={!!errors.name}
+                    placeholder="Como consta no documento" required hasError={!!shownErrors.name}
                     autoComplete="name" />
-                  <Err msg={errors.name} />
+                  <Err id="co-name-err" msg={shownErrors.name} />
                 </div>
                 <div className="grid grid-cols-1 min-[440px]:grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="co-cpf">CPF</Label>
                     <Input id="co-cpf" value={customer.cpf} onChange={v => setCustomer(c => ({ ...c, cpf: maskCpf(v) }))}
                       inputMode="numeric" maxLength={14} placeholder="000.000.000-00"
-                      required hasError={!!errors.cpf} autoComplete="off" />
-                    <Err msg={errors.cpf} />
+                      required hasError={!!shownErrors.cpf} isValid={isValidCpf(customer.cpf)} autoComplete="off" />
+                    <Err id="co-cpf-err" msg={shownErrors.cpf} />
                   </div>
                   <div>
                     <Label htmlFor="co-phone">Celular / WhatsApp</Label>
                     <Input id="co-phone" value={customer.phone} onChange={v => setCustomer(c => ({ ...c, phone: maskPhone(v) }))}
                       type="tel" maxLength={15} placeholder="(47) 99999-0000"
-                      required hasError={!!errors.phone} autoComplete="tel" />
-                    <Err msg={errors.phone} />
+                      required hasError={!!shownErrors.phone} isValid={isValidPhone(customer.phone)} autoComplete="tel" />
+                    <Err id="co-phone-err" msg={shownErrors.phone} />
                   </div>
                 </div>
                 <button type="button" onClick={advanceToStep2}
@@ -535,27 +553,27 @@ export default function CheckoutPage() {
                       setAddr(a => ({ ...a, cep: masked }));
                       if (onlyDigits(masked).length === 8) lookupCep(masked);
                     }} inputMode="numeric" maxLength={9} placeholder="00000-000"
-                      required hasError={!!errors.cep} autoComplete="postal-code" />
+                      required hasError={!!shownErrors.cep} isValid={isValidCep(addr.cep)} autoComplete="postal-code" />
                     {(cepLoading || shippingLoading) && (
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"><span className="spinner" /></span>
                     )}
                   </div>
-                  <Err msg={errors.cep} />
+                  <Err id="co-cep-err" msg={shownErrors.cep} />
                 </div>
                 {/* Rua */}
                 <div>
                   <Label htmlFor="co-street">Logradouro</Label>
                   <Input id="co-street" value={addr.street} onChange={v => setAddr(a => ({ ...a, street: v }))}
-                    placeholder="Rua, Avenida, Travessa…" required hasError={!!errors.street} autoComplete="address-line1" />
-                  <Err msg={errors.street} />
+                    placeholder="Rua, Avenida, Travessa…" required hasError={!!shownErrors.street} autoComplete="address-line1" />
+                  <Err id="co-street-err" msg={shownErrors.street} />
                 </div>
                 {/* Número + Complemento */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="co-number">Número</Label>
                     <Input id="co-number" value={addr.number} onChange={v => setAddr(a => ({ ...a, number: v }))}
-                      placeholder="123 ou S/N" required hasError={!!errors.number} autoComplete="off" />
-                    <Err msg={errors.number} />
+                      placeholder="123 ou S/N" required hasError={!!shownErrors.number} autoComplete="off" />
+                    <Err id="co-number-err" msg={shownErrors.number} />
                   </div>
                   <div>
                     <Label optional htmlFor="co-complement">Complemento</Label>
@@ -567,16 +585,16 @@ export default function CheckoutPage() {
                 <div>
                   <Label htmlFor="co-neighborhood">Bairro</Label>
                   <Input id="co-neighborhood" value={addr.neighborhood} onChange={v => setAddr(a => ({ ...a, neighborhood: v }))}
-                    required hasError={!!errors.neighborhood} autoComplete="address-level3" />
-                  <Err msg={errors.neighborhood} />
+                    required hasError={!!shownErrors.neighborhood} autoComplete="address-level3" />
+                  <Err id="co-neighborhood-err" msg={shownErrors.neighborhood} />
                 </div>
                 {/* Cidade + UF */}
                 <div className="grid grid-cols-[1fr_96px] gap-3">
                   <div>
                     <Label htmlFor="co-city">Cidade</Label>
                     <Input id="co-city" value={addr.city} onChange={v => setAddr(a => ({ ...a, city: v }))}
-                      required hasError={!!errors.city} autoComplete="address-level2" />
-                    <Err msg={errors.city} />
+                      required hasError={!!shownErrors.city} autoComplete="address-level2" />
+                    <Err id="co-city-err" msg={shownErrors.city} />
                   </div>
                   <div>
                     <Label htmlFor="co-state">UF</Label>
@@ -586,9 +604,9 @@ export default function CheckoutPage() {
                       value={addr.state}
                       onChange={v => setAddr(a => ({ ...a, state: v }))}
                       options={[{ value: '', label: '--' }, ...BR_STATES.map(uf => ({ value: uf, label: uf }))]}
-                      triggerClassName={`w-full border px-3 py-3 text-sm bg-white dark:bg-warm focus:outline-none focus:ring-2 transition-all flex items-center justify-between gap-2 rounded-xl cursor-pointer ${errors.state ? 'border-red-400 focus:ring-red-100' : 'border-mist hover:border-ink/20 focus:border-ink/40 focus:ring-ink/5'}`}
+                      triggerClassName={`w-full border px-3 py-3 text-sm bg-white dark:bg-warm focus:outline-none focus:ring-2 transition-all flex items-center justify-between gap-2 rounded-xl cursor-pointer ${shownErrors.state ? 'border-red-400 focus:ring-red-100' : 'border-mist hover:border-ink/20 focus:border-ink/40 focus:ring-ink/5'}`}
                     />
-                    <Err msg={errors.state} />
+                    <Err id="co-state-err" msg={shownErrors.state} />
                   </div>
                 </div>
                 <button type="button" onClick={advanceToStep3}

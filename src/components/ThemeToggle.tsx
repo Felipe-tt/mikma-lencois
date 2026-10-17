@@ -24,7 +24,7 @@ export function ThemeToggle() {
 
   // Evita mismatch de hydration
   if (!mounted) {
-    return <div className="w-[34px] h-[34px]" />;
+    return <div className="w-10 h-10" />;
   }
 
   return (
@@ -32,7 +32,7 @@ export function ThemeToggle() {
       onClick={toggle}
       aria-label={dark ? 'Ativar modo claro' : 'Ativar modo escuro'}
       title={dark ? 'Modo claro' : 'Modo escuro'}
-      className="p-2 rounded-full transition-colors duration-150 text-mid hover:text-ink hover:bg-warm"
+      className="w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-150 text-mid hover:text-ink hover:bg-warm"
     >
       {dark ? (
         /* Sol */

@@ -234,11 +234,18 @@ export default function LoginPage() {
           setError('Muitas tentativas. Tente novamente em alguns minutos.');
         } else if (msg.includes('auth/network-request-failed')) {
           setError('Erro de conexão. Verifique sua internet.');
+        } else if (msg.includes('auth/user-disabled')) {
+          setError('Esta conta está desativada. Fale com a loja pelo WhatsApp.');
+        } else if (msg.includes('auth/invalid-email')) {
+          setError('Confira o e-mail digitado.');
+        } else if (/^(Firebase|auth\/)/i.test(msg) || !msg) {
+          // Nunca mostra texto cru do Firebase ("Firebase: Error (auth/...)").
+          setError('Não foi possível entrar. Tente de novo.');
         } else {
-          setError(msg || 'Erro ao entrar');
+          setError(msg);
         }
       } else {
-        setError('Erro ao entrar');
+        setError('Não foi possível entrar. Tente de novo.');
       }
     } finally {
       setLoading(false);
