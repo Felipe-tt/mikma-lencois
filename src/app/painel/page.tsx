@@ -203,7 +203,7 @@ export default function PainelDashboard() {
 
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-display font-normal text-ink text-lg">Últimos pedidos</h2>
-        <Link href="/painel/pedidos" className="flex items-center gap-1 text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors">
+        <Link href="/painel/pedidos" className="inline-flex items-center gap-1 min-h-10 px-2 -mr-2 text-[12px] font-semibold text-clay hover:text-clay-d transition-colors">
           Ver todos
           <IconArrowRight size={13} />
         </Link>

@@ -23,6 +23,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { parseBRL, centsToInput } from '@/lib/parseBRL';
+import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, limit as fbLimit, getDocs, type DocumentReference } from 'firebase/firestore';
@@ -108,6 +109,9 @@ export default function ProductForm({ initial }: Props) {
   const router = useRouter();
   const { user } = useAuth();
   const isEdit = !!initial?.id;
+  // Edição sem salvar pergunta antes de sair pela barra de baixo ou pelo
+  // menu. Produto novo não precisa: o rascunho fica salvo no aparelho.
+  const [touched, setTouched] = useState(false);
 
   const [name, setName] = useState(initial?.name ?? '');
   const [nameEditedManually, setNameEditedManually] = useState(isEdit);
@@ -308,6 +312,7 @@ export default function ProductForm({ initial }: Props) {
   const [colorPickerImageIndex, setColorPickerImageIndex] = useState<number | null>(null);
   const [pendingColorTargetFabric, setPendingColorTargetFabric] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  useUnsavedGuard(isEdit && touched && !saving, { detail: 'As alterações deste produto ainda não foram salvas.' });
   const [error, setError] = useState('');
 
   const [existingSkus, setExistingSkus] = useState<Record<string, { quantity: number; reserved: number }>>({});
@@ -477,12 +482,14 @@ export default function ProductForm({ initial }: Props) {
   }
 
   function removeImage(i: number) {
+    setTouched(true);
     const img = images[i];
     if (img.url) setRemovedUrls(prev => [...prev, img.url!]);
     setImages(prev => prev.filter((_, idx) => idx !== i));
   }
 
   function makeCover(i: number) {
+    setTouched(true);
     setImages(prev => {
       const next = [...prev];
       const [chosen] = next.splice(i, 1);
@@ -693,6 +700,7 @@ export default function ProductForm({ initial }: Props) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         tap();
+        setTouched(false);
         router.push('/painel/produtos');
       }
     } catch (e) {
@@ -751,7 +759,7 @@ export default function ProductForm({ initial }: Props) {
         <DuplicateProductModal onPick={applyDuplicateSource} onClose={() => setDuplicateModalOpen(false)} />
       )}
 
-      <div className="max-w-xl mx-auto px-4 sm:px-0 pb-40">
+      <div className="max-w-xl mx-auto px-4 sm:px-0 pb-40" onInputCapture={() => setTouched(true)} onChangeCapture={() => setTouched(true)}>
         {/* ── Checklist de progresso — orienta quem não conhece o formulário ── */}
         {!isEdit && (
           <div className="mb-5 flex items-center gap-3">
@@ -828,7 +836,7 @@ export default function ProductForm({ initial }: Props) {
                     <button
                       type="button"
                       onClick={() => makeCover(i)}
-                      className="absolute bottom-1 left-1 bg-white/90 text-ink text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm hover:bg-white transition-colors"
+                      className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] font-bold tracking-wide uppercase px-2 py-1 rounded-full backdrop-blur-sm hover:bg-black/85 transition-colors"
                       title="Tornar capa"
                     >
                       Tornar capa
@@ -840,10 +848,13 @@ export default function ProductForm({ initial }: Props) {
                   <button
                     type="button"
                     onClick={() => removeImage(i)}
-                    className="absolute top-1 right-1 w-7 h-7 rounded-full bg-ink/70 text-paper backdrop-blur-sm flex items-center justify-center hover:bg-red-600 active:scale-90 transition-[background-color,transform] duration-150"
+                    className="group/rm absolute top-0 right-0 w-10 h-10 flex items-center justify-center"
                     aria-label="Remover foto"
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    {/* Círculo de 28px, área de toque de 40px. */}
+                    <span className="w-7 h-7 rounded-full bg-black/70 text-white backdrop-blur-sm flex items-center justify-center group-hover/rm:bg-red-600 group-active/rm:scale-90 transition-[background-color,transform] duration-150">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </span>
                   </button>
                 </div>
               ))}

@@ -170,7 +170,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                         <button
                           type="button"
                           onClick={() => removeRange(key, idx)}
-                          className="w-6 h-6 flex items-center justify-center text-faint hover:text-red-500 transition-colors shrink-0"
+                          className="w-10 h-10 -mx-1 rounded-full flex items-center justify-center text-faint hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0"
                           aria-label="Remover intervalo"
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -179,7 +179,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                           <button
                             type="button"
                             onClick={() => addRange(key)}
-                            className="w-6 h-6 flex items-center justify-center text-clay-l hover:bg-clay-l/10 rounded transition-colors shrink-0"
+                            className="w-10 h-10 -mx-1 rounded-full flex items-center justify-center text-clay hover:bg-clay-l/10 transition-colors shrink-0"
                             aria-label="Adicionar outro intervalo"
                             title="Adicionar outro intervalo (ex: pausa de almoço)"
                           >
@@ -192,7 +192,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                       <button
                         type="button"
                         onClick={() => addRange(key)}
-                        className="self-start flex items-center gap-1 text-[11px] font-semibold text-clay-l hover:text-ink transition-colors"
+                        className="self-start inline-flex items-center gap-1 min-h-10 text-[11px] font-semibold text-clay hover:text-ink transition-colors"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
                         Adicionar horário
@@ -207,7 +207,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                 <button
                   type="button"
                   onClick={() => setCopyMenuOpen(copyMenuOpen === key ? null : key)}
-                  className="w-7 h-7 flex items-center justify-center text-faint hover:text-ink hover:bg-paper rounded transition-colors"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-paper transition-colors"
                   aria-label="Copiar horário"
                   title="Copiar este horário para outros dias"
                 >

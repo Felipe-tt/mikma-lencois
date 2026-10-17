@@ -1,5 +1,6 @@
 'use client';
 import { IconBox } from '@/components/ui/Icon';
+import { variantLabel as variantLabelOf } from '@/lib/variantLabel';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -18,7 +19,7 @@ type InventoryItem = {
 type FlatMovement = MovementLog & { itemId: string; productName: string; variantLabel: string };
 
 function variantLabel(item: InventoryItem) {
-  return [item.variant.size, item.variant.fabric, item.variant.colorName || item.variant.color].filter(Boolean).join(' · ');
+  return variantLabelOf(item.variant);
 }
 
 export default function HistoricoEstoquePage() {

@@ -64,7 +64,7 @@ export default function PainelMensagens() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Erro ao excluir a conversa');
       }
-      if (selectedId === conv.id) setSelectedId(null);
+      if (selectedId === conv.id) closeConversation();
     } catch (err) {
       await confirmDialog({
         message: 'Não foi possível excluir a conversa',
@@ -76,7 +76,34 @@ export default function PainelMensagens() {
     }
   }
 
+  // Conversa aberta fica na URL (?c=id): no celular o gesto de voltar
+  // fecha a conversa em vez de sair de Mensagens (e perder a resposta).
+  const pushedRef = useRef(false);
+  useEffect(() => {
+    const sync = () => {
+      const c = new URLSearchParams(window.location.search).get('c');
+      setSelectedId(c);
+      if (!c) pushedRef.current = false;
+    };
+    sync();
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+
+  function closeConversation() {
+    if (pushedRef.current) { window.history.back(); return; }
+    const url = new URL(window.location.href);
+    url.searchParams.delete('c');
+    window.history.replaceState(window.history.state, '', url);
+    setSelectedId(null);
+  }
+
   async function openConversation(conv: Conversation) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('c', conv.id);
+    // Trocar de conversa substitui a entrada; abrir a primeira cria uma.
+    if (selectedId) window.history.replaceState(window.history.state, '', url);
+    else { window.history.pushState(window.history.state, '', url); pushedRef.current = true; }
     setSelectedId(conv.id);
     if (conv.unread) {
       await updateDoc(doc(db, 'conversations', conv.id), { unread: false });
@@ -186,7 +213,7 @@ export default function PainelMensagens() {
           {selected ? (
             <ConversationThread
               conversation={selected}
-              onBack={() => setSelectedId(null)}
+              onBack={closeConversation}
               onDelete={() => deleteConversation(selected)}
               deleting={deletingId === selected.id}
             />
@@ -219,6 +246,15 @@ function ConversationThread({
   const [messages, setMessages] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [reply, setReply] = useState('');
+  // Dica do Ctrl+Enter só com mouse/teclado; no celular não faz sentido.
+  const [finePointer, setFinePointer] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: fine)');
+    const update = () => setFinePointer(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
   const [subject, setSubject] = useState('');
   const [showSubject, setShowSubject] = useState(false);
   const [sending, setSending] = useState(false);
@@ -324,7 +360,8 @@ function ConversationThread({
       <div className="flex items-center gap-3 px-4 py-3 border-b border-mist bg-paper shrink-0">
         <button
           onClick={onBack}
-          className="sm:hidden text-mid hover:text-ink transition-colors p-1 -ml-1"
+          aria-label="Voltar para a lista de conversas"
+          className="sm:hidden w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors shrink-0"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 19l-7-7 7-7" />
@@ -332,7 +369,7 @@ function ConversationThread({
         </button>
 
         {/* Avatar */}
-        <div className="w-8 h-8 bg-mist flex items-center justify-center text-[13px] font-bold text-mid shrink-0">
+        <div className="w-8 h-8 rounded-full bg-mist flex items-center justify-center text-[13px] font-bold text-mid shrink-0">
           {(conversation.customerName || conversation.customerEmail)[0].toUpperCase()}
         </div>
 
@@ -345,21 +382,26 @@ function ConversationThread({
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[11px] text-faint">
+        {/* Ações em ícones de 40px: no celular o texto "Abrir no e-mail"
+            espremia o nome do cliente em ~100px. */}
+        <div className="flex items-center gap-1 shrink-0 -mr-2">
+          <span className="hidden sm:inline text-[11px] text-faint mr-1">
             {messages.length} msg{messages.length !== 1 ? 's' : ''}
           </span>
           <a
             href={`mailto:${conversation.customerEmail}`}
-            className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors"
+            aria-label="Abrir no e-mail"
+            title="Abrir no e-mail"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
           >
-            Abrir no e-mail
+            <IconMail size={16} />
           </a>
           <button
             onClick={onDelete}
             disabled={deleting}
+            aria-label="Excluir conversa"
             title="Excluir conversa"
-            className="w-7 h-7 flex items-center justify-center text-faint hover:text-red-500 transition-colors disabled:opacity-60"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-faint hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-60"
           >
             {deleting ? (
               <span className="w-3.5 h-3.5 border border-current border-t-transparent rounded-full animate-spin" />
@@ -430,7 +472,7 @@ function ConversationThread({
             value={reply}
             onChange={e => setReply(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Escreva sua resposta… (Ctrl+Enter para enviar)"
+            placeholder={finePointer ? 'Escreva sua resposta… (Ctrl+Enter para enviar)' : 'Escreva sua resposta…'}
             aria-label="Sua resposta"
             rows={3}
             className="w-full resize-none border border-mist bg-white dark:bg-warm px-3 py-2.5 text-[13px] text-ink focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 placeholder:text-faint rounded-xl"

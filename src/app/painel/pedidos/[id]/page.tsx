@@ -164,6 +164,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
+  const [pasteFailed, setPasteFailed] = useState(false);
   const [refunding, setRefunding] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
   const [copied, setCopied]       = useState<string | null>(null);
@@ -611,6 +612,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   // Só dígitos, sem o 55 (o cadastro guarda o celular com DDD).
   const customerPhone = ((customer as (User & { phone?: string }) | null)?.phone ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '') || null;
   const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const isPickupOrder = (order.delivery?.carrier ?? (order as unknown as { selectedShipping?: { carrier?: string } }).selectedShipping?.carrier) === 'pickup';
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -774,14 +776,41 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
               {!isPickup && !isUberDirect ? (
                 <>
-                  <input
-                    type="text"
-                    value={trackingCode}
-                    onChange={e => setTrackingCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
-                    placeholder={isCorreiosCarrier ? 'AA123456789BR' : 'Código de rastreio'}
-                    maxLength={30}
-                    className="w-full font-mono text-[13px] tracking-wide border border-mist bg-white dark:bg-warm px-4 py-3 rounded-xl focus:outline-none focus:border-ink"
-                  />
+                  {/* Sem autocorreção nem maiúscula automática: o corretor do
+                      celular "consertava" AA123456789BR. Colar lê a área de
+                      transferência direto (o app dos Correios copia o código). */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={trackingCode}
+                      onChange={e => setTrackingCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                      placeholder={isCorreiosCarrier ? 'AA123456789BR' : 'Código de rastreio'}
+                      aria-label="Código de rastreio"
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      autoComplete="off"
+                      spellCheck={false}
+                      maxLength={30}
+                      className="w-full font-mono text-[13px] tracking-wide border border-mist bg-white dark:bg-warm pl-4 pr-[5.5rem] py-3 rounded-xl focus:outline-none focus:border-ink"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const text = await navigator.clipboard.readText();
+                          if (text.trim()) setTrackingCode(text.toUpperCase().replace(/\s+/g, '').slice(0, 30));
+                        } catch {
+                          setPasteFailed(true);
+                        }
+                      }}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 px-3.5 rounded-full bg-warm text-[12px] font-semibold text-ink hover:bg-mist transition-colors"
+                    >
+                      Colar
+                    </button>
+                  </div>
+                  {pasteFailed && (
+                    <p className="text-[11px] text-faint">Não deu para ler a área de transferência. Toque e segure no campo para colar.</p>
+                  )}
                   {trackingCode.trim().length > 0 && !codeOk && (
                     <p className="text-[11px] text-amber-600">
                       {isCorreiosCarrier
@@ -1092,17 +1121,35 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </Card>
 
         {/* ── Endereço de entrega ── */}
-        <Card title="Endereço de entrega" icon="pin">
-          <Row label="Rua" value={`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}`} />
-          <Row label="Bairro" value={order.address.neighborhood} />
-          <Row label="Cidade" value={`${order.address.city}, ${order.address.state}`} />
-          <Row label="CEP" value={maskCep(order.address.cep)} />
+        {/* Retirada na loja: o endereço do cliente não serve para nada no
+            despacho, então fica recolhido (ainda dá para abrir). */}
+        <Card title={isPickupOrder ? 'Retirada na loja' : 'Endereço de entrega'} icon="pin">
+          {isPickupOrder ? (
+            <details className="group py-2.5">
+              <summary className="flex items-center justify-between min-h-10 cursor-pointer list-none text-[12px] text-mid">
+                O cliente vai buscar o pedido na loja.
+                <span className="text-[11px] font-semibold text-clay group-open:hidden">Ver endereço do cliente</span>
+              </summary>
+              <p className="text-[12px] text-ink mt-1">
+                {order.address.street}, {order.address.number}{order.address.complement ? `, ${order.address.complement}` : ''} · {order.address.neighborhood} · {order.address.city}, {order.address.state} · {maskCep(order.address.cep)}
+              </p>
+            </details>
+          ) : (
+            <>
+              <Row label="Rua" value={`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}`} />
+              <Row label="Bairro" value={order.address.neighborhood} />
+              <Row label="Cidade" value={`${order.address.city}, ${order.address.state}`} />
+              <Row label="CEP" value={maskCep(order.address.cep)} />
+            </>
+          )}
           <div className="py-2.5 flex flex-col gap-2">
+            {!isPickupOrder && (
             <button
               onClick={() => copy(`${order.address.street}, ${order.address.number}${order.address.complement ? `, ${order.address.complement}` : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP ${maskCep(order.address.cep)}`, 'address')}
               className="w-full border border-mist text-mid text-[12px] font-semibold py-2 hover:bg-warm transition-colors rounded-xl">
               {copied === 'address' ? 'Endereço copiado!' : 'Copiar endereço completo'}
             </button>
+            )}
             {order.payment.paidAt && order.status !== 'cancelled' && (
             <Link
               href={`/painel/pedidos/${order.id}/etiqueta`}
@@ -1119,7 +1166,10 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <Row label="Transportadora" value={order.delivery.carrier ? carrierNameVendor(order.delivery.carrier) : 'Não definida'} />
             <Row label="Despachado em" value={order.delivery.dispatchedAt ? formatDateTime(order.delivery.dispatchedAt) : null} />
             <Row label="Previsão" value={order.delivery.estimatedDelivery ? formatDateTime(order.delivery.estimatedDelivery) : null} />
-            {order.delivery.trackingCode && (
+            {/* Pedido a caminho já mostra o código no cartão de ação lá em
+                cima; aqui ele aparecia de novo (e uma terceira vez no
+                Rastreamento). */}
+            {order.delivery.trackingCode && order.status !== 'shipped' && (
               <div className="py-2.5">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[12px] text-faint">Código de rastreio</span>
@@ -1153,7 +1203,6 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-mist bg-warm">
               <IconBox size={16} className="text-mid shrink-0" />
               <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Rastreamento</p>
-              <span className="ml-auto font-mono text-[11px] text-mid">{order.delivery.trackingCode}</span>
             </div>
             <div className="px-5 py-4">
               <TrackingTimeline

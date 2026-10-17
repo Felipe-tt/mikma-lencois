@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/Select';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { Field } from '@/components/ui/Field';
 import { PainelSkeleton } from '@/components/painel/PainelSkeleton';
+import { formatCurrency } from '@/lib/utils/format';
 
 type Coupon = {
   id: string; code: string; type: 'percent' | 'fixed'; value: number;
@@ -92,14 +93,16 @@ export default function CuponsPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      {/* No celular o botão desce para a própria linha: ao lado do título
+          "+ CRIAR CUPOM" quebrava em duas linhas. */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display font-normal text-ink text-2xl">Cupons de desconto</h1>
           <p className="text-[13px] text-faint mt-1">Crie códigos para seus clientes usarem na hora de comprar.</p>
         </div>
         <button onClick={() => { setShowForm(s => !s); setError(''); }}
-          className={`text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2.5 border transition-colors ${ showForm ? 'border-mist text-mid hover:bg-warm' : 'bg-ink text-paper border-ink hover:bg-ink/80' } rounded-full`}>
-          {showForm ? 'Cancelar' : '+ Criar cupom'}
+          className={`w-full sm:w-auto shrink-0 whitespace-nowrap inline-flex items-center justify-center gap-1.5 h-11 px-5 text-[13px] font-semibold border transition-colors ${ showForm ? 'border-mist text-mid hover:bg-warm' : 'bg-ink text-paper border-ink hover:bg-ink/80' } rounded-full`}>
+          {showForm ? 'Cancelar' : <><span aria-hidden="true" className="text-[16px] leading-none">+</span> Criar cupom</>}
         </button>
       </div>
 
@@ -176,8 +179,8 @@ export default function CuponsPage() {
               <div className="bg-clay-l/5 border border-clay-l/20 px-4 py-3 rounded-xl">
                 <p className="text-[12px] text-ink">
                   <IconInfo size={13} className="text-mid" /> <strong>Resumo:</strong> O cupom <strong className="font-mono">{form.code || '...'}</strong> vai dar{' '}
-                  <strong>{form.type === 'percent' ? `${form.value}%` : `R$ ${form.value.toFixed(2)}`} de desconto</strong>
-                  {form.minOrderCents > 0 && ` em pedidos acima de R$ ${form.minOrderCents.toFixed(2)}`}
+                  <strong>{form.type === 'percent' ? `${form.value}%` : formatCurrency(Math.round(form.value * 100))} de desconto</strong>
+                  {form.minOrderCents > 0 && ` em pedidos acima de ${formatCurrency(Math.round(form.minOrderCents * 100))}`}
                   {` e pode ser usado ${form.maxUses} vez${form.maxUses !== 1 ? 'es' : ''}`}
                   {form.expiresAt && ` até ${new Date(form.expiresAt + 'T00:00:00').toLocaleDateString('pt-BR')}`}.
                 </p>
@@ -205,23 +208,27 @@ export default function CuponsPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {coupons.map(c => (
-            <div key={c.id} className={`border bg-paper px-5 py-4 rounded-2xl ${!c.active ? 'opacity-50' : 'border-mist'}`}>
+            // Pausado esmaece só o conteúdo: o botão de reativar continua
+            // nítido (antes o cartão inteiro, botão incluso, ia a 50%).
+            <div key={c.id} className="border border-mist bg-paper px-5 py-4 rounded-2xl">
               <div className="flex items-start justify-between gap-3 mb-3">
-                <div>
+                <div className={`min-w-0 transition-opacity ${!c.active ? 'opacity-50' : ''}`}>
                   <span className="font-mono font-bold text-ink text-lg tracking-wider">{c.code}</span>
-                  <p className="text-[13px] text-mid mt-0.5">{desconto(c)}{c.minOrderCents > 0 && ` em pedidos acima de R$ ${(c.minOrderCents/100).toFixed(2)}`}</p>
+                  <p className="text-[13px] text-mid mt-0.5">{desconto(c)}{c.minOrderCents > 0 && ` em pedidos acima de ${formatCurrency(c.minOrderCents)}`}</p>
                 </div>
                 <button onClick={() => toggleActive(c.id, c.active)}
-                  className={`shrink-0 text-[11px] font-bold px-3 py-1.5 border transition-colors ${ c.active ? 'border-clay-l text-clay-l hover:bg-clay-l hover:text-paper' : 'border-mist text-faint hover:bg-warm' } rounded-lg`}>
+                  aria-pressed={c.active}
+                  className={`shrink-0 inline-flex items-center gap-1.5 h-9 text-[12px] font-semibold px-3.5 border transition-colors ${ c.active ? 'border-emerald-600/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30' : 'border-mist text-mid hover:bg-warm' } rounded-full`}>
+                  <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full ${c.active ? 'bg-emerald-600' : 'bg-faint'}`} />
                   {c.active ? 'Ativo' : 'Pausado'}
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-faint pt-3 border-t border-mist">
+              <div className={`flex items-center justify-between gap-3 text-[11px] text-faint pt-3 border-t border-mist ${!c.active ? '[&>span]:opacity-60' : ''}`}>
                 <span>
-                  Usado <strong>{c.usedCount ?? 0}</strong> de <strong>{c.maxUses}</strong> vezes
+                  Usado <strong>{c.usedCount ?? 0}</strong>{c.maxUses ? <> de <strong>{c.maxUses}</strong></> : null} {(c.usedCount ?? 0) === 1 && !c.maxUses ? 'vez' : 'vezes'}{!c.maxUses && ' · sem limite'}
                   {c.expiresAt && ` · Válido até ${new Date(c.expiresAt.length === 10 ? `${c.expiresAt}T12:00:00` : c.expiresAt).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`}
                 </span>
-                <button onClick={() => remove(c.id)} className="text-red-400 hover:text-red-600 font-semibold transition-colors">Apagar</button>
+                <button onClick={() => remove(c.id)} className="inline-flex items-center min-h-10 px-2 -mr-2 text-red-600 hover:text-red-700 font-semibold transition-colors">Apagar</button>
               </div>
             </div>
           ))}

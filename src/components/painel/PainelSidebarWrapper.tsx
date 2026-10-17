@@ -61,6 +61,33 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
     };
   }, [open]);
 
+  // Teclado aberto no celular: a barra de baixo some enquanto um campo de
+  // texto tem foco. Com o teclado, topo + barra de salvar + barra de baixo
+  // ocupavam ~40% da tela e sobrava pouco espaço pro formulário.
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const isTextField = (el: Element | null) => {
+      if (!el) return false;
+      if (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return true;
+      if (el instanceof HTMLInputElement) return !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file', 'image', 'hidden'].includes(el.type);
+      return (el as HTMLElement).isContentEditable === true;
+    };
+    let frame = 0;
+    // Espera um quadro no focusout: pular de um campo pro outro não pode
+    // fazer a barra piscar.
+    const sync = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setTyping(isTextField(document.activeElement)));
+    };
+    document.addEventListener('focusin', sync);
+    document.addEventListener('focusout', sync);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('focusin', sync);
+      document.removeEventListener('focusout', sync);
+    };
+  }, []);
+
   // Título vem da lista completa (antes só da barra inferior, e Cupons,
   // Trocas etc. apareciam como "Painel").
   const isActive = (n: { href: string; exact?: boolean }) => n.exact ? pathname === n.href : pathname.startsWith(n.href);
@@ -69,7 +96,7 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
   const moreActive = !TABBAR_NAV.some(isActive);
 
   return (
-    <div className="painel-scope flex min-h-screen bg-warm">
+    <div className="painel-scope flex min-h-screen bg-warm" data-typing={typing ? '' : undefined}>
       {/* Sidebar desktop */}
       <div data-no-print className="hidden lg:block sticky top-0 h-screen self-start overflow-hidden">
         <PainelSidebar />
@@ -121,7 +148,11 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
           </div>
         </div>
 
-        <main className="flex-1 p-5 sm:p-8 pb-[calc(var(--panel-tabbar-h)+env(safe-area-inset-bottom)+1rem)] lg:pb-8 overflow-y-auto animate-fade-in">
+        {/* overflow-x-clip e não overflow-y-auto: o documento é que rola, e
+            um main com overflow virava o contêiner das barras "sticky"
+            (Confirmar venda, Salvar contagem), que por isso nunca grudavam.
+            O clip só corta sobra horizontal sem criar contêiner de rolagem. */}
+        <main className="flex-1 p-5 sm:p-8 pb-[calc(var(--panel-tabbar-h)+env(safe-area-inset-bottom)+1rem)] lg:pb-8 overflow-x-clip animate-fade-in">
           {children}
         </main>
 
