@@ -4,8 +4,8 @@ import { doc, getDoc, writeBatch, increment, arrayUnion, serverTimestamp } from 
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { IconBox, IconCheck, IconX, IconSearch, IconInventory, IconReceipt, IconMinusCircle, IconPlusCircle } from '@/components/ui/Icon';
-import { SIZE_LABEL } from '@/lib/productOptions';
-import { hexToColorName } from '@/lib/colorNames';
+import { variantLabel as variantLabelOf } from '@/lib/variantLabel';
+import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import type { MovementLog } from '@/types';
 import { nextTapDelta, shouldConfirmRapidTap, applyTapDelta } from '@/lib/inventoryTap';
@@ -19,18 +19,16 @@ export type InventoryItem = {
   quantity: number; reserved: number; lowStockThreshold: number; history?: MovementLog[];
 };
 
-const COL_OPTIONS_MOBILE = [2, 3, 4];
+// No celular 4 colunas deixavam a foto pequena demais pra acertar o toque.
+const COL_OPTIONS_MOBILE = [2, 3];
 const COL_OPTIONS_DESKTOP = [3, 4, 5, 6, 8];
 const COLS_KEY = 'mikma_estoque_grid_cols';
 
 function normalize(s: string) {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
-// "Único · Algodão · Branco" em vez de "unico · Algodão · #FFFFFF".
 function variantLabel(item: InventoryItem) {
-  const { size, fabric, color, colorName } = item.variant;
-  const colorLabel = colorName || (color?.startsWith('#') ? hexToColorName(color) : color);
-  return [SIZE_LABEL[size] ?? size, fabric, colorLabel].filter(Boolean).join(' · ');
+  return variantLabelOf(item.variant);
 }
 
 export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
@@ -135,6 +133,11 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
   const pendingEntries = Object.entries(deltas).filter(([, d]) => d !== 0);
   const pendingCount = pendingEntries.length;
   const pendingUnits = pendingEntries.reduce((s, [, d]) => s + Math.abs(d), 0);
+  // Toques marcados e não confirmados se perdiam ao trocar de aba.
+  useUnsavedGuard(embedded && pendingCount > 0 && !saving, {
+    message: 'Sair sem confirmar?',
+    detail: `${pendingCount} ${pendingCount === 1 ? 'produto marcado ainda não foi salvo' : 'produtos marcados ainda não foram salvos'}.`,
+  });
 
   function clearAll() {
     setDeltas({});
@@ -255,7 +258,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
           </button>
           <button onClick={() => setMode('reposicao')}
             className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
-            <IconPlusCircle size={15} /> Chegou mercadoria
+            <IconPlusCircle size={15} /> <span className="sm:hidden">Chegou</span><span className="hidden sm:inline">Chegou mercadoria</span>
           </button>
         </div>
 
@@ -287,7 +290,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
           {mode === 'venda'
             ? 'Toque na foto do produto pra registrar 1 venda. Toque de novo se vendeu mais de 1.'
             : 'Toque na foto do produto pra registrar 1 chegada. Toque de novo se chegou mais de 1.'}
-          {' '}Tocou errado? Aperta o outro botão aí em cima e toque de novo no mesmo produto pra corrigir.
+          {' '}Marcou a mais? Use “Limpar” lá embaixo, ou troque de botão aqui em cima e toque de novo no produto.
         </p>
       </div>
 
@@ -338,7 +341,11 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
       </div>
 
       {/* Barra de confirmação */}
-      <div className={`px-4 py-3 flex items-center gap-2 bg-paper ${embedded ? 'sticky bottom-0 border-t border-mist shadow-[0_-4px_10px_rgba(0,0,0,0.06)]' : 'border-t border-mist shrink-0'}`}>
+      <div className={`px-4 py-3 flex items-center gap-2 bg-paper ${embedded
+        // Só gruda com algo marcado: parada, a dica "Toque nos produtos"
+        // cobria a última fileira de fotos à toa.
+        ? `-mx-5 sm:mx-0 sm:rounded-2xl ${pendingCount > 0 || saving ? 'sticky above-panel-tabbar z-10 border-t border-mist sm:border shadow-[0_-4px_10px_rgba(0,0,0,0.06)]' : 'bg-transparent'}`
+        : 'border-t border-mist shrink-0'}`}>
         {pendingCount > 0 && (
           <button onClick={clearAll} disabled={saving}
             className="shrink-0 border border-mist text-mid text-[12px] font-semibold px-3 py-3 hover:bg-warm disabled:opacity-50 rounded-xl">

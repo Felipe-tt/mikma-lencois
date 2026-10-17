@@ -653,6 +653,11 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
 .panel-nav-item:not(.is-active) {
   @apply text-mid hover:text-ink hover:bg-warm;
 }
+/* Notebook com tela baixa (1280x800): os 11 itens não cabiam e o último
+   ("Avaliações") ficava escondido atrás do rodapé da barra. */
+@media (max-height: 860px) {
+  .panel-nav-item { @apply py-1.5; }
+}
 
 /* Barra de navegação inferior (mobile) — âncora fixa tipo app nativo,
    com o item ativo flutuando um pouco acima da linha. */
@@ -672,6 +677,14 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
 }
 .panel-tabbar-dot {
   @apply block w-1 h-1 rounded-full bg-clay-l opacity-0 scale-0 transition-all duration-200;
+}
+
+/* Campo de texto com foco no celular (teclado aberto): a barra some e as
+   barras fixas (.above-panel-tabbar) descem pro rodapé. O atributo é
+   ligado pelo PainelSidebarWrapper. */
+@media (max-width: 1023px) {
+  .painel-scope[data-typing] { --panel-tabbar-h: 0px; }
+  .painel-scope[data-typing] .panel-tabbar { display: none; }
 }
 
 /* ── Unificação com as telas antigas ───────────────────────────────
@@ -809,7 +822,9 @@ html.dark { --overlay-dim: rgb(0 0 0 / 0.62); }
 /* Fechado, por variante */
 .overlay-panel[data-variant="dialog"] { opacity: 0; transform: translateY(8px) scale(0.97); }
 .overlay-panel[data-variant="sheet"] { transform: translateY(100%); }
-.overlay-panel[data-variant="drawer-left"] { transform: translateX(-100%); }
+/* -100% sozinho deixava a sombra larga do drawer (shadow-modal) vazando
+   como uma faixa cinza na borda esquerda de toda tela do painel. */
+.overlay-panel[data-variant="drawer-left"] { transform: translateX(calc(-100% - 80px)); }
 /* Sheet no celular, diálogo do sm pra cima */
 .overlay-panel[data-variant="responsive"] { transform: translateY(100%); }
 @media (min-width: 640px) {

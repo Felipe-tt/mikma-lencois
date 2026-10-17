@@ -1,5 +1,6 @@
 'use client';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import React from 'react';
 import {
@@ -59,13 +60,9 @@ export default function ConfiguracoesPage() {
   const [loadError, setLoadError] = useState(false);
   const dirty = JSON.stringify(settings) !== JSON.stringify(savedSnapshot);
 
-  // Avisa antes de sair da página com mudanças não salvas.
-  useEffect(() => {
-    if (!dirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [dirty]);
+  // Avisa antes de sair com mudanças não salvas: fechar a aba e também
+  // navegar pela barra de baixo ou pelo menu (só beforeunload não pegava).
+  useUnsavedGuard(dirty && !saving);
 
   useEffect(() => {
     getDoc(doc(db, 'settings', 'store')).then(snap => {
@@ -225,12 +222,12 @@ export default function ConfiguracoesPage() {
           <Card icon="pin" title="Onde você fica" desc="Endereço físico da sua loja, usado também para gerar etiquetas de envio" onPreview={() => setPreview('sobre')}>
             <Row>
               <F label="Rua" value={settings.storeAddress} onChange={v => set('storeAddress', v)} placeholder="Rua das Flores" />
-              <F label="Número" value={settings.storeNumber} onChange={v => set('storeNumber', v)} placeholder="123" />
+              <F label="Número" inputMode="numeric" value={settings.storeNumber} onChange={v => set('storeNumber', v)} placeholder="123" />
             </Row>
             <F label="Complemento (opcional)" value={settings.storeComplement} onChange={v => set('storeComplement', v)} placeholder="Sala 2, fundos, etc." />
             <Row>
               <F label="Bairro" value={settings.storeNeighborhood} onChange={v => set('storeNeighborhood', v)} placeholder="Centro" />
-              <F label="CEP" value={settings.storeCep} onChange={v => set('storeCep', maskCep(v))}
+              <F label="CEP" inputMode="numeric" value={settings.storeCep} onChange={v => set('storeCep', maskCep(v))}
                 placeholder="89000-000" maxLength={9}
                 hint={!settings.storeCep ? undefined : isValidCep(settings.storeCep) ? 'CEP válido' : 'CEP incompleto'} />
             </Row>
@@ -241,15 +238,15 @@ export default function ConfiguracoesPage() {
           </Card>
 
           <Card icon="phone" title="Como te chamam?" desc="Formas de contato que aparecem no site" onPreview={() => setPreview('footer')}>
-            <F label="WhatsApp" value={settings.storePhone} onChange={v => set('storePhone', maskPhone(v))}
+            <F label="WhatsApp" type="tel" value={settings.storePhone} onChange={v => set('storePhone', maskPhone(v))}
               placeholder="(47) 99999-0000" maxLength={15}
               hint={!settings.storePhone ? 'Número principal de atendimento' : isValidPhone(settings.storePhone) ? 'Número principal de atendimento' : 'Telefone incompleto'} />
-            <F label="Link do WhatsApp" value={settings.whatsappUrl ?? ''} onChange={v => set('whatsappUrl', v)}
+            <F label="Link do WhatsApp" type="url" value={settings.whatsappUrl ?? ''} onChange={v => set('whatsappUrl', v)}
               placeholder="https://wa.me/5547999990000"
               hint='Cole o link gerado em wa.me, é o botão "Falar no WhatsApp"' />
-            <F label="E-mail" value={settings.storeEmail} onChange={v => set('storeEmail', v)} placeholder="contato@minhaloja.com.br"
+            <F label="E-mail" type="email" value={settings.storeEmail} onChange={v => set('storeEmail', v)} placeholder="contato@minhaloja.com.br"
               hint={!settings.storeEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.storeEmail) ? undefined : 'E-mail incompleto'} />
-            <F label="Instagram (opcional)" value={settings.instagramUrl ?? ''} onChange={v => set('instagramUrl', v)}
+            <F label="Instagram (opcional)" type="url" value={settings.instagramUrl ?? ''} onChange={v => set('instagramUrl', v)}
               placeholder="https://instagram.com/mikmalencois" hint="Aparece no rodapé" />
           </Card>
 
@@ -410,7 +407,7 @@ export default function ConfiguracoesPage() {
         <div className="flex flex-col gap-5">
 
           <Card icon="produto" title="De onde você envia?" desc="Endereço de onde seus produtos saem, usado para calcular o frete automaticamente">
-            <F label="CEP de envio" value={settings.originCep} onChange={v => set('originCep', v)}
+            <F label="CEP de envio" inputMode="numeric" value={settings.originCep} onChange={v => set('originCep', v)}
               placeholder="89000-000" hint="CEP do seu estoque ou loja física" />
             <Num label="Raio de entrega rápida (km)"
               value={settings.localDeliveryRadiusKm} onChange={v => set('localDeliveryRadiusKm', v)}
@@ -562,12 +559,15 @@ export default function ConfiguracoesPage() {
       )}
 
       {/* Botão salvar fixo */}
+      {/* No celular e no tablet a barra fixa só aparece com algo a salvar
+          (antes "Nenhuma alteração" ocupava ~76px o tempo todo); no tablet
+          ficava no fim de uma página de 2600px, agora fica fixa até o lg. */}
       {tab !== 'equipe' && (
-      <div className="fixed above-panel-tabbar left-0 right-0 z-30 md:relative md:bottom-auto md:mt-8">
-        <div className="bg-paper border-t border-mist md:border-0 px-4 py-3 md:px-0 md:py-0">
+      <div className={`${dirty || saved || saving || saveError ? 'fixed' : 'hidden'} above-panel-tabbar left-0 right-0 z-30 lg:block lg:relative lg:bottom-auto lg:mt-8 animate-fade-up lg:animate-none`}>
+        <div className="bg-paper/95 backdrop-blur-md border-t border-mist lg:border-0 lg:bg-transparent lg:backdrop-blur-none px-4 py-3 lg:px-0 lg:py-0">
           {saveError && <p className="text-center text-[12px] text-red-600 mb-2">{saveError}</p>}
           <button onClick={handleSave} disabled={saving || (!dirty && !saved)}
-            className="w-full bg-ink text-paper text-sm font-semibold py-4 disabled:opacity-50 hover:bg-ink/85 transition-colors flex items-center justify-center gap-2 rounded-xl"
+            className="w-full bg-ink text-paper text-sm font-semibold h-12 lg:h-14 disabled:opacity-50 hover:bg-ink/85 transition-colors flex items-center justify-center gap-2 rounded-full"
           >
             {saving
               ? <><span className="spinner" />Salvando…</>
@@ -655,16 +655,21 @@ function examplePlaceholder(p?: string) {
   return `Ex.: ${p}`;
 }
 
-function F({ label, value, onChange, hint, placeholder, maxLength, type='text' }: {
+// inputMode/type certos trazem o teclado certo no celular (números pro
+// CEP, telefone pro WhatsApp, @ pro e-mail); antes todo campo abria o
+// teclado de letras.
+function F({ label, value, onChange, hint, placeholder, maxLength, type='text', inputMode }: {
   label:string; value:string; onChange:(v:string)=>void;
   hint?:string; placeholder?:string; maxLength?:number; type?:string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
 }) {
   const id = useId();
   return (
     <div>
       <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
-      <input id={id} type={type} value={value} onChange={e=>onChange(e.target.value)}
+      <input id={id} type={type} inputMode={inputMode} value={value} onChange={e=>onChange(e.target.value)}
         placeholder={examplePlaceholder(placeholder)} maxLength={maxLength}
+        {...(type === 'url' || type === 'email' ? { autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } : {})}
         className="panel-input placeholder:text-faint/60 placeholder:italic" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>
@@ -705,16 +710,27 @@ function Toggle({ label, checked, onChange, hint, warn }: {
     </div>
   );
 }
-function Num({ label, value, onChange, hint, min, max, step=1 }: {
+function Num({ label, value, onChange, hint, min, max }: {
   label:string; value:number; onChange:(v:number)=>void;
   hint?:string; min?:number; max?:number; step?:number;
 }) {
   const id = useId();
+  const [draft, setDraft] = useState<string | null>(null);
+  const clamp = (n: number) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, n));
   return (
     <div>
       <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
-      <input id={id} type="number" value={value} onChange={e=>onChange(parseFloat(e.target.value)||0)}
-        min={min} max={max} step={step} inputMode="decimal"
+      {/* Texto livre enquanto edita: antes apagar o campo pra digitar outro
+          número fazia ele voltar pra 0 na hora. Campo vazio ao sair volta
+          pro último valor válido. */}
+      <input id={id} type="text" inputMode={min !== undefined && min >= 0 ? 'decimal' : undefined} value={draft ?? String(value).replace('.', ',')}
+        onFocus={() => setDraft(String(value).replace('.', ','))}
+        onChange={e => {
+          setDraft(e.target.value);
+          const n = parseFloat(e.target.value.replace(',', '.'));
+          if (Number.isFinite(n)) onChange(clamp(n));
+        }}
+        onBlur={() => setDraft(null)}
         className="panel-input" />
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
     </div>

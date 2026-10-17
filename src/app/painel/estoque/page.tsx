@@ -12,6 +12,8 @@ import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Link from 'next/link';
 import { staffActor } from '@/lib/staffActor';
+import { variantLabel as variantLabelOf } from '@/lib/variantLabel';
+import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import { ORDER_STOCK_SOURCE_LABEL, type OrderStockSource } from '@/lib/stockHistory';
 
 type MovementLog = { type: 'in' | 'out' | 'adjust'; quantity: number; reason: string; date: string; by?: string; saleId?: string; source?: OrderStockSource };
@@ -26,8 +28,7 @@ function normalize(s: string) {
 }
 
 function variantLabel(item: InventoryItem) {
-  const parts = [item.variant.size, item.variant.fabric, item.variant.colorName || item.variant.color].filter(Boolean);
-  return parts.join(' · ');
+  return variantLabelOf(item.variant);
 }
 
 function timeAgo(iso: string) {
@@ -257,6 +258,27 @@ export default function EstoquePage() {
     [countDraft, items]
   );
 
+  // Contagem em andamento se perdia ao tocar em outra aba do painel.
+  useUnsavedGuard(mode === 'contagem' && changedCount > 0 && !savingCount, {
+    message: 'Sair sem salvar a contagem?',
+    detail: `${changedCount} ${changedCount === 1 ? 'item contado ainda não foi salvo' : 'itens contados ainda não foram salvos'}.`,
+  });
+
+  async function exitCountMode() {
+    if (changedCount > 0) {
+      const { confirmed } = await confirmDialog({
+        message: 'Sair da contagem sem salvar?',
+        detail: `${changedCount} ${changedCount === 1 ? 'item contado vai' : 'itens contados vão'} se perder.`,
+        confirmLabel: 'Sair sem salvar',
+        cancelLabel: 'Continuar contando',
+        variant: 'danger',
+      });
+      if (!confirmed) return;
+    }
+    setCountDraft({});
+    setMode('dia');
+  }
+
   function enterCountMode() {
     setActionFor(null);
     setCountDraft({});
@@ -366,36 +388,38 @@ export default function EstoquePage() {
           </p>
         </div>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
-          <div className="flex items-center border border-mist bg-white dark:bg-warm text-[12.5px] font-semibold text-mid divide-x divide-mist overflow-x-auto rounded-xl">
+          {/* Grade de colunas iguais: em 390px a fileira rolava de lado e
+              "Modo contagem" aparecia cortado como "Modo". */}
+          <div className={`grid ${mode === 'dia' ? 'grid-cols-3' : 'grid-cols-2'} border border-mist bg-white dark:bg-warm text-[12.5px] font-semibold text-mid divide-x divide-mist overflow-hidden rounded-xl lg:flex lg:items-center`}>
             {mode === 'dia' && (
               <button onClick={() => setSubview(v => v === 'grade' ? 'lista' : 'grade')}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors whitespace-nowrap">
+                className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors text-center leading-tight">
                 {subview === 'grade' ? (
-                  <><IconEdit size={13} /> Corrigir número</>
+                  <><IconEdit size={13} /> <span><span className="sm:hidden">Corrigir</span><span className="hidden sm:inline">Corrigir número</span></span></>
                 ) : (
                   <><IconImage size={13} /> Ver fotos</>
                 )}
               </button>
             )}
             <Link href="/painel/estoque/historico"
-              className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors whitespace-nowrap">
-              <IconClock size={13} /> Histórico geral
+              className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors text-center leading-tight">
+              <IconClock size={13} /> <span><span className="sm:hidden">Histórico</span><span className="hidden sm:inline">Histórico geral</span></span>
             </Link>
             {mode === 'dia' ? (
               <button onClick={enterCountMode}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors whitespace-nowrap">
-                <IconListCheck size={13} /> Modo contagem
+                className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2.5 hover:bg-warm hover:text-ink transition-colors text-center leading-tight">
+                <IconListCheck size={13} /> <span><span className="sm:hidden">Contagem</span><span className="hidden sm:inline">Modo contagem</span></span>
               </button>
             ) : (
-              <button onClick={() => setMode('dia')}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-ink text-paper font-bold whitespace-nowrap rounded-lg">
+              <button onClick={exitCountMode}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-ink text-paper font-bold whitespace-nowrap">
                 <IconX size={13} /> Sair da contagem
               </button>
             )}
           </div>
           <Link href="/painel/produtos/novo"
-            className="w-full lg:w-auto shrink-0 flex items-center justify-center gap-1.5 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 transition-colors rounded-lg">
-            + Produto
+            className="w-full lg:w-auto shrink-0 flex items-center justify-center gap-1.5 h-10 bg-ink text-paper text-[13px] font-semibold px-5 hover:bg-ink/80 transition-colors rounded-full">
+            <span aria-hidden="true" className="text-[16px] leading-none">+</span> Novo produto
           </Link>
         </div>
       </div>
@@ -412,7 +436,7 @@ export default function EstoquePage() {
           </p>
           {!(subview === 'lista' && onlyLow) && (
             <button type="button" onClick={() => { setSubview('lista'); setOnlyLow(true); }}
-              className="shrink-0 text-[12px] font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900 transition-colors">
+              className="shrink-0 inline-flex items-center min-h-10 px-2 -my-2 -mr-2 text-[12px] font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900 transition-colors">
               Ver
             </button>
           )}
@@ -485,9 +509,11 @@ export default function EstoquePage() {
               </div>
             );
           })}
-          <div className="sticky bottom-4 flex justify-end px-4 py-3">
+          {/* above-panel-tabbar: no celular fica acima da barra de baixo
+              (antes "sticky bottom-4" nunca grudava, o main rolava junto). */}
+          <div className="sticky above-panel-tabbar z-10 flex justify-end px-4 py-3 pointer-events-none [&>*]:pointer-events-auto">
             <button onClick={saveCount} disabled={savingCount}
-              className="bg-ink text-paper text-[12px] font-bold tracking-[0.05em] uppercase px-6 py-3 shadow-lg hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-full">
+              className="bg-ink text-paper text-[13px] font-semibold px-6 h-12 shadow-lg hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-full">
               {savingCount ? 'Salvando...' : `Salvar contagem${changedCount > 0 ? ` (${changedCount})` : ''}`}
             </button>
           </div>
