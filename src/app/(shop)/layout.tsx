@@ -4,6 +4,7 @@ import { CookieBanner } from '@/components/layout/CookieBanner';
 import { PageTransition } from '@/components/ui/PageTransition';
 import { MaintenanceGate } from '@/components/layout/MaintenanceGate';
 import { getSettings } from '@/lib/settings';
+import { storeIdentity } from '@/lib/legal';
 import { JsonLd } from '@/components/seo/JsonLd';
 
 // Sem force-dynamic: páginas públicas usam ISR normalmente.
@@ -16,6 +17,7 @@ import { JsonLd } from '@/components/seo/JsonLd';
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
   const s = await getSettings();
+  const identity = storeIdentity(s);
   const siteUrl = 'https://mikma.com.br';
   const orgJsonLd = {
     '@context': 'https://schema.org',
@@ -58,6 +60,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         instagramUrl={s.instagramUrl}
         whatsappUrl={s.whatsappUrl}
         tagline={s.storeSlogan}
+        cnpj={identity.cnpj}
+        address={identity.address}
         businessHours={s.businessHours}
         businessHoursTimezone={s.businessHoursTimezone}
       />

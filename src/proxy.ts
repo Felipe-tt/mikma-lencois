@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 import { clientIpFromHeaders } from '@/lib/ip';
-import { maintenanceDocId, pathOnly, safeReferer, clip } from '@/lib/maintenanceQueue';
+import { maintenanceDocId, pathOnly } from '@/lib/maintenanceQueue';
 
 // Firebase Emulator Suite em desenvolvimento local (ver lib/firebase/client.ts).
 const EMULATOR_CONNECT_SRC =
@@ -69,14 +69,6 @@ async function isIpReleased(projectId: string, docId: string): Promise<boolean> 
   }
 }
 
-// Bots/crawlers que não devem poluir a fila de manutenção, não são
-// visitantes reais esperando acesso, e não faz sentido o admin ficar
-// vendo "GoogleBot entrou na fila".
-const BOT_UA_PATTERN = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|whatsapp|telegrambot|discordbot|semrush|ahrefs|mj12bot|dotbot|petalbot|yandex|baidu|duckduckbot|nutch|scrapy|python-requests|curl\/|wget\/|headless|phantomjs|okhttp|libwww-perl|go-http-client/i;
-
-function isBotUserAgent(ua: string): boolean {
-  return BOT_UA_PATTERN.test(ua);
-}
 
 // Paths que só existem em varreduras automáticas de vulnerabilidade (não
 // tem WordPress, PHP, ou XML-RPC nesse projeto). Rejeitar aqui, antes de
@@ -85,32 +77,6 @@ function isBotUserAgent(ua: string): boolean {
 // nada além do próprio isolate.
 const SCANNER_PATH_PATTERN = /^\/(wp-admin|wp-login|wp-content|wp-includes|wp-json|xmlrpc\.php|\.env|\.git|phpmyadmin|admin\.php|config\.php|_ignition|actuator|\.well-known\/traffic-advice)/i;
 
-async function registerInQueue(projectId: string, docId: string, ip: string, req: NextRequest) {
-  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`;
-  const userAgent = clip(req.headers.get('user-agent'), 300);
-  const fields: Record<string, unknown> = {
-    ip: { stringValue: clip(ip, 45) },
-    released: { booleanValue: false },
-    enteredAt: { stringValue: new Date().toISOString() },
-    userAgent: { stringValue: userAgent },
-    isBot: { booleanValue: isBotUserAgent(userAgent) },
-    // Sem query string/hash: links de e-mail (reset de senha, confirmação)
-    // carregam token e NUNCA podem ser gravados (nem no referer).
-    referer: { stringValue: safeReferer(req.headers.get('referer')) },
-    acceptLanguage: { stringValue: clip(req.headers.get('accept-language'), 100) },
-    requestedPath: { stringValue: pathOnly(req.nextUrl.pathname) },
-    platform: { stringValue: clip((req.headers.get('sec-ch-ua-platform') ?? '').replace(/"/g, ''), 30) },
-    isMobile: { stringValue: clip(req.headers.get('sec-ch-ua-mobile'), 10) },
-  };
-  try {
-    await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields }),
-      signal: AbortSignal.timeout(3000),
-    });
-  } catch { /* silencioso */ }
-}
 
 // ── Security headers (aplicados em todas as respostas) ───────────────────────
 
@@ -208,20 +174,15 @@ export async function proxy(req: NextRequest) {
         const released = await isIpReleased(projectId, docId);
 
         if (!released) {
-          const userAgent = req.headers.get('user-agent') ?? '';
-          const isBot = isBotUserAgent(userAgent);
-
-          // Bots reconhecidos (crawlers, monitoramento, ferramentas de
-          // scraping) não precisam entrar na fila de "quem está esperando
-          // acesso" nem ter IP geolocalizado - isso só existe pra dar
-          // visibilidade de visitante real esperando no painel. Pular
-          // esse trabalho pra bots corta a maior fonte de custo: cada
-          // hit de bot deixa de gerar uma escrita no Firestore.
-          if (!isBot) {
-            await registerInQueue(projectId, docId, ip, req);
-          }
-
-          const redirectRes = NextResponse.redirect(new URL('/manutencao', req.url));
+          // A fila não é mais preenchida aqui: cada requisição de qualquer
+          // IP (inclusive robô com user-agent de navegador) virava uma
+          // entrada. Quem entra na fila agora é o navegador que abre
+          // /manutencao e fica nela (ver /api/maintenance/queue). O caminho
+          // pedido vai junto, sem query string (links de e-mail têm token).
+          const target = new URL('/manutencao', req.url);
+          const wanted = pathOnly(pathname);
+          if (wanted && wanted !== '/' && !wanted.startsWith('/manutencao')) target.searchParams.set('de', wanted);
+          const redirectRes = NextResponse.redirect(target);
           redirectRes.headers.set('Cache-Control', 'no-store, must-revalidate');
           applySecurityHeaders(redirectRes);
           return redirectRes;

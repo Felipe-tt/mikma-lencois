@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db, auth } from '@/lib/firebase/client';
 import { trackPurchase } from '@/lib/analytics';
 import { copyText } from '@/lib/clipboard';
 import { requestNewPix } from '@/lib/orders/requestNewPix';
@@ -200,7 +200,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
 
             {/* ── PENDENTE ── */}
             {!confirmed && !expired && !failed && (
-              <PixPayBlock qrCode={qrCode} copyPaste={copyPaste} expiresAt={expiresAt} />
+              <PixPayBlock qrCode={qrCode} copyPaste={copyPaste} expiresAt={expiresAt} orderId={orderId} />
             )}
           </div>
         </div>
@@ -235,7 +235,56 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
  * nem instruções. No celular o "Copiar código" vem primeiro: quem paga no
  * próprio telefone não tem como escanear o QR da tela.
  */
-export function PixPayBlock({ qrCode, copyPaste, expiresAt }: { qrCode: string; copyPaste: string; expiresAt?: string }) {
+/**
+ * Pergunta à AbacatePay (via /api/orders/[id]/check-payment) se o PIX já foi
+ * pago, enquanto o código está na tela: se o webhook atrasar, a confirmação
+ * aparece mesmo assim. A tela muda sozinha pelo onSnapshot do pedido.
+ */
+function usePixStatusPolling(orderId: string | undefined) {
+  const [checking, setChecking] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+
+  async function check(manual: boolean) {
+    if (!orderId || !auth.currentUser) return;
+    if (manual) { setChecking(true); setHint(null); }
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/orders/${orderId}/check-payment`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({})) as { status?: string };
+      if (manual && data.status !== 'paid') {
+        setHint(data.status === 'expired'
+          ? 'Este PIX venceu. Gere um novo código para pagar.'
+          : 'Ainda não recebemos o pagamento. Depois de pagar, pode levar alguns segundos.');
+      }
+    } catch {
+      if (manual) setHint('Não deu para consultar agora. Tente de novo em instantes.');
+    } finally {
+      if (manual) setChecking(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!orderId) return;
+    const started = Date.now();
+    let busy = false;
+    const tick = async () => {
+      // Para depois de 20 min ou com a aba escondida (volta ao focar).
+      if (busy || document.visibilityState !== 'visible' || Date.now() - started > 20 * 60_000) return;
+      busy = true;
+      await check(false);
+      busy = false;
+    };
+    const id = setInterval(tick, 6000);
+    const onVisible = () => { if (document.visibilityState === 'visible') tick(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
+  }, [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { checking, hint, checkNow: () => check(true) };
+}
+
+export function PixPayBlock({ qrCode, copyPaste, expiresAt, orderId }: { qrCode: string; copyPaste: string; expiresAt?: string; orderId?: string }) {
+  const { checking, hint, checkNow } = usePixStatusPolling(orderId);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const copyInputRef = useRef<HTMLInputElement>(null);
@@ -357,6 +406,21 @@ export function PixPayBlock({ qrCode, copyPaste, expiresAt }: { qrCode: string; 
           </li>
         ))}
       </ol>
+
+      {/* Já pagou e a tela não mudou: consulta na hora. */}
+      {orderId && (
+        <div className="w-full flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={checkNow}
+            disabled={checking}
+            className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-full border border-mist text-[13px] font-medium text-ink hover:bg-warm disabled:opacity-60 transition-colors"
+          >
+            {checking ? <><span className="spinner w-3.5 h-3.5" /> Consultando…</> : 'Já paguei'}
+          </button>
+          {hint && <p role="status" className="text-xs text-mid text-center max-w-[32ch]">{hint}</p>}
+        </div>
+      )}
     </div>
   );
 }

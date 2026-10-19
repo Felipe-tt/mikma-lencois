@@ -8,6 +8,7 @@ import {
 import { auth } from '@/lib/firebase/client';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
+import { readPendingPurchase } from '@/lib/pendingPurchase';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { BrandLogo } from '@/components/BrandLogo';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
@@ -119,6 +120,8 @@ export function AuthModal() {
   // renders (React quebra com "Rendered more hooks than during the
   // previous render").
   if (!mounted) return null;
+  // Visitante que tocou em Adicionar/Comprar antes de criar a conta.
+  const hasPendingPurchase = signupStep === 'awaiting' && !!readPendingPurchase();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -376,6 +379,13 @@ export function AuthModal() {
                   </div>
                 )}
 
+                {/* Google primeiro: entra na hora, sem ir até o e-mail confirmar. */}
+                <GoogleSignInButton onError={setSignupError} />
+                <p className="mt-2 text-center text-[11.5px] text-faint">Mais rápido: sem senha e sem e-mail de confirmação.</p>
+                <div className="flex items-center gap-3 my-5">
+                  <div className="flex-1 divider" /><span className="text-xs text-faint uppercase tracking-wider">ou com e-mail</span><div className="flex-1 divider" />
+                </div>
+
                 <form onSubmit={sendVerification} noValidate className="flex flex-col gap-4">
                   <div>
                     <label htmlFor="modal-signup-name" className="label">Seu nome completo</label>
@@ -411,11 +421,6 @@ export function AuthModal() {
                     {signupLoading ? <><span className="spinner" /> Enviando…</> : 'Continuar'}
                   </button>
                 </form>
-
-                <div className="flex items-center gap-3 my-5">
-                  <div className="flex-1 divider" /><span className="text-xs text-faint uppercase tracking-wider">ou</span><div className="flex-1 divider" />
-                </div>
-                <GoogleSignInButton onError={setSignupError} />
               </>
             )}
 
@@ -429,8 +434,13 @@ export function AuthModal() {
                 <h2 className="font-display font-normal text-ink text-[1.5rem] mb-2 text-center">Veja seu e-mail</h2>
                 <p className="text-[13px] text-mid mb-5 leading-relaxed text-center">
                   Enviamos um link para <strong className="text-ink">{signupEmail}</strong>. Abra o e-mail e clique no botão{' '}
-                  <strong className="text-ink">&ldquo;Confirmar meu e-mail&rdquo;</strong>, você volta pra cá exatamente de onde saiu.
+                  <strong className="text-ink">&ldquo;Confirmar meu e-mail&rdquo;</strong>. Você volta para cá exatamente de onde saiu.
                 </p>
+                {hasPendingPurchase && (
+                  <p className="mb-5 rounded-2xl bg-clay/10 text-clay px-4 py-3 text-[13px] font-medium leading-snug text-center">
+                    Assim que você confirmar o e-mail, o produto entra no carrinho.
+                  </p>
+                )}
 
                 {signupError && (
                   <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700 rounded-xl">{signupError}</div>

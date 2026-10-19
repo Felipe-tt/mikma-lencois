@@ -47,7 +47,31 @@ export function MaintenancePoll() {
         .finally(() => { checking = false; });
     }, 20000);
 
-    return () => clearInterval(id);
+    // Entra na fila de quem está esperando (painel > Manutenção) só depois de
+    // a página ficar alguns segundos aberta e visível: robô raramente roda
+    // JavaScript e quase nunca espera. Antes o proxy registrava qualquer IP.
+    const openedAt = performance.now();
+    let joined = false;
+    function join() {
+      if (joined || document.visibilityState !== 'visible') return;
+      joined = true;
+      const de = new URLSearchParams(window.location.search).get('de') ?? '';
+      fetch('/api/maintenance/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ waitedMs: Math.round(performance.now() - openedAt), path: de }),
+        keepalive: true,
+      }).catch(() => { /* fila é só informativa */ });
+    }
+    const joinTimer = setTimeout(join, 4000);
+    const onVisible = () => { if (performance.now() - openedAt >= 4000) join(); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(id);
+      clearTimeout(joinTimer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   return null;

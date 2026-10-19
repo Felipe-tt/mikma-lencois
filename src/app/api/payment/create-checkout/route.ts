@@ -454,6 +454,10 @@ export async function POST(req: NextRequest) {
       externalId: orderId,
       returnUrl: `${origin}/pedidos/${orderId}`,
       completionUrl: `${origin}/pedidos/${orderId}?pago=1`,
+      // Parcelas de verdade vão em card.maxInstallments (docs v2): só no
+      // metadata a página da AbacatePay ignorava a escolha do cliente. Cada
+      // parcela precisa ser de pelo menos R$ 10.
+      card: { maxInstallments: Math.max(1, Math.min(parsedInstallments, 12, Math.floor(totalCents / 1000))) },
       metadata: { installments: parsedInstallments },
       ...(customerId ? { customerId } : {}),
     };

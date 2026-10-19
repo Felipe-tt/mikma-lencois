@@ -1,7 +1,8 @@
 'use client';
 import { PixPayBlock } from '@/components/checkout/PIXModal';
+import { groupConsecutiveDays, parseBusinessHours } from '@/lib/business-hours';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -130,11 +131,23 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [pixTimeUp, setPixTimeUp] = useState(false);
+  // Tempo do PIX acabou com a página aberta: pede para o servidor conferir na
+  // AbacatePay. Se não foi pago, o pedido expira e o estoque volta na hora
+  // (antes ficava reservado até a limpeza de 48h).
+  const askedExpiry = useRef(false);
   const [storeWa, setStoreWa] = useState<string | null>(null);
+  const [store, setStore] = useState<{ address: string; city: string; hours: { label: string; text: string }[] } | null>(null);
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
       const url = d.whatsappUrl || (d.storePhone ? `https://wa.me/55${String(d.storePhone).replace(/\D/g, '').replace(/^55/, '')}` : null);
       setStoreWa(url);
+      const street = [d.storeAddress, d.storeNumber].filter(Boolean).join(', ');
+      const city = [d.storeNeighborhood, [d.storeCity, d.storeState].filter(Boolean).join(' · ')].filter(Boolean).join(', ');
+      setStore({
+        address: street,
+        city: [city, d.storeCep ? `CEP ${String(d.storeCep).replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2')}` : ''].filter(Boolean).join(' · '),
+        hours: d.businessHours ? groupConsecutiveDays(parseBusinessHours(d.businessHours)) : [],
+      });
     }).catch(() => {});
   }, []);
 
@@ -143,11 +156,18 @@ export default function OrderDetailPage() {
     const raw = order.payment.expiresAt as { toDate?: () => Date } | string | undefined;
     const d = typeof raw === 'string' ? new Date(raw) : raw?.toDate?.();
     if (!d || Number.isNaN(d.getTime())) return;
-    const ms = d.getTime() - Date.now();
-    if (ms <= 0) return;
+    // Já vencido ao abrir: marca na próxima volta (dispara a conferência abaixo).
+    const ms = Math.max(0, d.getTime() - Date.now());
     const id = setTimeout(() => setPixTimeUp(true), ms + 500);
     return () => clearTimeout(id);
   }, [order]);
+
+  useEffect(() => {
+    if (!pixTimeUp || !order || order.status !== 'pending_payment' || askedExpiry.current || !user) return;
+    askedExpiry.current = true;
+    user.getIdToken().then(token => fetch(`/api/orders/${order.id}/check-payment`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })).catch(() => {});
+  }, [pixTimeUp, order, user]);
+
   const [confirmingReceived, setConfirmingReceived] = useState(false);
   const [confirmReceivedError, setConfirmReceivedError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -452,7 +472,7 @@ export default function OrderDetailPage() {
               <p className="font-display text-[1.3rem] text-ink leading-tight">Pague com PIX</p>
               <p className="font-display text-[1.2rem] text-ink tabular-nums">{formatCurrency(order.totalCents)}</p>
             </div>
-            <PixPayBlock qrCode={order.payment.pixQrCode ?? ''} copyPaste={order.payment.pixCopyPaste} expiresAt={pixExpiresIso} />
+            <PixPayBlock qrCode={order.payment.pixQrCode ?? ''} copyPaste={order.payment.pixCopyPaste} expiresAt={pixExpiresIso} orderId={order.id} />
           </div>
         )}
 
@@ -646,14 +666,43 @@ export default function OrderDetailPage() {
               </section>
             )}
 
+            {/* Retirada: onde e quando buscar (antes mostrava o endereço do
+                próprio cliente, que não serve para nada aqui). */}
             {carrier === 'pickup' && (
               <section className="rounded-2xl border border-mist p-5">
-                <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-2">Entrega</h2>
-                <p className="text-sm text-ink">Retirada na loja</p>
+                <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Onde retirar</h2>
+                {store?.address ? (
+                  <>
+                    <address className="text-sm text-ink not-italic leading-relaxed">
+                      {store.address}<br />
+                      <span className="text-mid">{store.city}</span>
+                    </address>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${store.address}, ${store.city}`)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center min-h-10 text-xs font-medium text-clay hover:text-clay-d transition-colors"
+                    >
+                      Abrir no mapa →
+                    </a>
+                  </>
+                ) : (
+                  <p className="text-sm text-ink">Retirada na loja</p>
+                )}
+                {store && store.hours.length > 0 && (
+                  <dl className="mt-3 pt-3 border-t border-mist text-xs grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                    {store.hours.map(h => (
+                      <div key={h.label} className="contents">
+                        <dt className="text-faint">{h.label}</dt>
+                        <dd className="text-mid text-right">{h.text}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
               </section>
             )}
 
             {/* Endereço */}
+            {carrier !== 'pickup' && (
             <section className="rounded-2xl border border-mist p-5">
               <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Endereço</h2>
               <address className="text-sm text-mid not-italic leading-relaxed">
@@ -663,6 +712,7 @@ export default function OrderDetailPage() {
                 CEP {order.address.cep.replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2')}
               </address>
             </section>
+            )}
 
             {/* Pagamento */}
             <section className="rounded-2xl border border-mist p-5">

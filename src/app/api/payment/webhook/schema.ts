@@ -6,6 +6,8 @@ export const webhookSchema = z.object({
     transparent: z.record(z.string(), z.unknown()).optional(),
     checkout: z.record(z.string(), z.unknown()).optional(),
     customer: z.record(z.string(), z.unknown()).optional(),
+    // Motivo, nos eventos de estorno e contestação.
+    reason: z.string().max(1000).optional(),
   }),
 }).refine(
   (v) => !v.event.startsWith('transparent.') || v.data.transparent !== undefined,

@@ -530,6 +530,35 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     }
   }
 
+  // Estorno pela AbacatePay (valor total). Pagamento por fora não passa por
+  // ela: nesse caso o painel só oferece o "Já devolvi por fora".
+  async function refundViaAbacate() {
+    if (!order) return;
+    const { confirmed } = await confirmDialog({
+      message: `Estornar ${formatCurrency(order.totalCents)} pela AbacatePay?`,
+      detail: 'O valor inteiro volta para o cliente pelo mesmo meio de pagamento. Não tem como desfazer.',
+      confirmLabel: 'Estornar agora',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    setRefunding(true);
+    setRefundError(null);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch(`/api/orders/${order.id}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setRefundError(data.error ?? 'Não foi possível estornar.');
+    } catch {
+      setRefundError('Erro de conexão. Confira na AbacatePay antes de tentar de novo.');
+    } finally {
+      setRefunding(false);
+    }
+  }
+
   async function markRefunded() {
     if (!order) return;
     const { confirmed, value: note } = await confirmDialog({
@@ -649,6 +678,24 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </div>
         )}
 
+        {/* ── Contestação (chargeback/MED) aberta pelo cliente ── */}
+        {order.payment.dispute && (
+          <div role={order.payment.dispute.state === 'open' ? 'alert' : undefined}
+            className={`px-5 py-4 rounded-2xl ${order.payment.dispute.state === 'open' ? 'border-2 border-red-400 bg-red-50' : 'border border-mist bg-warm'}`}>
+            <p className="text-[14px] font-bold text-ink mb-1">
+              {order.payment.dispute.state === 'open' ? 'Pagamento contestado pelo cliente'
+                : order.payment.dispute.state === 'lost' ? 'Contestação perdida: o valor voltou para o cliente'
+                : 'Contestação encerrada a favor da loja'}
+            </p>
+            <p className="text-[13px] text-ink/80 leading-relaxed">
+              {order.payment.dispute.state === 'open'
+                ? 'Não envie o pedido até resolver. Responda à contestação pelo painel da AbacatePay, com nota e comprovantes.'
+                : `Atualizado em ${formatDateTime(order.payment.dispute.at)}.`}
+              {order.payment.dispute.reason && order.payment.dispute.reason !== 'Dispute created' ? ` Motivo: ${order.payment.dispute.reason}` : ''}
+            </p>
+          </div>
+        )}
+
         {/* ── Pagamento recebido com o pedido já cancelado/expirado ── */}
         {order.payment.lateCaptureTxId && !order.payment.paidAt && order.payment.refundStatus !== 'done' && (
           <div role="alert" className="border-2 border-red-400 bg-red-50 px-5 py-4 rounded-2xl">
@@ -659,10 +706,16 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 ? ' Se ainda tiver os itens, marque como pago logo abaixo, em Pagamento. Se não, devolva o valor ao cliente.'
                 : ' Devolva o valor ao cliente pelo mesmo meio de pagamento.'}
             </p>
-            <button onClick={markRefunded} disabled={refunding}
-              className="mt-3 w-full sm:w-auto px-5 border border-red-300 bg-white text-red-700 text-[13px] font-semibold py-2.5 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-full">
-              {refunding ? 'Salvando…' : 'Já devolvi o valor'}
-            </button>
+            <div className="mt-3 flex flex-col sm:flex-row gap-2">
+              <button onClick={refundViaAbacate} disabled={refunding || order.payment.refundStatus === 'processing'}
+                className="w-full sm:w-auto px-5 bg-red-600 text-white text-[13px] font-semibold py-2.5 hover:bg-red-700 disabled:opacity-50 transition-colors rounded-full">
+                {refunding ? 'Estornando…' : order.payment.refundStatus === 'processing' ? 'Estorno em andamento…' : `Estornar ${formatCurrency(order.totalCents)} pela AbacatePay`}
+              </button>
+              <button onClick={markRefunded} disabled={refunding}
+                className="w-full sm:w-auto px-5 border border-red-300 bg-white text-red-700 text-[13px] font-semibold py-2.5 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-full">
+                Já devolvi por fora
+              </button>
+            </div>
             {refundError && <p className="text-[12px] text-red-600 mt-2">{refundError}</p>}
           </div>
         )}
@@ -678,12 +731,22 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <div className="border-2 border-amber-400 bg-amber-50 px-5 py-4 rounded-2xl">
               <p className="text-[14px] font-bold text-ink mb-1">Devolva {formatCurrency(order.totalCents)} ao cliente</p>
               <p className="text-[13px] text-ink/80 leading-relaxed">
-                Este pedido foi pago e depois cancelado. Faça o estorno pelo mesmo meio de pagamento ({order.payment.method === 'pix' ? 'PIX' : 'cartão'}) e marque aqui quando terminar.
+                {order.payment.confirmedManuallyBy
+                  ? 'Este pedido foi pago por fora da AbacatePay e depois cancelado. Devolva pelo mesmo meio e marque aqui quando terminar.'
+                  : `Este pedido foi pago (${order.payment.method === 'pix' ? 'PIX' : 'cartão'}) e depois cancelado. O estorno pela AbacatePay devolve o valor inteiro pelo mesmo meio de pagamento.`}
               </p>
-              <button onClick={markRefunded} disabled={refunding}
-                className="mt-3 w-full sm:w-auto px-5 bg-ink text-paper text-[13px] font-semibold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-full">
-                {refunding ? 'Salvando…' : 'Marcar estorno como feito'}
-              </button>
+              <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                {!order.payment.confirmedManuallyBy && (
+                  <button onClick={refundViaAbacate} disabled={refunding || order.payment.refundStatus === 'processing'}
+                    className="w-full sm:w-auto px-5 bg-ink text-paper text-[13px] font-semibold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-full">
+                    {refunding ? 'Estornando…' : order.payment.refundStatus === 'processing' ? 'Estorno em andamento…' : `Estornar ${formatCurrency(order.totalCents)} pela AbacatePay`}
+                  </button>
+                )}
+                <button onClick={markRefunded} disabled={refunding}
+                  className={`w-full sm:w-auto px-5 text-[13px] font-semibold py-2.5 disabled:opacity-50 transition-colors rounded-full ${order.payment.confirmedManuallyBy ? 'bg-ink text-paper hover:bg-ink/80' : 'border border-mist-d bg-paper text-ink hover:bg-warm'}`}>
+                  {order.payment.confirmedManuallyBy ? 'Marcar estorno como feito' : 'Já devolvi por fora'}
+                </button>
+              </div>
               {refundError && <p className="text-[12px] text-red-600 mt-2">{refundError}</p>}
             </div>
           )

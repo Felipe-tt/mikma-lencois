@@ -389,7 +389,13 @@ export async function computeShippingOptions(
 
   const options: ShippingOption[] = [];
 
-  options.push({ carrier: 'pickup', label: 'Retirar na loja', priceCents: 0, estimatedDays: 0, available: true, tag: 'local' });
+  // Retirada só para quem está perto: antes aparecia (e vinha marcada, por
+  // ser grátis) até para CEP de São Paulo, a 600 km da loja. Mesmo prefixo
+  // de CEP cobre o caso de a geolocalização falhar para um vizinho.
+  const sameRegion = !!fromCep && destCep.replace(/\D/g, '').slice(0, 3) === fromCep.replace(/\D/g, '').slice(0, 3);
+  if (isLocal || sameRegion) {
+    options.push({ carrier: 'pickup', label: 'Retirar na loja', priceCents: 0, estimatedDays: 0, available: true, tag: 'local' });
+  }
 
   // ── Uber Direct (entrega local no mesmo dia) ──────────────────────────────
   const uberSandbox = !!settings.uberDirectSandboxMode;
@@ -453,8 +459,6 @@ export async function computeShippingOptions(
   if (freeShipping) for (const o of deduped) { o.realPriceCents = o.priceCents; o.priceCents = 0; }
   else for (const o of deduped) o.realPriceCents = o.priceCents;
 
-  deduped.sort((a, b) => a.priceCents !== b.priceCents ? a.priceCents - b.priceCents : a.estimatedDays - b.estimatedDays);
-
   // Fallback se correios/jadlog não retornaram (sem credenciais configuradas)
   const hasCarrier = deduped.some(o => o.carrier !== 'pickup');
   if (!hasCarrier) {
@@ -464,6 +468,10 @@ export async function computeShippingOptions(
       { carrier: 'jadlog_package', label: 'Jadlog Package', priceCents: freeShipping ? 0 : 3200, realPriceCents: 3200, estimatedDays: 5,  available: true, tag: 'economico' }
     );
   }
+
+  // Ordena depois do fallback: antes as opções padrão entravam no fim, fora
+  // de ordem (PAC 25, SEDEX 45, Jadlog 32).
+  deduped.sort((a, b) => a.priceCents !== b.priceCents ? a.priceCents - b.priceCents : a.estimatedDays - b.estimatedDays);
 
   return { options: assignRelativeTags(deduped), distKm, isLocal, freeShipping, uberDebug, uberSandbox };
 }

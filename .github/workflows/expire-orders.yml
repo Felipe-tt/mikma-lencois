@@ -2,8 +2,8 @@ name: Cron · Expirar pedidos sem pagamento
 
 on:
   schedule:
-    # Roda a cada hora (minuto 0)
-    - cron: '0 * * * *'
+    # A cada 15 min: confere PIX vencido na AbacatePay e libera o estoque
+    - cron: '*/15 * * * *'
   workflow_dispatch: # permite rodar manualmente
 
 permissions: {}

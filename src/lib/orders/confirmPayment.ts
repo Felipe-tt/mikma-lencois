@@ -255,7 +255,7 @@ export async function confirmOrderPaid(
       // template (antes entravam crus no HTML). replyTo: o e-mail convida a
       // responder, e antes a resposta ia pro noreply e se perdia.
       const payload = buildConfirmed(
-        { id: orderId, items: order.items as EmailItem[], totalCents: order.totalCents as number, payment: order.payment as { method: string } },
+        { id: orderId, items: order.items as EmailItem[], totalCents: order.totalCents as number, payment: order.payment as { method: string }, productsCents: order.productsCents as number | undefined, shippingCents: order.shippingCents as number | undefined, pixDiscountCents: order.pixDiscountCents as number | undefined, couponDiscountCents: order.couponDiscountCents as number | undefined, discountCents: order.discountCents as number | undefined, couponCode: order.couponCode as string | undefined },
         customerName,
       );
       await sendEmail({

@@ -1,7 +1,7 @@
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { sendEmail, emailEnabled } from '@/lib/email';
 import { buildCancelled } from '@/lib/email/orderStatusEmails';
-import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
+import { CONTACT_EMAIL, type EmailItem, type EmailMoney } from '@/lib/email/layout';
 
 /**
  * Avisa o cliente que o pedido foi cancelado (pela loja ou por ele mesmo).
@@ -13,7 +13,7 @@ import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
  */
 export async function notifyOrderCancelled(
   orderId: string,
-  order: { userId?: string; items?: unknown; totalCents?: number },
+  order: { userId?: string; items?: unknown; totalCents?: number } & EmailMoney,
   opts: { refund: boolean; byCustomer?: boolean },
 ): Promise<void> {
   if (!emailEnabled() || !order.userId) return;
@@ -27,7 +27,11 @@ export async function notifyOrderCancelled(
     if (!email) return;
     const firstName = String(userData.name ?? userData.displayName ?? '').split(' ')[0] || 'cliente';
     const payload = buildCancelled(
-      { id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents ?? 0 },
+      {
+        id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents ?? 0,
+        productsCents: order.productsCents, shippingCents: order.shippingCents, pixDiscountCents: order.pixDiscountCents,
+        couponDiscountCents: order.couponDiscountCents, discountCents: order.discountCents, couponCode: order.couponCode,
+      },
       firstName,
       opts,
     );
