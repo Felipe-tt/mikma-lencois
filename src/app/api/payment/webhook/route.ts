@@ -1,36 +1,16 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import { createHmac, timingSafeEqual } from 'crypto';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { verifyAbacateWebhook } from '@/lib/abacatepayWebhook';
+import { notifySeller } from '@/lib/push/notifySeller';
+import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { sendEmail } from '@/lib/email';
 import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
-import { expandStockLines } from '@/lib/orderStockLines';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
-import { z } from 'zod';
+import { expirePixOrder } from '@/lib/orders/expirePixOrder';
 import { webhookSchema } from './schema';
-import { buildPixExpired } from '@/lib/email/orderStatusEmails';
-import { CONTACT_EMAIL } from '@/lib/email/layout';
 
-
-const ABACATEPAY_WEBHOOK_SECRET = process.env.ABACATEPAY_WEBHOOK_SECRET!;
-
-function verifySignature(payload: string, signature: string): boolean {
-  if (!ABACATEPAY_WEBHOOK_SECRET) return false;
-  try {
-    const expected = createHmac('sha256', ABACATEPAY_WEBHOOK_SECRET)
-      .update(Buffer.from(payload, 'utf8'))
-      .digest('base64');
-    const a = Buffer.from(expected);
-    const b = Buffer.from(signature);
-    if (a.length !== b.length) return false;
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
-  }
-}
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -45,16 +25,18 @@ export async function POST(req: NextRequest) {
   }
 
   const rawBody = await req.text();
-  const signature = req.headers.get('x-abacatepay-signature') ?? '';
-
-  if (!verifySignature(rawBody, signature)) {
-    console.warn('Invalid webhook signature, received:', signature.slice(0, 20));
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  // Limite antes da verificação (barato). 64 KB: eventos de checkout trazem
+  // itens e cliente; os 8 KB de antes podiam recusar um webhook legítimo.
+  if (rawBody.length > 65_536) {
+    return NextResponse.json({ error: 'Payload muito grande' }, { status: 413 });
   }
 
-  // Rejeita payloads muito grandes (webhook legítimo não passa de 8KB)
-  if (rawBody.length > 8192) {
-    return NextResponse.json({ error: 'Payload muito grande' }, { status: 413 });
+  // Aceita os esquemas de assinatura da API v2 (Standard Webhooks e o legado
+  // com ?webhookSecret=) e o formato que a loja já usava. Ver o lib.
+  const verification = verifyAbacateWebhook(rawBody, req.headers, req.nextUrl.searchParams, process.env.ABACATEPAY_WEBHOOK_SECRET);
+  if (!verification.ok) {
+    console.warn('[webhook] assinatura recusada:', verification.reason);
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
   let parsed: Record<string, unknown>;
@@ -63,6 +45,8 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
+  // Standard Webhooks manda o nome do evento em `type` (legado: `event`).
+  if (typeof parsed.event !== 'string' && typeof parsed.type === 'string') parsed.event = parsed.type;
 
   const validated = webhookSchema.safeParse(parsed);
   if (!validated.success) {
@@ -70,11 +54,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 
-  // AbacatePay v2 envelope: { event, apiVersion, data: { transparent: { id, externalId, ... }, customer, ... } }
   const { event: eventType, data } = validated.data as {
     event: string;
-    data: { transparent: Record<string, unknown>; customer?: Record<string, unknown> };
+    data: { transparent: Record<string, unknown>; customer?: Record<string, unknown>; reason?: string };
   };
+
+  // Id da entrega: reenvios automáticos repetem o mesmo, então serve de
+  // chave para não processar duas vezes (alertas de estorno e disputa não
+  // são idempotentes por si). Só é gravado depois do sucesso.
+  const deliveryId = verification.deliveryId ?? (typeof parsed.id === 'string' ? parsed.id : null);
+  const deliveryRef = deliveryId ? adminDb.collection('webhook_deliveries').doc(deliveryId.replace(/[^\w-]/g, '_').slice(0, 120)) : null;
+  if (deliveryRef && (await deliveryRef.get()).exists) {
+    return NextResponse.json({ ok: true, duplicate: true });
+  }
 
   console.log('Webhook received:', eventType);
 
@@ -82,100 +74,18 @@ export async function POST(req: NextRequest) {
   // vive em src/lib/orders/confirmPayment.ts, compartilhada com a
   // confirmação manual do painel (/api/orders/[id]/mark-paid-manually).
 
+  // A v2 da API não manda mais `transparent.expired` (não está na lista de
+  // eventos de @abacatepay/types). Fica por compatibilidade; quem expira o
+  // PIX hoje é a checagem em /api/orders/[id]/check-payment e o cron.
   if (eventType === 'transparent.expired') {
-    // PIX expirou, marca o pedido como payment_expired e libera reserva de
-    // estoque. IMPORTANTE: tudo isso precisa acontecer na MESMA transação
-    // que confere o status atual, pelo mesmo motivo do confirmOrder acima -
-    // sem isso, se esse evento de expiração chegar perto de um evento de
-    // pagamento confirmado (webhook duplicado/atrasado, comum em gateways
-    // de pagamento), dava pra marcar como "expirado" e liberar o estoque de
-    // um pedido que na verdade FOI PAGO, overselling do item liberado, e o
-    // cliente vendo o próprio pedido pago aparecer como expirado.
-    const transparent = data.transparent;
-    const orderId = transparent.externalId as string | undefined;
+    const orderId = data.transparent.externalId as string | undefined;
     if (orderId) {
-      const orderRef = adminDb.collection('orders').doc(orderId);
-      const now = new Date().toISOString();
-
-      let order: FirebaseFirestore.DocumentData | null;
       try {
-        order = await adminDb.runTransaction(async (tx) => {
-          const orderSnap = await tx.get(orderRef);
-          if (!orderSnap.exists) return null;
-          const data = orderSnap.data()!;
-          if (data.status !== 'pending_payment') return null;
-          // Expiração de um PIX ANTIGO: o cliente gerou um novo ("Pagar
-          // agora") e o pedido aponta pro txId novo. Sem esta checagem, o
-          // aviso do PIX velho expirava o pedido e liberava o estoque com o
-          // PIX novo ainda válido; pago, ele era ignorado (pedido não estava
-          // mais pending_payment) e o dinheiro entrava sem pedido pago.
-          const expiredTxId = transparent.id as string | undefined;
-          if (expiredTxId && data.payment?.txId && expiredTxId !== data.payment.txId) return null;
-
-          // Leituras antes das escritas; SKU sem documento de estoque é
-          // pulado em vez de derrubar a transação inteira.
-          const lines = expandStockLines(data.items as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>);
-          const invRefs = lines.map(line => adminDb.collection('inventory').doc(line.sku));
-          const invSnaps = invRefs.length > 0 ? await tx.getAll(...invRefs) : [];
-
-          tx.update(orderRef, {
-            status: 'payment_expired',
-            updatedAt: FieldValue.serverTimestamp(),
-            timeline: FieldValue.arrayUnion({
-              status: 'payment_expired',
-              at: now,
-              note: 'PIX expirou sem pagamento',
-            }),
-          });
-
-          lines.forEach((line, i) => {
-            if (!invSnaps[i].exists) return;
-            tx.update(invRefs[i], {
-              reserved: FieldValue.increment(-line.quantity),
-              updatedAt: FieldValue.serverTimestamp(),
-            });
-          });
-
-          return data;
-        });
+        await expirePixOrder(orderId, data.transparent.id as string | undefined, 'PIX expirou sem pagamento');
       } catch (err) {
         console.error(`Failed to expire order ${orderId}:`, err);
         Sentry.captureException(err, { tags: { route: 'payment-webhook', step: 'expire-order' }, extra: { orderId } });
         return NextResponse.json({ error: 'Falha ao expirar pedido' }, { status: 500 });
-      }
-
-      if (order) {
-        console.log(`Order ${orderId} marked as payment_expired, stock reservation released`);
-
-        // ── E-mail: PIX expirou, gere um novo ─────────────────────────────
-        try {
-          const userSnap = await adminDb.collection('users').doc(order.userId as string).get();
-          const userData = userSnap.data() ?? {};
-          const customerName = (userData.name ?? userData.displayName ?? 'Cliente') as string;
-          let customerEmail = userData.email as string | undefined;
-          if (!customerEmail) {
-            try {
-              const authUser = await adminAuth.getUser(order.userId as string);
-              customerEmail = authUser.email;
-            } catch { /* sem email */ }
-          }
-
-          if (customerEmail) {
-            const payload = buildPixExpired({ id: orderId, totalCents: order.totalCents as number }, customerName);
-            await sendEmail({
-              to: customerEmail,
-              subject: payload.subject,
-              text: payload.text,
-              html: payload.html,
-              from: 'noreply',
-              replyTo: CONTACT_EMAIL,
-            }).catch((err) => {
-              console.error('[webhook] falha ao enviar email PIX expirado:', err);
-            });
-          }
-        } catch (emailErr) {
-          console.error('[webhook] erro ao processar email PIX expirado:', emailErr);
-        }
       }
     }
   }
@@ -220,5 +130,119 @@ export async function POST(req: NextRequest) {
   }
 
   // Always 200 for other event types (transparent.refunded, subscription.*, etc.)
+  // ── Estorno feito (pelo painel ou direto na AbacatePay) ────────────────
+  if (eventType === 'transparent.refunded' || eventType === 'checkout.refunded') {
+    const charge = (eventType === 'transparent.refunded' ? data.transparent : (data as Record<string, unknown>).checkout) as Record<string, unknown> | undefined;
+    const orderId = charge?.externalId as string | undefined;
+    if (orderId) {
+      try {
+        await markOrderRefunded(orderId, (charge?.id as string) ?? '', data.reason);
+      } catch (err) {
+        Sentry.captureException(err, { tags: { route: 'payment-webhook', step: 'refunded' }, extra: { orderId } });
+        return NextResponse.json({ error: 'Falha ao registrar estorno' }, { status: 500 });
+      }
+    }
+  }
+
+  // ── Contestação (chargeback/MED): aberta, ganha ou perdida ───────────────
+  if (eventType === 'transparent.disputed' || eventType === 'checkout.disputed') {
+    const charge = (eventType === 'transparent.disputed' ? data.transparent : (data as Record<string, unknown>).checkout) as Record<string, unknown> | undefined;
+    const orderId = charge?.externalId as string | undefined;
+    if (orderId) {
+      try {
+        await recordDispute(orderId, String(charge?.status ?? ''), data.reason);
+      } catch (err) {
+        Sentry.captureException(err, { tags: { route: 'payment-webhook', step: 'disputed' }, extra: { orderId } });
+        return NextResponse.json({ error: 'Falha ao registrar contestação' }, { status: 500 });
+      }
+    }
+  }
+
+  if (deliveryRef) {
+    await deliveryRef.set({ event: eventType, at: FieldValue.serverTimestamp() }).catch(() => {});
+  }
   return NextResponse.json({ ok: true });
+}
+
+// Registra o estorno no pedido. Se a loja cancelou e marcou o estorno como
+// pendente, fecha a pendência; se o estorno veio direto da AbacatePay num
+// pedido ainda ativo, avisa o vendedor (o pedido não é cancelado sozinho:
+// pode já ter sido enviado).
+async function markOrderRefunded(orderId: string, chargeId: string, reason?: string) {
+  const ref = adminDb.collection('orders').doc(orderId);
+  const order = await adminDb.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const o = snap.data()!;
+    if ((o.payment as { refundStatus?: string } | undefined)?.refundStatus === 'done') return null;
+    tx.update(ref, {
+      'payment.refundStatus': 'done',
+      'payment.refundedAt': FieldValue.serverTimestamp(),
+      'payment.refundedBy': 'abacatepay',
+      'payment.refundChargeId': chargeId,
+      updatedAt: FieldValue.serverTimestamp(),
+      timeline: FieldValue.arrayUnion({
+        status: o.status,
+        at: new Date().toISOString(),
+        note: `Estorno confirmado pela AbacatePay${reason && reason !== 'Refund completed' ? ` · ${reason.slice(0, 200)}` : ''}`,
+      }),
+    });
+    return o;
+  });
+  if (!order || order.status === 'cancelled') return;
+  const code = orderId.slice(-8).toUpperCase();
+  await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
+    type: 'refund',
+    orderId,
+    message: `O pagamento do pedido #${code} foi estornado na AbacatePay, mas o pedido continua ativo. Confira antes de enviar.`,
+    read: false,
+    createdAt: FieldValue.serverTimestamp(),
+  }).catch(() => {});
+  await notifySeller({
+    title: 'Pagamento estornado',
+    body: `#${code} · ${formatCurrency(order.totalCents as number)} · pedido ainda ativo`,
+    url: `/painel/pedidos/${orderId}`,
+    data: { orderId, event: 'refunded' },
+  });
+}
+
+// Contestação: UNDER_DISPUTE (aberta), PAID/APPROVED (ganha), REFUNDED (perdida).
+async function recordDispute(orderId: string, chargeStatus: string, reason?: string) {
+  const state = chargeStatus === 'UNDER_DISPUTE' ? 'open' : chargeStatus === 'REFUNDED' ? 'lost' : 'won';
+  const label = state === 'open' ? 'Contestação aberta pelo cliente' : state === 'lost' ? 'Contestação perdida: valor devolvido ao cliente' : 'Contestação encerrada a favor da loja';
+  const ref = adminDb.collection('orders').doc(orderId);
+  const order = await adminDb.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const o = snap.data()!;
+    tx.update(ref, {
+      'payment.dispute': { state, reason: (reason ?? '').slice(0, 300), at: new Date().toISOString() },
+      ...(state === 'lost' ? { 'payment.refundStatus': 'done', 'payment.refundedAt': FieldValue.serverTimestamp(), 'payment.refundedBy': 'contestacao' } : {}),
+      updatedAt: FieldValue.serverTimestamp(),
+      timeline: FieldValue.arrayUnion({
+        status: o.status,
+        at: new Date().toISOString(),
+        note: `${label}${reason && reason !== 'Dispute created' ? ` · ${reason.slice(0, 200)}` : ''}`,
+      }),
+    });
+    return o;
+  });
+  if (!order) return;
+  const code = orderId.slice(-8).toUpperCase();
+  if (state === 'open') {
+    Sentry.captureMessage('payment-webhook: contestação aberta', { level: 'warning', extra: { orderId } });
+  }
+  await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
+    type: 'dispute',
+    orderId,
+    message: `${label} no pedido #${code}.${state === 'open' ? ' Não envie até resolver; responda pela AbacatePay.' : ''}`,
+    read: false,
+    createdAt: FieldValue.serverTimestamp(),
+  }).catch(() => {});
+  await notifySeller({
+    title: label,
+    body: `#${code} · ${formatCurrency(order.totalCents as number)}`,
+    url: `/painel/pedidos/${orderId}`,
+    data: { orderId, event: 'disputed' },
+  });
 }
