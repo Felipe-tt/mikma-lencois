@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { serialize } from '@/lib/utils/serialize';
 
-export const revalidate = 900; // ISR: revalida a cada 5 minutos
+export const revalidate = 900; // ISR: revalida a cada 15 minutos
 
 async function getFeatured(): Promise<Product[]> {
   try {
@@ -97,7 +97,7 @@ export default async function HomePage() {
             </p>
             <div className="flex items-center gap-5 shrink-0">
               <Link href="/produtos"
-                className="inline-flex items-center justify-center h-12 px-7 bg-ink text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-mid transition-colors duration-200">
+                className="inline-flex items-center justify-center h-12 px-7 rounded-full bg-ink text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-mid active:scale-[0.98] transition-[background-color,transform] duration-200">
                 Ver produtos
               </Link>
               <Link href="/sobre"
@@ -110,10 +110,11 @@ export default async function HomePage() {
           {/* Trust strip, 4 pilares com ícone + separador */}
           {trustItems.length > 0 && (
             <div className="mt-12 pt-8 border-t border-faint-l/60">
-              <div className="flex flex-wrap gap-y-4 gap-x-0">
+              {/* Celular: grade 2x2 alinhada (antes quebrava linha no meio). */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:flex sm:flex-wrap sm:gap-y-4 sm:gap-x-0">
                 {trustItems.map((t, i) => (
-                  <div key={t} className="flex items-center">
-                    <div className="flex items-center gap-2.5 pr-6 sm:pr-10">
+                  <div key={t} className="flex items-center min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 sm:pr-10">
                       <span className="text-mid shrink-0">
                         {i === 0 && (
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -136,10 +137,10 @@ export default async function HomePage() {
                           </svg>
                         )}
                       </span>
-                      <span className="text-[12px] text-[#5C4433] font-medium tracking-[0.02em]">{t}</span>
+                      <span className="text-[12px] leading-snug text-ink/80 font-medium tracking-[0.02em]">{t}</span>
                     </div>
                     {i < trustItems.length - 1 && (
-                      <span className="h-4 w-px bg-faint-l mr-6 sm:mr-10 shrink-0 hidden sm:block" />
+                      <span className="h-4 w-px bg-faint-l mr-10 shrink-0 hidden sm:block" />
                     )}
                   </div>
                 ))}
@@ -167,12 +168,12 @@ export default async function HomePage() {
 
         {/* Categorias, se existirem */}
         {categories.length > 1 && (
-          <div className="container-shop pb-8 flex flex-wrap gap-2">
+          <div className="container-shop pb-8 sm:pb-10 flex flex-wrap gap-2">
             {categories.map(cat => (
               <Link key={cat}
                 href={`/produtos?categoria=${encodeURIComponent(cat)}`}
-                className="font-mono text-[10px] tracking-[0.12em] uppercase px-3 py-1.5 border border-faint-l text-faint hover:border-ink hover:text-ink transition-colors duration-150">
-                {cat}
+                className="inline-flex items-center h-9 px-4 rounded-full border border-mist-d text-[13px] text-mid hover:border-ink hover:text-ink transition-colors duration-150">
+                {cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase()}
               </Link>
             ))}
           </div>
@@ -181,21 +182,24 @@ export default async function HomePage() {
         {/* Grid */}
         <div className="container-shop pb-20">
           {products.length === 0 ? (
-            <div className="py-20 text-center border border-mist">
+            <div className="py-20 text-center rounded-3xl border border-mist">
               <p className="font-display text-2xl text-faint font-normal">
                 Nenhum produto cadastrado ainda.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-mist border border-mist">
+            /* Mesma grade da página de produtos: o cartão é arredondado e tem
+               fundo próprio (a grade antiga, de linhas de 1px sobre fundo
+               bege, espremia os cartões e encavalava as cores no preço). */
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
               {products.map((p, i) => (
                 <ProductCard key={p.id} product={p} priority={i < 4} />
               ))}
             </div>
           )}
-          <div className="mt-8 sm:hidden text-center">
+          <div className="mt-10 sm:hidden text-center">
             <Link href="/produtos"
-              className="inline-flex items-center justify-center h-11 px-6 border border-ink text-ink text-[13px] font-medium hover:bg-ink hover:text-paper transition-colors duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 rounded-full border border-ink text-ink text-[13px] font-medium hover:bg-ink hover:text-paper transition-colors duration-200">
               Ver todos os produtos
             </Link>
           </div>
@@ -208,8 +212,8 @@ export default async function HomePage() {
       ═══════════════════════════════════════════════════════════ */}
       <section className="theme-locked bg-ink">
         <div className="container-shop py-14 sm:py-20">
-          <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-mid mb-8">
-            {city} · Est. {s.foundedYear || ''}
+          <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-paper/50 mb-8">
+            {s.foundedYear ? `${city} · Desde ${s.foundedYear}` : `${city} · Fábrica própria`}
           </p>
           <h2
             className="font-display font-normal text-paper leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl text-[clamp(2.2rem,5vw,4rem)]"
@@ -218,11 +222,11 @@ export default async function HomePage() {
           </h2>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/produtos"
-              className="inline-flex items-center justify-center h-12 px-7 bg-mid text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-clay-d transition-colors duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 rounded-full bg-mid text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-clay-d active:scale-[0.98] transition-[background-color,transform] duration-200">
               {ctaBtn1}
             </Link>
             <Link href="/sobre"
-              className="inline-flex items-center justify-center h-12 px-7 border border-paper/15 text-paper/50 text-[13px] font-medium hover:text-paper hover:border-paper/30 transition-colors duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 rounded-full border border-paper/20 text-paper/70 text-[13px] font-medium hover:text-paper hover:border-paper/40 transition-colors duration-200">
               {ctaBtn2}
             </Link>
           </div>
