@@ -10,7 +10,12 @@ export type Size = typeof SIZES[number];
 
 export const SIZE_LABEL: Record<string, string> = { solteiro: 'Solteiro', casal: 'Casal', queen: 'Queen', king: 'King', berco: 'Berço', unico: 'Único' };
 
-export const FABRICS = ['Algodão', 'Malha', 'Percal 200 fios', 'Percal 300 fios', 'Cetim'] as const;
+// A Mikma só trabalha com malha 100% algodão: um tecido só, e o cadastro
+// nem pergunta mais. O valor salvo continua 'Malha' (entra no ID da
+// variação e no SKU dos produtos que já existem).
+export const FABRICS = ['Malha'] as const;
+export const FABRIC_LABEL = 'Malha 100% algodão';
+export const DEFAULT_COMPOSITION = '100% Algodão';
 export type Fabric = typeof FABRICS[number];
 
 // Fiação/espessura do fio, mostrado como "Fio 30/1" no produto. Lista fixa
