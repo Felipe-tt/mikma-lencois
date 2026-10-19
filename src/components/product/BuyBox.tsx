@@ -17,6 +17,7 @@ import { trackAddToCart } from '@/lib/analytics';
 import { useOverlay } from '@/lib/hooks/useOverlay';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { useCartCount } from '@/lib/hooks/useCartCount';
+import { savePendingPurchase, readPendingPurchase, clearPendingPurchase } from '@/lib/pendingPurchase';
 
 interface Props {
   product: Product;
@@ -37,6 +38,9 @@ interface ShipOption {
   tag?: 'local' | 'economico' | 'rapido';
 }
 
+// Mesmos selos do checkout.
+const SHIP_TAG: Record<string, string> = { economico: 'Econômico', rapido: 'Mais rápido' };
+
 export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapQtyPerUnit, maxQty }: Props) {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -55,9 +59,6 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const [buyingNow, setBuyingNow] = useState(false);
   const [addedOpen, setAddedOpen] = useState(false);
   const [cartError, setCartError] = useState<string | null>(null);
-  // Visitante clicou em comprar: abre o login aqui mesmo e, ao entrar,
-  // completa a ação (antes ia pra /entrar e perdia o produto).
-  const [afterLogin, setAfterLogin] = useState<'cart' | 'buy' | null>(null);
   const { requireAuth } = useAuthModal();
   const cartCount = useCartCount();
   const addedPanelRef = useRef<HTMLDivElement>(null);
@@ -87,12 +88,36 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const closeAdded = useCallback(() => setAddedOpen(false), []);
   const added = useOverlay({ open: addedOpen, onClose: closeAdded, panelRef: addedPanelRef });
 
+  // Visitante clicou em comprar: a intenção fica guardada (pendingPurchase)
+  // e é retomada quando a pessoa entra, nesta aba ou na aba aberta pelo
+  // link de confirmação do cadastro, que volta para esta página.
+  const replayedRef = useRef(false);
   useEffect(() => {
-    if (!user || !afterLogin) return;
-    const action = afterLogin;
-    setAfterLogin(null);
-    if (action === 'cart') addToCart(); else buyNow();
-  }, [user, afterLogin]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!user || replayedRef.current) return;
+    const pending = readPendingPurchase();
+    if (!pending || pending.productId !== product.id) return;
+    const variant = product.variants.find(v => v.id === pending.variantId);
+    replayedRef.current = true;
+    clearPendingPurchase();
+    if (!variant) return;
+    setSelectedVariantId(variant.id);
+    setQty(pending.qty);
+    if (pending.action === 'cart') addToCart(variant, pending.qty); else buyNow(variant, pending.qty);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function askLogin(action: 'cart' | 'buy') {
+    if (!selectedVariant) return;
+    savePendingPurchase({
+      productId: product.id,
+      variantId: selectedVariant.id,
+      qty,
+      action,
+      returnTo: window.location.pathname + window.location.search,
+    });
+    requireAuth(() => {}, action === 'cart'
+      ? 'Entre para adicionar ao carrinho. Depois disso o produto já entra sozinho.'
+      : 'Entre para finalizar a compra. Você continua de onde parou.');
+  }
 
   // ── Preço, parcelamento e PIX, mesma lógica do checkout, uma única fonte de verdade visual ──
   const lineTotal = product.price * qty;
@@ -107,9 +132,10 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const pixTotal = lineTotal - pixDiscount;
 
   /** Devolve quantas unidades entraram de fato (0 se já estava no limite do estoque). */
-  async function addItemToCart(finalQty: number): Promise<number> {
-    if (!user || !selectedVariant) return 0;
-    const sku = `${product.id}_${selectedVariant.id}`;
+  async function addItemToCart(variant: ProductVariant, finalQty: number): Promise<number> {
+    if (!user) return 0;
+    const sku = `${product.id}_${variant.id}`;
+    const stock = Math.min(getStock(variant), maxQty ?? Infinity);
     // Uma escolha de fronha diferente vira uma linha separada no carrinho,
     // mesmo pro mesmo produto/variante — combinar quantidade ali juntaria
     // pedidos com trocas diferentes numa linha só, perdendo a informação.
@@ -118,7 +144,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     const cartSnap = await getDoc(cartRef);
     const existingItems: CartItem[] = cartSnap.exists() ? (cartSnap.data().items ?? []) : [];
     const existing = existingItems.find(i => (i.note ? `${i.sku}::${i.note}` : i.sku) === lineKey);
-    const newQty = Math.min(availableStock, (existing?.quantity ?? 0) + finalQty);
+    const newQty = Math.min(stock, (existing?.quantity ?? 0) + finalQty);
     const delta = newQty - (existing?.quantity ?? 0);
     if (delta <= 0) return 0;
 
@@ -126,7 +152,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       productId: product.id,
       productName: product.name,
       sku,
-      variant: selectedVariant,
+      variant,
       quantity: newQty,
       unitPrice: product.price,
       image: product.images[0] ?? '',
@@ -143,14 +169,14 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     return delta;
   }
 
-  async function addToCart() {
+  async function addToCart(variant = selectedVariant, amount = qty) {
     if (loading) return;
-    if (!user) { requireAuth(() => setAfterLogin('cart'), 'Entre para adicionar ao carrinho. Depois disso o produto já entra sozinho.'); return; }
-    if (!selectedVariant || outOfStock) return;
+    if (!user) { askLogin('cart'); return; }
+    if (!variant || getStock(variant) === 0) return;
     setAdding(true);
     setCartError(null);
     try {
-      const n = await addItemToCart(qty);
+      const n = await addItemToCart(variant, amount);
       if (n === 0) {
         // Antes mostrava "Adicionado" mesmo sem adicionar nada.
         setCartError('Você já tem no carrinho todo o estoque disponível deste item.');
@@ -166,14 +192,14 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     }
   }
 
-  async function buyNow() {
+  async function buyNow(variant = selectedVariant, amount = qty) {
     if (loading) return;
-    if (!user) { requireAuth(() => setAfterLogin('buy'), 'Entre para finalizar a compra. Você continua de onde parou.'); return; }
-    if (!selectedVariant || outOfStock) return;
+    if (!user) { askLogin('buy'); return; }
+    if (!variant || getStock(variant) === 0) return;
     setBuyingNow(true);
     setCartError(null);
     try {
-      await addItemToCart(qty);
+      await addItemToCart(variant, amount);
       router.push('/checkout');
     } catch (err) {
       console.error('buyNow error:', err);
@@ -226,14 +252,16 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               em até <strong className="text-ink">{maxInstall}x de {formatCurrency(installVal)}</strong> sem juros
             </p>
           )}
-          {pixDiscountThresholdCents > 0 && (
+          {/* Só fala do desconto quando ele está ao alcance: "10% a partir de
+              R$ 1.800" num item de R$ 189 desanimava em vez de ajudar. */}
+          {pixDiscountThresholdCents > 0 && lineTotal >= pixDiscountThresholdCents * 0.5 && (
             <p className="mt-3 flex items-start gap-2 bg-warm/70 rounded-xl px-3.5 py-2.5 text-[12px] text-mid leading-snug">
               <svg width="14" height="14" viewBox="0 0 512 512" className="shrink-0 mt-px fill-[#32BCAD]" aria-hidden="true"><path d="M242.4 292.5C247.8 287.1 257.1 287.1 262.5 292.5L339.5 369.5C353.7 383.7 372.6 391.5 392.6 391.5H407.7L310.6 488.6C280.3 518.1 231.1 518.1 200.8 488.6L103.3 391.2H112.6C132.6 391.2 151.5 383.4 165.7 369.2L242.4 292.5zM262.5 218.9C256.1 224.4 247.9 224.5 242.4 218.9L165.7 142.2C151.5 127.1 132.6 120.2 112.6 120.2H103.3L200.7 22.76C231.1-7.586 280.3-7.586 310.6 22.76L407.8 119.9H392.6C372.6 119.9 353.7 127.7 339.5 141.9L262.5 218.9zM112.6 142.7C126.4 142.7 139.1 148.3 149.7 158.1L226.4 234.8C233.6 241.1 243 245.6 252.5 245.6C261.9 245.6 271.3 241.1 278.5 234.8L355.5 157.8C365.3 148.1 378.8 142.5 392.6 142.5H430.3L488.6 200.8C518.9 231.1 518.9 280.3 488.6 310.6L430.3 368.9H392.6C378.8 368.9 365.3 363.3 355.5 353.5L278.5 276.5C264.6 262.6 240.3 262.6 226.4 276.6L149.7 353.2C139.1 363 126.4 368.6 112.6 368.6H80.78L22.76 310.6C-7.586 280.3-7.586 231.1 22.76 200.8L80.78 142.7H112.6z"/></svg>
               <span>
                 {pixEligible ? (
                   <>ou <strong className="text-ink">{formatCurrency(pixTotal)}</strong> à vista no PIX, {pixDiscountPct}% de desconto</>
                 ) : (
-                  <>{pixDiscountPct}% de desconto no PIX em compras a partir de <strong className="text-ink">{formatCurrency(pixDiscountThresholdCents)}</strong></>
+                  <>Faltam <strong className="text-ink">{formatCurrency(pixDiscountThresholdCents - lineTotal)}</strong> para {pixDiscountPct}% off no PIX</>
                 )}
               </span>
             </p>
@@ -307,7 +335,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               <button
                 onClick={() => setQty(Math.max(1, qty - 1))}
                 disabled={qty <= 1}
-                className="w-9 h-9 rounded-full flex disabled:opacity-30 disabled:pointer-events-none items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
+                className="w-11 h-11 rounded-full flex disabled:opacity-30 disabled:pointer-events-none items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
                 aria-label="Diminuir"
               >
                 −
@@ -316,7 +344,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               <button
                 onClick={() => setQty(Math.min(availableStock, qty + 1))}
                 disabled={qty >= availableStock}
-                className="w-9 h-9 rounded-full flex disabled:opacity-30 disabled:pointer-events-none items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
+                className="w-11 h-11 rounded-full flex disabled:opacity-30 disabled:pointer-events-none items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors text-xl font-light"
                 aria-label="Aumentar"
               >
                 +
@@ -329,7 +357,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             Em mobile essas ações moram só na barra fixa abaixo, pra não duplicar o CTA. */}
         <div className="hidden sm:flex flex-col gap-2 border-t border-mist pt-5">
           <button
-            onClick={buyNow}
+            onClick={() => buyNow()}
             disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
             className={[
               'w-full h-13 py-3.5 rounded-full text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
@@ -343,7 +371,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             {buyingNow ? <><span className="spinner" />Preparando…</> : 'Comprar agora'}
           </button>
           <button
-            onClick={addToCart}
+            onClick={() => addToCart()}
             disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
             className={[
               'w-full h-13 py-3.5 rounded-full text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
@@ -423,7 +451,12 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               {shipOptions.map((o, i) => (
                 <div key={i} className="flex items-center justify-between px-3 py-2.5">
                   <div>
-                    <p className="text-[12px] font-medium text-ink">{o.label}</p>
+                    <p className="text-[12px] font-medium text-ink flex items-center gap-1.5 flex-wrap">
+                      {o.label}
+                      {o.tag && SHIP_TAG[o.tag] && (
+                        <span className="rounded-full bg-clay/10 text-clay px-2 py-px text-[10px] font-semibold whitespace-nowrap">{SHIP_TAG[o.tag]}</span>
+                      )}
+                    </p>
                     <p className="text-[11px] text-faint">
                       {o.estimatedDays === 0 ? 'Hoje' : `${o.estimatedDays} dia${o.estimatedDays > 1 ? 's' : ''} útei${o.estimatedDays > 1 ? 's' : ''}`}
                     </p>
@@ -454,24 +487,24 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
         </div>
         {!outOfStock && (
           <button
-            onClick={addToCart}
+            onClick={() => addToCart()}
             disabled={adding || buyingNow || !selectedVariant || loading}
             aria-label="Adicionar ao carrinho"
-            title="Adicionar ao carrinho"
-            className="w-11 h-11 shrink-0 rounded-full flex items-center justify-center border border-ink text-ink hover:bg-warm active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
+            className="h-11 shrink-0 px-4 rounded-full flex items-center justify-center gap-1.5 border border-ink text-ink text-[13px] font-semibold hover:bg-warm active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
           >
+            {/* Só o ícone parecia "ir para o carrinho" ao lado do Comprar agora. */}
             {adding ? (
               <span className="spinner-dark" />
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-              </svg>
+              <>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                Adicionar
+              </>
             )}
           </button>
         )}
         <button
-          onClick={buyNow}
+          onClick={() => buyNow()}
           disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
           className={[
             'flex-1 h-11 rounded-full text-[13px] font-semibold tracking-[0.04em] transition-[background-color,transform] duration-150',

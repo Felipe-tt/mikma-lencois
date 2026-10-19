@@ -493,7 +493,7 @@ export async function POST(req: NextRequest) {
     if (emailEnabled() && pendingEmailTo && pix.brCode) {
       const firstName = String(userData.name ?? userData.displayName ?? '').split(' ')[0] || 'cliente';
       const payload = buildPixPending(
-        { id: orderId, items: verifiedItems, totalCents: amountCents },
+        { id: orderId, items: verifiedItems, totalCents: amountCents, productsCents, shippingCents, pixDiscountCents, couponDiscountCents, couponCode: couponCode ?? undefined },
         firstName,
         { copyPaste: pix.brCode, expiresAt: pix.expiresAt },
       );

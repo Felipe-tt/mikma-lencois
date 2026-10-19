@@ -136,7 +136,7 @@ export async function GET(req: NextRequest) {
         // E-mail de cancelamento
         if (customerEmail) {
           const payload = buildCancelled(
-            { id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents as number },
+            { id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents as number, productsCents: order.productsCents as number | undefined, shippingCents: order.shippingCents as number | undefined, pixDiscountCents: order.pixDiscountCents as number | undefined, couponDiscountCents: order.couponDiscountCents as number | undefined, discountCents: order.discountCents as number | undefined, couponCode: order.couponCode as string | undefined },
             customerName.split(' ')[0] || 'cliente',
             { refund: false, reason: 'O pagamento não foi feito em 48 horas, então os itens voltaram para a loja.' },
           );
@@ -160,7 +160,7 @@ export async function GET(req: NextRequest) {
 
         if (customerEmail) {
           const payload = buildPaymentReminder(
-            { id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents as number },
+            { id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents as number, productsCents: order.productsCents as number | undefined, shippingCents: order.shippingCents as number | undefined, pixDiscountCents: order.pixDiscountCents as number | undefined, couponDiscountCents: order.couponDiscountCents as number | undefined, discountCents: order.discountCents as number | undefined, couponCode: order.couponCode as string | undefined },
             customerName.split(' ')[0] || 'cliente',
           );
           await sendEmail({

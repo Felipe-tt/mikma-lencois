@@ -293,8 +293,9 @@ function RegisterContent() {
                       ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
                       : n}
                   </div>
-                  <p className={`text-xs hidden sm:block ${n === stepNum ? 'text-ink font-medium' : 'text-faint'}`}>
-                    {n===1?'Seu e-mail':n===2?'Confirmar':n===3?'Sua senha':''}
+                  <p className={`text-[11px] sm:text-xs whitespace-nowrap ${n === stepNum ? 'text-ink font-medium' : 'text-faint'}`}>
+                    <span className="sm:hidden">{n===1?'E-mail':n===2?'Confirmar':'Senha'}</span>
+                    <span className="hidden sm:inline">{n===1?'Seu e-mail':n===2?'Confirmar':'Sua senha'}</span>
                   </p>
                   {n < 3 && <div className={`flex-1 h-px transition-colors duration-300 ${n < stepNum ? 'bg-clay' : 'bg-mist-d'}`} />}
                 </div>
@@ -422,12 +423,12 @@ function RegisterContent() {
                   <div className="relative">
                     <input id="cad-senha" type={showPass ? 'text' : 'password'} value={password}
                       onChange={e => { setPassword(e.target.value); if (fieldErrors.password) setFieldError('password'); }}
-                      className="input text-base pr-11" placeholder="Mínimo 8 caracteres"
+                      className="input text-base pr-11" placeholder="8+ caracteres, evite senhas comuns"
                       autoComplete="new-password" maxLength={PASSWORD_MAX}
                       aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'err-password' : undefined}
                       autoFocus />
                     <button type="button" onClick={() => setShowPass(p => !p)} aria-label={showPass ? "Ocultar senha" : "Mostrar senha"} aria-pressed={showPass}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-mid p-1">
+                      className="absolute right-0.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full text-faint hover:text-ink transition-colors">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                         {showPass
                           ? <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></>
@@ -436,7 +437,8 @@ function RegisterContent() {
                     </button>
                   </div>
                   <FieldError id="err-password" msg={fieldErrors.password} />
-                  <PasswordStrength password={password} email={email} />
+                  {/* Com erro no campo, o medidor não repete a mesma mensagem. */}
+                  {!fieldErrors.password && <PasswordStrength password={password} email={email} />}
                 </div>
 
                 <div>
@@ -479,15 +481,24 @@ function RegisterContent() {
                   </div>
                 </details>
 
-                <label className="flex items-start gap-3 cursor-pointer group">
-                  <div
-                    onClick={() => { setLgpd(p => !p); if (fieldErrors.lgpd) setFieldError('lgpd'); }}
-                    className={`mt-0.5 w-5 h-5 rounded-md border shrink-0 flex items-center justify-center transition-colors
-                      ${lgpd ? 'bg-clay border-clay' : 'border-mist group-hover:border-clay/60'}`}
+                {/* Checkbox de verdade (peer): antes um <div onClick> dentro do
+                    <label> mudava o estado duas vezes por toque (o clique do div
+                    e o do label no input escondido) e a caixa nunca marcava. */}
+                <label className="flex items-start gap-3 min-h-11 py-1 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={lgpd}
+                    onChange={e => { setLgpd(e.target.checked); if (fieldErrors.lgpd) setFieldError('lgpd'); }}
+                    aria-invalid={!!fieldErrors.lgpd}
+                    aria-describedby={fieldErrors.lgpd ? 'err-lgpd' : undefined}
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="mt-0.5 w-5 h-5 rounded-md border border-mist-d shrink-0 flex items-center justify-center text-transparent transition-colors group-hover:border-clay/60 peer-checked:bg-clay peer-checked:border-clay peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-clay/40 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-paper"
                   >
-                    {lgpd && <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2.5"><polyline points="2 6 5 9 10 3"/></svg>}
-                  </div>
-                  <input type="checkbox" className="sr-only" checked={lgpd} onChange={e => setLgpd(e.target.checked)} />
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+                  </span>
                   <span className="text-[13px] text-mid leading-relaxed">
                     Li e aceito os{' '}
                     <Link href="/termos" className="text-clay underline underline-offset-2" target="_blank">Termos de Uso</Link>
@@ -514,7 +525,7 @@ function RegisterContent() {
                 </svg>
               </div>
               <h2 className="font-display text-2xl text-ink mb-2">Conta criada!</h2>
-              <p className="text-mid text-[14px]">Bem-vinda{name ? `, ${name.split(' ')[0]}` : ''}! Redirecionando…</p>
+              <p className="text-mid text-[14px]">Boas-vindas{name ? `, ${name.split(' ')[0]}` : ''}! Redirecionando…</p>
             </div>
           )}
 

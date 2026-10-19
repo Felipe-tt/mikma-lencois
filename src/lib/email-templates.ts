@@ -41,7 +41,12 @@ export function deliveryStatusEmailHtml({
         ${emailParagraph(bodyText)}
         ${emailCta(buttonLabel, actionUrl)}`,
     })}
-    ${emailSignature()}`);
+    ${emailSignature()}`, { preheader: plainPreview(bodyText) });
+}
+
+// Prévia da caixa de entrada a partir de um trecho com HTML.
+function plainPreview(html: string): string {
+  return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 110);
 }
 
 /**
@@ -67,12 +72,12 @@ export function actionButtonEmailHtml({
       html: `
         ${emailParagraph(introText)}
         ${emailCta(buttonLabel, actionUrl)}
-        <p style="margin:0 0 18px;font-size:12px;color:#9C8B7C;">${expiryNote}</p>
-        <p style="margin:0 0 6px;font-size:12px;color:#9C8B7C;line-height:1.6;">
+        <p style="margin:0 0 18px;font-size:12px;color:#705A48;">${expiryNote}</p>
+        <p style="margin:0 0 6px;font-size:12px;color:#705A48;line-height:1.6;">
           Se o botão não funcionar, copie e cole este link no navegador:<br>
-          <a href="${actionUrl}" style="color:#B45A34;word-break:break-all;">${actionUrl}</a>
+          <a href="${actionUrl}" style="color:#9A4A28;word-break:break-all;">${actionUrl}</a>
         </p>
         ${emailCallout(`<p style="margin:0;font-size:13px;color:#705A48;line-height:1.6;">${securityNote}</p>`)}`,
     })}
-    ${emailSignature()}`, { replyHint: false, footerNote: 'Este é um e-mail automático de segurança da sua conta.' });
+    ${emailSignature()}`, { replyHint: false, footerNote: 'Este é um e-mail automático de segurança da sua conta.', preheader: plainPreview(introText) });
 }
