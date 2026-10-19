@@ -13,12 +13,15 @@ interface Props {
   whatsappUrl?: string;
   reclameAquiUrl?: string;
   tagline?: string;
+  /** Identificação do vendedor (Decreto 7.962/2013): CNPJ e endereço. */
+  cnpj?: string;
+  address?: string;
   businessHours?: string;
   businessHoursTimezone?: string;
 }
 
 export function Footer({
-  storeName = 'Mikma Lençóis',
+  storeName: storeNameRaw,
   storeCity = 'Blumenau, SC',
   storePhone,
   storeEmail,
@@ -26,10 +29,14 @@ export function Footer({
   whatsappUrl,
   reclameAquiUrl,
   tagline = '',
+  cnpj,
+  address,
   businessHours,
   businessHoursTimezone,
 }: Props) {
   const year = new Date().getFullYear();
+  // Nome vazio nas configurações virava "© 2026 · Todos os direitos...".
+  const storeName = storeNameRaw?.trim() || 'Mikma Lençóis';
   const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
   const status = businessHours ? getOpenStatus(parseBusinessHours(businessHours), businessHoursTimezone) : null;
 
@@ -62,7 +69,8 @@ export function Footer({
                 <li>
                   <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] ${status.isOpen ? 'bg-green-400/10 text-green-300' : 'bg-paper/[0.06] text-paper/60'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${status.isOpen ? 'bg-green-400' : 'bg-paper/35'}`} aria-hidden="true" />
-                    {status.isOpen ? 'Aberto agora' : 'Fechado agora'}
+                    {/* Loja online não "fecha": o horário é do atendimento. */}
+                    {status.isOpen ? 'Atendimento aberto agora' : 'Atendimento fechado · pedidos 24h'}
                   </span>
                 </li>
               )}
@@ -166,9 +174,10 @@ export function Footer({
 
         {/* ── Rodapé legal ── */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-7">
-          <p className="text-[11px] text-paper/55">
-            © {year} {storeName} · Todos os direitos reservados
-          </p>
+          <div className="text-[11px] text-paper/55 leading-relaxed">
+            <p>© {year} {storeName}{cnpj ? ` · CNPJ ${cnpj}` : ''} · Todos os direitos reservados</p>
+            {address && <p>{address}</p>}
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-[10px] font-semibold tracking-[0.1em] text-paper/55 uppercase">PIX · Cartão de crédito</span>
             {storeCity && (

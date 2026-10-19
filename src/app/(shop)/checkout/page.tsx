@@ -226,7 +226,10 @@ export default function CheckoutPage() {
       if (!res.ok) { setShipErr((await res.json().catch(() => ({}))).error ?? 'Erro ao calcular frete'); return; }
       const data = await res.json();
       setShipOpts(data.options);
-      setSelShip(data.options[0] ?? null);
+      // Nunca pré-seleciona a retirada: quem passa rápido pagaria por uma
+      // retirada sem perceber. Marca a entrega mais barata.
+      const opts = data.options as ShippingOption[];
+      setSelShip(opts.find(o => o.carrier !== 'pickup') ?? null);
       setQuotedCep(clean);
     } catch { setShipErr('Não foi possível calcular o frete. Tente novamente.'); }
     finally { setShipLoad(false); }

@@ -11,6 +11,12 @@ export async function GET() {
       creditMinOrderCents: s.creditMinOrderCents ?? 0,
       storeName: s.storeName,
       storeCity: s.storeCity,
+      // Endereço da loja é público (retirada na loja, rodapé).
+      storeAddress: s.storeAddress ?? '',
+      storeNumber: s.storeNumber ?? '',
+      storeNeighborhood: s.storeNeighborhood ?? '',
+      storeState: s.storeState ?? '',
+      storeCep: s.storeCep ?? '',
       storePhone: s.storePhone,
       storeEmail: s.storeEmail,
       storeCnpj: s.storeCnpj ?? '',
