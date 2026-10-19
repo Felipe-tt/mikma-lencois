@@ -464,6 +464,8 @@ export default function CheckoutPage() {
   // Parcelamento: mín R$100/parcela, máx 8x
   const maxInstall   = Math.min(8, Math.floor(creditBase / 10000));
   const installVal   = Math.round(creditTotal / installments);
+  // Maior parcelamento sem juros (a tabela cobra juros a partir de certa parcela).
+  const noFeeInstall = (() => { for (let n = maxInstall; n >= 1; n--) if (installmentFeeRate(n) === 0) return n; return 1; })();
 
   // Cupom aplicado no carrinho: revalida com o mesmo endpoint do carrinho
   // (e a mesma regra das rotas de pagamento) pra mostrar o desconto real.
@@ -860,15 +862,15 @@ export default function CheckoutPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-bold text-ink">PIX</p>
                           {pixDiscount > 0 && (
-                            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5">
+                            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
                               {pixDiscountPct}% de desconto
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-faint mt-0.5">
                           {pixDiscount > 0
-                            ? `Economize ${formatCurrency(pixDiscount)} pagando com PIX`
-                            : 'Aprovação instantânea'}
+                            ? `${formatCurrency(pixTotal)} no PIX · você economiza ${formatCurrency(pixDiscount)}`
+                            : 'Aprovação na hora'}
                         </p>
                       </div>
                     </button>
@@ -889,32 +891,44 @@ export default function CheckoutPage() {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-bold text-ink">Cartão de crédito</p>
-                            <p className="text-xs text-faint mt-0.5">Qualquer bandeira · até {maxInstall}x</p>
+                            <p className="text-xs text-faint mt-0.5">
+                              {noFeeInstall >= 2
+                                ? `Até ${noFeeInstall}x de ${formatCurrency(Math.round(creditBase / noFeeInstall))} sem juros`
+                                : `Qualquer bandeira · até ${maxInstall}x`}
+                            </p>
                           </div>
                         </div>
                       </button>
 
                         {/* Seletor de parcelas: fora do botão do cartão (botão dentro de botão é inválido) */}
                         {payMethod === 'credit' && maxInstall > 1 && (
-                          <div className="pb-4 px-4 ml-9 pl-4">
+                          <div className="pb-4 px-4 sm:ml-9 sm:pl-4">
                             <p id="installments-label" className="text-[11px] font-semibold text-mid mb-2">Em quantas vezes?</p>
-                            <div role="radiogroup" aria-labelledby="installments-label" className="flex flex-wrap gap-2">
+                            {/* Lista em vez de chips: cada linha mostra a parcela, o total
+                                pago e os juros, sem conta de cabeça para comparar. */}
+                            <div role="radiogroup" aria-labelledby="installments-label" className="flex flex-col rounded-2xl border border-mist bg-paper overflow-hidden divide-y divide-mist">
                               {Array.from({ length: maxInstall }, (_, i) => i + 1).map(n => {
-                                const val = Math.round(cardTotalFor(n) / n);
-                                const noFee = installmentFeeRate(n) === 0;
+                                const totalN = cardTotalFor(n);
+                                const val = Math.round(totalN / n);
+                                const fee = totalN - creditBase;
+                                const selected = installments === n;
                                 return (
-                                  <button key={n} type="button" role="radio" aria-checked={installments === n}
+                                  <button key={n} type="button" role="radio" aria-checked={selected}
                                     onClick={() => setInstall(n)}
-                                    className={`px-3.5 py-2 rounded-full border text-xs font-medium active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-150 ${
-                                      installments === n
-                                        ? 'border-ink bg-ink text-paper'
-                                        : 'border-mist text-mid hover:border-ink/40'
-                                    }`}
+                                    className={`flex items-center gap-3 w-full min-h-12 px-4 py-2.5 text-left transition-colors ${selected ? 'bg-warm' : 'hover:bg-warm/50'}`}
                                   >
-                                    {n}x {formatCurrency(val)}
-                                    {n === 1
-                                      ? <span className="ml-1 text-[9px] opacity-60">à vista</span>
-                                      : noFee && <span className="ml-1 text-[9px] opacity-60">sem juros</span>}
+                                    <span className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${selected ? 'border-ink' : 'border-faint-l'}`}>
+                                      {selected && <span className="w-2 h-2 rounded-full bg-ink" />}
+                                    </span>
+                                    <span className="flex-1 min-w-0 text-[13px] text-ink">
+                                      <strong className="font-semibold tabular-nums">{n}x {formatCurrency(val)}</strong>
+                                      <span className="block text-[11px] text-faint tabular-nums">
+                                        {n === 1 ? 'à vista' : fee > 0 ? `total ${formatCurrency(totalN)} · juros de ${formatCurrency(fee)}` : `total ${formatCurrency(totalN)}`}
+                                      </span>
+                                    </span>
+                                    {n > 1 && fee === 0 && (
+                                      <span className="shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">sem juros</span>
+                                    )}
                                   </button>
                                 );
                               })}

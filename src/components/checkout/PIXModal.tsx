@@ -148,11 +148,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
             {/* ── CONFIRMADO ── */}
             {confirmed && (
               <div className="w-full flex flex-col items-center gap-4 py-4 text-center">
-                <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-emerald-600">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                </div>
+                <PaidCheck />
                 <div>
                   <h3 className="text-lg font-semibold text-ink mb-1">Pagamento recebido!</h3>
                   <p className="text-sm text-mid max-w-[28ch] leading-relaxed">
@@ -283,12 +279,37 @@ function usePixStatusPolling(orderId: string | undefined) {
   return { checking, hint, checkNow: () => check(true) };
 }
 
+/** Check animado de pagamento confirmado (também usado na página do pedido). */
+export function PaidCheck({ size = 80 }: { size?: number }) {
+  // Toque curto no celular quando confirma (ignorado onde não existe).
+  useEffect(() => { try { navigator.vibrate?.(40); } catch { /* sem vibração */ } }, []);
+  return (
+    <span className="relative inline-flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <span aria-hidden="true" className="paid-ring absolute inset-0 rounded-full bg-emerald-400/40" />
+      <span className="paid-pop relative w-full h-full rounded-full bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center">
+        <svg width={size * 0.45} height={size * 0.45} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600 dark:text-emerald-400" aria-hidden="true">
+          <polyline className="paid-check" points="20 6 9 17 4 12" />
+        </svg>
+      </span>
+    </span>
+  );
+}
+
 export function PixPayBlock({ qrCode, copyPaste, expiresAt, orderId }: { qrCode: string; copyPaste: string; expiresAt?: string; orderId?: string }) {
   const { checking, hint, checkNow } = usePixStatusPolling(orderId);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const copyInputRef = useRef<HTMLInputElement>(null);
   const secondsLeft = useCountdown(expiresAt);
+  // Duração total do PIX (o maior valor visto; um PIX novo reinicia) para a
+  // barra de tempo.
+  const [totalSecs, setTotalSecs] = useState<number | null>(null);
+  useEffect(() => {
+    if (secondsLeft === null) return;
+    setTotalSecs(t => (t === null || secondsLeft > t ? secondsLeft : t));
+  }, [secondsLeft]);
+  const fraction = secondsLeft !== null && totalSecs ? secondsLeft / totalSecs : null;
+  const [justCopied, setJustCopied] = useState(false);
 
   async function copy() {
     const ok = await copyText(copyPaste);
@@ -302,6 +323,7 @@ export function PixPayBlock({ qrCode, copyPaste, expiresAt, orderId }: { qrCode:
     }
     setCopyFailed(false);
     setCopied(true);
+    setJustCopied(true);
     setTimeout(() => setCopied(false), 2500);
   }
 
@@ -330,6 +352,15 @@ export function PixPayBlock({ qrCode, copyPaste, expiresAt, orderId }: { qrCode:
           </span>
         )}
       </div>
+      {/* Barra do tempo que resta: esvazia até o PIX vencer. */}
+      {fraction !== null && (
+        <div aria-hidden="true" className="-mt-3 w-full h-1 rounded-full bg-mist/70 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-[width,background-color] duration-1000 ease-linear ${urgency ? 'bg-amber-500' : 'bg-clay'}`}
+            style={{ width: `${Math.max(0, Math.min(1, fraction)) * 100}%` }}
+          />
+        </div>
+      )}
 
       {/* Celular: copiar primeiro, botão grande */}
       <button
@@ -341,6 +372,12 @@ export function PixPayBlock({ qrCode, copyPaste, expiresAt, orderId }: { qrCode:
         {copied ? 'Código copiado' : 'Copiar código PIX'}
       </button>
       <span className="sr-only" aria-live="polite">{copied ? 'Código PIX copiado' : ''}</span>
+      {/* Próximo passo logo depois de copiar (no celular é o que falta). */}
+      {justCopied && (
+        <div className="sm:hidden w-full -mt-2 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-4 py-3 text-[12.5px] text-emerald-800 dark:text-emerald-300 leading-relaxed animate-fade-up">
+          <strong className="font-semibold">Código copiado.</strong> Agora abra o app do seu banco, vá em <strong className="font-semibold">Pix › Pix Copia e Cola</strong> e cole. Ao pagar, esta tela confirma sozinha.
+        </div>
+      )}
 
       {/* QR */}
       <div className="flex flex-col items-center gap-3">
