@@ -192,6 +192,11 @@ export default function OrderDetailPage() {
       const was = prevStatus.current;
       prevStatus.current = data.status;
       if ((was === 'pending_payment' || was === 'payment_expired') && data.status === 'paid') setJustPaid(true);
+      // Voltou do pagamento com cartão já aprovado (?pago=1): mesma confirmação.
+      if (was === null && data.status === 'paid' && new URLSearchParams(window.location.search).get('pago') === '1') {
+        setJustPaid(true);
+        window.history.replaceState(null, '', window.location.pathname);
+      }
       setOrder(data);
       if (data.status === 'paid' || data.status === 'preparing' || data.status === 'shipped' || data.status === 'delivered') {
         trackPurchase({
@@ -478,7 +483,7 @@ export default function OrderDetailPage() {
             <PaidCheck size={72} />
             <div>
               <p className="font-display text-[1.4rem] text-ink leading-tight">Pagamento confirmado!</p>
-              <p className="text-sm text-mid mt-1 max-w-[42ch]">Recebemos o seu PIX. Já vamos separar o pedido e você recebe um e-mail a cada etapa.</p>
+              <p className="text-sm text-mid mt-1 max-w-[42ch]">{order.payment.method === 'pix' ? 'Recebemos o seu PIX.' : 'Cartão aprovado.'} Já vamos separar o pedido e você recebe um e-mail a cada etapa.</p>
             </div>
           </div>
         )}
@@ -734,7 +739,7 @@ export default function OrderDetailPage() {
             {/* Pagamento */}
             <section className="rounded-2xl border border-mist p-5">
               <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">Pagamento</h2>
-              <p className="text-sm text-ink">{order.payment.method === 'pix' ? 'PIX' : `Cartão de crédito${order.payment.installments > 1 ? ` · ${order.payment.installments}x` : ' · à vista'}`}</p>
+              <p className="text-sm text-ink">{order.payment.method === 'pix' ? 'PIX' : `Cartão de crédito${order.payment.cardLastFour ? ` final ${order.payment.cardLastFour}` : ''}${order.payment.installments > 1 ? ` · ${order.payment.installments}x` : ' · à vista'}`}</p>
               {order.payment.paidAt && (
                 <p className="text-xs text-faint mt-1">
                   Confirmado em {formatTsDateTime(order.payment.paidAt)}

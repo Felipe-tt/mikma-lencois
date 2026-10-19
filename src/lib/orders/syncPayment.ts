@@ -1,5 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
-import { checkPixStatus, getCheckoutStatus } from '@/lib/abacatepayApi';
+import { checkPixStatus, getCheckoutStatus, getTransparent } from '@/lib/abacatepayApi';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
 import { expirePixOrder } from '@/lib/orders/expirePixOrder';
 
@@ -35,6 +35,17 @@ export async function syncOrderPayment(orderId: string): Promise<SyncResult> {
     if (status === 'EXPIRED' || status === 'CANCELLED') {
       await expirePixOrder(orderId, payment.txId, 'PIX expirou sem pagamento');
       return 'expired';
+    }
+    return 'pending';
+  }
+
+  // Cartão no próprio site: a cobrança `card_` se consulta em /transparents/get.
+  if (payment.method === 'card' && payment.txId?.startsWith('card_')) {
+    const res = await getTransparent(payment.txId, sandbox);
+    if (!res.ok) return 'error';
+    if (res.data.status === 'APPROVED' || res.data.status === 'PAID') {
+      await confirmOrderPaid(orderId, payment.txId, `Cartão aprovado (consulta à AbacatePay) · ${payment.txId.slice(-8)}`);
+      return 'paid';
     }
     return 'pending';
   }

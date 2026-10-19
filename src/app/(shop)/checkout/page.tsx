@@ -10,6 +10,7 @@ import { SIZE_LABEL } from '@/lib/productOptions';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Cart, Address, Order } from '@/types';
 import { PIXModal } from '@/components/checkout/PIXModal';
+import { CardFields, cardFieldsErrorMessage, type CardFieldsHandle } from '@/components/checkout/CardFields';
 import { CheckoutSkeleton } from '@/components/ui/Skeleton';
 import { maskCep, maskCpf, maskPhone, onlyDigits, isValidCpf, isValidPhone, isValidCep, BR_STATES } from '@/lib/masks';
 import { Select } from '@/components/ui/Select';
@@ -200,6 +201,16 @@ export default function CheckoutPage() {
   }, [apiError]);
   const [payMethod, setPayMethod]     = useState<'pix' | 'credit'>('pix');
   const [installments, setInstall]    = useState(1);
+  // Cartão no próprio site: chave pública (pk_) do abacatepay.js. Sem ela,
+  // ou se o formulário não carregar, o cartão vai para a página da AbacatePay.
+  const [cardKey, setCardKey]         = useState<string | null>(null);
+  const [cardCanPay, setCardCanPay]   = useState(false);
+  const cardRef = useRef<CardFieldsHandle>(null);
+  useEffect(() => {
+    fetch('/api/payment/card-config').then(r => r.json())
+      .then(d => setCardKey(typeof d.publicKey === 'string' ? d.publicKey : null))
+      .catch(() => {});
+  }, []);
 
   const [shippingOptions, setShipOpts]  = useState<ShippingOption[]>([]);
   const [selectedShipping, setSelShip]  = useState<ShippingOption | null>(null);
@@ -424,6 +435,9 @@ export default function CheckoutPage() {
         if (!res.ok) throw new Error(data.error ?? 'Erro ao gerar PIX. Tente novamente.');
         pixShownRef.current = true;
         setPixData(data);
+      } else if (cardKey) {
+        await payCardOnSite(token);
+        return;
       } else {
         const res = await fetch('/api/payment/create-checkout', {
           method: 'POST',
@@ -443,6 +457,44 @@ export default function CheckoutPage() {
       setApiErr(err instanceof Error ? err.message : 'Erro ao finalizar pedido.');
       setSub(false);
     }
+  }
+
+  async function payCardOnSite(token: string) {
+    if (!cardRef.current || !cardCanPay) throw new Error('Preencha todos os dados do cartão.');
+    const payer = {
+      name: customer.name.trim(),
+      email: (customer.email || user?.email || '').trim(),
+      taxId: onlyDigits(customer.cpf),
+      cellphone: onlyDigits(customer.phone),
+    };
+    let cardToken: string;
+    try {
+      // O 3DS, quando o banco pede, abre por cima da página e só volta no fim.
+      ({ token: cardToken } = await cardRef.current.tokenize(payer, {
+        street: addr.street, number: addr.number, city: addr.city, state: addr.state, zipCode: onlyDigits(addr.cep),
+      }));
+    } catch (err) {
+      throw new Error(cardFieldsErrorMessage(err));
+    }
+    const res = await fetch('/api/payment/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        address: addr, shipping: selectedShipping, installments,
+        cardToken, expectedTotalCents: creditTotal,
+        customer: { name: payer.name, taxId: payer.taxId, cellphone: payer.cellphone },
+      }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok && d.orderId) {
+      // Aprovado: confirmação no pedido. Em análise: o pedido mostra o status
+      // e muda sozinho quando a AbacatePay responder.
+      router.push(d.status === 'paid' ? `/pedidos/${d.orderId}?pago=1` : `/pedidos/${d.orderId}`);
+      return;
+    }
+    // Conta sem cartão no site (ou chave errada): volta para a página da AbacatePay.
+    if (d.code === 'UNAVAILABLE') setCardKey(null);
+    throw new Error(d.error ?? 'Não foi possível concluir o pagamento. Tente novamente.');
   }
 
   const items       = cart?.items ?? [];
@@ -935,6 +987,23 @@ export default function CheckoutPage() {
                             </div>
                           </div>
                         )}
+
+                        {payMethod === 'credit' && cardKey && creditTotal >= 100 && (
+                          <div className="pb-4 px-4 sm:ml-9 sm:pl-4">
+                            <p className="text-[11px] font-semibold text-mid mb-2">Dados do cartão</p>
+                            <CardFields
+                              ref={cardRef}
+                              publicKey={cardKey}
+                              amountCents={creditTotal}
+                              onReadyChange={setCardCanPay}
+                              onUnavailable={() => setCardKey(null)}
+                            />
+                            <p className="mt-2 flex items-center gap-1.5 text-[11px] text-faint">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                              Pagamento processado pela AbacatePay. Os dados do cartão não passam pela Mikma.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -999,13 +1068,15 @@ export default function CheckoutPage() {
 
                   <button
                     type="submit"
-                    disabled={submitting || !selectedShipping}
+                    disabled={submitting || !selectedShipping || (payMethod === 'credit' && !!cardKey && !cardCanPay)}
                     className="flex items-center justify-center gap-2.5 w-full h-14 rounded-full bg-ink text-paper text-[15px] font-bold tracking-[0.03em] hover:bg-mid disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 active:scale-[0.99]"
                   >
                     {submitting
-                      ? <><span className="spinner mr-1" />{payMethod === 'credit' ? 'Redirecionando…' : 'Gerando PIX…'}</>
+                      ? <><span className="spinner mr-1" />{payMethod === 'credit' ? (cardKey ? 'Processando pagamento…' : 'Redirecionando…') : 'Gerando PIX…'}</>
                       : selectedShipping
-                        ? payMethod === 'credit'
+                        ? payMethod === 'credit' && cardKey && !cardCanPay
+                          ? 'Preencha os dados do cartão'
+                          : payMethod === 'credit'
                           ? <>
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-80"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                               Pagar {formatCurrency(total)} com cartão

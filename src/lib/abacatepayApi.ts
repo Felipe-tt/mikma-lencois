@@ -58,10 +58,58 @@ export function getCheckoutStatus(checkoutId: string, sandbox: boolean) {
 export interface AbacateRefund { id: string; status: string; amount: number; reason: string | null; originalId: string }
 
 /**
- * Estorno total. PIX transparente: /transparents/refund com o `pix_char_`.
- * Cartão (checkout hospedado): /checkouts/refund com o `bill_`.
+ * Estorno total. Cobrança transparente (PIX `pix_char_` ou cartão `card_`):
+ * /transparents/refund. Cartão pela página da AbacatePay: /checkouts/refund
+ * com o `bill_`.
  */
-export function refundCharge(kind: 'pix' | 'checkout', id: string, reason: string, sandbox: boolean) {
-  const path = kind === 'pix' ? '/transparents/refund' : '/checkouts/refund';
+export function refundCharge(kind: 'transparent' | 'checkout', id: string, reason: string, sandbox: boolean) {
+  const path = kind === 'transparent' ? '/transparents/refund' : '/checkouts/refund';
   return request<AbacateRefund>(path, sandbox, { method: 'POST', body: { id, reason: reason.slice(0, 500) }, timeoutMs: 30_000 });
+}
+
+// ── Cartão no próprio site (checkout transparente) ──────────────────────────
+
+export interface CardCharge {
+  id: string;             // card_...
+  amount: number;
+  status: ChargeStatus;
+  brand?: string;
+  lastFour?: string;
+  installmentCount?: number;
+  installmentAmount?: number;
+}
+
+/**
+ * Cobra o cartão com o token `ctok_` gerado pelo abacatepay.js no navegador
+ * (docs: Criar cobrança Cartão). O `amount` precisa ser o mesmo usado no
+ * AbacatePay.create da página. Sem nova tentativa: timeout não é recusa, a
+ * cobrança pode ter passado (status 0 = sem resposta; quem chama trata).
+ */
+export function createCardCharge(input: {
+  token: string;
+  amount: number;
+  installments: number;
+  customer: { name: string; email: string; taxId: string; cellphone: string };
+  metadata: Record<string, string>;
+  sandbox: boolean;
+}) {
+  return request<CardCharge>('/transparents/create', input.sandbox, {
+    method: 'POST',
+    timeoutMs: 45_000,
+    body: {
+      method: 'CARD',
+      data: {
+        amount: input.amount,
+        token: input.token,
+        installmentCount: input.installments,
+        customer: input.customer,
+        metadata: input.metadata,
+      },
+    },
+  });
+}
+
+/** Uma cobrança transparente pelo id (cartão usa esta; /check é só PIX). */
+export function getTransparent(id: string, sandbox: boolean) {
+  return request<{ id: string; status: ChargeStatus }>(`/transparents/get?id=${encodeURIComponent(id)}`, sandbox);
 }

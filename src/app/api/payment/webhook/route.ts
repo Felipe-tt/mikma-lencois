@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
   if (eventType === 'transparent.completed') {
     const transparent = data.transparent;
     const txId = transparent.id as string;
-    const orderId = transparent.externalId as string | undefined;
+    const orderId = chargeOrderId(transparent);
 
     if (!orderId) {
       console.error('transparent.completed missing externalId, txId:', txId);
@@ -101,7 +101,8 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      await confirmOrderPaid(orderId, txId, `PIX confirmado · txId: ${txId.slice(-8)}`);
+      const label = txId.startsWith('card_') ? 'Cartão aprovado' : 'PIX confirmado';
+      await confirmOrderPaid(orderId, txId, `${label} · txId: ${txId.slice(-8)}`);
     } catch {
       // Falha transitória (contenção, timeout): 500 faz a AbacatePay
       // reenviar o evento. confirmOrderPaid é idempotente.
@@ -133,7 +134,7 @@ export async function POST(req: NextRequest) {
   // ── Estorno feito (pelo painel ou direto na AbacatePay) ────────────────
   if (eventType === 'transparent.refunded' || eventType === 'checkout.refunded') {
     const charge = (eventType === 'transparent.refunded' ? data.transparent : (data as Record<string, unknown>).checkout) as Record<string, unknown> | undefined;
-    const orderId = charge?.externalId as string | undefined;
+    const orderId = chargeOrderId(charge);
     if (orderId) {
       try {
         await markOrderRefunded(orderId, (charge?.id as string) ?? '', data.reason);
@@ -147,7 +148,7 @@ export async function POST(req: NextRequest) {
   // ── Contestação (chargeback/MED): aberta, ganha ou perdida ───────────────
   if (eventType === 'transparent.disputed' || eventType === 'checkout.disputed') {
     const charge = (eventType === 'transparent.disputed' ? data.transparent : (data as Record<string, unknown>).checkout) as Record<string, unknown> | undefined;
-    const orderId = charge?.externalId as string | undefined;
+    const orderId = chargeOrderId(charge);
     if (orderId) {
       try {
         await recordDispute(orderId, String(charge?.status ?? ''), data.reason);
@@ -162,6 +163,15 @@ export async function POST(req: NextRequest) {
     await deliveryRef.set({ event: eventType, at: FieldValue.serverTimestamp() }).catch(() => {});
   }
   return NextResponse.json({ ok: true });
+}
+
+// Pedido da cobrança: PIX e página da AbacatePay levam externalId; o cartão
+// no próprio site ignora externalId e leva o pedido em metadata.orderId.
+function chargeOrderId(charge: Record<string, unknown> | undefined): string | undefined {
+  if (!charge) return undefined;
+  if (typeof charge.externalId === 'string' && charge.externalId) return charge.externalId;
+  const meta = charge.metadata as Record<string, unknown> | undefined;
+  return typeof meta?.orderId === 'string' && meta.orderId ? meta.orderId : undefined;
 }
 
 // Registra o estorno no pedido. Se a loja cancelou e marcou o estorno como
