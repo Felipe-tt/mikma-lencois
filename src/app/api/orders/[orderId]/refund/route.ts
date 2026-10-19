@@ -80,6 +80,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       return NextResponse.json({ error: 'A AbacatePay não respondeu. O estorno pode ter sido feito: confira em alguns minutos antes de tentar de novo.' }, { status: 504 });
     }
     await ref.update({ 'payment.refundStatus': 'pending', 'payment.refundClaimAt': FieldValue.delete() });
+    // 401 "Insufficient permissions": a chave de API não tem a permissão de
+    // estorno (cada rota exige a sua, ver Autenticação nas docs).
+    if (result.status === 401) {
+      return NextResponse.json({ error: 'A chave da AbacatePay não tem permissão de estorno. Ative a permissão de reembolso na chave (painel da AbacatePay) ou estorne por lá e marque como feito.' }, { status: 502 });
+    }
     return NextResponse.json({ error: `A AbacatePay recusou o estorno: ${result.error}` }, { status: 502 });
   }
 

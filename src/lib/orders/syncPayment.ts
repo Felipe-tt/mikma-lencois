@@ -22,7 +22,11 @@ export async function syncOrderPayment(orderId: string): Promise<SyncResult> {
 
   if (payment.method === 'pix' && payment.txId) {
     const res = await checkPixStatus(payment.txId, sandbox);
-    if (!res.ok) return 'error';
+    if (!res.ok) {
+      // 401 = chave sem a permissão de leitura de cobranças transparentes.
+      if (res.status === 401) console.warn('[syncOrderPayment] chave da AbacatePay sem permissão para /transparents/check');
+      return 'error';
+    }
     const status = res.data.status;
     if (status === 'PAID' || status === 'APPROVED') {
       await confirmOrderPaid(orderId, payment.txId, `PIX confirmado (consulta à AbacatePay) · txId: ${payment.txId.slice(-8)}`);
