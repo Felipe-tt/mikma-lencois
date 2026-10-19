@@ -80,7 +80,15 @@ const SCANNER_PATH_PATTERN = /^\/(wp-admin|wp-login|wp-content|wp-includes|wp-js
 
 // ── Security headers (aplicados em todas as respostas) ───────────────────────
 
-function applySecurityHeaders(res: NextResponse): void {
+// Cartão no próprio site (abacatepay.js): o script da AbacatePay monta os
+// campos do cartão e o desafio 3DS em iframes de quem processa o cartão e
+// do banco emissor, domínios que a AbacatePay não publica. Só na página de
+// checkout a política aceita qualquer origem https para script, iframe e
+// rede; no resto do site continua fechada.
+const CHECKOUT_PAYMENT_SRC = ' https:';
+
+function applySecurityHeaders(res: NextResponse, pathname = ''): void {
+  const pay = pathname === '/checkout' || pathname.startsWith('/checkout/') ? CHECKOUT_PAYMENT_SRC : '';
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -90,7 +98,7 @@ function applySecurityHeaders(res: NextResponse): void {
   res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   res.headers.set('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://accounts.google.com https://www.googletagmanager.com https://connect.facebook.net",
+    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://accounts.google.com https://www.googletagmanager.com https://connect.facebook.net https://abacatepay.com" + pay,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://d1w2poirtb3as9.cloudfront.net https://*.tile.openstreetmap.org https://www.facebook.com",
@@ -98,8 +106,8 @@ function applySecurityHeaders(res: NextResponse): void {
     // script do reCAPTCHA faz uma chamada de rede pra /recaptcha/api2/clr,
     // sem isso ela quebrava silenciosamente por CSP (bug preexistente,
     // achado ao investigar por que o GA4 não carregava).
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://api.abacatepay.com https://viacep.com.br https://nominatim.openstreetmap.org https://www.thecolorapi.com https://tessdata.projectnaptha.com https://cdn.jsdelivr.net https://unpkg.com https://storage.googleapis.com https://*.ingest.us.sentry.io https://*.ingest.sentry.io https://www.google.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://api.pwnedpasswords.com" + EMULATOR_CONNECT_SRC,
-    "frame-src https://www.google.com https://recaptcha.google.com https://accounts.google.com https://*.firebaseapp.com https://*.web.app",
+    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://api.abacatepay.com https://viacep.com.br https://nominatim.openstreetmap.org https://www.thecolorapi.com https://tessdata.projectnaptha.com https://cdn.jsdelivr.net https://unpkg.com https://storage.googleapis.com https://*.ingest.us.sentry.io https://*.ingest.sentry.io https://www.google.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://api.pwnedpasswords.com" + EMULATOR_CONNECT_SRC + pay,
+    "frame-src https://www.google.com https://recaptcha.google.com https://accounts.google.com https://*.firebaseapp.com https://*.web.app" + pay,
     "worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com",
     "object-src 'none'",
     "base-uri 'self'",
@@ -184,7 +192,7 @@ export async function proxy(req: NextRequest) {
           if (wanted && wanted !== '/' && !wanted.startsWith('/manutencao')) target.searchParams.set('de', wanted);
           const redirectRes = NextResponse.redirect(target);
           redirectRes.headers.set('Cache-Control', 'no-store, must-revalidate');
-          applySecurityHeaders(redirectRes);
+          applySecurityHeaders(redirectRes, pathname);
           return redirectRes;
         }
       }
@@ -192,7 +200,7 @@ export async function proxy(req: NextRequest) {
   }
 
   const res = NextResponse.next();
-  applySecurityHeaders(res);
+  applySecurityHeaders(res, pathname);
 
   // Páginas do painel e auth: nunca cachear (dados do usuário)
   // Páginas da loja: deixar o Next.js/CDN cachearem normalmente via ISR

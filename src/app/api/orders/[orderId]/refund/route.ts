@@ -61,8 +61,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     if (!late && p.confirmedManuallyBy) {
       return { error: 'Este pedido foi pago por fora da AbacatePay. Devolva pelo mesmo meio e marque como feito.', status: 400 } as const;
     }
-    const kind = p.method === 'card' ? 'checkout' as const : 'pix' as const;
-    const chargeId = late ? p.lateCaptureTxId! : kind === 'pix' ? p.txId : p.checkoutId;
+    // Cartão no próprio site (card_) e PIX são cobranças transparentes;
+    // cartão pela página da AbacatePay é um checkout (bill_).
+    const transparentCard = p.method === 'card' && !!p.txId?.startsWith('card_');
+    const kind = late
+      ? (p.lateCaptureTxId!.startsWith('bill_') ? 'checkout' as const : 'transparent' as const)
+      : p.method === 'card' && !transparentCard ? 'checkout' as const : 'transparent' as const;
+    const chargeId = late ? p.lateCaptureTxId! : kind === 'transparent' ? p.txId : p.checkoutId;
     if (!chargeId) return { error: 'Cobrança da AbacatePay não encontrada neste pedido.', status: 400 } as const;
     tx.update(ref, { 'payment.refundStatus': 'processing', 'payment.refundClaimAt': Date.now() });
     return { kind, chargeId, sandbox: !!p.abacateSandbox, totalCents: o.totalCents as number };

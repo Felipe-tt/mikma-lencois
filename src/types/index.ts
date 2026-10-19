@@ -140,6 +140,10 @@ export interface Order {
   } | {
     method: 'card'
     installments: number
+    // Cartão no próprio site: cobrança `card_` e o final do cartão usado.
+    txId?: string
+    cardBrand?: string
+    cardLastFour?: string
     paidAt?: string
     abacateSandbox?: boolean
     confirmedManuallyBy?: string

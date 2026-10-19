@@ -21,6 +21,8 @@ import { z } from 'zod';
 import type { Coupon } from '@/types';
 import { createCheckoutSchema } from './schema';
 import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
+import { createCardCharge } from '@/lib/abacatepayApi';
+import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
 
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
@@ -45,7 +47,8 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
     const uid = decoded.uid;
 
-    if (!await rateLimit(`checkout:uid:${uid}`, 5, 60 * 60 * 1000)) {
+    // 10/h: no cartão no site, cada cartão recusado é uma nova tentativa.
+    if (!await rateLimit(`checkout:uid:${uid}`, 10, 60 * 60 * 1000)) {
       return tooManyRequests(rateLimitRetryAfter(`checkout:uid:${uid}`));
     }
 
@@ -55,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const parsedBody = await validateBody(req, createCheckoutSchema);
     if (!parsedBody.ok) return parsedBody.response;
-    const { address, installments, shipping } = parsedBody.data;
+    const { address, installments, shipping, cardToken, expectedTotalCents, customer } = parsedBody.data;
 
     // NOTA DE SEGURANÇA: nada do frete é confiado do cliente além de QUAL
     // carrier ele escolheu, preço, label, prazo e quoteId são sempre
@@ -217,10 +220,19 @@ export async function POST(req: NextRequest) {
     const totalCents = computeCardTotalCents({ productsCents, couponDiscountCents, shippingCents, feeRate });
     const installmentCents = Math.round(totalCents / parsedInstallments);
 
+    // O token do cartão foi gerado para um valor exato: se o carrinho, o
+    // frete ou o cupom mudou no meio do caminho, a página refaz o formulário.
+    if (cardToken && expectedTotalCents !== totalCents) {
+      return NextResponse.json(
+        { error: 'O valor do pedido mudou. Confira o total e tente de novo.', code: 'AMOUNT_CHANGED', totalCents },
+        { status: 409 }
+      );
+    }
+
     // ── Idempotência: evita pedido duplicado por duplo-clique/duas abas ──────
     // Ver mesmo mecanismo em create-pix/route.ts. Só reaproveita se: mesmo
     // usuário, cartão, criado há pouco, e com o MESMO valor calculado agora.
-    {
+    if (!cardToken) {
       const recentCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
       const existingSnap = await adminDb.collection('orders')
         .where('userId', '==', uid)
@@ -263,6 +275,16 @@ export async function POST(req: NextRequest) {
       stockLines.map(line => adminDb.collection('inventory').doc(line.sku).get())
     );
     const invDocRefs = inventorySnaps.map(snap => (snap.exists ? snap.ref : null));
+    const releaseReservation = () => {
+      for (let i = 0; i < stockLines.length; i++) {
+        const ref = invDocRefs[i];
+        if (!ref) continue;
+        ref.update({
+          reserved: FieldValue.increment(-stockLines[i].quantity),
+          updatedAt: FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      }
+    };
 
     try {
       await adminDb.runTransaction(async tx => {
@@ -356,7 +378,7 @@ export async function POST(req: NextRequest) {
       },
       timeline: [
         { status: 'created', at: now, note: 'Pedido criado' },
-        { status: 'payment_initiated', at: now, note: `Checkout cartão iniciado (${parsedInstallments}x)` },
+        { status: 'payment_initiated', at: now, note: cardToken ? `Cartão no site (${parsedInstallments}x)` : `Checkout cartão iniciado (${parsedInstallments}x)` },
       ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -366,21 +388,35 @@ export async function POST(req: NextRequest) {
     // da transação da reserva de estoque, nada a fazer aqui.
 
     // Avisa o vendor que alguém iniciou um pagamento (ainda não confirmado).
+    // No cartão no site o resultado sai na hora: o aviso é o de pago.
     // Best-effort: nunca deve bloquear ou falhar o checkout do cliente.
     // IMPORTANTE: await de propósito, ver nota em create-pix/route.ts
     // sobre CPU throttling do Cloud Run em chamadas fire-and-forget.
-    await notifySeller({
+    if (!cardToken) await notifySeller({
       title: 'Pagamento iniciado',
       body: `${summarizeOrderItems(verifiedItems)} · R$ ${(totalCents / 100).toFixed(2)} · ${matchedShipping.label}`,
       url: `/painel/pedidos/${orderId}`,
       data: { orderId, event: 'payment_initiated' },
     });
-    await notifyInApp({
+    if (!cardToken) await notifyInApp({
       type: 'payment_initiated',
       message: `Checkout de cartão iniciado: ${summarizeOrderItems(verifiedItems)} · R$ ${(totalCents / 100).toFixed(2)}`,
       orderId,
       url: `/painel/pedidos/${orderId}`,
     });
+
+    if (cardToken && customer) {
+      return chargeCardOnSite({
+        orderId, orderRef, uid, cardToken, totalCents, installments: parsedInstallments,
+        customer: { ...customer, email: ((userData.email ?? decoded.email ?? '') as string) },
+        sandbox: abacateSandbox,
+        rollback: async () => {
+          await orderRef.delete();
+          await releaseCouponUse(couponCode);
+          releaseReservation();
+        },
+      });
+    }
 
     // ── Upsert product on AbacatePay (one per order, single-use) ─────────────
     // AbacatePay /checkouts/create precisa de um produto existente.
@@ -521,4 +557,100 @@ export async function POST(req: NextRequest) {
     Sentry.captureException(err, { tags: { route: 'create-checkout' } });
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
+}
+
+// Mensagens da AbacatePay (docs: Criar cobrança Cartão) para o cliente.
+function cardErrorMessage(error: string): { message: string; code: string } {
+  const e = error.toLowerCase();
+  if (e.includes('token')) return { code: 'TOKEN_EXPIRED', message: 'Os dados do cartão expiraram. Confira e toque em pagar de novo.' };
+  if (e.includes('amount')) return { code: 'AMOUNT_CHANGED', message: 'O valor do pedido mudou. Confira o total e tente de novo.' };
+  if (e.includes('card_transparents') || e.includes('not available')) {
+    return { code: 'UNAVAILABLE', message: 'O pagamento com cartão no site está indisponível agora. Use a página de pagamento.' };
+  }
+  return { code: 'DECLINED', message: 'Não foi possível processar o pagamento com este cartão. Confira os dados ou tente outro cartão.' };
+}
+
+async function chargeCardOnSite(input: {
+  orderId: string;
+  orderRef: FirebaseFirestore.DocumentReference;
+  uid: string;
+  cardToken: string;
+  totalCents: number;
+  installments: number;
+  customer: { name: string; email: string; taxId: string; cellphone: string };
+  sandbox: boolean;
+  rollback: () => Promise<void>;
+}) {
+  const { orderId, orderRef } = input;
+  const res = await createCardCharge({
+    token: input.cardToken,
+    amount: input.totalCents,
+    installments: input.installments,
+    customer: {
+      name: input.customer.name,
+      email: input.customer.email,
+      taxId: input.customer.taxId.replace(/\D/g, ''),
+      cellphone: input.customer.cellphone.replace(/\D/g, ''),
+    },
+    metadata: { orderId, uid: input.uid },
+    sandbox: input.sandbox,
+  });
+
+  if (!res.ok) {
+    // Sem resposta (timeout/rede) ou erro do lado deles: a cobrança pode ter
+    // passado. Nada de desfazer nem tentar de novo; o pedido fica aguardando
+    // e o webhook (metadata.orderId) confirma se foi aprovado.
+    if (res.status === 0 || res.status >= 500) {
+      Sentry.captureMessage('Cartão no site sem resposta da AbacatePay', {
+        level: 'warning',
+        tags: { route: 'create-checkout', abacatePayStatus: String(res.status) },
+        extra: { orderId, error: res.error.slice(0, 500) },
+      });
+      const at = new Date().toISOString();
+      await orderRef.update({
+        updatedAt: at,
+        timeline: FieldValue.arrayUnion({ status: 'payment_processing', at, note: 'Cartão em análise: sem resposta imediata da AbacatePay' }),
+      }).catch(() => {});
+      return NextResponse.json({ orderId, status: 'processing' }, { status: 202 });
+    }
+    await input.rollback();
+    const { code, message } = cardErrorMessage(res.error);
+    if (res.status === 401 || res.status === 403 || code === 'UNAVAILABLE') {
+      Sentry.captureMessage('AbacatePay recusou cartão no site (configuração)', {
+        level: 'error',
+        tags: { route: 'create-checkout', abacatePayStatus: String(res.status) },
+        extra: { orderId, error: res.error.slice(0, 500) },
+      });
+      return NextResponse.json({ error: 'O pagamento com cartão no site está indisponível agora. Use a página de pagamento.', code: 'UNAVAILABLE' }, { status: 503 });
+    }
+    return NextResponse.json({ error: message, code }, { status: 402 });
+  }
+
+  const charge = res.data;
+  const at = new Date().toISOString();
+  await orderRef.update({
+    'payment.txId': charge.id,
+    ...(charge.brand ? { 'payment.cardBrand': String(charge.brand).slice(0, 20) } : {}),
+    ...(charge.lastFour ? { 'payment.cardLastFour': String(charge.lastFour).slice(-4) } : {}),
+    updatedAt: at,
+  });
+
+  if (charge.status === 'APPROVED' || charge.status === 'PAID') {
+    const card = charge.lastFour ? ` · final ${String(charge.lastFour).slice(-4)}` : '';
+    try {
+      await confirmOrderPaid(orderId, charge.id, `Cartão aprovado no site (${input.installments}x)${card}`);
+    } catch (err) {
+      // Cobrança aprovada: o webhook confirma de novo (idempotente).
+      Sentry.captureException(err, { tags: { route: 'create-checkout', step: 'confirm-card' }, extra: { orderId } });
+    }
+    return NextResponse.json({ orderId, status: 'paid' });
+  }
+
+  if (charge.status === 'PENDING') {
+    return NextResponse.json({ orderId, status: 'pending' });
+  }
+
+  // FAILED (ou outro estado final) já na criação: recusa.
+  await input.rollback();
+  return NextResponse.json({ error: cardErrorMessage('').message, code: 'DECLINED' }, { status: 402 });
 }
