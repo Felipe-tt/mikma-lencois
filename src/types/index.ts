@@ -149,8 +149,10 @@ export interface Order {
     lateCaptureTxId?: string
     lateCaptureAt?: string
     // Pedido pago e cancelado: 'pending' até o lojista marcar o estorno.
-    refundStatus?: 'pending' | 'done'
+    refundStatus?: 'pending' | 'processing' | 'done'
     refundedAt?: string
+    // Contestação aberta pelo cliente no banco/cartão (webhook *.disputed).
+    dispute?: { state: 'open' | 'won' | 'lost'; reason?: string; at: string }
   }
   delivery: {
     carrier: 'melhor_envio' | 'correios_pac' | 'correios_sedex' | 'jadlog_package' | 'jadlog_expresso' | 'pickup' | 'uber_direct' | 'manual' | null

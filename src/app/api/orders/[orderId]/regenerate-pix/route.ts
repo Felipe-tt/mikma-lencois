@@ -14,6 +14,17 @@ const ORDER_PAYMENT_WINDOW_MS = 48 * 60 * 60 * 1000;
 type StockItem = { productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number };
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
+
+async function createPixWithRetry(call: () => Promise<Response>): Promise<Response> {
+  try {
+    const res = await call();
+    if (res.status < 500 && res.status !== 429) return res;
+  } catch { /* timeout/rede: tenta de novo abaixo */ }
+  await new Promise(r => setTimeout(r, 800));
+  // Segunda falha de rede vira resposta de erro: quem chama já sabe desfazer
+  // o pedido (liberar estoque e cupom) em vez de deixar tudo reservado.
+  return call().catch(() => new Response(JSON.stringify({ error: 'timeout' }), { status: 504 }));
+}
 // Ver nota em create-pix/route.ts: ambiente é decidido por qual key é
 // usada. Precisa usar a MESMA que gerou o pedido original — regenerar
 // um PIX de teste com a key de produção (ou vice-versa) criaria uma
@@ -116,12 +127,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     },
   };
 
-  const pixRes  = await fetch(`${ABACATEPAY_BASE}/transparents/create`, {
+  // Uma nova tentativa em falha de rede/5xx: com o mesmo externalId a
+  // AbacatePay devolve o PIX pendente já criado (docs v2), sem cobrança dupla.
+  const pixRes = await createPixWithRetry(() => fetch(`${ABACATEPAY_BASE}/transparents/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ABACATEPAY_KEY}` },
     body: JSON.stringify(pixPayload),
     signal: AbortSignal.timeout(10000),
-  });
+  }));
 
   if (!pixRes.ok) {
     const detail = await pixRes.text();

@@ -29,6 +29,17 @@ import { CONTACT_EMAIL } from '@/lib/email/layout';
 
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
+
+async function createPixWithRetry(call: () => Promise<Response>): Promise<Response> {
+  try {
+    const res = await call();
+    if (res.status < 500 && res.status !== 429) return res;
+  } catch { /* timeout/rede: tenta de novo abaixo */ }
+  await new Promise(r => setTimeout(r, 800));
+  // Segunda falha de rede vira resposta de erro: quem chama já sabe desfazer
+  // o pedido (liberar estoque e cupom) em vez de deixar tudo reservado.
+  return call().catch(() => new Response(JSON.stringify({ error: 'timeout' }), { status: 504 }));
+}
 /** Máximo de pedidos "aguardando pagamento" simultâneos por cliente. */
 const MAX_PENDING_ORDERS_PER_USER = 3;
 // Ambiente da AbacatePay é decidido por qual API key é usada (chave de Dev
@@ -440,14 +451,18 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    const pixRes = await fetch(`${ABACATEPAY_BASE}/transparents/create`, {
+    // Timeout e uma nova tentativa em falha de rede/5xx: com o mesmo externalId
+    // a AbacatePay devolve o PIX pendente já criado em vez de outro (docs v2),
+    // então repetir não gera cobrança dupla.
+    const pixRes = await createPixWithRetry(() => fetch(`${ABACATEPAY_BASE}/transparents/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${ABACATEPAY_KEY}`,
       },
       body: JSON.stringify(pixPayload),
-    });
+      signal: AbortSignal.timeout(20_000),
+    }));
 
     const pixText = await pixRes.text();
     console.log('AbacatePay status:', pixRes.status, 'body:', pixText);

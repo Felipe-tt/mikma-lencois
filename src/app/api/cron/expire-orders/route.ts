@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
+import { syncOrderPayment } from '@/lib/orders/syncPayment';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email';
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   const warnCutoff   = new Date(now - WARN_AFTER_MS);
   const cancelCutoff = new Date(now - CANCEL_AFTER_MS);
 
-  const results = { warned: 0, cancelled: 0, errors: 0 };
+  const results = { warned: 0, cancelled: 0, expired: 0, errors: 0 };
 
   // ── Busca todos os pedidos ainda pending_payment ───────────────────────────
   const snap = await adminDb
@@ -47,6 +48,18 @@ export async function GET(req: NextRequest) {
     const createdAt: Date = order.createdAt?.toDate?.() ?? new Date(order.createdAt);
 
     try {
+      // ── Confere na AbacatePay o PIX que já passou do vencimento ────────
+      // A v2 não manda mais evento de expiração: sem isto o estoque ficava
+      // reservado até o cancelamento de 48h. Pago? confirma. Vencido? expira
+      // (libera a reserva). Erro de consulta: segue o fluxo normal.
+      const pay = (order.payment ?? {}) as { method?: string; expiresAt?: { toDate?: () => Date } | string };
+      const exp = typeof pay.expiresAt === 'string' ? new Date(pay.expiresAt) : pay.expiresAt?.toDate?.();
+      if (order.status === 'pending_payment' && exp && exp.getTime() < now - 60_000) {
+        const synced = await syncOrderPayment(orderId);
+        if (synced === 'paid') continue;
+        if (synced === 'expired') results.expired++;
+      }
+
       // ── Busca e-mail do cliente ─────────────────────────────────────────
       let customerEmail: string | undefined;
       let customerName = 'Cliente';
