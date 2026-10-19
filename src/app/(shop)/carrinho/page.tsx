@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { installmentFeeRate } from '@/lib/orderPricing';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
@@ -39,11 +40,15 @@ export default function CartPage() {
   const [lastRemoved, setLastRemoved] = useState<{ item: CartItem; index: number } | null>(null);
   // Linha que recebe o foco depois de remover (o botão some junto com o item).
   const focusAfterRemove = useRef<number | null>(null);
+  const [pixRule, setPixRule] = useState<{ thresholdCents: number; pct: number } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
       setThreshold(Math.max(0, Number(d.freeShippingThresholdCents) || 0));
+    }).catch(() => {});
+    fetch('/api/checkout/pix-discount').then(r => r.ok ? r.json() : null).then(d => {
+      if (d) setPixRule({ thresholdCents: Number(d.pixDiscountThresholdCents) || 0, pct: Number(d.pixDiscountPct) || 0 });
     }).catch(() => {});
   }, []);
 
@@ -514,6 +519,7 @@ export default function CartPage() {
                 <span className="text-sm font-semibold text-ink">Total estimado</span>
                 <span className="font-display text-2xl text-ink">{formatCurrency(total)}</span>
               </div>
+              <PaymentHint total={total} subtotal={subtotal} pixRule={pixRule} />
 
               <div className="px-5 pb-5">
                 {hasUnavailableItem ? (
@@ -560,5 +566,34 @@ export default function CartPage() {
       </div>
       {undoBar}
     </div>
+  );
+}
+
+// Como dá para pagar, logo abaixo do total: o preço no PIX (com o desconto,
+// quando o pedido chega no mínimo) e o parcelamento sem juros no cartão. Mesma
+// regra do checkout: cartão a partir de R$ 100, parcela mínima de R$ 100,
+// até 8x, sem juros enquanto a taxa da tabela for zero.
+function PaymentHint({ total, subtotal, pixRule }: { total: number; subtotal: number; pixRule: { thresholdCents: number; pct: number } | null }) {
+  const pixEligible = !!pixRule && pixRule.thresholdCents > 0 && pixRule.pct > 0 && subtotal >= pixRule.thresholdCents;
+  const pixPrice = pixEligible ? total - Math.round(subtotal * (pixRule!.pct / 100)) : null;
+  const maxInstall = Math.min(8, Math.floor(total / 10000));
+  let noFee = 1;
+  for (let n = maxInstall; n >= 1; n--) { if (installmentFeeRate(n) === 0) { noFee = n; break; } }
+  if (!pixPrice && noFee < 2) return null;
+  return (
+    <ul className="px-5 pb-4 -mt-1 flex flex-col gap-1.5 text-[12.5px]">
+      {pixPrice != null && (
+        <li className="flex justify-between gap-3 text-emerald-700 dark:text-emerald-400">
+          <span>No PIX ({pixRule!.pct}% off)</span>
+          <span className="font-semibold tabular-nums">{formatCurrency(pixPrice)}</span>
+        </li>
+      )}
+      {noFee >= 2 && (
+        <li className="flex justify-between gap-3 text-mid">
+          <span>No cartão</span>
+          <span className="tabular-nums">até {noFee}x de {formatCurrency(Math.round(total / noFee))} sem juros</span>
+        </li>
+      )}
+    </ul>
   );
 }

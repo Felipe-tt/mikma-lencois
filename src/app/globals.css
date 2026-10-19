@@ -969,6 +969,27 @@ html.dark .cookie-glass {
 }
 .animate-heart-pop { animation: heart-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 
+/* Pagamento confirmado: o círculo entra com um leve salto, o anel se espalha
+   e o check se desenha. Sem movimento quando o sistema pede menos animação. */
+@keyframes paid-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes paid-ring {
+  0%   { transform: scale(0.9); opacity: 0.55; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+@keyframes paid-check { to { stroke-dashoffset: 0; } }
+.paid-pop { animation: paid-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.paid-ring { animation: paid-ring 900ms ease-out 200ms both; }
+.paid-check { stroke-dasharray: 30; stroke-dashoffset: 30; animation: paid-check 420ms ease-out 260ms forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .paid-pop, .paid-ring { animation: none; }
+  .paid-ring { opacity: 0; }
+  .paid-check { animation: none; stroke-dashoffset: 0; }
+}
+
 @keyframes badge-bump {
   0%   { transform: scale(0.6); opacity: 0; }
   55%  { transform: scale(1.18); opacity: 1; }

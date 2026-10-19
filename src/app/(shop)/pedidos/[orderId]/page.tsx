@@ -1,5 +1,5 @@
 'use client';
-import { PixPayBlock } from '@/components/checkout/PIXModal';
+import { PixPayBlock, PaidCheck } from '@/components/checkout/PIXModal';
 import { groupConsecutiveDays, parseBusinessHours } from '@/lib/business-hours';
 
 import { useEffect, useRef, useState } from 'react';
@@ -135,6 +135,8 @@ export default function OrderDetailPage() {
   // AbacatePay. Se não foi pago, o pedido expira e o estoque volta na hora
   // (antes ficava reservado até a limpeza de 48h).
   const askedExpiry = useRef(false);
+  const prevStatus = useRef<string | null>(null);
+  const [justPaid, setJustPaid] = useState(false);
   const [storeWa, setStoreWa] = useState<string | null>(null);
   const [store, setStore] = useState<{ address: string; city: string; hours: { label: string; text: string }[] } | null>(null);
   useEffect(() => {
@@ -186,6 +188,10 @@ export default function OrderDetailPage() {
     return onSnapshot(doc(db, 'orders', orderId), snap => {
       if (!snap.exists()) { setNotFound(true); return; }
       const data = { id: snap.id, ...snap.data() } as Order;
+      // Pago com a página aberta: mostra a confirmação animada no lugar do PIX.
+      const was = prevStatus.current;
+      prevStatus.current = data.status;
+      if ((was === 'pending_payment' || was === 'payment_expired') && data.status === 'paid') setJustPaid(true);
       setOrder(data);
       if (data.status === 'paid' || data.status === 'preparing' || data.status === 'shipped' || data.status === 'delivered') {
         trackPurchase({
@@ -466,6 +472,17 @@ export default function OrderDetailPage() {
         )}
 
         {/* ── PIX pendente: mesmo bloco do modal (tempo, copiar, QR, passos) ── */}
+        {/* ── Acabou de pagar (com a página aberta) ── */}
+        {justPaid && (
+          <div role="status" className="mb-8 rounded-3xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-500/[0.07] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+            <PaidCheck size={72} />
+            <div>
+              <p className="font-display text-[1.4rem] text-ink leading-tight">Pagamento confirmado!</p>
+              <p className="text-sm text-mid mt-1 max-w-[42ch]">Recebemos o seu PIX. Já vamos separar o pedido e você recebe um e-mail a cada etapa.</p>
+            </div>
+          </div>
+        )}
+
         {order.status === 'pending_payment' && order.payment.method === 'pix' && order.payment.pixCopyPaste && !pixExpired && (
           <div className="mb-8 rounded-3xl border border-mist bg-paper p-5 sm:p-7 max-w-md">
             <div className="flex items-baseline justify-between gap-3 mb-5">
