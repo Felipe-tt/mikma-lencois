@@ -11,9 +11,8 @@
  *
  * Mudanças principais:
  * 1. Tamanho é campo único do produto (não mais repetido por variação).
- * 2. Tecidos são chips de múltipla seleção — marcar um tecido já cria a
- *    linha (tecido + cor + estoque) na hora, sem precisar clicar
- *    "Adicionar variação" pra cada um.
+ * 2. Tecido é sempre malha 100% algodão: o produto novo já vem com a linha
+ *    (cor + estoque) pronta, sem escolher tecido.
  * 3. "Duplicar produto existente" — começa o cadastro a partir de um
  *    produto parecido (nome, categoria, tamanho, tecidos, peso, specs).
  * 4. Rascunho automático (localStorage) só pra criação de produto novo,
@@ -34,7 +33,7 @@ import type { Product } from '@/types';
 import { hexToColorName, sampleDominantColor } from '@/lib/colorNames';
 import { ColorPicker } from './ColorPicker';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
-import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, YARN_COUNTS, suggestProductName, type Size } from '@/lib/productOptions';
+import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, FABRIC_LABEL, DEFAULT_COMPOSITION, suggestProductName, type Size } from '@/lib/productOptions';
 import { formatProductName } from '@/lib/textFormat';
 import { formatCurrency } from '@/lib/utils/format';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -180,11 +179,6 @@ export default function ProductForm({ initial }: Props) {
       if (prefs.lastSize && (SIZES as readonly string[]).includes(prefs.lastSize)) {
         setSize(prefs.lastSize as Size);
       }
-      if (prefs.lastFabrics?.length) {
-        const initRows = prefs.lastFabrics.map(f => ({ fabric: f, color: '#E8DCC8', colorName: hexToColorName('#E8DCC8'), qty: 1 }));
-        setRows(initRows);
-        rowMemory.current = new Map(initRows.map(r => [r.fabric, r]));
-      }
     }).catch(() => {});
   }, [isEdit, user]);
 
@@ -193,7 +187,8 @@ export default function ProductForm({ initial }: Props) {
     if (user) setStaffPref(user.uid, 'lastYarnCount', v).catch(() => {});
   }
 
-  const [composition, setComposition] = useState(initial?.composition ?? '');
+  // Produto novo já sai com a composição (todo produto é malha 100% algodão).
+  const [composition, setComposition] = useState(initial?.composition ?? (isEdit ? '' : DEFAULT_COMPOSITION));
   const [weightGsm, setWeightGsm] = useState(initial?.weightGsm ? String(initial.weightGsm) : '');
   const [certifications, setCertifications] = useState(initial?.certifications?.join(', ') ?? '');
   const [specsOpen, setSpecsOpen] = useState(!!(initial?.yarnCount || initial?.composition || initial?.weightGsm || initial?.certifications?.length));
@@ -255,7 +250,11 @@ export default function ProductForm({ initial }: Props) {
     colorName: v.colorName || hexToColorName(v.color || '#E8DCC8'),
     qty: 0,
   }));
-  const [rows, setRows] = useState<FabricRow[]>(initialRows);
+  // Produto novo já começa com a única linha (malha): ninguém precisa
+  // escolher tecido, só a cor e o estoque.
+  const [rows, setRows] = useState<FabricRow[]>(() => initialRows.length > 0 || isEdit
+    ? initialRows
+    : [{ fabric: FABRICS[0], color: '#E8DCC8', colorName: hexToColorName('#E8DCC8'), qty: 1 }]);
 
   // ID das variações que JÁ existem: produtos publicados a partir de
   // rascunho/CSV usam "v1", não o `${tamanho}_${tecido}` deste formulário.
@@ -521,7 +520,8 @@ export default function ProductForm({ initial }: Props) {
   const steps = [
     { label: 'Fotos', done: images.length > 0 },
     { label: 'Informações', done: !!name.trim() && priceValid && weightKgValid },
-    { label: 'Tecidos', done: rows.length > 0 },
+    // Cor conta como feita quando sai do bege inicial (escolhida ou tirada da foto).
+    { label: 'Cor', done: rows.length > 0 && (isEdit || rows.every(r => r.color !== '#E8DCC8')) },
   ];
   const stepsDone = steps.filter(s => s.done).length;
 
@@ -542,7 +542,7 @@ export default function ProductForm({ initial }: Props) {
     if (!priceValid) { setError('Informe um preço válido.'); return; }
     if (!weightKgValid) { setError('Informe o peso do produto em kg (ex: 1.2).'); return; }
     if (images.length === 0) { setError('Adicione pelo menos uma foto.'); return; }
-    if (rows.length === 0) { setError('Marque pelo menos um tecido disponível.'); return; }
+    if (rows.length === 0) { setError('Informe a cor do produto.'); return; }
 
     // A confirmação vem antes de qualquer upload ou exclusão: cancelar aqui
     // não pode deixar nada pela metade.
@@ -1095,42 +1095,20 @@ export default function ProductForm({ initial }: Props) {
             )}
           </FormSection>
 
-          {/* ── 3. Tecidos e cores ── */}
-          <FormSection
-            step={3}
-            title="Tecidos disponíveis"
-            hint="Marque os tecidos que esse produto tem — cada um vira uma linha de estoque, com uma cor"
-          >
-            <div className="flex flex-wrap gap-1.5">
-              {FABRICS.map(f => {
-                const on = rows.some(r => r.fabric === f);
-                return (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => toggleFabric(f)}
-                    className={`px-3.5 py-2.5 text-[13px] font-medium rounded-full border transition-colors ${
-                      on ? 'bg-ink text-paper border-ink' : 'border-mist text-mid hover:border-clay/50 hover:text-clay'
-                    }`}
-                  >
-                    {on && '✓ '}{f}
-                  </button>
-                );
-              })}
-            </div>
-
-            {rows.length === 0 && (
-              <p className="text-[12px] text-faint border border-dashed border-mist px-4 py-4 text-center rounded-xl">
-                Marque ao menos um tecido acima pra continuar
-              </p>
-            )}
-
+          {/* ── 3. Cor e estoque ── */}
+          {/* Tecido é sempre malha 100% algodão: a escolha de tecido e a
+              etapa de especificações saíram (eram a parte mais demorada do
+              cadastro). Produtos antigos com mais de um tecido continuam
+              mostrando uma linha por tecido. */}
+          <FormSection step={3} title="Cor e estoque" hint={FABRIC_LABEL}>
             <div className="flex flex-col gap-2.5">
               {rows.map(r => (
                 <div key={r.fabric} className="border border-mist bg-warm/40 p-3.5 flex flex-col gap-3 rounded-xl">
+                  {rows.length > 1 && (
                   <div className="flex items-center justify-between">
                     <span className="text-[13px] font-bold text-ink">{r.fabric}</span>
                     <button
+                      type="button"
                       onClick={() => toggleFabric(r.fabric)}
                       className="text-red-400 hover:text-red-600 transition-colors w-9 h-9 flex items-center justify-center shrink-0 -mr-1.5"
                       aria-label={`Remover ${r.fabric}`}
@@ -1138,6 +1116,7 @@ export default function ProductForm({ initial }: Props) {
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                   </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
                     <div>
@@ -1204,50 +1183,8 @@ export default function ProductForm({ initial }: Props) {
             </div>
           </FormSection>
 
-          {/* ── 4. Especificações do tecido (colapsável) ── */}
-          <FormSection step={4} title="Especificações do tecido" hint="Opcional, aparece na página do produto">
-            <button
-              type="button"
-              onClick={() => setSpecsOpen(o => !o)}
-              className="self-start flex items-center gap-1.5 text-[12px] font-semibold text-mid hover:text-ink transition-colors"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${specsOpen ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
-              {specsOpen ? 'Ocultar especificações' : 'Adicionar especificações'}
-            </button>
-
-            {specsOpen && (
-              <div className="border border-mist p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl">
-                <div>
-                  <label htmlFor="prod-fio" className="label">Espessura do fio <span className="font-normal normal-case text-faint">(malha)</span></label>
-                  <Select
-                    value={yarnCount}
-                    onChange={handleYarnCountChange}
-                    options={[
-                      { value: '', label: 'Não informar' },
-                      ...YARN_COUNTS.map(y => ({ value: y, label: `Fio ${y}` })),
-                    ]}
-                    size="sm"
-                    triggerId="prod-fio"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="prod-gramatura" className="label">Gramatura (g/m²)</label>
-                  <input id="prod-gramatura" type="number" min={0} placeholder="180" value={weightGsm} onChange={e => setWeightGsm(e.target.value)} className="input-sm" />
-                </div>
-                <div className="col-span-2">
-                  <label htmlFor="prod-composicao" className="label">Composição</label>
-                  <input id="prod-composicao" placeholder="100% Algodão" value={composition} onChange={e => setComposition(e.target.value)} className="input-sm" />
-                </div>
-                <div className="col-span-2">
-                  <label htmlFor="prod-certificacoes" className="label">Certificações <span className="font-normal normal-case text-faint">(vírgula)</span></label>
-                  <input id="prod-certificacoes" placeholder="OEKO-TEX, Fair Trade" value={certifications} onChange={e => setCertifications(e.target.value)} className="input-sm" />
-                </div>
-              </div>
-            )}
-          </FormSection>
-
-          {/* ── 5. Visibilidade ── */}
-          <FormSection step={5} title="Visibilidade">
+          {/* ── 4. Visibilidade ── */}
+          <FormSection step={4} title="Visibilidade">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"

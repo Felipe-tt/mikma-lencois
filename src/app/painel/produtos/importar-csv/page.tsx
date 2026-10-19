@@ -162,7 +162,8 @@ function parseGenericCsv(csvText: string): { items: StagingItem[]; skipped: numb
       description: descCol ? (row[descCol] ?? '').trim() : '',
       category: categoryCol ? (row[categoryCol] ?? '').trim() : '',
       size: sizeGuess,
-      fabric: fabricCol ? (row[fabricCol] ?? '').trim() : '',
+      // Sem coluna de tecido: malha, o único tecido da loja.
+      fabric: (fabricCol ? (row[fabricCol] ?? '').trim() : '') || FABRICS[0],
       colorName: colorCol ? (row[colorCol] ?? '').trim() : '',
       colorHex: '',
       priceInput: priceCol ? parsePriceBR(row[priceCol]) : '',
