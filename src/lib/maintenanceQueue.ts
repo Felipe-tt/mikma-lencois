@@ -51,3 +51,12 @@ export function safeReferer(referer: string | null | undefined): string {
 export function clip(value: string | null | undefined, max: number): string {
   return (value ?? '').slice(0, max);
 }
+
+// Bots/crawlers que não devem poluir a fila de manutenção, não são
+// visitantes reais esperando acesso, e não faz sentido o admin ficar
+// vendo "GoogleBot entrou na fila".
+export const BOT_UA_PATTERN = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|whatsapp|telegrambot|discordbot|semrush|ahrefs|mj12bot|dotbot|petalbot|yandex|baidu|duckduckbot|nutch|scrapy|python-requests|curl\/|wget\/|headless|phantomjs|okhttp|libwww-perl|go-http-client/i;
+
+export function isBotUserAgent(ua: string): boolean {
+  return BOT_UA_PATTERN.test(ua);
+}

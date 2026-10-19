@@ -396,9 +396,9 @@ describe('maintenance_queue: leitura por ID, listagem só da equipe, criação r
     );
   });
 
-  it('anônimo cria o registro no formato exato que o proxy grava', async () => {
+  it('CRÍTICO: ninguém cria pelo cliente, nem no formato certo (só o servidor grava)', async () => {
     const anon = testEnv.unauthenticatedContext();
-    await assertSucceeds(setDoc(doc(anon.firestore(), `maintenance_queue/${'b'.repeat(64)}`), validEntry()));
+    await assertFails(setDoc(doc(anon.firestore(), `maintenance_queue/${'b'.repeat(64)}`), validEntry()));
   });
 
   it('CRÍTICO: criação fora do formato é recusada (ID, campo extra, released=true, tamanho)', async () => {

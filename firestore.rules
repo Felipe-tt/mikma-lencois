@@ -200,31 +200,19 @@ service cloud.firestore {
       allow write: if isSellerOrAdmin();
     }
     match /maintenance_queue/{doc} {
-      // O proxy roda sem autenticação (Edge Runtime). Ele precisa:
-      //  (a) LER um documento pelo ID, para saber se o IP está liberado, e
-      //  (b) CRIAR o registro do visitante.
+      // O proxy roda sem autenticação (Edge Runtime) e só LÊ um documento
+      // pelo ID, para saber se o IP está liberado.
       // O ID é um HMAC do IP (64 hex, ver lib/maintenanceQueue.ts), então só
       // quem tem o segredo calcula o ID de um IP. LISTAR é só da equipe: antes
       // a coleção inteira (IP, user-agent, URL com token de reset...) era
       // legível por qualquer pessoa na internet.
       allow get: if true;
       allow list: if isSellerOrAdmin();
-      // Só cria documento novo, com o formato exato que o proxy grava (campos
-      // e tamanhos limitados) e released=false: visitante anônimo não se
-      // auto-libera, não sobrescreve registro existente e não injeta dados.
-      allow create: if doc.matches('[0-9a-f]{64}')
-        && request.resource.data.keys().hasOnly(['ip', 'released', 'enteredAt', 'userAgent',
-             'isBot', 'referer', 'acceptLanguage', 'requestedPath', 'platform', 'isMobile'])
-        && request.resource.data.released == false
-        && request.resource.data.ip is string && request.resource.data.ip.size() <= 45
-        && request.resource.data.enteredAt is string && request.resource.data.enteredAt.size() <= 40
-        && request.resource.data.userAgent is string && request.resource.data.userAgent.size() <= 300
-        && request.resource.data.isBot is bool
-        && request.resource.data.referer is string && request.resource.data.referer.size() <= 300
-        && request.resource.data.acceptLanguage is string && request.resource.data.acceptLanguage.size() <= 100
-        && request.resource.data.requestedPath is string && request.resource.data.requestedPath.size() <= 200
-        && request.resource.data.platform is string && request.resource.data.platform.size() <= 30
-        && request.resource.data.isMobile is string && request.resource.data.isMobile.size() <= 10;
+      // Ninguém cria pelo cliente: a entrada na fila é gravada pelo servidor
+      // (/api/maintenance/queue, Admin SDK) depois de checar que é um
+      // navegador de verdade. Antes o proxy criava sem login, e a regra
+      // aberta deixava qualquer um encher a coleção direto pela API REST.
+      allow create: if false;
       // Liberar (released=true) ou apagar exige seller/admin autenticado.
       allow update, delete: if isSellerOrAdmin();
     }
