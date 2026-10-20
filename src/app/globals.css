@@ -1003,3 +1003,74 @@ html.dark .cookie-glass {
   to   { opacity: 1; transform: translateX(0); }
 }
 .animate-drawer-item { animation: drawer-item-in 260ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+/* ── Transição de página: foto do cartão vira a foto do produto ─────────
+   O React (<ViewTransition share="morph">) dá a classe .morph ao par. O
+   desfoque no meio do caminho esconde a interpolação entre as duas fotos
+   (tamanhos diferentes). Sem suporte do navegador, a navegação é normal. */
+::view-transition-group(.morph) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+::view-transition-image-pair(.morph) {
+  animation-name: morph-blur;
+}
+::view-transition-old(.morph),
+::view-transition-new(.morph) {
+  /* As duas fotos são 4:5, mas com cantos e larguras diferentes: preenche
+     sem esticar. */
+  height: 100%;
+  object-fit: cover;
+}
+@keyframes morph-blur {
+  30% { filter: blur(3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* ── Animações guiadas pela rolagem (página do produto) ──────────────────
+   CSS puro (animation-timeline: view()), sem JS. Navegador sem suporte ou
+   pessoa com movimento reduzido: nada anima e tudo aparece no lugar. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* Bloco sobe e aparece ao entrar na tela. */
+    .sd-rise {
+      animation: sd-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+    /* Foto e faixa ficam dentro de caixas com overflow: hidden, que viram
+       o "rolador" do view() e travam a animação. A linha do tempo fica na
+       caixa (que rola com a página) e o conteúdo dentro usa o nome dela. */
+    .sd-zoom-scope { view-timeline-name: --sd-galeria; }
+    .sd-marquee-scope { view-timeline-name: --sd-faixa; }
+    /* Foto aproxima o tecido enquanto sai da tela. */
+    .sd-zoom {
+      animation: sd-zoom linear both;
+      animation-timeline: --sd-galeria;
+      animation-range: exit 0% exit 100%;
+    }
+    /* Faixa de texto corre para a esquerda enquanto atravessa a tela. */
+    .sd-marquee {
+      animation: sd-marquee linear both;
+      animation-timeline: --sd-faixa;
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}
+@keyframes sd-rise {
+  from { opacity: 0; translate: 0 24px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+@keyframes sd-zoom {
+  to { scale: 1.14; }
+}
+@keyframes sd-marquee {
+  from { translate: 0 0; }
+  to   { translate: -35% 0; }
+}

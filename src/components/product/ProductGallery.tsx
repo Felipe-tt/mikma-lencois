@@ -1,16 +1,17 @@
 'use client';
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, ViewTransition } from 'react';
 import 'photoswipe/style.css';
 
-interface Props { images: string[]; name: string; tag?: string; }
+// productId: liga a foto grande à foto do cartão do produto (transição).
+interface Props { images: string[]; name: string; tag?: string; productId?: string; }
 
 // Tamanho usado como "fallback" pra abrir na hora, sem esperar carregar as
 // dimensões reais da imagem. Assim que a imagem real carrega, o PhotoSwipe
 // já reajusta sozinho, na prática o usuário nunca percebe.
 const FALLBACK_SIZE = { w: 1600, h: 1600 };
 
-export function ProductGallery({ images, name, tag }: Props) {
+export function ProductGallery({ images, name, tag, productId }: Props) {
   const [active, setActive] = useState(0);
   const lightboxRef = useRef<import('photoswipe/lightbox').default | null>(null);
   const dimsRef = useRef<Record<string, { w: number; h: number }>>({});
@@ -124,8 +125,11 @@ export function ProductGallery({ images, name, tag }: Props) {
       )}
 
       <div className="flex-1 min-w-0 flex flex-col gap-2">
+        {/* Mesmo nome da foto do cartão (ProductCard): a foto do cartão cresce
+            até aqui ao abrir o produto. Só com productId, para não colidir. */}
+        <ViewTransition name={productId ? `produto-${productId}` : undefined} share="morph" default="none">
         <div
-          className={`group relative aspect-[4/5] overflow-hidden rounded-3xl bg-warm [transform:translateZ(0)] select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
+          className={`sd-zoom-scope group relative aspect-[4/5] overflow-hidden rounded-3xl bg-warm [transform:translateZ(0)] select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={() => { swipe.current = null; }}
@@ -142,7 +146,8 @@ export function ProductGallery({ images, name, tag }: Props) {
           )}
           {hasImages ? (
             <div className="absolute inset-0">
-              <div className="relative w-full h-full">
+              {/* Zoom no tecido enquanto a foto sai da tela (CSS .sd-zoom). */}
+              <div className="sd-zoom relative w-full h-full">
                 <Image
                   src={images[active]}
                   alt={`${name}, foto ${active + 1}`}
@@ -201,6 +206,7 @@ export function ProductGallery({ images, name, tag }: Props) {
             </div>
           )}
         </div>
+        </ViewTransition>
 
         {images.length > 1 && (
           <div className="flex lg:hidden gap-2.5 overflow-x-auto scrollbar-none p-1 -m-1">

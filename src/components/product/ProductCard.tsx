@@ -4,7 +4,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import type { Product } from '@/types';
 import { FABRIC_SHORT } from '@/lib/productOptions';
 import { formatCurrency } from '@/lib/utils/format';
-import { useState } from 'react';
+import { useState, ViewTransition } from 'react';
 import { NavLink } from '@/components/ui/NavLink';
 import { useWishlist } from '@/lib/hooks/useWishlist';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
@@ -20,6 +20,11 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   const img1 = product.images?.[1] ?? null;
   const [imgError, setImgError] = useState(false);
   const [hovered, setHovered] = useState(false);
+  // Intenção de abrir (mouse em cima, dedo encostou, foco do teclado): só
+  // então carrega a página completa do produto, antes do clique. Assim ela
+  // abre na hora e a foto do cartão tem par para a transição. Carregar
+  // completo todos os cartões da tela pesaria no servidor.
+  const [intent, setIntent] = useState(false);
   const { isFavorite, toggle } = useWishlist();
   const { requireAuth } = useAuthModal();
   const favorite = isFavorite(product.id);
@@ -49,14 +54,20 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   return (
     <div
       className="group relative"
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={() => { setHovered(true); setIntent(true); }}
+      onTouchStart={() => setIntent(true)}
+      onFocus={() => setIntent(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <NavLink
         href={`/produtos/${product.id}`}
+        prefetch={intent ? true : null}
         className="block focus-visible:outline-offset-4"
       >
-        {/* Imagem */}
+        {/* Imagem. Mesmo nome da foto grande da página do produto: ao abrir,
+            a foto do cartão cresce até virar a foto da página (e volta ao
+            retornar), em vez de uma sumir e a outra aparecer. */}
+        <ViewTransition name={`produto-${product.id}`} share="morph" default="none">
         <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-warm [transform:translateZ(0)]">
           {img0 && !imgError ? (
             <>
@@ -106,6 +117,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </div>
         </div>
+        </ViewTransition>
 
         {/* Info */}
         <div className="pt-3.5 pb-1">
