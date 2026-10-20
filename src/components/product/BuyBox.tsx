@@ -13,6 +13,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import type { Product, InventoryItem, ProductVariant, CartItem } from '@/types';
 import { getStockUrgency } from '@/lib/stockUrgency';
+import { StockAlert } from '@/components/product/StockAlert';
 import { trackAddToCart } from '@/lib/analytics';
 import { useOverlay } from '@/lib/hooks/useOverlay';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
@@ -276,6 +277,8 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           </span>
         </div>
 
+        {outOfStock && <StockAlert productId={product.id} />}
+
         {/* Variante */}
         <div className="border-t border-mist pt-5">
           <div className="flex items-center justify-between mb-3">
@@ -503,18 +506,32 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             )}
           </button>
         )}
+        {outOfStock ? (
+          // Esgotado: em vez de um botão morto, leva ao "avise-me" e foca o e-mail.
+          <button
+            onClick={() => {
+              const input = document.getElementById(`alerta-${product.id}`) as HTMLInputElement | null;
+              input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              input?.focus({ preventScroll: true });
+            }}
+            className="flex-1 h-11 rounded-full text-[13px] font-semibold tracking-[0.04em] border border-ink text-ink active:scale-[0.98] transition-transform duration-150"
+          >
+            Avise-me quando chegar
+          </button>
+        ) : (
         <button
           onClick={() => buyNow()}
-          disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
+          disabled={adding || buyingNow || !selectedVariant || loading}
           className={[
             'flex-1 h-11 rounded-full text-[13px] font-semibold tracking-[0.04em] transition-[background-color,transform] duration-150',
-            outOfStock || !selectedVariant
+            !selectedVariant
               ? 'cursor-not-allowed bg-warm text-faint'
               : 'bg-ink text-paper active:scale-[0.98]',
           ].join(' ')}
         >
-          {outOfStock ? 'Fora de estoque' : buyingNow ? <span className="inline-flex items-center gap-2"><span className="spinner" />Preparando…</span> : 'Comprar agora'}
+          {buyingNow ? <span className="inline-flex items-center gap-2"><span className="spinner" />Preparando…</span> : 'Comprar agora'}
         </button>
+        )}
       </div>
 
       {/* ── Modal: item adicionado ── */}

@@ -27,3 +27,15 @@ jobs:
             echo "Erro: status $STATUS"
             exit 1
           fi
+
+      # Mesmo agendamento: avisa quem pediu "avise-me quando chegar" dos
+      # produtos que voltaram ao estoque. Falha aqui não derruba o job.
+      - name: Avisar produtos que voltaram ao estoque
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /tmp/alerts.json -w "%{http_code}" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            https://mikma.com.br/api/cron/stock-alerts)
+          echo "HTTP status: $STATUS"
+          cat /tmp/alerts.json
+          [ "$STATUS" = "200" ]
