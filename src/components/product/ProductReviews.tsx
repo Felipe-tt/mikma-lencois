@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useEffect, useState } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
@@ -68,7 +69,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
       setFormOpen(false);
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao enviar avaliação');
+      setError(userMessage(err, 'Erro ao enviar avaliação'));
     } finally {
       setSubmitting(false);
     }

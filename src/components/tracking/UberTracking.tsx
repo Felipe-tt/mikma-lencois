@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { Order } from '@/types';
-import { courierVehicleLabel } from '@/lib/carriers';
+import { courierCarColor, courierVehicleLabel } from '@/lib/carriers';
+import { maskPhone } from '@/lib/masks';
 import type { DeliveryPhase } from './LiveDeliveryMap';
 
 const LiveDeliveryMap = dynamic(() => import('./LiveDeliveryMap').then(m => m.LiveDeliveryMap), {
@@ -20,7 +21,19 @@ export function uberPhase(d: Delivery): DeliveryPhase {
   return 'searching';
 }
 
-const STEPS = ['Entregador', 'Coleta', 'A caminho', 'Entregue'];
+// Barra de 5 partes como a da Uber: procurando, indo à loja, coletado,
+// a caminho, entregue. A parte atual fica pulsando.
+function progressStep(d: Delivery): number {
+  switch (d.uberLastStatus) {
+    case 'pickup': return 1;
+    case 'pickup_complete': return 2;
+    case 'dropoff': return 3;
+    case 'delivered': return 5;
+    default: return d.courierName ? 1 : 0;
+  }
+}
+
+const UBER_GREEN = '#06C167';
 
 function useNow(ms: number) {
   const [now, setNow] = useState<number | null>(null);
@@ -33,76 +46,93 @@ function useNow(ms: number) {
   return now;
 }
 
+// "+5547999990000" → "(47) 99999-0000"; número de fora do Brasil fica como veio.
+function formatPhone(raw: string): string {
+  const d = raw.replace(/\D/g, '');
+  const local = d.startsWith('55') && (d.length === 12 || d.length === 13) ? d.slice(2) : d.length <= 11 ? d : '';
+  return local ? maskPhone(local) : raw;
+}
+
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
 
+/** Carro de lado, pintado com a cor que a Uber informa. */
+function CarArt({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 120 52" className="h-auto w-full" aria-hidden="true">
+      <ellipse cx="60" cy="46" rx="52" ry="3.5" fill="#000" opacity=".12" />
+      <path d="M7 35c0-5 3-7.5 9-8.5l17-2.6C39 16 47 12 59 12h16c10 0 18 4.6 24 11.3l8 1.6c5 1 7 3.8 7 8.1v4c0 2-1.6 3.4-3.5 3.4H10.5C8.6 40.4 7 39 7 37z"
+        fill={color} stroke="#000" strokeOpacity=".22" strokeWidth="1" />
+      <path d="M38 23.8C43 17.4 49 15 58 15h3.5v8.8z" fill="#24303C" />
+      <path d="M65.5 15H75c8 0 14 3 19 8.8H65.5z" fill="#24303C" />
+      <path d="M12 31h9" stroke="#000" strokeOpacity=".25" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="106" y="29" width="6" height="2.6" rx="1.3" fill="#F6E7A1" />
+      <circle cx="31" cy="40" r="7.5" fill="#1C1C1C" /><circle cx="31" cy="40" r="3.2" fill="#9AA0A6" />
+      <circle cx="92" cy="40" r="7.5" fill="#1C1C1C" /><circle cx="92" cy="40" r="3.2" fill="#9AA0A6" />
+    </svg>
+  );
+}
+
+interface Props {
+  delivery: Delivery;
+  audience: 'cliente' | 'loja';
+  /** Etiqueta do pino de entrega (rua e número). */
+  addressLabel?: string;
+}
+
 /**
- * Acompanhamento da corrida da Uber Direct no estilo do app da Uber: status
- * com horário de chegada, barra de etapas, mapa ao vivo e o entregador com
- * carro e placa. Usado na página do pedido (cliente) e no painel.
+ * Acompanhamento da corrida da Uber Direct no estilo do app da Uber: título
+ * da etapa com horário de chegada, barra de progresso, mapa ao vivo e o
+ * entregador com carro, cor e placa. Usado na página do pedido e no painel.
  */
-export function UberTracking({ delivery, audience }: { delivery: Delivery; audience: 'cliente' | 'loja' }) {
+export function UberTracking({ delivery, audience, addressLabel }: Props) {
   const now = useNow(30_000);
   const phase = uberPhase(delivery);
+  const step = progressStep(delivery);
   const name = delivery.courierName?.split(' ')[0];
-  const etaIso = phase === 'to_store' ? delivery.pickupEta : delivery.dropoffEta;
+  const etaIso = audience === 'loja' && phase === 'to_store' ? delivery.pickupEta : delivery.dropoffEta;
   const etaValid = !!etaIso && !Number.isNaN(Date.parse(etaIso));
   const minutes = etaValid && now !== null ? Math.max(0, Math.round((Date.parse(etaIso!) - now) / 60_000)) : null;
 
-  const step = phase === 'searching' ? 0 : phase === 'to_store' ? 1 : 2;
-
   let title: string;
-  let subtitle: string;
-  if (phase === 'searching') {
-    title = 'Procurando entregador';
-    subtitle = 'A Uber está chamando alguém perto da loja. Costuma levar poucos minutos.';
-  } else if (phase === 'to_store') {
-    title = audience === 'loja'
-      ? (etaValid ? `Chega na loja às ${hhmm(etaIso!)}` : 'Entregador a caminho da loja')
-      : (delivery.dropoffEta ? `Chega por volta de ${hhmm(delivery.dropoffEta)}` : 'Entregador a caminho da loja');
-    subtitle = audience === 'loja'
-      ? `${name ?? 'O entregador'} está indo buscar o pacote. Deixe separado.`
-      : `${name ?? 'O entregador'} está indo buscar seu pedido na loja.`;
-  } else {
-    title = etaValid ? `Chega às ${hhmm(etaIso!)}` : 'A caminho';
-    subtitle = minutes !== null && minutes <= 1
-      ? `${name ?? 'O entregador'} está chegando.`
-      : `${name ?? 'O entregador'} está a caminho${audience === 'loja' ? ' do cliente' : ' de você'}${minutes !== null ? `, cerca de ${minutes} min` : ''}.`;
-  }
+  if (phase === 'searching') title = 'Procurando entregador…';
+  else if (phase === 'to_store') title = audience === 'loja' ? 'Entregador a caminho da loja' : 'Retirando seu pedido…';
+  else if (minutes !== null && minutes <= 2) title = 'Chegando…';
+  else title = audience === 'loja' ? 'A caminho do cliente' : 'A caminho';
+  const etaLine = etaValid
+    ? `${audience === 'loja' && phase === 'to_store' ? 'Chegada na loja' : 'Chegada'}: ${hhmm(etaIso!)}${minutes !== null && phase === 'to_customer' && minutes > 2 ? ` · ${minutes} min` : ''}`
+    : phase === 'searching' ? 'Costuma levar poucos minutos' : null;
 
-  const store = delivery.pickupPoint ?? null;
-  const home = delivery.dropoffPoint ?? null;
   const hasCourierPos = typeof delivery.courierLat === 'number' && typeof delivery.courierLng === 'number';
   const stale = hasCourierPos && delivery.courierLocationAt && now !== null && now - Date.parse(delivery.courierLocationAt) > 5 * 60_000;
-  const car = [delivery.courierCar, delivery.courierCarColor].filter(Boolean).join(' · ')
-    || (delivery.courierVehicle ? courierVehicleLabel(delivery.courierVehicle) : '');
+  const color = courierCarColor(delivery.courierCarColor);
+  const carName = [delivery.courierCar, color?.label].filter(Boolean).join(' ');
+  const isCar = !delivery.courierVehicle || ['car', 'van', 'truck'].includes(delivery.courierVehicle);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-mist bg-paper">
       <div className="px-5 pt-5 pb-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-faint">Entrega Uber</p>
-        <h3 className="mt-1.5 text-[22px] leading-tight font-bold tracking-tight text-ink" aria-live="polite">{title}</h3>
-        <p className="mt-1 text-[13px] text-mid text-pretty">{subtitle}</p>
-
-        <ol className="mt-4 grid grid-cols-4 gap-1.5" aria-label="Etapas da entrega">
-          {STEPS.map((label, i) => (
-            <li key={label} className="flex flex-col gap-1.5">
-              <span className={`relative h-1 overflow-hidden rounded-full ${i < step ? 'bg-ink' : 'bg-mist'}`}>
-                {i === step && <span className="sd-progress absolute inset-y-0 left-0 w-full bg-ink" />}
-              </span>
-              <span className={`text-[10.5px] ${i <= step ? 'text-ink font-semibold' : 'text-faint'}`} aria-current={i === step ? 'step' : undefined}>{label}</span>
-            </li>
+        <h3 className="text-[21px] leading-tight font-bold tracking-tight text-ink" aria-live="polite">{title}</h3>
+        {etaLine && <p className="mt-1 text-[13px] text-mid tabular-nums">{etaLine}</p>}
+        <div className="mt-3.5 grid grid-cols-5 gap-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={5} aria-valuenow={step} aria-label="Andamento da entrega">
+          {[0, 1, 2, 3, 4].map(i => (
+            <span key={i} className="relative h-1 overflow-hidden rounded-full bg-mist">
+              {i < step && <span className="absolute inset-0" style={{ background: UBER_GREEN }} />}
+              {i === step && <span className="sd-progress absolute inset-0" style={{ background: UBER_GREEN }} />}
+            </span>
           ))}
-        </ol>
+        </div>
       </div>
 
       <div className="px-3">
         <LiveDeliveryMap
           routePoints={delivery.routePoints}
-          store={store}
-          home={home}
+          store={delivery.pickupPoint ?? null}
+          home={delivery.dropoffPoint ?? null}
           courier={hasCourierPos ? { lat: delivery.courierLat!, lng: delivery.courierLng!, vehicle: delivery.courierVehicle } : null}
           phase={phase}
           etaMinutes={phase === 'to_customer' ? minutes : null}
+          storeLabel="Mikma Lençóis"
+          homeLabel={addressLabel ?? (audience === 'loja' ? 'Cliente' : 'Você')}
         />
         {stale && (
           <p className="mt-1.5 px-1 text-[11px] text-faint">A Uber não manda a posição há alguns minutos. Ela pode estar desatualizada.</p>
@@ -110,49 +140,52 @@ export function UberTracking({ delivery, audience }: { delivery: Delivery; audie
       </div>
 
       {delivery.courierName ? (
-        <div className="px-5 py-4">
-          <div className="flex items-center gap-3">
-            {delivery.courierPhoto ? (
-              <img src={delivery.courierPhoto} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover bg-mist" />
+        <div className="flex items-center gap-4 px-5 py-4">
+          <div className="relative w-[104px] shrink-0">
+            {isCar ? (
+              <CarArt color={color?.hex ?? '#C3C7CC'} />
             ) : (
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-mist">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-6 w-6 text-mid"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-mist text-[11px] font-semibold text-mid">
+                {courierVehicleLabel(delivery.courierVehicle!)}
               </span>
             )}
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-semibold leading-snug text-ink break-words">{delivery.courierName}</p>
-              {typeof delivery.courierRating === 'number' && (
-                <p className="text-[12px] text-mid">★ {delivery.courierRating.toFixed(1).replace('.', ',')}</p>
-              )}
-            </div>
-            {(delivery.courierPlate || car) && (
-              <div className="flex shrink-0 flex-col items-end gap-1 text-right max-w-[45%]">
-                {delivery.courierPlate && (
-                  <span className="rounded-md border border-ink/70 bg-white px-2 py-0.5 font-mono text-[13px] font-bold tracking-wider text-[#111]">
-                    {delivery.courierPlate}
-                  </span>
-                )}
-                {car && <span className="text-[12px] leading-tight text-mid">{car}</span>}
-              </div>
+            {delivery.courierPhoto && (
+              <img src={delivery.courierPhoto} alt="" className="absolute -bottom-1 -right-1 h-9 w-9 rounded-full border-2 border-paper object-cover bg-mist" />
             )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1 text-[14px] font-semibold" style={{ color: UBER_GREEN }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4 shrink-0"><circle cx="12" cy="7" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>
+              <span className="truncate">{name}</span>
+              {typeof delivery.courierRating === 'number' && (
+                <span className="ml-1 text-[12px] font-medium text-mid">★ {delivery.courierRating.toFixed(1).replace('.', ',')}</span>
+              )}
+            </p>
+            <p className="mt-0.5 text-[14px] font-semibold leading-snug text-ink">
+              {carName || (delivery.courierVehicle ? courierVehicleLabel(delivery.courierVehicle) : 'Entregador Uber')}
+            </p>
+            {delivery.courierPlate && (
+              <p className="mt-1 inline-block rounded border border-ink/60 px-1.5 font-mono text-[12px] font-bold tracking-wider text-ink">{delivery.courierPlate}</p>
+            )}
+            {delivery.courierPhone && <p className="mt-0.5 text-[12px] text-mid tabular-nums">{formatPhone(delivery.courierPhone)}</p>}
           </div>
           {delivery.courierPhone && (
             <a
               href={`tel:${delivery.courierPhone.replace(/[^\d+]/g, '')}`}
-              className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-full bg-warm py-2.5 text-[13px] font-semibold text-ink hover:bg-mist transition-colors"
+              aria-label={`Ligar para ${name ?? 'o entregador'}`}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-warm text-ink hover:bg-mist transition-colors"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
-              Ligar para {name}
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>
             </a>
           )}
         </div>
       ) : (
         <div className="flex items-center gap-3 px-5 py-4">
           <span className="relative flex h-3 w-3 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ink/40 motion-reduce:animate-none" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-ink" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-50 motion-reduce:animate-none" style={{ background: UBER_GREEN }} />
+            <span className="relative inline-flex h-3 w-3 rounded-full" style={{ background: UBER_GREEN }} />
           </span>
-          <p className="text-[13px] text-mid">Assim que alguém aceitar, o nome, o carro e a placa aparecem aqui.</p>
+          <p className="text-[13px] text-mid">Assim que alguém aceitar, o entregador e o carro aparecem aqui.</p>
         </div>
       )}
 

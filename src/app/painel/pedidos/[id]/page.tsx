@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { useUberSync } from '@/components/tracking/useUberSync';
 import { UberTracking } from '@/components/tracking/UberTracking';
+import { toAddress, streetLine } from '@/lib/address';
 
 import { carrierNameVendor, trackingUrl, isCorreios, isManualDispatch, isValidTrackingCodeFor } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
@@ -504,7 +505,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       message: 'Cancelar este pedido?',
       detail: `${willReturnStock ? 'O estoque será devolvido. ' : ''}${order.payment.paidAt ? `O cliente já pagou ${formatCurrency(order.totalCents)}: depois de cancelar, devolva o valor pelo mesmo meio de pagamento. O cliente recebe um e-mail avisando do cancelamento. ` : ''}Esta ação não tem como desfazer.`,
       withInput: true,
-      inputPlaceholder: 'Motivo do cancelamento (opcional)',
+      inputPlaceholder: 'Motivo, o cliente vai ver (opcional)',
       confirmLabel: 'Cancelar pedido',
       variant: 'danger',
     });
@@ -911,7 +912,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
             {/* ── Uber Direct: entregador em tempo real ─────────────────── */}
             {order.delivery?.carrier === 'uber_direct' && (
-              <UberTracking delivery={order.delivery} audience="loja" />
+              <UberTracking delivery={order.delivery} audience="loja" addressLabel={(() => { const a = toAddress(order.address); return a ? streetLine(a) || undefined : undefined; })()} />
             )}
 
             {/* Código de rastreio (Correios / Jadlog) */}

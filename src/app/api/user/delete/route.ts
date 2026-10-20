@@ -8,14 +8,14 @@ import { releaseCouponUse } from '@/lib/orders/couponUsage';
 
 export async function DELETE(req: NextRequest) {
   const token = req.headers.get('authorization')?.split('Bearer ')[1];
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!token) return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
 
   let uid: string;
   try {
     const decoded = await adminAuth.verifyIdToken(token, true); // checkRevoked=true
     uid = decoded.uid;
   } catch {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
   }
 
   // Rate limit: 3 tentativas por usuário por hora (evita loop de delete/recriação)
@@ -105,6 +105,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[user/delete]', err);
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Não foi possível concluir agora. Tente de novo.' }, { status: 500 });
   }
 }

@@ -6,8 +6,8 @@ describe('carrierName', () => {
     expect(carrierName('uber_direct')).toBe('Entrega expressa');
     expect(carrierName('correios_sedex')).toBe('Correios SEDEX');
   });
-  it('faz fallback formatando a chave quando desconhecida', () => {
-    expect(carrierName('transportadora_nova')).toBe('transportadora nova');
+  it('serviço desconhecido vira "Transportadora", sem mostrar o código', () => {
+    expect(carrierName('melhor_envio_17')).toBe('Transportadora');
   });
 });
 

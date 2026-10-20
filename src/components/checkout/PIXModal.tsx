@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
@@ -99,7 +100,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
       const next = await requestNewPix(orderId);
       setPix({ qrCode: next.qrCode, copyPaste: next.copyPaste, expiresAt: next.expiresAt, totalCents: next.totalCents ?? totalCents });
     } catch (err) {
-      setRegenError(err instanceof Error ? err.message : 'Não foi possível gerar o PIX. Tente novamente.');
+      setRegenError(userMessage(err, 'Não foi possível gerar o PIX. Tente novamente.'));
     } finally {
       setRegenerating(false);
     }

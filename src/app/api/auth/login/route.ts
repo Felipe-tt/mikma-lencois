@@ -146,6 +146,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: false, requiresEmailChallenge: true, email: emailLower });
   } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Não foi possível concluir agora. Tente de novo.' }, { status: 500 });
   }
 }

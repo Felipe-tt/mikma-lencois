@@ -15,6 +15,9 @@ interface Props {
   phase: DeliveryPhase;
   /** Minutos até a chegada no endereço, mostrado no pino da casa. */
   etaMinutes?: number | null;
+  /** Etiquetas dos pinos, como no app da Uber ("Mikma Lençóis", "Rua X, 105"). */
+  storeLabel?: string;
+  homeLabel?: string;
 }
 
 // Mapa vetorial claro, no estilo do app da Uber. OpenFreeMap: gratuito, sem
@@ -27,7 +30,8 @@ const RASTER_STYLE: StyleSpecification = {
 };
 
 const INK = '#111111';
-const ANIM_MS = 2500;
+// Leva quase o intervalo entre posições (10s): o carro anda sem parar, como na Uber.
+const ANIM_MS = 9000;
 
 function el(html: string, className = ''): HTMLDivElement {
   const d = document.createElement('div');
@@ -36,12 +40,12 @@ function el(html: string, className = ''): HTMLDivElement {
   return d;
 }
 
-const STORE_ICON = `<div class="sd-pin sd-pin-store" aria-label="Loja">
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg>
-</div>`;
-const HOME_ICON = `<div class="sd-pin sd-pin-home" aria-label="Endereço de entrega">
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
-</div>`;
+// Pino no estilo da Uber: ponto preto com etiqueta preta ao lado.
+function pinHtml(kind: 'store' | 'home', label: string): string {
+  const esc = label.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  return `<span class="sd-dot sd-dot-${kind}"></span><span class="sd-tag"><span class="sd-eta" hidden></span><span class="sd-tag-text">${esc}</span></span>`;
+}
+
 // Carro visto de cima, frente pra cima (rumo 0 = norte), como no app da Uber.
 const CAR_ICON = `<svg viewBox="0 0 24 44" width="20" height="37" aria-hidden="true">
   <rect x="2" y="2" width="20" height="40" rx="7" fill="#fff" stroke="${INK}" stroke-width="1.6"/>
@@ -79,7 +83,7 @@ const line = (pts: Pt[]) => ({
   geometry: { type: 'LineString' as const, coordinates: pts.map(p => [p.lng, p.lat]) },
 });
 
-export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaMinutes }: Props) {
+export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaMinutes, storeLabel = 'Loja', homeLabel = 'Entrega' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const mlRef = useRef<Ml | null>(null);
@@ -167,15 +171,21 @@ export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaM
     const ml = mlRef.current!;
     {
       const m = markers.current;
+      // A etiqueta vai pro lado de fora: o pino mais a leste tem a etiqueta à
+      // esquerda, senão ela sai do mapa quando o enquadramento é justo.
+      const storeEast = !!(storePt && homePt && storePt.lng > homePt.lng);
+      const pin = (kind: 'store' | 'home', label: string, left: boolean) => {
+        const node = el(pinHtml(kind, label), left ? 'sd-pin sd-pin-left' : 'sd-pin');
+        return new ml.Marker({ element: node, anchor: left ? 'right' : 'left', offset: [left ? 7 : -7, 0] });
+      };
       if (storePt) {
-        m.store ??= new ml.Marker({ element: el(STORE_ICON) }).setLngLat(storePt).addTo(map);
+        m.store ??= pin('store', storeLabel, storeEast).setLngLat(storePt).addTo(map);
         m.store!.setLngLat(storePt);
       }
       if (homePt) {
         if (!m.home) {
-          const node = el(`${HOME_ICON}<div class="sd-eta" hidden></div>`, 'sd-home');
-          m.eta = node.querySelector('.sd-eta') as HTMLElement;
-          m.home = new ml.Marker({ element: node, anchor: 'bottom' }).setLngLat(homePt).addTo(map);
+          m.home = pin('home', homeLabel, !storeEast && !!storePt).setLngLat(homePt).addTo(map);
+          m.eta = m.home.getElement().querySelector('.sd-eta') as HTMLElement;
         }
         m.home!.setLngLat(homePt);
       }
@@ -240,9 +250,9 @@ export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaM
       const start = performance.now();
       const step = (now: number) => {
         const t = Math.min(1, (now - start) / ANIM_MS);
-        const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+        const e = t; // linear: velocidade constante entre as posições
         const pos = { lat: from.pos.lat + (target.lat - from.pos.lat) * e, lng: from.pos.lng + (target.lng - from.pos.lng) * e };
-        const rot = (from.bearing + delta * Math.min(1, t * 2) + 360) % 360;
+        const rot = (from.bearing + delta * Math.min(1, t * 6) + 360) % 360;
         m.courier?.setLngLat(pos).setRotation(rot);
         shown.current = { pos, bearing: rot };
         if (t < 1) anim.current = requestAnimationFrame(step);
@@ -301,11 +311,14 @@ export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaM
       )}
       <style jsx global>{`
         .sd-map .maplibregl-ctrl-attrib { font-size: 10px; }
-        .sd-pin { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: ${INK}; box-shadow: 0 2px 8px rgba(0,0,0,.3); border: 2px solid #fff; }
-        .sd-pin-store { border-radius: 8px; }
-        .sd-pin-home { border-radius: 9999px; }
-        .sd-home { display: flex; flex-direction: column-reverse; align-items: center; gap: 4px; }
-        .sd-eta { background: ${INK}; color: #fff; font: 600 12px/1 system-ui, sans-serif; padding: 6px 9px; border-radius: 9999px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+        .sd-pin { display: flex; align-items: center; gap: 6px; pointer-events: none; }
+        .sd-pin-left { flex-direction: row-reverse; }
+        .sd-dot { width: 14px; height: 14px; border-radius: 9999px; background: ${INK}; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); flex: none; }
+        .sd-dot-store { border-radius: 3px; }
+        .sd-tag { display: inline-flex; align-items: center; gap: 6px; background: ${INK}; color: #fff; font: 600 12px/1.2 system-ui, -apple-system, sans-serif; padding: 6px 8px; box-shadow: 0 2px 8px rgba(0,0,0,.25); white-space: nowrap; max-width: 180px; }
+        .sd-tag-text { overflow: hidden; text-overflow: ellipsis; }
+        .sd-eta { background: #fff; color: ${INK}; padding: 2px 6px; font-weight: 700; }
+        .sd-eta[hidden] { display: none; }
         .sd-courier { display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
         .sd-halo { position: absolute; left: 50%; top: 50%; margin: -28px 0 0 -28px; width: 56px; height: 56px; border-radius: 9999px; background: rgba(17,17,17,.12); animation: sd-pulse 2s ease-out infinite; }
         .sd-arrow { position: relative; width: 28px; height: 28px; border-radius: 9999px; background: ${INK}; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }

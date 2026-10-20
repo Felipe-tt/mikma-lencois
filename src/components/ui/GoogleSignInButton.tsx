@@ -13,10 +13,17 @@ export function GoogleSignInButton({ onError }: Props) {
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (e: unknown) {
-      if (e instanceof Error && e.message.includes('popup-closed-by-user')) {
+      const code = (e as { code?: string } | null)?.code ?? (e instanceof Error ? e.message : '');
+      if (/popup-closed-by-user|cancelled-popup-request/.test(code)) {
         // usuário fechou, ignora
+      } else if (/popup-blocked/.test(code)) {
+        onError?.('O navegador bloqueou a janela do Google. Permita pop-ups para este site e tente de novo.');
+      } else if (/network-request-failed/.test(code)) {
+        onError?.('Erro de conexão. Verifique sua internet e tente de novo.');
+      } else if (/account-exists-with-different-credential/.test(code)) {
+        onError?.('Este e-mail já tem conta com senha. Entre com e-mail e senha.');
       } else {
-        onError?.(e instanceof Error ? e.message : 'Erro ao entrar com Google');
+        onError?.('Não foi possível entrar com o Google. Tente de novo.');
       }
     } finally {
       setLoading(false);

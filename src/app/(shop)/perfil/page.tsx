@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -138,7 +139,7 @@ export default function PerfilPage() {
       await logout().catch(() => {});
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : 'Não foi possível excluir a conta agora.');
+      setError(userMessage(err, 'Não foi possível excluir a conta agora.'));
       setDeleting(false);
     }
   };

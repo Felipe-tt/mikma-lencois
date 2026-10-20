@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -104,7 +105,7 @@ export function AuthModal() {
       }
       try {
         const res = await fetch(`/api/auth/login-challenge-status?email=${encodeURIComponent(email)}`);
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (d.expired) {
           setChallengeExpired(true);
@@ -157,14 +158,14 @@ export function AuthModal() {
       // O AuthModalProvider detecta o login (via onAuthStateChanged) e
       // fecha o modal + roda a ação pendente sozinho, nada a fazer aqui.
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '';
+      const msg = userMessage(err, '');
       if (msg.includes('Muitas tentativas')) setLoginError(msg);
       else if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found')) setLoginError('E-mail ou senha incorretos.');
       else if (msg.includes('auth/network-request-failed')) setLoginError('Erro de conexão. Verifique sua internet.');
       else if (msg.includes('auth/too-many-requests')) setLoginError('Muitas tentativas. Tente novamente em alguns minutos.');
       else if (msg.includes('auth/user-disabled')) setLoginError('Esta conta está desativada. Fale com a loja pelo WhatsApp.');
       else if (msg.includes('auth/invalid-email')) setLoginError('Confira o e-mail digitado.');
-      else setLoginError(!msg || /^(Firebase|auth\/)/i.test(msg) ? 'Não foi possível entrar. Tente de novo.' : msg);
+      else setLoginError(userMessage(err, 'Não foi possível entrar. Tente de novo.'));
     } finally {
       setLoginLoading(false);
     }
@@ -196,12 +197,12 @@ export function AuthModal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: signupName(), email: normalizeEmail(signupEmail) }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
       setSignupStep('awaiting');
       setResendCooldown(60);
     } catch (err: unknown) {
-      setSignupError(err instanceof Error ? err.message : 'Erro ao enviar. Tente novamente.');
+      setSignupError(userMessage(err, 'Erro ao enviar. Tente novamente.'));
     } finally {
       setSignupLoading(false);
     }
@@ -216,11 +217,11 @@ export function AuthModal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: signupName(), email: normalizeEmail(signupEmail) }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
       setResendCooldown(60);
     } catch (err: unknown) {
-      setSignupError(err instanceof Error ? err.message : 'Erro ao reenviar.');
+      setSignupError(userMessage(err, 'Erro ao reenviar.'));
     } finally {
       setSignupLoading(false);
     }

@@ -416,7 +416,7 @@ export async function computeShippingOptions(
         const quote = await uberQuote(pickupAddr, dropoffAddr, uberSandbox);
         options.push({
           carrier:       'uber_direct',
-          label:         uberSandbox ? 'Entrega hoje · Uber Direct (TESTE)' : 'Entrega hoje · Uber Direct',
+          label:         'Entrega hoje · Entrega expressa',
           priceCents:    quote.feeCents,
           estimatedDays: 0,
           available:     true,

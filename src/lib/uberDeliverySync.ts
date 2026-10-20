@@ -108,26 +108,37 @@ export async function ensureRoutePoints(
   opts: { vehicleType?: string; pickup?: RoutePoint | null; dropoff?: RoutePoint | null } = {},
 ): Promise<void> {
   const delivery = orderData.delivery ?? {};
-  if (delivery.routePoints?.length > 1) return;
+  const pickup = isCoord(opts.pickup) ? opts.pickup : isCoord(delivery.pickupPoint) ? delivery.pickupPoint as RoutePoint : null;
+  const dropoff = isCoord(opts.dropoff) ? opts.dropoff : isCoord(delivery.dropoffPoint) ? delivery.dropoffPoint as RoutePoint : null;
+  // Rota feita pelo CEP (aproximado) é refeita quando chegam as coordenadas
+  // exatas da Uber; a feita com elas pelas ruas não muda mais.
+  if (delivery.routePoints?.length > 1 && (delivery.routeExact || !(pickup && dropoff))) return;
+  const exact = !!(pickup && dropoff);
   const lastTry = delivery.routeAttemptAt ? Date.parse(delivery.routeAttemptAt) : 0;
-  if (lastTry && Date.now() - lastTry < ROUTE_RETRY_MS) return;
+  // A espera entre tentativas não vale quando antes só havia o CEP e agora
+  // há as coordenadas da Uber.
+  const upgrade = exact && !delivery.routeAttemptExact;
+  if (!upgrade && lastTry && Date.now() - lastTry < ROUTE_RETRY_MS) return;
 
   try {
-    await orderRef.update({ 'delivery.routeAttemptAt': new Date().toISOString() });
+    await orderRef.update({ 'delivery.routeAttemptAt': new Date().toISOString(), 'delivery.routeAttemptExact': exact });
 
-    let origin = isCoord(opts.pickup) ? opts.pickup : null;
+    let origin = pickup;
     if (!origin) {
       const settings = await getSettings();
       if (settings.originLat && settings.originLng) origin = { lat: settings.originLat, lng: settings.originLng };
     }
-    let dest = isCoord(opts.dropoff) ? opts.dropoff : null;
+    let dest = dropoff;
     const cep = orderData.address?.cep as string | undefined;
     if (!dest && cep) dest = await geocodeCep(cep);
     if (!origin || !dest) return;
 
     const route = await fetchRoute(origin, dest, opts.vehicleType);
     const routePoints = route && route.length > 1 ? route : [origin, dest];
-    await orderRef.update({ 'delivery.routePoints': routePoints });
+    await orderRef.update({
+      'delivery.routePoints': routePoints,
+      'delivery.routeExact': !!(exact && route),
+    });
   } catch (err) {
     console.warn('[uber] falha ao calcular rota (best-effort, ignorado):', err);
   }
@@ -197,6 +208,8 @@ export async function applyUberStatus(
       update['delivery.courierLng']           = null;
       update['delivery.routePoints']          = null;
       update['delivery.routeAttemptAt']       = null;
+      update['delivery.routeExact']           = null;
+      update['delivery.routeAttemptExact']    = null;
       update['delivery.pickupPoint']          = null;
       update['delivery.dropoffPoint']         = null;
       // Entregador da corrida cancelada não pode aparecer na próxima.

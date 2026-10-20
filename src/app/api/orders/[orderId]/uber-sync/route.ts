@@ -8,7 +8,7 @@ import { syncUberDelivery } from '@/lib/uberDeliverySync';
 /**
  * POST /api/orders/[orderId]/uber-sync
  *
- * A página do pedido (cliente e painel) chama a cada ~20s enquanto a corrida
+ * A página do pedido (cliente e painel) chama a cada ~10s enquanto a corrida
  * da Uber está em andamento: consulta a corrida e atualiza entregador,
  * posição e status, sem depender só dos webhooks. Dono do pedido ou equipe.
  */
@@ -33,8 +33,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   if (!staff && snap.data()!.userId !== uid) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
 
   // Por pedido, não por pessoa: cliente e painel abertos juntos dividem a
-  // mesma cota e a Uber recebe no máximo uma consulta a cada 10s.
-  if (!await rateLimit(`uber-sync:${orderId}`, 1, 10_000)) {
+  // mesma cota e a Uber recebe no máximo uma consulta a cada 8s.
+  if (!await rateLimit(`uber-sync:${orderId}`, 1, 8_000)) {
     return NextResponse.json({ status: 'skipped' });
   }
 

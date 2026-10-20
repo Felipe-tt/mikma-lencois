@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
     }
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
     const uid = decoded.uid;

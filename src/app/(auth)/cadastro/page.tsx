@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -148,12 +149,12 @@ function RegisterContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: normalizedName(), email: normalizeEmail(email), recaptchaToken }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
       setStep('awaiting');
       setResendCooldown(60);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao enviar. Tente novamente.');
+      setError(userMessage(err, 'Erro ao enviar. Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -171,13 +172,13 @@ function RegisterContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: normalizedName(), email: normalizeEmail(email), recaptchaToken }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
       setResendCooldown(60);
       setResent(true);
       setTimeout(() => setResent(false), 4000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao reenviar.');
+      setError(userMessage(err, 'Erro ao reenviar.'));
     } finally {
       setLoading(false);
     }
@@ -231,13 +232,13 @@ function RegisterContent() {
           recaptchaToken,
         }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
       await signInWithEmailAndPassword(auth, normalizeEmail(email), password);
       setStep('done');
       setTimeout(() => router.push(consumeReturnTo() ?? '/'), 2000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar conta.');
+      setError(userMessage(err, 'Erro ao criar conta.'));
     } finally {
       setLoading(false);
     }

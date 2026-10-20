@@ -432,7 +432,7 @@ export default function ConfiguracoesPage() {
               checked={!!settings.uberDirectSandboxMode}
               onChange={v => set('uberDirectSandboxMode', v)}
               hint="Ligado: usa as credenciais de teste do Uber Direct, cotações funcionam normalmente, mas nenhuma entrega real é criada nem cobrada. Desligado: usa as credenciais de produção (entregas reais, motoboy de verdade)."
-              warn="TESTE ATIVO, o checkout mostra 'Uber Direct (TESTE)' e nenhuma entrega será despachada de verdade. Desligue antes de vender de verdade."
+              warn="TESTE ATIVO: nenhuma entrega será despachada de verdade (o cliente não vê aviso de teste). Desligue antes de vender de verdade."
             />
           </Card>
 

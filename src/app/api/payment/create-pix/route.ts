@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
     }
 
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true); // checkRevoked
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     if (!ABACATEPAY_KEY) {
       console.error(abacateSandbox ? 'ABACATEPAY_SANDBOX_API_KEY not set' : 'ABACATEPAY_API_KEY not set');
-      return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'Pagamento indisponível no momento. Tente em alguns minutos.' }, { status: 500 });
     }
 
     // ── Load cart from Firestore (server-side, trusted) ──────────────────────
@@ -493,7 +493,7 @@ export async function POST(req: NextRequest) {
           updatedAt: FieldValue.serverTimestamp(),
         }).catch(() => {});
       }
-      return NextResponse.json({ error: 'Erro no provedor de pagamento' }, { status: 502 });
+      return NextResponse.json({ error: 'Não foi possível iniciar o pagamento. Tente de novo.' }, { status: 502 });
     }
 
     const pix = JSON.parse(pixText).data;
@@ -539,6 +539,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('create-pix error:', err);
     Sentry.captureException(err, { tags: { route: 'create-pix' } });
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Não foi possível concluir agora. Tente de novo.' }, { status: 500 });
   }
 }

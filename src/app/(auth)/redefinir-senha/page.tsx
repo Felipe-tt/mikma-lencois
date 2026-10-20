@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -58,11 +59,11 @@ function ResetForm() {
     (async () => {
       try {
         const res = await fetch(`/api/auth/reset-password?email=${encodeURIComponent(emailParam)}&token=${tokenParam}`);
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(d.error);
         setChecking(false);
       } catch (err: unknown) {
-        setLinkInvalid(err instanceof Error ? err.message : 'Link inválido ou expirado.');
+        setLinkInvalid(userMessage(err, 'Link inválido ou expirado.'));
         setChecking(false);
       }
     })();
@@ -81,7 +82,7 @@ function ResetForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailParam, token: tokenParam, newPassword: password }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
 
       // Login automático: a pessoa acabou de definir esta senha agora
@@ -99,7 +100,7 @@ function ResetForm() {
       setDone(true);
       setTimeout(() => router.push('/'), 2500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao redefinir. Tente novamente.');
+      setError(userMessage(err, 'Erro ao redefinir. Tente novamente.'));
     } finally {
       setLoading(false);
     }

@@ -62,7 +62,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   if (order.userId !== uid) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
   const allowedStatuses = ['pending_payment', 'payment_expired'];
   if (!allowedStatuses.includes(order.status as string)) {
-    return NextResponse.json({ error: 'Pedido não pode ter PIX gerado neste status' }, { status: 400 });
+    return NextResponse.json({ error: 'Este pedido não pode mais receber um novo PIX.' }, { status: 400 });
   }
 
   const createdAtMs = new Date(order.createdAt?.toDate?.() ?? order.createdAt).getTime();
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const ABACATEPAY_KEY = abacatePayKey(abacateSandbox);
   if (!ABACATEPAY_KEY) {
     console.error(abacateSandbox ? 'ABACATEPAY_SANDBOX_API_KEY not set' : 'ABACATEPAY_API_KEY not set');
-    return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
+    return NextResponse.json({ error: 'Pagamento indisponível no momento. Tente em alguns minutos.' }, { status: 500 });
   }
 
   const pixPayload: Record<string, unknown> = {
