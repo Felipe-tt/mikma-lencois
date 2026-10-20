@@ -138,8 +138,10 @@ export default function ContaPage() {
           <Stat
             href="/perfil"
             label="Endereço"
-            value={address === undefined ? undefined : address ? address.city : '—'}
-            hint={address ? address.state : address === null ? 'Nenhum salvo' : undefined}
+            // Rua e número, não só a cidade: dá pra conferir de relance se é
+            // o endereço certo antes de comprar.
+            value={address === undefined ? undefined : address ? `${address.street}, ${address.number}` : 'Adicionar'}
+            hint={address ? `${address.city}/${address.state}` : address === null ? 'Nenhum salvo' : undefined}
             small
             className="col-span-2 sm:col-span-1"
           />
