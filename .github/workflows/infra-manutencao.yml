@@ -21,6 +21,10 @@ on:
         description: 'Configurar a Cloudflare (SSL, firewall, limite de requisições, trava de origem)'
         type: boolean
         default: false
+      verificar_ip:
+        description: 'Testar em produção se o limite por IP resiste a IP forjado'
+        type: boolean
+        default: false
       apagar_ssr_antigo:
         description: 'Apagar a função SSR da hospedagem antiga (ssrmikmalencois), só se o domínio já estiver no App Hosting'
         type: boolean
@@ -193,3 +197,16 @@ jobs:
 
           echo "## O domínio já passa pela Cloudflare?"
           curl -sI https://mikma.com.br/ | grep -iE '^(server|cf-ray)' || true
+
+      - name: Limite por IP resiste a IP forjado?
+        if: ${{ inputs.verificar_ip }}
+        run: |
+          # /api/stock aceita 60 consultas por minuto por IP. Mandando um IP
+          # falso diferente a cada vez, o bloqueio só vem se o site usa o IP real.
+          bloqueou=0
+          for i in $(seq 1 70); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -H "fastly-client-ip: 10.0.$((i/250)).$((i%250))" -H "x-forwarded-for: 1.2.3.$i" "https://mikma.com.br/api/stock?skus=teste")
+            [ "$code" = "429" ] && bloqueou=$((bloqueou+1))
+          done
+          echo "Respostas 429: $bloqueou de 70"
+          if [ "$bloqueou" -gt 0 ]; then echo "OK: o IP forjado não engana o limite"; else echo "ATENÇÃO: limite não disparou"; fi
