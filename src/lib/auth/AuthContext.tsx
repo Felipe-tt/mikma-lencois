@@ -89,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = async () => {
+    // Convidado que sai (computador compartilhado): esquece a sessão dele.
+    if (auth.currentUser?.isAnonymous) { try { localStorage.removeItem(GUEST_TOKEN_KEY); } catch { /* ok */ } }
     await signOut(auth);
     setUser(null);
     fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
@@ -121,14 +123,16 @@ async function mergeGuestInto(account: User) {
   let guestToken: string | null = null;
   try { guestToken = localStorage.getItem(GUEST_TOKEN_KEY); } catch { return; }
   if (!guestToken) return;
-  try { localStorage.removeItem(GUEST_TOKEN_KEY); } catch { /* ok */ }
   try {
-    await fetch('/api/auth/merge-guest', {
+    const res = await fetch('/api/auth/merge-guest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await account.getIdToken()}` },
       body: JSON.stringify({ guestToken }),
     });
-  } catch { /* fica no convidado; nada quebra */ }
+    // Só esquece o convidado com resposta definitiva (feito, ou token que
+    // não vale mais). Limite, erro do servidor ou rede: tenta no próximo login.
+    if (res.ok || res.status === 400 || res.status === 401) localStorage.removeItem(GUEST_TOKEN_KEY);
+  } catch { /* fica para o próximo login; nada quebra */ }
 }
 
 export function useAuth(): AuthContextValue {

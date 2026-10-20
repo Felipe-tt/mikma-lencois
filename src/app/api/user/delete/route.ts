@@ -78,14 +78,25 @@ export async function DELETE(req: NextRequest) {
     const notifSnap = await adminDb.collection(`notifications/${uid}/items`).get();
     for (const d of notifSnap.docs) batch.delete(d.ref);
 
-    // Pedidos de "avise-me quando chegar" pendentes com o e-mail da conta.
+    // E-mail da conta, lido antes de apagá-la, para limpar os avisos abaixo.
     const accountEmail = (await adminAuth.getUser(uid).catch(() => null))?.email?.toLowerCase();
-    if (accountEmail) {
-      const alertSnap = await adminDb.collection('stockAlerts').where('email', '==', accountEmail).get();
-      for (const d of alertSnap.docs) batch.delete(d.ref);
-    }
 
     await batch.commit();
+
+    // Pedidos de "avise-me quando chegar" pendentes com esse e-mail. Em
+    // separado e sem derrubar a exclusão: o essencial já foi apagado acima.
+    if (accountEmail) {
+      try {
+        const reqSnap = await adminDb.collection('restockRequests').where('email', '==', accountEmail).limit(400).get();
+        if (!reqSnap.empty) {
+          const b2 = adminDb.batch();
+          reqSnap.docs.forEach(d => b2.delete(d.ref));
+          await b2.commit();
+        }
+      } catch (err) {
+        console.error('[user/delete] falha ao limpar avisos de estoque', err);
+      }
+    }
 
     // Revoga tokens antes de deletar, evita uso de token após exclusão
     await adminAuth.revokeRefreshTokens(uid);

@@ -2,10 +2,14 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 
-// "Avise-me quando chegar": aparece no produto esgotado. Quem está logado já
-// vem com o e-mail da conta preenchido; não exige login.
-export function StockAlert({ productId }: { productId: string }) {
+export interface RestockOption { id: string; label: string }
+
+// "Avise-me quando chegar": aparece quando a variação está esgotada. O aviso
+// é da variação (tamanho e cor) que o cliente quer; com mais de uma esgotada,
+// ele escolhe. Quem está logado já vem com o e-mail preenchido.
+export function StockAlert({ productId, options, defaultVariantId }: { productId: string; options: RestockOption[]; defaultVariantId?: string }) {
   const { user } = useAuth();
+  const [variantId, setVariantId] = useState(defaultVariantId ?? options[0]?.id ?? '');
   const [email, setEmail] = useState('');
   const [touched, setTouched] = useState(false);
   const [state, setState] = useState<'idle' | 'sending' | 'done'>('idle');
@@ -18,10 +22,10 @@ export function StockAlert({ productId }: { productId: string }) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) { setError('Confira o e-mail.'); return; }
     setState('sending'); setError('');
     try {
-      const res = await fetch(`/api/products/${encodeURIComponent(productId)}/stock-alert`, {
+      const res = await fetch(`/api/products/${encodeURIComponent(productId)}/restock-request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: clean }),
+        body: JSON.stringify({ email: clean, variantId }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Não deu para registrar agora. Tente de novo.');
       setState('done');
@@ -35,7 +39,10 @@ export function StockAlert({ productId }: { productId: string }) {
     return (
       <div role="status" className="rounded-2xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-500/[0.07] px-4 py-3.5 flex items-start gap-3 animate-fade-in">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true" className="text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
-        <p className="text-[13px] text-ink leading-snug">Pronto! Avisamos em <strong className="font-semibold break-all">{value.trim()}</strong> assim que voltar.</p>
+        <p className="text-[13px] text-ink leading-snug">
+          Pronto! Avisamos em <strong className="font-semibold break-all">{value.trim()}</strong> assim que
+          {options.length > 1 ? <> o <strong className="font-semibold">{options.find(o => o.id === variantId)?.label}</strong> voltar.</> : ' voltar.'}
+        </p>
       </div>
     );
   }
@@ -46,6 +53,22 @@ export function StockAlert({ productId }: { productId: string }) {
         <p className="text-[14px] font-semibold text-ink">Avise-me quando chegar</p>
         <p className="text-[12.5px] text-mid mt-0.5">Mandamos um e-mail assim que voltar ao estoque. É um aviso só.</p>
       </div>
+      {options.length > 1 && (
+        <div role="radiogroup" aria-label="Qual você quer" className="flex flex-wrap gap-1.5">
+          {options.map(o => (
+            <button
+              key={o.id}
+              type="button"
+              role="radio"
+              aria-checked={variantId === o.id}
+              onClick={() => setVariantId(o.id)}
+              className={`h-9 px-3.5 rounded-full border text-[12.5px] font-medium transition-colors ${variantId === o.id ? 'border-ink bg-ink text-paper' : 'border-mist-d text-mid hover:border-ink hover:text-ink'}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex gap-2">
         <label htmlFor={`alerta-${productId}`} className="sr-only">Seu e-mail</label>
         <input

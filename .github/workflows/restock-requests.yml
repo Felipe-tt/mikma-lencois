@@ -1,0 +1,30 @@
+name: Cron · Avisar estoque de volta
+
+on:
+  schedule:
+    # De hora em hora: avisa quem pediu "avise-me quando chegar" das
+    # variações que voltaram ao estoque.
+    - cron: '23 * * * *'
+  workflow_dispatch: # permite rodar manualmente
+
+permissions: {}
+
+jobs:
+  restock-requests:
+    name: Avisar estoque de volta
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar API de avisos
+        run: |
+          STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            https://mikma.com.br/api/cron/restock-requests)
+
+          echo "HTTP status: $STATUS"
+          echo "Resposta:"
+          cat /tmp/response.json
+
+          if [ "$STATUS" != "200" ]; then
+            echo "Erro: status $STATUS"
+            exit 1
+          fi

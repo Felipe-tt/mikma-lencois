@@ -135,6 +135,14 @@ export default async function ProductPage({ params }: Props) {
   try { sizeGuideColumns = JSON.parse(s.sizeGuideColumns || '[]'); } catch { sizeGuideColumns = []; }
   try { sizeGuideRows = JSON.parse(s.sizeGuideRows || '[]'); } catch { sizeGuideRows = []; }
   const sizeGuideNote = s.sizeGuideNote || '';
+  // Especificações: o tecido é sempre malha; o resto, quando cadastrado.
+  const specRows: { k: string; v: string; clay?: boolean }[] = [
+    { k: 'Tecido', v: FABRIC_LABEL },
+    // Só título de malha (ex.: 30/1); "200" de cadastro de percal antigo não.
+    ...(product.yarnCount && /^\d+\/\d+$/.test(product.yarnCount) ? [{ k: 'Título do fio', v: `Fio ${product.yarnCount}` }] : []),
+    ...(product.weightGsm ? [{ k: 'Gramatura', v: `${product.weightGsm} g/m²` }] : []),
+    ...(product.certifications ?? []).map(cert => ({ k: 'Certificação', v: cert, clay: true })),
+  ];
   const productTrusts = [
     s.productTrust1 || 'Entrega local em Blumenau em até 1h',
     s.productTrust2 || 'Frete para todo o Brasil com rastreio',
@@ -344,17 +352,14 @@ export default async function ProductPage({ params }: Props) {
                   "tipo" vindos de cadastros antigos (percal, cetim…) não
                   aparecem mais. */}
                 <div className="pt-8 first:pt-0">
-                  <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-3">Especificações do tecido</p>
-                  <dl className="grid sm:grid-cols-2 gap-x-10 border-t border-mist">
-                    {[
-                      { k: 'Tecido', v: FABRIC_LABEL },
-                      ...(product.yarnCount ? [{ k: 'Título do fio', v: `Fio ${product.yarnCount}` }] : []),
-                      ...(product.weightGsm ? [{ k: 'Gramatura', v: `${product.weightGsm} g/m²` }] : []),
-                      ...(product.certifications ?? []).map(cert => ({ k: 'Certificação', v: cert, clay: true })),
-                    ].map((row, i) => (
+                  <span className="eyebrow mb-3 block">Especificações do tecido</span>
+                  {/* Duas colunas só com mais de uma linha: com uma, ela ocupava
+                      meia largura e a divisória ficava desencontrada. */}
+                  <dl className={`grid gap-x-10 border-t border-mist ${specRows.length > 1 ? 'sm:grid-cols-2' : ''}`}>
+                    {specRows.map((row, i) => (
                       <div key={i} className="sd-rise flex items-baseline justify-between gap-4 py-3 border-b border-mist">
                         <dt className="text-[12px] text-mid">{row.k}</dt>
-                        <dd className={`text-[13px] font-semibold text-right ${'clay' in row && row.clay ? 'text-clay' : 'text-ink'}`}>{row.v}</dd>
+                        <dd className={`text-[13px] font-semibold text-right ${row.clay ? 'text-clay' : 'text-ink'}`}>{row.v}</dd>
                       </div>
                     ))}
                   </dl>

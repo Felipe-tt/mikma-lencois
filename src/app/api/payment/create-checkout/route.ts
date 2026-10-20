@@ -20,6 +20,7 @@ import { computeProductsCents, validateCoupon, computeCardTotalCents, installmen
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 import { createCheckoutSchema } from './schema';
+import { guardGuestPayment } from '@/lib/guestGuard';
 import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { createCardCharge } from '@/lib/abacatepayApi';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
@@ -46,6 +47,10 @@ export async function POST(req: NextRequest) {
 
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
     const uid = decoded.uid;
+
+    // Convidado: precisa ter feito o registro com reCAPTCHA; limite por IP.
+    const guestBlock = await guardGuestPayment(decoded, ip);
+    if (guestBlock) return guestBlock;
 
     // 10/h: no cartão no site, cada cartão recusado é uma nova tentativa.
     if (!await rateLimit(`checkout:uid:${uid}`, 10, 60 * 60 * 1000)) {

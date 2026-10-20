@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
@@ -14,9 +14,8 @@ import { PerfilSkeleton } from '@/components/ui/Skeleton';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import type { Address } from '@/types';
 import { Select } from '@/components/ui/Select';
+import { EMPTY_ADDRESS, toAddress, streetLine } from '@/lib/address';
 import { maskCep, maskCpf, maskPhone, onlyDigits, isValidCep, isValidPhone, BR_STATES } from '@/lib/masks';
-
-const EMPTY_ADDRESS: Address = { cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' };
 
 export default function PerfilPage() {
   const { user, userData, loading, logout } = useAuth();
@@ -34,6 +33,10 @@ export default function PerfilPage() {
   const [phone, setPhone] = useState('');
   const [cpf, setCpf] = useState('');
   const [savedPhone, setSavedPhone] = useState('');
+  const [savedName, setSavedName] = useState<string | null>(null);
+  const phoneTouched = useRef(false);
+  const [addrStatus, setAddrStatus] = useState('');
+  const editAddrBtn = useRef<HTMLButtonElement>(null);
   const [phoneErr, setPhoneErr] = useState('');
   const [editingAddress, setEditingAddress] = useState(false);
   const [removingAddress, setRemovingAddress] = useState(false);
@@ -59,10 +62,12 @@ export default function PerfilPage() {
       .then(snap => {
         if (cancelled) return;
         const d = snap.data();
-        setAddress((d?.address as Address | undefined) ?? null);
+        setAddress(toAddress(d?.address));
         const ph = typeof d?.phone === 'string' ? maskPhone(d.phone) : '';
         const cp = typeof d?.cpf === 'string' ? maskCpf(d.cpf) : '';
-        setPhone(ph); setSavedPhone(ph);
+        // Não apaga o que a pessoa já começou a digitar (rede lenta).
+        if (!phoneTouched.current) setPhone(ph);
+        setSavedPhone(ph);
         setCpf(cp);
       })
       .catch(() => { if (!cancelled) setAddress(null); });
@@ -74,12 +79,16 @@ export default function PerfilPage() {
   const handleSave = async () => {
     const clean = name.trim();
     if (!clean) { setError('Digite seu nome.'); return; }
+    // Mesmas regras do Firestore: sem isso a gravação era recusada e a
+    // mensagem falava em conexão.
+    if (clean.length > 100 || /[<>]/.test(clean)) { setError('O nome pode ter até 100 caracteres, sem < ou >.'); return; }
     if (phone && !isValidPhone(phone)) { setPhoneErr('Informe o celular com DDD'); return; }
     setPhoneErr('');
     setSaving(true); setError('');
     try {
       await setDoc(doc(db, 'users', user.uid), { name: clean, phone: onlyDigits(phone) }, { merge: true });
       setSavedPhone(phone);
+      setSavedName(clean);
       // Atualiza também o nome do login, que é o que aparece em "Olá, X".
       if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: clean }).catch(() => {});
       setSaved(true);
@@ -169,7 +178,7 @@ export default function PerfilPage() {
   const usesPassword = providers.includes('password');
   const usesGoogle = providers.includes('google.com');
   const initial = (name || user.email || '?').trim().charAt(0).toUpperCase();
-  const dirty = name.trim() !== (userData?.name ?? user.displayName ?? '').trim() || phone !== savedPhone;
+  const dirty = name.trim() !== (savedName ?? userData?.name ?? user.displayName ?? '').trim() || phone !== savedPhone;
 
   return (
     <div>
@@ -202,7 +211,7 @@ export default function PerfilPage() {
             <div className="flex flex-col gap-4">
               <div>
                 <label htmlFor="perfil-nome" className="label">Nome completo</label>
-                <input id="perfil-nome" value={name} onChange={e => { setNameTouched(true); setName(e.target.value); setSaved(false); }} autoComplete="name" className="input" />
+                <input id="perfil-nome" maxLength={100} value={name} onChange={e => { setNameTouched(true); setName(e.target.value); setSaved(false); }} autoComplete="name" className="input" />
               </div>
               <div>
                 <label htmlFor="perfil-email" className="label">E-mail</label>
@@ -214,7 +223,7 @@ export default function PerfilPage() {
               </div>
               <div>
                 <label htmlFor="perfil-phone" className="label">Celular / WhatsApp</label>
-                <input id="perfil-phone" value={phone} onChange={e => { setPhone(maskPhone(e.target.value)); setSaved(false); setPhoneErr(''); }}
+                <input id="perfil-phone" value={phone} onChange={e => { phoneTouched.current = true; setPhone(maskPhone(e.target.value)); setSaved(false); setPhoneErr(''); }}
                   type="tel" maxLength={15} placeholder="(47) 99999-0000" autoComplete="tel"
                   aria-invalid={!!phoneErr} aria-describedby={phoneErr ? 'perfil-phone-err' : 'perfil-phone-dica'}
                   className={`input ${phoneErr ? '!border-red-400' : ''}`} />
@@ -254,11 +263,15 @@ export default function PerfilPage() {
             ) : editingAddress ? (
               <AddressForm
                 initial={address ?? EMPTY_ADDRESS}
-                onCancel={() => setEditingAddress(false)}
+                onCancel={() => { setEditingAddress(false); requestAnimationFrame(() => editAddrBtn.current?.focus()); }}
                 onSave={async next => {
                   await setDoc(doc(db, 'users', user.uid), { address: next }, { merge: true });
                   setAddress(next);
                   setEditingAddress(false);
+                  setAddrStatus('Endereço salvo');
+                  setTimeout(() => setAddrStatus(''), 2500);
+                  // O formulário some: o foco volta para o botão de editar.
+                  requestAnimationFrame(() => editAddrBtn.current?.focus());
                 }}
               />
             ) : address ? (
@@ -268,25 +281,31 @@ export default function PerfilPage() {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                   </span>
                   <address className="not-italic text-[13.5px] text-ink leading-relaxed min-w-0">
-                    {address.street}, {address.number}{address.complement ? ` · ${address.complement}` : ''}<br />
-                    <span className="text-mid">{address.neighborhood} · {address.city}/{address.state}</span><br />
-                    <span className="text-mid">CEP {maskCep(address.cep)}</span>
+                    {streetLine(address)}{address.complement ? ` · ${address.complement}` : ''}<br />
+                    <span className="text-mid">{[address.neighborhood, [address.city, address.state].filter(Boolean).join('/')].filter(Boolean).join(' · ')}</span>
+                    {address.cep && <><br /><span className="text-mid">CEP {maskCep(address.cep)}</span></>}
                   </address>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                  <button onClick={() => setEditingAddress(true)} className="btn-outline">
+                  <button ref={editAddrBtn} onClick={() => setEditingAddress(true)} className="btn-outline">
                     Editar endereço
                   </button>
                   <button onClick={handleRemoveAddress} disabled={removingAddress} className="text-[13px] font-medium text-mid hover:text-red-600 transition-colors disabled:opacity-50">
                     {removingAddress ? 'Removendo…' : 'Remover'}
                   </button>
+                  {addrStatus && (
+                    <span role="status" className="text-[12.5px] text-emerald-700 font-medium flex items-center gap-1.5 animate-fade-in">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                      {addrStatus}
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-mist-d px-5 py-6 text-center">
                 <p className="text-[13.5px] text-ink font-medium">Nenhum endereço salvo</p>
                 <p className="text-[12.5px] text-mid mt-1 mb-4">Salve agora e o checkout já vem preenchido.</p>
-                <button onClick={() => setEditingAddress(true)} className="btn-outline">
+                <button ref={editAddrBtn} onClick={() => setEditingAddress(true)} className="btn-outline">
                   Adicionar endereço
                 </button>
               </div>
@@ -403,21 +422,29 @@ function AddressForm({ initial, onSave, onCancel }: { initial: Address; onSave: 
     setErrors(e => ({ ...e, [k]: undefined }));
   };
 
+  // Só a resposta do último CEP digitado vale: corrigir o CEP rápido não
+  // deixa a resposta atrasada do anterior sobrescrever o endereço.
+  const lastCep = useRef('');
   async function lookupCep(masked: string) {
     const c = onlyDigits(masked);
     if (c.length !== 8) return;
+    lastCep.current = c;
     setCepLoading(true); setCepMsg('');
     try {
       const d = await (await fetch(`https://viacep.com.br/ws/${c}/json/`)).json();
+      if (lastCep.current !== c) return;
       if (d.erro) { setCepMsg('CEP não encontrado. Confira ou preencha o endereço à mão.'); return; }
-      setAddr(a => ({ ...a, street: d.logradouro || a.street, neighborhood: d.bairro || a.neighborhood, city: d.localidade || a.city, state: d.uf || a.state }));
+      // CEP de cidade inteira vem sem rua e bairro: limpa os antigos em vez
+      // de manter a rua de outra cidade.
+      setAddr(a => ({ ...a, street: d.logradouro ?? '', neighborhood: d.bairro ?? '', city: d.localidade || a.city, state: d.uf || a.state }));
+      if (!d.logradouro) setCepMsg('Esse CEP é da cidade toda. Preencha a rua e o bairro.');
       setErrors({});
       // Rua veio do CEP: o próximo campo útil é o número.
       if (d.logradouro) document.getElementById('perfil-number')?.focus();
     } catch {
-      setCepMsg('Não deu para buscar o CEP agora. Preencha o endereço à mão.');
+      if (lastCep.current === c) setCepMsg('Não deu para buscar o CEP agora. Preencha o endereço à mão.');
     } finally {
-      setCepLoading(false);
+      if (lastCep.current === c) setCepLoading(false);
     }
   }
 

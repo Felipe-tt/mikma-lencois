@@ -58,7 +58,11 @@ export async function sendEmail({ to, subject, text, html, from = 'noreply', rep
     html: finalHtml,
     ...(replyTo ? { replyTo } : {}),
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // `code` = nome do erro do Resend (validation_error, rate_limit_exceeded…):
+    // quem chama distingue e-mail inválido de falha passageira.
+    throw Object.assign(new Error(error.message), { code: error.name });
+  }
   return data;
 }
 
