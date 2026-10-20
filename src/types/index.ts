@@ -184,6 +184,13 @@ export interface Order {
     courierLng?: number
     courierLocationAt?: string  // ISO, quando essa posição foi recebida
     routePoints?: { lat: number; lng: number }[]  // rota loja→cliente (calculada 1x quando o motoboy é atribuído)
+    pickupPoint?: { lat: number; lng: number }    // onde a Uber coleta (loja)
+    dropoffPoint?: { lat: number; lng: number }   // onde a Uber entrega (cliente)
+    courierCar?: string         // marca e modelo ("Toyota Prius")
+    courierCarColor?: string
+    courierPlate?: string
+    courierRating?: number
+    uberLastStatus?: string     // último status da corrida (pending, pickup, pickup_complete, dropoff…)
   }
   address: Address
   totalCents: number

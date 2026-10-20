@@ -76,7 +76,14 @@ export interface CourierInfo {
   phone_number?: string;
   img_href?: string;
   vehicle_type?: string;
+  vehicle_make?: string;
+  vehicle_model?: string;
+  vehicle_color?: string;
+  vehicle_license_plate?: string;
+  rating?: number | string;
 }
+
+const text = (v: unknown, max = 60) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined);
 
 function isCoord(p?: { lat?: number; lng?: number } | null): p is RoutePoint {
   return typeof p?.lat === 'number' && typeof p?.lng === 'number'
@@ -190,6 +197,13 @@ export async function applyUberStatus(
       update['delivery.courierLng']           = null;
       update['delivery.routePoints']          = null;
       update['delivery.routeAttemptAt']       = null;
+      update['delivery.pickupPoint']          = null;
+      update['delivery.dropoffPoint']         = null;
+      // Entregador da corrida cancelada não pode aparecer na próxima.
+      for (const f of ['courierName', 'courierPhone', 'courierPhoto', 'courierVehicle', 'courierCar', 'courierCarColor',
+        'courierPlate', 'courierRating', 'courierLocationAt', 'pickupEta', 'dropoffEta', 'uberLastStatus']) {
+        update[`delivery.${f}`] = null;
+      }
     }
 
     tx.update(orderRef, update);
@@ -242,6 +256,14 @@ export function courierUpdate(
   if (courier?.phone_number) update['delivery.courierPhone']   = courier.phone_number;
   if (courier?.img_href)     update['delivery.courierPhoto']   = courier.img_href;
   if (courier?.vehicle_type) update['delivery.courierVehicle'] = courier.vehicle_type;
+  // Carro, cor e placa, como no app da Uber (nem toda conta/veículo manda).
+  const make = text(courier?.vehicle_make), model = text(courier?.vehicle_model);
+  const color = text(courier?.vehicle_color, 30), plate = text(courier?.vehicle_license_plate, 12);
+  if (make || model) update['delivery.courierCar'] = [make, model].filter(Boolean).join(' ');
+  if (color)         update['delivery.courierCarColor'] = color;
+  if (plate)         update['delivery.courierPlate'] = plate.toUpperCase();
+  const rating = Number(courier?.rating);
+  if (Number.isFinite(rating) && rating > 0 && rating <= 5) update['delivery.courierRating'] = Math.round(rating * 10) / 10;
   if (isCoord(location)) {
     update['delivery.courierLat']        = location.lat;
     update['delivery.courierLng']        = location.lng;
@@ -278,6 +300,13 @@ export async function syncUberDelivery(orderId: string): Promise<string | null> 
   if (ACTIVE_STATUSES.has(status)) {
     const update = courierUpdate(d.courier, d.courier?.location, { pickupEta: d.pickup_eta, dropoffEta: d.dropoff_eta });
     if (d.tracking_url && d.tracking_url !== order.delivery?.trackingUrl) update['delivery.trackingUrl'] = d.tracking_url;
+    // Pinos da loja e do cliente exatamente onde a Uber vai coletar e entregar.
+    if (isCoord(d.pickup?.location) && !order.delivery?.pickupPoint) {
+      update['delivery.pickupPoint'] = { lat: d.pickup.location.lat, lng: d.pickup.location.lng };
+    }
+    if (isCoord(d.dropoff?.location) && !order.delivery?.dropoffPoint) {
+      update['delivery.dropoffPoint'] = { lat: d.dropoff.location.lat, lng: d.dropoff.location.lng };
+    }
     if (Object.keys(update).length) {
       // Só grava se a corrida ainda é a mesma (pode ter sido cancelada nesse meio-tempo).
       await adminDb.runTransaction(async tx => {

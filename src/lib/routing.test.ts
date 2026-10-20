@@ -30,10 +30,31 @@ describe('fetchRoute', () => {
     global.fetch = originalFetch;
   });
 
-  it('retorna null sem lançar quando ORS_API_KEY não está configurada', async () => {
+  it('sem ORS_API_KEY usa o OSRM público', async () => {
     delete process.env.ORS_API_KEY;
+    const mock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ routes: [{ geometry: { coordinates: [[-49.0, -26.9], [-49.02, -26.905], [-49.05, -26.91]] } }] }),
+    });
+    global.fetch = mock as unknown as typeof fetch;
+
     const result = await fetchRoute({ lat: -26.9, lng: -49.0 }, { lat: -26.91, lng: -49.05 });
-    expect(result).toBeNull();
+    expect(String(mock.mock.calls[0][0])).toContain('routing.openstreetmap.de/routed-car/');
+    expect(result).toEqual([
+      { lat: -26.9, lng: -49.0 },
+      { lat: -26.905, lng: -49.02 },
+      { lat: -26.91, lng: -49.05 },
+    ]);
+  });
+
+  it('ORS com erro cai pro OSRM', async () => {
+    process.env.ORS_API_KEY = 'test-key';
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => 'erro' })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ routes: [{ geometry: { coordinates: [[-49.0, -26.9], [-49.05, -26.91]] } }] }) }) as unknown as typeof fetch;
+
+    const result = await fetchRoute({ lat: -26.9, lng: -49.0 }, { lat: -26.91, lng: -49.05 });
+    expect(result).toHaveLength(2);
   });
 
   it('converte coordenadas [lng, lat] do GeoJSON pra [lat, lng]', async () => {
