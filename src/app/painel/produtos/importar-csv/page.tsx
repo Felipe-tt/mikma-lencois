@@ -1,5 +1,6 @@
 'use client';
 
+import { plural } from '@/lib/plural';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { parseBRL } from '@/lib/parseBRL';
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -274,7 +275,7 @@ export default function ImportarCsvPage() {
           return;
         }
         setStaging((prev) => [...prev, ...items]);
-        if (skipped > 0) setCsvError(`${skipped} linha(s) ignorada(s) por não ter nome.`);
+        if (skipped > 0) setCsvError(`${plural(skipped, 'linha ignorada', 'linhas ignoradas')} por não ter nome.`);
       } catch (err) {
         setCsvError(err instanceof Error ? err.message : 'Não foi possível ler esse CSV.');
       }
@@ -395,7 +396,7 @@ export default function ImportarCsvPage() {
     );
     setDrafts((prev) => prev.filter((d) => d.status === 'published' || failedIds.has(d.id)));
     if (failedIds.size > 0) {
-      setDraftsError(`${failedIds.size} rascunho(s) não foram apagados, tente de novo.`);
+      setDraftsError(`${failedIds.size === 1 ? '1 rascunho não foi apagado' : `${failedIds.size} rascunhos não foram apagados`}, tente de novo.`);
     }
     setDeletingAll(false);
   }

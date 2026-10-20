@@ -1,5 +1,6 @@
 'use client';
 
+import { plural } from '@/lib/plural';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconMoney, IconBox, IconReceipt, IconTrophy, IconTruck, IconReports, IconAlert } from '@/components/ui/Icon';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
@@ -257,7 +258,7 @@ export default function RelatoriosPage() {
                         <span className="text-[13px] text-ink font-medium truncate">{p.name}</span>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-[11px] text-faint tabular-nums">{p.qty} un.</span>
+                        <span className="text-[11px] text-faint tabular-nums">{plural(p.qty, 'unidade', 'unidades')}</span>
                         <span className="text-[13px] font-semibold text-ink tabular-nums">{fmt(p.revenue)}</span>
                       </div>
                     </div>

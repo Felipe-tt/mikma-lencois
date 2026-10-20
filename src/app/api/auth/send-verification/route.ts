@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { plural } from '@/lib/plural';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDb } from '@/lib/firebase/admin';
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!await rateLimit(ipKey, 3, 15 * 60 * 1000)) {
     const wait = Math.ceil(rateLimitRetryAfter(ipKey) / 60000);
     return NextResponse.json(
-      { error: `Muitas tentativas. Aguarde ${wait} minuto(s).` },
+      { error: `Muitas tentativas. Aguarde ${plural(wait, 'minuto', 'minutos')}.` },
       { status: 429 }
     );
   }

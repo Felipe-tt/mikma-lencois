@@ -1,5 +1,6 @@
 'use client';
 
+import { plural } from '@/lib/plural';
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -825,7 +826,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   </p>
                   {shipping?.estimatedDays !== undefined && !isPickup && (
                     <p className="text-[11px] text-faint mt-0.5">
-                      Prazo: {shipping.estimatedDays === 0 ? 'hoje' : `${shipping.estimatedDays} dias úteis`}
+                      Prazo: {shipping.estimatedDays === 0 ? 'hoje' : plural(shipping.estimatedDays, 'dia útil', 'dias úteis')}
                     </p>
                   )}
                 </div>

@@ -1,4 +1,5 @@
 'use client';
+import { plural } from '@/lib/plural';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, increment, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -115,7 +116,7 @@ export default function TrocasPage() {
       });
       showToast(
         restock
-          ? (missing > 0 ? `Concluído. ${missing} item(ns) não achado(s) no estoque pra repor.` : 'Concluído e devolvido ao estoque.')
+          ? (missing > 0 ? `Concluído. ${plural(missing, 'item não achado', 'itens não achados')} no estoque pra repor.` : 'Concluído e devolvido ao estoque.')
           : 'Concluído (sem repor estoque).'
       );
     } catch (err) {

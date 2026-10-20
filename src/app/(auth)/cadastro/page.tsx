@@ -41,7 +41,7 @@ function PasswordStrength({ password, email }: { password: string; email: string
     return <p className="mt-2 text-xs text-faint">Use {PASSWORD_MIN} ou mais caracteres. Uma frase longa é melhor que símbolos.</p>;
   }
   if (password.length < PASSWORD_MIN) {
-    return <p className="mt-2 text-xs text-faint" aria-live="polite">Faltam {PASSWORD_MIN - password.length} caractere(s).</p>;
+    return <p className="mt-2 text-xs text-faint" aria-live="polite">{PASSWORD_MIN - password.length === 1 ? 'Falta 1 caractere.' : `Faltam ${PASSWORD_MIN - password.length} caracteres.`}</p>;
   }
   if (!report) return <p className="mt-2 text-xs text-faint" aria-live="polite">Analisando…</p>;
 
