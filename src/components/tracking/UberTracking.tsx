@@ -78,20 +78,29 @@ function CarArt({ color, loaded }: { color: string; loaded: boolean }) {
   );
 }
 
-/** Moto de lado, com o baú de entrega (pacote verde depois da coleta). */
+/** Moto de lado, com o baú no bagageiro (verde, com o pacote, depois da coleta). */
 function MotoArt({ color, loaded }: { color: string; loaded: boolean }) {
   return (
     <svg viewBox="0 0 120 52" className="h-auto w-full" aria-hidden="true">
-      <ellipse cx="60" cy="47" rx="46" ry="3" fill="#000" opacity=".12" />
-      <circle cx="28" cy="38" r="9" fill="#1C1C1C" /><circle cx="28" cy="38" r="3.5" fill="#9AA0A6" />
-      <circle cx="92" cy="38" r="9" fill="#1C1C1C" /><circle cx="92" cy="38" r="3.5" fill="#9AA0A6" />
-      <path d="M28 38l14-14h26l8 8h10l6 6" fill="none" stroke="#3A3F45" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M44 22h26l10 10H50z" fill={color} stroke="#000" strokeOpacity=".5" strokeWidth="1.2" />
-      <path d="M38 20h14" stroke="#1C1C1C" strokeWidth="4" strokeLinecap="round" />
-      <path d="M84 30l6-14M86 16h8" stroke="#3A3F45" strokeWidth="3" strokeLinecap="round" />
-      <rect x={loaded ? 20 : 22} y={loaded ? 6 : 10} width={loaded ? 24 : 20} height={loaded ? 18 : 14} rx="3"
-        fill={loaded ? UBER_GREEN : '#2B2F35'} />
-      {loaded && <path d="M32 7v16M21 15h22" stroke="#fff" strokeOpacity=".75" strokeWidth="1.6" />}
+      <ellipse cx="60" cy="47.5" rx="48" ry="2.6" fill="#000" opacity=".12" />
+      {/* bagageiro preso no quadro, com o baú em cima */}
+      <path d="M15 27h28" stroke="#3A3F45" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M26 27l7 8" stroke="#3A3F45" strokeWidth="2.2" strokeLinecap="round" />
+      <rect x="15" y={loaded ? 9 : 12} width="24" height={loaded ? 17 : 14} rx="2.5"
+        fill={loaded ? UBER_GREEN : '#2B2F35'} stroke={loaded ? '#04883F' : '#16191C'} strokeWidth="1" />
+      {loaded
+        ? <path d="M27 10v15M16 17.5h22" stroke="#fff" strokeOpacity=".8" strokeWidth="1.5" />
+        : <path d="M17 16h20" stroke="#fff" strokeOpacity=".15" strokeWidth="1.5" />}
+      <circle cx="27" cy="38" r="9" fill="#1C1C1C" /><circle cx="27" cy="38" r="3.4" fill="#9AA0A6" />
+      <circle cx="93" cy="38" r="9" fill="#1C1C1C" /><circle cx="93" cy="38" r="3.4" fill="#9AA0A6" />
+      <path d="M27 38L48 34" stroke="#3A3F45" strokeWidth="3" strokeLinecap="round" />
+      <rect x="46" y="29" width="16" height="10" rx="3" fill="#3A3F45" />
+      <path d="M40 27c2-4 6-6 11-6h16c5 0 9 2 12 6l3 4H48c-4 0-7-1-8-4z" fill={color} stroke="#000" strokeOpacity=".45" strokeWidth="1.2" />
+      <path d="M38 22.5c3-2.5 7-3.5 12-3.5h10" stroke="#1C1C1C" strokeWidth="4.5" strokeLinecap="round" />
+      <path d="M93 38L85 16" stroke="#3A3F45" strokeWidth="3" strokeLinecap="round" />
+      <path d="M84 30c4-2 10-2 15 1" stroke={color} strokeWidth="3" strokeLinecap="round" fill="none" />
+      <path d="M80 14h10" stroke="#1C1C1C" strokeWidth="3.2" strokeLinecap="round" />
+      <circle cx="90" cy="21" r="2.2" fill="#F6E7A1" />
     </svg>
   );
 }
@@ -129,10 +138,12 @@ export function UberTracking({ delivery, audience, addressLabel }: Props) {
   const hasCourierPos = typeof delivery.courierLat === 'number' && typeof delivery.courierLng === 'number';
   const stale = hasCourierPos && delivery.courierLocationAt && now !== null && now - Date.parse(delivery.courierLocationAt) > 5 * 60_000;
   const color = courierCarColor(delivery.courierCarColor);
-  const carName = [delivery.courierCar, color?.label].filter(Boolean).join(' ');
   const vehicle = (delivery.courierVehicle ?? 'car').toLowerCase();
   const isMoto = ['motorcycle', 'scooter', 'moto'].includes(vehicle);
   const isCar = !isMoto && !['bicycle', 'walker'].includes(vehicle);
+  // A moto: concorda a cor no feminino ("Vermelha", "Branca").
+  const colorLabel = color && isMoto && /o$/.test(color.label) && color.label !== 'Vinho' ? color.label.replace(/o$/, 'a') : color?.label;
+  const carName = [delivery.courierCar, colorLabel].filter(Boolean).join(' ');
 
   return (
     <div className="overflow-hidden rounded-2xl border border-mist bg-paper">
