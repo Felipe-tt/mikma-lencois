@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { checkPassword } from '@/lib/validation/password';
 import { plural } from '@/lib/plural';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -80,6 +81,13 @@ export async function POST(req: NextRequest) {
   if (data.token !== token) {
     await ref.update({ attempts: (data.attempts ?? 0) + 1 });
     return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
+  }
+
+  // Mesmas regras do cadastro (força e senha vazada): antes a troca de
+  // senha aceitava qualquer coisa com 8 caracteres.
+  const passwordReport = await checkPassword(newPassword, { email });
+  if (!passwordReport.ok) {
+    return NextResponse.json({ error: passwordReport.error }, { status: 400 });
   }
 
   try {

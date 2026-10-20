@@ -8,7 +8,7 @@ Sentry.init({
   dsn: process.env.SENTRY_DSN,
   enabled: !!process.env.SENTRY_DSN,
   environment: process.env.NODE_ENV,
-  tracesSampleRate: 0.1,
+  tracesSampleRate: 0.02, // 2%: cada amostra passa pelo Cloud Run (túnel /monitoring)
   // Nunca manda o conteúdo de request/response (pode conter dados de
   // pagamento, endereço, etc), só stack trace e contexto do erro.
   sendDefaultPii: false,

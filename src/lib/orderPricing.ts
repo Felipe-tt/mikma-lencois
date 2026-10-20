@@ -48,9 +48,12 @@ export function validateCoupon(coupon: CouponLike, productsCents: number, now: D
   if (coupon.minOrderCents != null && productsCents < coupon.minOrderCents) {
     return { valid: false, reason: `Pedido mínimo de R$ ${(coupon.minOrderCents / 100).toFixed(2)}`, discountCents: 0 };
   }
-  const discountCents = coupon.type === 'percent'
+  const raw = coupon.type === 'percent'
     ? Math.round((productsCents * coupon.value) / 100)
     : coupon.value;
+  // Desconto nunca passa do valor dos produtos: cupom de valor fixo maior
+  // que o carrinho abatia também o frete (que a loja paga de verdade).
+  const discountCents = Math.max(0, Math.min(raw, productsCents));
   return { valid: true, discountCents };
 }
 

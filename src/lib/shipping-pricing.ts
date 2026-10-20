@@ -64,13 +64,13 @@ export async function geocodeCep(cep: string): Promise<{ lat: number; lng: numbe
   } catch { /* cache miss */ }
 
   try {
-    const v = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+    const v = await fetch(`https://viacep.com.br/ws/${clean}/json/`, { signal: AbortSignal.timeout(4000) });
     const d = await v.json();
     if (d.erro) return null;
     const q = encodeURIComponent(`${d.logradouro ?? ''}, ${d.localidade}, ${d.uf}, Brasil`);
     const g = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
-      { headers: { 'User-Agent': 'MikmaLencoisShipping/1.0 (+https://mikma.com.br)' } }
+      { headers: { 'User-Agent': 'MikmaLencoisShipping/1.0 (+https://mikma.com.br)' }, signal: AbortSignal.timeout(5000) }
     );
     const [hit] = await g.json();
     if (!hit) return null;
@@ -232,6 +232,8 @@ async function quoteJadlog(
     try {
       const res = await fetch('https://www.jadlog.com.br/embarcador/api/frete/valor', {
         method: 'POST',
+        // Sem timeout, transportadora lenta segurava a requisição (e a vaga no servidor).
+        signal: AbortSignal.timeout(8000),
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           frete: {
@@ -286,6 +288,8 @@ async function quoteCorreiosDireto(
   try {
     const authRes = await fetch('https://cws.correios.com.br/token', {
       method: 'POST',
+      // Sem timeout, transportadora lenta segurava a requisição (e a vaga no servidor).
+      signal: AbortSignal.timeout(8000),
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Basic ${Buffer.from(`${cartao}:${codigo}`).toString('base64')}`,
@@ -308,6 +312,8 @@ async function quoteCorreiosDireto(
     try {
       const res = await fetch('https://cws.correios.com.br/calculo/preco/nacional', {
         method: 'POST',
+        // Sem timeout, transportadora lenta segurava a requisição (e a vaga no servidor).
+        signal: AbortSignal.timeout(8000),
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           idLote: '1',
