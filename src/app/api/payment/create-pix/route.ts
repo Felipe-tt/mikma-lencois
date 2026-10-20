@@ -26,7 +26,7 @@ import { createPixSchema } from './schema';
 import { sendEmail, emailEnabled } from '@/lib/email';
 import { buildPixPending } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
-import { guardGuestPayment } from '@/lib/guestGuard';
+import { guardGuestPayment, guestUnitsBlock } from '@/lib/guestGuard';
 
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
@@ -103,6 +103,8 @@ export async function POST(req: NextRequest) {
     const cartData = cartSnap.data()!;
     const cartItems: Array<{ sku: string; productId: string; quantity: number; note?: string; swapSku?: string; swapQtyPerUnit?: number }> = cartData.items;
     const cartCouponCode: string | null = cartData.couponCode ?? null;
+    const guestUnits = guestUnitsBlock(decoded, cartItems);
+    if (guestUnits) return guestUnits;
 
     // Carrinho é escrito direto pelo client SDK, quantity é dado não
     // confiável — quantidade negativa passaria ilesa pela checagem de
@@ -470,7 +472,9 @@ export async function POST(req: NextRequest) {
     }));
 
     const pixText = await pixRes.text();
-    console.log('AbacatePay status:', pixRes.status, 'body:', pixText);
+    // Só o status: o corpo traz o código PIX e dados do cliente, que não
+    // devem ir pro log (em erro ele vai pro Sentry, logo abaixo).
+    console.log('AbacatePay status:', pixRes.status);
 
     if (!pixRes.ok) {
       // Sem isso, o motivo real (o que a AbacatePay respondeu) só ia pro

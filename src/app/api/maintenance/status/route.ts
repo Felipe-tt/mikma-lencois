@@ -12,20 +12,27 @@ import { maintenanceDocId } from '@/lib/maintenanceQueue';
 // client-side pra quando uma página cacheada é servida sem passar pelo
 // middleware). Não expõe nada sensível: só se a manutenção está ativa e se
 // quem está perguntando já pode ver o site (IP liberado OU staff logado).
+const NO_STORE = { headers: { 'Cache-Control': 'private, no-store' } };
+
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
 
   // Rate limit: 20 req/min por IP, cobre um polling de ~5s com folga.
   if (!await rateLimit(`maintenance-status:${ip}`, 20, 60 * 1000)) {
     // Silencioso: mantém o cliente em manutenção em vez de expor o limite.
-    return NextResponse.json({ active: true, released: false });
+    return NextResponse.json({ active: true, released: false }, NO_STORE);
   }
 
   const statusSnap = await adminDb.doc('maintenance/status').get();
   const active = statusSnap.exists ? (statusSnap.data()?.active ?? false) : false;
 
   if (!active) {
-    return NextResponse.json({ active: false, released: false });
+    // Sem manutenção (o normal): a CDN pode responder por 10s, então cada
+    // visita deixa de bater no Cloud Run, Upstash e Firestore. Com manutenção
+    // ativa a resposta segue sem cache (depende do IP e do cookie).
+    return NextResponse.json({ active: false, released: false }, {
+      headers: { 'Cache-Control': 'public, max-age=0, s-maxage=10, stale-while-revalidate=20' },
+    });
   }
 
   // Mesma checagem de bypass do middleware.ts, sem isso, o MaintenanceGate
@@ -36,12 +43,12 @@ export async function GET(req: NextRequest) {
   const staffSecret = process.env.STAFF_SESSION_SECRET;
   if (staffCookie && staffSecret) {
     const staff = await verifyStaffSession(staffCookie, staffSecret);
-    if (staff) return NextResponse.json({ active, released: true });
+    if (staff) return NextResponse.json({ active, released: true }, NO_STORE);
   }
 
   const docId = await maintenanceDocId(ip, process.env.STAFF_SESSION_SECRET);
   const queueSnap = await adminDb.doc(`maintenance_queue/${docId}`).get();
   const released = queueSnap.exists ? (queueSnap.data()?.released ?? false) : false;
 
-  return NextResponse.json({ active, released });
+  return NextResponse.json({ active, released }, NO_STORE);
 }

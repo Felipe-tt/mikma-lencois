@@ -63,7 +63,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'too many requests' }, { status: 429 });
   }
 
+  // Evento da Uber tem poucos KB; corpo gigante é abuso (antes lia tudo).
+  if (Number(req.headers.get('content-length') ?? 0) > 64 * 1024) {
+    return NextResponse.json({ error: 'payload too large' }, { status: 413 });
+  }
   const rawBody = Buffer.from(await req.arrayBuffer());
+  if (rawBody.length > 64 * 1024) return NextResponse.json({ error: 'payload too large' }, { status: 413 });
   const sig     = req.headers.get('x-postmates-signature')
                 ?? req.headers.get('x-uber-signature')
                 ?? '';

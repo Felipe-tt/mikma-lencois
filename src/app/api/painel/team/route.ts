@@ -60,6 +60,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Promoção só pra conta com e-mail confirmado: qualquer um pode criar uma
+  // conta com o e-mail de um futuro funcionário antes dele; sem essa checagem,
+  // o admin promovia o impostor.
+  if (!targetUser.emailVerified) {
+    return NextResponse.json(
+      { error: 'Essa conta ainda não confirmou o e-mail. Peça para a pessoa confirmar o e-mail (link enviado no cadastro) e tente de novo.' },
+      { status: 409 }
+    );
+  }
+
   // O DELETE já impedia o admin de se remover; aqui impedia não: um admin
   // podia se rebaixar e ficar sem acesso à equipe.
   if (targetUser.uid === auth.decoded.uid && role !== 'admin') {

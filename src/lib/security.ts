@@ -23,11 +23,8 @@ import { z, type ZodType, type ZodError } from 'zod';
  * próprio cliente.
  */
 export function getClientIp(req: NextRequest): string {
-  // Atenção: fastly-client-ip só é confiável quando a requisição passou pelo
-  // Firebase Hosting/Fastly. Se o domínio *.run.app aceitar acesso direto, esse
-  // header pode ser forjado: por isso rotas sensíveis NÃO dependem só do IP
-  // (há limite por e-mail/uid e tetos globais), e a validação do formato
-  // impede que strings arbitrárias virem chaves de rate limit.
+  // Só fontes que o visitante não forja (ver lib/ip.ts). Mesmo assim, rotas
+  // sensíveis não dependem só do IP: há limite por e-mail/uid e tetos globais.
   return clientIpFromHeaders(req.headers);
 }
 

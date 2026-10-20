@@ -7,7 +7,7 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NODE_ENV,
-  tracesSampleRate: 0.1,
+  tracesSampleRate: 0.02, // 2%: cada amostra passa pelo Cloud Run (túnel /monitoring)
   sendDefaultPii: false,
   // Sem session replay, não faz sentido pra esse porte de loja e evita
   // capturar sem querer algo sensível digitado em algum formulário.

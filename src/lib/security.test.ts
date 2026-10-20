@@ -59,8 +59,20 @@ describe('isPlausibleIp / getClientIp (rate limit por IP)', async () => {
     expect(isPlausibleIp('')).toBe(false);
   });
 
-  it('usa fastly-client-ip só quando válido; senão cai no x-forwarded-for', () => {
-    expect(getClientIp(req({ 'fastly-client-ip': '189.1.2.3' }))).toBe('189.1.2.3');
-    expect(getClientIp(req({ 'fastly-client-ip': 'lixo-arbitrario', 'x-forwarded-for': '1.1.1.1, 8.8.8.8' }))).toBe('8.8.8.8');
+  it('usa o x-fah-client-ip do App Hosting e ignora o fastly-client-ip forjável', () => {
+    expect(getClientIp(req({ 'x-fah-client-ip': '189.1.2.3', 'fastly-client-ip': '6.6.6.6' }))).toBe('189.1.2.3');
+    expect(getClientIp(req({ 'fastly-client-ip': '6.6.6.6', 'x-forwarded-for': '1.1.1.1, 8.8.8.8' }))).toBe('8.8.8.8');
+    expect(getClientIp(req({ 'x-fah-client-ip': 'lixo', 'x-forwarded-for': '8.8.8.8' }))).toBe('8.8.8.8');
+  });
+
+  it('cf-connecting-ip só vale com o segredo da Cloudflare', () => {
+    const prev = process.env.EDGE_SHARED_SECRET;
+    process.env.EDGE_SHARED_SECRET = 'segredo-123';
+    try {
+      expect(getClientIp(req({ 'cf-connecting-ip': '200.1.1.1', 'x-mikma-edge': 'segredo-123', 'x-fah-client-ip': '172.70.0.1' }))).toBe('200.1.1.1');
+      expect(getClientIp(req({ 'cf-connecting-ip': '200.1.1.1', 'x-mikma-edge': 'errado-123', 'x-fah-client-ip': '172.70.0.1' }))).toBe('172.70.0.1');
+    } finally {
+      if (prev === undefined) delete process.env.EDGE_SHARED_SECRET; else process.env.EDGE_SHARED_SECRET = prev;
+    }
   });
 });

@@ -20,7 +20,7 @@ import { computeProductsCents, validateCoupon, computeCardTotalCents, installmen
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 import { createCheckoutSchema } from './schema';
-import { guardGuestPayment } from '@/lib/guestGuard';
+import { guardGuestPayment, guestUnitsBlock } from '@/lib/guestGuard';
 import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { createCardCharge } from '@/lib/abacatepayApi';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
@@ -89,6 +89,8 @@ export async function POST(req: NextRequest) {
     const cartData = cartSnap.data()!;
     const cartItems: Array<{ sku: string; productId: string; quantity: number; note?: string; swapSku?: string; swapQtyPerUnit?: number }> = cartData.items;
     const cartCouponCode: string | null = cartData.couponCode ?? null;
+    const guestUnits = guestUnitsBlock(decoded, cartItems);
+    if (guestUnits) return guestUnits;
 
     // Carrinho é escrito direto pelo client SDK, quantity é dado não
     // confiável — quantidade negativa passaria ilesa pela checagem de

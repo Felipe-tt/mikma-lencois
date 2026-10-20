@@ -5,11 +5,16 @@ const nextConfig = {
   serverExternalPackages: ['@node-rs/argon2', 'firebase-admin'],
 
   images: {
+    // Só as fotos do bucket da loja: antes qualquer bucket do Firebase (e
+    // qualquer imagem do Google) podia ser otimizada aqui, queimando CPU e
+    // banda do servidor com imagens de terceiros.
     remotePatterns: [
-      { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
-      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'firebasestorage.googleapis.com', pathname: '/v0/b/mikma-lencois.firebasestorage.app/o/**' },
+      { protocol: 'https', hostname: 'firebasestorage.googleapis.com', pathname: '/v0/b/mikma-lencois.appspot.com/o/**' },
     ],
-    formats: ['image/avif', 'image/webp'],
+    // Só WebP: AVIF custa 5-10x mais CPU pra codificar no Cloud Run (1 vCPU)
+    // e o ganho de tamanho sobre WebP é pequeno nas fotos de produto.
+    formats: ['image/webp'],
     // Tamanhos usados no app, evita gerar versões desnecessárias
     deviceSizes: [375, 640, 828, 1080, 1280],
     imageSizes: [64, 128, 256, 384],

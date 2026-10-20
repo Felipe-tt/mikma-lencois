@@ -18,16 +18,20 @@ export async function POST(req: NextRequest) {
   if (!authHeader?.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
+  let uid: string;
   try {
-    await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true); // checkRevoked
+    uid = (await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true)).uid; // checkRevoked
   } catch {
-    return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
+    return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
   }
 
-  // Rate limit: 20 coupon checks per IP per 10 minutes
+  // Por IP e por conta, e um teto geral: impede adivinhar códigos de cupom
+  // em massa (contas anônimas são de graça, então só o IP não segura).
   const ip = getClientIp(req);
-  if (!await rateLimit(`coupon:${ip}`, 20, 10 * 60 * 1000)) {
-    return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 });
+  if (!await rateLimit(`coupon:${ip}`, 20, 10 * 60 * 1000)
+    || !await rateLimit(`coupon:uid:${uid}`, 10, 10 * 60 * 1000)
+    || !await rateLimit('coupon:global', 300, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: 'Muitas tentativas. Aguarde alguns minutos.' }, { status: 429 });
   }
 
   try {

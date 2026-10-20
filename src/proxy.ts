@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
-import { clientIpFromHeaders } from '@/lib/ip';
+import { cameThroughEdge, clientIpFromHeaders } from '@/lib/ip';
 import { maintenanceDocId, pathOnly } from '@/lib/maintenanceQueue';
 
 // Firebase Emulator Suite em desenvolvimento local (ver lib/firebase/client.ts).
@@ -124,6 +124,14 @@ function applySecurityHeaders(res: NextResponse, pathname = ''): void {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Com a Cloudflare na frente (EDGE_SHARED_SECRET configurado), só aceita o
+  // que passou por ela: quem chamasse o endereço do App Hosting direto
+  // pularia o firewall, o anti-bot e o limite de DDoS da Cloudflare. Sem o
+  // segredo configurado, nada muda.
+  if (process.env.EDGE_SHARED_SECRET && !cameThroughEdge(req.headers)) {
+    return new NextResponse('Forbidden', { status: 403, headers: { 'Cache-Control': 'no-store' } });
+  }
+
   // Scanners de vulnerabilidade (procurando WordPress/PHP que não existe
   // aqui) batem constantemente em qualquer domínio público na internet,
   // 24h por dia, independente de tráfego real. Sem essa checagem, cada
@@ -151,13 +159,8 @@ export async function proxy(req: NextRequest) {
 
   if (!isExempt) {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'mikma-lencois';
-    // Mesmo cuidado do getClientIp em lib/security.ts: este app fica atrás
-    // do Firebase Hosting (servido pela Fastly), então o ÚLTIMO valor do
-    // X-Forwarded-For é a infraestrutura da Fastly, não o visitante, daí
-    // a fila de manutenção e o "liberar IP" nunca baterem com o IP real de
-    // ninguém. O IP real vem em fastly-client-ip. X-Forwarded-For (último
-    // valor) só como fallback pra quando não tem Firebase Hosting na
-    // frente (ex: emulador local batendo direto no Cloud Run).
+    // Mesma regra do getClientIp (lib/ip.ts): Cloudflare comprovada >
+    // x-fah-client-ip do App Hosting > x-forwarded-for só no ambiente local.
     const ip = clientIpFromHeaders(req.headers);
 
     const active = await getMaintenanceStatus(projectId);
@@ -207,7 +210,8 @@ export async function proxy(req: NextRequest) {
   // O middleware já garantiu que manutenção ativa redireciona antes de chegar aqui
   if (
     pathname.startsWith('/painel') ||
-    pathname.startsWith('/api/') ||
+    // /api/maintenance/status define o próprio cache (público quando não há manutenção).
+    (pathname.startsWith('/api/') && pathname !== '/api/maintenance/status') ||
     pathname.startsWith('/conta') ||
     pathname.startsWith('/perfil') ||
     pathname.startsWith('/pedidos') ||
@@ -227,5 +231,7 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon|logo|public|icons|manifest).*)'],
+  // Arquivos estáticos (imagens, robots, sitemap) não passam pelo proxy:
+  // cada um custava uma execução e, sem cache, uma leitura do Firestore.
+  matcher: ['/((?!_next/static|_next/image|favicon|logo|public|icons|manifest|brand/|.*\\.(?:jpg|jpeg|png|webp|avif|svg|ico|gif|txt|xml|webmanifest|woff2?)$).*)'],
 };
