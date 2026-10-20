@@ -371,18 +371,6 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Faixa que corre de lado conforme a rolagem (CSS .sd-marquee). Só
-          decoração: o mesmo conteúdo já está nas especificações. */}
-      <section aria-hidden="true" className="sd-marquee-scope overflow-hidden border-y border-mist bg-warm/40 py-7 sm:py-10">
-        <p className="sd-marquee whitespace-nowrap font-display font-normal text-ink/90 leading-none tracking-[-0.02em] text-[2.6rem] sm:text-[4.5rem]">
-          {Array.from({ length: 3 }, (_, i) => (
-            <span key={i}>
-              Malha 100% algodão <span className="text-clay">·</span> <em className="text-mid">Feito em {s.storeCity?.split(',')[0] || 'Blumenau'}</em> <span className="text-clay">·</span> Direto da fábrica <span className="text-clay">·</span>{' '}
-            </span>
-          ))}
-        </p>
-      </section>
-
       <ProductReviews productId={product.id} initialReviews={reviews} />
 
       {/* ── Produtos relacionados ── */}
