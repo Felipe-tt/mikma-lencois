@@ -20,7 +20,16 @@ type SignupStep = 'form' | 'awaiting';
 type ForgotStep = 'email' | 'sent';
 
 export function AuthModal() {
-  const { isOpen, mode, setMode, close, reason } = useAuthModal();
+  const { isOpen, mode, setMode, close, reason, allowGuest, continueAsGuest } = useAuthModal();
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState('');
+  async function handleGuest() {
+    setGuestLoading(true); setGuestError('');
+    const ok = await continueAsGuest();
+    // Sucesso: o contexto roda a ação pendente e fecha o modal.
+    if (!ok) setGuestError('A compra sem cadastro está indisponível agora. Entre ou crie sua conta.');
+    setGuestLoading(false);
+  }
 
   // ── Login ──
   const [email, setEmail] = useState('');
@@ -274,6 +283,25 @@ export function AuthModal() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
             {reason}
           </p>
+        )}
+
+        {/* Carrinho e compra: dá para seguir sem criar conta (convidado). */}
+        {allowGuest && mode === 'login' && (
+          <div className="mb-7">
+            <button
+              type="button"
+              onClick={handleGuest}
+              disabled={guestLoading}
+              className="w-full h-12 rounded-full bg-ink text-paper text-[14px] font-semibold hover:bg-mid active:scale-[0.99] transition-[background-color,transform] duration-150 disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {guestLoading ? <span className="spinner" /> : 'Continuar sem cadastro'}
+            </button>
+            <p className="text-[12px] text-faint text-center mt-2">Só o e-mail no checkout. Dá para criar a conta depois.</p>
+            {guestError && <p role="alert" className="text-[12.5px] text-red-600 text-center mt-2">{guestError}</p>}
+            <div className="flex items-center gap-3 mt-6 text-[11px] uppercase tracking-[0.14em] text-faint">
+              <span className="h-px flex-1 bg-mist" />ou entre na sua conta<span className="h-px flex-1 bg-mist" />
+            </div>
+          </div>
         )}
 
         {mode === 'login' ? (

@@ -13,44 +13,52 @@ interface AuthModalContextValue {
   /** Se já logado, roda `action` na hora. Senão, abre o modal e roda
    *  `action` automaticamente assim que o login/cadastro for concluído
    * , sem sair da página onde a pessoa estava. */
-  requireAuth: (action: () => void, reason?: string) => void;
+  requireAuth: (action: () => void, reason?: string, opts?: { allowGuest?: boolean }) => void;
   /** Por que o modal abriu (ex.: "Entre pra adicionar ao carrinho"). */
   reason: string | null;
+  /** O modal aberto aceita "Continuar sem cadastro" (carrinho e compra). */
+  allowGuest: boolean;
+  /** Entra como convidado e segue a ação pendente. false = indisponível. */
+  continueAsGuest: () => Promise<boolean>;
 }
 
 const AuthModalContext = createContext<AuthModalContextValue | null>(null);
 
 export function AuthModalProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, buyer, startGuest } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('login');
   const [reason, setReason] = useState<string | null>(null);
+  const [allowGuest, setAllowGuest] = useState(false);
   const pendingAction = useRef<(() => void) | null>(null);
 
-  const open = useCallback((m: Mode = 'login') => { setMode(m); setReason(null); setIsOpen(true); }, []);
+  const open = useCallback((m: Mode = 'login') => { setMode(m); setReason(null); setAllowGuest(false); setIsOpen(true); }, []);
   const close = useCallback(() => { setIsOpen(false); pendingAction.current = null; }, []);
 
-  const requireAuth = useCallback((action: () => void, why?: string) => {
-    if (user) { action(); return; }
+  const requireAuth = useCallback((action: () => void, why?: string, opts?: { allowGuest?: boolean }) => {
+    if (user || (opts?.allowGuest && buyer)) { action(); return; }
     pendingAction.current = action;
     setMode('login');
     setReason(why ?? null);
+    setAllowGuest(!!opts?.allowGuest);
     setIsOpen(true);
-  }, [user]);
+  }, [user, buyer]);
+
+  const continueAsGuest = useCallback(() => startGuest(), [startGuest]);
 
   // Assim que o usuário loga (com o modal aberto e uma ação pendente),
   // executa a ação e fecha o modal, a pessoa nunca sai de onde estava.
   useEffect(() => {
-    if (user && isOpen && pendingAction.current) {
+    if ((user || (allowGuest && buyer)) && isOpen && pendingAction.current) {
       const action = pendingAction.current;
       pendingAction.current = null;
       setIsOpen(false);
       action();
     }
-  }, [user, isOpen]);
+  }, [user, buyer, allowGuest, isOpen]);
 
   return (
-    <AuthModalContext.Provider value={{ isOpen, mode, open, close, setMode, requireAuth, reason }}>
+    <AuthModalContext.Provider value={{ isOpen, mode, open, close, setMode, requireAuth, reason, allowGuest, continueAsGuest }}>
       {children}
     </AuthModalContext.Provider>
   );
