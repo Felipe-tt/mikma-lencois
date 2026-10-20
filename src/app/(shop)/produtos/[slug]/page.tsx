@@ -9,7 +9,6 @@ import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCarousel } from '@/components/product/ProductCarousel';
 import { ProductReviews } from '@/components/product/ProductReviews';
 import { SizeGuideModal } from '@/components/product/SizeGuideModal';
-import { FadeIn } from '@/components/ui/FadeIn';
 import { getSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
 import { shareMeta } from '@/lib/seo';
@@ -249,7 +248,7 @@ export default async function ProductPage({ params }: Props) {
               nome ficava embaixo da foto e a coluna de compra começava direto
               pelo preço, sem dizer o que estava à venda. */}
           <div className="min-w-0 md:col-start-1 md:row-start-1">
-            <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} />
+            <ProductGallery images={product.images} name={product.name} tag={product.tags?.[0]} productId={product.id} />
           </div>
 
           <div className="flex flex-col gap-5 md:col-start-2 md:row-start-1 md:row-span-2 md:sticky md:top-24">
@@ -299,8 +298,10 @@ export default async function ProductPage({ params }: Props) {
             {/* Detalhes: antes eram blocos soltos com larguras diferentes
                 (texto 60ch, tabela e selos 520px, sanfona na coluna toda).
                 Agora tudo segue a largura da coluna, com título de seção. */}
-            <FadeIn className="flex flex-col gap-9 lg:pt-4">
-              <div>
+            {/* Cada bloco sobe ao entrar na tela, guiado pela rolagem (CSS
+                .sd-rise). Sem suporte ou com movimento reduzido, fica parado. */}
+            <div className="flex flex-col gap-9 lg:pt-4">
+              <div className="sd-rise">
                 <span className="eyebrow mb-3 block">Sobre o produto</span>
                 {product.description && (
                   <p className="text-[15px] text-ink/80 leading-relaxed max-w-[62ch] whitespace-pre-line">
@@ -327,7 +328,7 @@ export default async function ProductPage({ params }: Props) {
                 <div className="@container">
                 <ul className="grid @xl:grid-cols-3 rounded-2xl border border-mist bg-warm/30 divide-y @xl:divide-y-0 @xl:divide-x divide-mist">
                   {productTrusts.map((text, i) => (
-                    <li key={i} className="flex items-center gap-3 px-4 py-4 @xl:px-5 text-[13px] text-mid leading-snug min-w-0">
+                    <li key={i} className="sd-rise flex items-center gap-3 px-4 py-4 @xl:px-5 text-[13px] text-mid leading-snug min-w-0">
                       <span aria-hidden="true" className="w-9 h-9 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0">
                         {i === 0 ? <TruckIcon /> : i === 1 ? <PackageIcon /> : <PixIcon />}
                       </span>
@@ -351,7 +352,7 @@ export default async function ProductPage({ params }: Props) {
                       ...(product.weightGsm ? [{ k: 'Gramatura', v: `${product.weightGsm} g/m²` }] : []),
                       ...(product.certifications ?? []).map(cert => ({ k: 'Certificação', v: cert, clay: true })),
                     ].map((row, i) => (
-                      <div key={i} className="flex items-baseline justify-between gap-4 py-3 border-b border-mist">
+                      <div key={i} className="sd-rise flex items-baseline justify-between gap-4 py-3 border-b border-mist">
                         <dt className="text-[12px] text-mid">{row.k}</dt>
                         <dd className={`text-[13px] font-semibold text-right ${'clay' in row && row.clay ? 'text-clay' : 'text-ink'}`}>{row.v}</dd>
                       </div>
@@ -364,11 +365,23 @@ export default async function ProductPage({ params }: Props) {
                 rows={(() => { try { return JSON.parse(s.bedSizeRows || '[]'); } catch { return []; } })()}
               />
               </div>
-            </FadeIn>
+            </div>
           </div>
 
         </div>
       </div>
+
+      {/* Faixa que corre de lado conforme a rolagem (CSS .sd-marquee). Só
+          decoração: o mesmo conteúdo já está nas especificações. */}
+      <section aria-hidden="true" className="sd-marquee-scope overflow-hidden border-y border-mist bg-warm/40 py-7 sm:py-10">
+        <p className="sd-marquee whitespace-nowrap font-display font-normal text-ink/90 leading-none tracking-[-0.02em] text-[2.6rem] sm:text-[4.5rem]">
+          {Array.from({ length: 3 }, (_, i) => (
+            <span key={i}>
+              Malha 100% algodão <span className="text-clay">·</span> <em className="text-mid">Feito em {s.storeCity?.split(',')[0] || 'Blumenau'}</em> <span className="text-clay">·</span> Direto da fábrica <span className="text-clay">·</span>{' '}
+            </span>
+          ))}
+        </p>
+      </section>
 
       <ProductReviews productId={product.id} initialReviews={reviews} />
 
