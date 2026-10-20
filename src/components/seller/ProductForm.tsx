@@ -191,6 +191,7 @@ export default function ProductForm({ initial }: Props) {
   const [composition, setComposition] = useState(initial?.composition ?? (isEdit ? '' : DEFAULT_COMPOSITION));
   const [weightGsm, setWeightGsm] = useState(initial?.weightGsm ? String(initial.weightGsm) : '');
   const [certifications, setCertifications] = useState(initial?.certifications?.join(', ') ?? '');
+  const [moreOpen, setMoreOpen] = useState(false);
   const [specsOpen, setSpecsOpen] = useState(!!(initial?.yarnCount || initial?.composition || initial?.weightGsm || initial?.certifications?.length));
 
   // ── Peso: auto-preenchido pelo tamanho selecionado (padrão configurável) ──
@@ -540,7 +541,7 @@ export default function ProductForm({ initial }: Props) {
   async function handleSubmit(mode: 'list' | 'another' = 'list') {
     if (!name.trim()) { setError('Dê um nome para o produto.'); return; }
     if (!priceValid) { setError('Informe um preço válido.'); return; }
-    if (!weightKgValid) { setError('Informe o peso do produto em kg (ex: 1.2).'); return; }
+    if (!weightKgValid) { setMoreOpen(true); setError('Informe o peso do produto em kg (ex: 1.2).'); return; }
     if (images.length === 0) { setError('Adicione pelo menos uma foto.'); return; }
     if (rows.length === 0) { setError('Informe a cor do produto.'); return; }
 
@@ -917,18 +918,6 @@ export default function ProductForm({ initial }: Props) {
               )}
             </div>
 
-            <div>
-              <label htmlFor="prod-descricao" className="label">Descrição</label>
-              <textarea
-                id="prod-descricao"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                rows={3}
-                placeholder="Material, medidas, cuidados com lavagem..."
-                className="input resize-none"
-              />
-            </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="prod-preco" className="label">Preço (R$)</label>
@@ -984,6 +973,63 @@ export default function ProductForm({ initial }: Props) {
               </div>
             </div>
 
+            {category === 'Jogos de cama' && (
+              <div>
+                <label htmlFor="prod-fronhas" className="label">
+                  Quantas fronhas vêm no jogo? <span className="font-normal normal-case text-faint">(solteiro/berço geralmente 1, casal/queen/king geralmente 2)</span>
+                </label>
+                <input
+                  id="prod-fronhas"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={fronhaCount === 0 ? '' : fronhaCount}
+                  onChange={e => {
+                    const raw = e.target.value;
+                    if (raw === '') { setFronhaCount(0); return; } // 0 é só estado transitório de "campo vazio", nunca é salvo
+                    const n = parseInt(raw, 10);
+                    if (!isNaN(n)) setFronhaCount(n);
+                  }}
+                  onBlur={() => { if (!fronhaCount || fronhaCount < 1) setFronhaCount(1); }}
+                  onFocus={e => e.target.select()}
+                  placeholder="2"
+                  inputMode="numeric"
+                  className="input-sm w-24"
+                />
+                <p className="text-[11px] text-faint mt-1">
+                  Usado pra reservar a quantidade certa de estoque quando o cliente troca a fronha padrão do jogo por outra do catálogo.
+                </p>
+              </div>
+            )}
+
+            {/* Como o "Mais campos" do catálogo do WhatsApp: à vista só o que
+                todo produto precisa (foto, nome, preço, tamanho, cor). O peso
+                já vem do tamanho; descrição e tags são opcionais. */}
+            <button
+              type="button"
+              onClick={() => setMoreOpen(o => !o)}
+              aria-expanded={moreOpen}
+              className="self-start flex items-center gap-1.5 text-[12.5px] font-semibold text-clay hover:text-clay-d transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${moreOpen ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
+              {moreOpen ? 'Menos campos' : 'Mais campos'}
+              {!moreOpen && <span className="font-normal text-faint">(descrição, peso, tags)</span>}
+            </button>
+
+            {moreOpen && (
+              <div className="flex flex-col gap-4">
+            <div>
+              <label htmlFor="prod-descricao" className="label">Descrição</label>
+              <textarea
+                id="prod-descricao"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={3}
+                placeholder="Material, medidas, cuidados com lavagem..."
+                className="input resize-none"
+              />
+            </div>
+
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label htmlFor="prod-peso" className="label mb-0">
@@ -1025,35 +1071,6 @@ export default function ProductForm({ initial }: Props) {
               )}
             </div>
 
-            {category === 'Jogos de cama' && (
-              <div>
-                <label htmlFor="prod-fronhas" className="label">
-                  Quantas fronhas vêm no jogo? <span className="font-normal normal-case text-faint">(solteiro/berço geralmente 1, casal/queen/king geralmente 2)</span>
-                </label>
-                <input
-                  id="prod-fronhas"
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={fronhaCount === 0 ? '' : fronhaCount}
-                  onChange={e => {
-                    const raw = e.target.value;
-                    if (raw === '') { setFronhaCount(0); return; } // 0 é só estado transitório de "campo vazio", nunca é salvo
-                    const n = parseInt(raw, 10);
-                    if (!isNaN(n)) setFronhaCount(n);
-                  }}
-                  onBlur={() => { if (!fronhaCount || fronhaCount < 1) setFronhaCount(1); }}
-                  onFocus={e => e.target.select()}
-                  placeholder="2"
-                  inputMode="numeric"
-                  className="input-sm w-24"
-                />
-                <p className="text-[11px] text-faint mt-1">
-                  Usado pra reservar a quantidade certa de estoque quando o cliente troca a fronha padrão do jogo por outra do catálogo.
-                </p>
-              </div>
-            )}
-
             <div>
               <label htmlFor="prod-tags" className="label">Tags <span className="font-normal normal-case text-faint">(separadas por vírgula)</span></label>
               <input
@@ -1064,6 +1081,9 @@ export default function ProductForm({ initial }: Props) {
                 className="input"
               />
             </div>
+
+              </div>
+            )}
 
             {/* ── Prévia ao vivo — pra quem não é técnico, ver como vai
                 aparecer pro cliente é mais confiável que confiar nos
