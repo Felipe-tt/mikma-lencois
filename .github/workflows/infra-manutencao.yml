@@ -17,6 +17,10 @@ on:
         description: 'Aplicar as mudanças (sem isso, só lista)'
         type: boolean
         default: false
+      apagar_ssr_antigo:
+        description: 'Apagar a função SSR da hospedagem antiga (ssrmikmalencois), só se o domínio já estiver no App Hosting'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -27,6 +31,7 @@ jobs:
     env:
       PROJECT_ID: mikma-lencois
       APLICAR: ${{ inputs.aplicar }}
+      APAGAR_SSR: ${{ inputs.apagar_ssr_antigo }}
     steps:
       - name: Autenticar no Google Cloud
         run: |
@@ -103,4 +108,21 @@ jobs:
               echo "Acesso ao backend $b"
               GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx -y firebase-tools@14 apphosting:secrets:grantaccess ABACATEPAY_WEBHOOK_SECRET --backend "$b" --project "$PROJECT_ID"
             done
+          fi
+
+      - name: Quem serve mikma.com.br e servidor antigo
+        run: |
+          set +e
+          # /api/painel/ip-check só existe no código novo (App Hosting): 401 = novo; 404 = antigo.
+          novo=$(curl -s -o /dev/null -w '%{http_code}' https://mikma.com.br/api/painel/ip-check)
+          antigo=$(curl -s -o /dev/null -w '%{http_code}' https://ssrmikmalencois-k62tgyyiyq-rj.a.run.app/api/painel/ip-check)
+          echo "mikma.com.br/api/painel/ip-check -> $novo"
+          echo "ssrmikmalencois/api/painel/ip-check -> $antigo"
+          curl -sI https://mikma.com.br/ | grep -iE '^(server|via|x-fah|x-cloud|alt-svc)' || true
+          if [ "$APAGAR_SSR" = "true" ]; then
+            if [ "$novo" = "401" ]; then
+              gcloud functions delete ssrmikmalencois --region southamerica-east1 --quiet && echo "função antiga apagada"
+            else
+              echo "Domínio não respondeu como o código novo ($novo): não apaguei a função antiga."
+            fi
           fi
