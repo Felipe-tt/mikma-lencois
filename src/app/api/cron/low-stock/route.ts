@@ -6,12 +6,23 @@ import { timingSafeEqual } from 'crypto';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { hexToColorName } from '@/lib/colorNames';
+import { SIZE_LABEL } from '@/lib/productOptions';
 
-// Não reavisa do mesmo SKU antes desse tempo, mesmo que continue baixo -
-// senão vira ruído (ex: roda de hora em hora e o estoque não mudou nesse
-// meio-tempo). Reavisa se: passou o cooldown, OU piorou desde o último
-// aviso (ex: foi de "baixo" pra "zerado").
-const RENOTIFY_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24h
+// Antes: uma notificação por SKU, repetida a cada 24h e a cada venda que
+// baixava o estoque, inclusive de madrugada. Agora:
+// - um resumo por rodada (uma notificação no celular, uma linha no sino);
+// - só avisa quando o SKU muda de situação (ok -> baixo, baixo -> zerado);
+//   continuar igual não repete. A página de Estoque mostra tudo.
+// - produto desativado não conta;
+// - de madrugada não notifica: a mudança fica para a próxima rodada de dia.
+type Level = 'low' | 'zero';
+const QUIET_START = 21; // 21h às 8h, horário de Brasília
+const QUIET_END = 8;
+
+function isQuietHour(now = new Date()): boolean {
+  const h = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Sao_Paulo' }).format(now));
+  return h >= QUIET_START || h < QUIET_END;
+}
 
 export async function GET(req: NextRequest) {
   // Mesmo padrão de autenticação do cron de expirar pedidos.
@@ -28,17 +39,13 @@ export async function GET(req: NextRequest) {
   const invSnap = await adminDb.collection('inventory').get();
   results.checked = invSnap.size;
 
-  const productNameCache = new Map<string, string>();
-  async function getProductName(productId: string): Promise<string> {
-    if (productNameCache.has(productId)) return productNameCache.get(productId)!;
-    try {
-      const pSnap = await adminDb.collection('products').doc(productId).get();
-      const name = (pSnap.data()?.name as string | undefined) ?? productId;
-      productNameCache.set(productId, name);
-      return name;
-    } catch {
-      return productId;
-    }
+  const productCache = new Map<string, { name: string; active: boolean }>();
+  async function getProduct(productId: string): Promise<{ name: string; active: boolean }> {
+    if (productCache.has(productId)) return productCache.get(productId)!;
+    const d = (await adminDb.collection('products').doc(productId).get()).data();
+    const p = { name: (d?.name as string | undefined) ?? productId, active: d?.active === true };
+    productCache.set(productId, p);
+    return p;
   }
 
   const lowItems: Array<{ sku: string; productId: string; variant: unknown; available: number; threshold: number }> = [];
@@ -56,49 +63,63 @@ export async function GET(req: NextRequest) {
   }
   results.low = lowItems.length;
 
-  // Recupera alertas anteriores pra decidir quem já foi avisado e quando -
-  // um get por SKU seria N chamadas; como o volume de SKUs baixos costuma
-  // ser pequeno numa loja desse porte, tudo bem.
+  // Situação anterior de cada SKU baixo (doc em stockAlerts). Muda de
+  // situação = novo ou piorou (baixo -> zerado): entra no resumo.
+  const changed: Array<{ sku: string; level: Level; label: string; available: number }> = [];
+  const quiet = isQuietHour();
   for (const low of lowItems) {
     try {
+      const product = await getProduct(low.productId);
+      if (!product.active) continue;
+      const level: Level = low.available <= 0 ? 'zero' : 'low';
       const alertRef = adminDb.collection('stockAlerts').doc(low.sku);
-      const alertSnap = await alertRef.get();
-      const prev = alertSnap.exists ? alertSnap.data() as { lastNotifiedAt?: FirebaseFirestore.Timestamp; lastAvailable?: number } : null;
-
-      const cooldownPassed = !prev?.lastNotifiedAt || (Date.now() - prev.lastNotifiedAt.toMillis()) > RENOTIFY_COOLDOWN_MS;
-      const gotWorse = prev?.lastAvailable !== undefined && low.available < prev.lastAvailable;
-
-      if (cooldownPassed || gotWorse) {
-        const productName = await getProductName(low.productId);
-        const variant = low.variant as { size?: string; fabric?: string; color?: string; colorName?: string } | undefined;
-        const colorLabel = variant?.colorName || (variant?.color ? hexToColorName(variant.color) : undefined);
-        const variantLabel = variant ? [variant.size, variant.fabric, colorLabel].filter(Boolean).join(' · ') : '';
-        const label = variantLabel ? `${productName} (${variantLabel})` : productName;
-        const statusWord = low.available <= 0 ? 'Zerou' : 'Estoque baixo';
-
-        await notifySeller({
-          title: `${statusWord}: ${label}`,
-          body: `Restam ${low.available} unidade(s) (SKU ${low.sku}). Hora de repor.`,
-          url: '/painel/estoque',
-          data: { sku: low.sku, event: 'low_stock' },
-        });
-        await notifyInApp({
-          type: 'low_stock',
-          message: `${statusWord}: ${label}, restam ${low.available} unidade(s)`,
-          url: '/painel/estoque',
-          dedupeKey: `low_stock:${low.sku}`,
-        });
-
-        await alertRef.set({
-          sku: low.sku, productId: low.productId, available: low.available,
-          lastAvailable: low.available, lastNotifiedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-        results.notified++;
+      const prev = (await alertRef.get()).data() as { level?: Level } | undefined;
+      const worse = !prev?.level || (prev.level === 'low' && level === 'zero');
+      if (!worse) {
+        // Melhorou de zerado para baixo: só atualiza, sem avisar.
+        if (prev?.level !== level) await alertRef.set({ level, available: low.available }, { merge: true });
+        continue;
       }
+      // Horário silencioso: não grava a nova situação, para avisar de dia.
+      if (quiet) continue;
+      const variant = low.variant as { size?: string; color?: string; colorName?: string } | undefined;
+      const colorLabel = variant?.colorName || (variant?.color ? hexToColorName(variant.color) : undefined);
+      const variantLabel = variant ? [variant.size ? (SIZE_LABEL[variant.size] ?? variant.size) : '', colorLabel].filter(Boolean).join(' · ') : '';
+      changed.push({ sku: low.sku, level, available: low.available, label: variantLabel ? `${product.name} (${variantLabel})` : product.name });
+      await alertRef.set({
+        sku: low.sku, productId: low.productId, level, available: low.available,
+        lastNotifiedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
     } catch (err) {
       console.error(`[low-stock] erro processando SKU ${low.sku}:`, err);
       results.errors++;
     }
+  }
+
+  if (changed.length > 0) {
+    const zero = changed.filter(c => c.level === 'zero');
+    const low = changed.filter(c => c.level === 'low');
+    const parts = [
+      zero.length ? `${zero.length} ${zero.length === 1 ? 'zerou' : 'zeraram'}` : '',
+      low.length ? `${low.length} ${low.length === 1 ? 'ficou baixo' : 'ficaram baixos'}` : '',
+    ].filter(Boolean).join(', ');
+    // Zerados primeiro; até 3 nomes, o resto vira "e mais N".
+    const names = [...zero, ...low].map(c => c.label);
+    const shown = names.slice(0, 3).join('; ') + (names.length > 3 ? `; e mais ${names.length - 3}` : '');
+    await notifySeller({
+      title: `Estoque: ${parts}`,
+      body: shown,
+      url: '/painel/estoque',
+      data: { event: 'low_stock' },
+    });
+    // Uma linha só no sino, sempre atualizada (dedupe fixo).
+    await notifyInApp({
+      type: 'low_stock',
+      message: `Estoque: ${parts}. ${shown}`,
+      url: '/painel/estoque',
+      dedupeKey: 'low_stock:resumo',
+    });
+    results.notified = changed.length;
   }
 
   // Limpa alertas de SKUs que voltaram a ficar saudáveis, pra não acumular
@@ -120,6 +141,15 @@ export async function GET(req: NextRequest) {
     await batch.commit();
   }
   if (recoveredDocs.length > 0) results.recovered = recoveredDocs.length;
+
+  // Avisos antigos, um por SKU no sino (antes do resumo): some com eles.
+  for (let i = 0; i < lowItems.length; i += 400) {
+    const batch = adminDb.batch();
+    for (const low of lowItems.slice(i, i + 400)) {
+      batch.delete(adminDb.collection('notifications').doc('seller').collection('items').doc(`low_stock:${low.sku}`));
+    }
+    await batch.commit();
+  }
 
   return NextResponse.json({ ok: true, ...results });
 }
