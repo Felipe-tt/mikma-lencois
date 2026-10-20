@@ -78,6 +78,13 @@ export async function DELETE(req: NextRequest) {
     const notifSnap = await adminDb.collection(`notifications/${uid}/items`).get();
     for (const d of notifSnap.docs) batch.delete(d.ref);
 
+    // Pedidos de "avise-me quando chegar" pendentes com o e-mail da conta.
+    const accountEmail = (await adminAuth.getUser(uid).catch(() => null))?.email?.toLowerCase();
+    if (accountEmail) {
+      const alertSnap = await adminDb.collection('stockAlerts').where('email', '==', accountEmail).get();
+      for (const d of alertSnap.docs) batch.delete(d.ref);
+    }
+
     await batch.commit();
 
     // Revoga tokens antes de deletar, evita uso de token após exclusão
