@@ -32,6 +32,19 @@ describe('conteúdo', () => {
     expect(p.html).toContain('000201PIXCODE');
     expect(p.text).toContain('000201PIXCODE');
   });
+  it('PIX pendente embute o QR Code quando vem a imagem', () => {
+    const png = 'data:image/png;base64,' + Buffer.from('fake-png').toString('base64');
+    const p = buildPixPending(base, 'Ana', { copyPaste: '000201PIXCODE', qrCode: png });
+    expect(p.html).toContain('src="cid:pix-qrcode"');
+    expect(p.attachments).toHaveLength(1);
+    expect(p.attachments![0]).toMatchObject({ contentId: 'pix-qrcode', contentType: 'image/png', filename: 'qrcode-pix.png' });
+    expect(p.attachments![0].content.toString()).toBe('fake-png');
+  });
+  it('PIX pendente sem imagem válida fica só com o copia e cola', () => {
+    const p = buildPixPending(base, 'Ana', { copyPaste: '000201PIXCODE', qrCode: 'https://x/qr.png' });
+    expect(p.html).not.toContain('cid:');
+    expect(p.attachments).toBeUndefined();
+  });
   it('despachado mostra previsão quando há prazo e usa "Rastrear envio"', () => {
     const order = {
       ...base, userId: 'u', status: 'shipped',

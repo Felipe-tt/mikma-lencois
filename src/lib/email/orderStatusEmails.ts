@@ -6,8 +6,21 @@ import {
   BASE_URL, emailCallout, emailCta, emailItemsTable, emailLayout, emailParagraph,
   emailSection, emailSignature, orderSubject, shortOrderId, type EmailItem, type EmailMoney,
 } from './layout';
+import type { EmailAttachment } from '@/lib/email';
 
-type EmailPayload = { subject: string; html: string; text: string };
+type EmailPayload = { subject: string; html: string; text: string; attachments?: EmailAttachment[] };
+
+const PIX_QR_CID = 'pix-qrcode';
+
+/** QR do PIX ("data:image/png;base64,…" da AbacatePay) como imagem embutida no e-mail. */
+function pixQrAttachment(dataUrl?: string | null): EmailAttachment | null {
+  const m = /^data:image\/(png|jpe?g|gif);base64,([A-Za-z0-9+/=\s]+)$/.exec(dataUrl?.trim() ?? '');
+  if (!m) return null;
+  const content = Buffer.from(m[2].replace(/\s/g, ''), 'base64');
+  if (!content.length) return null;
+  const type = m[1] === 'jpg' ? 'jpeg' : m[1];
+  return { filename: `qrcode-pix.${m[1]}`, content, contentType: `image/${type}`, contentId: PIX_QR_CID };
+}
 
 /** Mesma conta de dias úteis do checkout ("Recebe sex., 30/10"). */
 export function addBusinessDays(from: Date, days: number): Date {
@@ -150,8 +163,9 @@ export function buildConfirmed(
 export function buildPixPending(
   order: { id: string; items: EmailItem[]; totalCents: number } & EmailMoney,
   name: string,
-  pix: { copyPaste: string; expiresAt?: string | Date | null },
+  pix: { copyPaste: string; expiresAt?: string | Date | null; qrCode?: string | null },
 ): EmailPayload {
+  const qr = pixQrAttachment(pix.qrCode);
   const id = shortOrderId(order.id);
   const url = orderUrl(order);
   const exp = pix.expiresAt ? new Date(pix.expiresAt) : null;
@@ -164,18 +178,28 @@ export function buildPixPending(
       title: 'Recebemos seu pedido',
       html: `
         ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Falta só o pagamento via PIX para confirmar. Total: <strong>${formatCurrency(order.totalCents)}</strong>.`)}
+        ${qr ? `
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 16px;">
+          <tr><td align="center" style="padding:12px;background:#FFFFFF;border:1px solid #F0EBE1;border-radius:12px;">
+            <img src="cid:${PIX_QR_CID}" width="200" height="200" alt="QR Code do PIX de ${formatCurrency(order.totalCents)}" style="display:block;width:200px;height:200px;border:0;">
+          </td></tr>
+          <tr><td align="center" style="padding-top:8px;font-size:12px;color:#705A48;">Abra o app do banco, escolha Pix → Ler QR Code e aponte a câmera.</td></tr>
+        </table>` : ''}
         ${emailCallout(`
-          <p style="margin:0 0 6px;font-size:11px;color:#7A6656;text-transform:uppercase;letter-spacing:.08em;">PIX copia e cola</p>
+          <p style="margin:0 0 6px;font-size:11px;color:#7A6656;text-transform:uppercase;letter-spacing:.08em;">${qr ? 'Ou use o PIX copia e cola' : 'PIX copia e cola'}</p>
           <p style="margin:0;font-family:monospace;font-size:12px;color:#1E1208;word-break:break-all;line-height:1.5;">${escapeHtml(pix.copyPaste)}</p>
           ${expLabel ? `<p style="margin:10px 0 0;font-size:12px;color:#705A48;">Válido até ${expLabel}. Depois disso, gere um novo código na página do pedido.</p>` : ''}`)}
-        ${emailParagraph('No app do seu banco, escolha Pix → Pix copia e cola, cole o código e confirme. A confirmação é automática.', { muted: true })}
+        ${emailParagraph(qr
+          ? 'Para o copia e cola: no app do banco, escolha Pix → Pix copia e cola e cole o código. A confirmação é automática.'
+          : 'No app do seu banco, escolha Pix → Pix copia e cola, cole o código e confirme. A confirmação é automática.', { muted: true })}
         ${emailItemsTable(order)}
-        ${emailCta('Ver pedido e QR Code', url)}`,
+        ${emailCta(qr ? 'Ver pedido' : 'Ver pedido e QR Code', url)}`,
     })}
     ${emailSignature()}`, { preheader: `Falta só o PIX: ${formatCurrency(order.totalCents)}${expLabel ? `, válido até ${expLabel}` : ''}.` });
   return {
     subject: orderSubject(id, 'recebido, falta o PIX'),
     html,
+    ...(qr ? { attachments: [qr] } : {}),
     text: [
       `Olá, ${name}! Recebemos seu pedido #${id}. Falta só o pagamento via PIX (${formatCurrency(order.totalCents)}).`, '',
       'PIX copia e cola:', pix.copyPaste, '',

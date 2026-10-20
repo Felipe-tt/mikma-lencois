@@ -24,6 +24,15 @@ interface SendEmailInput {
   /** 'contato' usa o remetente de suporte (para respostas de conversa); 'noreply' para avisos automáticos. */
   from?: 'noreply' | 'contato';
   replyTo?: string;
+  /** Anexos; com contentId viram imagem embutida, referenciada no HTML por cid:. */
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+  contentId?: string;
 }
 
 /**
@@ -44,7 +53,7 @@ export function buildReplyHtml(text: string): string {
 }
 
 /** Envia um e-mail via Resend. Lança erro se a API key não estiver configurada ou o envio falhar. */
-export async function sendEmail({ to, subject, text, html, from = 'noreply', replyTo }: SendEmailInput) {
+export async function sendEmail({ to, subject, text, html, from = 'noreply', replyTo, attachments }: SendEmailInput) {
   const resend = getResend();
 
   // Se não vier HTML customizado, gera o template padrão bonito
@@ -57,6 +66,7 @@ export async function sendEmail({ to, subject, text, html, from = 'noreply', rep
     text,
     html: finalHtml,
     ...(replyTo ? { replyTo } : {}),
+    ...(attachments?.length ? { attachments } : {}),
   });
   if (error) {
     // `code` = nome do erro do Resend (validation_error, rate_limit_exceeded…):
