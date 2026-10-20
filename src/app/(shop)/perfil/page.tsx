@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { deleteField, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -13,6 +13,10 @@ import { setReturnTo } from '@/lib/auth/returnTo';
 import { PerfilSkeleton } from '@/components/ui/Skeleton';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import type { Address } from '@/types';
+import { Select } from '@/components/ui/Select';
+import { maskCep, maskCpf, maskPhone, onlyDigits, isValidCep, isValidPhone, BR_STATES } from '@/lib/masks';
+
+const EMPTY_ADDRESS: Address = { cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' };
 
 export default function PerfilPage() {
   const { user, userData, loading, logout } = useAuth();
@@ -25,7 +29,13 @@ export default function PerfilPage() {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [address, setAddress] = useState<Address | null | undefined>(undefined);
+  // Celular editável (o checkout usa para preencher o pedido). O CPF só
+  // aparece, parcialmente oculto: não se troca pelo perfil.
   const [phone, setPhone] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [savedPhone, setSavedPhone] = useState('');
+  const [phoneErr, setPhoneErr] = useState('');
+  const [editingAddress, setEditingAddress] = useState(false);
   const [removingAddress, setRemovingAddress] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
@@ -50,7 +60,10 @@ export default function PerfilPage() {
         if (cancelled) return;
         const d = snap.data();
         setAddress((d?.address as Address | undefined) ?? null);
-        setPhone(typeof d?.phone === 'string' ? d.phone : '');
+        const ph = typeof d?.phone === 'string' ? maskPhone(d.phone) : '';
+        const cp = typeof d?.cpf === 'string' ? maskCpf(d.cpf) : '';
+        setPhone(ph); setSavedPhone(ph);
+        setCpf(cp);
       })
       .catch(() => { if (!cancelled) setAddress(null); });
     return () => { cancelled = true; };
@@ -61,9 +74,12 @@ export default function PerfilPage() {
   const handleSave = async () => {
     const clean = name.trim();
     if (!clean) { setError('Digite seu nome.'); return; }
+    if (phone && !isValidPhone(phone)) { setPhoneErr('Informe o celular com DDD'); return; }
+    setPhoneErr('');
     setSaving(true); setError('');
     try {
-      await updateDoc(doc(db, 'users', user.uid), { name: clean });
+      await setDoc(doc(db, 'users', user.uid), { name: clean, phone: onlyDigits(phone) }, { merge: true });
+      setSavedPhone(phone);
       // Atualiza também o nome do login, que é o que aparece em "Olá, X".
       if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: clean }).catch(() => {});
       setSaved(true);
@@ -153,7 +169,7 @@ export default function PerfilPage() {
   const usesPassword = providers.includes('password');
   const usesGoogle = providers.includes('google.com');
   const initial = (name || user.email || '?').trim().charAt(0).toUpperCase();
-  const dirty = name.trim() !== (userData?.name ?? user.displayName ?? '').trim();
+  const dirty = name.trim() !== (userData?.name ?? user.displayName ?? '').trim() || phone !== savedPhone;
 
   return (
     <div>
@@ -196,6 +212,27 @@ export default function PerfilPage() {
                 </div>
                 <p id="perfil-email-dica" className="text-[11.5px] text-faint mt-1.5">É o e-mail de login, não dá pra trocar por aqui.</p>
               </div>
+              <div>
+                <label htmlFor="perfil-phone" className="label">Celular / WhatsApp</label>
+                <input id="perfil-phone" value={phone} onChange={e => { setPhone(maskPhone(e.target.value)); setSaved(false); setPhoneErr(''); }}
+                  type="tel" maxLength={15} placeholder="(47) 99999-0000" autoComplete="tel"
+                  aria-invalid={!!phoneErr} aria-describedby={phoneErr ? 'perfil-phone-err' : 'perfil-phone-dica'}
+                  className={`input ${phoneErr ? '!border-red-400' : ''}`} />
+                {phoneErr
+                  ? <p id="perfil-phone-err" className="text-[11.5px] text-red-600 mt-1.5">{phoneErr}</p>
+                  : <p id="perfil-phone-dica" className="text-[11.5px] text-faint mt-1.5">Para avisos da entrega. Já vem preenchido no checkout.</p>}
+              </div>
+              {cpf && (
+                <div>
+                  <span className="label">CPF</span>
+                  <p className="input !bg-warm/60 text-mid flex items-center justify-between cursor-default tabular-nums">
+                    {/* Só os dígitos do meio, como em nota fiscal. */}
+                    {`***.${cpf.slice(4, 7)}.${cpf.slice(8, 11)}-**`}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" className="text-faint shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  </p>
+                  <p className="text-[11.5px] text-faint mt-1.5">Para corrigir o CPF, fale com a gente.</p>
+                </div>
+              )}
               <div className="flex items-center gap-3 pt-1 min-h-[44px]">
                 <button onClick={handleSave} disabled={saving || !dirty} className="btn-primary">
                   {saving ? <><span className="spinner w-3.5 h-3.5" /> Salvando…</> : 'Salvar alterações'}
@@ -211,9 +248,19 @@ export default function PerfilPage() {
           </Card>
 
           {/* ── Endereço salvo ── */}
-          <Card title="Endereço de entrega" desc="Preenchido no seu último pedido e sugerido no próximo checkout.">
+          <Card title="Endereço de entrega" desc="Sugerido no próximo checkout. Pode trocar quando quiser.">
             {address === undefined ? (
               <div className="flex flex-col gap-2"><span className="skeleton h-4 w-3/4" /><span className="skeleton h-4 w-1/2" /><span className="skeleton h-4 w-1/3" /></div>
+            ) : editingAddress ? (
+              <AddressForm
+                initial={address ?? EMPTY_ADDRESS}
+                onCancel={() => setEditingAddress(false)}
+                onSave={async next => {
+                  await setDoc(doc(db, 'users', user.uid), { address: next }, { merge: true });
+                  setAddress(next);
+                  setEditingAddress(false);
+                }}
+              />
             ) : address ? (
               <div className="flex flex-col gap-5">
                 <div className="flex items-start gap-3.5 rounded-2xl bg-warm/60 px-4 py-4">
@@ -223,18 +270,25 @@ export default function PerfilPage() {
                   <address className="not-italic text-[13.5px] text-ink leading-relaxed min-w-0">
                     {address.street}, {address.number}{address.complement ? ` · ${address.complement}` : ''}<br />
                     <span className="text-mid">{address.neighborhood} · {address.city}/{address.state}</span><br />
-                    <span className="text-mid">CEP {address.cep.replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2')}</span>
-                    {phone && <><br /><span className="text-mid">Tel. {phone}</span></>}
+                    <span className="text-mid">CEP {maskCep(address.cep)}</span>
                   </address>
                 </div>
-                <button onClick={handleRemoveAddress} disabled={removingAddress} className="self-start text-[13px] font-medium text-mid hover:text-red-600 transition-colors disabled:opacity-50">
-                  {removingAddress ? 'Removendo…' : 'Remover endereço salvo'}
-                </button>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <button onClick={() => setEditingAddress(true)} className="btn-outline">
+                    Editar endereço
+                  </button>
+                  <button onClick={handleRemoveAddress} disabled={removingAddress} className="text-[13px] font-medium text-mid hover:text-red-600 transition-colors disabled:opacity-50">
+                    {removingAddress ? 'Removendo…' : 'Remover'}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-mist-d px-5 py-6 text-center">
                 <p className="text-[13.5px] text-ink font-medium">Nenhum endereço salvo</p>
-                <p className="text-[12.5px] text-mid mt-1">Ele fica salvo aqui depois da sua primeira compra.</p>
+                <p className="text-[12.5px] text-mid mt-1 mb-4">Salve agora e o checkout já vem preenchido.</p>
+                <button onClick={() => setEditingAddress(true)} className="btn-outline">
+                  Adicionar endereço
+                </button>
               </div>
             )}
           </Card>
@@ -330,5 +384,128 @@ function AccessRow({ label }: { label: string }) {
         Ativo
       </span>
     </li>
+  );
+}
+
+type AddrKey = 'cep' | 'street' | 'number' | 'neighborhood' | 'city' | 'state';
+
+// Mesmos campos e validação do endereço do checkout, com a busca do CEP.
+function AddressForm({ initial, onSave, onCancel }: { initial: Address; onSave: (a: Address) => Promise<void>; onCancel: () => void }) {
+  const [addr, setAddr] = useState<Address>({ ...initial, cep: maskCep(initial.cep) });
+  const [errors, setErrors] = useState<Partial<Record<AddrKey, string>>>({});
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepMsg, setCepMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  const set = (k: keyof Address, v: string) => {
+    setAddr(a => ({ ...a, [k]: v }));
+    setErrors(e => ({ ...e, [k]: undefined }));
+  };
+
+  async function lookupCep(masked: string) {
+    const c = onlyDigits(masked);
+    if (c.length !== 8) return;
+    setCepLoading(true); setCepMsg('');
+    try {
+      const d = await (await fetch(`https://viacep.com.br/ws/${c}/json/`)).json();
+      if (d.erro) { setCepMsg('CEP não encontrado. Confira ou preencha o endereço à mão.'); return; }
+      setAddr(a => ({ ...a, street: d.logradouro || a.street, neighborhood: d.bairro || a.neighborhood, city: d.localidade || a.city, state: d.uf || a.state }));
+      setErrors({});
+      // Rua veio do CEP: o próximo campo útil é o número.
+      if (d.logradouro) document.getElementById('perfil-number')?.focus();
+    } catch {
+      setCepMsg('Não deu para buscar o CEP agora. Preencha o endereço à mão.');
+    } finally {
+      setCepLoading(false);
+    }
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs: Partial<Record<AddrKey, string>> = {};
+    if (!isValidCep(addr.cep)) errs.cep = 'Confira o CEP (8 dígitos)';
+    if (!addr.street.trim()) errs.street = 'Informe o logradouro';
+    if (!addr.number.trim()) errs.number = 'Informe o número (ou S/N)';
+    if (!addr.neighborhood.trim()) errs.neighborhood = 'Informe o bairro';
+    if (!addr.city.trim()) errs.city = 'Informe a cidade';
+    if (!addr.state) errs.state = 'Escolha o estado';
+    setErrors(errs);
+    const first = (Object.keys(errs) as AddrKey[])[0];
+    if (first) { document.getElementById(`perfil-${first}`)?.focus(); return; }
+    setSaving(true); setSaveError('');
+    try {
+      await onSave({
+        cep: onlyDigits(addr.cep),
+        street: addr.street.trim().slice(0, 120),
+        number: addr.number.trim().slice(0, 20),
+        complement: (addr.complement ?? '').trim().slice(0, 60),
+        neighborhood: addr.neighborhood.trim().slice(0, 80),
+        city: addr.city.trim().slice(0, 80),
+        state: addr.state,
+      });
+    } catch {
+      setSaveError('Não foi possível salvar o endereço. Verifique sua conexão e tente de novo.');
+      setSaving(false);
+    }
+  }
+
+  const field = (k: AddrKey | 'complement', label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => {
+    const err = k !== 'complement' ? errors[k] : undefined;
+    return (
+      <div>
+        <label htmlFor={`perfil-${k}`} className="label">{label}</label>
+        <input id={`perfil-${k}`} value={addr[k] ?? ''} onChange={e => set(k, e.target.value)}
+          aria-invalid={!!err} aria-describedby={err ? `perfil-${k}-err` : undefined}
+          className={`input ${err ? '!border-red-400' : ''}`} {...props} />
+        {err && <p id={`perfil-${k}-err`} className="text-[11.5px] text-red-600 mt-1.5">{err}</p>}
+      </div>
+    );
+  };
+
+  return (
+    <form onSubmit={submit} noValidate className="flex flex-col gap-4 animate-fade-in">
+      <div>
+        <label htmlFor="perfil-cep" className="label">CEP</label>
+        <div className="relative max-w-[12rem]">
+          <input id="perfil-cep" value={addr.cep} autoFocus
+            onChange={e => { const m = maskCep(e.target.value); set('cep', m); setCepMsg(''); if (onlyDigits(m).length === 8) lookupCep(m); }}
+            inputMode="numeric" maxLength={9} placeholder="00000-000" autoComplete="postal-code"
+            aria-invalid={!!errors.cep} aria-describedby={errors.cep ? 'perfil-cep-err' : cepMsg ? 'perfil-cep-msg' : undefined}
+            className={`input ${errors.cep ? '!border-red-400' : ''}`} />
+          {cepLoading && <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"><span className="spinner-dark w-3.5 h-3.5" /></span>}
+        </div>
+        {errors.cep && <p id="perfil-cep-err" className="text-[11.5px] text-red-600 mt-1.5">{errors.cep}</p>}
+        {!errors.cep && cepMsg && <p id="perfil-cep-msg" role="status" className="text-[11.5px] text-mid mt-1.5">{cepMsg}</p>}
+      </div>
+      {field('street', 'Logradouro', { placeholder: 'Rua, Avenida, Travessa…', autoComplete: 'address-line1' })}
+      <div className="grid grid-cols-2 gap-3">
+        {field('number', 'Número', { placeholder: '123 ou S/N', autoComplete: 'off' })}
+        {field('complement', 'Complemento', { placeholder: 'Opcional', autoComplete: 'address-line2' })}
+      </div>
+      {field('neighborhood', 'Bairro', { autoComplete: 'address-level3' })}
+      <div className="grid grid-cols-[1fr_96px] gap-3">
+        {field('city', 'Cidade', { autoComplete: 'address-level2' })}
+        <div>
+          <label htmlFor="perfil-state" className="label">UF</label>
+          <Select
+            triggerId="perfil-state"
+            name="state"
+            value={addr.state}
+            onChange={v => set('state', v)}
+            options={[{ value: '', label: '--' }, ...BR_STATES.map(uf => ({ value: uf, label: uf }))]}
+            triggerClassName={`w-full border px-3 py-3 text-sm bg-white dark:bg-warm focus:outline-none focus:ring-2 transition-all flex items-center justify-between gap-2 rounded-xl cursor-pointer ${errors.state ? 'border-red-400 focus:ring-red-100' : 'border-mist hover:border-ink/20 focus:border-ink/40 focus:ring-ink/5'}`}
+          />
+          {errors.state && <p className="text-[11.5px] text-red-600 mt-1.5">{errors.state}</p>}
+        </div>
+      </div>
+      {saveError && <p role="alert" className="text-[12.5px] text-red-600">{saveError}</p>}
+      <div className="flex flex-wrap items-center gap-3 pt-1">
+        <button type="submit" disabled={saving} className="btn-primary">
+          {saving ? <><span className="spinner w-3.5 h-3.5" /> Salvando…</> : 'Salvar endereço'}
+        </button>
+        <button type="button" onClick={onCancel} disabled={saving} className="btn-ghost">Cancelar</button>
+      </div>
+    </form>
   );
 }
