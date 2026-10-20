@@ -55,8 +55,8 @@ function formatPhone(raw: string): string {
 
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
 
-/** Carro de lado, pintado com a cor que a Uber informa. */
-function CarArt({ color }: { color: string }) {
+/** Carro de lado, pintado com a cor que a Uber informa; pacote no teto depois da coleta. */
+function CarArt({ color, loaded }: { color: string; loaded: boolean }) {
   return (
     <svg viewBox="0 0 120 52" className="h-auto w-full" aria-hidden="true">
       <ellipse cx="60" cy="46" rx="52" ry="3.5" fill="#000" opacity=".12" />
@@ -68,6 +68,30 @@ function CarArt({ color }: { color: string }) {
       <rect x="106" y="29" width="6" height="2.6" rx="1.3" fill="#F6E7A1" />
       <circle cx="31" cy="40" r="7.5" fill="#1C1C1C" /><circle cx="31" cy="40" r="3.2" fill="#9AA0A6" />
       <circle cx="92" cy="40" r="7.5" fill="#1C1C1C" /><circle cx="92" cy="40" r="3.2" fill="#9AA0A6" />
+      {loaded && (
+        <>
+          <rect x="49" y="2" width="24" height="10" rx="2" fill={UBER_GREEN} />
+          <path d="M61 3v8M50 7h22" stroke="#fff" strokeOpacity=".75" strokeWidth="1.4" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** Moto de lado, com o baú de entrega (pacote verde depois da coleta). */
+function MotoArt({ color, loaded }: { color: string; loaded: boolean }) {
+  return (
+    <svg viewBox="0 0 120 52" className="h-auto w-full" aria-hidden="true">
+      <ellipse cx="60" cy="47" rx="46" ry="3" fill="#000" opacity=".12" />
+      <circle cx="28" cy="38" r="9" fill="#1C1C1C" /><circle cx="28" cy="38" r="3.5" fill="#9AA0A6" />
+      <circle cx="92" cy="38" r="9" fill="#1C1C1C" /><circle cx="92" cy="38" r="3.5" fill="#9AA0A6" />
+      <path d="M28 38l14-14h26l8 8h10l6 6" fill="none" stroke="#3A3F45" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M44 22h26l10 10H50z" fill={color} stroke="#000" strokeOpacity=".5" strokeWidth="1.2" />
+      <path d="M38 20h14" stroke="#1C1C1C" strokeWidth="4" strokeLinecap="round" />
+      <path d="M84 30l6-14M86 16h8" stroke="#3A3F45" strokeWidth="3" strokeLinecap="round" />
+      <rect x={loaded ? 20 : 22} y={loaded ? 6 : 10} width={loaded ? 24 : 20} height={loaded ? 18 : 14} rx="3"
+        fill={loaded ? UBER_GREEN : '#2B2F35'} />
+      {loaded && <path d="M32 7v16M21 15h22" stroke="#fff" strokeOpacity=".75" strokeWidth="1.6" />}
     </svg>
   );
 }
@@ -106,7 +130,9 @@ export function UberTracking({ delivery, audience, addressLabel }: Props) {
   const stale = hasCourierPos && delivery.courierLocationAt && now !== null && now - Date.parse(delivery.courierLocationAt) > 5 * 60_000;
   const color = courierCarColor(delivery.courierCarColor);
   const carName = [delivery.courierCar, color?.label].filter(Boolean).join(' ');
-  const isCar = !delivery.courierVehicle || ['car', 'van', 'truck'].includes(delivery.courierVehicle);
+  const vehicle = (delivery.courierVehicle ?? 'car').toLowerCase();
+  const isMoto = ['motorcycle', 'scooter', 'moto'].includes(vehicle);
+  const isCar = !isMoto && !['bicycle', 'walker'].includes(vehicle);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-mist bg-paper">
@@ -143,7 +169,9 @@ export function UberTracking({ delivery, audience, addressLabel }: Props) {
         <div className="flex items-center gap-4 px-5 py-4">
           <div className="relative w-[104px] shrink-0">
             {isCar ? (
-              <CarArt color={color?.hex ?? '#C3C7CC'} />
+              <CarArt color={color?.hex ?? '#C3C7CC'} loaded={phase === 'to_customer'} />
+            ) : isMoto ? (
+              <MotoArt color={color?.hex ?? '#C0392B'} loaded={phase === 'to_customer'} />
             ) : (
               <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-mist text-[11px] font-semibold text-mid">
                 {courierVehicleLabel(delivery.courierVehicle!)}

@@ -46,13 +46,47 @@ function pinHtml(kind: 'store' | 'home', label: string): string {
   return `<span class="sd-dot sd-dot-${kind}"></span><span class="sd-tag"><span class="sd-eta" hidden></span><span class="sd-tag-text">${esc}</span></span>`;
 }
 
-// Carro visto de cima, frente pra cima (rumo 0 = norte), como no app da Uber.
-const CAR_ICON = `<svg viewBox="0 0 24 44" width="20" height="37" aria-hidden="true">
+// Ícones vistos de cima, frente pra cima (rumo 0 = norte), como no app da
+// Uber. Depois da coleta aparece o pacote verde em cima, como na Uber.
+const BOX = '#06C167';
+function boxSvg(x: number, y: number, w: number, h: number): string {
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.6" fill="${BOX}" stroke="#04883F" stroke-width="1"/>`
+    + `<path d="M${x + w / 2} ${y + 1}V${y + h - 1}M${x + 1} ${y + h / 2}H${x + w - 1}" stroke="#fff" stroke-opacity=".75" stroke-width="1.2"/>`;
+}
+
+const CAR_ICON = (loaded: boolean) => `<svg viewBox="0 0 24 44" width="21" height="38" aria-hidden="true">
   <rect x="2" y="2" width="20" height="40" rx="7" fill="#fff" stroke="${INK}" stroke-width="1.6"/>
-  <rect x="5" y="10" width="14" height="7" rx="2.5" fill="${INK}"/>
-  <rect x="5.5" y="30" width="13" height="5" rx="2" fill="${INK}" opacity=".8"/>
+  <rect x="5" y="9" width="14" height="6.5" rx="2.5" fill="${INK}"/>
+  <rect x="5.5" y="31" width="13" height="4.5" rx="2" fill="${INK}" opacity=".8"/>
+  ${loaded ? boxSvg(5.5, 16.5, 13, 12.5) : ''}
 </svg>`;
-const ARROW_ICON = `<div class="sd-arrow"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3l7 17-7-4-7 4z" fill="#fff"/></svg></div>`;
+
+// Moto: roda da frente, guidão, banco e roda de trás; o baú vai na traseira.
+const MOTO_ICON = (loaded: boolean) => `<svg viewBox="0 0 24 44" width="19" height="35" aria-hidden="true">
+  <rect x="9.5" y="2" width="5" height="9" rx="2.5" fill="${INK}"/>
+  <path d="M4 12.5h16" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>
+  <rect x="7.5" y="11" width="9" height="19" rx="4.5" fill="#fff" stroke="${INK}" stroke-width="1.6"/>
+  <rect x="9.5" y="16" width="5" height="9" rx="2.5" fill="${INK}" opacity=".85"/>
+  <rect x="9.5" y="31" width="5" height="10" rx="2.5" fill="${INK}"/>
+  ${loaded ? boxSvg(5, 27, 14, 13) : ''}
+</svg>`;
+
+// Bicicleta: mais fina, com a mochila de entrega nas costas do entregador.
+const BIKE_ICON = (loaded: boolean) => `<svg viewBox="0 0 24 44" width="18" height="33" aria-hidden="true">
+  <rect x="10.5" y="2" width="3" height="11" rx="1.5" fill="${INK}"/>
+  <path d="M5 13h14" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 13v17" stroke="${INK}" stroke-width="2"/>
+  <circle cx="12" cy="21" r="4.5" fill="#fff" stroke="${INK}" stroke-width="1.6"/>
+  <rect x="10.5" y="30" width="3" height="12" rx="1.5" fill="${INK}"/>
+  ${loaded ? boxSvg(5.5, 19, 13, 11) : ''}
+</svg>`;
+
+function courierIcon(vehicle: string | undefined, loaded: boolean): string {
+  const v = (vehicle ?? 'car').toLowerCase();
+  if (v === 'motorcycle' || v === 'scooter' || v === 'moto') return MOTO_ICON(loaded);
+  if (v === 'bicycle' || v === 'walker') return BIKE_ICON(loaded);
+  return CAR_ICON(loaded);
+}
 
 function bearing(a: Pt, b: Pt): number {
   const r = Math.PI / 180;
@@ -230,12 +264,11 @@ export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaM
       return;
     }
     const target: Pt = { lat: courier.lat, lng: courier.lng };
-    const isCar = !courier.vehicle || courier.vehicle === 'car' || courier.vehicle === 'van' || courier.vehicle === 'truck';
     const ml = mlRef.current!;
     {
       const m = markers.current;
       if (!m.courier) {
-        const node = el(`<div class="sd-halo"></div>${isCar ? CAR_ICON : ARROW_ICON}`, 'sd-courier');
+        const node = el(`<div class="sd-halo"></div><div class="sd-vehicle">${courierIcon(courier.vehicle, phase === 'to_customer')}</div>`, 'sd-courier');
         const b = route ? bearing(target, route[Math.min(nearestIndex(route, target) + 1, route.length - 1)]) : 0;
         m.courier = new ml.Marker({ element: node, rotationAlignment: 'map', rotation: b }).setLngLat(target).addTo(map);
         shown.current = { pos: target, bearing: b };
@@ -260,6 +293,15 @@ export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaM
       anim.current = requestAnimationFrame(step);
     }
   }, [ready, courier?.lat, courier?.lng, courier?.vehicle]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Coletou (ou a Uber informou o veículo): troca o desenho, o pacote
+  // aparece em cima do carro ou da moto.
+  const hasCourierMarker = !!courier;
+  useEffect(() => {
+    const node = markers.current.courier?.getElement().querySelector('.sd-vehicle');
+    if (!ready || !node) return;
+    node.innerHTML = courierIcon(courier?.vehicle, phase === 'to_customer');
+  }, [ready, hasCourierMarker, courier?.vehicle, phase]);
 
   // Enquadra o que importa na fase: entregador e loja, depois entregador e casa.
   const fitKey = `${phase}|${routeKey}|${!!courier}|${storePt?.lat}|${homePt?.lat}`;
@@ -321,7 +363,7 @@ export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaM
         .sd-eta[hidden] { display: none; }
         .sd-courier { display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
         .sd-halo { position: absolute; left: 50%; top: 50%; margin: -28px 0 0 -28px; width: 56px; height: 56px; border-radius: 9999px; background: rgba(17,17,17,.12); animation: sd-pulse 2s ease-out infinite; }
-        .sd-arrow { position: relative; width: 28px; height: 28px; border-radius: 9999px; background: ${INK}; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
+        .sd-vehicle { position: relative; display: flex; }
         @keyframes sd-pulse { 0% { transform: scale(.4); opacity: .9; } 100% { transform: scale(1.3); opacity: 0; } }
         @media (prefers-reduced-motion: reduce) { .sd-halo { animation: none; opacity: .5; } }
       `}</style>
