@@ -333,6 +333,11 @@ export interface UberDelivery {
     phone_number?: string;
     img_href?:     string;
     vehicle_type?: string;
+    vehicle_make?: string;
+    vehicle_model?: string;
+    vehicle_color?: string;
+    vehicle_license_plate?: string;
+    rating?:       number | string;
     location?:     LatLng;
   } | null;
   pickup?:  { location?: LatLng };

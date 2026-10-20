@@ -7,9 +7,9 @@
 // posição do motoboy ao longo dela. Isso mantém o uso bem abaixo do limite
 // gratuito mesmo com muitos pedidos.
 //
-// Sem ORS_API_KEY configurada: retorna null e quem chamou deve cair pra
-// exibir só uma linha reta entre os pontos (ainda funcional, só não segue
-// as ruas de verdade).
+// Sem ORS_API_KEY (ou com o ORS fora do ar), usa o OSRM público da FOSSGIS
+// (routing.openstreetmap.de), também gratuito e sem chave. Se os dois
+// falharem, retorna null e quem chamou cai pra linha reta.
 
 export interface RoutePoint {
   lat: number;
@@ -39,6 +39,47 @@ export function vehicleTypeToProfile(vehicleType?: string): string {
  * requisição falhar (best-effort, nunca lança).
  */
 export async function fetchRoute(
+  origin: RoutePoint,
+  destination: RoutePoint,
+  vehicleType?: string
+): Promise<RoutePoint[] | null> {
+  return (await fetchOrsRoute(origin, destination, vehicleType)) ?? fetchOsrmRoute(origin, destination, vehicleType);
+}
+
+// Perfis do OSRM da FOSSGIS: carro, bicicleta e a pé.
+function vehicleTypeToOsrm(vehicleType?: string): string {
+  if (vehicleType === 'bicycle') return 'routed-bike/route/v1/bike';
+  if (vehicleType === 'walker') return 'routed-foot/route/v1/foot';
+  return 'routed-car/route/v1/driving';
+}
+
+async function fetchOsrmRoute(
+  origin: RoutePoint,
+  destination: RoutePoint,
+  vehicleType?: string
+): Promise<RoutePoint[] | null> {
+  const url = `https://routing.openstreetmap.de/${vehicleTypeToOsrm(vehicleType)}/`
+    + `${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'MikmaLencoisTracking/1.0 (+https://mikma.com.br)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      console.warn('[routing] OSRM respondeu', res.status);
+      return null;
+    }
+    const data = await res.json();
+    const coords: [number, number][] | undefined = data?.routes?.[0]?.geometry?.coordinates;
+    if (!coords || coords.length < 2) return null;
+    return coords.map(([lng, lat]) => ({ lat, lng }));
+  } catch (err) {
+    console.warn('[routing] falha no OSRM (best-effort, ignorado):', err);
+    return null;
+  }
+}
+
+async function fetchOrsRoute(
   origin: RoutePoint,
   destination: RoutePoint,
   vehicleType?: string

@@ -11,14 +11,9 @@ import type { Order, User } from '@/types';
 import dynamic from 'next/dynamic';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { useUberSync } from '@/components/tracking/useUberSync';
+import { UberTracking } from '@/components/tracking/UberTracking';
 
-// Carregado sob demanda: leaflet só é baixado quando essa página realmente
-// precisa mostrar o mapa, em vez de entrar no bundle inicial da rota.
-const LiveDeliveryMap = dynamic(
-  () => import('@/components/tracking/LiveDeliveryMap').then(m => m.LiveDeliveryMap),
-  { ssr: false }
-);
-import { carrierNameVendor, trackingUrl, isCorreios, isManualDispatch, isValidTrackingCodeFor, courierVehicleLabel } from '@/lib/carriers';
+import { carrierNameVendor, trackingUrl, isCorreios, isManualDispatch, isValidTrackingCodeFor } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import {
   IconTruck, IconProducts, IconBox, IconMaintenance, IconUser, IconCard, IconPin, IconClock,
@@ -916,74 +911,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
             {/* ── Uber Direct: entregador em tempo real ─────────────────── */}
             {order.delivery?.carrier === 'uber_direct' && (
-              <div className="bg-[#F5F1EB] border border-mist px-4 py-3 flex flex-col gap-3 rounded-xl">
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-faint">Uber Direct</p>
-
-                {/* Entregador */}
-                {order.delivery.courierName ? (
-                  <div className="flex items-center gap-3">
-                    {order.delivery.courierPhoto ? (
-                      <img src={order.delivery.courierPhoto} alt={order.delivery.courierName}
-                        className="w-9 h-9 rounded-full object-cover shrink-0" />
-                    ) : (
-                      <span className="w-9 h-9 rounded-full bg-mist flex items-center justify-center shrink-0">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#C4714A" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                      </span>
-                    )}
-                    <div>
-                      <p className="text-[13px] font-semibold text-ink">{order.delivery.courierName}</p>
-                      {order.delivery.courierPhone && (
-                        <p className="text-[11px] text-mid font-mono">{order.delivery.courierPhone}</p>
-                      )}
-                      {order.delivery.courierVehicle && (
-                        <p className="text-[11px] text-faint ">{courierVehicleLabel(order.delivery.courierVehicle)}</p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-[12px] text-faint">Procurando entregador…</p>
-                )}
-
-                {/* ETAs */}
-                {(order.delivery.pickupEta || order.delivery.dropoffEta) && (
-                  <div className="flex gap-4">
-                    {order.delivery.pickupEta && (
-                      <p className="text-[12px] text-mid">
-                        Previsão de coleta:{' '}
-                        <span className="font-bold text-ink">
-                          {new Date(order.delivery.pickupEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </p>
-                    )}
-                    {order.delivery.dropoffEta && (
-                      <p className="text-[12px] text-mid">
-                        Previsão de chegada:{' '}
-                        <span className="font-bold text-ink">
-                          {new Date(order.delivery.dropoffEta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Mapa ao vivo */}
-                <LiveDeliveryMap
-                  routePoints={order.delivery.routePoints}
-                  courierLat={order.delivery.courierLat}
-                  courierLng={order.delivery.courierLng}
-                  courierLocationAt={order.delivery.courierLocationAt}
-                  courierName={order.delivery.courierName}
-                />
-
-                {/* Link rastreio em tempo real */}
-                {order.delivery.trackingUrl && (
-                  <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 w-full py-2 bg-ink text-paper text-[12px] font-bold hover:bg-ink/80 transition-colors rounded-xl">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                    Abrir rastreio da Uber em outra aba
-                  </a>
-                )}
-              </div>
+              <UberTracking delivery={order.delivery} audience="loja" />
             )}
 
             {/* Código de rastreio (Correios / Jadlog) */}
