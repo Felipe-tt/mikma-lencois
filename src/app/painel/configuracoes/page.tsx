@@ -1,4 +1,5 @@
 'use client';
+import { formatMeasure, parseMeasure } from '@/lib/measures';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
@@ -362,17 +363,20 @@ export default function ConfiguracoesPage() {
             <Info>
               Diferente da tabela &quot;Guia de tamanhos de cama&quot; logo abaixo: esta aqui é por tipo de peça (uma
               coluna pra Lençol, outra pra Fronha, outra pra Capa duvet...). Configure as colunas (separadas por
-              vírgula) e depois preencha as linhas. A primeira coluna é sempre o nome do tamanho.
+              vírgula) e depois preencha as linhas. A primeira coluna é sempre o nome do tamanho; nas outras,
+              preencha largura, comprimento e altura em centímetros.
             </Info>
             <F label="Colunas da tabela"
               value={(() => { try { return JSON.parse(settings.sizeGuideColumns || '[]').join(', '); } catch { return ''; } })()}
               onChange={v => set('sizeGuideColumns', JSON.stringify(v.split(',').map((s: string) => s.trim()).filter(Boolean)))}
               placeholder="Tamanho, Lençol, Fronha, Capa duvet" />
             <TableEditor
+              measures
               colsJson={settings.sizeGuideColumns}
               rowsJson={settings.sizeGuideRows}
               onRowsChange={v => set('sizeGuideRows', v)}
             />
+            <p className="text-[11px] text-faint -mt-1">Medidas em centímetros: largura × comprimento × altura. A altura é opcional (fronha não tem).</p>
             <F label="Observação (rodapé da tabela)"
               value={settings.sizeGuideNote ?? ''} onChange={v => set('sizeGuideNote', v)}
               placeholder="Medidas podem variar ±2 cm após lavagem. Recomendamos lavar antes do primeiro uso." />
@@ -738,8 +742,51 @@ function Num({ label, value, onChange, hint, min, max }: {
 }
 
 /* ── Table editor (reusável para guias) ────────────────────────────────── */
-function TableEditor({ colsJson, rowsJson, onRowsChange }: {
+/**
+ * Medida da peça em três campos (cm): largura × comprimento × altura. Salva
+ * já no padrão ("88 × 188 × 40 cm"); valor antigo em texto livre é lido e
+ * convertido (metro vira centímetro).
+ */
+function MeasureInput({ value, label, onChange }: { value: string; label: string; onChange: (v: string) => void }) {
+  const initial = parseMeasure(value);
+  const [parts, setParts] = useState({
+    l: initial.l != null ? String(initial.l).replace('.', ',') : '',
+    c: initial.c != null ? String(initial.c).replace('.', ',') : '',
+    a: initial.a != null ? String(initial.a).replace('.', ',') : '',
+  });
+  // Valor trocado de fora (configurações carregando, linha removida acima):
+  // ressincroniza os campos. Enquanto digita, o valor formatado bate e nada muda.
+  useEffect(() => {
+    const n = (x: string) => (x ? Number(x.replace(',', '.')) || undefined : undefined);
+    if (formatMeasure({ l: n(parts.l), c: n(parts.c), a: n(parts.a) }) === value) return;
+    const m = parseMeasure(value);
+    const str = (x?: number) => (x != null ? String(x).replace('.', ',') : '');
+    setParts({ l: str(m.l), c: str(m.c), a: str(m.a) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  const update = (k: 'l' | 'c' | 'a', v: string) => {
+    const clean = v.replace(/[^\d,.]/g, '').slice(0, 6);
+    const next = { ...parts, [k]: clean };
+    setParts(next);
+    const n = (x: string) => (x ? Number(x.replace(',', '.')) || undefined : undefined);
+    onChange(formatMeasure({ l: n(next.l), c: n(next.c), a: n(next.a) }));
+  };
+  const box = 'w-full min-w-0 border border-mist bg-white dark:bg-warm px-1.5 py-2 text-sm text-center tabular-nums focus:outline-none focus:ring-1 focus:ring-clay-l/30 rounded-lg placeholder:text-[10px]';
+  return (
+    <div className="flex items-center gap-1" role="group" aria-label={`${label} (cm)`}>
+      <input inputMode="decimal" value={parts.l} onChange={e => update('l', e.target.value)} placeholder="Larg." aria-label="Largura (cm)" className={box} />
+      <span className="text-faint text-[11px]">×</span>
+      <input inputMode="decimal" value={parts.c} onChange={e => update('c', e.target.value)} placeholder="Compr." aria-label="Comprimento (cm)" className={box} />
+      <span className="text-faint text-[11px]">×</span>
+      <input inputMode="decimal" value={parts.a} onChange={e => update('a', e.target.value)} placeholder="Alt." aria-label="Altura (cm), opcional" className={box} />
+    </div>
+  );
+}
+
+function TableEditor({ colsJson, rowsJson, onRowsChange, measures = false }: {
   colsJson: string; rowsJson: string; onRowsChange: (v: string) => void;
+  /** Colunas depois da primeira são medidas L × C × A (guia de medidas por peça). */
+  measures?: boolean;
 }) {
   let cols: string[] = []; let rows: Record<string,string>[] = [];
   try { cols = JSON.parse(colsJson || '[]'); } catch {}
@@ -759,14 +806,20 @@ function TableEditor({ colsJson, rowsJson, onRowsChange }: {
       {rows.map((row, i) => (
         <div key={i} className="flex gap-2 items-center">
           <div className="grid gap-2 flex-1 [grid-template-columns:repeat(var(--cols),1fr)]" style={{ '--cols': cols.length } as React.CSSProperties}>
-            {cols.map(col => (
-              <input key={col} type="text" value={row[col]??''} placeholder={col} aria-label={`${col}, linha ${i + 1}`}
-                onChange={e => {
-                  const next = [...rows]; next[i]={...next[i],[col]:e.target.value};
-                  onRowsChange(JSON.stringify(next));
-                }}
-                className="w-full border border-mist bg-white dark:bg-warm px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay-l/30 rounded-xl" />
-            ))}
+            {cols.map((col, j) => {
+              const setCell = (v: string) => {
+                const next = [...rows]; next[i] = { ...next[i], [col]: v };
+                onRowsChange(JSON.stringify(next));
+              };
+              // Primeira coluna: nome do tamanho. As outras: medida da peça.
+              return j === 0 || !measures ? (
+                <input key={col} type="text" value={row[col]??''} placeholder={col} aria-label={`${col}, linha ${i + 1}`}
+                  onChange={e => setCell(e.target.value)}
+                  className="w-full border border-mist bg-white dark:bg-warm px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay-l/30 rounded-xl" />
+              ) : (
+                <MeasureInput key={col} value={row[col] ?? ''} label={`${col}, linha ${i + 1}`} onChange={setCell} />
+              );
+            })}
           </div>
           <button onClick={() => onRowsChange(JSON.stringify(rows.filter((_,idx)=>idx!==i)))}
             className="w-7 h-7 flex items-center justify-center text-faint hover:text-red-400 transition-colors shrink-0 text-sm">

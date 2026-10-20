@@ -1,5 +1,6 @@
 'use client';
 
+import { normalizeMeasureText } from '@/lib/measures';
 import type { StoreSettings } from '@/lib/store-settings';
 
 function parseTable(colsJson: string, rowsJson: string): { columns: string[]; rows: Record<string, string>[] } {
@@ -76,7 +77,7 @@ export function SizeGuidePreview({ s }: { s: StoreSettings }) {
                   <tr key={i}>
                     {columns.map((col, j) => (
                       <td key={col} className={`px-5 py-3.5 whitespace-nowrap ${j === 0 ? 'font-semibold text-ink' : 'text-mid font-mono text-[12px]'}`}>
-                        {row[col] ?? ''}
+                        {j === 0 ? (row[col] ?? '') : normalizeMeasureText(row[col])}
                       </td>
                     ))}
                   </tr>

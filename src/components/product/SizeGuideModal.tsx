@@ -1,4 +1,5 @@
 'use client';
+import { normalizeMeasureText } from '@/lib/measures';
 import { useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useOverlay } from '@/lib/hooks/useOverlay';
@@ -59,6 +60,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
               <div>
                 <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-faint mb-1">Produto</p>
                 <h3 id="size-guide-title" className="font-display font-normal text-ink text-xl leading-none">Medidas deste produto</h3>
+                <p className="text-[11.5px] text-faint mt-1.5">Em centímetros: largura × comprimento × altura</p>
               </div>
               <button
                 onClick={close}
@@ -88,7 +90,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
                       <tr key={i} className="hover:bg-warm/40 transition-colors">
                         {columns.map((col, j) => (
                           <td key={col} className={`px-5 py-3.5 whitespace-nowrap ${j === 0 ? 'font-semibold text-ink' : 'text-mid font-mono text-[12px]'}`}>
-                            {row[col] ?? ''}
+                            {j === 0 ? (row[col] ?? '') : normalizeMeasureText(row[col])}
                           </td>
                         ))}
                       </tr>
