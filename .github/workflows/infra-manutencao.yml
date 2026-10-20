@@ -1,0 +1,89 @@
+name: Infra · manutenção do Google Cloud
+
+# Rodado manualmente. Sem "aplicar", só lista (não muda nada):
+# - repositórios do Artifact Registry e tamanho (imagens de build acumuladas);
+# - backends do App Hosting, serviços do Cloud Run e funções;
+# - se o secret ABACATEPAY_WEBHOOK_SECRET existe no Secret Manager.
+# Com "aplicar":
+# - política de limpeza no Artifact Registry (mantém as 5 imagens mais
+#   recentes de cada pacote, apaga o resto com mais de 14 dias);
+# - cria o ABACATEPAY_WEBHOOK_SECRET no Secret Manager a partir do secret do
+#   GitHub (se ainda não existir) e dá acesso aos backends do App Hosting.
+
+on:
+  workflow_dispatch:
+    inputs:
+      aplicar:
+        description: 'Aplicar as mudanças (sem isso, só lista)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  infra:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: mikma-lencois
+      APLICAR: ${{ inputs.aplicar }}
+    steps:
+      - name: Autenticar no Google Cloud
+        run: |
+          echo "$SA_JSON" > /tmp/sa.json
+          gcloud auth activate-service-account --key-file=/tmp/sa.json
+          gcloud config set project "$PROJECT_ID"
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
+      - name: Artifact Registry
+        run: |
+          set +e
+          echo "## Repositórios"
+          gcloud artifacts repositories list --format='table(name.basename(),format,location,sizeBytes.size(zero="0",precision=1,units_out=G))'
+          if [ "$APLICAR" = "true" ]; then
+            cat > /tmp/policy.json <<'JSON'
+          [
+            {"name": "manter-5-recentes", "action": {"type": "Keep"}, "mostRecentVersions": {"keepCount": 5}},
+            {"name": "apagar-antigas", "action": {"type": "Delete"}, "condition": {"olderThan": "14d"}}
+          ]
+          JSON
+            gcloud artifacts repositories list --format='value(name.basename(),location,format)' | while read -r repo loc fmt; do
+              [ "$fmt" = "DOCKER" ] || continue
+              echo "Política de limpeza em $repo ($loc)"
+              gcloud artifacts repositories set-cleanup-policies "$repo" --location="$loc" --policy=/tmp/policy.json --no-dry-run
+            done
+          fi
+
+      - name: Serviços ligados (App Hosting, Cloud Run, funções)
+        run: |
+          set +e
+          echo "## App Hosting"
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx -y firebase-tools@14 apphosting:backends:list --project "$PROJECT_ID"
+          echo "## Cloud Run"
+          gcloud run services list --format='table(metadata.name,region,status.url)'
+          echo "## Cloud Functions"
+          gcloud functions list --format='table(name,state,environment)' 2>&1 | head -40
+
+      - name: Secret do webhook da AbacatePay
+        env:
+          WEBHOOK_SECRET: ${{ secrets.ABACATEPAY_WEBHOOK_SECRET }}
+        run: |
+          set +e
+          if [ -n "$WEBHOOK_SECRET" ]; then echo "GitHub: ABACATEPAY_WEBHOOK_SECRET presente"; else echo "GitHub: ABACATEPAY_WEBHOOK_SECRET vazio/ausente"; fi
+          if gcloud secrets describe ABACATEPAY_WEBHOOK_SECRET >/dev/null 2>&1; then
+            echo "Secret Manager: ABACATEPAY_WEBHOOK_SECRET existe"
+            EXISTE=1
+          else
+            echo "Secret Manager: ABACATEPAY_WEBHOOK_SECRET NÃO existe"
+            EXISTE=0
+          fi
+          if [ "$APLICAR" = "true" ] && [ -n "$WEBHOOK_SECRET" ]; then
+            if [ "$EXISTE" = "0" ]; then
+              printf '%s' "$WEBHOOK_SECRET" | gcloud secrets create ABACATEPAY_WEBHOOK_SECRET --replication-policy=automatic --data-file=- && echo "criado"
+            fi
+            for b in $(GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx -y firebase-tools@14 apphosting:backends:list --project "$PROJECT_ID" --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const r=JSON.parse(s).result||[];for(const b of r)console.log(String(b.name).split("/").pop())}catch{}})'); do
+              echo "Acesso ao backend $b"
+              GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx -y firebase-tools@14 apphosting:secrets:grantaccess ABACATEPAY_WEBHOOK_SECRET --backend "$b" --project "$PROJECT_ID"
+            done
+          fi
