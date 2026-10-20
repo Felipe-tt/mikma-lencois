@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import Link from 'next/link';
 import { Fragment, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -247,7 +248,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({ destCep: clean }),
       });
       if (!res.ok) { setShipErr((await res.json().catch(() => ({}))).error ?? 'Erro ao calcular frete'); return; }
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setShipOpts(data.options);
       // Nunca pré-seleciona a retirada: quem passa rápido pagaria por uma
       // retirada sem perceber. Marca a entrega mais barata.
@@ -511,7 +512,7 @@ export default function CheckoutPage() {
       }
       setSub(false);
     } catch (err: unknown) {
-      setApiErr(err instanceof Error ? err.message : 'Erro ao finalizar pedido.');
+      setApiErr(userMessage(err, 'Erro ao finalizar pedido.'));
       setSub(false);
     }
   }

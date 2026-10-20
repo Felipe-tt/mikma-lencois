@@ -1,4 +1,5 @@
 'use client';
+import { variantLabel } from '@/lib/variantLabel';
 import Image from 'next/image';
 import { installmentFeeRate } from '@/lib/orderPricing';
 import Link from 'next/link';
@@ -11,7 +12,6 @@ import { useRouter } from 'next/navigation';
 import type { Cart, CartItem } from '@/types';
 import { CartSkeleton } from '@/components/ui/Skeleton';
 import { getStockUrgency } from '@/lib/stockUrgency';
-import { SIZE_LABEL } from '@/lib/productOptions';
 import { setReturnTo } from '@/lib/auth/returnTo';
 
 export default function CartPage() {
@@ -368,7 +368,7 @@ export default function CartPage() {
                     </Link>
                     {(item.variant?.size || item.variant?.colorName || item.variant?.color) && (
                       <p className="text-xs text-faint">
-                        {[SIZE_LABEL[item.variant.size] ?? item.variant.size, item.variant.colorName || item.variant.color].filter(Boolean).join(' · ')}
+                        {variantLabel({ size: item.variant.size, color: item.variant.color, colorName: item.variant.colorName })}
                       </p>
                     )}
                     {item.note && (

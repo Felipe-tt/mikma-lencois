@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 
@@ -30,7 +31,7 @@ export function StockAlert({ productId, options, defaultVariantId }: { productId
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Não deu para registrar agora. Tente de novo.');
       setState('done');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não deu para registrar agora. Tente de novo.');
+      setError(userMessage(err, 'Não deu para registrar agora. Tente de novo.'));
       setState('idle');
     }
   }

@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
     }
 
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     if (!ABACATEPAY_KEY) {
       console.error(abacateSandbox ? 'ABACATEPAY_SANDBOX_API_KEY not set' : 'ABACATEPAY_API_KEY not set');
-      return NextResponse.json({ error: 'Payment provider not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'Pagamento indisponível no momento. Tente em alguns minutos.' }, { status: 500 });
     }
 
     // Mínimo fixo de R$100 para cartão
@@ -455,7 +455,7 @@ export async function POST(req: NextRequest) {
           updatedAt: FieldValue.serverTimestamp(),
         }).catch(() => {});
       }
-      return NextResponse.json({ error: 'Erro ao criar produto no gateway de pagamento' }, { status: 502 });
+      return NextResponse.json({ error: 'Não foi possível iniciar o pagamento. Tente de novo.' }, { status: 502 });
     }
 
     const abacateProduct = JSON.parse(productText).data;
@@ -538,7 +538,7 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ABACATEPAY_KEY}` },
         body: JSON.stringify({ id: abacateProduct.id }),
       }).catch(() => {});
-      return NextResponse.json({ error: 'Erro no provedor de pagamento' }, { status: 502 });
+      return NextResponse.json({ error: 'Não foi possível iniciar o pagamento. Tente de novo.' }, { status: 502 });
     }
 
     const checkout = JSON.parse(checkText).data;
@@ -560,7 +560,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('create-checkout error:', err);
     Sentry.captureException(err, { tags: { route: 'create-checkout' } });
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Não foi possível concluir agora. Tente de novo.' }, { status: 500 });
   }
 }
 

@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -27,12 +28,12 @@ function ConfirmContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, token }),
         });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(d.error);
         setState('ok');
       } catch (err: unknown) {
         setState('error');
-        setError(err instanceof Error ? err.message : 'Não foi possível confirmar o login.');
+        setError(userMessage(err, 'Não foi possível confirmar o login.'));
       }
     })();
   }, [email, token]);

@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -28,7 +29,7 @@ function ConfirmContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, token }),
         });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(d.error);
         setState('ok');
         // Pequena pausa para a pessoa ver a confirmação, depois segue
@@ -38,7 +39,7 @@ function ConfirmContent() {
         }, 1200);
       } catch (err: unknown) {
         setState('error');
-        setError(err instanceof Error ? err.message : 'Não foi possível confirmar seu e-mail.');
+        setError(userMessage(err, 'Não foi possível confirmar seu e-mail.'));
       }
     })();
   }, [email, token, router]);

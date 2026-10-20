@@ -1,5 +1,6 @@
 'use client';
 
+import { userMessage } from '@/lib/userMessage';
 import { useEffect, useState, useCallback } from 'react';
 import type { TrackingResult } from '@/app/api/tracking/[code]/route';
 import { auth } from '@/lib/firebase/client';
@@ -68,11 +69,11 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
         if (idToken) headers.Authorization = `Bearer ${idToken}`;
       }
       const res = await fetch(`/api/tracking/${encodeURIComponent(key)}`, { headers });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? 'Erro ao buscar rastreio');
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível buscar o rastreio');
+      setError(userMessage(err, 'Não foi possível buscar o rastreio'));
     } finally {
       setLoading(false);
     }

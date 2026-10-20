@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
@@ -67,7 +68,7 @@ export default function PedidosPage() {
       const data = await requestNewPix(order.id);
       setPixModal({ qrCode: data.qrCode, copyPaste: data.copyPaste, orderId: order.id, totalCents: data.totalCents ?? order.totalCents, expiresAt: data.expiresAt });
     } catch (err) {
-      setActionError(e => ({ ...e, [order.id]: err instanceof Error ? err.message : 'Erro' }));
+      setActionError(e => ({ ...e, [order.id]: userMessage(err) }));
     } finally {
       setActionOId(null);
     }
@@ -92,7 +93,7 @@ export default function PedidosPage() {
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Não foi possível cancelar. Tente de novo.');
     } catch (err) {
-      setActionError(e => ({ ...e, [order.id]: err instanceof Error ? err.message : 'Erro' }));
+      setActionError(e => ({ ...e, [order.id]: userMessage(err) }));
     } finally {
       setActionOId(null);
     }
@@ -158,12 +159,12 @@ export default function PedidosPage() {
                       {/* No celular o selo vai embaixo: do lado ele quebrava
                           em duas linhas e espremia a data. */}
                       <span className={`${BADGES[order.status] ?? 'badge'} sm:!hidden mt-2.5 whitespace-nowrap`}>
-                        {LABELS[order.status] ?? order.status}
+                        {LABELS[order.status] ?? 'Em andamento'}
                       </span>
                     </div>
                   </div>
                   <span className={`${BADGES[order.status] ?? 'badge'} !hidden sm:!inline-flex shrink-0 whitespace-nowrap`}>
-                    {LABELS[order.status] ?? order.status}
+                    {LABELS[order.status] ?? 'Em andamento'}
                   </span>
                 </div>
 

@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { PixPayBlock, PaidCheck } from '@/components/checkout/PIXModal';
 import { groupConsecutiveDays, parseBusinessHours } from '@/lib/business-hours';
 
@@ -17,6 +18,9 @@ import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { useUberSync } from '@/components/tracking/useUberSync';
 import { UberTracking } from '@/components/tracking/UberTracking';
+import { toAddress, streetLine } from '@/lib/address';
+import { customerTimeline, customerCancelReason } from '@/lib/orders/customerTimeline';
+import { variantLabel } from '@/lib/variantLabel';
 import { trackPurchase } from '@/lib/analytics';
 import { requestNewPix, type NewPix } from '@/lib/orders/requestNewPix';
 import { setReturnTo } from '@/lib/auth/returnTo';
@@ -104,20 +108,6 @@ function stepIndex(status: OrderStatus) {
 
 // ─── Timeline interna do pedido (eventos do Firestore) ───────────────────────
 
-const TIMELINE_LABEL: Record<string, string> = {
-  created:              'Pedido criado',
-  payment_initiated:    'Aguardando pagamento',
-  payment_confirmed:    'Pagamento confirmado',
-  payment_expired:      'PIX expirou',
-  payment_failed:       'Pagamento recusado',
-  pending_payment:      'Aguardando pagamento',
-  paid:                 'Pagamento confirmado',
-  preparing:            'Pedido em preparação',
-  shipped:              'Pedido despachado',
-  delivery_cancelled:   'Entrega cancelada, novo envio em breve',
-  delivered:            'Pedido entregue',
-  cancelled:            'Pedido cancelado',
-};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -225,7 +215,7 @@ export default function OrderDetailPage() {
     try {
       setNewPix(await requestNewPix(order.id));
     } catch (err) {
-      setPixError(err instanceof Error ? err.message : 'Não foi possível gerar o PIX. Tente novamente.');
+      setPixError(userMessage(err, 'Não foi possível gerar o PIX. Tente novamente.'));
     } finally {
       setPixLoading(false);
     }
@@ -279,7 +269,7 @@ export default function OrderDetailPage() {
   const rastreioUrl = carrier === 'uber_direct'
     ? (order.delivery?.trackingUrl ?? null)
     : (carrier && trackCode ? trackingUrl(carrier, trackCode) : null);
-  const timeline = [...(order.timeline ?? [])].reverse();
+  const timeline = customerTimeline(order.timeline).reverse();
 
   // Quando o pedido já foi despachado, rastrear é a informação que o
   // cliente abriu a página pra ver, não devia ficar escondido depois
@@ -360,7 +350,7 @@ export default function OrderDetailPage() {
           <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
             Acompanhe a entrega
           </h2>
-          <UberTracking delivery={order.delivery} audience="cliente" />
+          <UberTracking delivery={order.delivery} audience="cliente" addressLabel={(() => { const a = toAddress(order.address); return a ? streetLine(a) || undefined : undefined; })()} />
         </section>
       )}
     </>
@@ -398,7 +388,7 @@ export default function OrderDetailPage() {
 
         {/* ── Cancelado: motivo e reembolso (antes só um selo vermelho) ── */}
         {isCancelled && (() => {
-          const reason = [...(order.timeline ?? [])].reverse().find(e => e.status === 'cancelled' && e.note)?.note;
+          const reason = customerCancelReason(order.timeline);
           const wasPaid = !!order.payment.paidAt;
           return (
             <div className="mb-8 rounded-3xl border border-red-200 bg-red-50/60 dark:bg-red-500/10 dark:border-red-500/30 p-5 sm:p-6">
@@ -530,10 +520,8 @@ export default function OrderDetailPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-ink">{item.productName}</p>
-                      <p className="text-xs text-faint mt-0.5 first-letter:uppercase">
-                        {item.variant.size}
-                        {(item.variant.colorName || item.variant.color) ? ` · ${item.variant.colorName || item.variant.color}` : ''}
-                        {' · '}{item.quantity}x
+                      <p className="text-xs text-faint mt-0.5">
+                        {[variantLabel({ size: item.variant.size, color: item.variant.color, colorName: item.variant.colorName }), `${item.quantity}x`].filter(Boolean).join(' · ')}
                       </p>
                       {item.note && <p className="text-xs text-clay font-medium mt-0.5">{item.note}</p>}
                     </div>
@@ -600,9 +588,9 @@ export default function OrderDetailPage() {
                             </div>
                             <div className="pt-1">
                               <p className={isLatest ? 'text-sm font-semibold text-ink' : 'text-sm font-medium text-mid'}>
-                                {TIMELINE_LABEL[ev.status] ?? ev.status}
+                                {ev.title}
                               </p>
-                              {ev.note && <p className="text-xs text-faint mt-0.5 italic">{ev.note}</p>}
+                              {ev.detail && <p className="text-xs text-faint mt-0.5">{ev.detail}</p>}
                               <p className="text-xs text-faint mt-1 tabular-nums">{formatTsDateTime(ev.at)}</p>
                             </div>
                           </div>

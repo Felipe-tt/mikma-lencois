@@ -1,4 +1,5 @@
 'use client';
+import { userMessage } from '@/lib/userMessage';
 import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -42,7 +43,7 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase(), recaptchaToken }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
       setStep('sent');
       setResendCooldown(60);
@@ -163,7 +164,7 @@ export default function LoginPage() {
       }
       try {
         const res = await fetch(`/api/auth/login-challenge-status?email=${encodeURIComponent(email)}`);
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (d.expired) {
           setChallengeExpired(true);
@@ -231,7 +232,7 @@ export default function LoginPage() {
           // Nunca mostra texto cru do Firebase ("Firebase: Error (auth/...)").
           setError('Não foi possível entrar. Tente de novo.');
         } else {
-          setError(msg);
+          setError(userMessage(err, 'Não foi possível entrar. Tente de novo.'));
         }
       } else {
         setError('Não foi possível entrar. Tente de novo.');

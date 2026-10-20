@@ -61,7 +61,8 @@ const CARRIERS: Record<string, CarrierInfo> = {
 
 /** Nome legível da transportadora para o cliente */
 export function carrierName(carrier: CarrierKey): string {
-  return CARRIERS[carrier]?.name ?? carrier.replace(/_/g, ' ');
+  // Serviço do Melhor Envio sem nome próprio ("melhor_envio_17"): não mostra o código.
+  return CARRIERS[carrier]?.name ?? 'Transportadora';
 }
 
 /** Nome técnico da transportadora para o vendor (pode ser mais detalhado) */
@@ -128,4 +129,29 @@ const COURIER_VEHICLE: Record<string, string> = {
 /** Veículo do entregador da Uber (vehicle_type) em português. */
 export function courierVehicleLabel(vehicle: string): string {
   return COURIER_VEHICLE[vehicle.toLowerCase()] ?? vehicle;
+}
+
+// Cor do carro como a Uber manda (em inglês, às vezes em português).
+const CAR_COLORS: [RegExp, string, string][] = [
+  [/white|branc/i, 'Branco', '#F4F4F2'],
+  [/black|pret/i, 'Preto', '#222222'],
+  [/silver|prata/i, 'Prata', '#C3C7CC'],
+  [/gr[ae]y|cinza|grafite/i, 'Cinza', '#7E848C'],
+  [/red|vermelh/i, 'Vermelho', '#C0392B'],
+  [/blue|azul/i, 'Azul', '#2456A6'],
+  [/green|verde/i, 'Verde', '#2E7D4F'],
+  [/yellow|amarel/i, 'Amarelo', '#E8C33A'],
+  [/orange|laranja/i, 'Laranja', '#E07B2E'],
+  [/brown|marrom/i, 'Marrom', '#6B4A3A'],
+  [/beige|bege/i, 'Bege', '#D9C9A8'],
+  [/gold|dourad/i, 'Dourado', '#C8A44D'],
+  [/purple|roxo/i, 'Roxo', '#6B45A0'],
+  [/wine|vinho|burgundy|maroon/i, 'Vinho', '#7A2635'],
+];
+
+/** Nome em português e tom do desenho do carro a partir da cor da Uber. */
+export function courierCarColor(color?: string | null): { label: string; hex: string } | null {
+  if (!color) return null;
+  const hit = CAR_COLORS.find(([re]) => re.test(color));
+  return hit ? { label: hit[1], hex: hit[2] } : { label: color, hex: '#C3C7CC' };
 }
