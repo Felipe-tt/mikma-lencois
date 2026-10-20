@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
-const INTERVAL_MS = 20_000;
+const INTERVAL_MS = 10_000;
 
 /**
  * Enquanto a corrida da Uber está em andamento, pede ao servidor pra
- * consultar a Uber a cada 20s (só com a aba visível). O pedido chega
+ * consultar a Uber a cada 10s (só com a aba visível). O pedido chega
  * atualizado pelo listener do Firestore; isso cobre webhook perdido ou
  * atrasado, que deixava a página em "Procurando entregador…" com o
  * motoboy já a caminho.
