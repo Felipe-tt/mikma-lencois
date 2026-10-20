@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { BrandLogo } from '@/components/BrandLogo';
 import type { Product } from '@/types';
+import { FABRIC_SHORT } from '@/lib/productOptions';
 import { formatCurrency } from '@/lib/utils/format';
 import { useState } from 'react';
 import { NavLink } from '@/components/ui/NavLink';
@@ -38,8 +39,9 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   // dentro de <a> é interativo aninhado, e leitor de tela/teclado se perdiam.
   // Meta e cores pra dar hierarquia ao card (antes era só nome + preço em
   // 12px, todos iguais): categoria · tecido em cima, bolinhas das cores.
-  const fabric = product.variants?.[0]?.fabric;
-  const meta = [product.category, fabric].filter(Boolean).join(' · ');
+  // Todo produto é malha 100% algodão: o tecido salvo na variação (produtos
+  // antigos podem ter outro) não aparece.
+  const meta = [product.category, FABRIC_SHORT].filter(Boolean).join(' · ');
   const swatches = Array.from(new Set(
     (product.variants ?? []).map(v => v.color).filter((c): c is string => !!c && c.startsWith('#')),
   )).slice(0, 4);

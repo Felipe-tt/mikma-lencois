@@ -15,6 +15,9 @@ export const SIZE_LABEL: Record<string, string> = { solteiro: 'Solteiro', casal:
 // variação e no SKU dos produtos que já existem).
 export const FABRICS = ['Malha'] as const;
 export const FABRIC_LABEL = 'Malha 100% algodão';
+// O que a loja mostra ao cliente. Produtos antigos podem ter outro valor
+// salvo em `fabric` (cadastro de antes); na loja ele nunca aparece.
+export const FABRIC_SHORT = 'Malha';
 export const DEFAULT_COMPOSITION = '100% Algodão';
 export type Fabric = typeof FABRICS[number];
 

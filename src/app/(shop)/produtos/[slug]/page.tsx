@@ -17,6 +17,7 @@ import { serialize } from '@/lib/utils/serialize';
 import { TrackViewItem } from '@/components/product/TrackViewItem';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { toPublicReview, type PublicReview } from '@/lib/reviews';
+import { FABRIC_LABEL } from '@/lib/productOptions';
 
 // ISR: revalida a cada 5 minutos, reduz leituras no Firestore por visita ao produto
 export const revalidate = 300;
@@ -129,7 +130,6 @@ export default async function ProductPage({ params }: Props) {
   const relatedSameCategory = related.every(p => p.category === product.category);
   const fronhaInventory = await getFronhaInventory(fronhaOptions.map(f => f.id));
 
-  // Extract specs from tags (thread count, fabric composition, etc.)
   // Size guide data from settings
   let sizeGuideColumns: string[] = [];
   let sizeGuideRows: Record<string, string>[] = [];
@@ -142,9 +142,6 @@ export default async function ProductPage({ params }: Props) {
     s.productTrust3 || 'Pagamento PIX com confirmação imediata',
   ].filter(Boolean);
 
-  const specTags = product.tags?.filter(t =>
-    /\d+\s*fios|percal|misto|microfibra|algodão|poliéster|bamboo|cetim/i.test(t)
-  ) ?? [];
 
   // Dados estruturados (schema.org), pro Google mostrar preço, estoque e
   // estrelas de avaliação direto no resultado de busca (rich snippet) —
@@ -342,25 +339,25 @@ export default async function ProductPage({ params }: Props) {
               )}
 
               {/* ── Especificações ── */}
-              {(product.yarnCount || product.composition || product.weightGsm || specTags.length > 0 || (product.certifications?.length ?? 0) > 0) && (
+              {/* Tecido fixo: a loja só vende malha 100% algodão. Composição e
+                  "tipo" vindos de cadastros antigos (percal, cetim…) não
+                  aparecem mais. */}
                 <div className="pt-8 first:pt-0">
                   <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-3">Especificações do tecido</p>
                   <dl className="grid sm:grid-cols-2 gap-x-10 border-t border-mist">
                     {[
+                      { k: 'Tecido', v: FABRIC_LABEL },
                       ...(product.yarnCount ? [{ k: 'Título do fio', v: `Fio ${product.yarnCount}` }] : []),
-                      ...(product.composition ? [{ k: 'Composição', v: product.composition }] : []),
                       ...(product.weightGsm ? [{ k: 'Gramatura', v: `${product.weightGsm} g/m²` }] : []),
-                      ...specTags.map(tag => ({ k: 'Tipo', v: tag, cap: true })),
                       ...(product.certifications ?? []).map(cert => ({ k: 'Certificação', v: cert, clay: true })),
                     ].map((row, i) => (
                       <div key={i} className="flex items-baseline justify-between gap-4 py-3 border-b border-mist">
                         <dt className="text-[12px] text-mid">{row.k}</dt>
-                        <dd className={`text-[13px] font-semibold text-right ${'clay' in row && row.clay ? 'text-clay' : 'text-ink'} ${'cap' in row && row.cap ? 'capitalize' : ''}`}>{row.v}</dd>
+                        <dd className={`text-[13px] font-semibold text-right ${'clay' in row && row.clay ? 'text-clay' : 'text-ink'}`}>{row.v}</dd>
                       </div>
                     ))}
                   </dl>
                 </div>
-              )}
 
               <SizeGuide
                 columns={(() => { try { return JSON.parse(s.bedSizeColumns || '[]'); } catch { return ['Tamanho','Cama','Comprimento','Largura']; } })()}
