@@ -626,8 +626,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       active && order.status === 'pending_payment' ? 'A reserva do estoque será liberada.' : null,
       active && order.status !== 'pending_payment' ? 'O estoque destes itens volta para a loja.' : null,
       order.status === 'shipped' && order.delivery?.carrier === 'uber_direct' ? 'A corrida da Uber será cancelada.' : null,
+      order.status === 'delivered' ? 'As peças já saíram da loja, então a saída do estoque continua.' : null,
       hasMoneyHistory(order) ? `Pedido pago (${formatCurrency(order.totalCents)}): ele some dos relatórios e do controle de estorno. Se precisar devolver, faça por fora.` : null,
-      'O cliente não recebe e-mail e perde o acesso ao pedido. Esta ação não tem como desfazer.',
+      'Some todo o rastro do pedido (histórico do estoque, uso do cupom, notificações e trocas). O cliente não recebe e-mail. Esta ação não tem como desfazer.',
     ].filter(Boolean).join(' ');
     const { confirmed } = await confirmDialog({
       message: 'Apagar permanentemente este pedido?',
