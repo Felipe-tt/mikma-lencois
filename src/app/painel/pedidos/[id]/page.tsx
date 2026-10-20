@@ -614,20 +614,46 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     }
   }
 
+  const isAdmin = user?.role === 'admin';
+  // Vendedor: só cancelado sem dinheiro envolvido (como sempre foi).
+  // Admin: qualquer pedido, pelo servidor, que desfaz estoque, cupom e Uber.
+  const canDelete = !!order && (isAdmin || (order.status === 'cancelled' && !hasMoneyHistory(order)));
+
   async function handleDelete() {
-    if (!order || order.status !== 'cancelled' || hasMoneyHistory(order)) return;
+    if (!order || !canDelete) return;
+    const active = order.status !== 'cancelled' && order.status !== 'delivered' && order.status !== 'payment_expired';
+    const warnings = [
+      active && order.status === 'pending_payment' ? 'A reserva do estoque será liberada.' : null,
+      active && order.status !== 'pending_payment' ? 'O estoque destes itens volta para a loja.' : null,
+      order.status === 'shipped' && order.delivery?.carrier === 'uber_direct' ? 'A corrida da Uber será cancelada.' : null,
+      order.status === 'delivered' ? 'As peças já saíram da loja, então a saída do estoque continua.' : null,
+      hasMoneyHistory(order) ? `Pedido pago (${formatCurrency(order.totalCents)}): ele some dos relatórios e do controle de estorno. Se precisar devolver, faça por fora.` : null,
+      'Some todo o rastro do pedido (histórico do estoque, uso do cupom, notificações e trocas). O cliente não recebe e-mail. Esta ação não tem como desfazer.',
+    ].filter(Boolean).join(' ');
     const { confirmed } = await confirmDialog({
       message: 'Apagar permanentemente este pedido?',
-      detail: 'Esta ação não tem como desfazer.',
+      detail: warnings,
       confirmLabel: 'Apagar pedido',
       variant: 'danger',
     });
     if (!confirmed) return;
     setDeleting(true);
-    try { await deleteDoc(doc(db, 'orders', id)); router.push('/painel/pedidos'); }
-    catch {
+    try {
+      if (isAdmin) {
+        const token = await user!.getIdToken();
+        const res = await fetch(`/api/orders/${order.id}/admin-delete`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Não foi possível apagar o pedido. Tente de novo.');
+        if (data.uberCancelFailed) {
+          await confirmDialog({ message: 'Pedido apagado, mas a corrida da Uber não pôde ser cancelada. Cancele pelo app da Uber.', alertOnly: true });
+        }
+      } else {
+        await deleteDoc(doc(db, 'orders', id));
+      }
+      router.push('/painel/pedidos');
+    } catch (err) {
       setDeleting(false);
-      await confirmDialog({ message: 'Não foi possível apagar o pedido. Tente de novo.', alertOnly: true });
+      await confirmDialog({ message: err instanceof Error && isAdmin ? err.message : 'Não foi possível apagar o pedido. Tente de novo.', alertOnly: true });
     }
   }
 
@@ -1292,13 +1318,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        {/* ── Apagar se cancelado ── */}
-        {/* Pedido que teve dinheiro envolvido fica: some dos relatórios e do
-            registro de estorno se for apagado. */}
-        {order.status === 'cancelled' && !hasMoneyHistory(order) && (
+        {/* ── Apagar ── */}
+        {/* Vendedor: só cancelado sem dinheiro envolvido (pedido com dinheiro
+            fica pros relatórios e o registro de estorno). Admin: qualquer um. */}
+        {canDelete && (
           <button onClick={handleDelete} disabled={deleting}
             className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-xl">
-            {deleting ? 'Apagando…' : 'Apagar este pedido cancelado'}
+            {deleting ? 'Apagando…' : order.status === 'cancelled' ? 'Apagar este pedido cancelado' : 'Apagar este pedido'}
           </button>
         )}
       </div>

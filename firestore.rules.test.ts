@@ -290,6 +290,28 @@ describe('orders/{orderId}: sem update pelo client SDK', () => {
     await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order1')));
     await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order2')));
   });
+
+  it('seller não apaga pedido ativo nem entregue', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'paid' });
+      await setDoc(doc(ctx.firestore(), 'orders/order2'), { userId: 'buyer1', status: 'delivered' });
+    });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order1')));
+    await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order2')));
+  });
+
+  it('admin apaga direto só o que não tem nada a desfazer; ativo passa pela API', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'cancelled', payment: { method: 'pix', paidAt: new Date() } });
+      await setDoc(doc(ctx.firestore(), 'orders/order2'), { userId: 'buyer1', status: 'delivered' });
+      await setDoc(doc(ctx.firestore(), 'orders/order3'), { userId: 'buyer1', status: 'preparing' });
+    });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    await assertSucceeds(deleteDoc(doc(admin.firestore(), 'orders/order1')));
+    await assertSucceeds(deleteDoc(doc(admin.firestore(), 'orders/order2')));
+    await assertFails(deleteDoc(doc(admin.firestore(), 'orders/order3')));
+  });
 });
 
 describe('coupons/{code}: só a equipe lê', () => {

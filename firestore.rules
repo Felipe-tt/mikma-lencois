@@ -123,10 +123,12 @@ service cloud.firestore {
       // campo do pedido direto, inclusive marcar como pago sem passar pelo
       // fluxo de confirmação. O front só apaga (delete abaixo).
       allow update: if false;
-      // Delete: admin sempre; seller só pode deletar pedidos cancelados que
-      // nunca receberam dinheiro (pago antes de cancelar ou pagamento que
-      // chegou depois). Esses ficam pros relatórios e pro registro de estorno.
-      allow delete: if hasRole('admin') || (
+      // Delete: seller só pode deletar pedidos cancelados que nunca receberam
+      // dinheiro (pago antes de cancelar ou pagamento que chegou depois).
+      // Esses ficam pros relatórios e pro registro de estorno. Admin apaga
+      // qualquer pedido pela API (/admin-delete), que devolve estoque, cupom
+      // e cancela a Uber; direto pelo client, só o que não tem nada a desfazer.
+      allow delete: if (hasRole('admin') && resource.data.status in ['cancelled', 'delivered', 'payment_expired']) || (
         hasRole('seller') && resource.data.status == 'cancelled'
         && resource.data.get('payment', {}).get('paidAt', null) == null
         && resource.data.get('payment', {}).get('lateCaptureTxId', null) == null
