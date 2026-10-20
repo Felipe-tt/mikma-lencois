@@ -319,6 +319,49 @@ export interface UberDeliveryStatus {
   complete:          boolean;
 }
 
+type LatLng = { lat?: number; lng?: number };
+
+/** Corrida como a Uber devolve em GET /deliveries/{id} (só o que usamos). */
+export interface UberDelivery {
+  id:            string;
+  status?:       string;
+  tracking_url?: string;
+  pickup_eta?:   string;
+  dropoff_eta?:  string;
+  courier?: {
+    name?:         string;
+    phone_number?: string;
+    img_href?:     string;
+    vehicle_type?: string;
+    location?:     LatLng;
+  } | null;
+  pickup?:  { location?: LatLng };
+  dropoff?: { location?: LatLng };
+}
+
+/**
+ * GET /customers/{customer_id}/deliveries/{delivery_id}
+ * Usado pra sincronizar o pedido sem depender só dos webhooks.
+ */
+export async function uberGetDelivery(deliveryId: string, sandbox: boolean): Promise<UberDelivery> {
+  const { customerId } = credentials(sandbox);
+  if (!customerId) {
+    throw new Error(sandbox ? 'UBER_DIRECT_SANDBOX_CUSTOMER_ID não configurado' : 'UBER_DIRECT_CUSTOMER_ID não configurado');
+  }
+
+  const token = await getUberToken(sandbox);
+  const res = await fetch(
+    `${apiBase(sandbox)}/customers/${customerId}/deliveries/${encodeURIComponent(deliveryId)}`,
+    { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000), cache: 'no-store' },
+  );
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => '');
+    throw new Error(`Uber Direct get delivery falhou: ${res.status} ${err.slice(0, 200)}`);
+  }
+  return await res.json() as UberDelivery;
+}
+
 // ── Cancelar ──────────────────────────────────────────────────────────────────
 
 /**

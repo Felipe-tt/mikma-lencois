@@ -10,6 +10,7 @@ import { maskCep, maskPhone } from '@/lib/masks';
 import type { Order, User } from '@/types';
 import dynamic from 'next/dynamic';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
+import { useUberSync } from '@/components/tracking/useUberSync';
 
 // Carregado sob demanda: leaflet só é baixado quando essa página realmente
 // precisa mostrar o mapa, em vez de entrar no bundle inicial da rota.
@@ -17,7 +18,7 @@ const LiveDeliveryMap = dynamic(
   () => import('@/components/tracking/LiveDeliveryMap').then(m => m.LiveDeliveryMap),
   { ssr: false }
 );
-import { carrierNameVendor, trackingUrl, isCorreios, isManualDispatch, isValidTrackingCodeFor } from '@/lib/carriers';
+import { carrierNameVendor, trackingUrl, isCorreios, isManualDispatch, isValidTrackingCodeFor, courierVehicleLabel } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import {
   IconTruck, IconProducts, IconBox, IconMaintenance, IconUser, IconCard, IconPin, IconClock,
@@ -159,6 +160,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const { user } = useAuth();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
+  useUberSync(
+    order?.id,
+    order?.delivery?.carrier === 'uber_direct' && !!order.delivery.uberDirectDeliveryId && order.status === 'shipped',
+    user,
+  );
   const [customer, setCustomer] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -930,7 +936,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                         <p className="text-[11px] text-mid font-mono">{order.delivery.courierPhone}</p>
                       )}
                       {order.delivery.courierVehicle && (
-                        <p className="text-[11px] text-faint capitalize">{order.delivery.courierVehicle}</p>
+                        <p className="text-[11px] text-faint ">{courierVehicleLabel(order.delivery.courierVehicle)}</p>
                       )}
                     </div>
                   </div>

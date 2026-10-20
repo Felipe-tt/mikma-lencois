@@ -120,3 +120,12 @@ export function normalizeTrackingCode(code: string): string {
 export function isCorreiosTrackingCode(code: string): boolean {
   return /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(normalizeTrackingCode(code));
 }
+
+const COURIER_VEHICLE: Record<string, string> = {
+  car: 'Carro', motorcycle: 'Moto', scooter: 'Moto', bicycle: 'Bicicleta', walker: 'A pé', van: 'Van', truck: 'Caminhão',
+};
+
+/** Veículo do entregador da Uber (vehicle_type) em português. */
+export function courierVehicleLabel(vehicle: string): string {
+  return COURIER_VEHICLE[vehicle.toLowerCase()] ?? vehicle;
+}

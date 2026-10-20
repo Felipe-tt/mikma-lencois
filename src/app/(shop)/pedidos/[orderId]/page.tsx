@@ -18,9 +18,10 @@ import { db } from '@/lib/firebase/client';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/types';
 import { formatCurrency, formatTs, formatTsDateTime } from '@/lib/utils/format';
-import { carrierName, trackingUrl, isCorreios } from '@/lib/carriers';
+import { carrierName, trackingUrl, isCorreios, courierVehicleLabel } from '@/lib/carriers';
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
+import { useUberSync } from '@/components/tracking/useUberSync';
 import { trackPurchase } from '@/lib/analytics';
 import { requestNewPix, type NewPix } from '@/lib/orders/requestNewPix';
 import { setReturnTo } from '@/lib/auth/returnTo';
@@ -134,6 +135,11 @@ export default function OrderDetailPage() {
   const [listenTry, setListenTry] = useState(0);
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
+  useUberSync(
+    order?.id,
+    order?.delivery?.carrier === 'uber_direct' && !!order.delivery.uberDirectDeliveryId && order.status === 'shipped',
+    user,
+  );
   const [pixTimeUp, setPixTimeUp] = useState(false);
   // Tempo do PIX acabou com a página aberta: pede para o servidor conferir na
   // AbacatePay. Se não foi pago, o pedido expira e o estoque volta na hora
@@ -376,7 +382,7 @@ export default function OrderDetailPage() {
                 <div>
                   <p className="text-sm font-semibold text-ink">{order.delivery.courierName}</p>
                   {order.delivery.courierVehicle && (
-                    <p className="text-xs text-faint capitalize">{order.delivery.courierVehicle}</p>
+                    <p className="text-xs text-faint ">{courierVehicleLabel(order.delivery.courierVehicle)}</p>
                   )}
                 </div>
               </div>

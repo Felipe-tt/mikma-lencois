@@ -515,13 +515,14 @@ export async function POST(req: NextRequest) {
       const payload = buildPixPending(
         { id: orderId, items: verifiedItems, totalCents: amountCents, productsCents, shippingCents, pixDiscountCents, couponDiscountCents, couponCode: couponCode ?? undefined },
         firstName,
-        { copyPaste: pix.brCode, expiresAt: pix.expiresAt },
+        { copyPaste: pix.brCode, expiresAt: pix.expiresAt, qrCode: pix.brCodeBase64 },
       );
       await sendEmail({
         to: pendingEmailTo,
         subject: payload.subject,
         text: payload.text,
         html: payload.html,
+        attachments: payload.attachments,
         from: 'noreply',
         replyTo: CONTACT_EMAIL,
       }).catch(err => console.error('[create-pix] falha ao enviar e-mail de pedido recebido (ignorado):', err));
