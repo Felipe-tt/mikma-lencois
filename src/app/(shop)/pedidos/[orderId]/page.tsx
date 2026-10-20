@@ -286,6 +286,10 @@ export default function OrderDetailPage() {
   const pixExpired = pixTimeUp || (!!pixExpiresIso && new Date(pixExpiresIso).getTime() <= Date.now());
 
   const trackingIsPriority = !!carrier && (order.status === 'shipped' || order.status === 'delivered');
+  // Pedido a caminho com rastreio dos Correios/Jadlog: código, "Rastrear" e
+  // "Já recebi" sobem para o bloco do topo. No celular eles ficavam no fim
+  // da página, depois de itens, histórico e ajuda.
+  const trackingOnTop = trackingIsPriority && carrier !== 'pickup' && carrier !== 'manual' && carrier !== 'uber_direct';
 
   const trackingSection = (
     <>
@@ -296,6 +300,39 @@ export default function OrderDetailPage() {
             Rastreamento
           </h2>
           <div className="rounded-2xl border border-mist p-5">
+            {trackingOnTop && (trackCode || order.status === 'shipped') && (
+              <div className="flex flex-col gap-3 pb-4 mb-4 border-b border-mist">
+                {trackCode && (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <div className="min-w-0">
+                      <p className="text-xs text-faint">{carrierName(carrier)} · código de rastreio</p>
+                      <p className="font-mono text-sm font-bold text-ink">{trackCode}</p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <CopyCode code={trackCode} />
+                      {rastreioUrl && (
+                        <a href={rastreioUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center h-9 px-3.5 rounded-full border border-mist-d text-[12.5px] font-medium text-ink hover:border-ink transition-colors">
+                          Rastrear
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {order.status === 'shipped' && (
+                  <div>
+                    <button
+                      onClick={confirmReceived}
+                      disabled={confirmingReceived}
+                      className="w-full sm:w-auto sm:px-6 rounded-full bg-ink text-paper text-[13px] font-bold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors"
+                    >
+                      {confirmingReceived ? 'Confirmando…' : 'Já recebi meu pedido'}
+                    </button>
+                    {confirmReceivedError && <p className="text-[12px] text-red-600 mt-2">{confirmReceivedError}</p>}
+                  </div>
+                )}
+              </div>
+            )}
             <TrackingTimeline
               trackingCode={useCorreiosTracking ? trackCode : undefined}
               orderId={useCorreiosTracking ? undefined : orderId}
@@ -652,7 +689,7 @@ export default function OrderDetailPage() {
                     Despachado em {formatTs(order.delivery.dispatchedAt)}
                   </p>
                 )}
-                {trackCode && (
+                {trackCode && !trackingOnTop && (
                   <div className="mt-3 pt-3 border-t border-mist">
                     <p className="text-xs text-faint mb-1">Código de rastreio</p>
                     <p className="font-mono text-sm font-bold text-ink">{trackCode}</p>
@@ -668,7 +705,7 @@ export default function OrderDetailPage() {
                     )}
                   </div>
                 )}
-                {order.status === 'shipped' && (
+                {order.status === 'shipped' && !trackingOnTop && (
                   <div className="mt-3 pt-3 border-t border-mist">
                     <button
                       onClick={confirmReceived}
@@ -763,5 +800,23 @@ export default function OrderDetailPage() {
         />
       )}
     </div>
+  );
+}
+
+function CopyCode({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard?.writeText(code).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1600);
+        }).catch(() => {});
+      }}
+      className="inline-flex items-center h-9 px-3.5 rounded-full border border-mist-d text-[12.5px] font-medium text-ink hover:border-ink transition-colors"
+    >
+      <span role="status">{copied ? 'Copiado' : 'Copiar'}</span>
+    </button>
   );
 }
