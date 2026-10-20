@@ -125,10 +125,10 @@ function Input({
 
 // ── Accordion section ─────────────────────────────────────────────────────────
 function Section({
-  num, label, done, open, onEdit, children,
+  num, label, done, open, onEdit, summary, children,
 }: {
   num: number; label: string; done?: boolean; open: boolean;
-  onEdit?: () => void; children: React.ReactNode;
+  onEdit?: () => void; summary?: string; children: React.ReactNode;
 }) {
   // Seção concluída e fechada: o cabeçalho inteiro vira o botão "Editar".
   const editable = !!done && !open && !!onEdit;
@@ -153,6 +153,9 @@ function Section({
           <h2 id={`co-step-${num}`} tabIndex={-1} className={`font-display font-normal text-[1.15rem] leading-none transition-colors focus:outline-none ${open ? 'text-ink' : done ? 'text-mid' : 'text-faint'}`}>
             {label}
           </h2>
+          {/* Etapa concluída e fechada: mostra o que foi preenchido, pra
+              conferir sem abrir (principalmente quando veio do perfil). */}
+          {editable && summary && <p className="text-[12.5px] text-faint mt-1.5 truncate">{summary}</p>}
         </div>
         {editable && (
           <span aria-hidden className="text-xs font-semibold text-clay hover:text-clay-d transition-colors shrink-0">
@@ -274,14 +277,27 @@ export default function CheckoutPage() {
     });
     getDoc(doc(db, 'users', user.uid)).then(s => {
       const d = s.data();
-      if (d?.address) setAddr({ ...d.address, cep: maskCep(d.address.cep ?? '') });
-      setCustomer({
+      const savedAddr: Address | null = d?.address ? { ...d.address, cep: maskCep(d.address.cep ?? '') } : null;
+      if (savedAddr) setAddr(savedAddr);
+      const c = {
         name: d?.name ?? user.displayName ?? '',
         cpf: d?.cpf ? maskCpf(d.cpf) : '',
         phone: d?.phone ? maskPhone(d.phone) : '',
         email: user.email ?? '',
-      });
-    });
+      };
+      setCustomer(c);
+      // Dados e endereço já salvos e válidos (compra anterior ou perfil):
+      // pula direto para entrega e pagamento. As etapas fechadas mostram o
+      // resumo e continuam editáveis.
+      const step1Ok = !!c.name.trim() && isValidCpf(c.cpf) && isValidPhone(c.phone);
+      const step2Ok = !!savedAddr && isValidCep(savedAddr.cep) && !!savedAddr.street?.trim() && !!savedAddr.number?.trim()
+        && !!savedAddr.neighborhood?.trim() && !!savedAddr.city?.trim() && !!savedAddr.state;
+      if (step1Ok) {
+        setS1Done(true);
+        // Só avança se a pessoa ainda não mexeu nas etapas.
+        if (step2Ok) { setS2Done(true); setStep(cur => (cur === 1 ? 3 : cur)); } else setStep(cur => (cur === 1 ? 2 : cur));
+      }
+    }).catch(() => {});
     // Buscar configurações de desconto PIX do servidor
     fetch('/api/checkout/pix-discount')
       .then(r => r.ok ? r.json() : null)
@@ -719,7 +735,8 @@ export default function CheckoutPage() {
             )}
 
             {/* ── Seção 1: Identificação ── */}
-            <Section num={1} label="Identificação" open={step === 1} done={s1done} onEdit={() => goToStep(1)}>
+            <Section num={1} label="Identificação" open={step === 1} done={s1done} onEdit={() => goToStep(1)}
+              summary={[customer.name.trim(), customer.phone].filter(Boolean).join(' · ')}>
               <div className="flex flex-col gap-4">
                 <div>
                   <Label htmlFor="co-name">Nome completo</Label>
@@ -752,7 +769,8 @@ export default function CheckoutPage() {
             </Section>
 
             {/* ── Seção 2: Endereço ── */}
-            <Section num={2} label="Endereço de entrega" open={step === 2} done={s2done} onEdit={() => goToStep(2)}>
+            <Section num={2} label="Endereço de entrega" open={step === 2} done={s2done} onEdit={() => goToStep(2)}
+              summary={addr.street ? `${addr.street}, ${addr.number} · ${addr.city}/${addr.state}` : undefined}>
               <div className="flex flex-col gap-4">
                 {/* CEP */}
                 <div>
