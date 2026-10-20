@@ -1,5 +1,6 @@
 'use client';
 
+import { plural } from '@/lib/plural';
 import { useState } from 'react';
 import { auth } from '@/lib/firebase/client';
 import { IconAlert, IconCheck, IconListCheck } from '@/components/ui/Icon';
@@ -67,7 +68,7 @@ export function InventoryAuditPanel() {
   async function fix() {
     if (!result) return;
     const { confirmed } = await confirmDialog({
-      message: `Corrigir ${result.summary.skuMismatchCount} reserva(s)?`,
+      message: `Corrigir ${plural(result.summary.skuMismatchCount, 'reserva', 'reservas')}?`,
       detail: 'Isso ajusta só a quantidade reservada para pedidos em aberto, recalculada a partir dos pedidos que existem agora. O estoque físico não é alterado, e cada ajuste fica registrado no histórico do item.',
       confirmLabel: 'Corrigir reservas',
     });
@@ -123,8 +124,8 @@ export function InventoryAuditPanel() {
 
       {fixed && (
         <p className="text-[12px] text-emerald-700 mt-3 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg">
-          {fixed.corrected} reserva(s) corrigida(s).
-          {fixed.skipped > 0 && ` ${fixed.skipped} pulada(s) porque mudaram durante a correção, rode de novo para conferir.`}
+          {plural(fixed.corrected, 'reserva corrigida', 'reservas corrigidas')}.
+          {fixed.skipped > 0 && ` ${plural(fixed.skipped, 'pulada porque mudou', 'puladas porque mudaram')} durante a correção, rode de novo para conferir.`}
         </p>
       )}
 
@@ -137,7 +138,7 @@ export function InventoryAuditPanel() {
               </span>
               <p className="text-[13px] text-mid">
                 Tudo certo. Nenhuma reserva travada
-                <span className="text-faint"> · {result.summary.pendingOrdersChecked} pedido(s) em aberto conferido(s)</span>
+                <span className="text-faint"> · {plural(result.summary.pendingOrdersChecked, 'pedido em aberto conferido', 'pedidos em aberto conferidos')}</span>
               </p>
             </div>
           ) : (
@@ -147,7 +148,7 @@ export function InventoryAuditPanel() {
                   <IconAlert size={12} />
                 </span>
                 <p className="text-[13px] font-semibold text-ink">
-                  {mismatchCount} item(ns) com reserva diferente do esperado
+                  {plural(mismatchCount, 'item', 'itens')} com reserva diferente do esperado
                 </p>
               </div>
 
@@ -181,7 +182,7 @@ export function InventoryAuditPanel() {
           {result.summary.suspiciousCancellationCount > 0 && (
             <div className="mt-4 pt-3 border-t border-mist">
               <p className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg leading-relaxed">
-                <strong>{result.summary.suspiciousCancellationCount} pedido(s) cancelado(s) que constam como pagos.</strong>{' '}
+                <strong>{result.summary.suspiciousCancellationCount === 1 ? '1 pedido cancelado que consta como pago.' : `${result.summary.suspiciousCancellationCount} pedidos cancelados que constam como pagos.`}</strong>{' '}
                 Isso não é corrigido automaticamente porque envolve dinheiro recebido, confira um a um no painel de pedidos.
               </p>
             </div>

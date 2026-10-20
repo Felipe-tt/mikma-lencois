@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { plural } from '@/lib/plural';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
   const ipKey = `reset-password:${ip}`;
   if (!await rateLimit(ipKey, 5, 15 * 60 * 1000)) {
     const wait = Math.ceil(rateLimitRetryAfter(ipKey) / 60000);
-    return NextResponse.json({ error: `Aguarde ${wait} minuto(s).` }, { status: 429 });
+    return NextResponse.json({ error: `Aguarde ${plural(wait, 'minuto', 'minutos')}.` }, { status: 429 });
   }
 
   let body: unknown;

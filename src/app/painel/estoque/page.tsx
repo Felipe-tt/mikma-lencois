@@ -1,4 +1,5 @@
 'use client';
+import { plural } from '@/lib/plural';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { IconAlert, IconBox, IconCheck, IconMinusCircle, IconPlusCircle, IconListCheck, IconEdit, IconImage, IconClock, IconX } from '@/components/ui/Icon';
 import { InventoryAuditPanel } from '@/components/painel/InventoryAuditPanel';
@@ -525,7 +526,7 @@ export default function EstoquePage() {
               <div className="flex items-baseline justify-between mb-2 px-0.5">
                 <p className="text-[13px] font-bold text-ink">{group.productName}</p>
                 <p className="text-[11px] text-faint">
-                  {group.list.length} {group.list.length === 1 ? 'variação' : 'variações'} · {group.list.reduce((s, i) => s + available(i), 0)} un. disponíveis
+                  {group.list.length} {group.list.length === 1 ? 'variação' : 'variações'} · {(() => { const n = group.list.reduce((s, i) => s + available(i), 0); return plural(n, 'unidade disponível', 'unidades disponíveis'); })()}
                 </p>
               </div>
               <div className="flex flex-col gap-2.5">

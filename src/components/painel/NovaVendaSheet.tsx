@@ -1,4 +1,5 @@
 'use client';
+import { plural } from '@/lib/plural';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { doc, getDoc, writeBatch, increment, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -102,7 +103,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
       vibrate([20, 60, 20]);
       const { confirmed } = await confirmDialog({
         message: `${Math.abs(next)} toques seguidos em "${item.productName}"`,
-        detail: `Confere se não foi sem querer. Continuar como ${mode === 'venda' ? `${Math.abs(next)} vendas` : `${Math.abs(next)} chegadas`}?`,
+        detail: `Confere se não foi sem querer. Continuar como ${mode === 'venda' ? plural(Math.abs(next), 'venda', 'vendas') : plural(Math.abs(next), 'chegada', 'chegadas')}?`,
         confirmLabel: 'Continuar',
       });
       if (!confirmed) return;
@@ -199,7 +200,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
     const offlineNote = typeof navigator !== 'undefined' && !navigator.onLine
       ? ' Sem internet agora, vai sincronizar sozinho assim que voltar.'
       : '';
-    onDone(`Registrado: ${parts.join(' e ')} (${pendingUnits} peças).${offlineNote}`, async () => {
+    onDone(`Registrado: ${parts.join(' e ')} (${plural(pendingUnits, 'peça', 'peças')}).${offlineNote}`, async () => {
       try {
         const undoBatch = writeBatch(db);
         for (const { itemId, log } of logs) {
