@@ -554,7 +554,6 @@ export default function OrderDetailPage() {
                       <p className="text-xs text-faint mt-0.5 first-letter:uppercase">
                         {item.variant.size}
                         {(item.variant.colorName || item.variant.color) ? ` · ${item.variant.colorName || item.variant.color}` : ''}
-                        {item.variant.fabric ? ` · ${item.variant.fabric}` : ''}
                         {' · '}{item.quantity}x
                       </p>
                       {item.note && <p className="text-xs text-clay font-medium mt-0.5">{item.note}</p>}

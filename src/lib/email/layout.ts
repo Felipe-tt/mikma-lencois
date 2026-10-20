@@ -143,11 +143,11 @@ export interface EmailOrderTotals extends EmailMoney {
   totalCents: number;
 }
 
-/** "Casal · Terracota · Percal": tamanho legível, nome da cor (nunca o hex) e tecido com maiúscula. */
+/** "Casal · Terracota": tamanho legível e nome da cor (nunca o hex). O tecido
+ * não entra: tudo é malha 100% algodão (pedidos antigos podem ter outro). */
 export function itemMeta(v: EmailItem['variant']): string {
   if (!v) return '';
-  const fabric = v.fabric ? v.fabric.charAt(0).toUpperCase() + v.fabric.slice(1) : undefined;
-  return [v.size ? (SIZE_LABEL[v.size] ?? v.size) : undefined, v.colorName, fabric]
+  return [v.size ? (SIZE_LABEL[v.size] ?? v.size) : undefined, v.colorName]
     .filter(Boolean).map(x => escapeHtml(String(x))).join(' · ');
 }
 
