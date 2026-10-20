@@ -42,7 +42,8 @@ interface ShipOption {
 const SHIP_TAG: Record<string, string> = { economico: 'Econômico', rapido: 'Mais rápido' };
 
 export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapQtyPerUnit, maxQty }: Props) {
-  const { user, loading } = useAuth();
+  // Carrinho e compra aceitam o convidado ("comprar sem cadastro").
+  const { buyer: user, loading } = useAuth();
   const router = useRouter();
   // Começa no primeiro tamanho com estoque: se o primeiro estivesse
   // esgotado, a página inteira parecia "Fora de estoque".
@@ -115,8 +116,8 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       returnTo: window.location.pathname + window.location.search,
     });
     requireAuth(() => {}, action === 'cart'
-      ? 'Entre para adicionar ao carrinho. Depois disso o produto já entra sozinho.'
-      : 'Entre para finalizar a compra. Você continua de onde parou.');
+      ? 'Entre ou continue sem cadastro. Depois disso o produto já entra sozinho.'
+      : 'Entre ou continue sem cadastro para finalizar a compra.', { allowGuest: true });
   }
 
   // ── Preço, parcelamento e PIX, mesma lógica do checkout, uma única fonte de verdade visual ──

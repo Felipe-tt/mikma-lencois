@@ -20,7 +20,7 @@ export default function CartPage() {
   // "Grátis" e o servidor cobrava o frete.
   const [threshold, setThreshold] = useState(0);
   const [cartError, setCartError] = useState(false);
-  const { user, loading } = useAuth();
+  const { buyer: user, loading } = useAuth();
   const router = useRouter();
   const [cart, setCart] = useState<Cart | null>(null);
   const [cartLoading, setCartLoading] = useState(true);

@@ -20,6 +20,7 @@ import { trackBeginCheckout } from '@/lib/analytics';
 import { computePixTotalCents, computeCardTotalCents, installmentFeeRate } from '@/lib/orderPricing';
 
 interface CustomerData { name: string; cpf: string; phone: string; email: string }
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ── Carrier delivery date estimate ───────────────────────────────────────────
 function estimatedDate(days: number): string {
@@ -170,7 +171,10 @@ function Section({
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function CheckoutPage() {
-  const { user, loading } = useAuth();
+  // Aceita o convidado ("comprar sem cadastro"): ele informa o e-mail e
+  // aceita os termos aqui, na identificação.
+  const { buyer: user, isGuest, loading } = useAuth();
+  const [termsOk, setTermsOk] = useState(false);
   const router = useRouter();
 
   const [cart, setCart]       = useState<Cart | null>(null);
@@ -283,13 +287,16 @@ export default function CheckoutPage() {
         name: d?.name ?? user.displayName ?? '',
         cpf: d?.cpf ? maskCpf(d.cpf) : '',
         phone: d?.phone ? maskPhone(d.phone) : '',
-        email: user.email ?? '',
+        // Convidado: o e-mail que ele deu numa compra anterior (servidor).
+        email: user.email ?? (typeof d?.email === 'string' ? d.email : ''),
       };
+      const guestOk = !user.isAnonymous || (EMAIL_RE.test(c.email) && !!d?.lgpdConsent);
+      if (user.isAnonymous && d?.lgpdConsent) setTermsOk(true);
       setCustomer(c);
       // Dados e endereço já salvos e válidos (compra anterior ou perfil):
       // pula direto para entrega e pagamento. As etapas fechadas mostram o
       // resumo e continuam editáveis.
-      const step1Ok = !!c.name.trim() && isValidCpf(c.cpf) && isValidPhone(c.phone);
+      const step1Ok = !!c.name.trim() && isValidCpf(c.cpf) && isValidPhone(c.phone) && guestOk;
       const step2Ok = !!savedAddr && isValidCep(savedAddr.cep) && !!savedAddr.street?.trim() && !!savedAddr.number?.trim()
         && !!savedAddr.neighborhood?.trim() && !!savedAddr.city?.trim() && !!savedAddr.state;
       if (step1Ok) {
@@ -343,6 +350,8 @@ export default function CheckoutPage() {
     try {
       const d = await (await fetch(`https://viacep.com.br/ws/${c}/json/`)).json();
       if (!d.erro) setAddr(a => ({ ...a, street: d.logradouro ?? a.street, neighborhood: d.bairro ?? a.neighborhood, city: d.localidade ?? a.city, state: d.uf ?? a.state }));
+    } catch {
+      // ViaCEP fora do ar ou sem internet: a pessoa preenche o endereço à mão.
     } finally { setCepL(false); }
     quoteShipping(raw);
   }
@@ -351,6 +360,8 @@ export default function CheckoutPage() {
   function fieldError(key: string): string | undefined {
     switch (key) {
       case 'name':         return customer.name.trim() ? undefined : 'Informe seu nome completo';
+      case 'email':        return EMAIL_RE.test(customer.email.trim()) ? undefined : 'Informe um e-mail válido';
+      case 'terms':        return termsOk ? undefined : 'Aceite os termos para continuar';
       case 'cpf':          return isValidCpf(customer.cpf) ? undefined : 'Confira os 11 dígitos do CPF';
       case 'phone':        return isValidPhone(customer.phone) ? undefined : 'Informe o celular com DDD';
       case 'cep':          return isValidCep(addr.cep) ? undefined : 'Confira o CEP (8 dígitos)';
@@ -376,7 +387,7 @@ export default function CheckoutPage() {
     return !first;
   }
   function validateStep1(): boolean {
-    return runValidation(['name', 'cpf', 'phone']);
+    return runValidation(isGuest ? ['name', 'email', 'cpf', 'phone', 'terms'] : ['name', 'cpf', 'phone']);
   }
   function validateStep2(): boolean {
     return runValidation(['cep', 'street', 'number', 'neighborhood', 'city', 'state']);
@@ -436,6 +447,15 @@ export default function CheckoutPage() {
     setSub(true); setApiErr('');
     try {
       const token = await auth.currentUser!.getIdToken();
+      if (isGuest) {
+        // E-mail e aceite dos termos do convidado: só o servidor grava.
+        const g = await fetch('/api/auth/guest-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ email: customer.email.trim(), acceptTerms: true }),
+        });
+        if (!g.ok) throw new Error((await g.json().catch(() => ({}))).error ?? 'Confira o e-mail e tente de novo.');
+      }
       await setDoc(doc(db, 'users', user.uid), {
         address: addr, name: customer.name,
         cpf: onlyDigits(customer.cpf), phone: onlyDigits(customer.phone),
@@ -745,6 +765,16 @@ export default function CheckoutPage() {
                     autoComplete="name" />
                   <Err id="co-name-err" msg={shownErrors.name} />
                 </div>
+                {isGuest && (
+                  <div>
+                    <Label htmlFor="co-email">E-mail</Label>
+                    <Input id="co-email" value={customer.email} onChange={v => setCustomer(c => ({ ...c, email: v }))}
+                      type="email" placeholder="seu@email.com" required hasError={!!shownErrors.email}
+                      isValid={EMAIL_RE.test(customer.email.trim())} autoComplete="email" />
+                    <Err id="co-email-err" msg={shownErrors.email} />
+                    {!shownErrors.email && <p className="text-[11.5px] text-faint mt-1.5">Para o comprovante e o acompanhamento do pedido.</p>}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 min-[440px]:grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="co-cpf">CPF</Label>
@@ -761,6 +791,17 @@ export default function CheckoutPage() {
                     <Err id="co-phone-err" msg={shownErrors.phone} />
                   </div>
                 </div>
+                {isGuest && (
+                  <div>
+                    <label className="flex items-start gap-2.5 text-[12.5px] text-mid leading-relaxed cursor-pointer">
+                      <input id="co-terms" type="checkbox" checked={termsOk} onChange={e => setTermsOk(e.target.checked)}
+                        aria-invalid={!!shownErrors.terms} aria-describedby={shownErrors.terms ? 'co-terms-err' : undefined}
+                        className="mt-0.5 w-4 h-4 accent-clay shrink-0" />
+                      <span>Li e aceito os <Link href="/termos" target="_blank" className="text-clay underline underline-offset-2">termos de uso</Link> e a <Link href="/privacidade" target="_blank" className="text-clay underline underline-offset-2">política de privacidade</Link>.</span>
+                    </label>
+                    <Err id="co-terms-err" msg={shownErrors.terms} />
+                  </div>
+                )}
                 <button type="button" onClick={advanceToStep2}
                   className="w-full h-12 rounded-full bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
                   Continuar para endereço

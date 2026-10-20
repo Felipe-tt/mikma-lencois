@@ -127,7 +127,8 @@ const TIMELINE_LABEL: Record<string, string> = {
 
 export default function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
-  const { user, loading } = useAuth();
+  // Convidado ("comprar sem cadastro") também vê o próprio pedido.
+  const { buyer: user, isGuest, loading } = useAuth();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [pixTimeUp, setPixTimeUp] = useState(false);
@@ -515,6 +516,18 @@ export default function OrderDetailPage() {
 
         {/* ── PIX pendente: mesmo bloco do modal (tempo, copiar, QR, passos) ── */}
         {/* ── Acabou de pagar (com a página aberta) ── */}
+        {/* Convidado: convite para criar a conta e ver os pedidos de qualquer
+            aparelho. Ao entrar, os pedidos deste aparelho vão para a conta. */}
+        {isGuest && (
+          <div className="mb-8 rounded-2xl border border-mist bg-warm/50 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+            <p className="text-[13.5px] text-ink leading-relaxed flex-1">
+              <strong className="font-semibold">Acompanhe de qualquer lugar.</strong>{' '}
+              <span className="text-mid">Crie sua conta com o mesmo e-mail e este pedido passa a aparecer nela.</span>
+            </p>
+            <Link href="/cadastro" onClick={() => setReturnTo(`/pedidos/${orderId}`)} className="btn-outline shrink-0 self-start sm:self-auto">Criar conta</Link>
+          </div>
+        )}
+
         {justPaid && (
           <div role="status" className="mb-8 rounded-3xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-500/[0.07] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
             <PaidCheck size={72} />

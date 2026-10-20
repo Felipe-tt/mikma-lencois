@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import type { Cart } from '@/types';
 
 export function useCartTotal(): number {
-  const { user } = useAuth();
+  const { buyer: user } = useAuth();
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
