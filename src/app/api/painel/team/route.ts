@@ -85,6 +85,9 @@ export async function POST(req: NextRequest) {
   // o token dele expirasse sozinho (até 1h).
   await adminAuth.revokeRefreshTokens(targetUser.uid);
 
+  // Voltou pra equipe: tira a marca de acesso revogado.
+  await adminDb.collection('staffRevoked').doc(targetUser.uid).delete();
+
   await adminDb.collection('team').doc(targetUser.uid).set({
     email: targetUser.email ?? email,
     displayName: targetUser.displayName ?? null,
@@ -126,6 +129,9 @@ export async function DELETE(req: NextRequest) {
   await adminAuth.setCustomUserClaims(uid, { ...existingClaims, role: 'buyer' });
   await adminAuth.revokeRefreshTokens(uid);
   await adminDb.collection('team').doc(uid).delete();
+  // As regras do banco recusam na hora quem tem essa marca: sem ela, o
+  // token antigo (com o papel) ainda valia por até 1h direto no Firestore.
+  await adminDb.collection('staffRevoked').doc(uid).set({ at: FieldValue.serverTimestamp(), by: auth.decoded.uid });
 
   return NextResponse.json({ ok: true });
 }

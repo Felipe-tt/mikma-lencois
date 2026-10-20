@@ -17,6 +17,14 @@ on:
         description: 'Aplicar as mudanças (sem isso, só lista)'
         type: boolean
         default: false
+      cloudflare:
+        description: 'Configurar a Cloudflare (SSL, firewall, limite de requisições, trava de origem)'
+        type: boolean
+        default: false
+      verificar_ip:
+        description: 'Testar em produção se o limite por IP resiste a IP forjado'
+        type: boolean
+        default: false
       apagar_ssr_antigo:
         description: 'Apagar a função SSR da hospedagem antiga (ssrmikmalencois), só se o domínio já estiver no App Hosting'
         type: boolean
@@ -32,6 +40,7 @@ jobs:
       PROJECT_ID: mikma-lencois
       APLICAR: ${{ inputs.aplicar }}
       APAGAR_SSR: ${{ inputs.apagar_ssr_antigo }}
+      CLOUDFLARE: ${{ inputs.cloudflare }}
     steps:
       - name: Autenticar no Google Cloud
         run: |
@@ -126,3 +135,78 @@ jobs:
               echo "Domínio não respondeu como o código novo ($novo): não apaguei a função antiga."
             fi
           fi
+
+      - name: Cloudflare
+        if: ${{ inputs.cloudflare }}
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -u
+          api() { curl -sS -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" "$@"; }
+          ok() { jq -e '.success' >/dev/null; }
+          ZONE=$(api "https://api.cloudflare.com/client/v4/zones?name=mikma.com.br" | jq -r '.result[0].id // empty')
+          [ -n "$ZONE" ] || { echo "Zona mikma.com.br não encontrada (token sem acesso?)"; exit 1; }
+          STATUS=$(api "https://api.cloudflare.com/client/v4/zones/$ZONE" | jq -r '.result.status')
+          echo "Zona: $STATUS"
+          B="https://api.cloudflare.com/client/v4/zones/$ZONE"
+
+          # SSL ponta a ponta com certificado válido na origem (App Hosting) e HTTPS sempre.
+          for kv in 'ssl:"strict"' 'always_use_https:"on"' 'min_tls_version:"1.2"' 'browser_check:"on"' 'security_level:"medium"'; do
+            k=${kv%%:*}; v=${kv#*:}
+            api -X PATCH "$B/settings/$k" --data "{\"value\":$v}" | jq -c '{setting:"'"$k"'",success,errors}'
+          done
+
+          # Firewall: scanners de WordPress/PHP/arquivos ocultos são bloqueados na borda.
+          api -X PUT "$B/rulesets/phases/http_request_firewall_custom/entrypoint" --data '{
+            "rules": [{
+              "description": "Bloqueia scanners",
+              "expression": "(http.request.uri.path contains \"/wp-\") or (http.request.uri.path contains \".php\") or (http.request.uri.path contains \"/.env\") or (http.request.uri.path contains \"/.git\") or (http.request.uri.path contains \"xmlrpc\")",
+              "action": "block"
+            }]
+          }' | jq -c '{firewall:.success,errors}'
+
+          # Limite por IP nas APIs (fora webhooks e cron, que vêm de servidores).
+          api -X PUT "$B/rulesets/phases/http_ratelimit/entrypoint" --data '{
+            "rules": [{
+              "description": "Limite nas APIs",
+              "expression": "starts_with(http.request.uri.path, \"/api/\") and not starts_with(http.request.uri.path, \"/api/payment/webhook\") and not starts_with(http.request.uri.path, \"/api/shipping/uber-webhook\") and not starts_with(http.request.uri.path, \"/api/cron/\") and not starts_with(http.request.uri.path, \"/api/email/\")",
+              "action": "block",
+              "ratelimit": {"characteristics": ["ip.src", "cf.colo.id"], "period": 10, "requests_per_period": 80, "mitigation_timeout": 10}
+            }]
+          }' | jq -c '{ratelimit:.success,errors}'
+
+          # Trava de origem: a Cloudflare manda um segredo; o site recusa quem chega sem ele.
+          # Reaproveita o segredo se já existe (trocar exigiria novo deploy do site).
+          if gcloud secrets describe EDGE_SHARED_SECRET >/dev/null 2>&1; then
+            EDGE=$(gcloud secrets versions access latest --secret EDGE_SHARED_SECRET)
+            echo "Segredo de origem: reaproveitado"
+          else
+            EDGE=$(openssl rand -hex 32)
+            printf '%s' "$EDGE" | gcloud secrets create EDGE_SHARED_SECRET --replication-policy=automatic --data-file=- >/dev/null && echo "Segredo de origem: criado"
+            gcloud secrets add-iam-policy-binding EDGE_SHARED_SECRET --member=serviceAccount:firebase-app-hosting-compute@mikma-lencois.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor >/dev/null && echo "acesso ok"
+          fi
+          echo "::add-mask::$EDGE"
+          api -X PUT "$B/rulesets/phases/http_request_late_transform/entrypoint" --data "{
+            \"rules\": [{
+              \"description\": \"Segredo de origem\",
+              \"expression\": \"true\",
+              \"action\": \"rewrite\",
+              \"action_parameters\": {\"headers\": {\"x-mikma-edge\": {\"operation\": \"set\", \"value\": \"$EDGE\"}}}
+            }]
+          }" | jq -c '{transform:.success,errors}'
+
+          echo "## O domínio já passa pela Cloudflare?"
+          curl -sI https://mikma.com.br/ | grep -iE '^(server|cf-ray)' || true
+
+      - name: Limite por IP resiste a IP forjado?
+        if: ${{ inputs.verificar_ip }}
+        run: |
+          # /api/stock aceita 60 consultas por minuto por IP. Mandando um IP
+          # falso diferente a cada vez, o bloqueio só vem se o site usa o IP real.
+          bloqueou=0
+          for i in $(seq 1 70); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -H "fastly-client-ip: 10.0.$((i/250)).$((i%250))" -H "x-forwarded-for: 1.2.3.$i" "https://mikma.com.br/api/stock?skus=teste")
+            [ "$code" = "429" ] && bloqueou=$((bloqueou+1))
+          done
+          echo "Respostas 429: $bloqueou de 70"
+          if [ "$bloqueou" -gt 0 ]; then echo "OK: o IP forjado não engana o limite"; else echo "ATENÇÃO: limite não disparou"; fi

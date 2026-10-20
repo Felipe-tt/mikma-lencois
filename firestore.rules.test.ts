@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { setDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, collection } from 'firebase/firestore';
+import { setDoc, getDoc, getDocs, updateDoc, deleteDoc, deleteField, doc, collection } from 'firebase/firestore';
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 
 // Testa as regras publicadas em firestore.rules contra o emulador local.
@@ -470,5 +470,47 @@ describe('inventory/{sku} delete', () => {
       await setDoc(doc(ctx.firestore(), 'inventory/p1_v1'), { productId: 'p1', quantity: 2, reserved: 0, history: [] });
     });
     await assertFails(deleteDoc(doc(buyer.firestore(), 'inventory/p1_v1')));
+  });
+});
+
+describe('inventory: leitura só da equipe e revogação imediata', () => {
+  it('cliente não lê o estoque (histórico tem dados da loja)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'inventory/p1_v1'), { productId: 'p1', quantity: 2, reserved: 0, history: [] });
+    });
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await assertFails(getDoc(doc(buyer.firestore(), 'inventory/p1_v1')));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'inventory/p1_v1')));
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await assertSucceeds(getDoc(doc(seller.firestore(), 'inventory/p1_v1')));
+  });
+
+  it('vendedor removido perde o acesso na hora, mesmo com token antigo', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'inventory/p1_v1'), { productId: 'p1', quantity: 2, reserved: 0, history: [] });
+      await setDoc(doc(ctx.firestore(), 'staffRevoked/seller1'), { at: new Date() });
+    });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await assertFails(getDoc(doc(seller.firestore(), 'inventory/p1_v1')));
+  });
+});
+
+describe('users: endereço limitado', () => {
+  const ok = { cep: '89032143', street: 'Rua Bernhard Koser', number: '105', complement: '', neighborhood: 'Salto', city: 'Blumenau', state: 'SC' };
+  it('aceita o endereço normal e a remoção', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users/u1'), { name: 'Ana', role: 'buyer' });
+    });
+    const u = testEnv.authenticatedContext('u1');
+    await assertSucceeds(setDoc(doc(u.firestore(), 'users/u1'), { address: ok }, { merge: true }));
+    await assertSucceeds(updateDoc(doc(u.firestore(), 'users/u1'), { address: deleteField() }));
+  });
+  it('recusa campo extra e texto gigante', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users/u1'), { name: 'Ana', role: 'buyer' });
+    });
+    const u = testEnv.authenticatedContext('u1');
+    await assertFails(setDoc(doc(u.firestore(), 'users/u1'), { address: { ...ok, lixo: 'x' } }, { merge: true }));
+    await assertFails(setDoc(doc(u.firestore(), 'users/u1'), { address: { ...ok, street: 'x'.repeat(5000) } }, { merge: true }));
   });
 });

@@ -9,8 +9,11 @@ service cloud.firestore {
     function isSelf(uid) {
       return isAuth() && request.auth.uid == uid;
     }
+    // O papel vem do token (custom claim), que só expira em até 1h. Quem
+    // sai da equipe ganha um staffRevoked/{uid}: perde o acesso na hora.
     function hasRole(role) {
-      return isAuth() && request.auth.token.role == role;
+      return isAuth() && request.auth.token.role == role
+        && !exists(/databases/$(database)/documents/staffRevoked/$(request.auth.uid));
     }
     function isSellerOrAdmin() {
       return hasRole('seller') || hasRole('admin');
@@ -40,8 +43,20 @@ service cloud.firestore {
                   && d.name.size() <= 100 && !d.name.matches('.*[<>].*')))
             && (!('cpf' in keys) || (d.cpf is string && d.cpf.size() <= 14))
             && (!('phone' in keys) || (d.phone is string && d.phone.size() <= 20))
-            && (!('address' in keys) || d.address is map
+            && (!('address' in keys) || !('address' in d) || validAddress(d.address)
                   || (d.address is string && d.address.size() <= 500));
+      }
+      // Endereço: só os campos conhecidos, cada um com tamanho limitado
+      // (antes aceitava qualquer mapa, de qualquer tamanho).
+      function shortStr(a, k, max) {
+        return !(k in a) || (a[k] is string && a[k].size() <= max);
+      }
+      function validAddress(a) {
+        return a is map
+          && a.keys().hasOnly(['cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state'])
+          && shortStr(a, 'cep', 10) && shortStr(a, 'street', 200) && shortStr(a, 'number', 20)
+          && shortStr(a, 'complement', 120) && shortStr(a, 'neighborhood', 120)
+          && shortStr(a, 'city', 120) && shortStr(a, 'state', 2);
       }
       allow create: if isSelf(uid)
         && request.resource.data.keys().hasOnly(editableKeys())
@@ -64,7 +79,9 @@ service cloud.firestore {
 
     // ── Inventory ────────────────────────────────────────────────────────────
     match /inventory/{sku} {
-      allow read: if true;
+      // Só a equipe: o histórico tem vendas da loja física e nomes da equipe.
+      // A loja consulta o disponível por /api/stock (só o número).
+      allow read: if isSellerOrAdmin();
       // 'reserved' é gerido só pelo fluxo de pedidos (Admin SDK, que ignora
       // estas regras), o painel de estoque nunca deve poder mexer nele.
       // 'history' só pode crescer (arrayUnion), nunca ser reduzido/apagado.
@@ -267,6 +284,11 @@ service cloud.firestore {
     // (mesmo admin) não lê nem escreve, pra não abrir brecha de alguém
     // editar a própria role aqui direto.
     match /team/{uid} {
+      allow read, write: if false;
+    }
+
+    // Marca de acesso revogado (gravada pela API ao remover alguém da equipe).
+    match /staffRevoked/{uid} {
       allow read, write: if false;
     }
 

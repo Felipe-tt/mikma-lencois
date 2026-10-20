@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { timingSafeEqual } from 'crypto';
 import { checkPassword } from '@/lib/validation/password';
 import { plural } from '@/lib/plural';
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,6 +18,11 @@ const resetSchema = z.object({
   token: z.string().min(20).max(100),
   newPassword: z.string().min(8).max(128),
 });
+
+function sameToken(stored: unknown, given: string): boolean {
+  if (typeof stored !== 'string' || stored.length !== given.length) return false;
+  return timingSafeEqual(Buffer.from(stored), Buffer.from(given));
+}
 
 // Verifica token (chamado automaticamente pela página /redefinir-senha ao carregar)
 export async function GET(req: NextRequest) {
@@ -42,11 +48,10 @@ export async function GET(req: NextRequest) {
     await snap.ref.delete();
     return NextResponse.json({ error: 'Link expirado. Solicite um novo.' }, { status: 400 });
   }
-  if (data.attempts >= 10) {
-    await snap.ref.delete();
-    return NextResponse.json({ error: 'Link inválido. Solicite um novo.' }, { status: 429 });
-  }
-  if (data.token !== token) {
+  // Token errado não apaga mais o link: antes, 10 tentativas com o e-mail
+  // de outra pessoa invalidavam o link dela. O token é longo e aleatório, e o
+  // limite por IP segura a força bruta.
+  if (!sameToken(data.token, token)) {
     await snap.ref.update({ attempts: (data.attempts ?? 0) + 1 });
     return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
   }
@@ -77,8 +82,7 @@ export async function POST(req: NextRequest) {
 
   const data = snap.data()!;
   if (Date.now() > data.expiresAt) { await ref.delete(); return NextResponse.json({ error: 'Link expirado.' }, { status: 400 }); }
-  if (data.attempts >= 10) { await ref.delete(); return NextResponse.json({ error: 'Link inválido.' }, { status: 429 }); }
-  if (data.token !== token) {
+  if (!sameToken(data.token, token)) {
     await ref.update({ attempts: (data.attempts ?? 0) + 1 });
     return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
   }

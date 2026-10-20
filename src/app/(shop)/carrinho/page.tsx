@@ -74,16 +74,11 @@ export default function CartPage() {
     if (items.length === 0) { setStockMap({}); setStockReady(true); return; }
     // Inclui a fronha trocada (Jogo de Cama): ela também precisa ter estoque.
     const skus = Array.from(new Set(items.flatMap(i => i.swapSku ? [i.sku, i.swapSku] : [i.sku])));
-    Promise.all(
-      skus.map(sku =>
-        getDoc(doc(db, 'inventory', sku)).then(snap => {
-          const inv = snap.data();
-          return { sku, available: inv ? Math.max(0, (inv.quantity ?? 0) - (inv.reserved ?? 0)) : 99 };
-        })
-      )
-    ).then(results => {
-      setStockMap(Object.fromEntries(results.map(r => [r.sku, r.available])));
-    }).catch(() => {}).finally(() => setStockReady(true));
+    // Pelo servidor: o documento de estoque não é mais público (tem o histórico).
+    fetch(`/api/stock?skus=${encodeURIComponent(skus.join(','))}`)
+      .then(res => (res.ok ? res.json() : {}))
+      .then((map: Record<string, number>) => setStockMap(map))
+      .catch(() => {}).finally(() => setStockReady(true));
   }, [cart]);
 
   // "Desfazer" some sozinho depois de alguns segundos.
