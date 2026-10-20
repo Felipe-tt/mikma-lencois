@@ -179,16 +179,21 @@ export default function PedidosPage() {
 
                 {/* CTA de avaliação, só em pedidos entregues */}
                 {order.status === 'delivered' && (
-                  <div className="border-t border-mist px-5 sm:px-6 py-3 flex flex-wrap gap-x-4 gap-y-1.5">
-                    {order.items.map(item => (
-                      <Link
-                        key={item.sku}
-                        href={`/produtos/${item.productId}#avaliacoes`}
-                        className="text-[11px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.06em]"
-                      >
-                        Avaliar {item.productName.length > 24 ? item.productName.slice(0, 24) + '…' : item.productName}
-                      </Link>
-                    ))}
+                  <div className="border-t border-mist px-5 sm:px-6 py-3.5 flex flex-col gap-2">
+                    <p className="text-[12px] text-mid">Gostou? Conte o que achou:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {/* Um por produto (o mesmo produto em dois tamanhos é uma avaliação só). */}
+                      {order.items.filter((it, i, all) => all.findIndex(o => o.productId === it.productId) === i).map(item => (
+                        <Link
+                          key={item.productId}
+                          href={`/produtos/${item.productId}#avaliacoes`}
+                          className="inline-flex items-center gap-1.5 max-w-full h-9 px-3.5 rounded-full border border-mist-d text-[12.5px] text-ink hover:border-clay hover:text-clay transition-colors"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="text-clay shrink-0"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+                          <span className="truncate">Avaliar {item.productName}</span>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 )}
 
