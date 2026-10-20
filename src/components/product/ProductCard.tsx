@@ -20,10 +20,11 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   const img1 = product.images?.[1] ?? null;
   const [imgError, setImgError] = useState(false);
   const [hovered, setHovered] = useState(false);
-  // Intenção de abrir (mouse em cima, dedo encostou, foco do teclado): só
-  // então carrega a página completa do produto, antes do clique. Assim ela
-  // abre na hora e a foto do cartão tem par para a transição. Carregar
-  // completo todos os cartões da tela pesaria no servidor.
+  // Intenção de abrir (mouse em cima ou foco do teclado): só então carrega
+  // a página completa do produto, antes do clique, para ela abrir na hora e
+  // a foto do cartão ter par para a transição. Carregar todos os cartões da
+  // tela pesaria no servidor. Toque fica de fora: no celular ele dispara só
+  // de rolar a grade.
   const [intent, setIntent] = useState(false);
   const { isFavorite, toggle } = useWishlist();
   const { requireAuth } = useAuthModal();
@@ -55,7 +56,6 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
     <div
       className="group relative"
       onMouseEnter={() => { setHovered(true); setIntent(true); }}
-      onTouchStart={() => setIntent(true)}
       onFocus={() => setIntent(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -99,12 +99,12 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           {(badge || lowStock) && (
             <div className="theme-locked absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
               {badge && (
-                <span className={`text-[9px] font-semibold tracking-[0.16em] uppercase px-2.5 py-[5px] leading-none rounded-full ${
+                <span className={`text-[10px] font-semibold tracking-[0.14em] uppercase px-2.5 py-[5px] leading-none rounded-full ${
                   isNew ? 'bg-paper/95 text-ink' : 'bg-ink text-paper'
                 }`}>{badge}</span>
               )}
               {lowStock && (
-                <span className="bg-paper/95 text-clay text-[9px] font-semibold tracking-[0.16em] uppercase px-2.5 py-[5px] leading-none rounded-full">
+                <span className="bg-paper/95 text-clay text-[10px] font-semibold tracking-[0.14em] uppercase px-2.5 py-[5px] leading-none rounded-full">
                   Últimas peças
                 </span>
               )}
@@ -124,7 +124,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           {meta && (
             <p className="text-[10px] font-medium tracking-[0.14em] uppercase text-faint mb-1.5 truncate">{meta}</p>
           )}
-          <p className="text-[13.5px] sm:text-[14px] text-ink leading-snug line-clamp-2 underline-offset-[5px] decoration-mist-d decoration-1 group-hover:underline">
+          <p className="text-[13.5px] sm:text-[14px] text-ink leading-snug line-clamp-2 min-h-[2lh] underline-offset-[5px] decoration-mist-d decoration-1 group-hover:underline">
             {product.name}
           </p>
           <div className="mt-2.5 flex items-center justify-between gap-2">

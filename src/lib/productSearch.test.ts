@@ -23,9 +23,13 @@ describe('searchProducts', () => {
   });
   it('acha pela categoria e pelas tags', () => {
     expect(searchProducts(products, 'lencois')).toHaveLength(1);
-    expect(searchProducts(products, 'algodao')).toHaveLength(1);
+    expect(searchProducts(products, 'avulsa algodao')).toHaveLength(1);
   });
-  it('acha pela cor e tecido da variação', () => {
+  it('todo produto é malha 100% algodão, qualquer que seja o tecido salvo', () => {
+    expect(searchProducts(products, 'malha')).toHaveLength(3);
+    expect(searchProducts(products, 'algodao')).toHaveLength(3);
+  });
+  it('acha pela cor da variação', () => {
     expect(searchProducts(products, 'terracota malha').map(p => p.name)).toEqual(['Edredom Queen']);
   });
   it('termo que não existe não devolve nada', () => {

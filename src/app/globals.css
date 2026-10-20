@@ -1044,22 +1044,15 @@ html.dark .cookie-glass {
       animation-timeline: view();
       animation-range: entry 0% entry 70%;
     }
-    /* Foto e faixa ficam dentro de caixas com overflow: hidden, que viram
-       o "rolador" do view() e travam a animação. A linha do tempo fica na
-       caixa (que rola com a página) e o conteúdo dentro usa o nome dela. */
+    /* A foto fica dentro de uma caixa com overflow: hidden, que vira o
+       "rolador" do view() e trava a animação. A linha do tempo fica na
+       caixa (que rola com a página) e a foto usa o nome dela. */
     .sd-zoom-scope { view-timeline-name: --sd-galeria; }
-    .sd-marquee-scope { view-timeline-name: --sd-faixa; }
     /* Foto aproxima o tecido enquanto sai da tela. */
     .sd-zoom {
       animation: sd-zoom linear both;
       animation-timeline: --sd-galeria;
       animation-range: exit 0% exit 100%;
-    }
-    /* Faixa de texto corre para a esquerda enquanto atravessa a tela. */
-    .sd-marquee {
-      animation: sd-marquee linear both;
-      animation-timeline: --sd-faixa;
-      animation-range: cover 0% cover 100%;
     }
   }
 }
@@ -1069,8 +1062,4 @@ html.dark .cookie-glass {
 }
 @keyframes sd-zoom {
   to { scale: 1.14; }
-}
-@keyframes sd-marquee {
-  from { translate: 0 0; }
-  to   { translate: -35% 0; }
 }

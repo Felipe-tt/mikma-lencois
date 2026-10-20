@@ -180,6 +180,12 @@ service cloud.firestore {
       allow read, write: if isSellerOrAdmin();
     }
 
+    // ── "Avise-me quando chegar" ─────────────────────────────────────────────
+    // E-mails de clientes: só o servidor (Admin SDK) lê e grava.
+    match /restockRequests/{id} {
+      allow read, write: if false;
+    }
+
     // ── Notifications (subcoleção por usuário) ────────────────────────────────
     match /notifications/{userId}/items/{notifId} {
       allow read: if isSelf(userId) || isSellerOrAdmin();

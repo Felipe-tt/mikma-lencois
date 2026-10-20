@@ -26,6 +26,7 @@ import { createPixSchema } from './schema';
 import { sendEmail, emailEnabled } from '@/lib/email';
 import { buildPixPending } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
+import { guardGuestPayment } from '@/lib/guestGuard';
 
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
@@ -65,6 +66,10 @@ export async function POST(req: NextRequest) {
 
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true); // checkRevoked
     const uid = decoded.uid;
+
+    // Convidado: precisa ter feito o registro com reCAPTCHA; limite por IP.
+    const guestBlock = await guardGuestPayment(decoded, ip);
+    if (guestBlock) return guestBlock;
 
     // Rate limit por usuário (mais restrito, 5 PIX por hora)
     if (!await rateLimit(`pix:uid:${uid}`, 5, 60 * 60 * 1000)) {

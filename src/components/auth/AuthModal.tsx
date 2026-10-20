@@ -22,6 +22,9 @@ type ForgotStep = 'email' | 'sent';
 export function AuthModal() {
   const { isOpen, mode, setMode, close, reason, allowGuest, continueAsGuest } = useAuthModal();
   const [guestLoading, setGuestLoading] = useState(false);
+  // Foco automático no e-mail só com mouse: no celular ele abria o teclado
+  // por cima do modal (e do "Continuar sem cadastro").
+  const [finePointer] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches);
   const [guestError, setGuestError] = useState('');
   async function handleGuest() {
     setGuestLoading(true); setGuestError('');
@@ -359,7 +362,7 @@ export function AuthModal() {
                   <div>
                     <label htmlFor="modal-login-email" className="label">E-mail</label>
                     <input id="modal-login-email" type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                      className="input" placeholder="seu@email.com" autoComplete="email" autoFocus />
+                      className="input" placeholder="seu@email.com" autoComplete="email" autoFocus={finePointer} />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
@@ -423,7 +426,7 @@ export function AuthModal() {
                       className="input" placeholder="Maria da Silva" autoComplete="name" autoCapitalize="words"
                       maxLength={NAME_MAX} spellCheck={false}
                       aria-invalid={!!signupFieldErrors.name} aria-describedby={signupFieldErrors.name ? 'modal-err-name' : undefined}
-                      autoFocus />
+                      autoFocus={finePointer} />
                     {signupFieldErrors.name && <p id="modal-err-name" role="alert" className="mt-1.5 text-xs text-red-600">{signupFieldErrors.name}</p>}
                   </div>
                   <div>
@@ -502,7 +505,7 @@ export function AuthModal() {
                   <div>
                     <label htmlFor="modal-forgot-email" className="label">Seu e-mail</label>
                     <input id="modal-forgot-email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
-                      className="input" placeholder="seu@email.com" autoComplete="email" autoFocus />
+                      className="input" placeholder="seu@email.com" autoComplete="email" autoFocus={finePointer} />
                   </div>
                   <button type="submit" disabled={forgotLoading}
                     className="btn-primary w-full h-12 text-[13px] font-semibold tracking-wide flex items-center justify-center gap-2 mt-1">

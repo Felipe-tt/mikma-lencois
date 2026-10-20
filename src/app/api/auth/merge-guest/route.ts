@@ -33,6 +33,15 @@ export async function POST(req: NextRequest) {
   }
   if (guest.uid === account.uid) return NextResponse.json({ ok: true, merged: 0 });
 
+  // Só junta se o convidado deu o mesmo e-mail da conta (e a conta tem o
+  // e-mail confirmado). Num computador compartilhado, quem entra depois
+  // numa conta própria não herda os pedidos e o endereço do convidado.
+  const guestEmail = (await adminDb.collection('users').doc(guest.uid).get()).data()?.email;
+  const accountEmail = account.email?.toLowerCase();
+  if (!account.email_verified || !accountEmail || typeof guestEmail !== 'string' || guestEmail.toLowerCase() !== accountEmail) {
+    return NextResponse.json({ ok: true, merged: 0, skipped: 'email' });
+  }
+
   // Carrinho: soma os itens do convidado aos da conta (mesmo SKU e mesma
   // observação viram uma linha só).
   const guestCartRef = adminDb.collection('carts').doc(guest.uid);

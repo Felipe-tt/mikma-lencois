@@ -10,6 +10,7 @@ import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import { AccountSkeleton } from '@/components/ui/Skeleton';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import type { Address, Order, OrderStatus } from '@/types';
+import { toAddress, streetLine, cityLine } from '@/lib/address';
 
 const ICON = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
@@ -77,7 +78,7 @@ export default function ContaPage() {
       .then(snap => { if (!cancelled) setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))); })
       .catch(() => { if (!cancelled) setOrders([]); });
     getDoc(doc(db, 'users', user.uid))
-      .then(snap => { if (!cancelled) setAddress((snap.data()?.address as Address | undefined) ?? null); })
+      .then(snap => { if (!cancelled) setAddress(toAddress(snap.data()?.address)); })
       .catch(() => { if (!cancelled) setAddress(null); });
     return () => { cancelled = true; };
   }, [user]);
@@ -140,8 +141,8 @@ export default function ContaPage() {
             label="Endereço"
             // Rua e número, não só a cidade: dá pra conferir de relance se é
             // o endereço certo antes de comprar.
-            value={address === undefined ? undefined : address ? `${address.street}, ${address.number}` : 'Adicionar'}
-            hint={address ? `${address.city}/${address.state}` : address === null ? 'Nenhum salvo' : undefined}
+            value={address === undefined ? undefined : address ? (streetLine(address) || cityLine(address)) : 'Adicionar'}
+            hint={address ? cityLine(address) : address === null ? 'Nenhum salvo' : undefined}
             small
             className="col-span-2 sm:col-span-1"
           />

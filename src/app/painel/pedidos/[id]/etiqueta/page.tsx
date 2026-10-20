@@ -1,4 +1,5 @@
 'use client';
+import { SIZE_LABEL } from '@/lib/productOptions';
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -134,7 +135,7 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
               <tr key={i} className="border-t border-neutral-200">
                 <td className="py-2 pr-2">{it.productName}</td>
                 <td className="py-2 pr-2 text-neutral-600">
-                  {it.variant.size} · {it.variant.fabric}{it.variant.colorName ? ` · ${it.variant.colorName}` : ''}
+                  {itemDesc(it.variant)}
                 </td>
                 <td className="py-2 text-right font-semibold">{it.quantity}×</td>
               </tr>
@@ -216,7 +217,7 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
                   <tr key={i} className="border-t border-neutral-400">
                     <td className="py-2 px-2 border-r border-neutral-400">{it.quantity}</td>
                     <td className="py-2 px-2 border-r border-neutral-400">
-                      {it.productName} — {it.variant.size} · {it.variant.fabric}{it.variant.colorName ? ` · ${it.variant.colorName}` : ''}
+                      {it.productName} — {itemDesc(it.variant)}
                     </td>
                     <td className="py-2 px-2 border-r border-neutral-400 text-right">{formatCurrency(it.unitPrice)}</td>
                     <td className="py-2 px-2 text-right">{formatCurrency(it.unitPrice * it.quantity)}</td>
@@ -262,4 +263,10 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
       )}
     </div>
   );
+}
+
+// Tamanho e cor. O tecido não entra: a declaração vai dentro do pacote e a
+// loja só vende malha 100% algodão (pedidos antigos podem ter outro salvo).
+function itemDesc(v: { size?: string; colorName?: string; color?: string }): string {
+  return [v.size ? (SIZE_LABEL[v.size] ?? v.size) : '', v.colorName ?? ''].filter(Boolean).join(' · ');
 }

@@ -18,6 +18,9 @@ import type { ShippingOption } from '@/lib/shipping-pricing';
 import Image from 'next/image';
 import { trackBeginCheckout } from '@/lib/analytics';
 import { computePixTotalCents, computeCardTotalCents, installmentFeeRate } from '@/lib/orderPricing';
+import { toAddress, streetLine, cityLine } from '@/lib/address';
+import { LEGAL_VERSION } from '@/lib/legal';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 interface CustomerData { name: string; cpf: string; phone: string; email: string }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -137,7 +140,7 @@ function Section({
   return (
     <div className={`scroll-mt-36 rounded-2xl overflow-hidden border transition-colors ${open ? 'border-ink/20' : 'border-mist'}`}>
       <HeaderTag
-        {...(editable ? { type: 'button' as const, onClick: onEdit, 'aria-label': `Editar ${label}` } : {})}
+        {...(editable ? { type: 'button' as const, onClick: onEdit } : {})}
         className={`flex items-center gap-3 px-5 py-4 w-full text-left ${editable ? 'cursor-pointer hover:bg-paper/60 transition-colors' : ''}`}
       >
         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
@@ -159,7 +162,8 @@ function Section({
           {editable && summary && <p className="text-[12.5px] text-faint mt-1.5 truncate">{summary}</p>}
         </div>
         {editable && (
-          <span aria-hidden className="text-xs font-semibold text-clay hover:text-clay-d transition-colors shrink-0">
+          // Sem aria-label no botão: o nome dele é o título + o resumo + "Editar".
+          <span className="text-xs font-semibold text-clay hover:text-clay-d transition-colors shrink-0">
             Editar
           </span>
         )}
@@ -173,8 +177,9 @@ function Section({
 export default function CheckoutPage() {
   // Aceita o convidado ("comprar sem cadastro"): ele informa o e-mail e
   // aceita os termos aqui, na identificação.
-  const { buyer: user, isGuest, loading } = useAuth();
+  const { buyer: user, isGuest, loading, logout } = useAuth();
   const [termsOk, setTermsOk] = useState(false);
+  const formTouched = useRef(false);
   const router = useRouter();
 
   const [cart, setCart]       = useState<Cart | null>(null);
@@ -280,8 +285,11 @@ export default function CheckoutPage() {
       setApiErr('Não conseguimos carregar seu carrinho. Verifique a conexão e recarregue a página.');
     });
     getDoc(doc(db, 'users', user.uid)).then(s => {
+      // A pessoa já começou a digitar (rede lenta): não sobrescreve nem pula etapa.
+      if (formTouched.current) return;
       const d = s.data();
-      const savedAddr: Address | null = d?.address ? { ...d.address, cep: maskCep(d.address.cep ?? '') } : null;
+      const norm = toAddress(d?.address);
+      const savedAddr: Address | null = norm ? { ...norm, cep: maskCep(norm.cep) } : null;
       if (savedAddr) setAddr(savedAddr);
       const c = {
         name: d?.name ?? user.displayName ?? '',
@@ -290,19 +298,20 @@ export default function CheckoutPage() {
         // Convidado: o e-mail que ele deu numa compra anterior (servidor).
         email: user.email ?? (typeof d?.email === 'string' ? d.email : ''),
       };
-      const guestOk = !user.isAnonymous || (EMAIL_RE.test(c.email) && !!d?.lgpdConsent);
-      if (user.isAnonymous && d?.lgpdConsent) setTermsOk(true);
+      // Aceite só vale se for da versão atual dos termos.
+      const consentCurrent = d?.lgpdConsent?.version === LEGAL_VERSION;
+      const guestOk = !user.isAnonymous || (EMAIL_RE.test(c.email) && consentCurrent);
+      if (user.isAnonymous && consentCurrent) setTermsOk(true);
       setCustomer(c);
       // Dados e endereço já salvos e válidos (compra anterior ou perfil):
       // pula direto para entrega e pagamento. As etapas fechadas mostram o
       // resumo e continuam editáveis.
       const step1Ok = !!c.name.trim() && isValidCpf(c.cpf) && isValidPhone(c.phone) && guestOk;
-      const step2Ok = !!savedAddr && isValidCep(savedAddr.cep) && !!savedAddr.street?.trim() && !!savedAddr.number?.trim()
-        && !!savedAddr.neighborhood?.trim() && !!savedAddr.city?.trim() && !!savedAddr.state;
+      const step2Ok = !!savedAddr && isValidCep(savedAddr.cep) && !!savedAddr.street.trim() && !!savedAddr.number.trim()
+        && !!savedAddr.neighborhood.trim() && !!savedAddr.city.trim() && !!savedAddr.state;
       if (step1Ok) {
         setS1Done(true);
-        // Só avança se a pessoa ainda não mexeu nas etapas.
-        if (step2Ok) { setS2Done(true); setStep(cur => (cur === 1 ? 3 : cur)); } else setStep(cur => (cur === 1 ? 2 : cur));
+        if (step2Ok) { setS2Done(true); setStep(3); } else setStep(2);
       }
     }).catch(() => {});
     // Buscar configurações de desconto PIX do servidor
@@ -403,13 +412,21 @@ export default function CheckoutPage() {
       h?.closest('.scroll-mt-36')?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     });
   }
+  // Guarda cada etapa no perfil ao concluir (antes só ao pagar): quem sai e
+  // volta não precisa digitar de novo, e o checkout já abre adiantado.
+  function saveProgress(data: Record<string, unknown>) {
+    if (!user) return;
+    setDoc(doc(db, 'users', user.uid), data, { merge: true }).catch(() => {});
+  }
   function advanceToStep2() {
     if (!validateStep1()) return;
+    saveProgress({ name: customer.name.trim(), cpf: onlyDigits(customer.cpf), phone: onlyDigits(customer.phone) });
     setS1Done(true);
     goToStep(2);
   }
   function advanceToStep3() {
     if (!validateStep2()) return;
+    saveProgress({ address: { ...addr, cep: onlyDigits(addr.cep) } });
     setS2Done(true);
     goToStep(3);
     if (isValidCep(addr.cep)) quoteShipping(addr.cep);
@@ -444,6 +461,10 @@ export default function CheckoutPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedShipping || !user || !cart) return;
+    // Revalida tudo antes de pagar: dá para reabrir uma etapa já concluída,
+    // mexer nela e pular para o pagamento pelo cabeçalho de outra etapa.
+    if (!validateStep1()) { setS1Done(false); goToStep(1); return; }
+    if (!validateStep2()) { setS2Done(false); goToStep(2); return; }
     setSub(true); setApiErr('');
     try {
       const token = await auth.currentUser!.getIdToken();
@@ -452,7 +473,7 @@ export default function CheckoutPage() {
         const g = await fetch('/api/auth/guest-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ email: customer.email.trim(), acceptTerms: true }),
+          body: JSON.stringify({ email: customer.email.trim(), acceptTerms: termsOk, recaptchaToken: await getRecaptchaToken('guest_checkout') }),
         });
         if (!g.ok) throw new Error((await g.json().catch(() => ({}))).error ?? 'Confira o e-mail e tente de novo.');
       }
@@ -642,7 +663,7 @@ export default function CheckoutPage() {
       {selectedShipping && (
         <div className="flex justify-between text-xs text-faint">
           <span>{selectedShipping.label}</span>
-          <span>{selectedShipping.estimatedDays === 0 ? 'hoje' : `${selectedShipping.estimatedDays} d.u.`}</span>
+          <span>{selectedShipping.estimatedDays === 0 ? 'hoje' : `${selectedShipping.estimatedDays} ${selectedShipping.estimatedDays === 1 ? 'dia útil' : 'dias úteis'}`}</span>
         </div>
       )}
     </>
@@ -743,7 +764,7 @@ export default function CheckoutPage() {
         <div className="flex flex-col lg:grid lg:grid-cols-[1fr_400px] gap-6 lg:gap-12 items-start">
 
           {/* ── Formulário accordion ── */}
-          <form onSubmit={submit} className="flex flex-col gap-3 w-full">
+          <form onSubmit={submit} onInput={() => { formTouched.current = true; }} className="flex flex-col gap-3 w-full">
 
             {mobileSummary}
 
@@ -756,7 +777,7 @@ export default function CheckoutPage() {
 
             {/* ── Seção 1: Identificação ── */}
             <Section num={1} label="Identificação" open={step === 1} done={s1done} onEdit={() => goToStep(1)}
-              summary={[customer.name.trim(), customer.phone].filter(Boolean).join(' · ')}>
+              summary={[customer.name.trim(), isGuest ? customer.email.trim() : '', customer.phone].filter(Boolean).join(' · ')}>
               <div className="flex flex-col gap-4">
                 <div>
                   <Label htmlFor="co-name">Nome completo</Label>
@@ -765,6 +786,14 @@ export default function CheckoutPage() {
                     autoComplete="name" />
                   <Err id="co-name-err" msg={shownErrors.name} />
                 </div>
+                {isGuest && (
+                  <p className="-mb-1 text-[12px] text-faint">
+                    Comprando sem cadastro.{' '}
+                    <button type="button" onClick={() => { void logout().then(() => router.push('/')); }} className="underline underline-offset-4 decoration-mist-d hover:text-ink">
+                      Não é você? Sair
+                    </button>
+                  </p>
+                )}
                 {isGuest && (
                   <div>
                     <Label htmlFor="co-email">E-mail</Label>
@@ -793,10 +822,10 @@ export default function CheckoutPage() {
                 </div>
                 {isGuest && (
                   <div>
-                    <label className="flex items-start gap-2.5 text-[12.5px] text-mid leading-relaxed cursor-pointer">
+                    <label className="flex items-start gap-3 py-2 -my-2 text-[12.5px] text-mid leading-relaxed cursor-pointer">
                       <input id="co-terms" type="checkbox" checked={termsOk} onChange={e => setTermsOk(e.target.checked)}
                         aria-invalid={!!shownErrors.terms} aria-describedby={shownErrors.terms ? 'co-terms-err' : undefined}
-                        className="mt-0.5 w-4 h-4 accent-clay shrink-0" />
+                        className={`mt-px w-5 h-5 accent-clay shrink-0 rounded ${shownErrors.terms ? 'outline outline-2 outline-red-400 outline-offset-1' : ''}`} />
                       <span>Li e aceito os <Link href="/termos" target="_blank" className="text-clay underline underline-offset-2">termos de uso</Link> e a <Link href="/privacidade" target="_blank" className="text-clay underline underline-offset-2">política de privacidade</Link>.</span>
                     </label>
                     <Err id="co-terms-err" msg={shownErrors.terms} />
@@ -811,7 +840,7 @@ export default function CheckoutPage() {
 
             {/* ── Seção 2: Endereço ── */}
             <Section num={2} label="Endereço de entrega" open={step === 2} done={s2done} onEdit={() => goToStep(2)}
-              summary={addr.street ? `${addr.street}, ${addr.number} · ${addr.city}/${addr.state}` : undefined}>
+              summary={addr.street ? [streetLine(addr), cityLine(addr)].filter(Boolean).join(' · ') : undefined}>
               <div className="flex flex-col gap-4">
                 {/* CEP */}
                 <div>

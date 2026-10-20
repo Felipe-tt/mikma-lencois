@@ -82,6 +82,9 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
   const availableStock = Math.min(selectedVariant ? getStock(selectedVariant) : 0, maxQty ?? Infinity);
   const outOfStock = availableStock === 0;
+  // "Avise-me" só quando a variação está esgotada de fato (no jogo de cama o
+  // limite pode vir da fronha trocada, e aí não há o que avisar).
+  const canAlert = outOfStock && product.variants.some(v => getStock(v) === 0);
   const urgency = getStockUrgency(availableStock);
   // Quantidade nunca passa do estoque atual (ex: trocou pra uma fronha com
   // menos estoque depois de escolher 3 jogos).
@@ -278,7 +281,15 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           </span>
         </div>
 
-        {outOfStock && <StockAlert productId={product.id} />}
+        {canAlert && (
+          <StockAlert
+            productId={product.id}
+            defaultVariantId={selectedVariant?.id}
+            options={product.variants
+              .filter(v => getStock(v) === 0)
+              .map(v => ({ id: v.id, label: [SIZE_LABEL[v.size] ?? v.size, v.colorName].filter(Boolean).join(' · ') }))}
+          />
+        )}
 
         {/* Variante */}
         <div className="border-t border-mist pt-5">
@@ -326,9 +337,12 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               );
             })}
           </div>
-          <Link href="/guia-de-tamanhos" className="inline-block mt-2.5 text-[11.5px] text-faint hover:text-clay-l transition-colors border-b border-dotted border-faint-l hover:border-clay-l">
-            Não sabe seu tamanho? Meça o colchão e a gente te diz
-          </Link>
+          {/* Inline: o pontilhado acompanha só o texto, não a largura toda. */}
+          <p className="mt-2.5 text-[11.5px] text-pretty">
+            <Link href="/guia-de-tamanhos" className="text-faint hover:text-clay-l transition-colors border-b border-dotted border-faint-l hover:border-clay-l">
+              Não sabe seu tamanho? Meça o colchão e a gente te diz
+            </Link>
+          </p>
         </div>
 
         {/* Quantidade */}
@@ -430,7 +444,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               aria-label="CEP para calcular o frete"
               inputMode="numeric"
               maxLength={9}
-              className="flex-1 min-w-0 h-10 px-4 rounded-full border border-mist bg-paper text-[13px] text-ink placeholder:text-faint focus:outline-none focus:border-ink transition-colors appearance-none"
+              className="flex-1 min-w-0 h-10 px-4 rounded-full border border-mist bg-paper text-[13px] text-ink placeholder:text-faint focus:outline-none focus:border-clay/60 focus:ring-2 focus:ring-clay/[0.12] transition-[border-color,box-shadow] appearance-none"
             />
             <button
               onClick={calcShipping}
@@ -507,7 +521,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             )}
           </button>
         )}
-        {outOfStock ? (
+        {canAlert ? (
           // Esgotado: em vez de um botão morto, leva ao "avise-me" e foca o e-mail.
           <button
             onClick={() => {
@@ -522,15 +536,15 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
         ) : (
         <button
           onClick={() => buyNow()}
-          disabled={adding || buyingNow || !selectedVariant || loading}
+          disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
           className={[
             'flex-1 h-11 rounded-full text-[13px] font-semibold tracking-[0.04em] transition-[background-color,transform] duration-150',
-            !selectedVariant
+            outOfStock || !selectedVariant
               ? 'cursor-not-allowed bg-warm text-faint'
               : 'bg-ink text-paper active:scale-[0.98]',
           ].join(' ')}
         >
-          {buyingNow ? <span className="inline-flex items-center gap-2"><span className="spinner" />Preparando…</span> : 'Comprar agora'}
+          {outOfStock ? 'Fora de estoque' : buyingNow ? <span className="inline-flex items-center gap-2"><span className="spinner" />Preparando…</span> : 'Comprar agora'}
         </button>
         )}
       </div>

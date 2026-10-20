@@ -128,7 +128,10 @@ const TIMELINE_LABEL: Record<string, string> = {
 export default function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
   // Convidado ("comprar sem cadastro") também vê o próprio pedido.
-  const { buyer: user, isGuest, loading } = useAuth();
+  const { buyer: user, isGuest, loading, logout } = useAuth();
+  // Pedido ainda não liberado para esta conta (o convidado acabou de entrar
+  // e a passagem dos pedidos está terminando): tenta de novo algumas vezes.
+  const [listenTry, setListenTry] = useState(0);
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [pixTimeUp, setPixTimeUp] = useState(false);
@@ -206,8 +209,12 @@ export default function OrderDetailPage() {
           items: data.items.map(i => ({ sku: i.sku, productId: i.productId, productName: i.productName, unitPriceCents: i.unitPrice, quantity: i.quantity })),
         });
       }
-    }, () => setNotFound(true)); // sem permissão (pedido de outra conta)
-  }, [user, orderId]);
+    }, () => {
+      // Sem permissão: pedido de outra conta, ou ainda passando do convidado.
+      if (listenTry < 2) setTimeout(() => setListenTry(n => n + 1), 2500);
+      else setNotFound(true);
+    });
+  }, [user, orderId, listenTry]);
 
 
   async function generatePix() {
@@ -329,7 +336,10 @@ export default function OrderDetailPage() {
                     >
                       {confirmingReceived ? 'Confirmando…' : 'Já recebi meu pedido'}
                     </button>
-                    {confirmReceivedError && <p className="text-[12px] text-red-600 mt-2">{confirmReceivedError}</p>}
+                    <p className="text-[11px] text-faint mt-2 leading-relaxed">
+                      Confirme aqui se o pedido já chegou, mesmo antes da transportadora atualizar o status sozinha.
+                    </p>
+                    {confirmReceivedError && <p role="alert" className="text-[12px] text-red-600 mt-2">{confirmReceivedError}</p>}
                   </div>
                 )}
               </div>
@@ -524,7 +534,12 @@ export default function OrderDetailPage() {
               <strong className="font-semibold">Acompanhe de qualquer lugar.</strong>{' '}
               <span className="text-mid">Crie sua conta com o mesmo e-mail e este pedido passa a aparecer nela.</span>
             </p>
-            <Link href="/cadastro" onClick={() => setReturnTo(`/pedidos/${orderId}`)} className="btn-outline shrink-0 self-start sm:self-auto">Criar conta</Link>
+            <div className="flex items-center gap-4 shrink-0">
+              <Link href="/cadastro" onClick={() => setReturnTo(`/pedidos/${orderId}`)} className="btn-outline">Criar conta</Link>
+              <button type="button" onClick={() => { void logout().then(() => router.push('/')); }} className="text-[12.5px] text-mid hover:text-ink underline underline-offset-4 decoration-mist-d">
+                Não é você? Sair
+              </button>
+            </div>
           </div>
         )}
 
@@ -816,19 +831,26 @@ export default function OrderDetailPage() {
 }
 
 function CopyCode({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  function flash(s: 'copied' | 'failed') { setState(s); setTimeout(() => setState('idle'), 1800); }
   return (
-    <button
-      type="button"
-      onClick={() => {
-        navigator.clipboard?.writeText(code).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1600);
-        }).catch(() => {});
-      }}
-      className="inline-flex items-center h-9 px-3.5 rounded-full border border-mist-d text-[12.5px] font-medium text-ink hover:border-ink transition-colors"
-    >
-      <span role="status">{copied ? 'Copiado' : 'Copiar'}</span>
-    </button>
+    <>
+      <button
+        type="button"
+        aria-label={`Copiar código de rastreio ${code}`}
+        onClick={() => {
+          // Sem área de transferência (navegador antigo, http): avisa em vez
+          // de não fazer nada; o código está visível para copiar à mão.
+          if (!navigator.clipboard) { flash('failed'); return; }
+          navigator.clipboard.writeText(code).then(() => flash('copied'), () => flash('failed'));
+        }}
+        className="inline-flex items-center h-9 px-3.5 rounded-full border border-mist-d text-[12.5px] font-medium text-ink hover:border-ink transition-colors"
+      >
+        {state === 'copied' ? 'Copiado' : 'Copiar'}
+      </button>
+      <span role="status" className="sr-only">
+        {state === 'copied' ? 'Código copiado' : state === 'failed' ? 'Não deu para copiar. Selecione o código e copie.' : ''}
+      </span>
+    </>
   );
 }

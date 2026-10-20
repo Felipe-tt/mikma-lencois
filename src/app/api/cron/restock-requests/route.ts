@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
-import { notifyStockAlerts } from '@/lib/stockAlerts';
+import { notifyRestockRequests } from '@/lib/restockRequests';
 
-// Avisa quem pediu "avise-me quando chegar" dos produtos que voltaram ao
-// estoque. Chamado pelo mesmo workflow do cron de expirar pedidos.
+// Avisa quem pediu "avise-me quando chegar" das variações que voltaram ao
+// estoque. Workflow próprio, de hora em hora (restock-requests.yml).
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret');
   const expected = process.env.CRON_SECRET;
@@ -12,6 +12,6 @@ export async function GET(req: NextRequest) {
     && timingSafeEqual(Buffer.from(secret), Buffer.from(expected));
   if (!isValid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const result = await notifyStockAlerts();
+  const result = await notifyRestockRequests();
   return NextResponse.json({ ok: true, ...result });
 }
