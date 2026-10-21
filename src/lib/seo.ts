@@ -29,10 +29,9 @@ export const STORE_JSON_LD = {
   description: STORE_SUMMARY,
   address: { '@type': 'PostalAddress', addressLocality: 'Blumenau', addressRegion: 'SC', addressCountry: 'BR' },
   parentOrganization: { '@type': 'Organization', name: 'GPM Têxtil' },
-  makesOffer: ['Lençóis', 'Fronhas', 'Jogos de lençol'].map(name => ({
-    '@type': 'Offer',
-    itemOffered: { '@type': 'Product', name, material: 'Malha 100% algodão' },
-  })),
+  // Sem "makesOffer" com Product: o Google trata cada Product como produto à
+  // venda e exige preço ou avaliação (erro crítico em "Snippets do produto").
+  // A descrição acima já diz o que a loja vende.
 };
 
 const OG_IMAGE = { url: '/og-mikma.jpg', width: 1200, height: 630, alt: 'Mikma Lençóis · Lençóis, fronhas e jogos de lençol' };
