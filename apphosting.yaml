@@ -125,6 +125,11 @@ env:
   - variable: UBER_DIRECT_SANDBOX_CREDS
     secret: UBER_DIRECT_SANDBOX_CREDS
     availability: [RUNTIME]
+  # Segredo que a Cloudflare injeta em x-mikma-edge: sem ele o site responde
+  # 403 (bloqueia quem tenta pular a Cloudflare pelo endereço do App Hosting).
+  - variable: EDGE_SHARED_SECRET
+    secret: EDGE_SHARED_SECRET
+    availability: [RUNTIME]
 
 # NAO incluído aqui (nao sao secrets de app, sao credenciais do proprio
 # processo de CI/deploy, nao devem ir para dentro do backend rodando):

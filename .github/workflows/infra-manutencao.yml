@@ -195,6 +195,10 @@ jobs:
             }]
           }" | jq -c '{transform:.success,errors}'
 
+          echo "## DNS publicados pelo registro.br (servidor oficial do .br)"
+          dig +norec NS mikma.com.br @a.dns.br | grep -E "IN\s+NS" || true
+          echo "## DNS vistos pela internet (Google)"
+          dig +short NS mikma.com.br @8.8.8.8 || true
           echo "## O domínio já passa pela Cloudflare?"
           curl -sI https://mikma.com.br/ | grep -iE '^(server|cf-ray)' || true
 
