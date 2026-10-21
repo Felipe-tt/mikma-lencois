@@ -97,11 +97,13 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      if (captured.length > 0) onDone(captured);
+      onClose();
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [captured, onDone, onClose]);
 
   async function handleFiles(files: FileList) {
     setBusy(true);
@@ -129,6 +131,9 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
     setCaptured(prev => prev.filter((_, idx) => idx !== i));
   }
 
+  // Fechar por qualquer caminho (botão, toque fora, Esc) guarda as fotos já
+  // tiradas: antes um toque fora sem querer jogava todas fora. Para tirar
+  // uma foto, é o X dela.
   function finish() {
     if (captured.length > 0) onDone(captured);
     onClose();
@@ -138,13 +143,19 @@ export function PhotoCaptureModal({ onDone, onClose }: Props) {
     <div
       className="overlay-enter fixed inset-0 z-[70] h-[100dvh] flex flex-col bg-black"
       style={viewportHeight ? { height: viewportHeight } : undefined}
-      onClick={onClose}
+      onClick={finish}
     >
       <div className="flex items-center justify-between px-4 py-3 text-white shrink-0">
         <span className="text-sm font-semibold">
           Foto do produto {captured.length > 0 && `· ${captured.length}`}
         </span>
-        <span className="text-[11px] text-white/40">Toque fora para fechar</span>
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); finish(); }}
+          className="-mr-2 px-3 py-2 text-[13px] font-semibold text-white/70 hover:text-white"
+        >
+          Fechar
+        </button>
       </div>
 
       {captured.length > 0 && (

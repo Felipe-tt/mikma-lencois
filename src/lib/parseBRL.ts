@@ -39,3 +39,14 @@ export function parseBRL(input: string): number {
 export function centsToInput(cents: number): string {
   return (cents / 100).toFixed(2).replace('.', ',');
 }
+
+/**
+ * Máscara de preço digitado como no app do banco: só dígitos, preenchendo
+ * da direita para a esquerda ("8990" → "89,90", "129990" → "1.299,90").
+ * Quem não sabe onde pôr a vírgula não erra o valor.
+ */
+export function maskBRL(typed: string): string {
+  const digits = typed.replace(/\D/g, '').replace(/^0+/, '').slice(0, 8);
+  if (!digits) return '';
+  return (Number(digits) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
