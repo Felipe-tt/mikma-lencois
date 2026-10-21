@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Mikma Lençóis · Lençóis direto da fábrica em Blumenau',
     description: SITE_DESCRIPTION,
-    images: ['/og-image.jpg'],
+    images: ['/og-mikma.jpg'],
   },
 };
 

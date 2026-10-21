@@ -15,7 +15,7 @@ export const STORE_JSON_LD = {
   name: SITE_NAME,
   url: 'https://mikma.com.br',
   logo: 'https://mikma.com.br/favicon-192-google.png',
-  image: 'https://mikma.com.br/og-image.jpg',
+  image: 'https://mikma.com.br/og-mikma.jpg',
   description: STORE_SUMMARY,
   address: { '@type': 'PostalAddress', addressLocality: 'Blumenau', addressRegion: 'SC', addressCountry: 'BR' },
   parentOrganization: { '@type': 'Organization', name: 'GPM Têxtil' },
@@ -25,7 +25,7 @@ export const STORE_JSON_LD = {
   })),
 };
 
-const OG_IMAGE = { url: '/og-image.jpg', width: 1200, height: 630, alt: 'Mikma Lençóis · Lençóis, fronhas e jogos de lençol' };
+const OG_IMAGE = { url: '/og-mikma.jpg', width: 1200, height: 630, alt: 'Mikma Lençóis · Lençóis, fronhas e jogos de lençol' };
 
 /** Base do Open Graph. O Next substitui o objeto `openGraph` inteiro em cada
  *  página (não mescla com o do layout): sem espalhar esta base, catálogo e
