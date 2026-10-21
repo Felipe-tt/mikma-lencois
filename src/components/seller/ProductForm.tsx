@@ -806,6 +806,373 @@ export default function ProductForm({ initial }: Props) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  // Blocos do formulário, montados uma vez e usados na edição (página
+  // única) e no passo a passo do produto novo.
+  const photosBlock = (
+    <>
+            <div className="flex flex-wrap gap-2">
+              {images.map((img, i) => (
+                <div key={i} className="relative group">
+                  <img src={img.dataUrl} alt="" className="h-20 w-20 border border-mist object-cover rounded-xl" />
+                  {i === 0 ? (
+                    <span className="absolute bottom-1 left-1 bg-ink/80 text-paper text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm">Capa</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => makeCover(i)}
+                      className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] font-bold tracking-wide uppercase px-2 py-1 rounded-full backdrop-blur-sm hover:bg-black/85 transition-colors"
+                      title="Tornar capa"
+                    >
+                      Tornar capa
+                    </button>
+                  )}
+                  {/* Dentro do canto da foto, discreto; vira vermelho só no
+                      hover/toque. Antes era um círculo vermelho grande vazando
+                      pra fora da miniatura e cobrindo a vizinha. */}
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    className="group/rm absolute top-0 right-0 w-10 h-10 flex items-center justify-center"
+                    aria-label="Remover foto"
+                  >
+                    {/* Círculo de 28px, área de toque de 40px. */}
+                    <span className="w-7 h-7 rounded-full bg-black/70 text-white backdrop-blur-sm flex items-center justify-center group-hover/rm:bg-red-600 group-active/rm:scale-90 transition-[background-color,transform] duration-150">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </span>
+                  </button>
+                </div>
+              ))}
+
+              <button
+                id="prod-fotos"
+                type="button"
+                onClick={() => setShowCamera(true)}
+                className={`border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/80 hover:border-clay hover:text-clay transition-colors rounded-xl ${images.length === 0 ? 'w-full h-32 bg-clay/[0.04]' : 'h-20 w-20'}`}
+              >
+                <svg width={images.length === 0 ? 30 : 22} height={images.length === 0 ? 30 : 22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <span className={images.length === 0 ? 'text-[15px] font-semibold' : 'text-[10px] font-medium'}>{images.length > 0 ? 'Mais fotos' : 'Tirar foto'}</span>
+              </button>
+            </div>
+            {fieldErr('fotos')}
+    </>
+  );
+  const typeBlock = (
+    <>
+            <div>
+              <label id="prod-categoria-label" className="label">Tipo de produto</label>
+              <div role="group" aria-labelledby="prod-categoria-label" className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {CATEGORIES.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-pressed={category === c}
+                    onClick={() => { tap(); setCategory(c); }}
+                    className={`min-h-[52px] px-3 rounded-xl border text-[14px] font-semibold transition-colors ${
+                      category === c
+                        ? 'bg-ink text-paper border-ink'
+                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label id="prod-tamanho-label" className="label">Tamanho</label>
+              <div role="group" aria-labelledby="prod-tamanho-label" className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {SIZES.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-pressed={size === s}
+                    onClick={() => { tap(); setSize(s); }}
+                    className={`min-h-[52px] rounded-xl border text-[14px] font-semibold transition-colors ${
+                      size === s
+                        ? 'bg-ink text-paper border-ink'
+                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
+                    }`}
+                  >
+                    {SIZE_LABEL[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {category === 'Jogos de cama' && (
+              <div>
+                <label id="prod-fronhas-label" className="label">Quantas fronhas vêm no jogo?</label>
+                <Stepper
+                  labelledBy="prod-fronhas-label"
+                  value={fronhaCount || 1}
+                  min={1}
+                  max={10}
+                  onChange={setFronhaCount}
+                />
+                <p className="text-[11.5px] text-faint mt-1.5">
+                  Solteiro e berço costumam vir com 1; casal, queen e king, com 2.
+                </p>
+              </div>
+            )}
+    </>
+  );
+  const nameBlock = (
+    <>
+            <div>
+              <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-1 mb-1">
+                <label htmlFor="prod-nome" className="label mb-0">Nome do produto</label>
+                {nameEditedManually && currentNameSuggestion && name !== currentNameSuggestion && (
+                  <button
+                    type="button"
+                    onClick={() => { setName(currentNameSuggestion); setNameEditedManually(false); }}
+                    className="flex items-center gap-1 text-[11px] text-clay hover:text-ink transition-colors font-medium"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>
+                      <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>
+                    </svg>
+                    Usar sugestão automática
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  id="prod-nome"
+                  value={name}
+                  onChange={e => { setName(e.target.value); setNameEditedManually(true); }}
+                  placeholder="Jogo de cama queen algodão"
+                  aria-invalid={fieldError?.field === 'nome'}
+                  className={`input ${!nameEditedManually && name ? 'pr-9' : ''} ${justAutoUpdated ? 'bg-clay/[0.06] border-clay/40' : ''} ${fieldError?.field === 'nome' ? 'border-red-400' : ''}`}
+                />
+                {!nameEditedManually && name && (
+                  <span
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
+                    title="Preenchido automaticamente"
+                    aria-hidden="true"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
+                      <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
+                    </svg>
+                  </span>
+                )}
+              </div>
+              {!nameEditedManually && name && (
+                <p className="text-[11px] text-faint mt-1" aria-live="polite">
+                  Preenchido sozinho com o tipo e o tamanho. Pode mudar se quiser.
+                </p>
+              )}
+              {fieldErr('nome')}
+            </div>
+    </>
+  );
+  const priceBlock = (
+    <>
+            <div>
+              <label htmlFor="prod-preco" className="label">Preço de venda</label>
+              <div className="relative max-w-[14rem]">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[17px] text-mid pointer-events-none">R$</span>
+                <input
+                  id="prod-preco"
+                  ref={priceInputRef}
+                  value={price}
+                  onChange={e => setPrice(maskBRL(e.target.value))}
+                  placeholder="0,00"
+                  inputMode="numeric"
+                  aria-invalid={fieldError?.field === 'preco' || (!!price && !priceValid)}
+                  className={`input pl-12 text-[18px] ${(price && !priceValid) || fieldError?.field === 'preco' ? 'border-red-400' : ''}`}
+                />
+              </div>
+              {price && !priceValid && fieldError?.field !== 'preco' && (
+                <p className="text-[11.5px] text-red-600 mt-1">Digite o valor, por exemplo 8990 para R$ 89,90.</p>
+              )}
+              {fieldErr('preco')}
+              {priceSuggestion !== null && !price && (
+                <button
+                  type="button"
+                  onClick={() => setPrice(maskBRL(String(priceSuggestion)))}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-clay/30 bg-clay/5 px-3 py-1.5 text-[12px] font-semibold text-clay hover:bg-clay/10"
+                >
+                  Usar {formatCurrency(priceSuggestion)}
+                  <span className="font-normal text-faint">· média dos parecidos</span>
+                </button>
+              )}
+            </div>
+    </>
+  );
+  const moreBlock = (
+    <>
+            {/* Como o "Mais campos" do catálogo do WhatsApp: à vista só o que
+                todo produto precisa (foto, nome, preço, tamanho, cor). O peso
+                já vem do tamanho; descrição e tags são opcionais. */}
+            <button
+              type="button"
+              onClick={() => setMoreOpen(o => !o)}
+              aria-expanded={moreOpen}
+              className="self-start flex items-center gap-1.5 text-[12.5px] font-semibold text-clay hover:text-clay-d transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${moreOpen ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
+              <span className="text-left">
+                {moreOpen ? 'Menos campos' : 'Mais campos'}
+                {!moreOpen && <span className="block font-normal text-[11.5px] text-faint">Descrição, peso e palavras de busca</span>}
+              </span>
+            </button>
+
+            {moreOpen && (
+              <div className="flex flex-col gap-4">
+            <div>
+              <label htmlFor="prod-descricao" className="label">Descrição <span className="font-normal normal-case text-faint">(opcional)</span></label>
+              <textarea
+                id="prod-descricao"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={3}
+                placeholder="Material, medidas, cuidados com lavagem..."
+                className="input resize-none"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="prod-peso" className="label mb-0">
+                  Peso de uma peça (kg) <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setWeightsModalOpen(true)}
+                  className="text-[10px] font-semibold text-clay hover:text-clay-d whitespace-nowrap"
+                >
+                  Editar padrões
+                </button>
+              </div>
+              <div className="relative max-w-[10rem]">
+                <input
+                  id="prod-peso"
+                  type="text"
+                  value={weightKg}
+                  onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); setWeightTypedByHand(true); }}
+                  placeholder="Ex.: 1,2"
+                  inputMode="decimal"
+                  className={`input ${(weightKg && !weightKgValid) || fieldError?.field === 'peso' ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
+                />
+                {!weightEditedManually && weightKg && (
+                  <span
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
+                    title="Preenchido a partir do padrão desse tamanho"
+                    aria-hidden="true"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
+                      <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
+                    </svg>
+                  </span>
+                )}
+              </div>
+              {!weightEditedManually && weightKg && (
+                <p className="text-[11px] text-faint mt-1">Já vem com o peso padrão desse tamanho. Usado para calcular o frete.</p>
+              )}
+              {fieldErr('peso')}
+            </div>
+
+            <div>
+              <label htmlFor="prod-tags" className="label">Palavras para a busca <span className="font-normal normal-case text-faint">(opcional, separe com vírgula)</span></label>
+              <input
+                id="prod-tags"
+                value={tags}
+                onChange={e => setTags(e.target.value)}
+                placeholder="algodão, casal, branco"
+                className="input"
+              />
+            </div>
+
+              </div>
+            )}
+    </>
+  );
+  const colorBlock = (
+    <>
+            <div className="flex flex-col gap-2.5">
+              {rows.map(r => (
+                <div key={r.fabric} className="border border-mist bg-warm/40 p-3.5 flex flex-col gap-3 rounded-xl">
+                  {rows.length > 1 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-bold text-ink">{r.fabric}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleFabric(r.fabric)}
+                      className="text-red-400 hover:text-red-600 transition-colors w-9 h-9 flex items-center justify-center shrink-0 -mr-1.5"
+                      aria-label={`Remover ${r.fabric}`}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor={`prod-cor-${r.fabric}`} className="text-[10px] text-faint block font-semibold tracking-[0.1em] uppercase">Cor</label>
+                        {images.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => openColorFromPhoto(r.fabric)}
+                            className="text-[10px] font-semibold text-clay hover:text-clay-d flex items-center gap-1"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                            Pegar da foto
+                          </button>
+                        )}
+                      </div>
+                      <ColorPicker
+                        id={`prod-cor-${r.fabric}`}
+                        value={r.color}
+                        colorName={r.colorName}
+                        onChange={(hex, colorName) => updateRow(r.fabric, { color: hex, colorName })}
+                      />
+                      {autoColoredFabrics.has(r.fabric) && (
+                        <p className="text-[10.5px] text-clay/80 mt-1 flex items-center gap-1">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                          Cor detectada da foto — ajuste se não bateu
+                        </p>
+                      )}
+                    </div>
+
+                    {!isEdit && (
+                      <div>
+                        <label htmlFor={`prod-estoque-${r.fabric}`} className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Quantas tem</label>
+                        <Stepper
+                          id={`prod-estoque-${r.fabric}`}
+                          value={r.qty}
+                          min={0}
+                          max={9999}
+                          onChange={n => updateRow(r.fabric, { qty: n })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {isEdit && (
+                    <p className="text-[11px] text-faint">Estoque é gerenciado na página Estoque</p>
+                  )}
+                </div>
+              ))}
+            </div>
+    </>
+  );
+  const visibilityBlock = (
+    <>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={e => setActive(e.target.checked)}
+                className="w-4 h-4 accent-clay rounded-[3px]"
+              />
+              <span className="text-sm text-mid">{isEdit ? 'Mostrar na loja' : 'Mostrar na loja assim que salvar'} <span className="block text-[11.5px] text-faint">{isEdit ? 'Desmarque para esconder sem apagar.' : 'Desmarque se ainda for terminar depois.'}</span></span>
+            </label>
+    </>
+  );
+
   if (created) {
     const storeUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/produtos/${created.id}`;
     const whatsapp = `https://wa.me/?text=${encodeURIComponent(`${created.name}\n${storeUrl}`)}`;
@@ -932,356 +1299,22 @@ export default function ProductForm({ initial }: Props) {
         {isEdit ? (
         <div className="flex flex-col gap-8">
           <FormSection step={1} title="Fotos do produto" hint="A primeira foto é a capa da loja.">
-            <div className="flex flex-wrap gap-2">
-              {images.map((img, i) => (
-                <div key={i} className="relative group">
-                  <img src={img.dataUrl} alt="" className="h-20 w-20 border border-mist object-cover rounded-xl" />
-                  {i === 0 ? (
-                    <span className="absolute bottom-1 left-1 bg-ink/80 text-paper text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm">Capa</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => makeCover(i)}
-                      className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] font-bold tracking-wide uppercase px-2 py-1 rounded-full backdrop-blur-sm hover:bg-black/85 transition-colors"
-                      title="Tornar capa"
-                    >
-                      Tornar capa
-                    </button>
-                  )}
-                  {/* Dentro do canto da foto, discreto; vira vermelho só no
-                      hover/toque. Antes era um círculo vermelho grande vazando
-                      pra fora da miniatura e cobrindo a vizinha. */}
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    className="group/rm absolute top-0 right-0 w-10 h-10 flex items-center justify-center"
-                    aria-label="Remover foto"
-                  >
-                    {/* Círculo de 28px, área de toque de 40px. */}
-                    <span className="w-7 h-7 rounded-full bg-black/70 text-white backdrop-blur-sm flex items-center justify-center group-hover/rm:bg-red-600 group-active/rm:scale-90 transition-[background-color,transform] duration-150">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </span>
-                  </button>
-                </div>
-              ))}
-
-              <button
-                id="prod-fotos"
-                type="button"
-                onClick={() => setShowCamera(true)}
-                className={`border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/80 hover:border-clay hover:text-clay transition-colors rounded-xl ${images.length === 0 ? 'w-full h-32 bg-clay/[0.04]' : 'h-20 w-20'}`}
-              >
-                <svg width={images.length === 0 ? 30 : 22} height={images.length === 0 ? 30 : 22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span className={images.length === 0 ? 'text-[15px] font-semibold' : 'text-[10px] font-medium'}>{images.length > 0 ? 'Mais fotos' : 'Tirar foto'}</span>
-              </button>
-            </div>
-            {fieldErr('fotos')}
+            {photosBlock}
           </FormSection>
 
           <FormSection step={2} title="Que produto é esse?">
-            <div>
-              <label id="prod-categoria-label" className="label">Tipo de produto</label>
-              <div role="group" aria-labelledby="prod-categoria-label" className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {CATEGORIES.map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    aria-pressed={category === c}
-                    onClick={() => { tap(); setCategory(c); }}
-                    className={`min-h-[52px] px-3 rounded-xl border text-[14px] font-semibold transition-colors ${
-                      category === c
-                        ? 'bg-ink text-paper border-ink'
-                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label id="prod-tamanho-label" className="label">Tamanho</label>
-              <div role="group" aria-labelledby="prod-tamanho-label" className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {SIZES.map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    aria-pressed={size === s}
-                    onClick={() => { tap(); setSize(s); }}
-                    className={`min-h-[52px] rounded-xl border text-[14px] font-semibold transition-colors ${
-                      size === s
-                        ? 'bg-ink text-paper border-ink'
-                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
-                    }`}
-                  >
-                    {SIZE_LABEL[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {category === 'Jogos de cama' && (
-              <div>
-                <label id="prod-fronhas-label" className="label">Quantas fronhas vêm no jogo?</label>
-                <Stepper
-                  labelledBy="prod-fronhas-label"
-                  value={fronhaCount || 1}
-                  min={1}
-                  max={10}
-                  onChange={setFronhaCount}
-                />
-                <p className="text-[11.5px] text-faint mt-1.5">
-                  Solteiro e berço costumam vir com 1; casal, queen e king, com 2.
-                </p>
-              </div>
-            )}
-
-            <div>
-              <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-1 mb-1">
-                <label htmlFor="prod-nome" className="label mb-0">Nome do produto</label>
-                {nameEditedManually && currentNameSuggestion && name !== currentNameSuggestion && (
-                  <button
-                    type="button"
-                    onClick={() => { setName(currentNameSuggestion); setNameEditedManually(false); }}
-                    className="flex items-center gap-1 text-[11px] text-clay hover:text-ink transition-colors font-medium"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>
-                      <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>
-                    </svg>
-                    Usar sugestão automática
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  id="prod-nome"
-                  value={name}
-                  onChange={e => { setName(e.target.value); setNameEditedManually(true); }}
-                  placeholder="Jogo de cama queen algodão"
-                  aria-invalid={fieldError?.field === 'nome'}
-                  className={`input ${!nameEditedManually && name ? 'pr-9' : ''} ${justAutoUpdated ? 'bg-clay/[0.06] border-clay/40' : ''} ${fieldError?.field === 'nome' ? 'border-red-400' : ''}`}
-                />
-                {!nameEditedManually && name && (
-                  <span
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
-                    title="Preenchido automaticamente"
-                    aria-hidden="true"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
-                      <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
-                    </svg>
-                  </span>
-                )}
-              </div>
-              {!nameEditedManually && name && (
-                <p className="text-[11px] text-faint mt-1" aria-live="polite">
-                  Preenchido sozinho com o tipo e o tamanho. Pode mudar se quiser.
-                </p>
-              )}
-              {fieldErr('nome')}
-            </div>
-
-
-            <div>
-              <label htmlFor="prod-preco" className="label">Preço de venda</label>
-              <div className="relative max-w-[14rem]">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[17px] text-mid pointer-events-none">R$</span>
-                <input
-                  id="prod-preco"
-                  ref={priceInputRef}
-                  value={price}
-                  onChange={e => setPrice(maskBRL(e.target.value))}
-                  placeholder="0,00"
-                  inputMode="numeric"
-                  aria-invalid={fieldError?.field === 'preco' || (!!price && !priceValid)}
-                  className={`input pl-12 text-[18px] ${(price && !priceValid) || fieldError?.field === 'preco' ? 'border-red-400' : ''}`}
-                />
-              </div>
-              {price && !priceValid && fieldError?.field !== 'preco' && (
-                <p className="text-[11.5px] text-red-600 mt-1">Digite o valor, por exemplo 8990 para R$ 89,90.</p>
-              )}
-              {fieldErr('preco')}
-              {priceSuggestion !== null && !price && (
-                <button
-                  type="button"
-                  onClick={() => setPrice(maskBRL(String(priceSuggestion)))}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-clay/30 bg-clay/5 px-3 py-1.5 text-[12px] font-semibold text-clay hover:bg-clay/10"
-                >
-                  Usar {formatCurrency(priceSuggestion)}
-                  <span className="font-normal text-faint">· média dos parecidos</span>
-                </button>
-              )}
-            </div>
-
-            {/* Como o "Mais campos" do catálogo do WhatsApp: à vista só o que
-                todo produto precisa (foto, nome, preço, tamanho, cor). O peso
-                já vem do tamanho; descrição e tags são opcionais. */}
-            <button
-              type="button"
-              onClick={() => setMoreOpen(o => !o)}
-              aria-expanded={moreOpen}
-              className="self-start flex items-center gap-1.5 text-[12.5px] font-semibold text-clay hover:text-clay-d transition-colors"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${moreOpen ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
-              <span className="text-left">
-                {moreOpen ? 'Menos campos' : 'Mais campos'}
-                {!moreOpen && <span className="block font-normal text-[11.5px] text-faint">Descrição, peso e palavras de busca</span>}
-              </span>
-            </button>
-
-            {moreOpen && (
-              <div className="flex flex-col gap-4">
-            <div>
-              <label htmlFor="prod-descricao" className="label">Descrição <span className="font-normal normal-case text-faint">(opcional)</span></label>
-              <textarea
-                id="prod-descricao"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                rows={3}
-                placeholder="Material, medidas, cuidados com lavagem..."
-                className="input resize-none"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="prod-peso" className="label mb-0">
-                  Peso de uma peça (kg) <span className="text-red-500">*</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setWeightsModalOpen(true)}
-                  className="text-[10px] font-semibold text-clay hover:text-clay-d whitespace-nowrap"
-                >
-                  Editar padrões
-                </button>
-              </div>
-              <div className="relative max-w-[10rem]">
-                <input
-                  id="prod-peso"
-                  type="text"
-                  value={weightKg}
-                  onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); setWeightTypedByHand(true); }}
-                  placeholder="Ex.: 1,2"
-                  inputMode="decimal"
-                  className={`input ${(weightKg && !weightKgValid) || fieldError?.field === 'peso' ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
-                />
-                {!weightEditedManually && weightKg && (
-                  <span
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
-                    title="Preenchido a partir do padrão desse tamanho"
-                    aria-hidden="true"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
-                      <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
-                    </svg>
-                  </span>
-                )}
-              </div>
-              {!weightEditedManually && weightKg && (
-                <p className="text-[11px] text-faint mt-1">Já vem com o peso padrão desse tamanho. Usado para calcular o frete.</p>
-              )}
-              {fieldErr('peso')}
-            </div>
-
-            <div>
-              <label htmlFor="prod-tags" className="label">Palavras para a busca <span className="font-normal normal-case text-faint">(opcional, separe com vírgula)</span></label>
-              <input
-                id="prod-tags"
-                value={tags}
-                onChange={e => setTags(e.target.value)}
-                placeholder="algodão, casal, branco"
-                className="input"
-              />
-            </div>
-
-              </div>
-            )}
-
+            {typeBlock}
+            {nameBlock}
+            {priceBlock}
+            {moreBlock}
           </FormSection>
 
           <FormSection step={3} title="Cor e estoque" hint={FABRIC_LABEL}>
-            <div className="flex flex-col gap-2.5">
-              {rows.map(r => (
-                <div key={r.fabric} className="border border-mist bg-warm/40 p-3.5 flex flex-col gap-3 rounded-xl">
-                  {rows.length > 1 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-bold text-ink">{r.fabric}</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleFabric(r.fabric)}
-                      className="text-red-400 hover:text-red-600 transition-colors w-9 h-9 flex items-center justify-center shrink-0 -mr-1.5"
-                      aria-label={`Remover ${r.fabric}`}
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label htmlFor={`prod-cor-${r.fabric}`} className="text-[10px] text-faint block font-semibold tracking-[0.1em] uppercase">Cor</label>
-                        {images.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => openColorFromPhoto(r.fabric)}
-                            className="text-[10px] font-semibold text-clay hover:text-clay-d flex items-center gap-1"
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                            Pegar da foto
-                          </button>
-                        )}
-                      </div>
-                      <ColorPicker
-                        id={`prod-cor-${r.fabric}`}
-                        value={r.color}
-                        colorName={r.colorName}
-                        onChange={(hex, colorName) => updateRow(r.fabric, { color: hex, colorName })}
-                      />
-                      {autoColoredFabrics.has(r.fabric) && (
-                        <p className="text-[10.5px] text-clay/80 mt-1 flex items-center gap-1">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                          Cor detectada da foto — ajuste se não bateu
-                        </p>
-                      )}
-                    </div>
-
-                    {!isEdit && (
-                      <div>
-                        <label htmlFor={`prod-estoque-${r.fabric}`} className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Quantas tem</label>
-                        <Stepper
-                          id={`prod-estoque-${r.fabric}`}
-                          value={r.qty}
-                          min={0}
-                          max={9999}
-                          onChange={n => updateRow(r.fabric, { qty: n })}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  {isEdit && (
-                    <p className="text-[11px] text-faint">Estoque é gerenciado na página Estoque</p>
-                  )}
-                </div>
-              ))}
-            </div>
+            {colorBlock}
           </FormSection>
 
           <FormSection step={4} title="Aparecer na loja">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={active}
-                onChange={e => setActive(e.target.checked)}
-                className="w-4 h-4 accent-clay rounded-[3px]"
-              />
-              <span className="text-sm text-mid">{isEdit ? 'Mostrar na loja' : 'Mostrar na loja assim que salvar'} <span className="block text-[11.5px] text-faint">{isEdit ? 'Desmarque para esconder sem apagar.' : 'Desmarque se ainda for terminar depois.'}</span></span>
-            </label>
+            {visibilityBlock}
           </FormSection>
 
           {/* ── Aviso: variações removidas que ainda têm estoque ── */}
@@ -1310,261 +1343,20 @@ export default function ProductForm({ initial }: Props) {
                 </ul>
               </div>
             )}
-            <div className="flex flex-wrap gap-2">
-              {images.map((img, i) => (
-                <div key={i} className="relative group">
-                  <img src={img.dataUrl} alt="" className="h-20 w-20 border border-mist object-cover rounded-xl" />
-                  {i === 0 ? (
-                    <span className="absolute bottom-1 left-1 bg-ink/80 text-paper text-[8px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-sm">Capa</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => makeCover(i)}
-                      className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] font-bold tracking-wide uppercase px-2 py-1 rounded-full backdrop-blur-sm hover:bg-black/85 transition-colors"
-                      title="Tornar capa"
-                    >
-                      Tornar capa
-                    </button>
-                  )}
-                  {/* Dentro do canto da foto, discreto; vira vermelho só no
-                      hover/toque. Antes era um círculo vermelho grande vazando
-                      pra fora da miniatura e cobrindo a vizinha. */}
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    className="group/rm absolute top-0 right-0 w-10 h-10 flex items-center justify-center"
-                    aria-label="Remover foto"
-                  >
-                    {/* Círculo de 28px, área de toque de 40px. */}
-                    <span className="w-7 h-7 rounded-full bg-black/70 text-white backdrop-blur-sm flex items-center justify-center group-hover/rm:bg-red-600 group-active/rm:scale-90 transition-[background-color,transform] duration-150">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </span>
-                  </button>
-                </div>
-              ))}
-
-              <button
-                id="prod-fotos"
-                type="button"
-                onClick={() => setShowCamera(true)}
-                className={`border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/80 hover:border-clay hover:text-clay transition-colors rounded-xl ${images.length === 0 ? 'w-full h-32 bg-clay/[0.04]' : 'h-20 w-20'}`}
-              >
-                <svg width={images.length === 0 ? 30 : 22} height={images.length === 0 ? 30 : 22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span className={images.length === 0 ? 'text-[15px] font-semibold' : 'text-[10px] font-medium'}>{images.length > 0 ? 'Mais fotos' : 'Tirar foto'}</span>
-              </button>
-            </div>
-            {fieldErr('fotos')}
+              {photosBlock}
             </FormSection>
           )}
           {wizardStep === 2 && (
             <FormSection step={2} title="Que produto é esse?">
-            <div>
-              <label id="prod-categoria-label" className="label">Tipo de produto</label>
-              <div role="group" aria-labelledby="prod-categoria-label" className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {CATEGORIES.map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    aria-pressed={category === c}
-                    onClick={() => { tap(); setCategory(c); }}
-                    className={`min-h-[52px] px-3 rounded-xl border text-[14px] font-semibold transition-colors ${
-                      category === c
-                        ? 'bg-ink text-paper border-ink'
-                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label id="prod-tamanho-label" className="label">Tamanho</label>
-              <div role="group" aria-labelledby="prod-tamanho-label" className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {SIZES.map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    aria-pressed={size === s}
-                    onClick={() => { tap(); setSize(s); }}
-                    className={`min-h-[52px] rounded-xl border text-[14px] font-semibold transition-colors ${
-                      size === s
-                        ? 'bg-ink text-paper border-ink'
-                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
-                    }`}
-                  >
-                    {SIZE_LABEL[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {category === 'Jogos de cama' && (
-              <div>
-                <label id="prod-fronhas-label" className="label">Quantas fronhas vêm no jogo?</label>
-                <Stepper
-                  labelledBy="prod-fronhas-label"
-                  value={fronhaCount || 1}
-                  min={1}
-                  max={10}
-                  onChange={setFronhaCount}
-                />
-                <p className="text-[11.5px] text-faint mt-1.5">
-                  Solteiro e berço costumam vir com 1; casal, queen e king, com 2.
-                </p>
-              </div>
-            )}
-
+              {typeBlock}
             </FormSection>
           )}
           {wizardStep === 3 && (
             <FormSection step={3} title="Nome, preço e cor">
-            <div>
-              <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-1 mb-1">
-                <label htmlFor="prod-nome" className="label mb-0">Nome do produto</label>
-                {nameEditedManually && currentNameSuggestion && name !== currentNameSuggestion && (
-                  <button
-                    type="button"
-                    onClick={() => { setName(currentNameSuggestion); setNameEditedManually(false); }}
-                    className="flex items-center gap-1 text-[11px] text-clay hover:text-ink transition-colors font-medium"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>
-                      <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>
-                    </svg>
-                    Usar sugestão automática
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  id="prod-nome"
-                  value={name}
-                  onChange={e => { setName(e.target.value); setNameEditedManually(true); }}
-                  placeholder="Jogo de cama queen algodão"
-                  aria-invalid={fieldError?.field === 'nome'}
-                  className={`input ${!nameEditedManually && name ? 'pr-9' : ''} ${justAutoUpdated ? 'bg-clay/[0.06] border-clay/40' : ''} ${fieldError?.field === 'nome' ? 'border-red-400' : ''}`}
-                />
-                {!nameEditedManually && name && (
-                  <span
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
-                    title="Preenchido automaticamente"
-                    aria-hidden="true"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
-                      <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
-                    </svg>
-                  </span>
-                )}
-              </div>
-              {!nameEditedManually && name && (
-                <p className="text-[11px] text-faint mt-1" aria-live="polite">
-                  Preenchido sozinho com o tipo e o tamanho. Pode mudar se quiser.
-                </p>
-              )}
-              {fieldErr('nome')}
-            </div>
-
-
-            <div>
-              <label htmlFor="prod-preco" className="label">Preço de venda</label>
-              <div className="relative max-w-[14rem]">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[17px] text-mid pointer-events-none">R$</span>
-                <input
-                  id="prod-preco"
-                  ref={priceInputRef}
-                  value={price}
-                  onChange={e => setPrice(maskBRL(e.target.value))}
-                  placeholder="0,00"
-                  inputMode="numeric"
-                  aria-invalid={fieldError?.field === 'preco' || (!!price && !priceValid)}
-                  className={`input pl-12 text-[18px] ${(price && !priceValid) || fieldError?.field === 'preco' ? 'border-red-400' : ''}`}
-                />
-              </div>
-              {price && !priceValid && fieldError?.field !== 'preco' && (
-                <p className="text-[11.5px] text-red-600 mt-1">Digite o valor, por exemplo 8990 para R$ 89,90.</p>
-              )}
-              {fieldErr('preco')}
-              {priceSuggestion !== null && !price && (
-                <button
-                  type="button"
-                  onClick={() => setPrice(maskBRL(String(priceSuggestion)))}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-clay/30 bg-clay/5 px-3 py-1.5 text-[12px] font-semibold text-clay hover:bg-clay/10"
-                >
-                  Usar {formatCurrency(priceSuggestion)}
-                  <span className="font-normal text-faint">· média dos parecidos</span>
-                </button>
-              )}
-            </div>
-
+              {nameBlock}
+              {priceBlock}
               <div>
-            <div className="flex flex-col gap-2.5">
-              {rows.map(r => (
-                <div key={r.fabric} className="border border-mist bg-warm/40 p-3.5 flex flex-col gap-3 rounded-xl">
-                  {rows.length > 1 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-bold text-ink">{r.fabric}</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleFabric(r.fabric)}
-                      className="text-red-400 hover:text-red-600 transition-colors w-9 h-9 flex items-center justify-center shrink-0 -mr-1.5"
-                      aria-label={`Remover ${r.fabric}`}
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label htmlFor={`prod-cor-${r.fabric}`} className="text-[10px] text-faint block font-semibold tracking-[0.1em] uppercase">Cor</label>
-                        {images.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => openColorFromPhoto(r.fabric)}
-                            className="text-[10px] font-semibold text-clay hover:text-clay-d flex items-center gap-1"
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                            Pegar da foto
-                          </button>
-                        )}
-                      </div>
-                      <ColorPicker
-                        id={`prod-cor-${r.fabric}`}
-                        value={r.color}
-                        colorName={r.colorName}
-                        onChange={(hex, colorName) => updateRow(r.fabric, { color: hex, colorName })}
-                      />
-                      {autoColoredFabrics.has(r.fabric) && (
-                        <p className="text-[10.5px] text-clay/80 mt-1 flex items-center gap-1">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                          Cor detectada da foto — ajuste se não bateu
-                        </p>
-                      )}
-                    </div>
-
-                    {!isEdit && (
-                      <div>
-                        <label htmlFor={`prod-estoque-${r.fabric}`} className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Quantas tem</label>
-                        <Stepper
-                          id={`prod-estoque-${r.fabric}`}
-                          value={r.qty}
-                          min={0}
-                          max={9999}
-                          onChange={n => updateRow(r.fabric, { qty: n })}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  {isEdit && (
-                    <p className="text-[11px] text-faint">Estoque é gerenciado na página Estoque</p>
-                  )}
-                </div>
-              ))}
-            </div>
+                {colorBlock}
               </div>
             </FormSection>
           )}
@@ -1598,101 +1390,8 @@ export default function ProductForm({ initial }: Props) {
                 </div>
               </div>
             )}
-            {/* Como o "Mais campos" do catálogo do WhatsApp: à vista só o que
-                todo produto precisa (foto, nome, preço, tamanho, cor). O peso
-                já vem do tamanho; descrição e tags são opcionais. */}
-            <button
-              type="button"
-              onClick={() => setMoreOpen(o => !o)}
-              aria-expanded={moreOpen}
-              className="self-start flex items-center gap-1.5 text-[12.5px] font-semibold text-clay hover:text-clay-d transition-colors"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${moreOpen ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
-              <span className="text-left">
-                {moreOpen ? 'Menos campos' : 'Mais campos'}
-                {!moreOpen && <span className="block font-normal text-[11.5px] text-faint">Descrição, peso e palavras de busca</span>}
-              </span>
-            </button>
-
-            {moreOpen && (
-              <div className="flex flex-col gap-4">
-            <div>
-              <label htmlFor="prod-descricao" className="label">Descrição <span className="font-normal normal-case text-faint">(opcional)</span></label>
-              <textarea
-                id="prod-descricao"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                rows={3}
-                placeholder="Material, medidas, cuidados com lavagem..."
-                className="input resize-none"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="prod-peso" className="label mb-0">
-                  Peso de uma peça (kg) <span className="text-red-500">*</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setWeightsModalOpen(true)}
-                  className="text-[10px] font-semibold text-clay hover:text-clay-d whitespace-nowrap"
-                >
-                  Editar padrões
-                </button>
-              </div>
-              <div className="relative max-w-[10rem]">
-                <input
-                  id="prod-peso"
-                  type="text"
-                  value={weightKg}
-                  onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); setWeightTypedByHand(true); }}
-                  placeholder="Ex.: 1,2"
-                  inputMode="decimal"
-                  className={`input ${(weightKg && !weightKgValid) || fieldError?.field === 'peso' ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
-                />
-                {!weightEditedManually && weightKg && (
-                  <span
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-clay/70 pointer-events-none"
-                    title="Preenchido a partir do padrão desse tamanho"
-                    aria-hidden="true"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
-                      <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
-                    </svg>
-                  </span>
-                )}
-              </div>
-              {!weightEditedManually && weightKg && (
-                <p className="text-[11px] text-faint mt-1">Já vem com o peso padrão desse tamanho. Usado para calcular o frete.</p>
-              )}
-              {fieldErr('peso')}
-            </div>
-
-            <div>
-              <label htmlFor="prod-tags" className="label">Palavras para a busca <span className="font-normal normal-case text-faint">(opcional, separe com vírgula)</span></label>
-              <input
-                id="prod-tags"
-                value={tags}
-                onChange={e => setTags(e.target.value)}
-                placeholder="algodão, casal, branco"
-                className="input"
-              />
-            </div>
-
-              </div>
-            )}
-
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={active}
-                onChange={e => setActive(e.target.checked)}
-                className="w-4 h-4 accent-clay rounded-[3px]"
-              />
-              <span className="text-sm text-mid">{isEdit ? 'Mostrar na loja' : 'Mostrar na loja assim que salvar'} <span className="block text-[11.5px] text-faint">{isEdit ? 'Desmarque para esconder sem apagar.' : 'Desmarque se ainda for terminar depois.'}</span></span>
-            </label>
+              {moreBlock}
+              {visibilityBlock}
             </FormSection>
           )}
         </div>
