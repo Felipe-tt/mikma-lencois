@@ -65,6 +65,26 @@ Para conferir o IP que o site enxerga existe a rota `/api/painel/ip-check`
 Ordem importa: se o secret entrar no `apphosting.yaml` antes da regra da
 Cloudflare existir, o site responde 403 para todo mundo.
 
+## 2.1 Se a Cloudflare cair
+
+O workflow `cloudflare-fallback.yml` confere a cada 5 minutos
+`mikma.com.br/cdn-cgi/trace` (respondido pela Cloudflare, sem chegar no
+servidor). Se não responde e o App Hosting responde direto:
+
+1. liga `edge/status.bypass` no Firestore (o proxy deixa de exigir o
+   segredo, sem deploy);
+2. tira o proxy (nuvem laranja) dos registros DNS pela API da Cloudflare.
+
+O site passa a ser servido direto pelo App Hosting. Quando a Cloudflare
+volta (2 checagens seguidas), religa o proxy e, 15 minutos depois, a trava.
+A ativação falha o job de propósito: o GitHub manda e-mail avisando.
+Para testar ou forçar: Actions → "Cloudflare · fallback automático" → Run
+workflow → `ativar` / `desativar`. Uma vez por dia o mesmo workflow confere
+se o certificado da origem vence em menos de 21 dias.
+
+Se a API da Cloudflare também cair, nada é automático: no registro.br, troque
+os servidores DNS de volta para os do Registro.br (a troca leva horas).
+
 ## 3. Custos fora do Firebase (Google Cloud)
 
 O maior gasto provável não é tráfego: **cada merge na `main` gera um build
