@@ -26,7 +26,9 @@ export function MaintenanceGate() {
       .then((data: { active?: boolean; released?: boolean }) => {
         if (cancelled) return;
         if (data.active && !data.released) {
-          window.location.href = '/manutencao';
+          // Leva o caminho junto, como o proxy: staff logado volta pra ele.
+          const de = window.location.pathname;
+          window.location.href = de && de !== '/' ? `/manutencao?de=${encodeURIComponent(de)}` : '/manutencao';
         }
       })
       .catch(() => {

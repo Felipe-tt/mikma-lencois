@@ -20,10 +20,10 @@
 // no middleware, mesmo o navegador mandando ele certinho, foi exatamente
 // isso que quebrou o bypass antes dessa correção.
 export const STAFF_SESSION_COOKIE = '__session';
-export const STAFF_SESSION_MAX_AGE_SECONDS = 60 * 60; // 1h, mesma janela do
-// ID token do Firebase; o AuthContext no cliente reemite esse cookie a
-// cada refresh de token, então na prática ele nunca fica velho enquanto
-// a pessoa continua logada e usando o site.
+// 7 dias: com 1h, quem voltava no dia seguinte caía na manutenção antes de o
+// AuthContext reemitir o cookie. Ele só serve pra pular a manutenção (nenhuma
+// rota de API o aceita) e o logout o apaga.
+export const STAFF_SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 
 export interface StaffSessionPayload {
   uid: string;
