@@ -4,7 +4,7 @@ import { Providers } from '@/components/Providers';
 import { ThemeScript } from '@/components/ThemeScript';
 import { Analytics } from '@/components/Analytics';
 import { fontSans, fontDisplay } from '@/lib/fonts';
-import { baseOpenGraph, SITE_DESCRIPTION, STORE_JSON_LD } from '@/lib/seo';
+import { baseOpenGraph, SITE_DESCRIPTION, STORE_JSON_LD, WEBSITE_JSON_LD } from '@/lib/seo';
 import { JsonLd } from '@/components/seo/JsonLd';
 
 export const metadata: Metadata = {
@@ -17,11 +17,11 @@ export const metadata: Metadata = {
       // Todos com fundo escuro da marca: a lua é clara, e o Google mostra o
       // ícone num círculo branco (transparente, a lua sumia no resultado).
       { url: '/favicon.ico', sizes: '16x16 32x32 48x48', type: 'image/x-icon' },
-      { url: '/favicon-48-google.png', sizes: '48x48', type: 'image/png' },
-      { url: '/favicon-96-google.png', sizes: '96x96', type: 'image/png' },
-      { url: '/favicon-192-google.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon-48-google.png?v=2', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon-96-google.png?v=2', sizes: '96x96', type: 'image/png' },
+      { url: '/favicon-192-google.png?v=2', sizes: '192x192', type: 'image/png' },
     ],
-    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+    apple: [{ url: '/apple-touch-icon.png?v=2', sizes: '180x180' }],
   },
   openGraph: {
     ...baseOpenGraph,
@@ -44,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeScript />
       </head>
       <body suppressHydrationWarning>
+        <JsonLd data={WEBSITE_JSON_LD} />
         <JsonLd data={STORE_JSON_LD} />
         <Analytics />
         <Providers>{children}</Providers>
