@@ -224,6 +224,12 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isSellerOrAdmin();
     }
+    // Fallback da Cloudflare: o proxy (sem autenticação) lê; só o workflow
+    // cloudflare-fallback.yml (Admin) escreve.
+    match /edge/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
     match /maintenance_queue/{doc} {
       // O proxy roda sem autenticação (Edge Runtime) e só LÊ um documento
       // pelo ID, para saber se o IP está liberado.

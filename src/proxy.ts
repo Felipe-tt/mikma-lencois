@@ -70,6 +70,32 @@ async function isIpReleased(projectId: string, docId: string): Promise<boolean> 
 }
 
 
+// Fallback da Cloudflare: se ela cair, o workflow cloudflare-fallback.yml liga
+// edge/status.bypass e tira o proxy dela do DNS, e os visitantes passam a
+// chegar direto, sem o segredo. Só é lido quando chega requisição sem o
+// segredo (no dia a dia, só robô tentando pular a Cloudflare), com cache de
+// 30s, então não custa leitura. Se a leitura falhar, a trava continua.
+const EDGE_BYPASS_CACHE_TTL_MS = 30000;
+let edgeBypassCache: { value: boolean; expiresAt: number } | null = null;
+
+async function isEdgeBypassActive(projectId: string): Promise<boolean> {
+  const now = Date.now();
+  if (edgeBypassCache && edgeBypassCache.expiresAt > now) return edgeBypassCache.value;
+  let value = edgeBypassCache?.value ?? false;
+  try {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/edge/status`,
+      { signal: AbortSignal.timeout(3000), cache: 'no-store' }
+    );
+    if (res.ok) value = (await res.json())?.fields?.bypass?.booleanValue === true;
+    else if (res.status === 404) value = false;
+  } catch {
+    // mantém o último valor conhecido
+  }
+  edgeBypassCache = { value, expiresAt: now + EDGE_BYPASS_CACHE_TTL_MS };
+  return value;
+}
+
 // Paths que só existem em varreduras automáticas de vulnerabilidade (não
 // tem WordPress, PHP, ou XML-RPC nesse projeto). Rejeitar aqui, antes de
 // qualquer leitura/escrita no Firestore ou lookup de geo, corta o custo
@@ -128,7 +154,12 @@ export async function proxy(req: NextRequest) {
   // que passou por ela: quem chamasse o endereço do App Hosting direto
   // pularia o firewall, o anti-bot e o limite de DDoS da Cloudflare. Sem o
   // segredo configurado, nada muda.
-  if (process.env.EDGE_SHARED_SECRET && !cameThroughEdge(req.headers)) {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'mikma-lencois';
+  if (
+    process.env.EDGE_SHARED_SECRET &&
+    !cameThroughEdge(req.headers) &&
+    !(await isEdgeBypassActive(projectId))
+  ) {
     return new NextResponse('Forbidden', { status: 403, headers: { 'Cache-Control': 'no-store' } });
   }
 
@@ -158,7 +189,6 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith('/sitemap');
 
   if (!isExempt) {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'mikma-lencois';
     // Mesma regra do getClientIp (lib/ip.ts): Cloudflare comprovada >
     // x-fah-client-ip do App Hosting > x-forwarded-for só no ambiente local.
     const ip = clientIpFromHeaders(req.headers);

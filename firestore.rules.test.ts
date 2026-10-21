@@ -514,3 +514,15 @@ describe('users: endereço limitado', () => {
     await assertFails(setDoc(doc(u.firestore(), 'users/u1'), { address: { ...ok, street: 'x'.repeat(5000) } }, { merge: true }));
   });
 });
+
+describe('edge/status: fallback da Cloudflare', () => {
+  it('qualquer um lê, ninguém escreve pelo client (nem admin)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'edge/status'), { bypass: false });
+    });
+    await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'edge/status')));
+    const adminCtx = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    await assertFails(setDoc(doc(adminCtx.firestore(), 'edge/status'), { bypass: true }));
+    await assertFails(setDoc(doc(testEnv.unauthenticatedContext().firestore(), 'edge/status'), { bypass: true }));
+  });
+});

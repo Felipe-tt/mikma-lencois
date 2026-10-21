@@ -1,0 +1,40 @@
+name: Cloudflare · fallback automático
+
+# Se a Cloudflare cair, o site passa a ser servido direto pelo App Hosting e
+# volta para trás da Cloudflare sozinho quando ela se recupera (ver
+# scripts/cloudflare-fallback.sh). Uma vez por dia confere a validade do
+# certificado da origem. Repositório público: Actions não custa nada.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+    - cron: '41 11 * * *'
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: 'auto (checa), ativar ou desativar o fallback, certificado'
+        type: choice
+        options: [auto, ativar, desativar, certificado]
+        default: auto
+
+permissions: {}
+
+concurrency:
+  group: cloudflare-fallback
+  cancel-in-progress: false
+
+jobs:
+  vigiar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          sparse-checkout: scripts/cloudflare-fallback.sh
+          sparse-checkout-cone-mode: false
+      - name: Checar
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          ACAO: ${{ github.event.schedule == '41 11 * * *' && 'certificado' || inputs.acao || 'auto' }}
+        run: bash scripts/cloudflare-fallback.sh "$ACAO"
