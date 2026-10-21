@@ -20,6 +20,13 @@ import { FABRIC_LABEL } from '@/lib/productOptions';
 
 // ISR: revalida a cada 5 minutos, reduz leituras no Firestore por visita ao produto
 export const revalidate = 300;
+// Sem isto a rota com [slug] era gerada a cada visita (ƒ no build) e o
+// revalidate acima não valia: cada acesso lia o Firestore. Lista vazia =
+// nenhuma página pronta no build; cada produto é gerado no 1º acesso e fica
+// em cache (o painel limpa com revalidatePath ao salvar).
+export async function generateStaticParams() {
+  return [];
+}
 interface Props { params: Promise<{ slug: string }> }
 
 // cache() do React: deduplica a leitura entre generateMetadata e a página
