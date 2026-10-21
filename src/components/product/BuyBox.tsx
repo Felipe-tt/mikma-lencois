@@ -323,13 +323,6 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                     </span>
                   )}
                   <span className="inline-flex items-center gap-2">
-                    {variant.color && (
-                      <span
-                        className="w-3 h-3 rounded-full border border-black/10 shrink-0"
-                        style={{ backgroundColor: variant.color }}
-                        aria-hidden="true"
-                      />
-                    )}
                     {SIZE_LABEL[variant.size] ?? variant.size}
                     {variant.colorName ? ` · ${variant.colorName}` : ''}
                   </span>
