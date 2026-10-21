@@ -1,32 +1,35 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 /**
- * A tela de manutenção normalmente é a única coisa que um visitante vê
- * quando o site está em manutenção — inclusive o próprio admin, se o
- * cookie de sessão de staff (verificado no proxy.ts) ainda não existe
- * nesse navegador/aba (ex.: sessão do Firebase ainda válida, mas o
- * cookie expirou ou nunca foi emitido nessa aba).
- *
- * `/painel` já é uma rota isenta do bloqueio de manutenção (ver
- * `isExempt` em proxy.ts), então o admin sempre conseguia entrar — só
- * que precisava trocar a URL manualmente. Esse componente resolve isso:
- * assim que a sessão do Firebase carrega no client, se for
- * seller/admin, redireciona sozinho pro painel.
+ * Admin/seller logado que caiu em /manutencao (cookie de staff vencido ou
+ * ainda não emitido neste navegador, ex.: primeira visita do dia) volta pra
+ * página que pediu, não pro painel: renova o cookie e só então navega, pra
+ * o proxy já deixar passar. Se a renovação falhar, vai pro painel, que é
+ * isento da manutenção.
  */
 export function MaintenanceAdminRedirect() {
   const { user, loading } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
-    if (user && (user.role === 'seller' || user.role === 'admin')) {
-      router.replace('/painel');
-    }
-  }, [user, loading, router]);
+    if (loading || !user || (user.role !== 'seller' && user.role !== 'admin')) return;
+    let cancelled = false;
+    (async () => {
+      const de = new URLSearchParams(window.location.search).get('de');
+      const target = de && de.startsWith('/') && !de.startsWith('//') ? de : '/';
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/auth/session', { method: 'POST', headers: { authorization: `Bearer ${token}` } });
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean };
+        if (!cancelled) window.location.replace(res.ok && data.ok ? target : '/painel');
+      } catch {
+        if (!cancelled) window.location.replace('/painel');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, loading]);
 
   return null;
 }
