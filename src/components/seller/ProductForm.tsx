@@ -18,10 +18,12 @@
  * 4. Rascunho automático (localStorage) só pra criação de produto novo,
  *    recuperável se a aba fechar ou a página recarregar sem querer.
  * 5. Barra de ação fixa (sempre visível) + atalho Ctrl/Cmd+Enter salva.
+ * 6. Produto novo é um passo a passo (Fotos → O que é → Nome e preço →
+ *    Conferir) e termina numa tela de sucesso; a edição é uma página só.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { parseBRL, centsToInput } from '@/lib/parseBRL';
+import { parseBRL, centsToInput, maskBRL } from '@/lib/parseBRL';
 import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -44,6 +46,7 @@ import { getStaffPrefs, setStaffPref } from '@/lib/staffPrefs';
 import { getDoc } from 'firebase/firestore';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import { IconAlert } from '@/components/ui/Icon';
+import { Stepper } from '@/components/ui/Stepper';
 
 // Carregados só quando abertos de verdade — PhotoColorPicker,
 // DefaultWeightsModal e DuplicateProductModal não são usados na maioria
@@ -111,6 +114,10 @@ export default function ProductForm({ initial }: Props) {
   // Edição sem salvar pergunta antes de sair pela barra de baixo ou pelo
   // menu. Produto novo não precisa: o rascunho fica salvo no aparelho.
   const [touched, setTouched] = useState(false);
+  // Na fase de "bolha", depois do onChange do campo: na fase de captura o
+  // re-render vinha antes e o React devolvia o valor antigo ao campo (o
+  // primeiro caractere digitado no formulário sumia).
+  const markTouched = () => { if (!touched) setTouched(true); };
 
   const [name, setName] = useState(initial?.name ?? '');
   const [nameEditedManually, setNameEditedManually] = useState(isEdit);
@@ -314,6 +321,21 @@ export default function ProductForm({ initial }: Props) {
   const [saving, setSaving] = useState(false);
   useUnsavedGuard(isEdit && touched && !saving, { detail: 'As alterações deste produto ainda não foram salvas.' });
   const [error, setError] = useState('');
+  // Produto novo é um passo a passo (uma etapa por tela, no celular é o que
+  // menos confunde); a edição continua numa página só.
+  const WIZARD_STEPS = ['Fotos', 'O que é', 'Nome e preço', 'Conferir'] as const;
+  const [wizardStep, setWizardStep] = useState(1);
+  const [created, setCreated] = useState<{ id: string; name: string; active: boolean } | null>(null);
+  // Erro de preenchimento mostrado JUNTO do campo (e na barra de salvar):
+  // antes só aparecia no topo da página, fora da tela, e parecia que o
+  // botão não fazia nada.
+  type FieldKey = 'fotos' | 'nome' | 'preco' | 'peso' | 'cor';
+  const [fieldError, setFieldError] = useState<{ field: FieldKey; msg: string } | null>(null);
+  const fieldErr = (field: FieldKey) => fieldError?.field === field ? (
+    <p role="alert" className="text-[12px] font-medium text-red-600 mt-1.5 flex items-center gap-1.5">
+      <IconAlert size={13} className="shrink-0" />{fieldError.msg}
+    </p>
+  ) : null;
 
   const [existingSkus, setExistingSkus] = useState<Record<string, { quantity: number; reserved: number }>>({});
   useEffect(() => {
@@ -474,7 +496,7 @@ export default function ProductForm({ initial }: Props) {
       // o que sobra é o preço. Só faz isso na primeira foto: se a pessoa já
       // tá preenchendo o resto e volta pra adicionar mais uma foto depois,
       // puxar o foco de volta seria mais irritante que útil.
-      setTimeout(() => {
+      if (isEdit) setTimeout(() => {
         priceInputRef.current?.focus();
         priceInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 350);
@@ -515,12 +537,32 @@ export default function ProductForm({ initial }: Props) {
   const priceValid = !!price && parseBRL(price) > 0;
   const weightKgValid = parseDecimal(weightKg) > 0;
 
+  // O aviso some sozinho assim que o campo fica certo.
+  useEffect(() => {
+    if (!fieldError) return;
+    const ok = { fotos: images.length > 0, nome: !!name.trim(), preco: priceValid, peso: weightKgValid, cor: rows.length > 0 }[fieldError.field];
+    if (ok) setFieldError(null);
+  }, [fieldError, images.length, name, priceValid, weightKgValid, rows.length]);
+
+  function failField(field: FieldKey, msg: string, elementId: string) {
+    setError('');
+    setFieldError({ field, msg });
+    if (!isEdit) setWizardStep({ fotos: 1, nome: 3, preco: 3, cor: 3, peso: 4 }[field]);
+    tap([30, 60, 30]);
+    // Espera o campo aparecer (o peso fica em "Mais campos") e leva até ele.
+    setTimeout(() => {
+      const el = document.getElementById(elementId);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (el as HTMLElement | null)?.focus?.({ preventScroll: true });
+    }, 60);
+  }
+
   // ── Checklist de progresso: orienta quem não conhece o formulário sobre
   // onde está e quanto falta, sem precisar rolar a tela pra descobrir o
   // que ainda não preencheu. Aparece fixo no topo.
   const steps = [
     { label: 'Fotos', done: images.length > 0 },
-    { label: 'Informações', done: !!name.trim() && priceValid && weightKgValid },
+    { label: 'Nome e preço', done: !!name.trim() && priceValid && weightKgValid },
     // Cor conta como feita quando sai do bege inicial (escolhida ou tirada da foto).
     { label: 'Cor', done: rows.length > 0 && (isEdit || rows.every(r => r.color !== '#E8DCC8')) },
   ];
@@ -535,15 +577,37 @@ export default function ProductForm({ initial }: Props) {
     return s && (s.quantity > 0 || s.reserved > 0);
   });
 
+  function goNext() {
+    if (wizardStep === 1 && images.length === 0) return failField('fotos', 'Tire pelo menos uma foto do produto.', 'prod-fotos');
+    if (wizardStep === 3) {
+      if (!name.trim()) return failField('nome', 'Escreva o nome do produto.', 'prod-nome');
+      if (!priceValid) return failField('preco', price ? 'Preço inválido. Digite o valor, por exemplo 8990 para R$ 89,90.' : 'Digite o preço de venda.', 'prod-preco');
+    }
+    setFieldError(null);
+    tap();
+    setWizardStep(s => Math.min(WIZARD_STEPS.length, s + 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function goBack() {
+    setFieldError(null);
+    setWizardStep(s => Math.max(1, s - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   const [successToast, setSuccessToast] = useState('');
   const pendingNewRef = useRef<DocumentReference | null>(null);
+  const pendingCreatedIdRef = useRef('');
 
   async function handleSubmit(mode: 'list' | 'another' = 'list') {
-    if (!name.trim()) { setError('Dê um nome para o produto.'); return; }
-    if (!priceValid) { setError('Informe um preço válido.'); return; }
-    if (!weightKgValid) { setMoreOpen(true); setError('Informe o peso do produto em kg (ex: 1.2).'); return; }
-    if (images.length === 0) { setError('Adicione pelo menos uma foto.'); return; }
-    if (rows.length === 0) { setError('Informe a cor do produto.'); return; }
+    // Na mesma ordem da tela, de cima para baixo.
+    if (images.length === 0) return failField('fotos', 'Tire pelo menos uma foto do produto.', 'prod-fotos');
+    if (!name.trim()) return failField('nome', 'Escreva o nome do produto.', 'prod-nome');
+    if (!priceValid) return failField('preco', price ? 'Preço inválido. Digite só o valor, por exemplo 89,90.' : 'Digite o preço de venda.', 'prod-preco');
+    if (!weightKgValid) {
+      setMoreOpen(true);
+      return failField('peso', 'Digite o peso de uma peça em kg, por exemplo 1,2.', 'prod-peso');
+    }
+    if (rows.length === 0) return failField('cor', 'Escolha a cor do produto.', `prod-cor-${FABRICS[0]}`);
 
     // A confirmação vem antes de qualquer upload ou exclusão: cancelar aqui
     // não pode deixar nada pela metade.
@@ -560,6 +624,7 @@ export default function ProductForm({ initial }: Props) {
 
     setSaving(true);
     setError('');
+    setFieldError(null);
     try {
       // Fotos removidas só são apagadas DEPOIS que o produto foi salvo.
       // Antes a exclusão começava junto com o upload: se o salvamento
@@ -670,6 +735,7 @@ export default function ProductForm({ initial }: Props) {
         }));
       }
       await deleteOldPhotos();
+      pendingCreatedIdRef.current = pendingNewRef.current?.id ?? '';
       pendingNewRef.current = null;
       clearDraft();
       if (!isEdit && user) {
@@ -682,23 +748,14 @@ export default function ProductForm({ initial }: Props) {
         setStaffPref(user.uid, 'lastFabrics', rows.map(r => r.fabric)).catch(() => {});
       }
       if (mode === 'another' && !isEdit) {
-        // Cadastro em lote: mantém categoria/tamanho/tecidos/especificações
-        // (o que costuma se repetir entre produtos parecidos cadastrados
-        // em sequência), limpa só o que é específico deste item — nome,
-        // fotos, preço, cores e quantidades.
         tap([12, 40, 12]);
         setSuccessToast(`"${data.name}" criado!`);
         setTimeout(() => setSuccessToast(''), 3000);
-        setName(''); setNameEditedManually(false);
-        setDescription('');
-        setPrice('');
-        setImages([]);
-        setRemovedUrls([]);
-        const resetRows = rows.map(r => ({ fabric: r.fabric, color: '#E8DCC8', colorName: hexToColorName('#E8DCC8'), qty: 1 }));
-        setRows(resetRows);
-        rowMemory.current = new Map(resetRows.map(r => [r.fabric, r]));
-        setTags('');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        startAnother();
+      } else if (!isEdit) {
+        tap([12, 40, 12]);
+        setCreated({ id: pendingCreatedIdRef.current, name: data.name, active });
+        window.scrollTo({ top: 0 });
       } else {
         tap();
         setTouched(false);
@@ -706,10 +763,30 @@ export default function ProductForm({ initial }: Props) {
       }
     } catch (e) {
       console.error(e);
-      setError('Erro ao salvar. Tente novamente.');
+      setError(navigator.onLine === false
+        ? 'Sem internet. O produto continua aqui; tente salvar de novo quando a conexão voltar.'
+        : 'Não deu para salvar. Tente de novo; nada do que você preencheu foi perdido.');
     } finally {
       setSaving(false);
     }
+  }
+
+  // Cadastro em lote: mantém tipo, tamanho, peso e especificações (o que se
+  // repete entre produtos parecidos), limpa o que é deste item: nome, fotos,
+  // preço, cor e quantidade. Volta para a primeira etapa.
+  function startAnother() {
+    setName(''); setNameEditedManually(false);
+    setDescription('');
+    setPrice('');
+    setImages([]);
+    setRemovedUrls([]);
+    const resetRows = rows.map(r => ({ fabric: r.fabric, color: '#E8DCC8', colorName: hexToColorName('#E8DCC8'), qty: 1 }));
+    setRows(resetRows);
+    rowMemory.current = new Map(resetRows.map(r => [r.fabric, r]));
+    setTags('');
+    setCreated(null);
+    setWizardStep(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // Atalho Ctrl/Cmd+Enter salva de qualquer lugar da tela — evita ter que
@@ -729,104 +806,10 @@ export default function ProductForm({ initial }: Props) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  return (
+  // Blocos do formulário, montados uma vez e usados na edição (página
+  // única) e no passo a passo do produto novo.
+  const photosBlock = (
     <>
-      {showCamera && (
-        <PhotoCaptureModal onDone={handlePhotosCaptured} onClose={() => setShowCamera(false)} />
-      )}
-      {colorPickerImageIndex !== null && (
-        <PhotoColorPicker
-          images={images.map(img => img.dataUrl)}
-          imageIndex={colorPickerImageIndex}
-          onChangeImage={setColorPickerImageIndex}
-          onPick={handlePickedFromPhoto}
-          onClose={() => { setColorPickerImageIndex(null); setPendingColorTargetFabric(null); }}
-        />
-      )}
-      {weightsModalOpen && (
-        <DefaultWeightsModal
-          current={defaultWeightsBySize}
-          onClose={() => setWeightsModalOpen(false)}
-          onSaved={next => {
-            setDefaultWeightsBySize(next);
-            if (!weightEditedManually) {
-              const updated = next[size as keyof typeof next];
-              if (updated) setWeightKg(String(updated));
-            }
-          }}
-        />
-      )}
-      {duplicateModalOpen && (
-        <DuplicateProductModal onPick={applyDuplicateSource} onClose={() => setDuplicateModalOpen(false)} />
-      )}
-
-      <div className="max-w-xl mx-auto px-4 sm:px-0 pb-40" onInputCapture={() => setTouched(true)} onChangeCapture={() => setTouched(true)}>
-        {/* ── Checklist de progresso — orienta quem não conhece o formulário ── */}
-        {!isEdit && (
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex items-center gap-2 flex-1">
-            {steps.map((s, i) => (
-              <div key={s.label} className="flex items-center gap-2 flex-1">
-                <div className="flex items-center gap-1.5 flex-1">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors ${
-                    s.done ? 'bg-clay text-paper' : 'bg-mist text-faint'
-                  }`}>
-                    {s.done ? (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
-                    ) : (i + 1)}
-                  </span>
-                  <span className={`text-[11px] font-medium whitespace-nowrap ${s.done ? 'text-ink' : 'text-faint'}`}>{s.label}</span>
-                </div>
-                {i < steps.length - 1 && <div className={`h-[2px] flex-1 rounded-full ${s.done ? 'bg-clay/40' : 'bg-mist'}`} />}
-              </div>
-            ))}
-            </div>
-            <span className="text-[10px] text-faint font-mono shrink-0">{stepsDone}/{steps.length}</span>
-          </div>
-        )}
-
-        {!isEdit && pendingDraft && !draftBannerDismissed && (
-          <div className="mb-5 border border-clay/30 bg-clay/5 px-4 py-3 rounded-[4px] flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-[12px] text-ink">
-              Encontramos um rascunho não finalizado{pendingDraft.name ? ` de "${pendingDraft.name}"` : ''}.
-            </p>
-            <div className="flex gap-2 shrink-0">
-              <button onClick={restoreDraft} className="text-[12px] font-semibold text-clay hover:text-clay-d">Continuar rascunho</button>
-              <button onClick={discardDraft} className="text-[12px] font-semibold text-faint hover:text-mid">Descartar</button>
-            </div>
-          </div>
-        )}
-
-        {!isEdit && (
-          <button
-            type="button"
-            onClick={() => setDuplicateModalOpen(true)}
-            className="mb-5 w-full border border-dashed border-mist hover:border-clay/50 hover:bg-clay/5 transition-colors px-4 py-2.5 flex items-center justify-center gap-2 text-[12px] font-semibold text-mid hover:text-clay rounded-xl"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-            Duplicar de um produto existente
-          </button>
-        )}
-
-        {hasMixedLegacySizes && (
-          <div className="mb-5 border border-amber-300 bg-amber-50 px-4 py-3 rounded-[4px]">
-            <p className="text-[12px] text-amber-800 leading-relaxed">
-              Este produto tem variações com tamanhos diferentes cadastradas de um jeito antigo. Ao salvar, todas as variações passam a usar o tamanho escolhido abaixo.
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-5 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 flex items-center gap-2 rounded-[4px]">
-            <IconAlert size={15} className="shrink-0" />
-            {error}
-          </div>
-        )}
-
-        <div className="flex flex-col gap-8">
-
-          {/* ── 1. Fotos ── */}
-          <FormSection step={1} title="Fotos do produto" hint="A primeira foto é usada como capa e como referência de cor">
             <div className="flex flex-wrap gap-2">
               {images.map((img, i) => (
                 <div key={i} className="relative group">
@@ -861,18 +844,81 @@ export default function ProductForm({ initial }: Props) {
               ))}
 
               <button
+                id="prod-fotos"
                 type="button"
                 onClick={() => setShowCamera(true)}
-                className="h-20 w-20 border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/70 hover:border-clay hover:text-clay transition-colors rounded-xl"
+                className={`border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/80 hover:border-clay hover:text-clay transition-colors rounded-xl ${images.length === 0 ? 'w-full h-32 bg-clay/[0.04]' : 'h-20 w-20'}`}
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span className="text-[10px] font-medium">Foto</span>
+                <svg width={images.length === 0 ? 30 : 22} height={images.length === 0 ? 30 : 22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <span className={images.length === 0 ? 'text-[15px] font-semibold' : 'text-[10px] font-medium'}>{images.length > 0 ? 'Mais fotos' : 'Tirar foto'}</span>
               </button>
             </div>
-          </FormSection>
+            {fieldErr('fotos')}
+    </>
+  );
+  const typeBlock = (
+    <>
+            <div>
+              <label id="prod-categoria-label" className="label">Tipo de produto</label>
+              <div role="group" aria-labelledby="prod-categoria-label" className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {CATEGORIES.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-pressed={category === c}
+                    onClick={() => { tap(); setCategory(c); }}
+                    className={`min-h-[52px] px-3 rounded-xl border text-[14px] font-semibold transition-colors ${
+                      category === c
+                        ? 'bg-ink text-paper border-ink'
+                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* ── 2. Informações básicas ── */}
-          <FormSection step={2} title="Informações básicas">
+            <div>
+              <label id="prod-tamanho-label" className="label">Tamanho</label>
+              <div role="group" aria-labelledby="prod-tamanho-label" className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {SIZES.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-pressed={size === s}
+                    onClick={() => { tap(); setSize(s); }}
+                    className={`min-h-[52px] rounded-xl border text-[14px] font-semibold transition-colors ${
+                      size === s
+                        ? 'bg-ink text-paper border-ink'
+                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
+                    }`}
+                  >
+                    {SIZE_LABEL[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {category === 'Jogos de cama' && (
+              <div>
+                <label id="prod-fronhas-label" className="label">Quantas fronhas vêm no jogo?</label>
+                <Stepper
+                  labelledBy="prod-fronhas-label"
+                  value={fronhaCount || 1}
+                  min={1}
+                  max={10}
+                  onChange={setFronhaCount}
+                />
+                <p className="text-[11.5px] text-faint mt-1.5">
+                  Solteiro e berço costumam vir com 1; casal, queen e king, com 2.
+                </p>
+              </div>
+            )}
+    </>
+  );
+  const nameBlock = (
+    <>
             <div>
               <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-1 mb-1">
                 <label htmlFor="prod-nome" className="label mb-0">Nome do produto</label>
@@ -896,7 +942,8 @@ export default function ProductForm({ initial }: Props) {
                   value={name}
                   onChange={e => { setName(e.target.value); setNameEditedManually(true); }}
                   placeholder="Jogo de cama queen algodão"
-                  className={`input ${!nameEditedManually && name ? 'pr-9' : ''} ${justAutoUpdated ? 'bg-clay/[0.06] border-clay/40' : ''}`}
+                  aria-invalid={fieldError?.field === 'nome'}
+                  className={`input ${!nameEditedManually && name ? 'pr-9' : ''} ${justAutoUpdated ? 'bg-clay/[0.06] border-clay/40' : ''} ${fieldError?.field === 'nome' ? 'border-red-400' : ''}`}
                 />
                 {!nameEditedManually && name && (
                   <span
@@ -913,95 +960,49 @@ export default function ProductForm({ initial }: Props) {
               </div>
               {!nameEditedManually && name && (
                 <p className="text-[11px] text-faint mt-1" aria-live="polite">
-                  Preenchido automaticamente a partir da categoria{category === 'Jogos de cama' ? ', tamanho e fronhas' : ' e tamanho'}. Pode editar à vontade.
+                  Preenchido sozinho com o tipo e o tamanho. Pode mudar se quiser.
                 </p>
               )}
+              {fieldErr('nome')}
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="prod-preco" className="label">Preço (R$)</label>
+    </>
+  );
+  const priceBlock = (
+    <>
+            <div>
+              <label htmlFor="prod-preco" className="label">Preço de venda</label>
+              <div className="relative max-w-[14rem]">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[17px] text-mid pointer-events-none">R$</span>
                 <input
                   id="prod-preco"
                   ref={priceInputRef}
                   value={price}
-                  onChange={e => setPrice(e.target.value)}
-                  placeholder="49,90"
-                  inputMode="decimal"
-                  className={`input ${price && !priceValid ? 'border-red-400' : ''}`}
-                />
-                {priceSuggestion !== null && !price && (
-                  <button
-                    type="button"
-                    onClick={() => setPrice(centsToInput(priceSuggestion))}
-                    className="text-[11px] text-clay hover:text-clay-d font-medium mt-1 flex items-center gap-1"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                    Sugestão: {formatCurrency(priceSuggestion)} <span className="text-faint font-normal">(baseado em produtos parecidos)</span>
-                  </button>
-                )}
-              </div>
-              <div>
-                <label htmlFor="prod-categoria" className="label">Categoria</label>
-                <Select
-                  value={category}
-                  onChange={v => setCategory(v as typeof category)}
-                  options={CATEGORIES.map(c => ({ value: c, label: c }))}
-                  triggerId="prod-categoria"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label id="prod-tamanho-label" className="label">Tamanho</label>
-              <div role="group" aria-labelledby="prod-tamanho-label" className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {SIZES.map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    aria-pressed={size === s}
-                    onClick={() => { tap(); setSize(s); }}
-                    className={`py-3 rounded-[6px] border text-[13px] font-semibold transition-colors ${
-                      size === s
-                        ? 'bg-ink text-paper border-ink'
-                        : 'border-mist text-mid hover:border-clay/50 hover:text-clay bg-paper'
-                    }`}
-                  >
-                    {SIZE_LABEL[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {category === 'Jogos de cama' && (
-              <div>
-                <label htmlFor="prod-fronhas" className="label">
-                  Quantas fronhas vêm no jogo? <span className="font-normal normal-case text-faint">(solteiro/berço geralmente 1, casal/queen/king geralmente 2)</span>
-                </label>
-                <input
-                  id="prod-fronhas"
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={fronhaCount === 0 ? '' : fronhaCount}
-                  onChange={e => {
-                    const raw = e.target.value;
-                    if (raw === '') { setFronhaCount(0); return; } // 0 é só estado transitório de "campo vazio", nunca é salvo
-                    const n = parseInt(raw, 10);
-                    if (!isNaN(n)) setFronhaCount(n);
-                  }}
-                  onBlur={() => { if (!fronhaCount || fronhaCount < 1) setFronhaCount(1); }}
-                  onFocus={e => e.target.select()}
-                  placeholder="2"
+                  onChange={e => setPrice(maskBRL(e.target.value))}
+                  placeholder="0,00"
                   inputMode="numeric"
-                  className="input-sm w-24"
+                  aria-invalid={fieldError?.field === 'preco' || (!!price && !priceValid)}
+                  className={`input pl-12 text-[18px] ${(price && !priceValid) || fieldError?.field === 'preco' ? 'border-red-400' : ''}`}
                 />
-                <p className="text-[11px] text-faint mt-1">
-                  Usado pra reservar a quantidade certa de estoque quando o cliente troca a fronha padrão do jogo por outra do catálogo.
-                </p>
               </div>
-            )}
-
+              {price && !priceValid && fieldError?.field !== 'preco' && (
+                <p className="text-[11.5px] text-red-600 mt-1">Digite o valor, por exemplo 8990 para R$ 89,90.</p>
+              )}
+              {fieldErr('preco')}
+              {priceSuggestion !== null && !price && (
+                <button
+                  type="button"
+                  onClick={() => setPrice(maskBRL(String(priceSuggestion)))}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-clay/30 bg-clay/5 px-3 py-1.5 text-[12px] font-semibold text-clay hover:bg-clay/10"
+                >
+                  Usar {formatCurrency(priceSuggestion)}
+                  <span className="font-normal text-faint">· média dos parecidos</span>
+                </button>
+              )}
+            </div>
+    </>
+  );
+  const moreBlock = (
+    <>
             {/* Como o "Mais campos" do catálogo do WhatsApp: à vista só o que
                 todo produto precisa (foto, nome, preço, tamanho, cor). O peso
                 já vem do tamanho; descrição e tags são opcionais. */}
@@ -1012,14 +1013,16 @@ export default function ProductForm({ initial }: Props) {
               className="self-start flex items-center gap-1.5 text-[12.5px] font-semibold text-clay hover:text-clay-d transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${moreOpen ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
-              {moreOpen ? 'Menos campos' : 'Mais campos'}
-              {!moreOpen && <span className="font-normal text-faint">(descrição, peso, tags)</span>}
+              <span className="text-left">
+                {moreOpen ? 'Menos campos' : 'Mais campos'}
+                {!moreOpen && <span className="block font-normal text-[11.5px] text-faint">Descrição, peso e palavras de busca</span>}
+              </span>
             </button>
 
             {moreOpen && (
               <div className="flex flex-col gap-4">
             <div>
-              <label htmlFor="prod-descricao" className="label">Descrição</label>
+              <label htmlFor="prod-descricao" className="label">Descrição <span className="font-normal normal-case text-faint">(opcional)</span></label>
               <textarea
                 id="prod-descricao"
                 value={description}
@@ -1033,7 +1036,7 @@ export default function ProductForm({ initial }: Props) {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label htmlFor="prod-peso" className="label mb-0">
-                  Peso por unidade (kg) <span className="text-red-500">*</span>
+                  Peso de uma peça (kg) <span className="text-red-500">*</span>
                 </label>
                 <button
                   type="button"
@@ -1049,9 +1052,9 @@ export default function ProductForm({ initial }: Props) {
                   type="text"
                   value={weightKg}
                   onChange={e => { setWeightKg(e.target.value); setWeightEditedManually(true); setWeightTypedByHand(true); }}
-                  placeholder="1,20"
+                  placeholder="Ex.: 1,2"
                   inputMode="decimal"
-                  className={`input ${weightKg && !weightKgValid ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
+                  className={`input ${(weightKg && !weightKgValid) || fieldError?.field === 'peso' ? 'border-red-400' : ''} ${justAutoUpdatedWeight ? 'bg-clay/[0.06] border-clay/40' : ''}`}
                 />
                 {!weightEditedManually && weightKg && (
                   <span
@@ -1067,12 +1070,13 @@ export default function ProductForm({ initial }: Props) {
                 )}
               </div>
               {!weightEditedManually && weightKg && (
-                <p className="text-[11px] text-faint mt-1">Padrão do tamanho selecionado</p>
+                <p className="text-[11px] text-faint mt-1">Já vem com o peso padrão desse tamanho. Usado para calcular o frete.</p>
               )}
+              {fieldErr('peso')}
             </div>
 
             <div>
-              <label htmlFor="prod-tags" className="label">Tags <span className="font-normal normal-case text-faint">(separadas por vírgula)</span></label>
+              <label htmlFor="prod-tags" className="label">Palavras para a busca <span className="font-normal normal-case text-faint">(opcional, separe com vírgula)</span></label>
               <input
                 id="prod-tags"
                 value={tags}
@@ -1084,43 +1088,10 @@ export default function ProductForm({ initial }: Props) {
 
               </div>
             )}
-
-            {/* ── Prévia ao vivo — pra quem não é técnico, ver como vai
-                aparecer pro cliente é mais confiável que confiar nos
-                campos abstratos do formulário. Atualiza junto com o
-                preenchimento, sem precisar publicar pra conferir. ── */}
-            {(images[0] || name || price) && (
-              <div>
-                <p className="text-[10px] text-faint font-semibold tracking-[0.12em] uppercase mb-2">É assim que vai aparecer na loja</p>
-                <div className="border border-mist bg-paper w-40 overflow-hidden shadow-sm rounded-xl">
-                  <div className="relative aspect-[3/4] bg-warm">
-                    {images[0] ? (
-                      <img src={images[0].dataUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <BrandLogo alt="" className="w-14 h-auto opacity-[0.12]" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-2.5 pt-2.5 pb-3">
-                    <p className="text-[10.5px] font-medium text-ink leading-snug line-clamp-2 mb-1.5 min-h-[2.4em]">
-                      {name || 'Nome do produto'}
-                    </p>
-                    <p className="font-display text-[0.95rem] text-ink font-normal leading-none tracking-[-0.01em]">
-                      {priceValid ? formatCurrency(Math.round(parseBRL(price) * 100)) : 'R$ —'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </FormSection>
-
-          {/* ── 3. Cor e estoque ── */}
-          {/* Tecido é sempre malha 100% algodão: a escolha de tecido e a
-              etapa de especificações saíram (eram a parte mais demorada do
-              cadastro). Produtos antigos com mais de um tecido continuam
-              mostrando uma linha por tecido. */}
-          <FormSection step={3} title="Cor e estoque" hint={FABRIC_LABEL}>
+    </>
+  );
+  const colorBlock = (
+    <>
             <div className="flex flex-col gap-2.5">
               {rows.map(r => (
                 <div key={r.fabric} className="border border-mist bg-warm/40 p-3.5 flex flex-col gap-3 rounded-xl">
@@ -1168,29 +1139,14 @@ export default function ProductForm({ initial }: Props) {
                     </div>
 
                     {!isEdit && (
-                      <div className="w-24">
-                        <label htmlFor={`prod-estoque-${r.fabric}`} className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Estoque</label>
-                        <input
+                      <div>
+                        <label htmlFor={`prod-estoque-${r.fabric}`} className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Quantas tem</label>
+                        <Stepper
                           id={`prod-estoque-${r.fabric}`}
-                          type="number"
+                          value={r.qty}
                           min={0}
-                          // Nunca mostra "0" literal na caixa — um número
-                          // controlado que vira 0 ao ser esvaziado (pra
-                          // digitar outro valor) travava a pessoa num "0"
-                          // que o teclado numérico do Android inseria
-                          // ANTES do dígito novo (virava "01" e nunca
-                          // saía disso). Em branco + placeholder resolve
-                          // na raiz: nunca tem um zero ali pra atrapalhar.
-                          value={r.qty === 0 ? '' : r.qty}
-                          onChange={e => {
-                            const raw = e.target.value;
-                            const n = raw === '' ? 0 : parseInt(raw, 10);
-                            updateRow(r.fabric, { qty: isNaN(n) ? 0 : n });
-                          }}
-                          onFocus={e => e.target.select()}
-                          placeholder="0"
-                          inputMode="numeric"
-                          className="w-full border border-mist px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay/20 rounded-xl"
+                          max={9999}
+                          onChange={n => updateRow(r.fabric, { qty: n })}
                         />
                       </div>
                     )}
@@ -1201,10 +1157,10 @@ export default function ProductForm({ initial }: Props) {
                 </div>
               ))}
             </div>
-          </FormSection>
-
-          {/* ── 4. Visibilidade ── */}
-          <FormSection step={4} title="Visibilidade">
+    </>
+  );
+  const visibilityBlock = (
+    <>
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -1212,8 +1168,153 @@ export default function ProductForm({ initial }: Props) {
                 onChange={e => setActive(e.target.checked)}
                 className="w-4 h-4 accent-clay rounded-[3px]"
               />
-              <span className="text-sm text-mid">Produto ativo (visível na loja)</span>
+              <span className="text-sm text-mid">{isEdit ? 'Mostrar na loja' : 'Mostrar na loja assim que salvar'} <span className="block text-[11.5px] text-faint">{isEdit ? 'Desmarque para esconder sem apagar.' : 'Desmarque se ainda for terminar depois.'}</span></span>
             </label>
+    </>
+  );
+
+  if (created) {
+    const storeUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/produtos/${created.id}`;
+    const whatsapp = `https://wa.me/?text=${encodeURIComponent(`${created.name}\n${storeUrl}`)}`;
+    return (
+      <div className="max-w-xl mx-auto px-4 sm:px-0 pb-24 pt-6 flex flex-col items-center text-center gap-5">
+        <div className="w-16 h-16 rounded-full bg-clay/10 text-clay flex items-center justify-center">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <div>
+          <h2 className="font-display text-2xl text-ink">{created.active ? 'Produto publicado!' : 'Produto salvo!'}</h2>
+          <p className="text-[13.5px] text-mid mt-1.5">
+            {created.active
+              ? <>&ldquo;{created.name}&rdquo; já aparece na loja.</>
+              : <>&ldquo;{created.name}&rdquo; ficou escondido. Para mostrar na loja, abra o produto em Produtos.</>}
+          </p>
+        </div>
+        <div className="w-full flex flex-col gap-2.5">
+          <button onClick={startAnother} className="btn-primary w-full py-3.5 text-[15px]">
+            Cadastrar outro parecido
+          </button>
+          {created.active && (
+            <>
+              <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="w-full border border-mist rounded-xl py-3.5 text-[15px] font-medium text-ink hover:bg-warm transition-colors">
+                Mandar no WhatsApp
+              </a>
+              <a href={`/produtos/${created.id}`} target="_blank" rel="noopener noreferrer" className="w-full border border-mist rounded-xl py-3.5 text-[15px] font-medium text-ink hover:bg-warm transition-colors">
+                Ver na loja
+              </a>
+            </>
+          )}
+          <button onClick={() => router.push('/painel/produtos')} className="w-full py-3 text-[14px] font-medium text-mid hover:text-ink">
+            Voltar para Produtos
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {showCamera && (
+        <PhotoCaptureModal onDone={handlePhotosCaptured} onClose={() => setShowCamera(false)} />
+      )}
+      {colorPickerImageIndex !== null && (
+        <PhotoColorPicker
+          images={images.map(img => img.dataUrl)}
+          imageIndex={colorPickerImageIndex}
+          onChangeImage={setColorPickerImageIndex}
+          onPick={handlePickedFromPhoto}
+          onClose={() => { setColorPickerImageIndex(null); setPendingColorTargetFabric(null); }}
+        />
+      )}
+      {weightsModalOpen && (
+        <DefaultWeightsModal
+          current={defaultWeightsBySize}
+          onClose={() => setWeightsModalOpen(false)}
+          onSaved={next => {
+            setDefaultWeightsBySize(next);
+            if (!weightEditedManually) {
+              const updated = next[size as keyof typeof next];
+              if (updated) setWeightKg(String(updated));
+            }
+          }}
+        />
+      )}
+      {duplicateModalOpen && (
+        <DuplicateProductModal onPick={applyDuplicateSource} onClose={() => setDuplicateModalOpen(false)} />
+      )}
+
+      <div className="max-w-xl mx-auto px-4 sm:px-0 pb-40" onInput={markTouched} onChange={markTouched}>
+        {/* ── Progresso do passo a passo ── */}
+        {!isEdit && (
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[12px] font-semibold text-mid">Passo {wizardStep} de {WIZARD_STEPS.length}</p>
+              <p className="text-[12px] text-faint">{WIZARD_STEPS[wizardStep - 1]}</p>
+            </div>
+            <div className="flex gap-1.5" aria-hidden="true">
+              {WIZARD_STEPS.map((_, i) => (
+                <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i < wizardStep ? 'bg-clay' : 'bg-mist'}`} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!isEdit && wizardStep === 1 && pendingDraft && !draftBannerDismissed && (
+          <div className="mb-5 border border-clay/30 bg-clay/5 px-4 py-3 rounded-[4px] flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-[12px] text-ink">
+              Encontramos um rascunho não finalizado{pendingDraft.name ? ` de "${pendingDraft.name}"` : ''}.
+            </p>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={restoreDraft} className="text-[12px] font-semibold text-clay hover:text-clay-d">Continuar rascunho</button>
+              <button onClick={discardDraft} className="text-[12px] font-semibold text-faint hover:text-mid">Descartar</button>
+            </div>
+          </div>
+        )}
+
+        {!isEdit && wizardStep === 1 && (
+          <button
+            type="button"
+            onClick={() => setDuplicateModalOpen(true)}
+            className="mb-5 w-full border border-dashed border-mist hover:border-clay/50 hover:bg-clay/5 transition-colors px-4 py-2.5 flex items-center justify-center gap-2 text-[12px] font-semibold text-mid hover:text-clay rounded-xl"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Começar a partir de um produto parecido
+          </button>
+        )}
+
+        {hasMixedLegacySizes && (
+          <div className="mb-5 border border-amber-300 bg-amber-50 px-4 py-3 rounded-[4px]">
+            <p className="text-[12px] text-amber-800 leading-relaxed">
+              Este produto tem variações com tamanhos diferentes cadastradas de um jeito antigo. Ao salvar, todas as variações passam a usar o tamanho escolhido abaixo.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-5 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 flex items-center gap-2 rounded-[4px]">
+            <IconAlert size={15} className="shrink-0" />
+            {error}
+          </div>
+        )}
+
+        {isEdit ? (
+        <div className="flex flex-col gap-8">
+          <FormSection step={1} title="Fotos do produto" hint="A primeira foto é a capa da loja.">
+            {photosBlock}
+          </FormSection>
+
+          <FormSection step={2} title="Que produto é esse?">
+            {typeBlock}
+            {nameBlock}
+            {priceBlock}
+            {moreBlock}
+          </FormSection>
+
+          <FormSection step={3} title="Cor e estoque" hint={FABRIC_LABEL}>
+            {colorBlock}
+          </FormSection>
+
+          <FormSection step={4} title="Aparecer na loja">
+            {visibilityBlock}
           </FormSection>
 
           {/* ── Aviso: variações removidas que ainda têm estoque ── */}
@@ -1228,6 +1329,73 @@ export default function ProductForm({ initial }: Props) {
             </div>
           )}
         </div>
+        ) : (
+        <div className="flex flex-col gap-5">
+          {wizardStep === 1 && (
+            <FormSection step={1} title="Fotos do produto" hint="A primeira foto é a capa da loja.">
+            {images.length === 0 && (
+              <div className="rounded-xl border border-mist bg-warm/50 px-4 py-3">
+                <p className="text-[12.5px] font-semibold text-ink mb-1.5">Para a foto ficar bonita</p>
+                <ul className="text-[12.5px] text-mid leading-relaxed list-disc pl-4">
+                  <li>Perto da janela, com luz do dia, sem flash</li>
+                  <li>Peça esticada ou na cama arrumada, fundo liso</li>
+                  <li>Depois tire uma de perto, mostrando o tecido</li>
+                </ul>
+              </div>
+            )}
+              {photosBlock}
+            </FormSection>
+          )}
+          {wizardStep === 2 && (
+            <FormSection step={2} title="Que produto é esse?">
+              {typeBlock}
+            </FormSection>
+          )}
+          {wizardStep === 3 && (
+            <FormSection step={3} title="Nome, preço e cor">
+              {nameBlock}
+              {priceBlock}
+              <div>
+                {colorBlock}
+              </div>
+            </FormSection>
+          )}
+          {wizardStep === 4 && (
+            <FormSection step={4} title="Confira antes de publicar">
+            {/* ── Prévia ao vivo — pra quem não é técnico, ver como vai
+                aparecer pro cliente é mais confiável que confiar nos
+                campos abstratos do formulário. Atualiza junto com o
+                preenchimento, sem precisar publicar pra conferir. ── */}
+            {(images[0] || name || price) && (
+              <div>
+                <p className="text-[10px] text-faint font-semibold tracking-[0.12em] uppercase mb-2">É assim que vai aparecer na loja</p>
+                <div className="border border-mist bg-paper w-40 overflow-hidden shadow-sm rounded-xl">
+                  <div className="relative aspect-[3/4] bg-warm">
+                    {images[0] ? (
+                      <img src={images[0].dataUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <BrandLogo alt="" className="w-14 h-auto opacity-[0.12]" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-2.5 pt-2.5 pb-3">
+                    <p className="text-[10.5px] font-medium text-ink leading-snug line-clamp-2 mb-1.5 min-h-[2.4em]">
+                      {name || 'Nome do produto'}
+                    </p>
+                    <p className="font-display text-[0.95rem] text-ink font-normal leading-none tracking-[-0.01em]">
+                      {priceValid ? formatCurrency(Math.round(parseBRL(price) * 100)) : 'R$ —'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+              {moreBlock}
+              {visibilityBlock}
+            </FormSection>
+          )}
+        </div>
+        )}
       </div>
 
       {/* Toast de sucesso — só aparece no fluxo "cadastrar outro", já que
@@ -1245,23 +1413,41 @@ export default function ProductForm({ initial }: Props) {
           o bottom:0 e ficam sobrepostas. */}
       <div className="fixed above-panel-tabbar left-0 right-0 lg:left-64 bg-paper/95 backdrop-blur border-t border-mist z-40 rounded-t-2xl lg:rounded-none shadow-modal lg:shadow-none lg:pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-xl mx-auto px-4 py-3 flex flex-col gap-2">
-          <div className="flex gap-3 items-center">
-            <button onClick={() => handleSubmit('list')} disabled={saving} className="btn-primary flex-1 py-3.5 sm:py-3 text-[15px]">
-              {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Criar produto'}
-            </button>
-            <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-4 py-3.5 sm:py-3 text-sm font-medium text-mid hover:bg-warm transition-colors shrink-0 rounded-xl">
-              Cancelar
-            </button>
-          </div>
-          {!isEdit && (
-            <button
-              onClick={() => handleSubmit('another')}
-              disabled={saving}
-              className="text-[12.5px] font-semibold text-clay hover:text-clay-d py-1 flex items-center justify-center gap-1.5"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-              Criar e cadastrar outro produto
-            </button>
+          {(fieldError || error) && (
+            <p role="status" className="text-[12.5px] font-medium text-red-600 text-center leading-snug">
+              {fieldError?.msg ?? error}
+            </p>
+          )}
+          {isEdit ? (
+            <div className="flex gap-3 items-center">
+              <button onClick={() => handleSubmit('list')} disabled={saving} className="btn-primary flex-1 py-3.5 sm:py-3 text-[15px]">
+                {saving ? 'Salvando…' : 'Salvar alterações'}
+              </button>
+              <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-4 py-3.5 sm:py-3 text-sm font-medium text-mid hover:bg-warm transition-colors shrink-0 rounded-xl">
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-3 items-center">
+              {wizardStep > 1 ? (
+                <button onClick={goBack} disabled={saving} className="border border-mist px-5 py-3.5 sm:py-3 text-[15px] font-medium text-mid hover:bg-warm transition-colors shrink-0 rounded-xl">
+                  Voltar
+                </button>
+              ) : (
+                <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-4 py-3.5 sm:py-3 text-[15px] font-medium text-mid hover:bg-warm transition-colors shrink-0 rounded-xl">
+                  Sair
+                </button>
+              )}
+              {wizardStep < WIZARD_STEPS.length ? (
+                <button onClick={goNext} className="btn-primary flex-1 py-3.5 sm:py-3 text-[15px]">
+                  Continuar
+                </button>
+              ) : (
+                <button onClick={() => handleSubmit('list')} disabled={saving} className="btn-primary flex-1 py-3.5 sm:py-3 text-[15px]">
+                  {saving ? 'Salvando…' : active ? 'Publicar na loja' : 'Salvar escondido'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBRL, centsToInput } from './parseBRL';
+import { parseBRL, centsToInput, maskBRL } from './parseBRL';
 
 describe('parseBRL', () => {
   it.each([
@@ -17,5 +17,13 @@ describe('parseBRL', () => {
   it('centsToInput usa vírgula', () => {
     expect(centsToInput(129990)).toBe('1299,90');
     expect(parseBRL(centsToInput(18990))).toBeCloseTo(189.9, 6);
+  });
+
+  it('maskBRL preenche da direita para a esquerda', () => {
+    expect(maskBRL('8990')).toBe('89,90');
+    expect(maskBRL('129990')).toBe('1.299,90');
+    expect(maskBRL('R$ 89,90')).toBe('89,90');
+    expect(maskBRL('0,00')).toBe('');
+    expect(parseBRL(maskBRL('129990'))).toBeCloseTo(1299.9, 6);
   });
 });
