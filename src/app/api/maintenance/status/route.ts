@@ -15,12 +15,17 @@ import { maintenanceDocId } from '@/lib/maintenanceQueue';
 const NO_STORE = { headers: { 'Cache-Control': 'private, no-store' } };
 
 export async function GET(req: NextRequest) {
-  const ip = getClientIp(req);
+  // Staff logado vem antes do limite: antes, um 429 respondia "não liberado"
+  // e o admin entrava num vaivém entre a home e /manutencao.
+  const staffCookie = req.cookies.get(STAFF_SESSION_COOKIE)?.value;
+  const staffSecret = process.env.STAFF_SESSION_SECRET;
+  const isStaff = !!(staffCookie && staffSecret && await verifyStaffSession(staffCookie, staffSecret));
 
-  // Rate limit: 20 req/min por IP, cobre um polling de ~5s com folga.
-  if (!await rateLimit(`maintenance-status:${ip}`, 20, 60 * 1000)) {
-    // Silencioso: mantém o cliente em manutenção em vez de expor o limite.
-    return NextResponse.json({ active: true, released: false }, NO_STORE);
+  const ip = getClientIp(req);
+  // Rate limit: 20 req/min por IP, cobre um polling de ~20s com folga. Estourou:
+  // 429, e o cliente não muda de página (o proxy já barra quem não pode ver).
+  if (!isStaff && !await rateLimit(`maintenance-status:${ip}`, 20, 60 * 1000)) {
+    return NextResponse.json({ error: 'Muitas consultas' }, { status: 429, ...NO_STORE });
   }
 
   const statusSnap = await adminDb.doc('maintenance/status').get();
@@ -35,16 +40,9 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Mesma checagem de bypass do middleware.ts, sem isso, o MaintenanceGate
-  // (que só olha esse endpoint) chutava staff logado pra /manutencao mesmo
-  // com o middleware já deixando a página passar, porque essa rota só
-  // sabia responder com base em IP liberado.
-  const staffCookie = req.cookies.get(STAFF_SESSION_COOKIE)?.value;
-  const staffSecret = process.env.STAFF_SESSION_SECRET;
-  if (staffCookie && staffSecret) {
-    const staff = await verifyStaffSession(staffCookie, staffSecret);
-    if (staff) return NextResponse.json({ active, released: true }, NO_STORE);
-  }
+  // Mesma checagem de bypass do proxy.ts: sem isso, o MaintenanceGate
+  // chutava staff logado pra /manutencao mesmo com o proxy deixando passar.
+  if (isStaff) return NextResponse.json({ active, released: true }, NO_STORE);
 
   const docId = await maintenanceDocId(ip, process.env.STAFF_SESSION_SECRET);
   const queueSnap = await adminDb.doc(`maintenance_queue/${docId}`).get();
