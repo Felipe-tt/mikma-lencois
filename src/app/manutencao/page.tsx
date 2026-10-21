@@ -44,7 +44,7 @@ export default async function ManutencaoPage() {
         .mnt-bg {
           position: absolute;
           inset: 0;
-          background-image: url('/hero-bg.jpg');
+          background-image: url('/hero-mikma.jpg');
           background-size: cover;
           background-position: center;
           opacity: 0.18;

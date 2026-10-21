@@ -8,6 +8,16 @@ export const SITE_NAME = 'Mikma Lençóis';
 export const STORE_SUMMARY = 'Loja de fábrica em Blumenau (SC) de lençóis, fronhas e jogos de lençol em malha 100% algodão.';
 export const SITE_DESCRIPTION = 'Lençóis, fronhas e jogos de lençol em malha 100% algodão, direto da fábrica em Blumenau. Entrega em Blumenau em 1h ou para todo o Brasil.';
 
+/** Nome do site para o Google: sem isso ele mostra "mikma.com.br" no lugar
+ *  do nome em cima do resultado de busca. */
+export const WEBSITE_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE_NAME,
+  alternateName: ['Mikma', 'Mikma Lençóis Blumenau'],
+  url: 'https://mikma.com.br/',
+};
+
 /** Dados da loja (schema.org) presentes em todas as páginas. */
 export const STORE_JSON_LD = {
   '@context': 'https://schema.org',

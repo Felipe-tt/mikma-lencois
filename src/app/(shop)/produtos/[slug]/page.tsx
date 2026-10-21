@@ -163,7 +163,7 @@ export default async function ProductPage({ params }: Props) {
     '@type': 'Product',
     name: product.name,
     description: product.description?.slice(0, 5000),
-    // URLs absolutas: imagem relativa ("/hero-bg.jpg") não vale pro Google.
+    // URLs absolutas: imagem relativa ("/hero-mikma.jpg") não vale pro Google.
     image: product.images.map(u => new URL(u, siteUrl).href),
     sku: product.id,
     category: product.category,
