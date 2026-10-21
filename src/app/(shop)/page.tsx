@@ -65,7 +65,7 @@ export default async function HomePage() {
       <section className="border-b border-mist relative overflow-hidden bg-paper">
         <div className="absolute inset-0 pointer-events-none select-none z-0">
           <Image
-            src="/hero-bg.jpg"
+            src="/hero-mikma.jpg"
             alt=""
             fill
             priority
