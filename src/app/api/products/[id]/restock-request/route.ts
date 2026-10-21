@@ -6,10 +6,11 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import { RESTOCK_REQUESTS, restockRequestId } from '@/lib/restockRequests';
 
-const schema = z.object({
-  email: z.string().trim().toLowerCase().email().max(200),
-  variantId: z.string().regex(/^[\w-]{1,64}$/),
-});
+const emailSchema = z.string().trim().toLowerCase().email().max(200);
+// Letras com acento valem: os produtos antigos têm variação "casal_algodão",
+// e a regra só com \w recusava todas, devolvendo "Confira o e-mail.".
+const variantSchema = z.string().regex(/^[\p{L}\p{N}_-]{1,64}$/u);
+const schema = z.object({ email: z.unknown(), variantId: z.unknown() });
 
 // "Avise-me quando chegar" numa variação esgotada. Público (não exige
 // conta). Limite por IP e por e-mail: sem o segundo, dava para inscrever o
@@ -23,8 +24,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!/^[\w-]{1,64}$/.test(id)) return NextResponse.json({ error: 'Produto inválido' }, { status: 400 });
 
   const body = await validateBody(req, schema);
-  if (!body.ok) return NextResponse.json({ error: 'Confira o e-mail.' }, { status: 400 });
-  const { email, variantId } = body.data;
+  if (!body.ok) return NextResponse.json({ error: 'Não deu para registrar agora. Tente de novo.' }, { status: 400 });
+  const parsedEmail = emailSchema.safeParse(body.data.email);
+  if (!parsedEmail.success) return NextResponse.json({ error: 'Confira o e-mail.' }, { status: 400 });
+  const parsedVariant = variantSchema.safeParse(body.data.variantId);
+  if (!parsedVariant.success) return NextResponse.json({ error: 'Escolha o tamanho de novo.' }, { status: 400 });
+  const email = parsedEmail.data;
+  const variantId = parsedVariant.data;
 
   const emailKey = `restock:email:${email}`;
   if (!await rateLimit(emailKey, 5, 24 * 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(emailKey));

@@ -8,17 +8,14 @@ import { baseOpenGraph } from '@/lib/seo';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br'),
-  title: { default: 'Mikma Lençóis · Blumenau SC', template: '%s | Mikma Lençóis' },
+  title: { default: 'Mikma Lençóis · Lençóis direto da fábrica em Blumenau', template: '%s | Mikma Lençóis' },
   description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
   keywords: ['lençóis', 'fronhas', 'jogos de cama', 'blumenau', 'mikma'],
   icons: {
     icon: [
-      // Ícone pequeno (aba do navegador): mantido transparente, como já estava.
-      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
-      // Ícones ≥48px: com fundo preto sólido. Buscadores como o Google usam o maior
-      // ícone declarado nos resultados de busca; se ele for transparente, o Google
-      // preenche o fundo com branco. A aba do navegador não é afetada, pois usa o
-      // favicon.ico pequeno acima.
+      // Todos com fundo escuro da marca: a lua é clara, e o Google mostra o
+      // ícone num círculo branco (transparente, a lua sumia no resultado).
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48', type: 'image/x-icon' },
       { url: '/favicon-48-google.png', sizes: '48x48', type: 'image/png' },
       { url: '/favicon-96-google.png', sizes: '96x96', type: 'image/png' },
       { url: '/favicon-192-google.png', sizes: '192x192', type: 'image/png' },
@@ -28,12 +25,12 @@ export const metadata: Metadata = {
   openGraph: {
     ...baseOpenGraph,
     url: '/',
-    title: 'Mikma Lençóis · Blumenau SC',
+    title: 'Mikma Lençóis · Lençóis direto da fábrica em Blumenau',
     description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Mikma Lençóis · Blumenau SC',
+    title: 'Mikma Lençóis · Lençóis direto da fábrica em Blumenau',
     description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
     images: ['/og-image.jpg'],
   },
@@ -44,11 +41,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" data-scroll-behavior="smooth" className={`${fontSans.variable} ${fontDisplay.variable}`} suppressHydrationWarning>
       <head>
         <ThemeScript />
-        <link rel="icon" href="/favicon.ico" sizes="32x32" />
-        <link rel="icon" href="/favicon-48-google.png" type="image/png" sizes="48x48" />
-        <link rel="icon" href="/favicon-96-google.png" type="image/png" sizes="96x96" />
-        <link rel="icon" href="/favicon-192-google.png" type="image/png" sizes="192x192" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
       </head>
       <body suppressHydrationWarning>
         <Analytics />
