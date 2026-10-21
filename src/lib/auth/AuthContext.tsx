@@ -37,6 +37,17 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const STAFF_COOKIE_FLAG = 'mikma-staff-cookie';
+
+function clearStaffCookie(force = false) {
+  try {
+    if (!force && !localStorage.getItem(STAFF_COOKIE_FLAG)) return;
+    localStorage.removeItem(STAFF_COOKIE_FLAG);
+  } catch { /* sem storage: apaga por garantia */ }
+  // keepalive: o pedido sobrevive se a página trocar logo em seguida.
+  fetch('/api/auth/session', { method: 'DELETE', keepalive: true }).catch(() => {});
+}
+
 async function mapUser(firebaseUser: User): Promise<AuthUser> {
   const tokenResult = await firebaseUser.getIdTokenResult(true);
   const role = (tokenResult.claims.role as AuthUser['role']) ?? 'buyer';
@@ -51,6 +62,12 @@ async function mapUser(firebaseUser: User): Promise<AuthUser> {
       method: 'POST',
       headers: { authorization: `Bearer ${idToken}` },
     }).catch(() => {});
+    try { localStorage.setItem(STAFF_COOKIE_FLAG, '1'); } catch { /* sem storage */ }
+  } else {
+    // Outra conta entrou no navegador onde havia staff: o cookie que pula a
+    // manutenção (HttpOnly, 7 dias) sai junto. A marca evita uma chamada
+    // por visita para quem nunca foi staff aqui.
+    clearStaffCookie();
   }
 
   return {
@@ -75,6 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!firebaseUser.isAnonymous) void mergeGuestInto(firebaseUser);
         setUser(mapped);
       } else {
+        // Sessão encerrada por fora (expirou, outra aba saiu): cookie de staff junto.
+        clearStaffCookie();
         setUser(null);
       }
       setLoading(false);
@@ -91,9 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     // Convidado que sai (computador compartilhado): esquece a sessão dele.
     if (auth.currentUser?.isAnonymous) { try { localStorage.removeItem(GUEST_TOKEN_KEY); } catch { /* ok */ } }
+    clearStaffCookie(true);
     await signOut(auth);
     setUser(null);
-    fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
   };
 
   const startGuest = async () => {
