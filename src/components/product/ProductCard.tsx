@@ -4,7 +4,8 @@ import { BrandLogo } from '@/components/BrandLogo';
 import type { Product } from '@/types';
 import { FABRIC_SHORT } from '@/lib/productOptions';
 import { formatCurrency } from '@/lib/utils/format';
-import { useState, ViewTransition } from 'react';
+import { useEffect, useState, ViewTransition } from 'react';
+import { useLinkStatus } from 'next/link';
 import { NavLink } from '@/components/ui/NavLink';
 import { useWishlist } from '@/lib/hooks/useWishlist';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
@@ -20,12 +21,15 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   const img1 = product.images?.[1] ?? null;
   const [imgError, setImgError] = useState(false);
   const [hovered, setHovered] = useState(false);
-  // Intenção de abrir (mouse em cima ou foco do teclado): só então carrega
-  // a página completa do produto, antes do clique, para ela abrir na hora e
-  // a foto do cartão ter par para a transição. Carregar todos os cartões da
-  // tela pesaria no servidor. Toque fica de fora: no celular ele dispara só
-  // de rolar a grade.
+  // Intenção de abrir: no computador, mouse em cima ou foco do teclado; no
+  // celular (sem mouse), o cartão aparecer na tela. Carrega a página do
+  // produto antes do toque: ela abre na hora e a foto do cartão cresce até a
+  // foto grande (sem isso o zoom não acontecia no celular). A página do
+  // produto vem do cache (ISR), então carregar antes custa pouco.
   const [intent, setIntent] = useState(false);
+  useEffect(() => {
+    if (window.matchMedia('(hover: none)').matches) setIntent(true);
+  }, []);
   const { isFavorite, toggle } = useWishlist();
   const { requireAuth } = useAuthModal();
   const favorite = isFavorite(product.id);
@@ -59,7 +63,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
       <NavLink
         href={`/produtos/${product.id}`}
         prefetch={intent ? true : null}
-        className="block focus-visible:outline-offset-4"
+        className="relative block focus-visible:outline-offset-4"
       >
         {/* Imagem. Mesmo nome da foto grande da página do produto: ao abrir,
             a foto do cartão cresce até virar a foto da página (e volta ao
@@ -115,6 +119,8 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           </div>
         </div>
         </ViewTransition>
+        {/* Fora da ViewTransition: não entra no "zoom" da foto. */}
+        <TapPending />
 
         {/* Info */}
         <div className="pt-3.5 pb-1">
@@ -152,5 +158,20 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
         </svg>
       </button>
     </div>
+  );
+}
+
+/** Toque no celular: a página do produto ainda não carregou (sem mouse não
+ *  há "passar por cima" para carregar antes). Mostra que o toque pegou; a
+ *  foto cresce até a página quando ela chega. */
+function TapPending() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return (
+    <span aria-hidden="true" className="theme-locked absolute inset-x-0 top-0 aspect-[4/5] rounded-2xl bg-ink/10 flex items-center justify-center pointer-events-none animate-fade-in">
+      <span className="w-10 h-10 rounded-full bg-paper/90 flex items-center justify-center shadow-sm">
+        <span className="spinner-dark" />
+      </span>
+    </span>
   );
 }
