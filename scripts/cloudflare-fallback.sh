@@ -61,11 +61,15 @@ write_state() {
     | jq -c '{bypass:.fields.bypass.booleanValue, erro:.error.message}'
 }
 
+# Liga/desliga o proxy nos registros; falha se a Cloudflare recusar algum.
 set_proxied() {
-  local b=$1 flag=$2 id
+  local b=$1 flag=$2 id r ok=0
   for id in ${3//,/ }; do
-    api -X PATCH "$b/dns_records/$id" --data "{\"proxied\":$flag}" | jq -c '{nome:.result.name,proxied:.result.proxied,success}'
+    r=$(api -X PATCH "$b/dns_records/$id" --data "{\"proxied\":$flag}")
+    echo "$r" | jq -c '{nome:.result.name,proxied:.result.proxied,success,erros:[.errors[]?.message]}'
+    [ "$(echo "$r" | jq -r '.success')" = "true" ] || ok=1
   done
+  return $ok
 }
 
 ativar() {
@@ -79,16 +83,29 @@ ativar() {
   write_state true "$records" 0 0
   # O proxy guarda o valor do bypass por 30s: espera antes de mudar o DNS.
   sleep 35
-  set_proxied "$b" false "$records"
+  if ! set_proxied "$b" false "$records"; then
+    # Sem a troca de DNS o bypass só abriria a origem: desfaz.
+    set_proxied "$b" true "$records" >/dev/null
+    write_state false "" 0 0
+    echo "::error::A Cloudflare recusou a troca de DNS (token precisa de Zone > DNS > Edit): fallback cancelado."
+    exit 1
+  fi
   echo "::error::Cloudflare fora do ar: fallback ativado, site servido direto pelo App Hosting."
   exit 1
 }
 
 restaurar() {
-  local b=$1 records=$2
-  set_proxied "$b" true "$records"
-  write_state true "$records" "$NOW" 0
-  echo "Cloudflare de volta: proxy religado, bypass sai em 15 min."
+  local b=$1 records=$2 proxiados
+  set_proxied "$b" true "$records" || true
+  # Se o DNS nunca saiu da Cloudflare (ou já voltou), a trava pode voltar já.
+  proxiados=$(api "$b/dns_records?per_page=100" | jq -r --arg ids ",$records," '[.result[] | select(($ids | contains("," + .id + ",")) and .proxied == false)] | length')
+  if [ "$proxiados" = "0" ] && [ "$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$EDGE")" = "200" ]; then
+    write_state false "" 0 0
+    echo "Cloudflare na frente: trava de origem religada."
+  else
+    write_state true "$records" "$NOW" 0
+    echo "Cloudflare de volta: proxy religado, bypass sai em 15 min."
+  fi
 }
 
 STATE=$(curl -sS -m 15 "$FS" || echo '{}')
