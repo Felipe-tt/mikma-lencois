@@ -95,11 +95,11 @@ ativar() {
 }
 
 restaurar() {
-  local b=$1 records=$2
-  set_proxied "$b" true "$records" || true
-  # /cdn-cgi/trace só responde 200 se o domínio já passa pela Cloudflare
-  # (o DNS nunca saiu dela, ou já voltou): então a trava pode voltar já.
-  if [ "$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$EDGE")" = "200" ]; then
+  local b=$1 records=$2 mudou=0
+  [ -n "$records" ] && set_proxied "$b" true "$records" && mudou=1
+  # Se o DNS não mudou agora e /cdn-cgi/trace responde (o domínio já passa
+  # pela Cloudflare), a trava volta já. Se mudou, espera 15 min de DNS.
+  if [ "$mudou" = "0" ] && [ "$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$EDGE")" = "200" ]; then
     write_state false "" 0 0
     echo "Cloudflare na frente: trava de origem religada."
   else
