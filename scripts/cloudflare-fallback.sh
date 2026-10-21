@@ -95,11 +95,11 @@ ativar() {
 }
 
 restaurar() {
-  local b=$1 records=$2 proxiados
+  local b=$1 records=$2
   set_proxied "$b" true "$records" || true
-  # Se o DNS nunca saiu da Cloudflare (ou já voltou), a trava pode voltar já.
-  proxiados=$(api "$b/dns_records?per_page=100" | jq -r --arg ids ",$records," '[.result[] | select(($ids | contains("," + .id + ",")) and .proxied == false)] | length')
-  if [ "$proxiados" = "0" ] && [ "$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$EDGE")" = "200" ]; then
+  # /cdn-cgi/trace só responde 200 se o domínio já passa pela Cloudflare
+  # (o DNS nunca saiu dela, ou já voltou): então a trava pode voltar já.
+  if [ "$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$EDGE")" = "200" ]; then
     write_state false "" 0 0
     echo "Cloudflare na frente: trava de origem religada."
   else
