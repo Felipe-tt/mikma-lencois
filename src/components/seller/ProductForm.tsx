@@ -1371,16 +1371,6 @@ export default function ProductForm({ initial }: Props) {
         <div className="flex flex-col gap-5">
           {wizardStep === 1 && (
             <FormSection step={1} title="Fotos do produto" hint="A primeira foto é a capa da loja.">
-            {images.length === 0 && (
-              <div className="rounded-xl border border-mist bg-warm/50 px-4 py-3">
-                <p className="text-[12.5px] font-semibold text-ink mb-1.5">Para a foto ficar bonita</p>
-                <ul className="text-[12.5px] text-mid leading-relaxed list-disc pl-4">
-                  <li>Perto da janela, com luz do dia, sem flash</li>
-                  <li>Peça esticada ou na cama arrumada, fundo liso</li>
-                  <li>Depois tire uma de perto, mostrando o tecido</li>
-                </ul>
-              </div>
-            )}
               {photosBlock}
             </FormSection>
           )}
