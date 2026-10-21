@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { parseBusinessHours, WEEKDAYS } from '@/lib/business-hours';
 import type { Metadata } from 'next';
-import { shareMeta } from '@/lib/seo';
+import { shareMeta, STORE_SUMMARY } from '@/lib/seo';
 
 // Sem isso a página herdava o título e a descrição da home.
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const name = s.storeName || 'Mikma Lençóis';
   const city = s.storeCity || 'Blumenau';
   const title = 'Sobre';
-  const description = `Conheça a ${name}: lençóis de qualidade direto de fábrica em ${city}, SC, com entrega rápida na cidade e envio para todo o Brasil.`;
+  const description = `Conheça a ${name}: lençóis, fronhas e jogos de lençol em malha 100% algodão direto da fábrica em ${city}, SC, com entrega rápida na cidade e envio para todo o Brasil.`;
   return {
     title,
     description,
@@ -67,6 +67,8 @@ export default async function SobrePage() {
     '@type': 'LocalBusiness',
     name: s.storeName || 'Mikma Lençóis',
     url: 'https://mikma.com.br/sobre',
+    description: STORE_SUMMARY,
+    parentOrganization: { '@type': 'Organization', name: 'GPM Têxtil' },
     ...(s.storeCity && { address: { '@type': 'PostalAddress', addressLocality: s.storeCity, addressCountry: 'BR' } }),
     ...(s.storePhone && { telephone: s.storePhone }),
     ...(openingHoursSpecification.length > 0 && { openingHoursSpecification }),
