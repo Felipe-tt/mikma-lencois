@@ -29,17 +29,8 @@ describe('suggestProductName', () => {
     expect(suggestProductName({ category: 'Fronhas', size: 'unico' })).toBe('Fronha Único');
   });
 
-  it('Edredons e Travesseiros também têm prefixo próprio', () => {
-    expect(suggestProductName({ category: 'Edredons', size: 'queen' })).toBe('Edredom Queen');
-    expect(suggestProductName({ category: 'Travesseiros', size: 'unico' })).toBe('Travesseiro Único');
-  });
-
   it('sem tamanho ainda, categoria não-jogo: só o prefixo', () => {
     expect(suggestProductName({ category: 'Lençóis' })).toBe('Lençol');
-  });
-
-  it('categoria Outros: string vazia, deixa o vendedor escrever livre', () => {
-    expect(suggestProductName({ category: 'Outros', size: 'casal' })).toBe('');
   });
 
   it('fronhaCount zero ou negativo (dado inválido) cai no padrão 2', () => {

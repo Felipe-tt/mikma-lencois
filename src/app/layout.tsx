@@ -4,12 +4,13 @@ import { Providers } from '@/components/Providers';
 import { ThemeScript } from '@/components/ThemeScript';
 import { Analytics } from '@/components/Analytics';
 import { fontSans, fontDisplay } from '@/lib/fonts';
-import { baseOpenGraph } from '@/lib/seo';
+import { baseOpenGraph, SITE_DESCRIPTION, STORE_JSON_LD } from '@/lib/seo';
+import { JsonLd } from '@/components/seo/JsonLd';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://mikma.com.br'),
   title: { default: 'Mikma Lençóis · Lençóis direto da fábrica em Blumenau', template: '%s | Mikma Lençóis' },
-  description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
+  description: SITE_DESCRIPTION,
   keywords: ['lençóis', 'fronhas', 'jogos de cama', 'blumenau', 'mikma'],
   icons: {
     icon: [
@@ -26,12 +27,12 @@ export const metadata: Metadata = {
     ...baseOpenGraph,
     url: '/',
     title: 'Mikma Lençóis · Lençóis direto da fábrica em Blumenau',
-    description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
+    description: SITE_DESCRIPTION,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Mikma Lençóis · Lençóis direto da fábrica em Blumenau',
-    description: 'Lençóis, fronhas e jogos de cama direto da fábrica. Entrega em Blumenau em 1h ou para todo o Brasil.',
+    description: SITE_DESCRIPTION,
     images: ['/og-image.jpg'],
   },
 };
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeScript />
       </head>
       <body suppressHydrationWarning>
+        <JsonLd data={STORE_JSON_LD} />
         <Analytics />
         <Providers>{children}</Providers>
       </body>

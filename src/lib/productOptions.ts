@@ -2,7 +2,8 @@
 // (ProductForm) e a importação de catálogo do WhatsApp, mantém as duas
 // telas sempre sincronizadas com os mesmos valores válidos.
 
-export const CATEGORIES = ['Lençóis', 'Fronhas', 'Edredons', 'Travesseiros', 'Jogos de cama', 'Outros'] as const;
+// A Mikma vende só lençóis, fronhas e jogos de lençol.
+export const CATEGORIES = ['Lençóis', 'Fronhas', 'Jogos de cama'] as const;
 export type Category = typeof CATEGORIES[number];
 
 export const SIZES = ['solteiro', 'casal', 'queen', 'king', 'berco', 'unico'] as const;
@@ -28,16 +29,12 @@ export const YARN_COUNTS = ['24/1', '30/1', '30/2', '36/1', '40/1'] as const;
 export type YarnCount = typeof YARN_COUNTS[number];
 
 // Prefixo singular usado na sugestão de nome, uma peça por categoria.
-// "Jogos de cama" e "Outros" não entram aqui de propósito: jogo de cama
+// "Jogos de cama" não entra aqui de propósito: jogo de cama
 // tem regra própria (soma peças = lençol + fronhas, ver
-// suggestProductName), e "Outros" é catch-all genérico demais pra
-// sugerir algo com confiança — melhor deixar em branco pro vendedor
-// escrever livremente.
+// suggestProductName).
 const CATEGORY_PREFIX: Partial<Record<Category, string>> = {
   'Lençóis': 'Lençol',
   'Fronhas': 'Fronha',
-  'Edredons': 'Edredom',
-  'Travesseiros': 'Travesseiro',
 };
 
 /**
@@ -53,7 +50,8 @@ const CATEGORY_PREFIX: Partial<Record<Category, string>> = {
  *  → "Lençol Casal"
  *
  * Retorna string vazia se não há informação suficiente ainda (nenhuma
- * variação com tamanho definido) ou se a categoria é "Outros".
+ * variação com tamanho definido) ou se a categoria não é conhecida
+ * (produto antigo com outra categoria).
  */
 export function suggestProductName(params: {
   category: Category;
@@ -70,7 +68,7 @@ export function suggestProductName(params: {
   }
 
   const prefix = CATEGORY_PREFIX[category];
-  if (!prefix) return ''; // "Outros", ou categoria desconhecida
+  if (!prefix) return ''; // categoria desconhecida (produto antigo)
   return sizeLabel ? `${prefix} ${sizeLabel}` : prefix;
 }
 
