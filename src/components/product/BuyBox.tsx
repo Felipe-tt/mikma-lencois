@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { formatColorName } from '@/lib/colorNameMatch';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
@@ -324,7 +325,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                   )}
                   <span className="inline-flex items-center gap-2">
                     {SIZE_LABEL[variant.size] ?? variant.size}
-                    {variant.colorName ? ` · ${variant.colorName}` : ''}
+                    {variant.colorName ? ` · ${formatColorName(variant.colorName)}` : ''}
                   </span>
                 </button>
               );
