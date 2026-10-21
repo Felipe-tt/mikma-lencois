@@ -3,6 +3,7 @@
 // terminar de revisar/completar os campos e publicar como produto de verdade.
 import { z } from 'zod';
 import { SIZES } from '@/lib/productOptions';
+import { formatColorName } from '@/lib/colorNameMatch';
 
 export const DraftImageSchema = z.object({
   url: z.string().url().max(500),
@@ -28,7 +29,8 @@ export const CatalogDraftSchema = z.object({
   category: z.string().max(100).default(''),
   size: z.string().max(50).default(''),
   fabric: z.string().max(100).default(''),
-  colorName: z.string().max(64).default(''),
+  // Mesma escrita do cadastro: "azul marinho" e "Azul Marinho" são a mesma cor.
+  colorName: z.string().max(64).default('').transform(formatColorName),
   colorHex: z.string().max(16).default(''),
   priceBRL: z.number().nonnegative().max(100_000).nullable().default(null),
   weightKg: z.number().nonnegative().max(200).nullable().default(null),

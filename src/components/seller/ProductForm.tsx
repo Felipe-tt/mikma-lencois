@@ -32,8 +32,9 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { db } from '@/lib/firebase/client';
 import { storage } from '@/lib/firebase/storage';
 import type { Product } from '@/types';
-import { hexToColorName, sampleDominantColor } from '@/lib/colorNames';
-import { ColorNameField } from './ColorNameField';
+import { hexToColorName, sampleDominantColor, TEXTILE_COLORS } from '@/lib/colorNames';
+import { colorKey, formatColorName, matchColorName, sortBySimilarity } from '@/lib/colorNameMatch';
+import { ColorNameField, type ColorCheck } from './ColorNameField';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, FABRIC_LABEL, DEFAULT_COMPOSITION, suggestProductName, suggestProductDescription, type Size } from '@/lib/productOptions';
 import { formatProductName } from '@/lib/textFormat';
@@ -313,6 +314,54 @@ export default function ProductForm({ initial }: Props) {
   // A cor é escrita por quem cadastra: sem nome, o produto não sai.
   const colorUnchosen = rows.some(r => !r.colorName.trim());
 
+  // ── Conferência do nome da cor contra as cores que a loja já usa ──
+  // Evita a mesma cor escrita de jeitos diferentes ("azul marinho",
+  // "Azul Marinho", "Azul marinhoo") virar cores diferentes na loja.
+  const [storeColors, setStoreColors] = useState<string[] | null>(null);
+  useEffect(() => {
+    getDocs(query(collection(db, 'products'), fbLimit(500))).then(snap => {
+      const byKey = new Map<string, string>();
+      snap.forEach(d => {
+        if (d.id === initial?.id) return;
+        for (const v of (d.data().variants ?? []) as { colorName?: string }[]) {
+          const n = v.colorName?.trim();
+          if (n && !byKey.has(colorKey(n))) byKey.set(colorKey(n), formatColorName(n));
+        }
+      });
+      setStoreColors([...byKey.values()].sort((a, b) => a.localeCompare(b, 'pt-BR')));
+    }).catch(() => setStoreColors(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [keptTypos, setKeptTypos] = useState<Set<string>>(new Set());
+  const [confirmedNew, setConfirmedNew] = useState<Set<string>>(new Set());
+  const initialColorKeys = useRef(new Set((initial?.variants ?? []).map(v => colorKey(v.colorName ?? '')))).current;
+  const paletteNames = TEXTILE_COLORS.map(c => c.name);
+
+  function checkColor(colorName: string): ColorCheck {
+    if (!colorName.trim()) return { state: 'empty' };
+    const key = colorKey(colorName);
+    // Sem a lista da loja (carregando ou sem rede) não trava o cadastro;
+    // na edição, a cor que o produto já tinha não é questionada.
+    if (!storeColors || initialColorKeys.has(key)) return { state: 'ok' };
+    const m = matchColorName(colorName, storeColors);
+    if (m.kind === 'same') return { state: 'existing', name: m.name };
+    if (m.kind === 'typo' && !keptTypos.has(key)) return { state: 'typo', name: m.name };
+    if (confirmedNew.has(key)) return { state: 'ok' };
+    const p = matchColorName(colorName, paletteNames);
+    const spelling = p.kind === 'typo' ? p.name : undefined;
+    return { state: 'new', spelling };
+  }
+  const colorChecks = rows.map(r => checkColor(r.colorName));
+  const colorPending = colorChecks.find(c => c.state === 'typo' || c.state === 'new') ?? null;
+  const colorPendingMsg = colorPending?.state === 'typo'
+    ? `Confira a cor: você quis dizer ${colorPending.name}?`
+    : 'Confirme se é uma cor nova ou escolha uma das cores da loja.';
+  // Nome final gravado: o da loja quando é a mesma cor, senão padronizado.
+  function finalColorName(colorName: string): string {
+    const c = checkColor(colorName);
+    return c.state === 'existing' ? c.name : formatColorName(colorName);
+  }
+
   const [showCamera, setShowCamera] = useState(false);
   const [saving, setSaving] = useState(false);
   useUnsavedGuard(isEdit && touched && !saving, { detail: 'As alterações deste produto ainda não foram salvas.' });
@@ -530,9 +579,9 @@ export default function ProductForm({ initial }: Props) {
   // O aviso some sozinho assim que o campo fica certo.
   useEffect(() => {
     if (!fieldError) return;
-    const ok = { fotos: images.length > 0, nome: !!name.trim(), preco: priceValid, peso: weightKgValid, cor: rows.length > 0 && !colorUnchosen }[fieldError.field];
+    const ok = { fotos: images.length > 0, nome: !!name.trim(), preco: priceValid, peso: weightKgValid, cor: rows.length > 0 && !colorUnchosen && !colorPending }[fieldError.field];
     if (ok) setFieldError(null);
-  }, [fieldError, images.length, name, priceValid, weightKgValid, rows.length, colorUnchosen]);
+  }, [fieldError, images.length, name, priceValid, weightKgValid, rows.length, colorUnchosen, colorPending]);
 
   function failField(field: FieldKey, msg: string, elementId: string) {
     setError('');
@@ -573,6 +622,7 @@ export default function ProductForm({ initial }: Props) {
       if (!name.trim()) return failField('nome', 'Escreva o nome do produto.', 'prod-nome');
       if (!priceValid) return failField('preco', price ? 'Preço inválido. Digite o valor, por exemplo 8990 para R$ 89,90.' : 'Digite o preço de venda.', 'prod-preco');
       if (colorUnchosen) return failField('cor', 'Escreva o nome da cor.', `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
+      if (colorPending) return failField('cor', colorPendingMsg, `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
     }
     setFieldError(null);
     tap();
@@ -599,6 +649,7 @@ export default function ProductForm({ initial }: Props) {
       return failField('peso', 'Digite o peso de uma peça em kg, por exemplo 1,2.', 'prod-peso');
     }
     if (rows.length === 0 || colorUnchosen) return failField('cor', rows.length === 0 ? 'Escolha a cor do produto.' : 'Escreva o nome da cor.', `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
+    if (colorPending) return failField('cor', colorPendingMsg, `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
 
     // A confirmação vem antes de qualquer upload ou exclusão: cancelar aqui
     // não pode deixar nada pela metade.
@@ -663,7 +714,7 @@ export default function ProductForm({ initial }: Props) {
         size,
         fabric,
         color,
-        colorName: colorName.trim(),
+        colorName: finalColorName(colorName),
       }));
 
       const data = {
@@ -1123,8 +1174,13 @@ export default function ProductForm({ initial }: Props) {
                         id={`prod-cor-${r.fabric}`}
                         value={r.color}
                         colorName={r.colorName}
-                        invalid={fieldError?.field === 'cor' && !r.colorName.trim()}
+                        check={colorChecks[rows.indexOf(r)] ?? { state: 'ok' }}
+                        storeColors={sortBySimilarity(r.colorName, storeColors ?? [])}
+                        invalid={fieldError?.field === 'cor'}
                         onChange={(hex, colorName) => updateRow(r.fabric, { color: hex, colorName })}
+                        onKeepTypo={() => setKeptTypos(cur => new Set(cur).add(colorKey(r.colorName)))}
+                        onConfirmNew={() => setConfirmedNew(cur => new Set(cur).add(colorKey(r.colorName)))}
+                        onBlur={() => { if (r.colorName.trim()) updateRow(r.fabric, { colorName: finalColorName(r.colorName) }); }}
                       />
                       {fieldErr('cor')}
                     </div>

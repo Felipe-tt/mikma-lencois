@@ -13,7 +13,9 @@ import { MaintenancePoll } from '@/components/layout/MaintenancePoll';
 export const revalidate = 30;
 
 export const metadata = {
-  title: 'Em breve, Mikma Lençóis',
+  // Absoluto: com o modelo do layout virava "Em breve, Mikma Lençóis | Mikma
+  // Lençóis", e é esta página que o Google lê enquanto a loja está fechada.
+  title: { absolute: 'Mikma Lençóis · Lençóis direto da fábrica em Blumenau' },
 };
 
 export default async function ManutencaoPage() {
