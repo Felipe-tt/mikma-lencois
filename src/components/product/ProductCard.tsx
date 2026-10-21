@@ -48,9 +48,6 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
   // Todo produto é malha 100% algodão: o tecido salvo na variação (produtos
   // antigos podem ter outro) não aparece.
   const meta = [product.category, FABRIC_SHORT].filter(Boolean).join(' · ');
-  const swatches = Array.from(new Set(
-    (product.variants ?? []).map(v => v.color).filter((c): c is string => !!c && c.startsWith('#')),
-  )).slice(0, 4);
 
   return (
     <div
@@ -131,13 +128,6 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
             <p className="font-display text-[1.15rem] text-ink font-normal leading-none tracking-[-0.01em] tabular-nums">
               {formatCurrency(product.price)}
             </p>
-            {swatches.length > 0 && (
-              <span role="img" className="flex items-center -space-x-1" aria-label={`${swatches.length} ${swatches.length === 1 ? 'cor' : 'cores'}`}>
-                {swatches.map(c => (
-                  <span key={c} className="w-3 h-3 rounded-full ring-1 ring-ink/15 ring-offset-1 ring-offset-paper" style={{ backgroundColor: c }} />
-                ))}
-              </span>
-            )}
           </div>
         </div>
       </NavLink>

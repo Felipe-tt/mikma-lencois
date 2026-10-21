@@ -10,6 +10,7 @@ import { db, auth } from '@/lib/firebase/client';
 import type { Product } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { readDraftName } from '@/lib/productDraft';
 
 export default function PainelProdutosPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -18,6 +19,9 @@ export default function PainelProdutosPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [loadError, setLoadError] = useState(false);
+  // Cadastro que ficou pela metade neste aparelho (rascunho salvo sozinho).
+  const [draftName, setDraftName] = useState<string | null>(null);
+  useEffect(() => { setDraftName(readDraftName()); }, []);
 
   useEffect(() => {
     return onSnapshot(
@@ -93,6 +97,18 @@ export default function PainelProdutosPage() {
         <p className="text-[13px] text-faint mt-1">Gerencie os produtos da sua loja. Produtos visíveis aparecem no site para os clientes.</p>
       </div>
 
+      {draftName !== null && (
+        <Link
+          href="/painel/produtos/novo?continuar=1"
+          className="mb-4 flex items-center justify-between gap-3 border border-clay/30 bg-clay/5 px-4 py-3 rounded-xl hover:bg-clay/10 transition-colors"
+        >
+          <span className="text-[13px] text-ink min-w-0">
+            Você tem um cadastro pela metade{draftName ? <>: <strong className="font-semibold">{draftName}</strong></> : ''}
+          </span>
+          <span className="text-[13px] font-semibold text-clay shrink-0">Continuar</span>
+        </Link>
+      )}
+
       {errorMsg && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 font-semibold flex items-center gap-2 rounded-lg">
           <IconAlert size={12} className="shrink-0" /> {errorMsg}
@@ -110,18 +126,18 @@ export default function PainelProdutosPage() {
             className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40 rounded-xl"
           />
         </div>
-        <div className="grid grid-cols-2 sm:flex gap-3">
-          <Link
-            href="/painel/produtos/importar-csv"
-            className="inline-flex items-center justify-center min-h-11 border border-mist text-ink text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-warm active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
-          >
-            Importar CSV
-          </Link>
+        <div className="grid grid-cols-[1fr_auto] sm:flex gap-3">
           <Link
             href="/painel/produtos/novo"
-            className="inline-flex items-center justify-center min-h-11 bg-ink text-paper text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
+            className="inline-flex items-center justify-center min-h-11 bg-ink text-paper text-[12px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
           >
             + Novo produto
+          </Link>
+          <Link
+            href="/painel/produtos/importar-csv"
+            className="inline-flex items-center justify-center min-h-11 border border-mist text-ink text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2.5 hover:bg-warm active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
+          >
+            Importar
           </Link>
         </div>
       </div>

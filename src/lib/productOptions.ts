@@ -73,3 +73,30 @@ export function suggestProductName(params: {
   if (!prefix) return ''; // "Outros", ou categoria desconhecida
   return sizeLabel ? `${prefix} ${sizeLabel}` : prefix;
 }
+
+/**
+ * Texto de descrição pronto, montado com o que já foi escolhido no
+ * cadastro, para quem não sabe o que escrever. Só afirma o que é certo
+ * (malha 100% algodão, tamanho, peças, cor); a pessoa edita à vontade.
+ */
+export function suggestProductDescription(params: {
+  category: Category;
+  size?: string;
+  fronhaCount?: number;
+  colorName?: string;
+}): string {
+  const { category, size, fronhaCount, colorName } = params;
+  const sizeLabel = size && size !== 'unico' ? SIZE_LABEL[size] : undefined;
+  const cor = colorName ? ` na cor ${colorName.toLowerCase()}` : '';
+  const lines: string[] = [];
+  if (category === 'Jogos de cama') {
+    const f = fronhaCount && fronhaCount > 0 ? fronhaCount : 2;
+    lines.push(`Jogo de cama${sizeLabel ? ` ${sizeLabel.toLowerCase()}` : ''} em malha 100% algodão${cor}.`);
+    lines.push(`Vem com ${1 + f} peças: 1 lençol e ${f} ${f === 1 ? 'fronha' : 'fronhas'}.`);
+  } else {
+    const prefix = CATEGORY_PREFIX[category] ?? 'Peça';
+    lines.push(`${prefix}${sizeLabel ? ` ${sizeLabel.toLowerCase()}` : ''} em malha 100% algodão${cor}.`);
+  }
+  lines.push('Tecido macio, gostoso para o dia a dia.');
+  return lines.join('\n');
+}

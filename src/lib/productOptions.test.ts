@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { suggestProductName } from './productOptions';
+import { suggestProductName, suggestProductDescription } from './productOptions';
 
 describe('suggestProductName', () => {
   it('Jogo de Cama: soma lençol + fronhas nas peças', () => {
@@ -45,5 +45,15 @@ describe('suggestProductName', () => {
   it('fronhaCount zero ou negativo (dado inválido) cai no padrão 2', () => {
     expect(suggestProductName({ category: 'Jogos de cama', size: 'queen', fronhaCount: 0 }))
       .toBe('Jogo de Cama Queen 3 Peças');
+  });
+});
+
+describe('suggestProductDescription', () => {
+  it('jogo de cama conta as peças e usa a cor', () => {
+    expect(suggestProductDescription({ category: 'Jogos de cama', size: 'casal', fronhaCount: 2, colorName: 'Azul Marinho' }))
+      .toBe('Jogo de cama casal em malha 100% algodão na cor azul marinho.\nVem com 3 peças: 1 lençol e 2 fronhas.\nTecido macio, gostoso para o dia a dia.');
+  });
+  it('fronha única, sem tamanho "único" no texto', () => {
+    expect(suggestProductDescription({ category: 'Fronhas', size: 'unico' }).split('\n')[0]).toBe('Fronha em malha 100% algodão.');
   });
 });

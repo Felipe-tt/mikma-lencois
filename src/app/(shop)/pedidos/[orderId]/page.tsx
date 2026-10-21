@@ -344,8 +344,10 @@ export default function OrderDetailPage() {
         </section>
       )}
 
-      {/* Uber Direct, bloco em tempo real com entregador e link de rastreio */}
-      {carrier === 'uber_direct' && order.status !== 'delivered' && order.status !== 'cancelled' && (
+      {/* Uber Direct, bloco em tempo real com entregador e link de rastreio.
+          Só depois que a loja despachou e a corrida existe: antes disso
+          (PIX pendente, pago, separando) não há entregador para procurar. */}
+      {carrier === 'uber_direct' && order.status === 'shipped' && !!order.delivery?.uberDirectDeliveryId && (
         <section>
           <h2 className="font-sans text-xs font-bold tracking-[0.15em] uppercase text-faint mb-3">
             Acompanhe a entrega

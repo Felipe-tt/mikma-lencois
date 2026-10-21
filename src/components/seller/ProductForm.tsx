@@ -33,9 +33,9 @@ import { db } from '@/lib/firebase/client';
 import { storage } from '@/lib/firebase/storage';
 import type { Product } from '@/types';
 import { hexToColorName, sampleDominantColor } from '@/lib/colorNames';
-import { ColorPicker } from './ColorPicker';
+import { ColorNameField } from './ColorNameField';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
-import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, FABRIC_LABEL, DEFAULT_COMPOSITION, suggestProductName, type Size } from '@/lib/productOptions';
+import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, FABRIC_LABEL, DEFAULT_COMPOSITION, suggestProductName, suggestProductDescription, type Size } from '@/lib/productOptions';
 import { formatProductName } from '@/lib/textFormat';
 import { formatCurrency } from '@/lib/utils/format';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -47,14 +47,13 @@ import { getDoc } from 'firebase/firestore';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import { IconAlert } from '@/components/ui/Icon';
 import { Stepper } from '@/components/ui/Stepper';
+import { PRODUCT_DRAFT_KEY } from '@/lib/productDraft';
 
-// Carregados só quando abertos de verdade — PhotoColorPicker,
-// DefaultWeightsModal e DuplicateProductModal não são usados na maioria
+// Carregados só quando abertos de verdade — DefaultWeightsModal e DuplicateProductModal não são usados na maioria
 // das visitas à tela (a maior parte dos cadastros nem chega a abrir
 // esses popups). Em celular Android de entrada, cada KB de JS executado
 // no carregamento inicial conta; adiar isso pra quando a pessoa realmente
 // clica deixa a tela principal do cadastro pronta mais rápido.
-const PhotoColorPicker = dynamic(() => import('./PhotoColorPicker').then(m => m.PhotoColorPicker), { ssr: false });
 const DefaultWeightsModal = dynamic(() => import('./DefaultWeightsModal').then(m => m.DefaultWeightsModal), { ssr: false });
 const DuplicateProductModal = dynamic(() => import('./DuplicateProductModal').then(m => m.DuplicateProductModal), { ssr: false });
 
@@ -78,7 +77,7 @@ function makeVariantId(size: string, fabric: string) {
 type ImgEntry = { dataUrl: string; blob?: Blob; url?: string };
 type FabricRow = { fabric: string; color: string; colorName: string; qty: number };
 
-const DRAFT_KEY = 'mikma:product-draft:v1';
+const DRAFT_KEY = PRODUCT_DRAFT_KEY;
 
 type DraftShape = {
   name: string; nameEditedManually: boolean; description: string; price: string;
@@ -262,7 +261,7 @@ export default function ProductForm({ initial }: Props) {
   // escolher tecido, só a cor e o estoque.
   const [rows, setRows] = useState<FabricRow[]>(() => initialRows.length > 0 || isEdit
     ? initialRows
-    : [{ fabric: FABRICS[0], color: '#E8DCC8', colorName: hexToColorName('#E8DCC8'), qty: 1 }]);
+    : [{ fabric: FABRICS[0], color: '#E8DCC8', colorName: '', qty: 1 }]);
 
   // ID das variações que JÁ existem: produtos publicados a partir de
   // rascunho/CSV usam "v1", não o `${tamanho}_${tecido}` deste formulário.
@@ -274,7 +273,6 @@ export default function ProductForm({ initial }: Props) {
   const variantIdFor = (s: string, fabric: string) =>
     existingVariantIds.get(`${s}|${fabric}`) ?? makeVariantId(s, fabric);
   const rowMemory = useRef<Map<string, FabricRow>>(new Map(initialRows.map(r => [r.fabric, r])));
-  const [autoColoredFabrics, setAutoColoredFabrics] = useState<Set<string>>(new Set());
 
   function toggleFabric(fabric: string) {
     tap();
@@ -291,7 +289,7 @@ export default function ProductForm({ initial }: Props) {
       const newRow: FabricRow = remembered ?? {
         fabric,
         color: fallbackHex,
-        colorName: hexToColorName(fallbackHex),
+        colorName: '',
         qty: 1,
       };
       // Se não tinha memória (tecido novo pra essa sessão) e já existe
@@ -302,8 +300,7 @@ export default function ProductForm({ initial }: Props) {
         sampleDominantColor(images[0].dataUrl).then(hex => {
           if (!hex) return;
           const name = hexToColorName(hex);
-          setRows(cur => cur.map(r => r.fabric === fabric && r.color === fallbackHex ? { ...r, color: hex, colorName: name } : r));
-          setAutoColoredFabrics(cur => new Set(cur).add(fabric));
+          setRows(cur => cur.map(r => r.fabric === fabric && r.color === fallbackHex ? { ...r, color: hex } : r));
         }).catch(() => {});
       }
       return [...prev, newRow];
@@ -312,12 +309,11 @@ export default function ProductForm({ initial }: Props) {
 
   function updateRow(fabric: string, patch: Partial<FabricRow>) {
     setRows(prev => prev.map(r => r.fabric === fabric ? { ...r, ...patch } : r));
-    if (patch.color) setAutoColoredFabrics(cur => { const next = new Set(cur); next.delete(fabric); return next; });
   }
+  // A cor é escrita por quem cadastra: sem nome, o produto não sai.
+  const colorUnchosen = rows.some(r => !r.colorName.trim());
 
   const [showCamera, setShowCamera] = useState(false);
-  const [colorPickerImageIndex, setColorPickerImageIndex] = useState<number | null>(null);
-  const [pendingColorTargetFabric, setPendingColorTargetFabric] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   useUnsavedGuard(isEdit && touched && !saving, { detail: 'As alterações deste produto ainda não foram salvas.' });
   const [error, setError] = useState('');
@@ -374,6 +370,11 @@ export default function ProductForm({ initial }: Props) {
   const [draftBannerDismissed, setDraftBannerDismissed] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<DraftShape | null>(null);
   const draftRestoredRef = useRef(false);
+  const autoRestoreRef = useRef(false);
+  useEffect(() => {
+    if (pendingDraft && autoRestoreRef.current) { autoRestoreRef.current = false; void restoreDraft(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDraft]);
 
   useEffect(() => {
     if (isEdit) return;
@@ -381,6 +382,7 @@ export default function ProductForm({ initial }: Props) {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) setPendingDraft(JSON.parse(raw));
     } catch { /* localStorage indisponível ou JSON corrompido, ignora */ }
+    if (new URLSearchParams(window.location.search).has('continuar')) autoRestoreRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -396,12 +398,13 @@ export default function ProductForm({ initial }: Props) {
     setWeightKg(d.weightKg); setWeightEditedManually(d.weightEditedManually); setWeightTypedByHand(d.weightTypedByHand);
     setRows(d.rows);
     // dataURL -> Blob de novo, pra poder subir pro Storage no submit
-    const restoredImages = await Promise.all(d.images.map(async dataUrl => {
+    // Decodifica na mão: fetch(data:...) é bloqueado pela CSP (connect-src)
+    // e as fotos do rascunho sumiam ao recuperar.
+    const restoredImages = d.images.map(dataUrl => {
       try {
-        const blob = await (await fetch(dataUrl)).blob();
-        return { dataUrl, blob } as ImgEntry;
+        return { dataUrl, blob: dataUrlToBlob(dataUrl) } as ImgEntry;
       } catch { return null; }
-    }));
+    });
     setImages(restoredImages.filter((i): i is ImgEntry => !!i));
     draftRestoredRef.current = true;
     setPendingDraft(null);
@@ -419,8 +422,10 @@ export default function ProductForm({ initial }: Props) {
   // rascunho antigo antes da pessoa decidir usá-lo ou não).
   useEffect(() => {
     if (isEdit || (pendingDraft && !draftRestoredRef.current)) return;
-    const hasContent = name || description || price || images.length > 0 || rows.length > 0;
-    if (!hasContent) return;
+    // Só conta o que a pessoa fez: o nome sugerido e a linha de cor que já
+    // vêm prontos não são "cadastro pela metade".
+    const hasContent = (nameEditedManually && name) || description || price || images.length > 0;
+    if (!hasContent || created) return;
     const t = setTimeout(() => {
       const draft: DraftShape = {
         name, nameEditedManually, description, price, category, size, fronhaCount, tags, active,
@@ -432,7 +437,7 @@ export default function ProductForm({ initial }: Props) {
       try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch { /* quota cheia ou indisponível, ignora silenciosamente */ }
     }, 600);
     return () => clearTimeout(t);
-  }, [isEdit, pendingDraft, name, nameEditedManually, description, price, category, size, fronhaCount, tags, active, yarnCount, composition, weightGsm, certifications, specsOpen, weightKg, weightEditedManually, weightTypedByHand, images, rows]);
+  }, [isEdit, pendingDraft, name, nameEditedManually, description, price, category, size, fronhaCount, tags, active, yarnCount, composition, weightGsm, certifications, specsOpen, weightKg, weightEditedManually, weightTypedByHand, images, rows, created]);
 
   function clearDraft() {
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignora */ }
@@ -459,7 +464,7 @@ export default function ProductForm({ initial }: Props) {
     const newRows: FabricRow[] = (p.variants ?? []).map(v => ({
       fabric: v.fabric ?? FABRICS[0],
       color: '#E8DCC8',
-      colorName: hexToColorName('#E8DCC8'),
+      colorName: '',
       qty: 1,
     }));
     setRows(newRows);
@@ -486,8 +491,7 @@ export default function ProductForm({ initial }: Props) {
           sampleDominantColor(cover).then(hex => {
             if (!hex) return;
             const name = hexToColorName(hex);
-            setRows(cur => cur.map(r => stillPlaceholder.has(r.fabric) ? { ...r, color: hex, colorName: name } : r));
-            setAutoColoredFabrics(cur => new Set([...cur, ...stillPlaceholder]));
+            setRows(cur => cur.map(r => stillPlaceholder.has(r.fabric) ? { ...r, color: hex } : r));
           }).catch(() => {});
         }
       }
@@ -520,29 +524,15 @@ export default function ProductForm({ initial }: Props) {
     });
   }
 
-  function openColorFromPhoto(fabric: string) {
-    if (images.length === 0) return;
-    setPendingColorTargetFabric(fabric);
-    setColorPickerImageIndex(0);
-  }
-
-  function handlePickedFromPhoto(hex: string, colorName: string) {
-    if (pendingColorTargetFabric !== null) {
-      updateRow(pendingColorTargetFabric, { color: hex, colorName });
-    }
-    setColorPickerImageIndex(null);
-    setPendingColorTargetFabric(null);
-  }
-
   const priceValid = !!price && parseBRL(price) > 0;
   const weightKgValid = parseDecimal(weightKg) > 0;
 
   // O aviso some sozinho assim que o campo fica certo.
   useEffect(() => {
     if (!fieldError) return;
-    const ok = { fotos: images.length > 0, nome: !!name.trim(), preco: priceValid, peso: weightKgValid, cor: rows.length > 0 }[fieldError.field];
+    const ok = { fotos: images.length > 0, nome: !!name.trim(), preco: priceValid, peso: weightKgValid, cor: rows.length > 0 && !colorUnchosen }[fieldError.field];
     if (ok) setFieldError(null);
-  }, [fieldError, images.length, name, priceValid, weightKgValid, rows.length]);
+  }, [fieldError, images.length, name, priceValid, weightKgValid, rows.length, colorUnchosen]);
 
   function failField(field: FieldKey, msg: string, elementId: string) {
     setError('');
@@ -582,6 +572,7 @@ export default function ProductForm({ initial }: Props) {
     if (wizardStep === 3) {
       if (!name.trim()) return failField('nome', 'Escreva o nome do produto.', 'prod-nome');
       if (!priceValid) return failField('preco', price ? 'Preço inválido. Digite o valor, por exemplo 8990 para R$ 89,90.' : 'Digite o preço de venda.', 'prod-preco');
+      if (colorUnchosen) return failField('cor', 'Escreva o nome da cor.', `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
     }
     setFieldError(null);
     tap();
@@ -607,7 +598,7 @@ export default function ProductForm({ initial }: Props) {
       setMoreOpen(true);
       return failField('peso', 'Digite o peso de uma peça em kg, por exemplo 1,2.', 'prod-peso');
     }
-    if (rows.length === 0) return failField('cor', 'Escolha a cor do produto.', `prod-cor-${FABRICS[0]}`);
+    if (rows.length === 0 || colorUnchosen) return failField('cor', rows.length === 0 ? 'Escolha a cor do produto.' : 'Escreva o nome da cor.', `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
 
     // A confirmação vem antes de qualquer upload ou exclusão: cancelar aqui
     // não pode deixar nada pela metade.
@@ -672,7 +663,7 @@ export default function ProductForm({ initial }: Props) {
         size,
         fabric,
         color,
-        colorName: colorName || color,
+        colorName: colorName.trim(),
       }));
 
       const data = {
@@ -780,7 +771,7 @@ export default function ProductForm({ initial }: Props) {
     setPrice('');
     setImages([]);
     setRemovedUrls([]);
-    const resetRows = rows.map(r => ({ fabric: r.fabric, color: '#E8DCC8', colorName: hexToColorName('#E8DCC8'), qty: 1 }));
+    const resetRows = rows.map(r => ({ fabric: r.fabric, color: '#E8DCC8', colorName: '', qty: 1 }));
     setRows(resetRows);
     rowMemory.current = new Map(resetRows.map(r => [r.fabric, r]));
     setTags('');
@@ -1022,7 +1013,23 @@ export default function ProductForm({ initial }: Props) {
             {moreOpen && (
               <div className="flex flex-col gap-4">
             <div>
-              <label htmlFor="prod-descricao" className="label">Descrição <span className="font-normal normal-case text-faint">(opcional)</span></label>
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <label htmlFor="prod-descricao" className="label mb-0">Descrição <span className="font-normal normal-case text-faint">(opcional)</span></label>
+                {!description.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setDescription(suggestProductDescription({
+                      category: category as typeof CATEGORIES[number],
+                      size,
+                      fronhaCount: category === 'Jogos de cama' ? fronhaCount : undefined,
+                      colorName: rows[0]?.colorName,
+                    }))}
+                    className="text-[12px] font-semibold text-clay hover:text-clay-d whitespace-nowrap"
+                  >
+                    Escrever para mim
+                  </button>
+                )}
+              </div>
               <textarea
                 id="prod-descricao"
                 value={description}
@@ -1081,7 +1088,7 @@ export default function ProductForm({ initial }: Props) {
                 id="prod-tags"
                 value={tags}
                 onChange={e => setTags(e.target.value)}
-                placeholder="algodão, casal, branco"
+                placeholder="Ex.: presente, verão"
                 className="input"
               />
             </div>
@@ -1111,31 +1118,15 @@ export default function ProductForm({ initial }: Props) {
 
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
                     <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label htmlFor={`prod-cor-${r.fabric}`} className="text-[10px] text-faint block font-semibold tracking-[0.1em] uppercase">Cor</label>
-                        {images.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => openColorFromPhoto(r.fabric)}
-                            className="text-[10px] font-semibold text-clay hover:text-clay-d flex items-center gap-1"
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                            Pegar da foto
-                          </button>
-                        )}
-                      </div>
-                      <ColorPicker
+                      <label htmlFor={`prod-cor-${r.fabric}`} className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Nome da cor</label>
+                      <ColorNameField
                         id={`prod-cor-${r.fabric}`}
                         value={r.color}
                         colorName={r.colorName}
+                        invalid={fieldError?.field === 'cor' && !r.colorName.trim()}
                         onChange={(hex, colorName) => updateRow(r.fabric, { color: hex, colorName })}
                       />
-                      {autoColoredFabrics.has(r.fabric) && (
-                        <p className="text-[10.5px] text-clay/80 mt-1 flex items-center gap-1">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                          Cor detectada da foto — ajuste se não bateu
-                        </p>
-                      )}
+                      {fieldErr('cor')}
                     </div>
 
                     {!isEdit && (
@@ -1215,15 +1206,6 @@ export default function ProductForm({ initial }: Props) {
     <>
       {showCamera && (
         <PhotoCaptureModal onDone={handlePhotosCaptured} onClose={() => setShowCamera(false)} />
-      )}
-      {colorPickerImageIndex !== null && (
-        <PhotoColorPicker
-          images={images.map(img => img.dataUrl)}
-          imageIndex={colorPickerImageIndex}
-          onChangeImage={setColorPickerImageIndex}
-          onPick={handlePickedFromPhoto}
-          onClose={() => { setColorPickerImageIndex(null); setPendingColorTargetFabric(null); }}
-        />
       )}
       {weightsModalOpen && (
         <DefaultWeightsModal
@@ -1434,8 +1416,8 @@ export default function ProductForm({ initial }: Props) {
                   Voltar
                 </button>
               ) : (
-                <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-4 py-3.5 sm:py-3 text-[15px] font-medium text-mid hover:bg-warm transition-colors shrink-0 rounded-xl">
-                  Sair
+                <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-5 py-3.5 sm:py-3 text-[15px] font-medium text-mid hover:bg-warm transition-colors shrink-0 rounded-xl">
+                  Voltar
                 </button>
               )}
               {wizardStep < WIZARD_STEPS.length ? (
@@ -1459,4 +1441,13 @@ export default function ProductForm({ initial }: Props) {
 function parseDecimal(s: string): number {
   const t = s.trim();
   return /^\d+([.,]\d+)?$/.test(t) ? Number(t.replace(',', '.')) : NaN;
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [head, b64] = dataUrl.split(',');
+  const type = /data:([^;]+)/.exec(head)?.[1] ?? 'image/webp';
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
 }
