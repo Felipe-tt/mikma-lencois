@@ -22,7 +22,9 @@ export function MaintenanceGate() {
     let cancelled = false;
 
     fetch('/api/maintenance/status', { cache: 'no-store' })
-      .then((res) => res.json())
+      // Só uma resposta OK manda pra manutenção: erro ou limite (429) não
+      // muda de página (o proxy já barra quem não pode ver).
+      .then((res) => (res.ok ? res.json() : {}))
       .then((data: { active?: boolean; released?: boolean }) => {
         if (cancelled) return;
         if (data.active && !data.released) {

@@ -39,7 +39,7 @@ export function MaintenancePoll() {
       if (checking) return;
       checking = true;
       fetch('/api/maintenance/status', { cache: 'no-store' })
-        .then(res => res.json())
+        .then(res => (res.ok ? res.json() : {}))
         .then((data: { active?: boolean; released?: boolean }) => {
           if (!data.active || data.released) window.location.href = '/';
         })

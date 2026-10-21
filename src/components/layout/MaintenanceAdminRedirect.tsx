@@ -18,7 +18,14 @@ export function MaintenanceAdminRedirect() {
     let cancelled = false;
     (async () => {
       const de = new URLSearchParams(window.location.search).get('de');
-      const target = de && de.startsWith('/') && !de.startsWith('//') ? de : '/';
+      let target = de && de.startsWith('/') && !de.startsWith('//') ? de : '/';
+      // Trava de segurança: se já voltou daqui há menos de 30s, algo mandou de
+      // novo pra manutenção; vai pro painel em vez de ficar num vaivém.
+      try {
+        const last = Number(sessionStorage.getItem('mnt-admin-back') ?? 0);
+        if (Date.now() - last < 30000) target = '/painel';
+        sessionStorage.setItem('mnt-admin-back', String(Date.now()));
+      } catch { /* sem sessionStorage: segue */ }
       try {
         const token = await user.getIdToken();
         const res = await fetch('/api/auth/session', { method: 'POST', headers: { authorization: `Bearer ${token}` } });
