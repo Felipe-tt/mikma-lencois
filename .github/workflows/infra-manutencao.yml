@@ -186,6 +186,11 @@ jobs:
             gcloud secrets add-iam-policy-binding EDGE_SHARED_SECRET --member=serviceAccount:firebase-app-hosting-compute@mikma-lencois.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor >/dev/null && echo "acesso ok"
           fi
           echo "::add-mask::$EDGE"
+          # Mesmo acesso dos secrets que já funcionam (build e runtime do App Hosting).
+          # Sem o viewer e o papel do agente do App Hosting, o build falha no "preparer".
+          gcloud secrets get-iam-policy CRON_SECRET --format=json | jq -r '.bindings[]? | .role as $r | .members[] | "\($r) \(.)"' | while read -r role m; do
+            gcloud secrets add-iam-policy-binding EDGE_SHARED_SECRET --member="$m" --role="$role" >/dev/null && echo "acesso: $role $m"
+          done
           api -X PUT "$B/rulesets/phases/http_request_late_transform/entrypoint" --data "{
             \"rules\": [{
               \"description\": \"Segredo de origem\",
@@ -214,3 +219,17 @@ jobs:
           done
           echo "Respostas 429: $bloqueou de 70"
           if [ "$bloqueou" -gt 0 ]; then echo "OK: o IP forjado não engana o limite"; else echo "ATENÇÃO: limite não disparou"; fi
+
+      - name: Último build com falha (App Hosting)
+        continue-on-error: true
+        run: |
+          set +e
+          id=$(gcloud builds list --region us-east4 --filter='status=FAILURE' --limit 1 --format='value(id)')
+          gcloud builds list --region us-east4 --limit 3 --format='table(id,status,createTime)'
+          [ -n "$id" ] && gcloud builds describe "$id" --region us-east4 --format='yaml(failureInfo,statusDetail,steps[].id,steps[].status,steps[].name)' 2>&1 | head -60
+          for sec in CRON_SECRET ABACATEPAY_WEBHOOK_SECRET EDGE_SHARED_SECRET; do
+            echo "--- $sec"
+            gcloud secrets get-iam-policy "$sec" --format='yaml(bindings)'
+            gcloud secrets versions list "$sec" --format='table(name,state)' | head -4
+            gcloud secrets describe "$sec" --format='yaml(replication,labels,annotations)'
+          done
