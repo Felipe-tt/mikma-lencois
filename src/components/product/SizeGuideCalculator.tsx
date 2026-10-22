@@ -167,7 +167,7 @@ export function SizeGuideCalculator({ products, widths }: Props) {
       {result && (
         <div key={result} ref={resultRef} className="scroll-mt-20 border-t border-mist pt-8 flex flex-col gap-5 animate-fade-up">
           <div className="text-center">
-            <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-2">Recomendação</p>
+            <p className="font-semibold text-[11px] tracking-[0.25em] uppercase text-faint mb-2">Recomendação</p>
             <p className="font-display text-3xl text-ink mb-2">{widths[result].label}</p>
             {confidenceMsg && <p className="text-[13px] text-mid max-w-[48ch] mx-auto leading-relaxed">{confidenceMsg}</p>}
             {aliasNote && <p className="text-[13px] text-clay max-w-[48ch] mx-auto leading-relaxed mt-2">{aliasNote}</p>}

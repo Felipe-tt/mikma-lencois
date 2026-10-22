@@ -101,13 +101,13 @@ export default async function ProdutosPage({ searchParams }: Props) {
         <div className="container-shop py-8 sm:py-12">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="font-mono text-[10px] tracking-[0.24em] uppercase text-faint mb-3">
+              <p className="font-semibold text-[10px] tracking-[0.24em] uppercase text-faint mb-3">
                 {search ? 'Resultado da busca' : categoria ? `Catálogo / ${categoria}` : 'Catálogo'}
               </p>
               <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">
                 {heading}
               </h1>
-              <p className="text-[12px] text-faint mt-2 font-mono">
+              <p className="text-[12px] text-faint mt-2 font-semibold">
                 {shownTotal} {search ? (shownTotal === 1 ? 'resultado' : 'resultados') : (shownTotal === 1 ? 'produto' : 'produtos')}
               </p>
             </div>
@@ -131,7 +131,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
           {categories.length > 0 && (
             <aside className="hidden lg:flex flex-col gap-7 w-44 shrink-0 sticky top-24">
               <div>
-                <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-faint mb-4">Categorias</p>
+                <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-faint mb-4">Categorias</p>
                 <div className="flex flex-col">
                   <Link href={hrefWith({ categoria: undefined })}
                     className={`flex items-center justify-between rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${

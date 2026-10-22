@@ -52,7 +52,7 @@ export function ProductCarousel({ products }: Props) {
       {/* Setas, desktop, alinhadas com o título da seção */}
       {/* Só aparecem quando há o que rolar (com 2 produtos ficavam ali à toa,
           por cima do "Ver tudo"). */}
-      <div className={`hidden absolute -top-[60px] right-0 gap-2 ${canPrev || canNext ? 'sm:flex' : ''}`}>
+      <div className={`hidden absolute -top-[66px] right-0 gap-2 ${canPrev || canNext ? 'sm:flex' : ''}`}>
         <button
           type="button"
           onClick={() => scrollByStep(-1)}

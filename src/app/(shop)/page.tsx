@@ -59,61 +59,64 @@ export default async function HomePage() {
   return (
     <>
       {/* ═══════════════════════════════════════════════════════════
-          HERO, tipografia como protagonista
-          Branco absoluto. Headline enorme. Nada mais.
+          HERO: a foto do quarto em tela cheia, texto claro por cima.
+          Antes a foto ficava com 22% de opacidade atrás de um texto escuro
+          (bege sobre bege, a placa "Mikma" da parede brigava com o título).
+          theme-locked: o hero é sempre escuro com texto claro, nos dois temas.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="border-b border-mist relative overflow-hidden bg-paper">
-        <div className="absolute inset-0 pointer-events-none select-none z-0">
-          <Image
-            src="/hero-mikma.jpg"
-            alt=""
-            fill
-            priority
-            // É o maior elemento da primeira tela (o LCP do Google): sem isso
-            // o navegador baixava com prioridade baixa, junto das fotos dos
-            // produtos que ficam abaixo da dobra.
-            fetchPriority="high"
-            sizes="100vw"
-            className="object-cover object-center opacity-[0.22]"
-            aria-hidden="true"
-          />
-        </div>
-        <div className="container-shop pt-16 sm:pt-24 pb-14 sm:pb-20 relative z-[2]">
+      <section className="theme-locked relative isolate overflow-hidden bg-ink">
+        <Image
+          src="/hero-mikma.jpg"
+          alt="Quarto com cama arrumada com lençóis claros e a placa Mikma Lençóis na parede"
+          fill
+          priority
+          // É o maior elemento da primeira tela (o LCP do Google): sem isso
+          // o navegador baixava com prioridade baixa, junto das fotos dos
+          // produtos que ficam abaixo da dobra.
+          fetchPriority="high"
+          sizes="100vw"
+          className="object-cover object-[51%_35%] sm:object-[55%_40%] -z-10"
+        />
+        {/* Escurece de baixo pra cima (e da esquerda no computador) só onde
+            fica o texto; o meio da foto continua luminoso. */}
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-ink/90 via-ink/40 to-ink/5 sm:bg-gradient-to-r sm:from-ink/80 sm:via-ink/35 sm:to-transparent" />
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 -z-10 hidden sm:block bg-gradient-to-t from-ink/60 to-transparent" />
 
-          {/* Origem, linha de contexto, não eyebrow decorativo */}
-          <p className="font-mono text-[11px] tracking-[0.22em] uppercase text-faint mb-10 sm:mb-14">
-            {city}, SC · Fábrica própria · {new Date().getFullYear()}
+        <div className="container-shop flex flex-col justify-end min-h-[calc(86svh-56px)] sm:min-h-[min(calc(92vh-60px),880px)] pt-32 pb-10 sm:pb-16">
+          <p className="text-[11px] font-medium tracking-[0.24em] uppercase text-paper/75 mb-5 sm:mb-7">
+            {city}, SC · Fábrica própria
           </p>
 
-          {/* Headline, ocupa toda a largura disponível */}
-          <h1
-            className="font-display font-normal text-ink leading-[0.96] tracking-[-0.025em] text-[clamp(3.8rem,9.5vw,9rem)]"
-          >
+          <h1 className="font-display font-normal text-paper leading-[0.98] tracking-[-0.02em] text-[clamp(3rem,8.2vw,7.25rem)] max-w-[14ch] [text-wrap:balance]">
             <span className="block">{heroLine1}</span>
-            <span className="block italic text-mid">{heroLine2}</span>
+            <span className="block italic text-[#EBC9A6]">{heroLine2}</span>
             <span className="block">{heroLine3}</span>
           </h1>
 
-          {/* Copy + CTA, linha única embaixo do headline */}
-          <div className="mt-10 sm:mt-14 flex flex-col sm:flex-row sm:items-end justify-between gap-8">
-            <p className="text-[15px] text-mid leading-relaxed max-w-[38ch] font-light">
+          <div className="mt-7 sm:mt-10 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10">
+            <p className="text-[15.5px] sm:text-[17px] text-paper/85 leading-relaxed max-w-[36ch] text-pretty">
               {heroSubtitle}
             </p>
-            <div className="flex items-center gap-5 shrink-0">
+            <div className="flex items-center gap-6 shrink-0">
               <Link href="/produtos"
-                className="inline-flex items-center justify-center h-12 px-7 rounded-full bg-ink text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-mid active:scale-[0.98] transition-[background-color,transform] duration-200">
+                className="inline-flex items-center justify-center gap-2 h-12 px-7 rounded-full bg-paper text-ink text-[14px] font-semibold hover:bg-warm active:scale-[0.98] transition-[background-color,transform] duration-200">
                 Ver produtos
+                <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               </Link>
               <Link href="/sobre"
-                className="text-[13px] text-faint hover:text-ink transition-colors duration-200 border-b border-faint-l hover:border-ink pb-px">
-                Sobre nós
+                className="relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] text-[14px] font-medium text-paper/85 hover:text-paper transition-colors duration-200 border-b border-paper/40 hover:border-paper pb-0.5">
+                Nossa fábrica
               </Link>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Trust strip, 4 pilares com ícone + separador */}
+      {/* Faixa de confiança logo abaixo da foto, sobre o fundo da página. */}
+      <section aria-label="Vantagens" className="border-b border-mist bg-paper">
+        <div className="container-shop">
           {trustItems.length > 0 && (
-            <div className="mt-12 pt-8 border-t border-faint-l/60">
+            <div className="py-5 sm:py-6">
               {/* Celular: grade 2x2 alinhada (antes quebrava linha no meio). */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:flex sm:flex-wrap sm:gap-y-4 sm:gap-x-0">
                 {trustItems.map((t, i) => (
@@ -160,23 +163,23 @@ export default async function HomePage() {
       ═══════════════════════════════════════════════════════════ */}
       <section className="bg-paper">
         {/* Header da seção, minimal */}
-        <div className="container-shop pt-14 sm:pt-20 pb-8 flex items-baseline justify-between gap-6">
-          <h2 className="font-display font-normal text-ink text-2xl sm:text-3xl">
+        <div className="container-shop pt-14 sm:pt-20 pb-7 flex items-end justify-between gap-6">
+          <h2 className="font-display font-normal text-ink text-[1.85rem] sm:text-[2.75rem] leading-[1.05] tracking-[-0.015em]">
             {s.featuredTitle || 'Destaques'}
           </h2>
           <Link href="/produtos"
-            className="relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] font-mono text-[11px] tracking-[0.14em] uppercase text-faint hover:text-ink transition-colors duration-150 border-b border-transparent hover:border-ink pb-px">
+            className="relative shrink-0 whitespace-nowrap mb-1 before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] font-semibold text-[11px] tracking-[0.14em] uppercase text-faint hover:text-ink transition-colors duration-150 border-b border-transparent hover:border-ink pb-px">
             Ver todos
           </Link>
         </div>
 
         {/* Categorias, se existirem */}
         {categories.length > 1 && (
-          <div className="container-shop pb-8 sm:pb-10 flex flex-wrap gap-2">
+          <div className="container-shop pb-8 sm:pb-10 flex gap-2 overflow-x-auto scrollbar-none sm:flex-wrap">
             {categories.map(cat => (
               <Link key={cat}
                 href={`/produtos?categoria=${encodeURIComponent(cat)}`}
-                className="inline-flex items-center h-9 px-4 rounded-full border border-mist-d text-[13px] text-mid hover:border-ink hover:text-ink transition-colors duration-150">
+                className="shrink-0 inline-flex items-center h-10 px-4 rounded-full border border-mist-d text-[13px] text-mid hover:border-ink hover:text-ink transition-colors duration-150">
                 {cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase()}
               </Link>
             ))}
@@ -214,23 +217,23 @@ export default async function HomePage() {
           PROPOSTA, uma frase e dois botões. Sem stats, sem grade.
           Fundo escuro como ponto final da página.
       ═══════════════════════════════════════════════════════════ */}
-      <section className="theme-locked bg-ink">
-        <div className="container-shop py-14 sm:py-20">
-          <p className="font-mono text-[10px] tracking-[0.28em] uppercase text-paper/50 mb-8">
+      <section className="bg-warm border-t border-mist">
+        <div className="container-shop py-16 sm:py-24">
+          <p className="font-semibold text-[11px] tracking-[0.24em] uppercase text-faint mb-6">
             {s.foundedYear ? `${city} · Desde ${s.foundedYear}` : `${city} · Fábrica própria`}
           </p>
           <h2
-            className="font-display font-normal text-paper leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl text-[clamp(2.2rem,5vw,4rem)]"
+            className="font-display font-normal text-ink leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl text-[clamp(2.4rem,5.5vw,4.5rem)]"
           >
-            {ctaLine1}<br /><em className="text-clay-d not-italic">{ctaLine2}</em>
+            {ctaLine1}<br /><em className="text-clay">{ctaLine2}</em>
           </h2>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/produtos"
-              className="inline-flex items-center justify-center h-12 px-7 rounded-full bg-mid text-paper text-[13px] font-medium tracking-[0.05em] hover:bg-clay-d active:scale-[0.98] transition-[background-color,transform] duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 rounded-full bg-ink text-paper text-[14px] font-semibold hover:bg-clay active:scale-[0.98] transition-[background-color,transform] duration-200">
               {ctaBtn1}
             </Link>
             <Link href="/sobre"
-              className="inline-flex items-center justify-center h-12 px-7 rounded-full border border-paper/20 text-paper/70 text-[13px] font-medium hover:text-paper hover:border-paper/40 transition-colors duration-200">
+              className="inline-flex items-center justify-center h-12 px-7 rounded-full border border-ink/20 text-ink text-[14px] font-medium hover:border-ink/50 hover:bg-paper transition-colors duration-200">
               {ctaBtn2}
             </Link>
           </div>

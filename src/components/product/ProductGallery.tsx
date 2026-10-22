@@ -129,7 +129,7 @@ export function ProductGallery({ images, name, tag, productId }: Props) {
             até aqui ao abrir o produto. Só com productId, para não colidir. */}
         <ViewTransition name={productId ? `produto-${productId}` : undefined} share="morph" default="none">
         <div
-          className={`sd-zoom-scope group relative aspect-[4/5] overflow-hidden rounded-3xl bg-warm [transform:translateZ(0)] select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
+          className={`sd-zoom-scope group relative aspect-[4/5] overflow-hidden rounded-2xl bg-warm [transform:translateZ(0)] select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={() => { swipe.current = null; }}
@@ -165,7 +165,7 @@ export function ProductGallery({ images, name, tag, productId }: Props) {
           )}
 
           {tag && (
-            <span className="absolute top-4 left-4 bg-ink text-paper text-[9px] font-bold tracking-[0.18em] uppercase px-3 py-1.5 rounded-full pointer-events-none">
+            <span className="absolute top-4 left-4 bg-ink text-paper text-[10px] font-semibold tracking-[0.14em] uppercase px-2.5 py-[5px] rounded-full pointer-events-none">
               {tag}
             </span>
           )}

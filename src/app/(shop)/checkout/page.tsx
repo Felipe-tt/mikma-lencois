@@ -726,7 +726,7 @@ export default function CheckoutPage() {
             <span key={step} className="text-[13px] font-semibold text-ink animate-fade-in">{STEP_LABELS[step - 1]}</span>
             <span className="flex items-center gap-2.5 shrink-0">
               <span className="sr-only">Etapa {step} de 3</span>
-              <span className="font-mono text-[11px] text-faint tabular-nums" aria-hidden="true">{step}/3</span>
+              <span className="font-semibold text-[11px] text-faint tabular-nums" aria-hidden="true">{step}/3</span>
               <span className="flex gap-1" aria-hidden="true">
                 {[1, 2, 3].map(n => (
                   <span key={n} className={`h-1 w-6 rounded-full transition-colors duration-300 ${n <= step ? 'bg-ink' : 'bg-mist'}`} />
@@ -834,7 +834,7 @@ export default function CheckoutPage() {
                   </div>
                 )}
                 <button type="button" onClick={advanceToStep2}
-                  className="w-full h-12 rounded-full bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
+                  className="w-full h-12 rounded-full bg-ink text-paper text-[15px] font-semibold hover:bg-mid transition-colors mt-1">
                   Continuar para endereço
                 </button>
               </div>
@@ -910,7 +910,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <button type="button" onClick={advanceToStep3}
-                  className="w-full h-12 rounded-full bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
+                  className="w-full h-12 rounded-full bg-ink text-paper text-[15px] font-semibold hover:bg-mid transition-colors mt-1">
                   Continuar para entrega
                 </button>
               </div>

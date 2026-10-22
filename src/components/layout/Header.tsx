@@ -191,14 +191,16 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             ) : (
               <>
                 <NavLink href="/entrar" onClick={rememberHere} className={`hidden md:block text-[13px] px-3 py-1.5 rounded-full transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}>Entrar</NavLink>
-                <NavLink href="/cadastro" onClick={rememberHere} className={`hidden md:inline-flex items-center h-9 px-4 ml-1 mr-1 rounded-full text-[13px] font-medium transition-colors ${isDark ? 'bg-paper text-ink hover:bg-paper/85' : 'bg-ink text-paper hover:bg-clay'}`}>
+                <NavLink href="/cadastro" onClick={rememberHere} className={`hidden md:inline-flex items-center h-9 px-4 ml-1 mr-1 rounded-full text-[13px] font-medium transition-colors ${isDark ? 'border border-paper/30 text-paper hover:bg-paper/10' : 'border border-ink/20 text-ink hover:bg-warm'}`}>
                   Cadastrar
                 </NavLink>
               </>
             )}
 
-            {/* Theme toggle */}
-            <ThemeToggle />
+            {/* Tema: no celular fica dentro do menu (a barra ficava com 5 ícones). */}
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
 
             {/* Favoritos */}
             {user && (
