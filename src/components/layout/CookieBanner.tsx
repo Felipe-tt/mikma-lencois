@@ -88,7 +88,7 @@ export function CookieBanner() {
             aria-hidden
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-clay/15 text-clay ring-1 ring-clay/25"
           >
-            <svg
+            <svg aria-hidden="true"
               width="20"
               height="20"
               viewBox="0 0 24 24"

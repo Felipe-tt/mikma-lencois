@@ -60,7 +60,7 @@ export function ProductCarousel({ products }: Props) {
           aria-label="Ver produtos anteriores"
           className="w-10 h-10 rounded-full flex items-center justify-center border border-mist text-mid transition-colors duration-150 hover:border-ink hover:text-ink disabled:opacity-25 disabled:pointer-events-none"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
         <button
           type="button"
@@ -69,7 +69,7 @@ export function ProductCarousel({ products }: Props) {
           aria-label="Ver mais produtos"
           className="w-10 h-10 rounded-full flex items-center justify-center border border-mist text-mid transition-colors duration-150 hover:border-ink hover:text-ink disabled:opacity-25 disabled:pointer-events-none"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
         </button>
       </div>
 

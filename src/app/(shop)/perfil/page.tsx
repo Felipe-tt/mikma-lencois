@@ -185,7 +185,7 @@ export default function PerfilPage() {
     <div>
       <div className="border-b border-mist bg-warm/60">
         <div className="container-shop py-8 sm:py-12">
-          <Link href="/conta" className="group inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
+          <Link href="/conta" className="group relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             Área do cliente
           </Link>
@@ -249,7 +249,7 @@ export default function PerfilPage() {
                 </button>
                 {saved && (
                   <span role="status" className="text-[12.5px] text-emerald-700 font-medium flex items-center gap-1.5 animate-fade-in">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                     Salvo
                   </span>
                 )}
@@ -279,7 +279,7 @@ export default function PerfilPage() {
               <div className="flex flex-col gap-5">
                 <div className="flex items-start gap-3.5 rounded-2xl bg-warm/60 px-4 py-4">
                   <span aria-hidden="true" className="w-9 h-9 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                   </span>
                   <address className="not-italic text-[13.5px] text-ink leading-relaxed min-w-0">
                     {streetLine(address)}{address.complement ? ` · ${address.complement}` : ''}<br />
@@ -291,7 +291,7 @@ export default function PerfilPage() {
                   <button ref={editAddrBtn} onClick={() => setEditingAddress(true)} className="btn-outline">
                     Editar endereço
                   </button>
-                  <button onClick={handleRemoveAddress} disabled={removingAddress} className="text-[13px] font-medium text-mid hover:text-red-600 transition-colors disabled:opacity-50">
+                  <button onClick={handleRemoveAddress} disabled={removingAddress} className="py-3 -my-3 text-[13px] font-medium text-mid hover:text-red-600 transition-colors disabled:opacity-50">
                     {removingAddress ? 'Removendo…' : 'Remover'}
                   </button>
                   {addrStatus && (
@@ -349,7 +349,7 @@ export default function PerfilPage() {
 
             <div className="mt-6 pt-5 border-t border-mist">
               {!confirmDelete ? (
-                <button onClick={() => setConfirmDelete(true)} className="text-[13px] font-medium text-red-600 hover:text-red-700 transition-colors">
+                <button onClick={() => setConfirmDelete(true)} className="py-3 -my-3 text-[13px] font-medium text-red-700 hover:text-red-800 transition-colors">
                   Excluir minha conta…
                 </button>
               ) : (
@@ -377,7 +377,7 @@ export default function PerfilPage() {
         </div>
 
         <button onClick={logout} className="mt-8 inline-flex items-center gap-2 h-10 px-4 -ml-4 rounded-full text-[13px] text-mid hover:text-ink hover:bg-warm transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Sair da conta
         </button>
       </div>

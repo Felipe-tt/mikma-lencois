@@ -134,7 +134,7 @@ export function NotificationBell() {
         aria-label="Notificações"
         className="relative w-10 h-10 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors rounded-xl"
       >
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 01-3.46 0" />
         </svg>
@@ -154,7 +154,7 @@ export function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-mist bg-warm/50">
             <p className="text-[12px] font-bold text-ink uppercase tracking-wide">Notificações</p>
             {unread.length > 0 && (
-              <button onClick={markAllRead} className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
+              <button onClick={markAllRead} className="text-[11px] font-semibold text-clay hover:text-clay-d transition-colors">
                 Marcar todas como lidas
               </button>
             )}

@@ -50,6 +50,9 @@ import { IconAlert } from '@/components/ui/Icon';
 import { Stepper } from '@/components/ui/Stepper';
 import { PRODUCT_DRAFT_KEY } from '@/lib/productDraft';
 
+// id do campo da cor: o nome do tecido tem espaços ("Percal 200 fios"), e id com espaço é inválido.
+const colorFieldId = (fabric: string) => `prod-cor-${fabric.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase()}`;
+
 // Carregados só quando abertos de verdade — DefaultWeightsModal e DuplicateProductModal não são usados na maioria
 // das visitas à tela (a maior parte dos cadastros nem chega a abrir
 // esses popups). Em celular Android de entrada, cada KB de JS executado
@@ -621,8 +624,8 @@ export default function ProductForm({ initial }: Props) {
     if (wizardStep === 3) {
       if (!name.trim()) return failField('nome', 'Escreva o nome do produto.', 'prod-nome');
       if (!priceValid) return failField('preco', price ? 'Preço inválido. Digite o valor, por exemplo 8990 para R$ 89,90.' : 'Digite o preço de venda.', 'prod-preco');
-      if (colorUnchosen) return failField('cor', 'Escreva o nome da cor.', `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
-      if (colorPending) return failField('cor', colorPendingMsg, `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
+      if (colorUnchosen) return failField('cor', 'Escreva o nome da cor.', colorFieldId(rows[0]?.fabric ?? FABRICS[0]));
+      if (colorPending) return failField('cor', colorPendingMsg, colorFieldId(rows[0]?.fabric ?? FABRICS[0]));
     }
     setFieldError(null);
     tap();
@@ -648,8 +651,8 @@ export default function ProductForm({ initial }: Props) {
       setMoreOpen(true);
       return failField('peso', 'Digite o peso de uma peça em kg, por exemplo 1,2.', 'prod-peso');
     }
-    if (rows.length === 0 || colorUnchosen) return failField('cor', rows.length === 0 ? 'Escolha a cor do produto.' : 'Escreva o nome da cor.', `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
-    if (colorPending) return failField('cor', colorPendingMsg, `prod-cor-${rows[0]?.fabric ?? FABRICS[0]}`);
+    if (rows.length === 0 || colorUnchosen) return failField('cor', rows.length === 0 ? 'Escolha a cor do produto.' : 'Escreva o nome da cor.', colorFieldId(rows[0]?.fabric ?? FABRICS[0]));
+    if (colorPending) return failField('cor', colorPendingMsg, colorFieldId(rows[0]?.fabric ?? FABRICS[0]));
 
     // A confirmação vem antes de qualquer upload ou exclusão: cancelar aqui
     // não pode deixar nada pela metade.
@@ -889,9 +892,9 @@ export default function ProductForm({ initial }: Props) {
                 id="prod-fotos"
                 type="button"
                 onClick={() => setShowCamera(true)}
-                className={`border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/80 hover:border-clay hover:text-clay transition-colors rounded-xl ${images.length === 0 ? 'w-full h-32 bg-clay/[0.04]' : 'h-20 w-20'}`}
+                className={`border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay-d hover:border-clay transition-colors rounded-xl ${images.length === 0 ? 'w-full h-32 bg-clay/[0.04]' : 'h-20 w-20'}`}
               >
-                <svg width={images.length === 0 ? 30 : 22} height={images.length === 0 ? 30 : 22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <svg aria-hidden="true" width={images.length === 0 ? 30 : 22} height={images.length === 0 ? 30 : 22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 <span className={images.length === 0 ? 'text-[15px] font-semibold' : 'text-[10px] font-medium'}>{images.length > 0 ? 'Mais fotos' : 'Tirar foto'}</span>
               </button>
             </div>
@@ -970,7 +973,7 @@ export default function ProductForm({ initial }: Props) {
                     onClick={() => { setName(currentNameSuggestion); setNameEditedManually(false); }}
                     className="flex items-center gap-1 text-[11px] text-clay hover:text-ink transition-colors font-medium"
                   >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>
                       <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>
                     </svg>
@@ -993,7 +996,7 @@ export default function ProductForm({ initial }: Props) {
                     title="Preenchido automaticamente"
                     aria-hidden="true"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
                       <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
                     </svg>
@@ -1054,7 +1057,7 @@ export default function ProductForm({ initial }: Props) {
               aria-expanded={moreOpen}
               className="self-start flex items-center gap-1.5 text-[12.5px] font-semibold text-clay hover:text-clay-d transition-colors"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${moreOpen ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${moreOpen ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
               <span className="text-left">
                 {moreOpen ? 'Menos campos' : 'Mais campos'}
                 {!moreOpen && <span className="block font-normal text-[11.5px] text-faint">Descrição, peso e palavras de busca</span>}
@@ -1094,7 +1097,7 @@ export default function ProductForm({ initial }: Props) {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label htmlFor="prod-peso" className="label mb-0">
-                  Peso de uma peça (kg) <span className="text-red-500">*</span>
+                  Peso de uma peça (kg) <span className="text-red-700">*</span>
                 </label>
                 <button
                   type="button"
@@ -1120,7 +1123,7 @@ export default function ProductForm({ initial }: Props) {
                     title="Preenchido a partir do padrão desse tamanho"
                     aria-hidden="true"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M9.5 3 11 6.5 14.5 8 11 9.5 9.5 13 8 9.5 4.5 8 8 6.5 9.5 3Z"/>
                       <path d="M18.5 13 19.5 15.5 22 16.5 19.5 17.5 18.5 20 17.5 17.5 15 16.5 17.5 15.5 18.5 13Z"/>
                     </svg>
@@ -1162,16 +1165,16 @@ export default function ProductForm({ initial }: Props) {
                       className="text-red-400 hover:text-red-600 transition-colors w-9 h-9 flex items-center justify-center shrink-0 -mr-1.5"
                       aria-label={`Remover ${r.fabric}`}
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                   </div>
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
                     <div>
-                      <label htmlFor={`prod-cor-${r.fabric}`} className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Nome da cor</label>
+                      <label htmlFor={colorFieldId(r.fabric)} className="text-[10px] text-faint mb-1 block font-semibold tracking-[0.1em] uppercase">Nome da cor</label>
                       <ColorNameField
-                        id={`prod-cor-${r.fabric}`}
+                        id={colorFieldId(r.fabric)}
                         value={r.color}
                         colorName={r.colorName}
                         check={colorChecks[rows.indexOf(r)] ?? { state: 'ok' }}
@@ -1314,7 +1317,7 @@ export default function ProductForm({ initial }: Props) {
             onClick={() => setDuplicateModalOpen(true)}
             className="mb-5 w-full border border-dashed border-mist hover:border-clay/50 hover:bg-clay/5 transition-colors px-4 py-2.5 flex items-center justify-center gap-2 text-[12px] font-semibold text-mid hover:text-clay rounded-xl"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             Começar a partir de um produto parecido
           </button>
         )}
@@ -1358,7 +1361,7 @@ export default function ProductForm({ initial }: Props) {
           {/* ── Aviso: variações removidas que ainda têm estoque ── */}
           {isEdit && orphanedWithStock.length > 0 && (
             <div className="border border-amber-300 bg-amber-50 px-4 py-3 -mt-2 flex items-start gap-2.5 rounded-[4px]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600 shrink-0 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600 shrink-0 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <p className="text-[12px] text-amber-800 leading-relaxed">
                 {orphanedWithStock.length === 1
                   ? 'Uma variação removida ainda tem estoque cadastrado.'
@@ -1430,7 +1433,7 @@ export default function ProductForm({ initial }: Props) {
           não há navegação de página que sirva de confirmação nesse caso */}
       {successToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-ink text-paper px-4 py-2.5 rounded-full text-[13px] font-medium shadow-lg flex items-center gap-2 transition-opacity duration-200">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
           {successToast}
         </div>
       )}

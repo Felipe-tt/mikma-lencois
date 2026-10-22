@@ -347,7 +347,7 @@ export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaM
           onClick={() => { setFollowed(true); fit(true); }}
           className="absolute left-3 bottom-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[12px] font-semibold text-[#111] shadow-[0_2px_10px_rgba(0,0,0,0.18)] hover:bg-[#F3F3F3] transition-colors"
         >
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
           Centralizar
         </button>
       )}

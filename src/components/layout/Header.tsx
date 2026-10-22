@@ -101,7 +101,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             className={`w-10 h-10 -ml-2.5 rounded-full flex items-center justify-center md:hidden active:scale-90 transition-[color,transform] duration-150 ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink'}`}
             onClick={() => setMenuOpen(true)} aria-label="Abrir menu" aria-haspopup="dialog" aria-expanded={menuOpen}
           >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M3 7h18M3 12h18M3 17h18"/>
             </svg>
           </button>
@@ -132,7 +132,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
           {/* Search inline */}
           <div inert={!searchOpen} className={`hidden items-center flex-1 min-w-0 mx-6 lg:mx-8 ${searchOpen ? 'md:flex animate-fade-in' : ''}`}>
             <form onSubmit={handleSearch} className="flex items-center gap-2.5 flex-1 h-10 px-4 rounded-full bg-warm/70 border border-transparent focus-within:border-mist-d focus-within:bg-paper transition-colors">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
               <input
@@ -147,9 +147,10 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               />
               {query && (
                 <button type="button" onClick={() => { setQuery(''); searchRef.current?.focus(); }} aria-label="Limpar busca" className="text-faint hover:text-ink transition-colors p-0.5">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
               )}
+              <button type="submit" className="sr-only">Buscar</button>
             </form>
           </div>
 
@@ -163,8 +164,8 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               onClick={onSearchButton} aria-label={searchOpen ? 'Fechar busca' : 'Buscar'} aria-expanded={searchOpen}
             >
               {searchOpen
-                ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                ? <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                : <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               }
             </button>
 
@@ -202,7 +203,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             {/* Favoritos */}
             {user && (
               <NavLink href="/favoritos" className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`} aria-label="Favoritos">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" />
                 </svg>
               </NavLink>
@@ -210,7 +211,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
             {/* Cart */}
             <NavLink href="/carrinho" className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDark ? 'text-paper/60 hover:text-paper' : 'text-mid hover:text-ink hover:bg-warm'}`} aria-label={count > 0 ? `Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}` : 'Carrinho'}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <path d="M16 10a4 4 0 01-8 0"/>
@@ -234,7 +235,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               <span className="text-[10px] font-medium text-mid shrink-0">
                 {freeShippingUnlocked
                   ? <span className="text-clay font-semibold flex items-center gap-1">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                       Frete grátis desbloqueado!
                     </span>
                   : <span>Faltam <strong className="text-ink">{formatCurrency(remaining)}</strong> para frete grátis</span>
@@ -264,7 +265,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                 <BrandLogo alt="Mikma Lençóis – início" className="h-9 w-auto object-contain" />
               </NavLink>
               <button type="button" className="btn-ghost w-10 h-10 !p-0" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
               </button>
@@ -273,12 +274,13 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
             {/* Search mobile */}
             <div className="px-4 py-3 border-b border-mist">
               <form onSubmit={handleSearch} className="flex items-center gap-2 px-4 h-11 rounded-full border border-mist-d bg-paper focus-within:border-ink transition-colors duration-150">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
+                <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
                 <input ref={mobileSearchRef} type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar…"
                   aria-label="Buscar produtos" enterKeyHint="search"
                   className="flex-1 min-w-0 bg-transparent text-[16px] text-ink placeholder:text-faint outline-none" />
+                <button type="submit" className="sr-only">Buscar</button>
               </form>
             </div>
 

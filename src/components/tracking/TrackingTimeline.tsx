@@ -17,7 +17,7 @@ interface Props {
 function StatusIcon({ status, active }: { status: string; active: boolean }) {
   const s = status.toLowerCase();
   const cls = `w-4 h-4 ${active ? 'stroke-white' : 'stroke-faint'}`;
-  const base = { fill: 'none' as const, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const base = { fill: 'none' as const, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
 
   if (s.includes('entregue') || s.includes('entrega efetuada'))
     return <svg viewBox="0 0 24 24" className={cls} {...base}><polyline points="20 6 9 17 4 12"/></svg>;
@@ -36,7 +36,7 @@ function StatusIcon({ status, active }: { status: string; active: boolean }) {
   if (s.includes('devolvido') || s.includes('devolução') || s.includes('cancelado'))
     return <svg viewBox="0 0 24 24" className={cls} {...base}><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>;
   // default dot
-  return <svg viewBox="0 0 24 24" className={cls} fill={active ? 'white' : '#B09C8C'}><circle cx="12" cy="12" r="4"/></svg>;
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className={cls} fill={active ? 'white' : '#B09C8C'}><circle cx="12" cy="12" r="4"/></svg>;
 }
 
 function statusColor(status: string, isFirst: boolean): string {
@@ -112,7 +112,7 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
             className="inline-flex items-center gap-2 text-[13px] font-semibold text-clay hover:text-clay-d transition-colors"
           >
             Rastrear{carrierName ? ` na ${carrierName}` : ''}
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </a>
         </div>
       );
@@ -137,7 +137,7 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
               className="text-[11px] font-semibold text-mid hover:text-ink transition-colors inline-flex items-center gap-1"
             >
               Ver no site
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </a>
           )}
           <button onClick={fetch_} className="text-[11px] font-semibold text-clay hover:text-clay-d transition-colors">

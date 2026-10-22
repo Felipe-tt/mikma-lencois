@@ -363,7 +363,7 @@ function ConversationThread({
           aria-label="Voltar para a lista de conversas"
           className="sm:hidden w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors shrink-0"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
@@ -447,7 +447,7 @@ function ConversationThread({
 
         <div className="p-3 flex flex-col gap-2">
           {error && (
-            <p className="text-[12px] text-red-500 font-medium flex items-center gap-1"><IconAlert size={11} />{error}</p>
+            <p className="text-[12px] text-red-700 font-medium flex items-center gap-1"><IconAlert size={11} />{error}</p>
           )}
 
           {/* Assunto (opcional, expansível) */}
@@ -585,7 +585,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2 border border-mist bg-white dark:bg-warm hover:bg-warm transition-colors text-[12px] text-mid font-medium rounded-xl"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
               </svg>
               {att.filename}

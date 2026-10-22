@@ -203,7 +203,7 @@ export default function ManutencaoPage() {
             className={`shrink-0 px-5 py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-50 rounded-xl ${
               status.active
                 ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-amber-500 text-white hover:bg-amber-600'
+                : 'bg-amber-700 text-white hover:bg-amber-800'
             }`}
           >
             {toggling ? '…' : status.active ? 'Reativar site' : 'Ativar manutenção'}

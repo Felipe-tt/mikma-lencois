@@ -254,7 +254,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         {/* Venda ou Reposição */}
         <div className="grid grid-cols-2 border border-mist p-1 bg-white dark:bg-warm rounded-xl">
           <button onClick={() => setMode('venda')}
-            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
+            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'venda' ? 'bg-red-600 text-white' : 'text-mid'}`}>
             <IconMinusCircle size={15} /> Vender
           </button>
           <button onClick={() => setMode('reposicao')}
@@ -272,7 +272,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <IconSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
-            <input type="search" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="search" aria-label="Buscar produto" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
               className="w-full border border-mist bg-white dark:bg-warm pl-8 pr-2 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
           </div>
           <div className="flex items-center shrink-0 border border-mist bg-white dark:bg-warm rounded-xl">
@@ -308,27 +308,28 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
               return (
                 <div key={item.id} className="flex flex-col gap-1">
                   <p className="text-[10px] font-semibold text-ink truncate px-0.5">{item.productName}</p>
-                  <button onClick={() => tap(item)}
+                  <button type="button" onClick={() => tap(item)}
                     className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-colors ${
                       delta < 0 ? 'border-red-500' : delta > 0 ? 'border-emerald-500' : 'border-mist'
                     }`}>
                     {image ? (
                       <img src={image} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-warm flex items-center justify-center">
+                      <span className="w-full h-full bg-warm flex items-center justify-center">
                         <IconBox size={26} className="text-[#D8CDBE]" />
-                      </div>
+                      </span>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-1.5 pt-4 pb-1.5 text-left">
-                      <p className="text-[9px] text-white/85 truncate leading-tight">{variantLabel(item)}</p>
-                      <p className="text-[10.5px] font-bold text-white leading-tight">{avail} em estoque</p>
-                    </div>
+                    {/* span e não div/p: dentro de <button> só cabe conteúdo de frase. */}
+                    <span className="absolute inset-x-0 bottom-0 block bg-gradient-to-t from-black/80 to-transparent px-1.5 pt-4 pb-1.5 text-left">
+                      <span className="block text-[9px] text-white/85 truncate leading-tight">{variantLabel(item)}</span>
+                      <span className="block text-[10.5px] font-bold text-white leading-tight">{avail} em estoque</span>
+                    </span>
                     {delta !== 0 && (
                       <>
-                        <span className={`absolute top-1 right-1 h-5 w-5 rounded-full flex items-center justify-center text-white text-[12px] font-bold leading-none ${delta < 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                        <span className={`absolute top-1 right-1 h-5 w-5 rounded-full flex items-center justify-center text-white text-[12px] font-bold leading-none ${delta < 0 ? 'bg-red-600' : 'bg-emerald-500'}`}>
                           {delta < 0 ? '×' : '✓'}
                         </span>
-                        <span className={`absolute top-1 left-1 h-5 min-w-5 px-1 rounded-full flex items-center justify-center text-white text-[11px] font-bold leading-none ${delta < 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                        <span className={`absolute top-1 left-1 h-5 min-w-5 px-1 rounded-full flex items-center justify-center text-white text-[11px] font-bold leading-none ${delta < 0 ? 'bg-red-600' : 'bg-emerald-500'}`}>
                           {delta < 0 ? `−${Math.abs(delta)}` : `+${delta}`}
                         </span>
                       </>

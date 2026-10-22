@@ -260,7 +260,7 @@ export default function CartPage() {
   if (items.length === 0) return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-6 text-center">
       <div className="w-16 h-16 border border-mist rounded-full flex items-center justify-center mb-6">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-faint">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-faint">
           <path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
           <path d="M16 10a4 4 0 01-8 0"/>
         </svg>
@@ -292,7 +292,7 @@ export default function CartPage() {
               <span className={`text-xs font-semibold ${freeShip ? 'text-ink' : 'text-mid'}`}>
                 {freeShip
                   ? <span className="flex items-center gap-1">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-clay"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-clay"><polyline points="20 6 9 17 4 12"/></svg>
                       Frete grátis desbloqueado para este pedido
                     </span>
                   : <><strong className="text-ink">{formatCurrency(remaining)}</strong> para frete grátis</>
@@ -327,19 +327,19 @@ export default function CartPage() {
                     <div className="flex items-center rounded-full border border-mist overflow-hidden">
                     <button
                       onClick={() => updateQty(item.sku, item.quantity - 1, item.note)}
-                      className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
+                      className="w-11 h-11 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
                       aria-label="Diminuir"
                     >
-                      <svg width="12" height="2" viewBox="0 0 12 2" fill="currentColor"><rect width="12" height="2" rx="1"/></svg>
+                      <svg aria-hidden="true" width="12" height="2" viewBox="0 0 12 2" fill="currentColor"><rect width="12" height="2" rx="1"/></svg>
                     </button>
                     <span className="w-9 text-center text-sm font-semibold text-ink tabular-nums">{item.quantity}</span>
                     <button
                       onClick={() => { const avail = stockMap[item.sku] ?? 99; if (item.quantity < avail) updateQty(item.sku, item.quantity + 1, item.note); }}
                       disabled={(stockMap[item.sku] ?? 99) <= item.quantity}
-                      className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="w-11 h-11 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       aria-label="Aumentar"
                     >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 0a1 1 0 011 1v4h4a1 1 0 110 2H7v4a1 1 0 11-2 0V7H1a1 1 0 010-2h4V1a1 1 0 011-1z"/></svg>
+                      <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 0a1 1 0 011 1v4h4a1 1 0 110 2H7v4a1 1 0 11-2 0V7H1a1 1 0 010-2h4V1a1 1 0 011-1z"/></svg>
                     </button>
                   </div>
                 );
@@ -348,10 +348,11 @@ export default function CartPage() {
                   key={lineKey}
                   className={`relative flex gap-4 sm:gap-5 py-6 transition-opacity ${removing === lineKey ? 'opacity-40 pointer-events-none' : ''}`}
                 >
-                  {/* Imagem */}
-                  <Link href={`/produtos/${item.productId}`} className="relative shrink-0 w-20 h-24 sm:w-24 sm:h-28 rounded-xl bg-warm overflow-hidden border border-mist/60 block">
+                  {/* Imagem. Mesmo destino do nome ao lado: fora do Tab e do
+                      leitor de tela, senão cada item era anunciado duas vezes. */}
+                  <Link href={`/produtos/${item.productId}`} tabIndex={-1} aria-hidden="true" className="relative shrink-0 w-20 h-24 sm:w-24 sm:h-28 rounded-xl bg-warm overflow-hidden border border-mist/60 block">
                     {item.image
-                      ? <Image src={item.image} alt={item.productName} fill sizes="96px" className="object-cover hover:scale-105 transition-transform duration-300" />
+                      ? <Image src={item.image} alt="" fill sizes="96px" className="object-cover hover:scale-105 transition-transform duration-300" />
                       : <div className="h-full flex items-center justify-center"><span className="font-display text-2xl text-faint/30">M</span></div>
                     }
                   </Link>
@@ -435,7 +436,7 @@ export default function CartPage() {
                   onClick={() => setCouponOpen(true)}
                   className="flex items-center gap-2 text-xs text-mid hover:text-clay transition-colors font-medium py-3 -my-3 pr-3 rounded-full"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                     <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
                     <circle cx="7" cy="7" r="1" fill="currentColor" stroke="none"/>
                   </svg>
@@ -444,7 +445,7 @@ export default function CartPage() {
               ) : couponApplied ? (
                 <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-2xl">
                   <div className="flex items-center gap-2.5">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-700 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-700 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                     <div>
                       <span className="text-xs font-bold tracking-[0.1em] text-emerald-800">{couponApplied.code}</span>
                       <span className="text-xs text-emerald-700 ml-2">{formatCurrency(couponApplied.discount)} de desconto</span>
@@ -472,7 +473,7 @@ export default function CartPage() {
                       {couponLoading ? <span className="spinner-sm" /> : 'Aplicar'}
                     </button>
                     <button type="button" aria-label="Fechar cupom" onClick={() => { setCouponOpen(false); setCouponError(''); }} className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm transition-colors">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                   </div>
                   {couponError && <p role="alert" className="text-xs text-red-600">{couponError}</p>}
@@ -530,7 +531,7 @@ export default function CartPage() {
                     className="flex items-center justify-center w-full h-14 rounded-full bg-ink text-paper text-sm font-semibold tracking-[0.05em] hover:bg-clay transition-colors duration-200 active:scale-[0.99]"
                   >
                     Finalizar compra
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-2 opacity-60">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-2 opacity-60">
                       <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
                   </Link>
@@ -544,14 +545,14 @@ export default function CartPage() {
                 'Troca em até 7 dias após o recebimento',
               ].map((text) => (
                 <div key={text} className="flex items-center gap-2.5 text-xs text-faint">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-mid"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/></svg>
+                  <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-mid"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/></svg>
                   <span>{text}</span>
                 </div>
               ))}
             </div>
 
             <div className="mt-5 text-center">
-              <Link href="/produtos" className="text-xs text-faint hover:text-clay transition-colors">
+              <Link href="/produtos" className="inline-block py-3 -my-3 text-xs text-faint hover:text-clay transition-colors">
                 Continuar comprando
               </Link>
             </div>

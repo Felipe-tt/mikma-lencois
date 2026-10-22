@@ -43,18 +43,18 @@ function estimatedDate(days: number): string {
 function CarrierIcon({ carrier }: { carrier: string }) {
   const cls = 'w-4 h-4 shrink-0';
   if (carrier === 'pickup') return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
   );
   if (carrier === 'uber_direct') return (
     /* moto / scooter icon */
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={cls}><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M8 17.5h7M15 17.5V9l3 2 2-2"/><path d="M6 9l3-4h5l2 4"/><path d="M6 9h9"/></svg>
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={cls}><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M8 17.5h7M15 17.5V9l3 2 2-2"/><path d="M6 9l3-4h5l2 4"/><path d="M6 9h9"/></svg>
   );
   if (carrier.startsWith('jadlog')) return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
   );
   // correios_pac, correios_sedex, outros
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={cls}><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
   );
 }
 
@@ -76,7 +76,7 @@ function Err({ msg, id }: { msg?: string; id?: string }) {
   if (!msg) return null;
   return (
     <p id={id} className="mt-1 flex items-center gap-1.5 text-[11px] text-red-600 font-medium">
-      <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+      <svg aria-hidden="true" width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
       {msg}
     </p>
   );
@@ -120,7 +120,7 @@ function Input({
         } disabled:bg-paper disabled:text-faint`}
       />
       {valid && (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       )}
@@ -150,7 +150,7 @@ function Section({
                           'border-2 border-mist text-faint'
         }`}>
           {done && !open
-            ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            ? <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
             : num
           }
         </span>
@@ -724,8 +724,9 @@ export default function CheckoutPage() {
               rótulo não cabem e só sobravam barras soltas. */}
           <div className="sm:hidden flex items-center justify-between gap-4 w-full">
             <span key={step} className="text-[13px] font-semibold text-ink animate-fade-in">{STEP_LABELS[step - 1]}</span>
-            <span className="flex items-center gap-2.5 shrink-0" aria-label={`Etapa ${step} de 3`}>
-              <span className="font-mono text-[11px] text-faint tabular-nums">{step}/3</span>
+            <span className="flex items-center gap-2.5 shrink-0">
+              <span className="sr-only">Etapa {step} de 3</span>
+              <span className="font-mono text-[11px] text-faint tabular-nums" aria-hidden="true">{step}/3</span>
               <span className="flex gap-1" aria-hidden="true">
                 {[1, 2, 3].map(n => (
                   <span key={n} className={`h-1 w-6 rounded-full transition-colors duration-300 ${n <= step ? 'bg-ink' : 'bg-mist'}`} />
@@ -771,7 +772,7 @@ export default function CheckoutPage() {
 
             {apiError && (
               <div ref={apiErrorRef} role="alert" className="scroll-mt-20 flex items-start gap-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3.5 text-sm rounded-2xl">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 mt-px text-red-500"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 mt-px text-red-500"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
                 {apiError}
               </div>
             )}
@@ -995,7 +996,7 @@ export default function CheckoutPage() {
                         {payMethod === 'pix' && <span className="w-2.5 h-2.5 rounded-full bg-ink" />}
                       </span>
                       <div className="w-8 h-8 rounded-full bg-[#32BCAD]/10 flex items-center justify-center shrink-0">
-                        <svg viewBox="0 0 512 512" className="w-5 h-5 fill-[#32BCAD]">
+                        <svg aria-hidden="true" viewBox="0 0 512 512" className="w-5 h-5 fill-[#32BCAD]">
                           <path d="M242.4 292.5C247.8 287.1 257.1 287.1 262.5 292.5L339.5 369.5C353.7 383.7 372.6 391.5 392.6 391.5H407.7L310.6 488.6C280.3 518.1 231.1 518.1 200.8 488.6L103.3 391.2H112.6C132.6 391.2 151.5 383.4 165.7 369.2L242.4 292.5zM262.5 218.9C256.1 224.4 247.9 224.5 242.4 218.9L165.7 142.2C151.5 127.1 132.6 120.2 112.6 120.2H103.3L200.7 22.76C231.1-7.586 280.3-7.586 310.6 22.76L407.8 119.9H392.6C372.6 119.9 353.7 127.7 339.5 141.9L262.5 218.9zM112.6 142.7C126.4 142.7 139.1 148.3 149.7 158.1L226.4 234.8C233.6 241.1 243 245.6 252.5 245.6C261.9 245.6 271.3 241.1 278.5 234.8L355.5 157.8C365.3 148.1 378.8 142.5 392.6 142.5H430.3L488.6 200.8C518.9 231.1 518.9 280.3 488.6 310.6L430.3 368.9H392.6C378.8 368.9 365.3 363.3 355.5 353.5L278.5 276.5C264.6 262.6 240.3 262.6 226.4 276.6L149.7 353.2C139.1 363 126.4 368.6 112.6 368.6H80.78L22.76 310.6C-7.586 280.3-7.586 231.1 22.76 200.8L80.78 142.7H112.6z"/>
                         </svg>
                       </div>
@@ -1026,7 +1027,7 @@ export default function CheckoutPage() {
                             {payMethod === 'credit' && <span className="w-2.5 h-2.5 rounded-full bg-ink" />}
                           </span>
                           <div className="w-8 h-8 rounded-full bg-mist flex items-center justify-center shrink-0">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#705A48" strokeWidth="1.8" strokeLinecap="round">
+                            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#705A48" strokeWidth="1.8" strokeLinecap="round">
                               <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
                             </svg>
                           </div>
@@ -1088,7 +1089,7 @@ export default function CheckoutPage() {
                               onUnavailable={() => setCardKey(null)}
                             />
                             <p className="mt-2 flex items-center gap-1.5 text-[11px] text-faint">
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                              <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                               Pagamento processado pela AbacatePay. Os dados do cartão não passam pela Mikma.
                             </p>
                           </div>
@@ -1167,11 +1168,11 @@ export default function CheckoutPage() {
                           ? 'Preencha os dados do cartão'
                           : payMethod === 'credit'
                           ? <>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-80"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-80"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                               Pagar {formatCurrency(total)} com cartão
                             </>
                           : <>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-80"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-80"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                               Pagar {formatCurrency(total)} com PIX
                             </>
                         : 'Selecione a entrega para continuar'
@@ -1218,11 +1219,11 @@ export default function CheckoutPage() {
               {/* Info objetiva, prazo e política */}
               <div className="px-5 pb-5 border-t border-mist pt-4 flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-[11px] text-faint">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                   Troca e devolução em até 7 dias
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-faint">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                   PIX confirmado em segundos
                 </div>
               </div>
@@ -1241,7 +1242,7 @@ function Crumb({ state, label }: { state: 'done' | 'active' | 'pending'; label: 
   return (
     <span aria-current={state === 'active' ? 'step' : undefined} className={`flex items-center gap-1.5 shrink-0 transition-opacity duration-200 ${state === 'pending' ? 'opacity-40' : ''}`}>
       {state === 'done' && (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-emerald-700">
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-emerald-700">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       )}

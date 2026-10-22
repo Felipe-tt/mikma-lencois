@@ -109,14 +109,14 @@ export function Footer({
           {/* Col 2, Loja */}
           <div>
             <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Loja</p>
-            <ul className="flex flex-col gap-3.5">
+            <ul className="flex flex-col gap-0.5 -my-1.5">
               {[
                 { href: '/produtos', label: 'Produtos' },
                 { href: '/guia-de-tamanhos', label: 'Guia de tamanhos' },
                 { href: '/sobre', label: 'Sobre nós' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
+                  <Link href={href} className="inline-block py-1.5 text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
@@ -127,13 +127,13 @@ export function Footer({
           {/* Col 3, Conta */}
           <div>
             <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Conta</p>
-            <ul className="flex flex-col gap-3.5">
+            <ul className="flex flex-col gap-0.5 -my-1.5">
               {[
                 { href: '/conta/pedidos', label: 'Meus pedidos' },
                 { href: '/conta', label: 'Minha conta' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
+                  <Link href={href} className="inline-block py-1.5 text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
@@ -144,7 +144,7 @@ export function Footer({
           {/* Col 4, Ajuda (legal) */}
           <div>
             <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Ajuda</p>
-            <ul className="flex flex-col gap-3.5">
+            <ul className="flex flex-col gap-0.5 -my-1.5">
               {[
                 { href: '/trocas-e-devolucoes', label: 'Trocas e devoluções' },
                 { href: '/privacidade', label: 'Privacidade' },
@@ -152,18 +152,18 @@ export function Footer({
                 { href: '/politica-de-cookies', label: 'Política de cookies' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
+                  <Link href={href} className="inline-block py-1.5 text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
                     {label}
                   </Link>
                 </li>
               ))}
               <li>
-                <CookiePreferencesButton className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150" />
+                <CookiePreferencesButton className="inline-block py-1.5 text-[13px] text-paper/70 hover:text-paper transition-colors duration-150" />
               </li>
               {reclameAquiUrl && (
                 <li>
                   <a href={reclameAquiUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
+                    className="inline-block py-1.5 text-[13px] text-paper/70 hover:text-paper transition-colors duration-150">
                     ReclameAqui
                   </a>
                 </li>

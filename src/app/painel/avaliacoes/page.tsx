@@ -79,7 +79,7 @@ export default function AvaliacoesPage() {
             <li key={r.id} className="px-5 py-4 flex items-start gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="text-amber-500 text-[13px] tracking-[0.1em]" aria-label={`${r.rating} de 5 estrelas`}>
+                  <span role="img" className="text-amber-500 text-[13px] tracking-[0.1em]" aria-label={`${r.rating} de 5 estrelas`}>
                     {'★'.repeat(r.rating)}<span className="text-mist">{'★'.repeat(5 - r.rating)}</span>
                   </span>
                   <span className="text-[12px] font-semibold text-ink">{r.userName}</span>
@@ -96,7 +96,7 @@ export default function AvaliacoesPage() {
                 type="button"
                 onClick={() => remove(r)}
                 disabled={busyId === r.id}
-                className="shrink-0 min-h-9 px-3 text-[12px] font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 active:scale-[0.97] transition-[background-color,color,transform] duration-150 disabled:opacity-50 rounded-lg"
+                className="shrink-0 min-h-9 px-3 text-[12px] font-semibold text-red-700 hover:text-red-700 hover:bg-red-50 active:scale-[0.97] transition-[background-color,color,transform] duration-150 disabled:opacity-50 rounded-lg"
               >
                 {busyId === r.id ? 'Apagando…' : 'Apagar'}
               </button>

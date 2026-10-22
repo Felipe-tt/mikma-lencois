@@ -30,7 +30,7 @@ export default async function ManutencaoPage() {
     <>
       <MaintenanceAdminRedirect />
       <MaintenancePoll />
-      <style>{`
+      <style href="manutencao" precedence="default">{`
         .mnt-page {
           min-height: 100vh;
           width: 100%;
@@ -153,7 +153,7 @@ export default async function ManutencaoPage() {
           font-weight: 400;
           letter-spacing: 0.25em;
           text-transform: uppercase;
-          color: rgba(255,255,255,0.25);
+          color: rgba(255,255,255,0.6);
           text-align: right;
           white-space: nowrap;
         }
@@ -240,7 +240,7 @@ export default async function ManutencaoPage() {
                       rel="noopener noreferrer"
                       className="mnt-contact-link"
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="2" y="2" width="20" height="20" rx="5" />
                         <circle cx="12" cy="12" r="4" />
                         <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
@@ -255,7 +255,7 @@ export default async function ManutencaoPage() {
                       rel="noopener noreferrer"
                       className="mnt-contact-link"
                     >
-                      <svg viewBox="0 0 24 24" fill="currentColor">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.45 1.33 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.5 0 9.96-4.46 9.96-9.96S17.54 2 12.04 2zm5.83 14.14c-.24.68-1.38 1.3-1.9 1.34-.5.05-1.03.24-3.45-.76-2.92-1.21-4.8-4.17-4.94-4.36-.14-.19-1.17-1.56-1.17-2.98 0-1.41.74-2.1 1-2.4.27-.29.58-.36.78-.36.19 0 .39.002.56.01.18.008.42-.07.65.5.24.6.82 2.06.9 2.2.07.15.12.32.02.51-.1.19-.15.31-.3.48-.15.17-.31.38-.44.51-.15.15-.3.31-.13.6.17.29.75 1.24 1.62 2.01 1.11 1 2.05 1.3 2.34 1.45.29.14.46.12.63-.07.17-.19.72-.84.92-1.13.19-.29.38-.24.63-.14.26.09 1.65.78 1.93.92.29.14.48.22.55.34.07.13.07.72-.17 1.4z" />
                       </svg>
                       WhatsApp

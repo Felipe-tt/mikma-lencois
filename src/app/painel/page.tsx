@@ -179,7 +179,7 @@ export default function PainelDashboard() {
                   <span className="block text-[13px] font-bold">
                     {waiting} {waiting === 1 ? 'pedido aguardando pagamento' : 'pedidos aguardando pagamento'}
                   </span>
-                  <span className="block text-[11px] opacity-70">Normal levar alguns minutos até o PIX cair</span>
+                  <span className="block text-[11px]">Normal levar alguns minutos até o PIX cair</span>
                 </span>
               </span>
               <IconArrowRight size={16} className="shrink-0 opacity-50 group-hover:opacity-90 transition-opacity" />

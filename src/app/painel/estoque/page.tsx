@@ -468,7 +468,7 @@ export default function EstoquePage() {
       {items.length > 0 && (
         <div className="flex items-center gap-3 mb-4">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <svg aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
             <input type="search" placeholder="Buscar produto..." aria-label="Buscar produto" value={search} onChange={e => setSearch(e.target.value)}
               className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40 rounded-xl" />
           </div>
@@ -485,7 +485,7 @@ export default function EstoquePage() {
         <div className="border border-mist bg-paper py-16 text-center rounded-xl">
           <IconBox size={40} className="text-mist mx-auto mb-3" />
           <p className="text-sm text-faint">{search ? 'Nenhum resultado.' : 'Nenhum produto no estoque ainda.'}</p>
-          {!search && <Link href="/painel/produtos/novo" className="mt-3 inline-block text-[12px] text-clay-l font-semibold">Adicionar produto</Link>}
+          {!search && <Link href="/painel/produtos/novo" className="mt-3 inline-block text-[12px] text-clay font-semibold">Adicionar produto</Link>}
         </div>
       ) : mode === 'contagem' ? (
         <div className="border border-mist bg-paper rounded-xl">
@@ -552,7 +552,7 @@ export default function EstoquePage() {
                     <p className={`text-xl font-bold ${low ? 'text-amber-600' : 'text-ink'}`}>{avail}</p>
                     <p className="text-[9px] text-faint mt-0.5">disponível</p>
                   </div>
-                  <svg className={`shrink-0 text-faint transition-transform ${expanded ? 'rotate-180' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                  <svg aria-hidden="true" className={`shrink-0 text-faint transition-transform ${expanded ? 'rotate-180' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                 </button>
 
                 {/* Ações rápidas -- 1 toque cobre o caso mais comum (vender/repor 1 unidade) */}
@@ -634,7 +634,7 @@ export default function EstoquePage() {
                               {timeAgo(m.date)}
                               {i === 0 && m.type !== 'adjust' && !m.source && (
                                 <button onClick={() => undoLast(item)} disabled={busy}
-                                  className="text-red-500 underline disabled:opacity-50">
+                                  className="text-red-700 underline disabled:opacity-50">
                                   Desfazer
                                 </button>
                               )}

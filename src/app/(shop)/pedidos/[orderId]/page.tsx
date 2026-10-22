@@ -32,7 +32,7 @@ import { PIXModal } from '@/components/checkout/PIXModal';
 // SVG ícones para cada step do progresso (sem emojis)
 function StepIcon({ status, active }: { status: OrderStatus; active: boolean }) {
   const cls = `w-4 h-4 ${active ? 'stroke-clay-l' : 'stroke-faint-l'}`;
-  const base = { fill: 'none' as const, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const base = { fill: 'none' as const, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
   if (status === 'pending_payment')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
   if (status === 'paid')
@@ -50,7 +50,7 @@ function StepIcon({ status, active }: { status: OrderStatus; active: boolean }) 
 // badge (mesmo padrão da timeline do painel, ver TIMELINE_ICON_COMP em
 // /painel/pedidos/[id]/page.tsx).
 function TimelineIcon({ status }: { status: string }) {
-  const base = { fill: 'none' as const, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const base = { fill: 'none' as const, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
   const cls = 'w-4 h-4';
   if (status === 'created')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>;
@@ -70,7 +70,7 @@ function TimelineIcon({ status }: { status: string }) {
     return <svg viewBox="0 0 24 24" className={cls} {...base}><polyline points="20 6 9 17 4 12"/></svg>;
   if (status === 'cancelled')
     return <svg viewBox="0 0 24 24" className={cls} {...base}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-  return <svg viewBox="0 0 24 24" className={cls} fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>;
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className={cls} fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>;
 }
 
 // Mesma paleta usada na timeline do painel (TIMELINE_TONE em
@@ -428,7 +428,7 @@ export default function OrderDetailPage() {
                         : 'bg-white dark:bg-warm border-mist text-faint'
                   }`}>
                     {i < currentStep || (i === currentStep && order.status === 'delivered')
-                      ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      ? <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                       : <StepIcon status={step.status} active={i === currentStep} />
                     }
                   </div>
@@ -609,7 +609,7 @@ export default function OrderDetailPage() {
           </div>
 
           {/* ── Sidebar ───────────────────────────────────────────── */}
-          <aside className="flex flex-col gap-4">
+          <aside aria-label="Resumo do pedido" className="flex flex-col gap-4">
             {/* Ajuda com o pedido: avaliar, trocar, falar com a loja */}
             {['paid', 'preparing', 'shipped', 'delivered'].includes(order.status) && (() => {
               const shortId = order.id.slice(-8).toUpperCase();
@@ -668,7 +668,7 @@ export default function OrderDetailPage() {
                         rel="noopener noreferrer"
                         className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-clay hover:text-clay-d min-h-10 transition-colors"                      >
                         Rastrear
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                       </a>
                     )}
                   </div>

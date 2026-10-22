@@ -228,7 +228,7 @@ export default function CuponsPage() {
                   Usado <strong>{c.usedCount ?? 0}</strong>{c.maxUses ? <> de <strong>{c.maxUses}</strong></> : null} {(c.usedCount ?? 0) === 1 && !c.maxUses ? 'vez' : 'vezes'}{!c.maxUses && ' · sem limite'}
                   {c.expiresAt && ` · Válido até ${new Date(c.expiresAt.length === 10 ? `${c.expiresAt}T12:00:00` : c.expiresAt).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`}
                 </span>
-                <button onClick={() => remove(c.id)} className="inline-flex items-center min-h-10 px-2 -mr-2 text-red-600 hover:text-red-700 font-semibold transition-colors">Apagar</button>
+                <button onClick={() => remove(c.id)} className="inline-flex items-center min-h-10 px-2 -mr-2 text-red-700 hover:text-red-800 font-semibold transition-colors">Apagar</button>
               </div>
             </div>
           ))}

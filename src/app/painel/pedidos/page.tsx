@@ -299,7 +299,7 @@ export default function PainelPedidos() {
       {/* Alerta de ação necessária */}
       {needActionCount > 0 && (
         <div className="bg-clay-l/10 border border-clay-l/30 px-4 py-3.5 mb-5 flex items-center gap-3 rounded-xl">
-          <IconAlert size={18} className="shrink-0 text-clay-l" />
+          <IconAlert size={18} className="shrink-0 text-clay" />
           <p className="text-[13px] text-ink flex-1">
             <strong>{needActionCount} pedido{needActionCount > 1 ? 's' : ''} pago{needActionCount > 1 ? 's' : ''}</strong> esperando você separar.
           </p>
@@ -323,7 +323,7 @@ export default function PainelPedidos() {
                 className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border transition-colors ${ filter === f.id ? 'bg-ink text-paper border-ink' : 'bg-paper text-mid border-mist hover:bg-warm' } rounded-full`}>
                 {f.Icon && <f.Icon size={11} className="shrink-0" />}
                 {f.label}
-                {count !== null && <span className={`text-[9px] font-bold ${filter === f.id ? 'opacity-40' : 'opacity-50'}`}>{count}</span>}
+                {count !== null && <span className="text-[9px] font-bold">{count}</span>}
               </button>
             );
           })}
@@ -331,7 +331,7 @@ export default function PainelPedidos() {
 
         {/* Busca */}
         <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
           </svg>
           <input
@@ -339,6 +339,7 @@ export default function PainelPedidos() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nome, e-mail ou ID do pedido…"
+            aria-label="Buscar pedidos"
             className="w-full pl-9 pr-4 py-2.5 text-sm border border-mist bg-white dark:bg-warm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
           />
         </div>
@@ -406,7 +407,7 @@ export default function PainelPedidos() {
             {/* CTA pago */}
             {order.status === 'paid' && (
               <div className="mt-3 flex items-center gap-3 p-3 bg-clay-l/5 border border-clay-l/20 rounded-xl">
-                <IconArrowRight size={16} className="shrink-0 text-clay-l" />
+                <IconArrowRight size={16} className="shrink-0 text-clay" />
                 <div className="flex-1">
                   <p className="text-[12px] font-semibold text-ink">Pagamento confirmado, separe o pedido!</p>
                   <p className="text-[11px] text-faint">Clique quando começar a preparar.</p>

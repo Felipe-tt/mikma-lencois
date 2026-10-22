@@ -141,7 +141,7 @@ export function SobrePreview({ s }: { s: StoreSettings }) {
 
             <div className="flex items-center justify-between px-4 py-3 bg-ink text-paper">
               <span className="text-[12px] font-semibold">{whatsappLabel}</span>
-              <svg className="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </div>

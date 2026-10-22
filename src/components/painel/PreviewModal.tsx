@@ -19,12 +19,12 @@ const VIEWPORTS: { id: Viewport; label: string; icon: React.ReactNode }[] = [
   {
     id: 'desktop',
     label: 'Desktop',
-    icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>,
+    icon: <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>,
   },
   {
     id: 'mobile',
     label: 'Mobile',
-    icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>,
+    icon: <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>,
   },
 ];
 
@@ -90,7 +90,7 @@ export function PreviewModal({ open, onClose, title, routeLabel, children }: Pro
               className="w-8 h-8 flex items-center justify-center text-paper/60 hover:text-paper hover:bg-paper/10 active:scale-90 rounded-lg transition-[color,background-color,transform] duration-150"
               aria-label="Fechar pré-visualização"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>
         </div>
@@ -124,9 +124,9 @@ export function PreviewButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 text-[11px] font-semibold text-clay-l hover:text-ink transition-colors shrink-0"
+      className="flex items-center gap-1.5 text-[11px] font-semibold text-clay hover:text-ink transition-colors shrink-0"
     >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
         <circle cx="12" cy="12" r="3" />
       </svg>

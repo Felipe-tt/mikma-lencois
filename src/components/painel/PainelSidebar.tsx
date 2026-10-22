@@ -45,7 +45,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
   }, []);
 
   return (
-    <aside className="w-64 shrink-0 flex flex-col bg-paper h-full border-r border-mist/70">
+    <aside aria-label="Menu do painel" className="w-64 shrink-0 flex flex-col bg-paper h-full border-r border-mist/70">
       {/* Brand */}
       <div className="h-16 flex items-center justify-between px-4">
         {/* <a> normal (não <Link>) de propósito: sair do painel precisa de
@@ -63,7 +63,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
         <a href="/" className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 -ml-2 hover:bg-warm transition-colors">
           <BrandLogo alt="Mikma" className="h-7 w-auto object-contain" />
           <div className="w-px h-4 bg-mist" />
-          <span className="font-mono text-[9px] text-clay-l tracking-[0.22em] uppercase">Painel</span>
+          <span className="font-mono text-[9px] text-clay tracking-[0.22em] uppercase">Painel</span>
         </a>
         <NotificationBell />
       </div>
@@ -82,7 +82,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
                   className={`panel-nav-item ${active ? 'is-active' : ''}`}
                 >
                   <span className={`shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
-                    active ? 'bg-clay/15 text-clay-l' : 'text-mid'
+                    active ? 'bg-clay/15 text-clay' : 'text-mid'
                   }`}>
                     <Icon size={15} />
                   </span>
@@ -116,14 +116,14 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
           href="/"
           className="flex items-center gap-2 min-h-10 px-3 py-2 text-[12px] text-mid hover:text-ink hover:bg-warm transition-colors rounded-xl"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           Ver loja
         </a>
         <button
           onClick={logout}
           className="flex items-center gap-2 w-full px-3 py-2 text-[12px] text-mid hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors rounded-xl text-left"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Sair da conta
         </button>
       </div>

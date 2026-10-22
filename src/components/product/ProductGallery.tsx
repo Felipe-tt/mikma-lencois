@@ -182,26 +182,26 @@ export function ProductGallery({ images, name, tag, productId }: Props) {
             <>
               <button
                 type="button"
-                className="absolute z-[2] left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 lg:hidden"
+                className="absolute z-[2] left-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 lg:hidden"
                 onClick={prev}
                 aria-label="Foto anterior"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
               </button>
               <button
                 type="button"
-                className="absolute z-[2] right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 lg:hidden"
+                className="absolute z-[2] right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-paper/85 backdrop-blur-sm flex items-center justify-center text-ink/70 active:scale-90 transition-transform duration-150 lg:hidden"
                 onClick={next}
                 aria-label="Próxima foto"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
             </>
           )}
 
           {hasImages && (
             <div className="absolute bottom-3 right-3 flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:gap-1.5 bg-ink/70 backdrop-blur-sm sm:px-2.5 sm:py-1.5 rounded-full text-[10px] text-paper font-medium pointer-events-none">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
               <span className="hidden sm:inline">Ampliar</span>
             </div>
           )}

@@ -92,7 +92,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
         <div className="grid lg:grid-cols-[300px_1fr] gap-10 lg:gap-16 items-start">
           {/* Resumo: média grande, estrelas e distribuição. Antes era uma
               linha solta no canto e a lista ocupava a largura toda. */}
-          <aside className="bg-warm/50 border border-mist rounded-3xl p-6 sm:p-7">
+          <aside aria-label="Resumo das avaliações" className="bg-warm/50 border border-mist rounded-3xl p-6 sm:p-7">
             {count > 0 ? (
               <>
                 <div className="flex items-end gap-3">
@@ -153,7 +153,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
                       aria-pressed={rating === n}
                       className="p-0.5 active:scale-90 transition-transform duration-150"
                     >
-                      <svg width="26" height="26" viewBox="0 0 24 24"
+                      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24"
                         fill={(hoverRating || rating) >= n ? '#b45744' : 'none'}
                         stroke={(hoverRating || rating) >= n ? '#b45744' : 'currentColor'}
                         strokeWidth="1.5" className="text-mist-d transition-colors duration-150">

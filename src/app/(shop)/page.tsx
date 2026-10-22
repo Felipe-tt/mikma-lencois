@@ -69,6 +69,10 @@ export default async function HomePage() {
             alt=""
             fill
             priority
+            // É o maior elemento da primeira tela (o LCP do Google): sem isso
+            // o navegador baixava com prioridade baixa, junto das fotos dos
+            // produtos que ficam abaixo da dobra.
+            fetchPriority="high"
             sizes="100vw"
             className="object-cover object-center opacity-[0.22]"
             aria-hidden="true"
@@ -117,22 +121,22 @@ export default async function HomePage() {
                     <div className="flex items-center gap-2.5 min-w-0 sm:pr-10">
                       <span className="text-mid shrink-0">
                         {i === 0 && (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                           </svg>
                         )}
                         {i === 1 && (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
                           </svg>
                         )}
                         {i === 2 && (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
                           </svg>
                         )}
                         {i === 3 && (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                           </svg>
                         )}
@@ -161,7 +165,7 @@ export default async function HomePage() {
             {s.featuredTitle || 'Destaques'}
           </h2>
           <Link href="/produtos"
-            className="font-mono text-[11px] tracking-[0.14em] uppercase text-faint hover:text-ink transition-colors duration-150 border-b border-transparent hover:border-ink pb-px">
+            className="relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] font-mono text-[11px] tracking-[0.14em] uppercase text-faint hover:text-ink transition-colors duration-150 border-b border-transparent hover:border-ink pb-px">
             Ver todos
           </Link>
         </div>
