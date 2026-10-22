@@ -113,7 +113,7 @@ export function buildDelivered(order: OrderDoc, name: string): EmailPayload {
         ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Seu pedido chegou. Esperamos que você ame seus novos lençóis.`)}
         ${emailParagraph('Se algo não estiver certo, é só responder este e-mail que a gente resolve.', { muted: true })}
         ${emailItemsTable(order)}
-        ${emailParagraph('Sua avaliação ajuda outras pessoas a escolher e leva menos de um minuto.', { muted: true })}
+        <div style="padding-top:20px;">${emailParagraph('Sua avaliação ajuda outras pessoas a escolher e leva menos de um minuto.', { muted: true })}</div>
         ${emailCta('Avaliar minha compra', reviewUrl)}
         ${emailCta('Ver detalhes do pedido', url, { secondary: true })}`,
     })}
