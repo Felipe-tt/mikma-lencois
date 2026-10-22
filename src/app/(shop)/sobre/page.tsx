@@ -164,7 +164,7 @@ export default async function SobrePage() {
             <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-between rounded-full pl-7 pr-6 py-4 bg-ink text-paper hover:bg-clay transition-colors duration-200 group">
               <span className="text-[13px] font-semibold">{whatsappLabel}</span>
-              <svg className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </a>

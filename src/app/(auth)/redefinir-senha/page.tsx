@@ -47,10 +47,12 @@ function ResetForm() {
   const [checking, setChecking] = useState(true);
   const [linkInvalid, setLinkInvalid] = useState('');
 
-  // Se não veio com os params (acesso direto), redireciona
+  // Se não veio com os params (acesso direto), redireciona. Navegação
+  // completa: com router.replace logo na carga, a página de login ficava
+  // com dois <title> (o de "Redefinir senha" não saía do <head>).
   useEffect(() => {
-    if (!emailParam || !tokenParam) { router.replace('/entrar'); return; }
-  }, [emailParam, tokenParam, router]);
+    if (!emailParam || !tokenParam) window.location.replace('/entrar');
+  }, [emailParam, tokenParam]);
 
   // Valida o token assim que a página carrega, sem o usuário digitar nada,
   // o próprio clique no botão do e-mail já trouxe tudo que é necessário.
@@ -129,7 +131,7 @@ function ResetForm() {
   if (done) return (
     <div className="text-center py-10">
       <div className="w-20 h-20 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mx-auto mb-6">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-green-500">
+        <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-green-500">
           <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
       </div>
@@ -162,7 +164,7 @@ function ResetForm() {
               autoComplete="new-password" autoFocus />
             <button type="button" onClick={() => setShowPass(p => !p)} aria-label={showPass ? "Ocultar senha" : "Mostrar senha"} aria-pressed={showPass}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-mid p-1">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 {showPass
                   ? <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></>
                   : <><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}

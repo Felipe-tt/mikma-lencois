@@ -138,7 +138,7 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
             aria-label="Abrir menu"
             aria-expanded={open}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M3 6h18M3 12h18M3 18h18"/>
             </svg>
           </button>

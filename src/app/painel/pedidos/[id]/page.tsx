@@ -677,7 +677,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()} aria-label="Voltar" className="w-10 h-10 -ml-2 flex items-center justify-center rounded-xl text-faint hover:text-ink hover:bg-paper transition-colors">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
         </button>
@@ -1279,7 +1279,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         <details className="bg-paper border border-mist rounded-xl overflow-hidden">
           <summary className="flex items-center gap-2 px-5 py-3.5 cursor-pointer select-none bg-warm border-b border-mist">
             <IconMaintenance size={14} className="text-mid shrink-0" />
-            <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Informações técnicas</p>
+            <span className="text-[12px] font-bold text-ink tracking-wide uppercase">Informações técnicas</span>
           </summary>
           <div className="px-5 py-1">
             <Row label="ID do pedido" value={order.id} mono />

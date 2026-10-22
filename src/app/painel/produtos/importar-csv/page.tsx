@@ -507,7 +507,7 @@ export default function ImportarCsvPage() {
         </p>
 
         <div className="ml-[30px] mt-4 flex flex-col gap-3 max-w-sm">
-          <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={handleCsvUpload} className="hidden" />
+          <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={handleCsvUpload} className="hidden" aria-label="Arquivo CSV" />
           <button
             onClick={() => fileInputRef.current?.click()}
             className="btn-primary py-2.5 px-5 text-[11px] tracking-[0.08em] uppercase self-start"

@@ -127,7 +127,7 @@ export default function PedidosPage() {
           <OrdersListSkeleton />
         ) : orders.length === 0 ? (
           <EmptyState
-            icon={<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
+            icon={<svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
             title="Nenhum pedido ainda"
             description="Quando você fizer uma compra, ela vai aparecer aqui."
             actions={[{ label: 'Ver produtos', href: '/produtos' }]}
@@ -202,7 +202,7 @@ export default function PedidosPage() {
                 {order.delivery?.trackingCode && (
                   <div className="border-t border-mist px-5 sm:px-6 py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-[12px] text-mid min-w-0">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-faint"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8zM5.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM18.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
+                      <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-faint"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8zM5.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM18.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
                       {order.delivery.carrier && (
                         <span className="text-faint shrink-0">{carrierName(order.delivery.carrier)} ·</span>
                       )}

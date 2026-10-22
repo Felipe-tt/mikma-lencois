@@ -111,7 +111,7 @@ export function ColorPicker({ value, colorName, onChange, id }: Props) {
           aria-label="Abrir paleta de cores"
         >
           <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-white dark:bg-warm border border-mist flex items-center justify-center rounded-xl">
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-faint"><path d="M6 9l6 6 6-6"/></svg>
+            <svg aria-hidden="true" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-faint"><path d="M6 9l6 6 6-6"/></svg>
           </span>
         </button>
 

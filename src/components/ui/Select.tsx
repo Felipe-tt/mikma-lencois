@@ -131,7 +131,7 @@ export function Select({
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-controls={`${id}-listbox`}
+        aria-controls={open ? `${id}-listbox` : undefined}
         aria-label={ariaLabel}
         disabled={disabled}
         onClick={() => !disabled && setOpen(o => !o)}
@@ -141,7 +141,7 @@ export function Select({
         <span className={selected ? '' : 'text-faint'}>
           {selected ? selected.label : placeholder}
         </span>
-        <svg
+        <svg aria-hidden="true"
           className={`shrink-0 text-faint transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
           width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
         >
@@ -183,7 +183,7 @@ export function Select({
               >
                 <span className={fitContentEnd ? 'whitespace-nowrap' : undefined}>{opt.label}</span>
                 {isSelected && (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-clay shrink-0">
+                  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-clay shrink-0">
                     <path d="M20 6L9 17l-5-5" />
                   </svg>
                 )}

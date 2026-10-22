@@ -468,7 +468,7 @@ export default function EstoquePage() {
       {items.length > 0 && (
         <div className="flex items-center gap-3 mb-4">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <svg aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
             <input type="search" placeholder="Buscar produto..." aria-label="Buscar produto" value={search} onChange={e => setSearch(e.target.value)}
               className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40 rounded-xl" />
           </div>
@@ -552,7 +552,7 @@ export default function EstoquePage() {
                     <p className={`text-xl font-bold ${low ? 'text-amber-600' : 'text-ink'}`}>{avail}</p>
                     <p className="text-[9px] text-faint mt-0.5">disponível</p>
                   </div>
-                  <svg className={`shrink-0 text-faint transition-transform ${expanded ? 'rotate-180' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                  <svg aria-hidden="true" className={`shrink-0 text-faint transition-transform ${expanded ? 'rotate-180' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                 </button>
 
                 {/* Ações rápidas -- 1 toque cobre o caso mais comum (vender/repor 1 unidade) */}

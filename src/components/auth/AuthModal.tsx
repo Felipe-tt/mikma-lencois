@@ -270,7 +270,7 @@ export function AuthModal() {
         className="overlay-panel relative w-full max-w-[420px] bg-paper shadow-2xl rounded-3xl p-7 sm:p-9 max-h-[90dvh] overflow-y-auto overscroll-contain"
       >
         <button type="button" onClick={close} aria-label="Fechar" className="absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
@@ -335,7 +335,7 @@ export function AuthModal() {
             {awaitingChallenge ? (
               <div className="border border-mist bg-warm rounded-2xl px-6 py-8 text-center">
                 <div className="w-14 h-14 rounded-full bg-clay/10 flex items-center justify-center mx-auto mb-5">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
+                  <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                     <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
                   </svg>
                 </div>
@@ -459,7 +459,7 @@ export function AuthModal() {
             {signupStep === 'awaiting' && (
               <>
                 <div className="w-14 h-14 rounded-full bg-clay/10 flex items-center justify-center mx-auto mb-5">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
+                  <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                     <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
                   </svg>
                 </div>
@@ -523,7 +523,7 @@ export function AuthModal() {
             {forgotStep === 'sent' && (
               <>
                 <div className="w-14 h-14 rounded-full bg-clay/10 flex items-center justify-center mb-5">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
+                  <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-clay">
                     <path d="M22 6l-10 7L2 6" /><rect x="2" y="4" width="20" height="16" rx="2" />
                   </svg>
                 </div>

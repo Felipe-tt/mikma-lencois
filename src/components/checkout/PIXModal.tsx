@@ -166,7 +166,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
             {!confirmed && (expired || failed) && (
               <div className="w-full flex flex-col items-center gap-4 py-4 text-center">
                 <div className="w-16 h-16 rounded-full bg-warm border border-mist flex items-center justify-center">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-clay">
+                  <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-clay">
                     <circle cx="12" cy="12" r="9"/>
                     <path d="M12 7v5l3 3"/>
                   </svg>
@@ -213,7 +213,7 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
           </button>
           {!confirmed && !expired && !failed && (
             <p className="text-xs text-faint flex items-center gap-1.5">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
               Conexão segura
             </p>
           )}

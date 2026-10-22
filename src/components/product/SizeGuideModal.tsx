@@ -26,7 +26,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
         aria-haspopup="dialog"
         className="inline-flex items-center gap-2 py-3 -my-3 text-[11px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.1em]"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <path d="M3 6h18M3 12h18M3 18h18"/>
           <circle cx="8" cy="6" r="1.5" fill="currentColor" stroke="none"/>
           <circle cx="16" cy="12" r="1.5" fill="currentColor" stroke="none"/>
@@ -68,7 +68,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
                 className="w-9 h-9 -mr-2 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-warm active:scale-90 transition-[color,background-color,transform] duration-150"
                 aria-label="Fechar guia de medidas"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
 

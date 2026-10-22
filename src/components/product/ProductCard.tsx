@@ -115,7 +115,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           {/* "Ver produto" que sobe no hover (só em quem tem mouse) */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-x-3 bottom-3 hidden [@media(hover:hover)]:flex items-center justify-between bg-paper/90 backdrop-blur-sm rounded-full px-4 py-2.5 text-[10px] font-semibold tracking-[0.16em] uppercase text-ink opacity-0 translate-y-2 transition-[opacity,transform] duration-300 ease-out group-hover:opacity-100 group-hover:translate-y-0">
             Ver produto
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </div>
         </div>
         </ViewTransition>
@@ -148,7 +148,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           favorite ? '' : '[@media(hover:hover)]:opacity-0 group-hover:opacity-100'
         }`}
       >
-        <svg key={pops} width="16" height="16" viewBox="0 0 24 24"
+        <svg aria-hidden="true" key={pops} width="16" height="16" viewBox="0 0 24 24"
           fill={favorite ? '#b45744' : 'none'}
           stroke={favorite ? '#b45744' : 'currentColor'}
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"

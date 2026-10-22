@@ -13,6 +13,7 @@ const base = (paths: React.ReactNode, size = 16) => {
       strokeWidth={1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden={props['aria-label'] ? undefined : true}
       {...props}
     >
       {paths}

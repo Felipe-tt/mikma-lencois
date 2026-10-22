@@ -105,7 +105,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
       </div>
       {justCopied && (
         <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 text-green-700 text-[12px] font-medium rounded-xl">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           Horário copiado
         </div>
       )}
@@ -175,7 +175,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                           className="w-10 h-10 -mx-1 rounded-full flex items-center justify-center text-faint hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0"
                           aria-label="Remover intervalo"
                         >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                         </button>
                         {idx === day.ranges.length - 1 && (
                           <button
@@ -185,7 +185,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                             aria-label="Adicionar outro intervalo"
                             title="Adicionar outro intervalo (ex: pausa de almoço)"
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+                            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
                           </button>
                         )}
                       </div>
@@ -196,7 +196,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                         onClick={() => addRange(key)}
                         className="self-start inline-flex items-center gap-1 min-h-10 text-[11px] font-semibold text-clay hover:text-ink transition-colors"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
                         Adicionar horário
                       </button>
                     )}
@@ -213,7 +213,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                   aria-label="Copiar horário"
                   title="Copiar este horário para outros dias"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                 </button>
                 {copyMenuOpen === key && (
                   <>
