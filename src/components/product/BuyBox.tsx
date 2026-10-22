@@ -419,7 +419,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             return (
               <li key={t.label}>
                 {t.href
-                  ? <Link href={t.href} className="inline-flex items-center gap-1.5 hover:text-ink underline-offset-4 hover:underline">{inner}</Link>
+                  ? <Link href={t.href} className="inline-flex items-center gap-1.5 py-2 -my-2 hover:text-ink underline-offset-4 hover:underline">{inner}</Link>
                   : <span className="inline-flex items-center gap-1.5">{inner}</span>}
               </li>
             );
@@ -451,7 +451,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           <a
             href="https://buscacepinter.correios.com.br/app/endereco/index.php"
             target="_blank" rel="noopener noreferrer"
-            className="text-[11px] text-faint hover:text-clay transition-colors underline underline-offset-2 mt-1.5 inline-block"
+            className="text-[11px] text-faint hover:text-clay transition-colors underline underline-offset-2 inline-block py-2 -mb-2 -mt-0.5"
           >
             Não sei meu CEP
           </a>

@@ -371,7 +371,7 @@ export function AuthModal() {
                       <button
                         type="button"
                         onClick={() => { setForgotEmail(email); setForgotStep('email'); setMode('forgot'); }}
-                        className="text-xs text-clay hover:text-clay-d transition-colors"
+                        className="text-xs text-clay hover:text-clay-d transition-colors py-2 -my-2"
                       >
                         Esqueci minha senha
                       </button>

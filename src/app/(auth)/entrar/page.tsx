@@ -348,7 +348,7 @@ export default function LoginPage() {
                 <div className="flex items-center justify-between mb-1.5">
                   <label htmlFor="login-senha" className="label !mb-0">Senha</label>
                   <button type="button" onClick={() => setShowForgot(true)}
-                    className="text-xs text-clay hover:text-clay-d transition-colors">
+                    className="text-xs text-clay hover:text-clay-d transition-colors py-2 -my-2">
                     Esqueci minha senha
                   </button>
                 </div>

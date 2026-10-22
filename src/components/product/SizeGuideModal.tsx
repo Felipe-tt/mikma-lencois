@@ -24,7 +24,7 @@ export function SizeGuideModal({ columns, rows, note, whatsappUrl }: Props) {
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        className="inline-flex items-center gap-2 text-[11px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.1em]"
+        className="inline-flex items-center gap-2 py-3 -my-3 text-[11px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.1em]"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <path d="M3 6h18M3 12h18M3 18h18"/>
