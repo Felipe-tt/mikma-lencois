@@ -672,22 +672,101 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const subtotal = order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const isPickupOrder = (order.delivery?.carrier ?? (order as unknown as { selectedShipping?: { carrier?: string } }).selectedShipping?.carrier) === 'pickup';
 
+  // Pagamento: mesmo card, renderizado antes do Cliente quando o pedido
+  // ainda espera pagamento (é o que a vendedora precisa ver primeiro).
+  const paymentCard = (
+    <Card title="Pagamento" icon="card">
+      {order.payment.abacateSandbox && (
+        <div className="mb-2.5 -mt-1 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-1.5">
+          <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-amber-700">Pagamento de teste</span>
+          <span className="text-[10px] text-amber-600">· AbacatePay Dev Mode, nenhum valor real</span>
+        </div>
+      )}
+      <Row label="Método" value={order.payment.method === 'card'
+        ? ((order.payment.installments ?? 1) > 1 ? `Cartão ${order.payment.installments}x` : 'Cartão à vista')
+        : 'PIX'} />
+      {/* Status do PAGAMENTO, não do pedido: "A caminho" aqui confundia. */}
+      <Row label="Status" value={
+        order.payment.paidAt ? 'Pago'
+          : order.payment.lateCaptureTxId ? 'Recebido depois do cancelamento'
+          : order.status === 'payment_expired' ? 'PIX expirado'
+          : order.status === 'cancelled' ? 'Não pago'
+          : 'Aguardando pagamento'
+      } />
+      <Row label="Pago em" value={order.payment.paidAt ? formatDateTime(order.payment.paidAt) : null} />
+      {order.payment.method === 'card' && (
+        <Row label="Parcelas" value={`${order.payment.installments}x`} />
+      )}
+      {order.payment.method === 'pix' && order.payment.pixCopyPaste && order.status === 'pending_payment' && (
+        <div className="py-2.5 border-b border-warm">
+          <button onClick={() => copy(order.payment.method === 'pix' ? order.payment.pixCopyPaste! : '', 'pix')}
+            className="w-full min-h-11 border border-mist rounded-xl text-[13px] font-semibold text-ink hover:bg-warm transition-colors">
+            {copied === 'pix' ? 'Código PIX copiado!' : 'Copiar código PIX para mandar ao cliente'}
+          </button>
+        </div>
+      )}
+      {order.payment.method === 'pix' && order.payment.abacateSandbox && order.status === 'pending_payment' && (
+        <div className="pt-3">
+          <button
+            onClick={simulatePayment}
+            disabled={simulatingPayment}
+            className="w-full bg-amber-600 text-white text-[13px] font-bold py-2.5 hover:bg-amber-700 disabled:opacity-50 transition-colors rounded-xl"
+          >
+            {simulatingPayment ? 'Simulando…' : 'Simular pagamento (teste)'}
+          </button>
+          {simulatePaymentError && (
+            <p className="text-[12px] text-red-600 mt-2">{simulatePaymentError}</p>
+          )}
+        </div>
+      )}
+
+      {(order.status === 'pending_payment' || order.status === 'payment_expired') && !order.payment.abacateSandbox && (
+        <div className="pt-3 border-t border-warm mt-1">
+          <p className="text-[13px] text-faint mb-2 leading-relaxed">
+            Cliente pagou por fora (dinheiro, transferência, outra plataforma)? Confirme manualmente, sem esperar o PIX/cartão.
+          </p>
+          <button
+            onClick={markPaidManually}
+            disabled={markingPaid}
+            className="w-full bg-ink text-paper text-[13px] font-bold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
+          >
+            {markingPaid ? 'Confirmando…' : 'Marcar como pago manualmente'}
+          </button>
+          {markPaidError && (
+            <p className="text-[12px] text-red-600 mt-2">{markPaidError}</p>
+          )}
+        </div>
+      )}
+
+      {order.payment.confirmedManuallyBy && (
+        <div className="mt-2.5 px-2.5 py-1.5 bg-warm border border-mist rounded-md">
+          <p className="text-[11px] text-mid">
+            <span className="font-semibold">Confirmado manualmente</span>{order.payment.confirmedManuallyNote ? ` · ${order.payment.confirmedManuallyNote}` : ''}
+          </p>
+        </div>
+      )}
+    </Card>
+  );
+
   return (
     <div className="max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5 mb-6">
         <button onClick={() => router.back()} aria-label="Voltar" className="w-10 h-10 -ml-2 flex items-center justify-center rounded-xl text-faint hover:text-ink hover:bg-paper transition-colors">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
         </button>
-        <div className="flex-1">
-          <h1 className="font-display font-normal text-ink text-xl">Pedido #{order.id.slice(-8).toUpperCase()}</h1>
-          <p className="text-[11px] text-faint">Criado em {formatDateTime(order.createdAt)}</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-display font-normal text-ink text-xl whitespace-nowrap">Pedido #{order.id.slice(-8).toUpperCase()}</h1>
+          <p className="text-[13px] text-faint">Criado em {formatDateTime(order.createdAt)}</p>
         </div>
-        <span className={STATUS_BADGE[order.status] ?? 'badge'}>
-          {STATUS_LABELS[order.status]}
-        </span>
+        {/* No celular o selo desce para baixo do título, alinhado com ele */}
+        <div className="basis-full sm:basis-auto pl-[44px] sm:pl-0">
+          <span className={STATUS_BADGE[order.status] ?? 'badge'}>
+            {STATUS_LABELS[order.status]}
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -988,6 +1067,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </div>
         )}
 
+        {order.status === 'pending_payment' && paymentCard}
+
         {/* ── Cliente ── */}
         <Card title="Cliente" icon="user">
           {customer ? (
@@ -1063,87 +1144,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           </div>
         </div>
 
-        {/* ── Pagamento ── */}
-        <Card title="Pagamento" icon="card">
-          {order.payment.abacateSandbox && (
-            <div className="mb-2.5 -mt-1 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-1.5">
-              <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-amber-700">Pagamento de teste</span>
-              <span className="text-[10px] text-amber-600">· AbacatePay Dev Mode, nenhum valor real</span>
-            </div>
-          )}
-          <Row label="Método" value={order.payment.method === 'card'
-            ? ((order.payment.installments ?? 1) > 1 ? `Cartão ${order.payment.installments}x` : 'Cartão à vista')
-            : 'PIX'} />
-          {/* Status do PAGAMENTO, não do pedido: "A caminho" aqui confundia. */}
-          <Row label="Status" value={
-            order.payment.paidAt ? 'Pago'
-              : order.payment.lateCaptureTxId ? 'Recebido depois do cancelamento'
-              : order.status === 'payment_expired' ? 'PIX expirado'
-              : order.status === 'cancelled' ? 'Não pago'
-              : 'Aguardando pagamento'
-          } />
-          <Row label="Pago em" value={order.payment.paidAt ? formatDateTime(order.payment.paidAt) : null} />
-          {order.payment.method === 'pix' && (
-            <Row label="ID da transação" value={order.payment.txId} mono />
-          )}
-          {order.payment.method === 'card' && (
-            <Row label="Parcelas" value={`${order.payment.installments}x`} />
-          )}
-          {order.payment.method === 'pix' && order.payment.pixCopyPaste && order.status === 'pending_payment' && (
-            <div className="py-2.5 border-b border-warm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[12px] text-faint">PIX Copia e Cola</span>
-                <button onClick={() => copy(order.payment.method === 'pix' ? order.payment.pixCopyPaste! : '', 'pix')}
-                  className="text-[11px] font-semibold text-clay hover:text-clay-d transition-colors">
-                  {copied === 'pix' ? 'Copiado!' : 'Copiar'}
-                </button>
-              </div>
-              <p className="text-[10px] font-mono text-faint break-all bg-warm px-2 py-1.5 leading-relaxed rounded-md">
-                {order.payment.pixCopyPaste.slice(0, 80)}…
-              </p>
-            </div>
-          )}
-          {order.payment.method === 'pix' && order.payment.abacateSandbox && order.status === 'pending_payment' && (
-            <div className="pt-3">
-              <button
-                onClick={simulatePayment}
-                disabled={simulatingPayment}
-                className="w-full bg-amber-600 text-white text-[13px] font-bold py-2.5 hover:bg-amber-700 disabled:opacity-50 transition-colors rounded-xl"
-              >
-                {simulatingPayment ? 'Simulando…' : 'Simular pagamento (teste)'}
-              </button>
-              {simulatePaymentError && (
-                <p className="text-[12px] text-red-600 mt-2">{simulatePaymentError}</p>
-              )}
-            </div>
-          )}
-
-          {(order.status === 'pending_payment' || order.status === 'payment_expired') && !order.payment.abacateSandbox && (
-            <div className="pt-3 border-t border-warm mt-1">
-              <p className="text-[11px] text-faint mb-2 leading-relaxed">
-                Cliente pagou por fora (dinheiro, transferência, outra plataforma)? Confirme manualmente, sem esperar o PIX/cartão.
-              </p>
-              <button
-                onClick={markPaidManually}
-                disabled={markingPaid}
-                className="w-full bg-ink text-paper text-[13px] font-bold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-xl"
-              >
-                {markingPaid ? 'Confirmando…' : 'Marcar como pago manualmente'}
-              </button>
-              {markPaidError && (
-                <p className="text-[12px] text-red-600 mt-2">{markPaidError}</p>
-              )}
-            </div>
-          )}
-
-          {order.payment.confirmedManuallyBy && (
-            <div className="mt-2.5 px-2.5 py-1.5 bg-warm border border-mist rounded-md">
-              <p className="text-[11px] text-mid">
-                <span className="font-semibold">Confirmado manualmente</span>{order.payment.confirmedManuallyNote ? ` · ${order.payment.confirmedManuallyNote}` : ''}
-              </p>
-            </div>
-          )}
-        </Card>
+        {order.status !== 'pending_payment' && paymentCard}
 
         {/* ── Endereço de entrega ── */}
         {/* Retirada na loja: o endereço do cliente não serve para nada no
@@ -1153,7 +1154,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <details className="group py-2.5">
               <summary className="flex items-center justify-between min-h-10 cursor-pointer list-none text-[12px] text-mid">
                 O cliente vai buscar o pedido na loja.
-                <span className="text-[11px] font-semibold text-clay group-open:hidden">Ver endereço do cliente</span>
+                <span className="text-[13px] font-semibold text-clay group-open:hidden">Endereço cadastrado do cliente</span>
               </summary>
               <p className="text-[12px] text-ink mt-1">
                 {order.address.street}, {order.address.number}{order.address.complement ? `, ${order.address.complement}` : ''} · {order.address.neighborhood} · {order.address.city}, {order.address.state} · {maskCep(order.address.cep)}
@@ -1186,7 +1187,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         </Card>
 
         {/* ── Entrega / Rastreio ── */}
-        {order.delivery && (
+        {order.delivery && !isPickupOrder && (
           <Card title="Entrega" icon="truck">
             <Row label="Transportadora" value={order.delivery.carrier ? carrierNameVendor(order.delivery.carrier) : 'Não definida'} />
             <Row label="Despachado em" value={order.delivery.dispatchedAt ? formatDateTime(order.delivery.dispatchedAt) : null} />
@@ -1256,10 +1257,13 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     const tone = isLatest ? (TIMELINE_TONE[ev.status] ?? TIMELINE_TONE_MUTED) : TIMELINE_TONE_MUTED;
                     return (
                       <div key={i} className="flex items-start gap-3.5">
-                        <div className={`shrink-0 rounded-full border flex items-center justify-center relative z-10 transition-all ${tone} ${isLatest ? 'w-8 h-8' : 'w-7 h-7'}`}>
-                          <TLIcon size={isLatest ? 14 : 12} />
+                        {/* Caixa fixa: ícones de tamanhos diferentes ficam centrados na linha */}
+                        <div className="w-8 h-8 flex items-center justify-center shrink-0">
+                          <div className={`shrink-0 rounded-full border flex items-center justify-center relative z-10 transition-all ${tone} ${isLatest ? 'w-8 h-8' : 'w-7 h-7'}`}>
+                            <TLIcon size={isLatest ? 14 : 12} />
+                          </div>
                         </div>
-                        <div className={`flex-1 ${isLatest ? 'pt-1' : 'pt-0.5'}`}>
+                        <div className="flex-1 pt-1">
                           <p className={`leading-snug ${isLatest ? 'text-[13.5px] font-semibold text-ink' : 'text-[13px] font-medium text-mid'}`}>
                             {timelineLabel(ev.status, order)}
                           </p>
@@ -1284,6 +1288,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
           <div className="px-5 py-1">
             <Row label="ID do pedido" value={order.id} mono />
             <Row label="ID do cliente" value={order.userId} mono />
+            {order.payment.method === 'pix' && (
+              <Row label="ID da transação" value={order.payment.txId} mono />
+            )}
             <Row label="Criado em" value={formatDateTime(order.createdAt)} />
             <Row label="Última atualização" value={order.updatedAt ? formatDateTime(order.updatedAt) : null} />
           </div>
@@ -1324,7 +1331,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             fica pros relatórios e o registro de estorno). Admin: qualquer um. */}
         {canDelete && (
           <button onClick={handleDelete} disabled={deleting}
-            className="w-full border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold py-3 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-xl">
+            className="self-center bg-transparent border-0 text-red-700 underline underline-offset-2 text-[13px] py-2 hover:text-red-800 disabled:opacity-50 transition-colors">
             {deleting ? 'Apagando…' : order.status === 'cancelled' ? 'Apagar este pedido cancelado' : 'Apagar este pedido'}
           </button>
         )}

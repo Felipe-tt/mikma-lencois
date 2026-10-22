@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { doc, getDoc, writeBatch, increment, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { IconBox, IconCheck, IconX, IconSearch, IconInventory, IconReceipt, IconMinusCircle, IconPlusCircle } from '@/components/ui/Icon';
+import { IconBox, IconCheck, IconX, IconSearch, IconReceipt, IconMinusCircle, IconPlusCircle } from '@/components/ui/Icon';
 import { variantLabel as variantLabelOf } from '@/lib/variantLabel';
 import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
@@ -254,7 +254,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         {/* Venda ou Reposição */}
         <div className="grid grid-cols-2 border border-mist p-1 bg-white dark:bg-warm rounded-xl">
           <button onClick={() => setMode('venda')}
-            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'venda' ? 'bg-red-600 text-white' : 'text-mid'}`}>
+            className={`flex items-center justify-center gap-1.5 py-3 text-[15px] font-bold normal-case tracking-normal transition-colors rounded-lg ${mode === 'venda' ? 'bg-ink text-paper' : 'text-mid'}`}>
             <IconMinusCircle size={15} /> Vender
           </button>
           <button onClick={() => setMode('reposicao')}
@@ -276,8 +276,8 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
               className="w-full border border-mist bg-white dark:bg-warm pl-8 pr-2 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
           </div>
           <div className="flex items-center shrink-0 border border-mist bg-white dark:bg-warm rounded-xl">
-            <span className="flex items-center pl-2 pr-1 text-faint" title="Quantas fotos por linha">
-              <IconInventory size={13} />
+            <span className="flex items-center pl-2.5 pr-1 text-[11px] leading-tight text-faint">
+              Fotos por linha
             </span>
             {(isMobile ? COL_OPTIONS_MOBILE : COL_OPTIONS_DESKTOP).map(n => (
               <button key={n} onClick={() => changeCols(n)} title={`${n} fotos por linha`}
@@ -287,11 +287,8 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
             ))}
           </div>
         </div>
-        <p className="text-[12px] text-faint -mt-1.5">
-          {mode === 'venda'
-            ? 'Toque na foto do produto pra registrar 1 venda. Toque de novo se vendeu mais de 1.'
-            : 'Toque na foto do produto pra registrar 1 chegada. Toque de novo se chegou mais de 1.'}
-          {' '}Marcou a mais? Use “Limpar” lá embaixo, ou troque de botão aqui em cima e toque de novo no produto.
+        <p className="text-[13px] text-faint -mt-1.5">
+          Toque na foto = 1 peça. Errou? Toque em Limpar lá embaixo.
         </p>
       </div>
 
@@ -307,7 +304,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
               const image = images[item.productId];
               return (
                 <div key={item.id} className="flex flex-col gap-1">
-                  <p className="text-[10px] font-semibold text-ink truncate px-0.5">{item.productName}</p>
+                  <p className="text-[12px] font-semibold text-ink truncate px-0.5">{item.productName}</p>
                   <button type="button" onClick={() => tap(item)}
                     className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-colors ${
                       delta < 0 ? 'border-red-500' : delta > 0 ? 'border-emerald-500' : 'border-mist'
@@ -321,8 +318,11 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
                     )}
                     {/* span e não div/p: dentro de <button> só cabe conteúdo de frase. */}
                     <span className="absolute inset-x-0 bottom-0 block bg-gradient-to-t from-black/80 to-transparent px-1.5 pt-4 pb-1.5 text-left">
-                      <span className="block text-[9px] text-white/85 truncate leading-tight">{variantLabel(item)}</span>
-                      <span className="block text-[10.5px] font-bold text-white leading-tight">{avail} em estoque</span>
+                      <span className="block text-[11px] text-white/85 truncate leading-tight">{variantLabel(item)}</span>
+                      <span className="block text-[13px] font-bold text-white leading-tight">
+                        {/* Estoque baixo em destaque */}
+                        <span className={avail <= item.lowStockThreshold ? 'inline-block bg-amber-700 text-white px-1.5 rounded' : undefined}>{avail} em estoque</span>
+                      </span>
                     </span>
                     {delta !== 0 && (
                       <>

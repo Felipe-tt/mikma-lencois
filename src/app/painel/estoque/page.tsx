@@ -381,7 +381,7 @@ export default function EstoquePage() {
     <div className="max-w-6xl mx-auto">
       <div className="flex flex-col gap-4 mb-6">
         <div>
-          <h1 className="font-display font-normal text-ink text-2xl">Estoque</h1>
+          <h1 className="sr-only lg:not-sr-only font-display font-normal text-ink text-2xl">Estoque</h1>
           <p className="text-[13px] text-faint mt-1">
             {mode === 'contagem' ? 'Digite quantas peças você tem em mãos de cada item agora.'
               : subview === 'grade' ? 'Toque nas fotos abaixo pra registrar vendas e chegadas de mercadoria.'
@@ -419,7 +419,7 @@ export default function EstoquePage() {
             )}
           </div>
           <Link href="/painel/produtos/novo"
-            className="w-full lg:w-auto shrink-0 flex items-center justify-center gap-1.5 h-10 bg-ink text-paper text-[13px] font-semibold px-5 hover:bg-ink/80 transition-colors rounded-full">
+            className="hidden lg:flex lg:w-auto shrink-0 items-center justify-center gap-1.5 h-10 bg-ink text-paper text-[13px] font-semibold px-5 hover:bg-ink/80 transition-colors rounded-full">
             <span aria-hidden="true" className="text-[16px] leading-none">+</span> Novo produto
           </Link>
         </div>

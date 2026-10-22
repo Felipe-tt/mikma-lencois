@@ -120,7 +120,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
               day.closed ? 'border-mist bg-paper/40' : 'border-mist bg-white dark:bg-warm'
             }`}
           >
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-3 sm:px-4 py-3">
               {/* Dia + toggle */}
               <button
                 type="button"
@@ -153,13 +153,13 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                       <span className="text-[11px] text-clay">Nenhum horário definido, adicione um intervalo</span>
                     )}
                     {day.ranges.map((range, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 flex-wrap">
+                      <div key={idx} className="flex items-center gap-1.5 sm:gap-2 flex-nowrap">
                         <input
                           type="time"
                           value={range.open}
                           aria-label={`Abre (${label}${day.ranges.length > 1 ? `, intervalo ${idx + 1}` : ''})`}
                           onChange={e => setRange(key, idx, 'open', e.target.value)}
-                          className="border border-mist bg-white dark:bg-warm px-2 py-1.5 text-[12px] tabular-nums w-[120px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
+                          className="border border-mist bg-white dark:bg-warm flex-1 min-w-0 max-w-[9rem] px-2 sm:px-2.5 py-2.5 text-[15px] tabular-nums focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
                         />
                         <span className="text-faint text-[11px] shrink-0">até</span>
                         <input
@@ -167,7 +167,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                           value={range.close}
                           aria-label={`Fecha (${label}${day.ranges.length > 1 ? `, intervalo ${idx + 1}` : ''})`}
                           onChange={e => setRange(key, idx, 'close', e.target.value)}
-                          className="border border-mist bg-white dark:bg-warm px-2 py-1.5 text-[12px] tabular-nums w-[120px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
+                          className="border border-mist bg-white dark:bg-warm flex-1 min-w-0 max-w-[9rem] px-2 sm:px-2.5 py-2.5 text-[15px] tabular-nums focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
                         />
                         <button
                           type="button"
@@ -177,19 +177,20 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                         >
                           <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                         </button>
-                        {idx === day.ranges.length - 1 && (
-                          <button
-                            type="button"
-                            onClick={() => addRange(key)}
-                            className="w-10 h-10 -mx-1 rounded-full flex items-center justify-center text-clay hover:bg-clay-l/10 transition-colors shrink-0"
-                            aria-label="Adicionar outro intervalo"
-                            title="Adicionar outro intervalo (ex: pausa de almoço)"
-                          >
-                            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
-                          </button>
-                        )}
                       </div>
                     ))}
+                    {/* Fora da linha dos horários: dentro dela os campos
+                        ficavam estreitos demais e cortavam a hora. */}
+                    {day.ranges.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => addRange(key)}
+                        className="self-start min-h-10 px-2 -mx-2 rounded-xl text-[12px] font-semibold text-clay whitespace-nowrap hover:bg-clay-l/10 transition-colors"
+                        title="Adicionar outro intervalo (ex: pausa de almoço)"
+                      >
+                        + Adicionar pausa (ex.: almoço)
+                      </button>
+                    )}
                     {day.ranges.length === 0 && (
                       <button
                         type="button"
@@ -209,16 +210,16 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                 <button
                   type="button"
                   onClick={() => setCopyMenuOpen(copyMenuOpen === key ? null : key)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-faint hover:text-ink hover:bg-paper transition-colors"
-                  aria-label="Copiar horário"
-                  title="Copiar este horário para outros dias"
+                  className="min-h-10 px-2 -mx-2 rounded-xl flex items-center text-[12px] font-semibold text-clay hover:text-clay-d hover:bg-paper transition-colors whitespace-nowrap"
+                  aria-label={`Copiar p/ outros dias: horário de ${label}`}
+                  aria-expanded={copyMenuOpen === key}
                 >
-                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  Copiar p/ outros dias
                 </button>
                 {copyMenuOpen === key && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setCopyMenuOpen(null)} />
-                    <div className="absolute right-0 top-9 z-20 bg-white dark:bg-warm border border-mist shadow-lg py-1 w-52 rounded-xl">
+                    <div className="absolute left-0 sm:left-auto sm:right-0 top-10 z-20 bg-white dark:bg-warm border border-mist shadow-lg py-1 w-52 rounded-xl">
                       <button
                         type="button"
                         onClick={() => copyToAll(key)}

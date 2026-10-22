@@ -102,8 +102,8 @@ function FormSection({ step, title, hint, children }: { step: number; title: str
         <span className="w-5 h-5 bg-ink text-paper flex items-center justify-center text-[10px] font-bold shrink-0 rounded-full">{step}</span>
         <h2 className="text-[13px] font-bold text-ink tracking-[0.02em]">{title}</h2>
       </div>
-      {hint && <p className="text-[12px] text-faint -mt-2 ml-[26px] sm:ml-[30px]">{hint}</p>}
-      <div className="ml-[26px] sm:ml-[30px] flex flex-col gap-4">{children}</div>
+      {hint && <p className="text-[12px] text-faint -mt-2 ml-0 sm:ml-[30px]">{hint}</p>}
+      <div className="ml-0 sm:ml-[30px] flex flex-col gap-4">{children}</div>
     </section>
   );
 }
@@ -895,7 +895,7 @@ export default function ProductForm({ initial }: Props) {
                 className={`border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay-d hover:border-clay transition-colors rounded-xl ${images.length === 0 ? 'w-full h-32 bg-clay/[0.04]' : 'h-20 w-20'}`}
               >
                 <svg aria-hidden="true" width={images.length === 0 ? 30 : 22} height={images.length === 0 ? 30 : 22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span className={images.length === 0 ? 'text-[15px] font-semibold' : 'text-[10px] font-medium'}>{images.length > 0 ? 'Mais fotos' : 'Tirar foto'}</span>
+                <span className={images.length === 0 ? 'text-[15px] font-semibold' : 'text-[10px] font-medium'}>{images.length > 0 ? 'Mais fotos' : 'Tirar ou escolher foto'}</span>
               </button>
             </div>
             {fieldErr('fotos')}
@@ -1283,7 +1283,7 @@ export default function ProductForm({ initial }: Props) {
         <DuplicateProductModal onPick={applyDuplicateSource} onClose={() => setDuplicateModalOpen(false)} />
       )}
 
-      <div className="max-w-xl mx-auto px-4 sm:px-0 pb-40" onInput={markTouched} onChange={markTouched}>
+      <div className="max-w-xl mx-auto px-0 pb-40" onInput={markTouched} onChange={markTouched}>
         {/* ── Progresso do passo a passo ── */}
         {!isEdit && (
           <div className="mb-5">
@@ -1466,7 +1466,7 @@ export default function ProductForm({ initial }: Props) {
                 </button>
               ) : (
                 <button onClick={() => router.push('/painel/produtos')} className="border border-mist px-5 py-3.5 sm:py-3 text-[15px] font-medium text-mid hover:bg-warm transition-colors shrink-0 rounded-xl">
-                  Voltar
+                  Cancelar
                 </button>
               )}
               {wizardStep < WIZARD_STEPS.length ? (
