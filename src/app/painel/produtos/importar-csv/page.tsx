@@ -559,6 +559,7 @@ export default function ImportarCsvPage() {
                       </td>
                       <td className="p-1.5">
                         <Select
+                          ariaLabel="Categoria"
                           triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
                           value={it.category}
                           onChange={(v) => updateStaging(idx, { category: v })}
@@ -570,6 +571,7 @@ export default function ImportarCsvPage() {
                           <span className="text-[11px] text-faint italic">Único (fronha)</span>
                         ) : (
                           <Select
+                            ariaLabel="Tamanho"
                             triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
                             value={it.size}
                             onChange={(v) => updateStaging(idx, { size: v })}
@@ -579,6 +581,7 @@ export default function ImportarCsvPage() {
                       </td>
                       <td className="p-1.5">
                         <Select
+                          ariaLabel="Tecido"
                           triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
                           value={it.fabric}
                           onChange={(v) => updateStaging(idx, { fabric: v })}
@@ -771,6 +774,7 @@ export default function ImportarCsvPage() {
                     <div>
                       <label className="label">Categoria</label>
                       <Select
+                        ariaLabel="Categoria"
                         triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
                         value={d.category}
                         onChange={(v) => { updateDraftLocal(d.id, { category: v }); saveDraftField({ ...d, category: v }); }}
@@ -783,6 +787,7 @@ export default function ImportarCsvPage() {
                         <p className={`${inputSm} text-faint italic bg-warm`}>Único (fronha não tem tamanho)</p>
                       ) : (
                         <Select
+                          ariaLabel="Tamanho"
                           triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
                           value={d.size}
                           onChange={(v) => { updateDraftLocal(d.id, { size: v }); saveDraftField({ ...d, size: v }); }}
@@ -793,6 +798,7 @@ export default function ImportarCsvPage() {
                     <div>
                       <label className="label">Tecido</label>
                       <Select
+                        ariaLabel="Tecido"
                         triggerClassName={selectSm + ' flex items-center justify-between gap-2 cursor-pointer'}
                         value={d.fabric}
                         onChange={(v) => { updateDraftLocal(d.id, { fabric: v }); saveDraftField({ ...d, fabric: v }); }}

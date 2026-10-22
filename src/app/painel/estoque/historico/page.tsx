@@ -142,6 +142,7 @@ export default function HistoricoEstoquePage() {
             className="w-full border border-mist bg-paper pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/40 rounded-xl" />
         </div>
         <Select
+          ariaLabel="Filtrar movimentações"
           value={typeFilter}
           onChange={v => setTypeFilter(v as 'todos' | 'in' | 'out')}
           options={[

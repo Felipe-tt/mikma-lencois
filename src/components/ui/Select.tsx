@@ -16,6 +16,8 @@ type Props = {
   triggerId?: string;
   disabled?: boolean;
   name?: string;
+  /** Nome lido pelo leitor de tela quando não há <label htmlFor> apontando pro triggerId. */
+  ariaLabel?: string;
   size?: 'sm' | 'md';
   /**
    * Lista na largura do maior rótulo (sem quebrar linha) e alinhada pela
@@ -44,6 +46,7 @@ export function Select({
   triggerId,
   disabled,
   name,
+  ariaLabel,
   fitContentEnd = false,
   size = 'md',
 }: Props) {
@@ -129,6 +132,7 @@ export function Select({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={`${id}-listbox`}
+        aria-label={ariaLabel}
         disabled={disabled}
         onClick={() => !disabled && setOpen(o => !o)}
         onKeyDown={handleTriggerKeyDown}

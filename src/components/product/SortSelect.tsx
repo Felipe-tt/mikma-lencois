@@ -30,6 +30,7 @@ export function SortSelect({ current }: Props) {
       onChange={handleChange}
       options={options}
       fitContentEnd
+      ariaLabel="Ordenar produtos"
       triggerClassName="h-10 text-[12.5px] text-ink border border-mist-d bg-paper pl-4 pr-3 cursor-pointer hover:bg-warm transition-colors rounded-full flex items-center justify-between gap-2 min-w-[150px]"
     />
   );
