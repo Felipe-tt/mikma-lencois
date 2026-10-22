@@ -2,7 +2,7 @@
 import { plural } from '@/lib/plural';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { collection, onSnapshot, doc, updateDoc, arrayUnion, increment, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, arrayUnion, increment, serverTimestamp, runTransaction, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { ReturnRequest, ReturnStatus } from '@/types';
@@ -29,35 +29,60 @@ const FILTERS: { key: ReturnStatus | 'todas'; label: string }[] = [
   { key: 'recusada', label: 'Recusadas' },
 ];
 
+const PAGE = 30;
+const OPEN_STATUSES: ReturnStatus[] = ['solicitada', 'aprovada'];
+
 export default function TrocasPage() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState<ReturnRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ReturnStatus | 'todas'>('todas');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const [loadError, setLoadError] = useState(false);
 
+  // Em aberto (solicitada/aprovada) vêm sempre todas; o histórico vem aos
+  // poucos, do mais novo pro mais antigo. Antes lia a coleção inteira a cada
+  // abertura da tela, e ela só cresce.
+  const [open, setOpen] = useState<ReturnRequest[]>([]);
+  const [history, setHistory] = useState<ReturnRequest[]>([]);
+  const [pageSize, setPageSize] = useState(PAGE);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'returns'), snap => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as ReturnRequest));
-      data.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-      setRequests(data);
-      setLoading(false);
-      setLoadError(false);
-    }, () => { setLoading(false); setLoadError(true); });
-    return unsub;
+    return onSnapshot(
+      query(collection(db, 'returns'), where('status', 'in', OPEN_STATUSES)),
+      snap => { setOpen(snap.docs.map(d => ({ id: d.id, ...d.data() } as ReturnRequest))); setLoadError(false); },
+      () => { setLoading(false); setLoadError(true); }
+    );
   }, []);
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, 'returns'), orderBy('createdAt', 'desc'), limit(pageSize)),
+      snap => {
+        setHistory(snap.docs.map(d => ({ id: d.id, ...d.data() } as ReturnRequest)));
+        setHasMore(snap.size >= pageSize);
+        setLoading(false); setLoadingMore(false); setLoadError(false);
+      },
+      () => { setLoading(false); setLoadingMore(false); setLoadError(true); }
+    );
+  }, [pageSize]);
+  const requests = useMemo(() => {
+    const byId = new Map<string, ReturnRequest>();
+    for (const r of [...history, ...open]) byId.set(r.id, r);
+    return [...byId.values()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  }, [open, history]);
 
   const filtered = useMemo(
     () => (filter === 'todas' ? requests : requests.filter(r => r.status === filter)),
     [requests, filter]
   );
+  // Com histórico ainda por carregar, só a contagem das em aberto é exata.
   const counts = useMemo(() => {
     const c: Record<string, number> = { todas: requests.length };
     for (const r of requests) c[r.status] = (c[r.status] ?? 0) + 1;
+    if (hasMore) for (const k of ['todas', 'concluida', 'recusada']) delete c[k];
     return c;
-  }, [requests]);
+  }, [requests, hasMore]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -235,6 +260,17 @@ export default function TrocasPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {hasMore && !loading && !loadError && (
+        <button
+          type="button"
+          onClick={() => { setLoadingMore(true); setPageSize(n => n + PAGE); }}
+          disabled={loadingMore}
+          className="mt-4 w-full min-h-11 border border-mist bg-paper text-[12px] font-semibold text-mid hover:bg-warm hover:text-ink active:scale-[0.99] transition-[background-color,color,transform] duration-150 disabled:opacity-60 rounded-xl inline-flex items-center justify-center gap-2"
+        >
+          {loadingMore ? <><span className="spinner-dark" />Carregando…</> : 'Carregar trocas mais antigas'}
+        </button>
       )}
 
       {toast && (
