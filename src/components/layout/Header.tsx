@@ -197,8 +197,10 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               </>
             )}
 
-            {/* Theme toggle */}
-            <ThemeToggle />
+            {/* Tema: no celular fica dentro do menu (a barra ficava com 5 ícones). */}
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
 
             {/* Favoritos */}
             {user && (

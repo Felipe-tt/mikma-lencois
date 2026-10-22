@@ -834,7 +834,7 @@ export default function CheckoutPage() {
                   </div>
                 )}
                 <button type="button" onClick={advanceToStep2}
-                  className="w-full h-12 rounded-full bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
+                  className="w-full h-12 rounded-full bg-ink text-paper text-[15px] font-semibold hover:bg-mid transition-colors mt-1">
                   Continuar para endereço
                 </button>
               </div>
@@ -910,7 +910,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <button type="button" onClick={advanceToStep3}
-                  className="w-full h-12 rounded-full bg-ink text-paper text-sm font-bold tracking-[0.05em] hover:bg-mid transition-colors mt-1">
+                  className="w-full h-12 rounded-full bg-ink text-paper text-[15px] font-semibold hover:bg-mid transition-colors mt-1">
                   Continuar para entrega
                 </button>
               </div>

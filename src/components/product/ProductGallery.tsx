@@ -129,7 +129,7 @@ export function ProductGallery({ images, name, tag, productId }: Props) {
             até aqui ao abrir o produto. Só com productId, para não colidir. */}
         <ViewTransition name={productId ? `produto-${productId}` : undefined} share="morph" default="none">
         <div
-          className={`sd-zoom-scope group relative aspect-[4/5] overflow-hidden rounded-3xl bg-warm [transform:translateZ(0)] select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
+          className={`sd-zoom-scope group relative aspect-[4/5] overflow-hidden rounded-2xl bg-warm [transform:translateZ(0)] select-none touch-pan-y ${hasImages ? 'cursor-zoom-in' : ''}`}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={() => { swipe.current = null; }}

@@ -163,7 +163,7 @@ html.dark {
    ("Salvar" -> "Salvando…") e o botão "escorregava" de tamanho. */
 @utility btn {
   @apply inline-flex items-center justify-center gap-2 rounded-full
-         font-sans text-[13px] font-medium tracking-[0.03em]
+         font-sans text-[13px] font-medium
          border transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-150 ease-out
          disabled:opacity-40 disabled:pointer-events-none
          whitespace-nowrap select-none;
@@ -191,7 +191,7 @@ html.dark {
            active:scale-[0.98];
   }
   .btn-primary-lg {
-    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.08em]
+    @apply btn h-14 px-8 text-[14px] font-semibold
            bg-ink text-paper border-ink
            hover:bg-clay hover:border-clay
            active:scale-[0.98];
@@ -202,7 +202,7 @@ html.dark {
            active:scale-[0.98];
   }
   .btn-outline-lg {
-    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.08em]
+    @apply btn h-14 px-8 text-[14px] font-semibold
            bg-transparent text-ink border-ink/25
            hover:bg-ink hover:text-paper hover:border-ink
            active:scale-[0.98];
@@ -218,7 +218,7 @@ html.dark {
            active:scale-[0.98];
   }
   .btn-clay-lg {
-    @apply btn h-14 px-8 text-[13px] font-semibold tracking-[0.06em]
+    @apply btn h-14 px-8 text-[14px] font-semibold
            bg-clay text-paper border-clay
            hover:bg-clay-d hover:border-clay-d
            active:scale-[0.98];

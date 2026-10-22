@@ -141,7 +141,7 @@ export default async function SobrePage() {
           <div className="flex flex-col gap-4 lg:sticky lg:top-24">
             <div className="border border-mist rounded-2xl overflow-hidden divide-y divide-mist">
               {stats.map(({ label, value }) => (
-                <div key={label} className="px-6 py-5 flex flex-col gap-1.5 hover:bg-warm transition-colors duration-150">
+                <div key={label} className="px-6 py-5 flex flex-col gap-1.5">
                   <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-faint">{label}</p>
                   <p className="font-display text-[1.65rem] text-ink font-normal leading-tight">{value}</p>
                 </div>
@@ -162,8 +162,8 @@ export default async function SobrePage() {
             )}
 
             <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-between rounded-full pl-7 pr-6 py-4 bg-ink text-paper hover:bg-clay transition-colors duration-200 group">
-              <span className="text-[13px] font-semibold">{whatsappLabel}</span>
+              className="flex items-center justify-between rounded-2xl px-6 py-4 bg-ink text-paper hover:bg-clay transition-colors duration-200 group">
+              <span className="text-[14px] font-semibold">{whatsappLabel}</span>
               <svg aria-hidden="true" className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>

@@ -523,7 +523,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               input?.focus({ preventScroll: true });
             }}
-            className="flex-1 h-11 rounded-full text-[13px] font-semibold tracking-[0.04em] border border-ink text-ink active:scale-[0.98] transition-transform duration-150"
+            className="flex-1 h-11 rounded-full text-[14px] font-semibold border border-ink text-ink active:scale-[0.98] transition-transform duration-150"
           >
             Avise-me quando chegar
           </button>
@@ -532,7 +532,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           onClick={() => buyNow()}
           disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
           className={[
-            'flex-1 h-11 rounded-full text-[13px] font-semibold tracking-[0.04em] transition-[background-color,transform] duration-150',
+            'flex-1 h-11 rounded-full text-[14px] font-semibold transition-[background-color,transform] duration-150',
             outOfStock || !selectedVariant
               ? 'cursor-not-allowed bg-warm text-faint'
               : 'bg-ink text-paper active:scale-[0.98]',

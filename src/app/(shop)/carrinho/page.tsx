@@ -520,7 +520,7 @@ export default function CartPage() {
               <div className="px-5 pb-5">
                 {hasUnavailableItem ? (
                   <div
-                    className="flex items-center justify-center w-full h-14 bg-mist text-faint text-sm font-semibold tracking-[0.05em] cursor-not-allowed"
+                    className="flex items-center justify-center w-full h-14 bg-mist text-faint text-sm font-semibold cursor-not-allowed"
                     title="Remova os itens indisponíveis pra continuar"
                   >
                     Remova os itens indisponíveis
@@ -528,7 +528,7 @@ export default function CartPage() {
                 ) : (
                   <Link
                     href="/checkout"
-                    className="flex items-center justify-center w-full h-14 rounded-full bg-ink text-paper text-sm font-semibold tracking-[0.05em] hover:bg-clay transition-colors duration-200 active:scale-[0.99]"
+                    className="flex items-center justify-center w-full h-14 rounded-full bg-ink text-paper text-sm font-semibold hover:bg-clay transition-colors duration-200 active:scale-[0.99]"
                   >
                     Finalizar compra
                     <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-2 opacity-60">

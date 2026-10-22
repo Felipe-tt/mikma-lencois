@@ -92,7 +92,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
         <div className="grid lg:grid-cols-[300px_1fr] gap-10 lg:gap-16 items-start">
           {/* Resumo: média grande, estrelas e distribuição. Antes era uma
               linha solta no canto e a lista ocupava a largura toda. */}
-          <aside aria-label="Resumo das avaliações" className="bg-warm/50 border border-mist rounded-3xl p-6 sm:p-7">
+          <aside aria-label="Resumo das avaliações" className="bg-warm/50 border border-mist rounded-2xl p-6 sm:p-7">
             {count > 0 ? (
               <>
                 <div className="flex items-end gap-3">
@@ -140,7 +140,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
             )}
 
             {formOpen && (
-              <div className="rounded-3xl border border-mist px-5 py-5 sm:px-6 sm:py-6 mb-8 animate-fade-in">
+              <div className="rounded-2xl border border-mist px-5 py-5 sm:px-6 sm:py-6 mb-8 animate-fade-in">
                 <p className="text-[12px] font-semibold text-ink mb-3">Sua nota</p>
                 <div className="flex items-center gap-1 mb-4" onMouseLeave={() => setHoverRating(0)}>
                   {[1, 2, 3, 4, 5].map(n => (
