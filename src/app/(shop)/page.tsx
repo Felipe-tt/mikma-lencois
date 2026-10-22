@@ -69,6 +69,10 @@ export default async function HomePage() {
             alt=""
             fill
             priority
+            // É o maior elemento da primeira tela (o LCP do Google): sem isso
+            // o navegador baixava com prioridade baixa, junto das fotos dos
+            // produtos que ficam abaixo da dobra.
+            fetchPriority="high"
             sizes="100vw"
             className="object-cover object-center opacity-[0.22]"
             aria-hidden="true"
