@@ -38,18 +38,97 @@ export function ProductGallery({ images, name, tag, productId }: Props) {
       const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
       if (disposed) return;
 
+      const icon = (d: string) =>
+        `<svg aria-hidden="true" class="pswp__icn" viewBox="0 0 24 24" width="22" height="22"><path d="${d}" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
       const lightbox = new PhotoSwipeLightbox({
         pswpModule: () => import('photoswipe'),
         dataSource: images.map(src => {
           const dims = dimsRef.current[src];
           return { src, width: dims?.w ?? FALLBACK_SIZE.w, height: dims?.h ?? FALLBACK_SIZE.h, alt: name };
         }),
+        // Visual da loja (fundo claro, botões redondos, nome do produto e
+        // miniaturas) no lugar do tema padrão preto do PhotoSwipe, que
+        // parecia genérico. Estilos em globals.css (.mk-pswp).
+        mainClass: 'mk-pswp',
         // Opaco: com 0.96 o cabeçalho e a barra de compra da página apareciam
-        // por trás da foto (a página é clara), poluindo a visualização.
+        // por trás da foto, poluindo a visualização.
         bgOpacity: 1,
         showHideAnimationType: 'zoom',
         zoomAnimationDuration: 250,
         wheelToZoom: true,
+        // Sem a lupa e o contador "1 / 3": ampliar é tocar/clicar na foto,
+        // e a posição aparece nos pontinhos/miniaturas.
+        zoom: false,
+        counter: false,
+        closeTitle: 'Fechar',
+        arrowPrevTitle: 'Foto anterior',
+        arrowNextTitle: 'Próxima foto',
+        closeSVG: icon('M6 6l12 12M18 6L6 18'),
+        arrowPrevSVG: icon('M15 5l-7 7 7 7'),
+        // A biblioteca espelha o ícone da seta seguinte: mesmo desenho da anterior.
+        arrowNextSVG: icon('M15 5l-7 7 7 7'),
+        errorMsg: 'Não foi possível carregar esta foto.',
+        // Espaço para o topo (nome e fechar) e a base (pontinhos/miniaturas).
+        paddingFn: (viewport) => viewport.x >= 1024
+          ? { top: 76, bottom: images.length > 1 ? 104 : 32, left: 88, right: 88 }
+          : { top: 64, bottom: images.length > 1 ? 44 : 16, left: 0, right: 0 },
+      });
+
+      lightbox.on('uiRegister', () => {
+        const pswp = lightbox.pswp;
+        if (!pswp) return;
+        // Nome do produto e posição ("2 de 3") no topo.
+        pswp.ui?.registerElement({
+          name: 'mk-title',
+          appendTo: 'bar',
+          order: 5,
+          onInit: (el, p) => {
+            el.className = 'mk-pswp-title';
+            const update = () => {
+              el.innerHTML = '';
+              const t = document.createElement('span');
+              t.className = 'mk-pswp-name';
+              t.textContent = name;
+              el.appendChild(t);
+              if (p.getNumItems() > 1) {
+                const c = document.createElement('span');
+                c.className = 'mk-pswp-count';
+                c.textContent = `${p.currIndex + 1} de ${p.getNumItems()}`;
+                el.appendChild(c);
+              }
+            };
+            p.on('change', update);
+            update();
+          },
+        });
+        if (images.length < 2) return;
+        // Celular: pontinhos. Computador: miniaturas clicáveis.
+        pswp.ui?.registerElement({
+          name: 'mk-thumbs',
+          appendTo: 'root',
+          onInit: (el, p) => {
+            el.className = 'mk-pswp-thumbs';
+            const btns = images.map((src, i) => {
+              const b = document.createElement('button');
+              b.type = 'button';
+              b.className = 'mk-pswp-thumb';
+              b.setAttribute('aria-label', `Ver foto ${i + 1}`);
+              const img = document.createElement('img');
+              img.src = src; img.alt = ''; img.loading = 'lazy';
+              b.appendChild(img);
+              b.addEventListener('click', () => p.goTo(i));
+              el.appendChild(b);
+              return b;
+            });
+            const update = () => btns.forEach((b, i) => {
+              const on = i === p.currIndex;
+              b.classList.toggle('is-active', on);
+              if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+            });
+            p.on('change', update);
+            update();
+          },
+        });
       });
 
       // Mantém a foto ativa da página sincronizada com a que tá aberta no

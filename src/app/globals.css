@@ -1063,3 +1063,93 @@ html.dark .cookie-glass {
 @keyframes sd-zoom {
   to { scale: 1.14; }
 }
+
+/* ─── Visualizador de fotos do produto (PhotoSwipe) ─────────────────
+   Fundo da própria loja (claro ou escuro, conforme o tema), botões
+   redondos e miniaturas, no lugar do tema padrão preto da biblioteca.
+   .pswp.mk-pswp: o CSS da biblioteca carrega depois e empataria. */
+.pswp.mk-pswp {
+  --pswp-bg: rgb(var(--c-paper));
+  --pswp-placeholder-bg: rgb(var(--c-warm));
+  --pswp-icon-color: rgb(var(--c-ink));
+  --pswp-error-text-color: rgb(var(--c-mid));
+  --pswp-preloader-color: rgb(var(--c-mist));
+  --pswp-preloader-color-secondary: rgb(var(--c-ink));
+}
+.pswp.mk-pswp .pswp__icn path { stroke: rgb(var(--c-ink)); }
+.pswp.mk-pswp .pswp__top-bar {
+  height: 64px;
+  padding: 0 12px 0 20px;
+  align-items: center;
+  gap: 12px;
+}
+.pswp.mk-pswp .pswp__button { opacity: 1; }
+.pswp.mk-pswp .pswp__button--close {
+  width: 44px; height: 44px; margin: 0;
+  border-radius: 9999px;
+  background: rgb(var(--c-warm));
+  display: flex; align-items: center; justify-content: center;
+  transition: background-color 150ms;
+}
+.pswp.mk-pswp .pswp__button--close:hover { background: rgb(var(--c-mist)); }
+.pswp.mk-pswp .pswp__button--close .pswp__icn,
+.pswp.mk-pswp .pswp__button--arrow .pswp__icn {
+  position: static; width: 22px; height: 22px; margin: 0;
+}
+.pswp.mk-pswp .pswp__button--arrow {
+  width: 52px; height: 52px; margin-top: -26px;
+  border-radius: 9999px;
+  background: rgb(var(--c-paper));
+  border: 1px solid rgb(var(--c-mist));
+  box-shadow: 0 6px 20px -8px rgb(var(--c-ink) / 0.25);
+  display: flex; align-items: center; justify-content: center;
+  transition: background-color 150ms, transform 150ms;
+}
+.pswp.mk-pswp .pswp__button--arrow:hover { background: rgb(var(--c-warm)); }
+.pswp.mk-pswp .pswp__button--arrow:active { transform: scale(0.95); }
+.pswp.mk-pswp .pswp__button--arrow--prev { left: 20px; }
+.pswp.mk-pswp .pswp__button--arrow--next { right: 20px; }
+.mk-pswp-title {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+  pointer-events: none;
+}
+.mk-pswp-name {
+  font-family: var(--font-dm-serif), Georgia, serif;
+  font-size: 17px; line-height: 1.2; color: rgb(var(--c-ink));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mk-pswp-count { font-size: 12px; color: rgb(var(--c-faint)); font-variant-numeric: tabular-nums; }
+.mk-pswp-thumbs {
+  position: absolute; left: 0; right: 0; bottom: 16px;
+  display: flex; justify-content: center; gap: 8px;
+  transition: opacity var(--pswp-transition-duration, 333ms);
+}
+.pswp.mk-pswp.pswp--ui-visible .mk-pswp-thumbs { opacity: 1; }
+.pswp.mk-pswp:not(.pswp--ui-visible) .mk-pswp-thumbs { opacity: 0; pointer-events: none; }
+.mk-pswp-thumb {
+  position: relative; padding: 0; border: 0; cursor: pointer;
+  /* Celular: pontinho (com área de toque de 24px). */
+  width: 24px; height: 24px; background: transparent;
+}
+.mk-pswp-thumb::after {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 9999px;
+  background: rgb(var(--c-ink) / 0.22); transition: background-color 150ms, transform 150ms;
+}
+.mk-pswp-thumb.is-active::after { background: rgb(var(--c-ink)); transform: scale(1.15); }
+.mk-pswp-thumb img { display: none; }
+@media (min-width: 1024px) {
+  .pswp.mk-pswp .pswp__top-bar { height: 76px; padding: 0 24px 0 32px; }
+  .mk-pswp-name { font-size: 20px; }
+  .mk-pswp-thumbs { bottom: 20px; gap: 10px; }
+  .mk-pswp-thumb {
+    width: 52px; height: 64px; border-radius: 10px; overflow: hidden;
+    background: rgb(var(--c-warm));
+    opacity: 0.55; transition: opacity 150ms, box-shadow 150ms;
+  }
+  .mk-pswp-thumb:hover { opacity: 1; }
+  .mk-pswp-thumb.is-active { opacity: 1; box-shadow: 0 0 0 2px rgb(var(--c-paper)), 0 0 0 3px rgb(var(--c-ink)); }
+  .mk-pswp-thumb::after { display: none; }
+  .mk-pswp-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+}
