@@ -33,7 +33,7 @@ export default async function NotFound() {
       </header>
 
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-16 text-center animate-fade-up">
-        <p className="flex items-center gap-3 font-mono text-[10px] tracking-[0.26em] uppercase text-faint mb-7">
+        <p className="flex items-center gap-3 font-semibold text-[10px] tracking-[0.26em] uppercase text-faint mb-7">
           <span className="h-px w-8 bg-clay/60" aria-hidden="true" />
           Erro 404
           <span className="h-px w-8 bg-clay/60" aria-hidden="true" />
@@ -57,7 +57,7 @@ export default async function NotFound() {
         </div>
       </main>
 
-      <footer className="relative z-10 pb-8 text-center font-mono text-[10px] tracking-[0.2em] uppercase text-faint">
+      <footer className="relative z-10 pb-8 text-center font-semibold text-[10px] tracking-[0.2em] uppercase text-faint">
         {s.storeName || 'Mikma Lençóis'} · {s.storeCity || 'Blumenau, SC'}
       </footer>
     </div>

@@ -35,7 +35,7 @@ export default function GlobalError({
         <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-paper">
           {isChunk ? (
             <>
-              <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-6">
+              <p className="font-semibold text-[11px] tracking-[0.25em] uppercase text-faint mb-6">
                 Atualizando
               </p>
               <h1 className="font-display font-normal text-ink leading-none tracking-[-0.02em] mb-6 text-[clamp(3rem,10vw,6rem)]">
@@ -47,7 +47,7 @@ export default function GlobalError({
             </>
           ) : (
             <>
-              <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-6">
+              <p className="font-semibold text-[11px] tracking-[0.25em] uppercase text-faint mb-6">
                 Erro inesperado
               </p>
               <h1 className="font-display font-normal text-ink leading-none tracking-[-0.02em] mb-6 text-[clamp(3rem,10vw,6rem)]">

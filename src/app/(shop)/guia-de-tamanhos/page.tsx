@@ -34,7 +34,7 @@ export default async function GuiaDeTamanhosPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 sm:py-14">
-      <p className="font-mono text-[11px] tracking-[0.25em] uppercase text-faint mb-4 text-center">
+      <p className="font-semibold text-[11px] tracking-[0.25em] uppercase text-faint mb-4 text-center">
         Guia de tamanhos
       </p>
       <h1 className="font-display font-normal text-ink leading-[1.05] tracking-[-0.02em] mb-4 text-[clamp(2rem,6vw,3.2rem)] text-center">

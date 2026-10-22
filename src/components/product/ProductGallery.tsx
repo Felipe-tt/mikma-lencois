@@ -165,7 +165,7 @@ export function ProductGallery({ images, name, tag, productId }: Props) {
           )}
 
           {tag && (
-            <span className="absolute top-4 left-4 bg-ink text-paper text-[9px] font-bold tracking-[0.18em] uppercase px-3 py-1.5 rounded-full pointer-events-none">
+            <span className="absolute top-4 left-4 bg-ink text-paper text-[10px] font-semibold tracking-[0.14em] uppercase px-2.5 py-[5px] rounded-full pointer-events-none">
               {tag}
             </span>
           )}

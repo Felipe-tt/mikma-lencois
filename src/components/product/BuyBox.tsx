@@ -246,7 +246,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   return (
     <>
       {/* ── Buy box: cartão único, estilo Amazon/ML, com tudo que decide a compra ── */}
-      <div className="border border-mist bg-paper rounded-3xl p-5 sm:p-7 flex flex-col gap-5">
+      <div className="md:border md:border-mist md:bg-paper md:rounded-2xl md:p-7 flex flex-col gap-5">
 
         {/* Preço */}
         <div>
@@ -372,7 +372,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             onClick={() => buyNow()}
             disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
             className={[
-              'w-full h-13 py-3.5 rounded-full text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
+              'w-full h-12 rounded-full text-[14px] font-semibold border transition-all duration-150 flex items-center justify-center gap-2',
               outOfStock || !selectedVariant
                 ? 'cursor-not-allowed bg-warm text-faint border-mist'
                 : buyingNow
@@ -386,7 +386,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             onClick={() => addToCart()}
             disabled={outOfStock || adding || buyingNow || !selectedVariant || loading}
             className={[
-              'w-full h-13 py-3.5 rounded-full text-[13px] font-semibold tracking-[0.06em] border transition-all duration-150 flex items-center justify-center gap-2',
+              'w-full h-12 rounded-full text-[14px] font-semibold border transition-all duration-150 flex items-center justify-center gap-2',
               outOfStock || !selectedVariant
                 ? 'cursor-not-allowed bg-warm text-faint border-mist'
                 : adding
@@ -589,14 +589,14 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                 type="button"
                 autoFocus
                 onClick={() => router.push('/carrinho')}
-                className="w-full h-12 rounded-full text-[13px] font-semibold tracking-[0.06em] bg-ink text-paper border border-ink hover:bg-clay hover:border-clay active:scale-[0.98] transition-[background-color,border-color,transform] duration-150"
+                className="w-full h-12 rounded-full text-[14px] font-semibold bg-ink text-paper border border-ink hover:bg-clay hover:border-clay active:scale-[0.98] transition-[background-color,border-color,transform] duration-150"
               >
                 Ver carrinho{cartCount > 0 ? ` (${cartCount} ${cartCount === 1 ? 'item' : 'itens'})` : ''}
               </button>
               <button
                 type="button"
                 onClick={closeAdded}
-                className="w-full h-12 rounded-full text-[13px] font-semibold tracking-[0.06em] text-mid border border-mist hover:border-ink/50 hover:text-ink active:scale-[0.98] transition-[border-color,color,transform] duration-150"
+                className="w-full h-12 rounded-full text-[14px] font-semibold text-mid border border-mist hover:border-ink/50 hover:text-ink active:scale-[0.98] transition-[border-color,color,transform] duration-150"
               >
                 Continuar comprando
               </button>

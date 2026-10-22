@@ -726,7 +726,7 @@ export default function CheckoutPage() {
             <span key={step} className="text-[13px] font-semibold text-ink animate-fade-in">{STEP_LABELS[step - 1]}</span>
             <span className="flex items-center gap-2.5 shrink-0">
               <span className="sr-only">Etapa {step} de 3</span>
-              <span className="font-mono text-[11px] text-faint tabular-nums" aria-hidden="true">{step}/3</span>
+              <span className="font-semibold text-[11px] text-faint tabular-nums" aria-hidden="true">{step}/3</span>
               <span className="flex gap-1" aria-hidden="true">
                 {[1, 2, 3].map(n => (
                   <span key={n} className={`h-1 w-6 rounded-full transition-colors duration-300 ${n <= step ? 'bg-ink' : 'bg-mist'}`} />

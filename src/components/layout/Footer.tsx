@@ -108,7 +108,7 @@ export function Footer({
 
           {/* Col 2, Loja */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Loja</p>
+            <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-paper/55 mb-5">Loja</p>
             <ul className="flex flex-col gap-0.5 -my-1.5">
               {[
                 { href: '/produtos', label: 'Produtos' },
@@ -126,7 +126,7 @@ export function Footer({
 
           {/* Col 3, Conta */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Conta</p>
+            <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-paper/55 mb-5">Conta</p>
             <ul className="flex flex-col gap-0.5 -my-1.5">
               {[
                 { href: '/conta/pedidos', label: 'Meus pedidos' },
@@ -143,7 +143,7 @@ export function Footer({
 
           {/* Col 4, Ajuda (legal) */}
           <div>
-            <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-paper/55 mb-5">Ajuda</p>
+            <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-paper/55 mb-5">Ajuda</p>
             <ul className="flex flex-col gap-0.5 -my-1.5">
               {[
                 { href: '/trocas-e-devolucoes', label: 'Trocas e devoluções' },

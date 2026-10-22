@@ -233,13 +233,13 @@ export default async function ProductPage({ params }: Props) {
         <div className="container-shop py-4">
           {/* Breadcrumb */}
           <nav aria-label="Trilha">
-            <ol className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.06em] text-faint overflow-x-auto whitespace-nowrap scrollbar-none">
+            <ol className="flex items-center gap-1.5 font-medium text-[11.5px] text-faint overflow-x-auto whitespace-nowrap scrollbar-none">
               <li className="shrink-0"><Link href="/" className="hover:text-clay transition-colors">Início</Link></li>
-              <li aria-hidden="true" className="text-mist mx-1">/</li>
+              <li aria-hidden="true" className="text-faint-l mx-1">/</li>
               <li className="shrink-0"><Link href="/produtos" className="hover:text-clay transition-colors">Produtos</Link></li>
               {product.category && (
                 <>
-                  <li aria-hidden="true" className="text-mist mx-1">/</li>
+                  <li aria-hidden="true" className="text-faint-l mx-1">/</li>
                   <li className="shrink-0">
                     <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
                       className="hover:text-clay transition-colors capitalize">
@@ -248,7 +248,7 @@ export default async function ProductPage({ params }: Props) {
                   </li>
                 </>
               )}
-              <li aria-hidden="true" className="text-mist mx-1">/</li>
+              <li aria-hidden="true" className="text-faint-l mx-1">/</li>
               <li aria-current="page" className="text-mid truncate max-w-[200px]">{product.name}</li>
             </ol>
           </nav>

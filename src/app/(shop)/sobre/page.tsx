@@ -87,7 +87,7 @@ export default async function SobrePage() {
         </div>
         <div className="container-shop relative z-10 pt-24 pb-16 sm:pt-36 sm:pb-24 lg:pt-44 lg:pb-28">
           <div className="flex flex-col gap-6 max-w-2xl animate-fade-up">
-            <p className="flex items-center gap-3 font-mono text-[10px] tracking-[0.26em] uppercase text-paper/70">
+            <p className="flex items-center gap-3 font-semibold text-[10px] tracking-[0.26em] uppercase text-paper/70">
               <span className="h-px w-8 bg-clay-l" aria-hidden="true" />
               Sobre nós
             </p>
@@ -118,14 +118,14 @@ export default async function SobrePage() {
                 <p className="page-label mb-8">{timelineTitle}</p>
                 <div className="relative">
                   <div className="absolute left-[25px] top-3 bottom-3 w-px bg-mist" />
-                  <div className="flex flex-col gap-9">
+                  <div className="flex flex-col gap-7">
                     {timeline.map((item, i) => (
-                      <div key={i} className="flex gap-7 items-start">
+                      <div key={i} className="flex gap-7 items-start [&:last-child>div:last-child]:border-0">
                         <div className="shrink-0 w-[50px] flex flex-col items-center pt-0.5">
                           <div className="w-2.5 h-2.5 rounded-full bg-clay shrink-0 relative z-10 ring-4 ring-paper" />
-                          <span className="relative z-10 bg-paper px-1 py-0.5 font-display text-[1rem] text-clay/60 leading-none mt-2 font-normal tabular-nums">{item.year}</span>
+                          <span className="relative z-10 bg-paper px-1 py-0.5 font-display text-[1.05rem] text-clay leading-none mt-2 font-normal tabular-nums">{item.year}</span>
                         </div>
-                        <div className="pb-2 border-b border-mist/60 flex-1">
+                        <div className="pb-7 border-b border-mist/60 flex-1">
                           <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-ink mb-1.5">{item.label}</p>
                           <p className="text-[14px] text-mid leading-relaxed">{item.desc}</p>
                         </div>
@@ -142,7 +142,7 @@ export default async function SobrePage() {
             <div className="border border-mist rounded-2xl overflow-hidden divide-y divide-mist">
               {stats.map(({ label, value }) => (
                 <div key={label} className="px-6 py-5 flex flex-col gap-1.5 hover:bg-warm transition-colors duration-150">
-                  <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint">{label}</p>
+                  <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-faint">{label}</p>
                   <p className="font-display text-[1.65rem] text-ink font-normal leading-tight">{value}</p>
                 </div>
               ))}
@@ -152,7 +152,7 @@ export default async function SobrePage() {
 
             {s.storeAddress && (
               <div className="border border-mist rounded-2xl px-6 py-5">
-                <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-faint mb-3">Endereço</p>
+                <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-faint mb-3">Endereço</p>
                 <address className="text-[14px] text-mid leading-relaxed not-italic">
                   {s.storeAddress}{s.storeNumber && `, ${s.storeNumber}`}{s.storeComplement && `, ${s.storeComplement}`}<br />
                   {s.storeNeighborhood && <>{s.storeNeighborhood} · </>}{s.storeCity}<br />
