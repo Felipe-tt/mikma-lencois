@@ -22,8 +22,10 @@ service cloud.firestore {
     // ── Users ────────────────────────────────────────────────────────────────
     match /users/{uid} {
       // Seller/admin precisam ler dados do cliente (nome, telefone, endereço)
-      // ao visualizar o detalhe de um pedido no painel.
-      allow read: if isSelf(uid) || isSellerOrAdmin();
+      // ao visualizar o detalhe de um pedido no painel. Só um por vez (get):
+      // listar a coleção inteira baixaria CPF e endereço de todos os clientes.
+      allow get: if isSelf(uid) || isSellerOrAdmin();
+      allow list: if false;
 
       // WHITELIST de campos que o PRÓPRIO usuário grava pelo SDK (checkout,
       // perfil e preferências do painel). Todo o resto (role, emailVerified,

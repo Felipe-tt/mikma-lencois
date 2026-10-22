@@ -5,7 +5,11 @@ service firebase.storage {
     // Imagens de produtos, leitura pública, escrita só vendedor/admin
     match /products/{productId}/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
+      // Apagar foto (delete não tem request.resource): antes caía na regra de
+      // envio e era sempre negado, e as fotos trocadas ficavam acumulando.
+      allow delete: if request.auth != null
+        && (request.auth.token.role == 'seller' || request.auth.token.role == 'admin');
+      allow create, update: if request.auth != null
         && (request.auth.token.role == 'seller' || request.auth.token.role == 'admin')
         && request.resource.size < 8 * 1024 * 1024  // 8 MB
         // Sem image/svg+xml: SVG pode carregar <script> e seria servido do
