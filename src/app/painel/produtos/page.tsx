@@ -93,7 +93,7 @@ export default function PainelProdutosPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="font-display font-normal text-ink text-2xl">Produtos</h1>
+        <h1 className="sr-only lg:not-sr-only font-display font-normal text-ink text-2xl">Produtos</h1>
         <p className="text-[13px] text-faint mt-1">Gerencie os produtos da sua loja. Produtos visíveis aparecem no site para os clientes.</p>
       </div>
 
@@ -129,15 +129,15 @@ export default function PainelProdutosPage() {
         <div className="grid grid-cols-[1fr_auto] sm:flex gap-3">
           <Link
             href="/painel/produtos/novo"
-            className="inline-flex items-center justify-center min-h-11 bg-ink text-paper text-[12px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 hover:bg-ink/80 active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
+            className="inline-flex items-center justify-center min-h-11 bg-ink text-paper text-[14px] font-semibold normal-case tracking-normal px-5 py-2.5 hover:bg-ink/80 active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
           >
             + Novo produto
           </Link>
           <Link
             href="/painel/produtos/importar-csv"
-            className="inline-flex items-center justify-center min-h-11 border border-mist text-ink text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2.5 hover:bg-warm active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
+            className="inline-flex items-center justify-center min-h-11 border border-mist text-ink text-[14px] font-semibold normal-case tracking-normal px-4 py-2.5 hover:bg-warm active:scale-[0.97] transition-[background-color,transform] duration-150 rounded-xl whitespace-nowrap"
           >
-            Importar
+            Importar planilha
           </Link>
         </div>
       </div>
@@ -180,7 +180,7 @@ export default function PainelProdutosPage() {
                 {/* Name */}
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-ink leading-snug line-clamp-1">{p.name}</p>
-                  <p className="text-[11px] text-faint sm:hidden">{p.category} · {formatCurrency(p.price)}</p>
+                  <p className="text-[13px] text-faint sm:hidden">{p.category} · <span className="font-semibold text-ink">{formatCurrency(p.price)}</span></p>
                 </div>
 
                 {/* Category, desktop */}
@@ -207,9 +207,9 @@ export default function PainelProdutosPage() {
                     onClick={() => toggleActive(p.id, p.active)}
                     disabled={isBusy}
                     aria-pressed={p.active}
-                    className={`sm:hidden min-h-10 text-[11px] font-bold tracking-[0.06em] uppercase px-3.5 border transition-colors disabled:opacity-50 ${ p.active ? 'border-clay-l text-clay' : 'border-mist text-faint' } rounded-full`}
+                    className={`sm:hidden min-h-10 whitespace-nowrap text-[13px] font-semibold normal-case tracking-normal px-3.5 border transition-colors disabled:opacity-50 ${ p.active ? 'border-clay-l text-clay' : 'border-mist text-faint' } rounded-full`}
                   >
-                    {isBusy ? '…' : p.active ? 'Visível' : 'Oculto'}
+                    {isBusy ? '…' : p.active ? 'Aparece no site' : 'Escondido'}
                   </button>
 
                   <div className="flex items-center gap-1">
@@ -223,7 +223,7 @@ export default function PainelProdutosPage() {
                       onClick={() => deleteProduct(p.id, p.name)}
                       disabled={isBusy}
                       aria-label={`Apagar ${p.name}`}
-                      className="inline-flex items-center min-h-10 px-3 rounded-xl text-[12.5px] font-semibold text-red-700 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                      className="inline-flex items-center min-h-10 px-3 rounded-xl text-[12.5px] font-semibold text-faint hover:text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
                     >
                       {isBusy ? 'Apagando…' : 'Apagar'}
                     </button>

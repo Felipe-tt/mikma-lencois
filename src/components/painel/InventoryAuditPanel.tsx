@@ -102,7 +102,7 @@ export function InventoryAuditPanel() {
     <div className="border border-mist bg-paper rounded-xl p-4 mb-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex-1">
-          <p className="text-[13px] font-semibold text-ink">Verificar reservas travadas</p>
+          <p className="text-[13px] font-semibold text-ink">Peças presas em pedidos não pagos</p>
           <p className="text-[12px] text-faint mt-0.5 leading-relaxed">
             Peças separadas para pedidos que nunca foram pagos podem ficar presas e sumir da venda.
             Aqui você confere e libera.
@@ -137,7 +137,7 @@ export function InventoryAuditPanel() {
                 <IconCheck size={12} />
               </span>
               <p className="text-[13px] text-mid">
-                Tudo certo. Nenhuma reserva travada
+                Tudo certo. Nenhuma peça presa em pedido não pago
                 <span className="text-faint"> · {plural(result.summary.pendingOrdersChecked, 'pedido em aberto conferido', 'pedidos em aberto conferidos')}</span>
               </p>
             </div>

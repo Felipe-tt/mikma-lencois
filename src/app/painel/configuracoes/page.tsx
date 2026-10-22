@@ -171,7 +171,7 @@ export default function ConfiguracoesPage() {
 
       {/* Título */}
       <div className="mb-6">
-        <h1 className="font-display font-normal text-ink text-2xl">Configurações</h1>
+        <h1 className="sr-only lg:not-sr-only font-display font-normal text-ink text-2xl">Configurações</h1>
         <p className="text-[13px] text-faint mt-1">Personalize sua loja. As mudanças aparecem no site logo depois de salvar.</p>
       </div>
 
@@ -257,7 +257,7 @@ export default function ConfiguracoesPage() {
               onChange={next => set('businessHours', serializeBusinessHours(next))}
             />
             <div>
-              <label htmlFor="config-fuso" className="block text-[11px] font-semibold text-mid mb-1.5">Fuso horário</label>
+              <label htmlFor="config-fuso" className="block text-[13px] font-semibold text-mid mb-1.5">Fuso horário</label>
               <Select
                 value={settings.businessHoursTimezone || 'America/Sao_Paulo'}
                 onChange={v => set('businessHoursTimezone', v)}
@@ -268,7 +268,7 @@ export default function ConfiguracoesPage() {
                   { value: 'America/Rio_Branco', label: 'Acre (GMT-5)' },
                   { value: 'America/Noronha', label: 'Fernando de Noronha (GMT-2)' },
                 ]}
-                triggerClassName="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-[2px] flex items-center justify-between gap-2 cursor-pointer hover:border-ink/20 transition-all"
+                triggerClassName="w-full border border-mist bg-white dark:bg-warm px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl flex items-center justify-between gap-2 cursor-pointer hover:border-ink/20 transition-all"
               />
             </div>
           </Card>
@@ -670,7 +670,7 @@ function F({ label, value, onChange, hint, placeholder, maxLength, type='text', 
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
+      <label htmlFor={id} className="block text-[13px] font-semibold text-mid mb-1.5">{label}</label>
       <input id={id} type={type} inputMode={inputMode} value={value} onChange={e=>onChange(e.target.value)}
         placeholder={examplePlaceholder(placeholder)} maxLength={maxLength}
         {...(type === 'url' || type === 'email' ? { autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } : {})}
@@ -685,7 +685,7 @@ function TA({ label, value, onChange, rows=3, placeholder, hint }: {
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
+      <label htmlFor={id} className="block text-[13px] font-semibold text-mid mb-1.5">{label}</label>
       <textarea id={id} value={value} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={examplePlaceholder(placeholder)}
         className="panel-input resize-y placeholder:text-faint/60 placeholder:italic" />
       {hint && <p className="mt-1.5 text-[11px] text-faint">{hint}</p>}
@@ -707,7 +707,7 @@ function Toggle({ label, checked, onChange, hint, warn }: {
         >
           <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white dark:bg-warm shadow transition-transform duration-150 ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
         </button>
-        <span className="text-[11px] font-semibold text-mid">{label}</span>
+        <span className="text-[13px] font-semibold text-mid">{label}</span>
       </label>
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
       {checked && warn && <p className="mt-1.5 text-[11px] text-clay font-semibold leading-relaxed">{warn}</p>}
@@ -723,7 +723,7 @@ function Num({ label, value, onChange, hint, min, max }: {
   const clamp = (n: number) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, n));
   return (
     <div>
-      <label htmlFor={id} className="block text-[11px] font-semibold text-mid mb-1.5">{label}</label>
+      <label htmlFor={id} className="block text-[13px] font-semibold text-mid mb-1.5">{label}</label>
       {/* Texto livre enquanto edita: antes apagar o campo pra digitar outro
           número fazia ele voltar pra 0 na hora. Campo vazio ao sair volta
           pro último valor válido. */}
@@ -987,7 +987,7 @@ function TeamPanel() {
         <Info>Só admins conseguem gerenciar a equipe. Sellers têm acesso ao painel, mas não podem adicionar ou remover outras pessoas, assim uma conta de seller comprometida não vira uma porta pra criar acessos ilimitados.</Info>
         <form onSubmit={handleAdd} className="flex flex-col gap-3">
           <div className="relative flex flex-col gap-1.5">
-            <label htmlFor="config-buscar-pessoa" className="text-[11px] font-bold text-mid uppercase tracking-wide">Buscar pessoa</label>
+            <label htmlFor="config-buscar-pessoa" className="text-[13px] font-bold text-mid uppercase tracking-wide">Buscar pessoa</label>
             <input
               id="config-buscar-pessoa"
               value={selected ? (selected.displayName || selected.email || '') : query}
@@ -1019,7 +1019,7 @@ function TeamPanel() {
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <label id="config-nivel-label" className="text-[11px] font-bold text-mid uppercase tracking-wide">Nível de acesso</label>
+            <label id="config-nivel-label" className="text-[13px] font-bold text-mid uppercase tracking-wide">Nível de acesso</label>
             <div role="group" aria-labelledby="config-nivel-label" className="flex gap-2">
               {(['seller', 'admin'] as const).map(r => (
                 <button type="button" key={r} aria-pressed={role === r} onClick={() => setRole(r)}

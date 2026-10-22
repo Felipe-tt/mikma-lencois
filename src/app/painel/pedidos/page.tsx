@@ -289,7 +289,7 @@ export default function PainelPedidos() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h1 className="font-display font-normal text-ink text-2xl">Pedidos</h1>
+          <h1 className="sr-only lg:not-sr-only font-display font-normal text-ink text-2xl">Pedidos</h1>
           <p className="text-[13px] text-faint mt-1">
             {todayCount} pedido{todayCount === 1 ? '' : 's'} pago{todayCount === 1 ? '' : 's'} hoje
           </p>
@@ -320,10 +320,10 @@ export default function PainelPedidos() {
             if (count === 0 && filter !== f.id) return null;
             return (
               <button key={f.id} onClick={() => setFilter(f.id)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border transition-colors ${ filter === f.id ? 'bg-ink text-paper border-ink' : 'bg-paper text-mid border-mist hover:bg-warm' } rounded-full`}>
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold border transition-colors ${ filter === f.id ? 'bg-ink text-paper border-ink' : 'bg-paper text-mid border-mist hover:bg-warm' } rounded-full`}>
                 {f.Icon && <f.Icon size={11} className="shrink-0" />}
                 {f.label}
-                {count !== null && <span className="text-[9px] font-bold">{count}</span>}
+                {count !== null && <span className="text-[11px] font-bold">{count}</span>}
               </button>
             );
           })}
@@ -338,7 +338,7 @@ export default function PainelPedidos() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por nome, e-mail ou ID do pedido…"
+            placeholder="Buscar nome, e-mail ou nº do pedido"
             aria-label="Buscar pedidos"
             className="w-full pl-9 pr-4 py-2.5 text-sm border border-mist bg-white dark:bg-warm focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
           />
@@ -361,37 +361,39 @@ export default function PainelPedidos() {
 
             {/* Linha principal */}
             <div className="flex items-start justify-between gap-3">
-              <div className="flex flex-col gap-1.5 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[11px] font-mono text-faint bg-warm px-1.5 py-0.5 rounded-md">
-                    #{order.id.slice(-8).toUpperCase()}
-                  </span>
-                  <span className={BADGE[order.status] ?? 'badge'}>
-                    {STATUS_LABEL[order.status] ?? order.status}
-                  </span>
-                  <span className="text-sm font-bold text-ink">
+              <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                {/* Cliente + valor (valor fixo no canto, fora da linha que quebra) */}
+                <div className="flex items-start gap-3">
+                  {(() => {
+                    const name = (order as Order & { customerName?: string }).customerName || customers[order.userId]?.name;
+                    return name ? <p className="text-[15px] font-semibold text-ink min-w-0 break-words">{name}</p> : null;
+                  })()}
+                  <span className="ml-auto shrink-0 text-[15px] font-bold text-ink">
                     {formatCurrency(order.totalCents)}
                   </span>
                 </div>
-                {/* Cliente */}
-                {(() => {
-                  const name = (order as Order & { customerName?: string }).customerName || customers[order.userId]?.name;
-                  return name ? <p className="text-[13px] text-ink font-medium">{name}</p> : null;
-                })()}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={BADGE[order.status] ?? 'badge'}>
+                    {STATUS_LABEL[order.status] ?? order.status}
+                  </span>
+                  <span className="text-[12px] font-mono text-faint bg-warm px-1.5 py-0.5 rounded-md">
+                    #{order.id.slice(-8).toUpperCase()}
+                  </span>
+                </div>
                 {/* Detalhes */}
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-[11px] text-faint">{formatTsDateTime(order.createdAt)}</span>
-                  <span className="text-[11px] text-faint">{paymentLabel(order)}</span>
+                  <span className="text-[13px] text-faint">{formatTsDateTime(order.createdAt)}</span>
+                  <span className="text-[13px] text-faint">{paymentLabel(order)}</span>
                   {order.delivery?.carrier && (
-                    <span className="text-[11px] text-faint">{carrierLabel(order.delivery.carrier)}</span>
+                    <span className="text-[13px] text-faint">{carrierLabel(order.delivery.carrier)}</span>
                   )}
                   {order.address?.city && (
-                    <span className="text-[11px] text-faint flex items-center gap-1"><IconPin size={10} />{order.address.city}, {order.address.state}</span>
+                    <span className="text-[13px] text-faint flex items-center gap-1"><IconPin size={10} />{order.address.city}, {order.address.state}</span>
                   )}
                 </div>
                 {/* Itens */}
                 {order.items?.length > 0 && (
-                  <p className="text-[11px] text-faint">
+                  <p className="text-[13px] text-faint">
                     {order.items.map(i => `${i.quantity}x ${i.productName ?? i.productId}`).join(' · ')}
                   </p>
                 )}

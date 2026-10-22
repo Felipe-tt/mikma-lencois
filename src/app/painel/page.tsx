@@ -111,8 +111,8 @@ export default function PainelDashboard() {
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
         <h1 className="font-display font-normal text-ink text-2xl">{firstName ? `Olá, ${firstName}!` : 'Olá!'}</h1>
-        <p className="flex items-center gap-2 text-[13px] text-faint mt-1">
-          <span className="panel-live-dot" aria-hidden="true" />
+        <p className="flex items-start gap-2 text-[13px] text-faint mt-1">
+          <span className="panel-live-dot mt-1.5 shrink-0" aria-hidden="true" />
           Um resumo do que está acontecendo na loja, em tempo real.
         </p>
       </div>
@@ -192,11 +192,11 @@ export default function PainelDashboard() {
         {kpis.map(k => (
           <div key={k.label} className="panel-stat">
             <span className="panel-stat-icon mb-3"><k.Icon size={17} /></span>
-            <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-faint mb-1">{k.label}</p>
+            <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-faint mb-1">{k.label}</p>
             <p className="font-display text-2xl text-ink leading-none">
               {k.fmt === 'c' ? formatCurrency(k.value) : k.value}
             </p>
-            <p className="text-[10.5px] text-faint mt-1">{k.desc}</p>
+            <p className="text-[12px] text-faint mt-1">{k.desc}</p>
           </div>
         ))}
       </div>
@@ -222,14 +222,16 @@ export default function PainelDashboard() {
             href={`/painel/pedidos/${o.id}`}
             className="panel-row flex items-center justify-between gap-3"
           >
-            {/* No celular o ID fica em cima do status: lado a lado, "Aguardando
+            {/* No celular o nome fica em cima do status: lado a lado, "Aguardando
                 pagamento" quebrava em duas linhas dentro do selo. */}
             <span className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3 min-w-0">
-              <span className="text-[11px] font-mono text-faint shrink-0">#{o.id.slice(-8).toUpperCase()}</span>
+              <span className="text-[14px] font-medium text-ink min-w-0 truncate max-w-full">
+                {(o as Order & { customerName?: string }).customerName || `#${o.id.slice(-8).toUpperCase()}`}
+              </span>
               <span className={`${BADGE[o.status] ?? 'badge'} whitespace-nowrap`}>{LABEL[o.status] ?? o.status}</span>
             </span>
-            <span className="flex items-center gap-4 shrink-0">
-              <span className="text-[11px] text-faint hidden sm:block">{formatTsDateTime(o.createdAt)}</span>
+            <span className="flex items-center gap-3 sm:gap-4 shrink-0">
+              <span className="text-[11px] text-faint">{formatTsDateTime(o.createdAt)}</span>
               <span className="font-display text-sm text-ink">{formatCurrency(o.totalCents)}</span>
               <IconArrowRight size={13} className="text-faint" />
             </span>
