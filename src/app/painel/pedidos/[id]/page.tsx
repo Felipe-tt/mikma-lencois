@@ -935,7 +935,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {order.status === 'shipped' && (
           <div className="border border-mist px-5 py-4 flex flex-col gap-3 rounded-xl">
-            <p className="text-[13px] font-bold text-ink flex items-center gap-1.5"><IconTruck size={13} className="text-clay-l" /> Pedido despachado</p>
+            <p className="text-[13px] font-bold text-ink flex items-center gap-1.5"><IconTruck size={13} className="text-clay" /> Pedido despachado</p>
 
             {/* ── Uber Direct: entregador em tempo real ─────────────────── */}
             {order.delivery?.carrier === 'uber_direct' && (
@@ -955,7 +955,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     Corrigir
                   </button>
                   <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
-                    className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
+                    className="text-[11px] font-semibold text-clay hover:text-clay-d transition-colors">
                     {copied === 'tracking' ? 'Copiado!' : 'Copiar'}
                   </button>
                 </div>
@@ -963,7 +963,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             )}
             {order.delivery?.trackingUrl && order.delivery?.carrier !== 'uber_direct' && (
               <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
-                className="text-[12px] text-clay-l font-semibold hover:underline">
+                className="text-[12px] text-clay font-semibold hover:underline">
                 Rastrear envio
               </a>
             )}
@@ -1094,7 +1094,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[12px] text-faint">PIX Copia e Cola</span>
                 <button onClick={() => copy(order.payment.method === 'pix' ? order.payment.pixCopyPaste! : '', 'pix')}
-                  className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
+                  className="text-[11px] font-semibold text-clay hover:text-clay-d transition-colors">
                   {copied === 'pix' ? 'Copiado!' : 'Copiar'}
                 </button>
               </div>
@@ -1199,7 +1199,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[12px] text-faint">Código de rastreio</span>
                   <button onClick={() => copy(order.delivery!.trackingCode!, 'tracking')}
-                    className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
+                    className="text-[11px] font-semibold text-clay hover:text-clay-d transition-colors">
                     {copied === 'tracking' ? 'Copiado!' : 'Copiar'}
                   </button>
                 </div>
@@ -1210,7 +1210,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     : null;
                   return url ? (
                     <a href={url} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center min-h-10 text-[12px] font-semibold text-clay-l hover:text-clay-d transition-colors">
+                      className="inline-flex items-center min-h-10 text-[12px] font-semibold text-clay hover:text-clay-d transition-colors">
                       Rastrear na transportadora
                     </a>
                   ) : null;

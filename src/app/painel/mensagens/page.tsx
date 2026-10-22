@@ -447,7 +447,7 @@ function ConversationThread({
 
         <div className="p-3 flex flex-col gap-2">
           {error && (
-            <p className="text-[12px] text-red-500 font-medium flex items-center gap-1"><IconAlert size={11} />{error}</p>
+            <p className="text-[12px] text-red-700 font-medium flex items-center gap-1"><IconAlert size={11} />{error}</p>
           )}
 
           {/* Assunto (opcional, expansível) */}

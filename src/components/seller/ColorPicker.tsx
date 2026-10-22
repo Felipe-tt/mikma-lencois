@@ -183,7 +183,7 @@ export function ColorPicker({ value, colorName, onChange, id }: Props) {
       )}
 
       {error && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
+        <p className="text-xs text-red-700 flex items-center gap-1">
           <IconAlert size={11} />
           {error}
         </p>

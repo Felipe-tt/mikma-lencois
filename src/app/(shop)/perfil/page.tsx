@@ -185,7 +185,7 @@ export default function PerfilPage() {
     <div>
       <div className="border-b border-mist bg-warm/60">
         <div className="container-shop py-8 sm:py-12">
-          <Link href="/conta" className="group inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
+          <Link href="/conta" className="group relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             Área do cliente
           </Link>
@@ -291,7 +291,7 @@ export default function PerfilPage() {
                   <button ref={editAddrBtn} onClick={() => setEditingAddress(true)} className="btn-outline">
                     Editar endereço
                   </button>
-                  <button onClick={handleRemoveAddress} disabled={removingAddress} className="text-[13px] font-medium text-mid hover:text-red-600 transition-colors disabled:opacity-50">
+                  <button onClick={handleRemoveAddress} disabled={removingAddress} className="py-3 -my-3 text-[13px] font-medium text-mid hover:text-red-600 transition-colors disabled:opacity-50">
                     {removingAddress ? 'Removendo…' : 'Remover'}
                   </button>
                   {addrStatus && (
@@ -349,7 +349,7 @@ export default function PerfilPage() {
 
             <div className="mt-6 pt-5 border-t border-mist">
               {!confirmDelete ? (
-                <button onClick={() => setConfirmDelete(true)} className="text-[13px] font-medium text-red-600 hover:text-red-700 transition-colors">
+                <button onClick={() => setConfirmDelete(true)} className="py-3 -my-3 text-[13px] font-medium text-red-700 hover:text-red-800 transition-colors">
                   Excluir minha conta…
                 </button>
               ) : (

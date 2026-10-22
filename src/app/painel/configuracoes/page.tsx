@@ -710,7 +710,7 @@ function Toggle({ label, checked, onChange, hint, warn }: {
         <span className="text-[11px] font-semibold text-mid">{label}</span>
       </label>
       {hint && <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{hint}</p>}
-      {checked && warn && <p className="mt-1.5 text-[11px] text-clay-l font-semibold leading-relaxed">{warn}</p>}
+      {checked && warn && <p className="mt-1.5 text-[11px] text-clay font-semibold leading-relaxed">{warn}</p>}
     </div>
   );
 }
@@ -828,7 +828,7 @@ function TableEditor({ colsJson, rowsJson, onRowsChange, measures = false }: {
         </div>
       ))}
       <button onClick={() => onRowsChange(JSON.stringify([...rows, Object.fromEntries(cols.map(c=>[c,'']))]))}
-        className="mt-1 border-2 border-dashed border-clay-l/25 text-clay-l text-[12px] font-semibold py-2.5 hover:bg-clay-l/5 hover:border-clay-l/50 transition-all">
+        className="mt-1 border-2 border-dashed border-clay-l/25 text-clay text-[12px] font-semibold py-2.5 hover:bg-clay-l/5 hover:border-clay-l/50 transition-all">
         + Adicionar linha
       </button>
     </div>
@@ -866,7 +866,7 @@ function TimelineEditor({ value, onChange }: { value:string; onChange:(v:string)
         </div>
       ))}
       <button onClick={()=>upd([...items,{year:'',label:'',desc:''}])}
-        className="border-2 border-dashed border-clay-l/30 text-clay-l text-[13px] font-semibold py-3 hover:bg-clay-l/5 transition-all">
+        className="border-2 border-dashed border-clay-l/30 text-clay text-[13px] font-semibold py-3 hover:bg-clay-l/5 transition-all">
         + Adicionar marco
       </button>
     </div>
@@ -1009,7 +1009,7 @@ function TeamPanel() {
                       <span className="block text-[11px] text-faint">{u.email}</span>
                     </span>
                     {memberUids.has(u.uid) ? (
-                      <span className="text-[10px] font-bold text-clay-l uppercase shrink-0">já é {u.role === 'admin' ? 'admin' : 'seller'}</span>
+                      <span className="text-[10px] font-bold text-clay uppercase shrink-0">já é {u.role === 'admin' ? 'admin' : 'seller'}</span>
                     ) : (
                       <span className="text-[10px] text-faint uppercase shrink-0">{u.role === 'buyer' ? 'cliente' : u.role}</span>
                     )}

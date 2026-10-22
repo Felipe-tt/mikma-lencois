@@ -146,7 +146,7 @@ export default function PainelProdutosPage() {
         <div className="border border-mist py-16 text-center bg-paper rounded-xl">
           {search ? <IconSearch size={36} className="text-mist mx-auto mb-3" /> : <IconProducts size={36} className="text-mist mx-auto mb-3" />}
           <p className="text-sm text-faint">{search ? 'Nenhum produto encontrado com esse nome.' : 'Você ainda não cadastrou nenhum produto.'}</p>
-          {!search && <p className="text-[12px] text-clay-l mt-2 font-semibold">Clique em &quot;+ Novo produto&quot; para começar!</p>}
+          {!search && <p className="text-[12px] text-clay mt-2 font-semibold">Clique em &quot;+ Novo produto&quot; para começar!</p>}
         </div>
       ) : (
         <div className="bg-paper border border-mist overflow-x-auto rounded-xl">
@@ -194,7 +194,7 @@ export default function PainelProdutosPage() {
                   <button
                     onClick={() => toggleActive(p.id, p.active)}
                     disabled={isBusy}
-                    className={`text-[10px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 border transition-colors disabled:opacity-50 disabled:cursor-wait ${ p.active ? 'border-clay-l text-clay-l hover:bg-clay-l hover:text-paper' : 'border-mist text-faint hover:bg-warm' } rounded-full`}
+                    className={`text-[10px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 border transition-colors disabled:opacity-50 disabled:cursor-wait ${ p.active ? 'border-clay-l text-clay hover:bg-clay-l hover:text-paper' : 'border-mist text-faint hover:bg-warm' } rounded-full`}
                   >
                     {isBusy ? '…' : p.active ? 'Visível' : 'Oculto'}
                   </button>
@@ -207,7 +207,7 @@ export default function PainelProdutosPage() {
                     onClick={() => toggleActive(p.id, p.active)}
                     disabled={isBusy}
                     aria-pressed={p.active}
-                    className={`sm:hidden min-h-10 text-[11px] font-bold tracking-[0.06em] uppercase px-3.5 border transition-colors disabled:opacity-50 ${ p.active ? 'border-clay-l text-clay-l' : 'border-mist text-faint' } rounded-full`}
+                    className={`sm:hidden min-h-10 text-[11px] font-bold tracking-[0.06em] uppercase px-3.5 border transition-colors disabled:opacity-50 ${ p.active ? 'border-clay-l text-clay' : 'border-mist text-faint' } rounded-full`}
                   >
                     {isBusy ? '…' : p.active ? 'Visível' : 'Oculto'}
                   </button>
@@ -223,7 +223,7 @@ export default function PainelProdutosPage() {
                       onClick={() => deleteProduct(p.id, p.name)}
                       disabled={isBusy}
                       aria-label={`Apagar ${p.name}`}
-                      className="inline-flex items-center min-h-10 px-3 rounded-xl text-[12.5px] font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                      className="inline-flex items-center min-h-10 px-3 rounded-xl text-[12.5px] font-semibold text-red-700 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
                     >
                       {isBusy ? 'Apagando…' : 'Apagar'}
                     </button>

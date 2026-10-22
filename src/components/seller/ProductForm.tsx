@@ -889,7 +889,7 @@ export default function ProductForm({ initial }: Props) {
                 id="prod-fotos"
                 type="button"
                 onClick={() => setShowCamera(true)}
-                className={`border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay/80 hover:border-clay hover:text-clay transition-colors rounded-xl ${images.length === 0 ? 'w-full h-32 bg-clay/[0.04]' : 'h-20 w-20'}`}
+                className={`border-2 border-dashed border-clay/40 flex flex-col items-center justify-center gap-1 text-clay hover:border-clay hover:text-clay-d transition-colors rounded-xl ${images.length === 0 ? 'w-full h-32 bg-clay/[0.04]' : 'h-20 w-20'}`}
               >
                 <svg width={images.length === 0 ? 30 : 22} height={images.length === 0 ? 30 : 22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 <span className={images.length === 0 ? 'text-[15px] font-semibold' : 'text-[10px] font-medium'}>{images.length > 0 ? 'Mais fotos' : 'Tirar foto'}</span>
@@ -1094,7 +1094,7 @@ export default function ProductForm({ initial }: Props) {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label htmlFor="prod-peso" className="label mb-0">
-                  Peso de uma peça (kg) <span className="text-red-500">*</span>
+                  Peso de uma peça (kg) <span className="text-red-700">*</span>
                 </label>
                 <button
                   type="button"

@@ -154,7 +154,7 @@ export function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-mist bg-warm/50">
             <p className="text-[12px] font-bold text-ink uppercase tracking-wide">Notificações</p>
             {unread.length > 0 && (
-              <button onClick={markAllRead} className="text-[11px] font-semibold text-clay-l hover:text-clay-d transition-colors">
+              <button onClick={markAllRead} className="text-[11px] font-semibold text-clay hover:text-clay-d transition-colors">
                 Marcar todas como lidas
               </button>
             )}

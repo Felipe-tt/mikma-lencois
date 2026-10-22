@@ -24,7 +24,7 @@ export default function EditarProdutoPage({ params }: { params: Promise<{ id: st
     </div>
   );
 
-  if (!product) return <div className="py-8 text-center text-sm text-red-500">Produto não encontrado.</div>;
+  if (!product) return <div className="py-8 text-center text-sm text-red-700">Produto não encontrado.</div>;
 
   return (
     <div>

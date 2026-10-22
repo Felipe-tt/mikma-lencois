@@ -124,7 +124,7 @@ export function PreviewButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 text-[11px] font-semibold text-clay-l hover:text-ink transition-colors shrink-0"
+      className="flex items-center gap-1.5 text-[11px] font-semibold text-clay hover:text-ink transition-colors shrink-0"
     >
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />

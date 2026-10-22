@@ -299,7 +299,7 @@ export default function PainelPedidos() {
       {/* Alerta de ação necessária */}
       {needActionCount > 0 && (
         <div className="bg-clay-l/10 border border-clay-l/30 px-4 py-3.5 mb-5 flex items-center gap-3 rounded-xl">
-          <IconAlert size={18} className="shrink-0 text-clay-l" />
+          <IconAlert size={18} className="shrink-0 text-clay" />
           <p className="text-[13px] text-ink flex-1">
             <strong>{needActionCount} pedido{needActionCount > 1 ? 's' : ''} pago{needActionCount > 1 ? 's' : ''}</strong> esperando você separar.
           </p>
@@ -406,7 +406,7 @@ export default function PainelPedidos() {
             {/* CTA pago */}
             {order.status === 'paid' && (
               <div className="mt-3 flex items-center gap-3 p-3 bg-clay-l/5 border border-clay-l/20 rounded-xl">
-                <IconArrowRight size={16} className="shrink-0 text-clay-l" />
+                <IconArrowRight size={16} className="shrink-0 text-clay" />
                 <div className="flex-1">
                   <p className="text-[12px] font-semibold text-ink">Pagamento confirmado, separe o pedido!</p>
                   <p className="text-[11px] text-faint">Clique quando começar a preparar.</p>

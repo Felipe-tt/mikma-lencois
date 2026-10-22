@@ -213,7 +213,7 @@ export default function TrocasPage() {
                       </span>
                     )}
                   </div>
-                  <Link href={`/painel/pedidos/${r.orderId}`} className="text-[13px] font-semibold text-clay-l hover:text-clay-d mt-1 inline-block">
+                  <Link href={`/painel/pedidos/${r.orderId}`} className="text-[13px] font-semibold text-clay hover:text-clay-d mt-1 inline-block">
                     Pedido #{r.orderId.slice(-8).toUpperCase()}
                   </Link>
                   {r.customerName && <span className="text-[13px] text-mid">, {r.customerName}</span>}

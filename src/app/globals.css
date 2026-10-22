@@ -670,7 +670,7 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
   @apply flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-mid transition-all duration-200;
 }
 .panel-tabbar-item.is-active {
-  @apply text-clay-l;
+  @apply text-clay;
 }
 .panel-tabbar-item.is-active .panel-tabbar-dot {
   @apply opacity-100 scale-100;

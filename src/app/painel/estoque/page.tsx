@@ -485,7 +485,7 @@ export default function EstoquePage() {
         <div className="border border-mist bg-paper py-16 text-center rounded-xl">
           <IconBox size={40} className="text-mist mx-auto mb-3" />
           <p className="text-sm text-faint">{search ? 'Nenhum resultado.' : 'Nenhum produto no estoque ainda.'}</p>
-          {!search && <Link href="/painel/produtos/novo" className="mt-3 inline-block text-[12px] text-clay-l font-semibold">Adicionar produto</Link>}
+          {!search && <Link href="/painel/produtos/novo" className="mt-3 inline-block text-[12px] text-clay font-semibold">Adicionar produto</Link>}
         </div>
       ) : mode === 'contagem' ? (
         <div className="border border-mist bg-paper rounded-xl">
@@ -634,7 +634,7 @@ export default function EstoquePage() {
                               {timeAgo(m.date)}
                               {i === 0 && m.type !== 'adjust' && !m.source && (
                                 <button onClick={() => undoLast(item)} disabled={busy}
-                                  className="text-red-500 underline disabled:opacity-50">
+                                  className="text-red-700 underline disabled:opacity-50">
                                   Desfazer
                                 </button>
                               )}

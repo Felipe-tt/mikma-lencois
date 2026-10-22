@@ -327,7 +327,7 @@ export default function CartPage() {
                     <div className="flex items-center rounded-full border border-mist overflow-hidden">
                     <button
                       onClick={() => updateQty(item.sku, item.quantity - 1, item.note)}
-                      className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
+                      className="w-11 h-11 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors"
                       aria-label="Diminuir"
                     >
                       <svg width="12" height="2" viewBox="0 0 12 2" fill="currentColor"><rect width="12" height="2" rx="1"/></svg>
@@ -336,7 +336,7 @@ export default function CartPage() {
                     <button
                       onClick={() => { const avail = stockMap[item.sku] ?? 99; if (item.quantity < avail) updateQty(item.sku, item.quantity + 1, item.note); }}
                       disabled={(stockMap[item.sku] ?? 99) <= item.quantity}
-                      className="w-9 h-9 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="w-11 h-11 flex items-center justify-center text-mid hover:text-ink hover:bg-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       aria-label="Aumentar"
                     >
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 0a1 1 0 011 1v4h4a1 1 0 110 2H7v4a1 1 0 11-2 0V7H1a1 1 0 010-2h4V1a1 1 0 011-1z"/></svg>
@@ -551,7 +551,7 @@ export default function CartPage() {
             </div>
 
             <div className="mt-5 text-center">
-              <Link href="/produtos" className="text-xs text-faint hover:text-clay transition-colors">
+              <Link href="/produtos" className="inline-block py-3 -my-3 text-xs text-faint hover:text-clay transition-colors">
                 Continuar comprando
               </Link>
             </div>

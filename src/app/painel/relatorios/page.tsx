@@ -240,7 +240,7 @@ export default function RelatoriosPage() {
 
           <section className="panel-card overflow-hidden">
             <header className="panel-card-header">
-              <IconTrophy size={14} className="text-clay-l shrink-0" />
+              <IconTrophy size={14} className="text-clay shrink-0" />
               <div>
                 <p className="text-[13px] font-bold text-ink leading-tight">Produtos mais vendidos</p>
                 <p className="text-[11px] text-faint">Por receita gerada no período</p>
@@ -281,7 +281,7 @@ export default function RelatoriosPage() {
           {stats.byCarrier.length > 0 && (
             <section className="panel-card overflow-hidden">
               <header className="panel-card-header">
-                <IconTruck size={14} className="text-clay-l shrink-0" />
+                <IconTruck size={14} className="text-clay shrink-0" />
                 <div>
                   <p className="text-[13px] font-bold text-ink leading-tight">Formas de entrega</p>
                   <p className="text-[11px] text-faint">Quantos pedidos por transportadora</p>

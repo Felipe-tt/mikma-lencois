@@ -60,7 +60,7 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
     return (
       <div>
         <p className="text-[13px] text-red-600">Pedido não encontrado.</p>
-        <Link href="/painel/pedidos" className="text-[12px] text-clay-l font-semibold mt-2 inline-block">Voltar pros pedidos</Link>
+        <Link href="/painel/pedidos" className="text-[12px] text-clay font-semibold mt-2 inline-block">Voltar pros pedidos</Link>
       </div>
     );
   }

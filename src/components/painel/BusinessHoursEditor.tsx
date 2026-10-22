@@ -150,13 +150,14 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                 ) : (
                   <div className="flex flex-col gap-2">
                     {day.ranges.length === 0 && (
-                      <span className="text-[11px] text-clay-l">Nenhum horário definido, adicione um intervalo</span>
+                      <span className="text-[11px] text-clay">Nenhum horário definido, adicione um intervalo</span>
                     )}
                     {day.ranges.map((range, idx) => (
                       <div key={idx} className="flex items-center gap-1.5 flex-wrap">
                         <input
                           type="time"
                           value={range.open}
+                          aria-label={`Abre (${label}${day.ranges.length > 1 ? `, intervalo ${idx + 1}` : ''})`}
                           onChange={e => setRange(key, idx, 'open', e.target.value)}
                           className="border border-mist bg-white dark:bg-warm px-2 py-1.5 text-[12px] tabular-nums w-[120px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
                         />
@@ -164,6 +165,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
                         <input
                           type="time"
                           value={range.close}
+                          aria-label={`Fecha (${label}${day.ranges.length > 1 ? `, intervalo ${idx + 1}` : ''})`}
                           onChange={e => setRange(key, idx, 'close', e.target.value)}
                           className="border border-mist bg-white dark:bg-warm px-2 py-1.5 text-[12px] tabular-nums w-[120px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 focus:border-clay-l/60 rounded-xl"
                         />
@@ -239,7 +241,7 @@ export function BusinessHoursEditor({ value, onChange }: Props) {
 
             {hasOverlapOrInvalid && (
               <div className="px-4 pb-3 -mt-1">
-                <p className="text-[11px] text-red-500 flex items-center gap-1.5">
+                <p className="text-[11px] text-red-700 flex items-center gap-1.5">
                   <IconAlert size={12} />
                   {hasOverlapOrInvalid}
                 </p>

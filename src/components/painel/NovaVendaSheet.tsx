@@ -254,7 +254,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         {/* Venda ou Reposição */}
         <div className="grid grid-cols-2 border border-mist p-1 bg-white dark:bg-warm rounded-xl">
           <button onClick={() => setMode('venda')}
-            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'venda' ? 'bg-red-500 text-white' : 'text-mid'}`}>
+            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'venda' ? 'bg-red-600 text-white' : 'text-mid'}`}>
             <IconMinusCircle size={15} /> Vender
           </button>
           <button onClick={() => setMode('reposicao')}
@@ -325,10 +325,10 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
                     </div>
                     {delta !== 0 && (
                       <>
-                        <span className={`absolute top-1 right-1 h-5 w-5 rounded-full flex items-center justify-center text-white text-[12px] font-bold leading-none ${delta < 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                        <span className={`absolute top-1 right-1 h-5 w-5 rounded-full flex items-center justify-center text-white text-[12px] font-bold leading-none ${delta < 0 ? 'bg-red-600' : 'bg-emerald-500'}`}>
                           {delta < 0 ? '×' : '✓'}
                         </span>
-                        <span className={`absolute top-1 left-1 h-5 min-w-5 px-1 rounded-full flex items-center justify-center text-white text-[11px] font-bold leading-none ${delta < 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                        <span className={`absolute top-1 left-1 h-5 min-w-5 px-1 rounded-full flex items-center justify-center text-white text-[11px] font-bold leading-none ${delta < 0 ? 'bg-red-600' : 'bg-emerald-500'}`}>
                           {delta < 0 ? `−${Math.abs(delta)}` : `+${delta}`}
                         </span>
                       </>

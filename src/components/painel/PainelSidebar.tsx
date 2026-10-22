@@ -63,7 +63,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
         <a href="/" className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 -ml-2 hover:bg-warm transition-colors">
           <BrandLogo alt="Mikma" className="h-7 w-auto object-contain" />
           <div className="w-px h-4 bg-mist" />
-          <span className="font-mono text-[9px] text-clay-l tracking-[0.22em] uppercase">Painel</span>
+          <span className="font-mono text-[9px] text-clay tracking-[0.22em] uppercase">Painel</span>
         </a>
         <NotificationBell />
       </div>
@@ -82,7 +82,7 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
                   className={`panel-nav-item ${active ? 'is-active' : ''}`}
                 >
                   <span className={`shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
-                    active ? 'bg-clay/15 text-clay-l' : 'text-mid'
+                    active ? 'bg-clay/15 text-clay' : 'text-mid'
                   }`}>
                     <Icon size={15} />
                   </span>

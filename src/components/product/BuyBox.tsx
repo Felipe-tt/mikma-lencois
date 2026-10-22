@@ -333,7 +333,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           </div>
           {/* Inline: o pontilhado acompanha só o texto, não a largura toda. */}
           <p className="mt-2.5 text-[11.5px] text-pretty">
-            <Link href="/guia-de-tamanhos" className="text-faint hover:text-clay-l transition-colors border-b border-dotted border-faint-l hover:border-clay-l">
+            <Link href="/guia-de-tamanhos" className="relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] text-faint hover:text-clay-l transition-colors border-b border-dotted border-faint-l hover:border-clay-l">
               Não sabe seu tamanho? Meça o colchão e a gente te diz
             </Link>
           </p>

@@ -165,7 +165,7 @@ export default async function HomePage() {
             {s.featuredTitle || 'Destaques'}
           </h2>
           <Link href="/produtos"
-            className="font-mono text-[11px] tracking-[0.14em] uppercase text-faint hover:text-ink transition-colors duration-150 border-b border-transparent hover:border-ink pb-px">
+            className="relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] font-mono text-[11px] tracking-[0.14em] uppercase text-faint hover:text-ink transition-colors duration-150 border-b border-transparent hover:border-ink pb-px">
             Ver todos
           </Link>
         </div>

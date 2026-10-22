@@ -130,7 +130,7 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
       {/* Content */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile topbar — vidro fosco, gruda no topo */}
-        <div data-no-print className="panel-topbar lg:hidden flex items-center gap-3 px-4 h-14">
+        <header data-no-print className="panel-topbar lg:hidden flex items-center gap-3 px-4 h-14">
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -146,7 +146,7 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
           <div className="ml-auto">
             <NotificationBell />
           </div>
-        </div>
+        </header>
 
         {/* overflow-x-clip e não overflow-y-auto: o documento é que rola, e
             um main com overflow virava o contêiner das barras "sticky"

@@ -96,7 +96,7 @@ export default function AvaliacoesPage() {
                 type="button"
                 onClick={() => remove(r)}
                 disabled={busyId === r.id}
-                className="shrink-0 min-h-9 px-3 text-[12px] font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 active:scale-[0.97] transition-[background-color,color,transform] duration-150 disabled:opacity-50 rounded-lg"
+                className="shrink-0 min-h-9 px-3 text-[12px] font-semibold text-red-700 hover:text-red-700 hover:bg-red-50 active:scale-[0.97] transition-[background-color,color,transform] duration-150 disabled:opacity-50 rounded-lg"
               >
                 {busyId === r.id ? 'Apagando…' : 'Apagar'}
               </button>
