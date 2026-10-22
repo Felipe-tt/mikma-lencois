@@ -23,7 +23,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     const decoded = await adminAuth.verifyIdToken(bearer.token);
     uid = decoded.uid;
     const role = (decoded as { role?: string }).role ?? '';
-    staff = role === 'seller' || role === 'admin';
+    // Equipe confere se o acesso não foi revogado (removido da equipe há
+    // pouco ainda tem token válido por até 1h). Comprador não precisa: só
+    // vê o próprio pedido, e assim o polling não paga a consulta extra.
+    staff = (role === 'seller' || role === 'admin')
+      && await adminAuth.verifyIdToken(bearer.token, true).then(() => true, () => false);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
