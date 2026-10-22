@@ -533,3 +533,17 @@ describe('edge/status: fallback da Cloudflare', () => {
     await assertFails(setDoc(doc(testEnv.unauthenticatedContext().firestore(), 'edge/status'), { bypass: true }));
   });
 });
+
+describe('notifications', () => {
+  it('equipe marca aviso do painel como lido, mas não escreve na conta de cliente', async () => {
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'notifications/seller/items/n1'), { title: 'Pedido', read: false });
+      await setDoc(doc(ctx.firestore(), 'notifications/buyer1/items/n1'), { title: 'Oi', read: false });
+    });
+    await assertSucceeds(updateDoc(doc(seller.firestore(), 'notifications/seller/items/n1'), { read: true }));
+    await assertFails(updateDoc(doc(seller.firestore(), 'notifications/seller/items/n1'), { title: 'Falso' }));
+    await assertFails(setDoc(doc(seller.firestore(), 'notifications/buyer1/items/n2'), { title: 'Falso' }));
+    await assertFails(getDoc(doc(seller.firestore(), 'notifications/buyer1/items/n1')));
+  });
+});

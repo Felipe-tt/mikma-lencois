@@ -208,9 +208,15 @@ service cloud.firestore {
     }
 
     // ── Notifications (subcoleção por usuário) ────────────────────────────────
+    // Quem cria é sempre o servidor. A equipe só lê os avisos do painel
+    // ('seller') e marca como lido; antes podia escrever aviso falso na
+    // conta de qualquer cliente.
     match /notifications/{userId}/items/{notifId} {
-      allow read: if isSelf(userId) || isSellerOrAdmin();
-      allow write: if isSellerOrAdmin();
+      allow read: if isSelf(userId) || (userId == 'seller' && isSellerOrAdmin());
+      allow update: if userId == 'seller' && isSellerOrAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+        && request.resource.data.read == true;
+      allow create, delete: if false;
     }
 
     // ── Push tokens (FCM), só o backend (Admin SDK) acessa; nunca o client ──
