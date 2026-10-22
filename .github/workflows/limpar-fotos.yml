@@ -1,0 +1,48 @@
+name: Storage · limpar fotos sem uso
+
+# Rodado manualmente. Sem "apagar", só lista as fotos de produto que nenhum
+# documento do Firestore usa (ver scripts/limpar-fotos-orfas.mjs).
+
+on:
+  workflow_dispatch:
+    inputs:
+      apagar:
+        description: 'Apagar as fotos sem uso (sem isso, só lista)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  limpar:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Limpar fotos
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          APAGAR: ${{ inputs.apagar }}
+        run: |
+          umask 077
+          printf '%s' "$SA_JSON" > "$HOME/sa.json"
+          trap 'rm -f "$HOME/sa.json"' EXIT
+          if [ "$APAGAR" = "true" ]; then
+            node scripts/limpar-fotos-orfas.mjs "$HOME/sa.json" --apply
+          else
+            node scripts/limpar-fotos-orfas.mjs "$HOME/sa.json"
+          fi
