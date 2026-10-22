@@ -64,6 +64,13 @@ describe('users/{uid}', () => {
     await assertSucceeds(getDoc(doc(seller.firestore(), 'users/buyer1')));
   });
 
+  it('ninguém lista a coleção de clientes inteira (CPF e endereço de todos)', async () => {
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    await assertFails(getDocs(collection(seller.firestore(), 'users')));
+    await assertFails(getDocs(collection(admin.firestore(), 'users')));
+  });
+
   it('CRÍTICO: comprador não consegue se auto-promover a admin', async () => {
     const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
