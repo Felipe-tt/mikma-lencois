@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Cart } from '@/types';
+import { VIEWER_TTL_MS } from '@/lib/sharedCart';
+import { ActivityList, OnlineStack } from '@/components/cart/montarUi';
 
 /**
  * "Montar junto": link secreto pra outras pessoas mexerem neste carrinho
@@ -27,6 +29,25 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { getIdTo
     return () => clearTimeout(t);
   }, [edit]);
 
+  // Enquanto o link está ligado, avisa que o dono está com o carrinho
+  // aberto e atualiza o "há 2 min" das mudanças.
+  const [now, setNow] = useState(openedAt);
+  useEffect(() => {
+    if (!active) return;
+    const ping = () => {
+      setNow(Date.now());
+      if (document.visibilityState !== 'visible') return;
+      user.getIdToken().then(t => fetch('/api/cart/share', { method: 'PUT', headers: { Authorization: `Bearer ${t}` } })).catch(() => {});
+    };
+    ping();
+    const t = setInterval(ping, 45_000);
+    return () => clearInterval(t);
+  }, [active, user]);
+  const online = Object.entries(share?.viewers ?? {})
+    .filter(([id, v]) => id !== 'owner' && now - v.at < VIEWER_TTL_MS)
+    .map(([, v]) => v);
+  const log = share?.log ?? [];
+
   async function call(method: 'POST' | 'DELETE') {
     setBusy(true); setError('');
     try {
@@ -48,6 +69,17 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { getIdTo
   return (
     <div className="mt-6 text-center">
       <p role="status" className="min-h-0 text-[12px] text-clay">{notice}</p>
+      {active && (online.length > 0 || log.length > 0) && (
+        <div className="mb-3 rounded-2xl border border-mist p-4 text-left">
+          {online.length > 0 && (
+            <p className="flex items-center gap-2 text-[12px] text-mid mb-3">
+              <OnlineStack people={online} />
+              {online.length === 1 ? `${online[0].name} está montando com você` : `${online.length} pessoas montando com você`}
+            </p>
+          )}
+          <ActivityList log={log} now={now} limit={3} />
+        </div>
+      )}
       {!open ? (
         <button type="button" onClick={() => setOpen(true)} className="inline-block py-3 -my-3 text-xs text-faint hover:text-clay transition-colors">
           {active ? 'Montando junto · ver link' : 'Montar junto com alguém'}

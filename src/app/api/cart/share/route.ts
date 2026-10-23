@@ -18,13 +18,30 @@ export async function POST(req: NextRequest) {
   const token = randomBytes(16).toString('base64url');
   const expiresAt = Timestamp.fromMillis(Date.now() + SHARE_DAYS * 86_400_000);
   const cartRef = adminDb.collection('carts').doc(uid);
+  // Primeiro nome, pra quem abre o link ver "Carrinho da Ana".
+  const fullName = String((await adminDb.collection('users').doc(uid).get()).data()?.name ?? auth.decoded.name ?? '');
+  const ownerName = fullName.trim().split(/\s+/)[0]?.slice(0, 24) ?? '';
   await adminDb.runTransaction(async tx => {
     const old = (await tx.get(cartRef)).data()?.share?.token;
     if (typeof old === 'string' && old) tx.delete(adminDb.collection('sharedCarts').doc(old));
     tx.set(adminDb.collection('sharedCarts').doc(token), { uid, expiresAt });
-    tx.set(cartRef, { userId: uid, share: { token, expiresAt } }, { merge: true });
+    // set com merge mescla mapas: o share antigo sai antes.
+    tx.set(cartRef, { userId: uid, share: FieldValue.delete() }, { merge: true });
+    tx.set(cartRef, { share: { token, expiresAt, ownerName, log: [], addedBy: {}, viewers: {} } }, { merge: true });
   });
   return NextResponse.json({ token, expiresAt: expiresAt.toMillis() });
+}
+
+/** PUT: o dono está com o carrinho aberto (aparece como online pra quem tem o link). */
+export async function PUT(req: NextRequest) {
+  const auth = await verifyAuth(req);
+  if (!auth.ok) return auth.response;
+  if (!await rateLimit(`cart-share-ping:${auth.decoded.uid}`, 6, 60_000)) return NextResponse.json({ ok: true });
+  const cartRef = adminDb.collection('carts').doc(auth.decoded.uid);
+  const share = (await cartRef.get()).data()?.share;
+  if (!share?.token) return NextResponse.json({ ok: false });
+  await cartRef.update({ 'share.viewers.owner': { name: share.ownerName || 'Dono', at: Date.now(), owner: true } });
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: NextRequest) {

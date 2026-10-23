@@ -5,28 +5,56 @@ import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'fire
 import { db } from '@/lib/firebase/client';
 import { formatCurrency } from '@/lib/utils/format';
 import { variantLabel } from '@/lib/variantLabel';
-import { lineKey } from '@/lib/sharedCart';
+import { lineKey, VIEWER_TTL_MS } from '@/lib/sharedCart';
 import type { Cart, Product } from '@/types';
 import { ProductSheet } from '@/components/cart/ProductSheet';
+import { ActivityList, Avatar, OnlineStack } from '@/components/cart/montarUi';
 
 type Status = 'loading' | 'ok' | 'off';
+
+const NAME_KEY = 'mikma:montar-nome';
+const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+function readStorage(key: string) {
+  try { return typeof window === 'undefined' ? '' : localStorage.getItem(key) ?? ''; } catch { return ''; }
+}
+
+/** Id aleatório deste navegador, pra aparecer uma vez só na lista de online. */
+function viewerId() {
+  let id = readStorage('mikma:montar-id');
+  if (!/^[A-Za-z0-9]{8,24}$/.test(id)) {
+    id = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => (b % 36).toString(36)).join('');
+    try { localStorage.setItem('mikma:montar-id', id); } catch { /* sem storage */ }
+  }
+  return id;
+}
 
 export default function MontarJuntoPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [status, setStatus] = useState<Status>('loading');
   const [cart, setCart] = useState<Cart | null>(null);
   const [catalog, setCatalog] = useState<Product[]>([]);
-  const [name, setName] = useState(() => {
-    try { return typeof window === 'undefined' ? '' : localStorage.getItem('mikma:montar-nome') ?? ''; } catch { return ''; }
-  });
+  const [name, setName] = useState(() => readStorage(NAME_KEY));
+  const [nameDraft, setNameDraft] = useState('');
+  const [editingName, setEditingName] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [picking, setPicking] = useState<Product | null>(null);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [threshold, setThreshold] = useState(0);
+  const [openedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(openedAt);
+  const [hiddenAt, setHiddenAt] = useState(0);
 
   useEffect(() => {
     getDocs(query(collection(db, 'products'), where('active', '==', true)))
       .then(s => setCatalog(s.docs.map(d => ({ id: d.id, ...d.data() }) as Product)))
       .catch(() => {});
+    fetch('/api/settings/public').then(r => r.json())
+      .then(d => setThreshold(Math.max(0, Number(d.freeShippingThresholdCents) || 0))).catch(() => {});
+    const t = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
@@ -44,23 +72,60 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     return () => unsub?.();
   }, [token]);
 
-  const byId = useMemo(() => new Map(catalog.map(p => [p.id, p])), [catalog]);
-  const fronhas = useMemo(() => catalog.filter(p => p.category === 'Fronhas'), [catalog]);
-  const items = cart?.items ?? [];
-  const total = items.reduce((a, i) => a + i.unitPrice * i.quantity, 0);
-
   /** true quando salvou; senão a mensagem de erro. */
   async function post(change: object): Promise<true | string> {
     try {
       const res = await fetch(`/api/cart/shared/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ by: name.trim() || undefined, change }),
+        body: JSON.stringify({ by: name.trim() || undefined, viewer: viewerId(), change }),
       });
       if (res.ok) return true;
       return (await res.json().catch(() => ({}))).error ?? 'Não deu para salvar. Tente de novo.';
     } catch { return 'Sem conexão. Tente de novo.'; }
   }
+
+  // "Estou aqui": entra na lista de online e renova enquanto a aba está aberta.
+  const live = status === 'ok';
+  useEffect(() => {
+    if (!live) return;
+    const ping = () => { if (document.visibilityState === 'visible') post({ op: 'ping' }); };
+    ping();
+    const t = setInterval(ping, 45_000);
+    document.addEventListener('visibilitychange', ping);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', ping); };
+  }, [live, name]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const share = cart?.share;
+  const log = share?.log ?? [];
+  const latest = log[log.length - 1];
+  // Aviso quando outra pessoa mexe (some sozinho).
+  const toast = latest && latest.at > openedAt && latest.at !== hiddenAt && latest.by !== (name.trim() || 'Alguém') ? latest : null;
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setHiddenAt(toast.at), 4500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const byId = useMemo(() => new Map(catalog.map(p => [p.id, p])), [catalog]);
+  const fronhas = useMemo(() => catalog.filter(p => p.category === 'Fronhas'), [catalog]);
+  const categories = useMemo(() => [...new Set(catalog.map(p => p.category))], [catalog]);
+  const shown = useMemo(() => catalog.filter(p =>
+    (!category || p.category === category) && (!search.trim() || fold(p.name).includes(fold(search.trim())))), [catalog, category, search]);
+
+  const items = cart?.items ?? [];
+  const total = items.reduce((a, i) => a + i.unitPrice * i.quantity, 0);
+  const count = items.reduce((a, i) => a + i.quantity, 0);
+  const inCart = new Map<string, number>();
+  items.forEach(i => inCart.set(i.productId, (inCart.get(i.productId) ?? 0) + i.quantity));
+  const me = viewerIdSafe();
+  const online = Object.entries(share?.viewers ?? {})
+    .filter(([id, v]) => now - v.at < VIEWER_TTL_MS && id !== me)
+    .map(([, v]) => v)
+    .sort((a, b) => Number(!!b.owner) - Number(!!a.owner));
+  const owner = share?.ownerName;
+  const remaining = Math.max(0, threshold - total);
+  const progress = threshold > 0 ? Math.min(100, (total / threshold) * 100) : 0;
 
   async function send(key: string, change: object) {
     setBusy(key); setError('');
@@ -70,21 +135,33 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   }
 
   function saveName(v: string) {
-    setName(v);
-    try { localStorage.setItem('mikma:montar-nome', v); } catch { /* sem storage */ }
+    const clean = v.trim().slice(0, 24);
+    if (!clean) return;
+    setName(clean);
+    setEditingName(false);
+    try { localStorage.setItem(NAME_KEY, clean); } catch { /* sem storage */ }
   }
 
-  const brand = (
-    <div className="border-b border-mist">
-      <div className="container-shop py-4 flex items-center gap-3">
+  const header = (
+    <header className="sticky top-0 z-30 border-b border-mist bg-paper/90 backdrop-blur">
+      <div className="container-shop h-16 flex items-center justify-between gap-3">
         <Image src="/logo-clay.png" alt="Mikma Lençóis" width={88} height={32} className="h-8 w-auto" priority />
+        {live && (
+          <div className="flex items-center gap-3">
+            <OnlineStack people={online} />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-warm px-2.5 py-1 text-[11px] font-semibold text-mid">
+              <span className="relative flex h-2 w-2"><span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-60" /><span className="relative h-2 w-2 rounded-full bg-emerald-500" /></span>
+              Ao vivo
+            </span>
+          </div>
+        )}
       </div>
-    </div>
+    </header>
   );
 
-  if (status === 'loading') return <>{brand}<p className="container-shop py-16 text-sm text-mid" role="status">Abrindo o carrinho…</p></>;
+  if (status === 'loading') return <>{header}<p className="container-shop py-16 text-sm text-mid" role="status">Abrindo o carrinho…</p></>;
   if (status === 'off') return (
-    <>{brand}
+    <>{header}
       <div className="container-shop py-20 text-center">
         <h1 className="font-display text-3xl text-ink mb-3">Esse link não está mais ativo</h1>
         <p className="text-sm text-mid max-w-[36ch] mx-auto">Quem compartilhou desligou o link ou ele expirou. Peça um novo para continuar montando o pedido.</p>
@@ -92,104 +169,192 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     </>
   );
 
+  const nameCard = !name || editingName ? (
+    <form onSubmit={e => { e.preventDefault(); saveName(nameDraft); }}
+      className="mb-8 rounded-3xl border border-mist bg-warm/50 p-5 animate-fade-up">
+      <label htmlFor="montar-nome" className="block text-[14px] font-semibold text-ink">Como você quer aparecer?</label>
+      <p className="text-[12px] text-mid mt-0.5">{owner ? `${owner} vai ver` : 'Quem compartilhou vai ver'} o que você colocar no carrinho.</p>
+      <div className="mt-3 flex gap-2">
+        <input id="montar-nome" value={nameDraft} onChange={e => setNameDraft(e.target.value)} maxLength={24} autoComplete="given-name" placeholder="Seu nome"
+          className="flex-1 min-w-0 h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink" />
+        <button type="submit" disabled={!nameDraft.trim()} className="h-11 px-5 rounded-full bg-ink text-paper text-[13px] font-semibold disabled:opacity-40">Pronto</button>
+      </div>
+    </form>
+  ) : (
+    <p className="mb-8 inline-flex items-center gap-2 text-[13px] text-mid">
+      <Avatar name={name} size={24} ring={false} />
+      Você está como <strong className="text-ink">{name}</strong>
+      <button type="button" onClick={() => { setNameDraft(name); setEditingName(true); }} className="font-semibold text-clay underline underline-offset-2">trocar</button>
+    </p>
+  );
+
   return (
-    <>{brand}
-      <div className="container-shop py-8 pb-24 grid gap-10 md:grid-cols-[minmax(0,1fr)_340px] items-start">
-        <section aria-labelledby="montar-titulo">
+    <>{header}
+      {toast && (
+        <div role="status" className="fixed z-40 left-1/2 -translate-x-1/2 top-20 w-[calc(100%-2rem)] max-w-sm flex items-center gap-3 rounded-full bg-ink text-paper pl-2 pr-5 py-2 shadow-lg animate-fade-up">
+          <Avatar name={toast.by} size={28} ring={false} />
+          <span className="text-[13px] leading-snug"><strong>{toast.by}</strong> {toast.text}</span>
+        </div>
+      )}
+
+      <div className="container-shop py-8 pb-32 md:pb-16 grid gap-10 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_360px] items-start">
+        <div>
           <p className="font-semibold text-[10px] tracking-[0.24em] uppercase text-faint mb-3">Montando junto</p>
-          <h1 id="montar-titulo" className="font-display text-4xl text-ink mb-2">Carrinho compartilhado</h1>
-          <p className="text-[13px] text-mid mb-6 max-w-[48ch]">O que você muda aqui aparece na hora para quem compartilhou. Só essa pessoa finaliza a compra.</p>
-
-          <label className="block text-[12px] font-semibold text-mid mb-6 max-w-xs">
-            Seu nome <span className="font-normal text-faint">(aparece para quem compartilhou)</span>
-            <input value={name} onChange={e => saveName(e.target.value.slice(0, 24))} maxLength={24} autoComplete="given-name"
-              className="mt-1.5 w-full h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink" />
-          </label>
-
-          {error && <p role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-3">{error}</p>}
-
-          {items.length === 0 && <p className="text-sm text-mid py-6">O carrinho está vazio. Escolha produtos abaixo.</p>}
-          <ul className="divide-y divide-mist/70">
-            {items.map(item => {
-              const key = lineKey(item);
-              const product = byId.get(item.productId);
-              const isJogo = product?.category === 'Jogos de cama';
-              return (
-                <li key={key} className="py-5 flex gap-4">
-                  <button type="button" onClick={() => product && setPicking(product)} disabled={!product} tabIndex={-1} aria-hidden="true"
-                    className="relative w-20 h-24 shrink-0 rounded-xl overflow-hidden bg-warm">
-                    {item.image && <Image src={item.image} alt="" fill sizes="80px" className="object-cover" />}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    {product
-                      ? <button type="button" onClick={() => setPicking(product)} className="text-left text-[15px] font-semibold text-ink underline-offset-4 hover:underline">{item.productName}</button>
-                      : <p className="text-[15px] font-semibold text-ink">{item.productName}</p>}
-                    <p className="text-[12px] text-faint mt-0.5">{variantLabel(item.variant)}</p>
-                    {item.note && <p className="text-[12px] text-clay mt-0.5">{item.note}</p>}
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      <div className="flex items-center rounded-full border border-mist">
-                        <button type="button" disabled={!!busy} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity - 1 })}
-                          aria-label={item.quantity === 1 ? `Tirar ${item.productName}` : `Diminuir ${item.productName}`}
-                          className="w-11 h-11 text-mid hover:text-ink disabled:opacity-40">−</button>
-                        <span className="w-8 text-center text-sm tabular-nums" aria-live="polite">{item.quantity}</span>
-                        <button type="button" disabled={!!busy} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity + 1 })}
-                          aria-label={`Aumentar ${item.productName}`}
-                          className="w-11 h-11 text-mid hover:text-ink disabled:opacity-40">+</button>
-                      </div>
-                      <span className="text-sm font-semibold text-ink tabular-nums">{formatCurrency(item.unitPrice * item.quantity)}</span>
-                    </div>
-                    {isJogo && fronhas.length > 0 && (
-                      <label className="mt-3 block text-[12px] text-mid">
-                        Fronha
-                        <select value={item.swapSku ?? ''} disabled={!!busy}
-                          onChange={e => send(key, { op: 'swap', line: key, swapSku: e.target.value || null })}
-                          className="mt-1 block w-full max-w-xs h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink">
-                          <option value="">A que vem no jogo</option>
-                          {fronhas.flatMap(f => f.variants.map(v => (
-                            <option key={`${f.id}_${v.id}`} value={`${f.id}_${v.id}`}>{f.name} · {variantLabel({ color: v.color, colorName: v.colorName })}</option>
-                          )))}
-                        </select>
-                      </label>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-
-          <h2 className="font-display text-2xl text-ink mt-12 mb-4">Adicionar produtos</h2>
-          <ul className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {catalog.map(p => (
-              <li key={p.id}>
-                <button type="button" onClick={() => setPicking(p)} aria-haspopup="dialog"
-                  className="w-full text-left rounded-2xl border border-mist overflow-hidden hover:border-ink transition-colors">
-                  <span className="relative block aspect-[4/5] bg-warm">
-                    {p.images?.[0] && <Image src={p.images[0]} alt="" fill sizes="(min-width: 640px) 200px, 45vw" className="object-cover" />}
-                  </span>
-                  <span className="block p-3">
-                    <span className="block text-[13px] font-semibold text-ink leading-snug">{p.name}</span>
-                    <span className="block text-[12px] text-mid mt-0.5">{formatCurrency(p.price)}</span>
-                    <span className="block text-[11px] text-clay font-semibold mt-1.5">Ver detalhes</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <aside className="md:sticky md:top-6 rounded-3xl border border-mist p-6">
-          <p className="text-[12px] text-mid">{items.reduce((a, i) => a + i.quantity, 0)} itens</p>
-          <p className="mt-1 flex items-baseline justify-between">
-            <span className="text-sm text-mid">Subtotal</span>
-            <span className="font-display text-3xl text-ink tabular-nums">{formatCurrency(total)}</span>
+          <h1 className="font-display text-4xl sm:text-5xl text-ink leading-tight mb-2">{owner ? `Carrinho de ${owner}` : 'Carrinho compartilhado'}</h1>
+          <p className="text-[14px] text-mid mb-6 max-w-[52ch] leading-relaxed">
+            Tudo que você muda aqui aparece na hora para {owner ?? 'quem compartilhou'}. Escolham juntos; o pagamento fica com {owner ?? 'essa pessoa'}.
           </p>
-          <p className="mt-3 text-[12px] text-faint leading-relaxed">Frete e pagamento ficam com quem compartilhou o carrinho.</p>
+          {nameCard}
+
+          <section id="montar-itens" aria-labelledby="montar-itens-titulo" className="scroll-mt-20">
+            <h2 id="montar-itens-titulo" className="flex items-baseline gap-2 font-display text-2xl text-ink mb-1">
+              No carrinho <span className="font-sans text-[13px] text-faint tabular-nums">{count} {count === 1 ? 'item' : 'itens'}</span>
+            </h2>
+            {error && <p role="alert" className="my-3 rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-3">{error}</p>}
+            {items.length === 0 && (
+              <div className="my-4 rounded-3xl border border-dashed border-mist px-6 py-10 text-center">
+                <p className="font-display text-xl text-ink">Ainda vazio</p>
+                <p className="text-[13px] text-mid mt-1">Escolha os produtos aqui embaixo para começar.</p>
+              </div>
+            )}
+            <ul className="divide-y divide-mist/70">
+              {items.map(item => {
+                const key = lineKey(item);
+                const product = byId.get(item.productId);
+                const isJogo = product?.category === 'Jogos de cama';
+                const by = share?.addedBy?.[item.sku];
+                return (
+                  <li key={key} className="py-5 flex gap-4 animate-fade-up">
+                    <button type="button" onClick={() => product && setPicking(product)} disabled={!product} tabIndex={-1} aria-hidden="true"
+                      className="relative w-20 h-24 sm:w-24 sm:h-28 shrink-0 rounded-2xl overflow-hidden bg-warm">
+                      {item.image && <Image src={item.image} alt="" fill sizes="96px" className="object-cover" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      {product
+                        ? <button type="button" onClick={() => setPicking(product)} className="text-left text-[15px] font-semibold text-ink underline-offset-4 hover:underline">{item.productName}</button>
+                        : <p className="text-[15px] font-semibold text-ink">{item.productName}</p>}
+                      <p className="text-[12px] text-faint mt-0.5">{variantLabel(item.variant)}</p>
+                      {item.note && <p className="text-[12px] text-clay mt-0.5">{item.note}</p>}
+                      {by && (
+                        <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] text-mid">
+                          <Avatar name={by} size={16} ring={false} /> por {by}
+                        </p>
+                      )}
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <div className="flex items-center rounded-full border border-mist">
+                          <button type="button" disabled={!!busy} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity - 1 })}
+                            aria-label={item.quantity === 1 ? `Tirar ${item.productName}` : `Diminuir ${item.productName}`}
+                            className="w-11 h-11 text-mid hover:text-ink disabled:opacity-40">{item.quantity === 1 ? '×' : '−'}</button>
+                          <span key={item.quantity} className="w-8 text-center text-sm tabular-nums animate-badge-bump" aria-live="polite">{item.quantity}</span>
+                          <button type="button" disabled={!!busy} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity + 1 })}
+                            aria-label={`Aumentar ${item.productName}`}
+                            className="w-11 h-11 text-mid hover:text-ink disabled:opacity-40">+</button>
+                        </div>
+                        <span className="text-sm font-semibold text-ink tabular-nums">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                      </div>
+                      {isJogo && fronhas.length > 0 && (
+                        <label className="mt-3 block text-[12px] text-mid">
+                          Fronha
+                          <select value={item.swapSku ?? ''} disabled={!!busy}
+                            onChange={e => send(key, { op: 'swap', line: key, swapSku: e.target.value || null })}
+                            className="mt-1 block w-full max-w-xs h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink">
+                            <option value="">A que vem no jogo</option>
+                            {fronhas.flatMap(f => f.variants.map(v => (
+                              <option key={`${f.id}_${v.id}`} value={`${f.id}_${v.id}`}>{f.name} · {variantLabel({ color: v.color, colorName: v.colorName })}</option>
+                            )))}
+                          </select>
+                        </label>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          <section aria-labelledby="montar-catalogo" className="mt-12">
+            <h2 id="montar-catalogo" className="font-display text-2xl text-ink mb-4">Adicionar produtos</h2>
+            <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto" aria-label="Buscar produto"
+              className="w-full h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink" />
+            <div className="mt-3 -mx-4 px-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Categorias">
+              {['', ...categories].map(c => (
+                <button key={c || 'tudo'} type="button" aria-pressed={category === c} onClick={() => setCategory(c)}
+                  className={`shrink-0 h-9 px-4 rounded-full border text-[12px] font-semibold transition-colors ${category === c ? 'border-ink bg-ink text-paper' : 'border-mist text-mid hover:border-ink hover:text-ink'}`}>
+                  {c || 'Tudo'}
+                </button>
+              ))}
+            </div>
+            {shown.length === 0 && <p className="mt-6 text-sm text-mid">Nenhum produto com esse nome.</p>}
+            <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {shown.map(p => {
+                const n = inCart.get(p.id);
+                return (
+                  <li key={p.id}>
+                    <button type="button" onClick={() => setPicking(p)} aria-haspopup="dialog"
+                      className="group w-full text-left rounded-2xl border border-mist overflow-hidden hover:border-ink transition-colors">
+                      <span className="relative block aspect-[4/5] bg-warm overflow-hidden">
+                        {p.images?.[0] && <Image src={p.images[0]} alt="" fill sizes="(min-width: 640px) 220px, 45vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />}
+                        {n && <span className="absolute top-2 left-2 rounded-full bg-ink text-paper text-[11px] font-semibold px-2.5 py-1">No carrinho · {n}</span>}
+                      </span>
+                      <span className="block p-3">
+                        <span className="block text-[13px] font-semibold text-ink leading-snug">{p.name}</span>
+                        <span className="flex items-center justify-between mt-1">
+                          <span className="text-[12px] text-mid">{formatCurrency(p.price)}</span>
+                          <span aria-hidden="true" className="w-7 h-7 rounded-full bg-warm text-ink flex items-center justify-center text-[16px] group-hover:bg-ink group-hover:text-paper transition-colors">+</span>
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </div>
+
+        <aside className="md:sticky md:top-24 flex flex-col gap-4">
+          <div className="rounded-3xl border border-mist p-6">
+            <p className="flex items-baseline justify-between">
+              <span className="text-sm text-mid">Subtotal · {count} {count === 1 ? 'item' : 'itens'}</span>
+              <span className="font-display text-3xl text-ink tabular-nums">{formatCurrency(total)}</span>
+            </p>
+            {threshold > 0 && (
+              <div className="mt-4">
+                <p className="text-[12px] text-mid mb-1.5">
+                  {remaining === 0 ? 'Frete grátis garantido' : <>Faltam <strong className="text-ink">{formatCurrency(remaining)}</strong> para frete grátis</>}
+                </p>
+                <div className="h-[3px] bg-mist/60 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-[width] duration-700 w-[var(--w)] ${remaining === 0 ? 'bg-clay' : 'bg-ink'}`} style={{ '--w': `${progress}%` } as React.CSSProperties} />
+                </div>
+              </div>
+            )}
+            <p className="mt-4 text-[12px] text-faint leading-relaxed">Frete e pagamento ficam com {owner ?? 'quem compartilhou o carrinho'}.</p>
+          </div>
+          <div className="rounded-3xl border border-mist p-6">
+            <h2 className="text-[13px] font-semibold text-ink mb-4">O que mudou</h2>
+            <ActivityList log={log} now={now} limit={8} />
+          </div>
         </aside>
       </div>
+
+      {/* Celular: total sempre à vista, com atalho pro carrinho. */}
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-mist bg-paper/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+        <div className="container-shop h-16 flex items-center justify-between gap-3">
+          <span>
+            <span className="block text-[11px] text-faint">{count} {count === 1 ? 'item' : 'itens'}</span>
+            <span className="block font-display text-xl text-ink tabular-nums leading-none">{formatCurrency(total)}</span>
+          </span>
+          <a href="#montar-itens" className="h-11 px-5 rounded-full bg-ink text-paper text-[13px] font-semibold flex items-center">Ver carrinho</a>
+        </div>
+      </div>
+
       {picking && (
         <ProductSheet product={picking} onClose={() => setPicking(null)}
           onAdd={variantId => post({ op: 'add', productId: picking.id, variantId })} />
       )}
     </>
   );
+}
+
+function viewerIdSafe() {
+  return typeof window === 'undefined' ? '' : readStorage('mikma:montar-id');
 }

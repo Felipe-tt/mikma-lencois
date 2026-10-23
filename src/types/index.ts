@@ -248,6 +248,8 @@ export interface CartItem {
   swapQtyPerUnit?: number  // fronhas por UNIDADE deste item — escala com quantity, não é um total fixo
 }
 
+export interface SharedCartEdit { by: string; text: string; at: number }
+
 export interface Cart {
   userId: string
   items: CartItem[]
@@ -259,7 +261,14 @@ export interface Cart {
   share?: {
     token: string
     expiresAt: { toMillis(): number }
-    lastEdit?: { by: string; text: string; at: number }
+    lastEdit?: SharedCartEdit
+    ownerName?: string
+    /** Últimas mudanças feitas pelo link, da mais antiga pra mais nova. */
+    log?: SharedCartEdit[]
+    /** SKU → nome de quem colocou o produto. */
+    addedBy?: Record<string, string>
+    /** Quem está com o link aberto (id do navegador → nome, último sinal). */
+    viewers?: Record<string, { name: string; at: number; owner?: boolean }>
   }
 }
 
