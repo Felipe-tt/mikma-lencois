@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { variantLabel } from '@/lib/variantLabel';
 import { lineKey } from '@/lib/sharedCart';
 import type { Cart, Product } from '@/types';
+import { ProductSheet } from '@/components/cart/ProductSheet';
 
 type Status = 'loading' | 'ok' | 'off';
 
@@ -48,19 +49,24 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   const items = cart?.items ?? [];
   const total = items.reduce((a, i) => a + i.unitPrice * i.quantity, 0);
 
-  async function send(key: string, change: object) {
-    setBusy(key); setError('');
+  /** true quando salvou; senão a mensagem de erro. */
+  async function post(change: object): Promise<true | string> {
     try {
       const res = await fetch(`/api/cart/shared/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ by: name.trim() || undefined, change }),
       });
-      if (!res.ok) setError((await res.json().catch(() => ({}))).error ?? 'Não deu para salvar. Tente de novo.');
-      else return true;
-    } catch { setError('Sem conexão. Tente de novo.'); }
-    finally { setBusy(null); }
-    return false;
+      if (res.ok) return true;
+      return (await res.json().catch(() => ({}))).error ?? 'Não deu para salvar. Tente de novo.';
+    } catch { return 'Sem conexão. Tente de novo.'; }
+  }
+
+  async function send(key: string, change: object) {
+    setBusy(key); setError('');
+    const r = await post(change);
+    if (r !== true) setError(r);
+    setBusy(null);
   }
 
   function saveName(v: string) {
@@ -106,14 +112,18 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
           <ul className="divide-y divide-mist/70">
             {items.map(item => {
               const key = lineKey(item);
-              const isJogo = byId.get(item.productId)?.category === 'Jogos de cama';
+              const product = byId.get(item.productId);
+              const isJogo = product?.category === 'Jogos de cama';
               return (
                 <li key={key} className="py-5 flex gap-4">
-                  <div className="relative w-20 h-24 shrink-0 rounded-xl overflow-hidden bg-warm">
+                  <button type="button" onClick={() => product && setPicking(product)} disabled={!product} tabIndex={-1} aria-hidden="true"
+                    className="relative w-20 h-24 shrink-0 rounded-xl overflow-hidden bg-warm">
                     {item.image && <Image src={item.image} alt="" fill sizes="80px" className="object-cover" />}
-                  </div>
+                  </button>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-semibold text-ink">{item.productName}</p>
+                    {product
+                      ? <button type="button" onClick={() => setPicking(product)} className="text-left text-[15px] font-semibold text-ink underline-offset-4 hover:underline">{item.productName}</button>
+                      : <p className="text-[15px] font-semibold text-ink">{item.productName}</p>}
                     <p className="text-[12px] text-faint mt-0.5">{variantLabel(item.variant)}</p>
                     {item.note && <p className="text-[12px] text-clay mt-0.5">{item.note}</p>}
                     <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -151,7 +161,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
           <ul className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {catalog.map(p => (
               <li key={p.id}>
-                <button type="button" onClick={() => setPicking(picking?.id === p.id ? null : p)} aria-expanded={picking?.id === p.id}
+                <button type="button" onClick={() => setPicking(p)} aria-haspopup="dialog"
                   className="w-full text-left rounded-2xl border border-mist overflow-hidden hover:border-ink transition-colors">
                   <span className="relative block aspect-[4/5] bg-warm">
                     {p.images?.[0] && <Image src={p.images[0]} alt="" fill sizes="(min-width: 640px) 200px, 45vw" className="object-cover" />}
@@ -159,19 +169,9 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                   <span className="block p-3">
                     <span className="block text-[13px] font-semibold text-ink leading-snug">{p.name}</span>
                     <span className="block text-[12px] text-mid mt-0.5">{formatCurrency(p.price)}</span>
+                    <span className="block text-[11px] text-clay font-semibold mt-1.5">Ver detalhes</span>
                   </span>
                 </button>
-                {picking?.id === p.id && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {p.variants.map(v => (
-                      <button key={v.id} type="button" disabled={!!busy}
-                        onClick={async () => { if (await send(`add:${v.id}`, { op: 'add', productId: p.id, variantId: v.id })) setPicking(null); }}
-                        className="min-h-11 px-3 rounded-full border border-mist text-[12px] text-ink hover:border-ink disabled:opacity-40">
-                        {variantLabel(v)}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </li>
             ))}
           </ul>
@@ -186,6 +186,10 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
           <p className="mt-3 text-[12px] text-faint leading-relaxed">Frete e pagamento ficam com quem compartilhou o carrinho.</p>
         </aside>
       </div>
+      {picking && (
+        <ProductSheet product={picking} onClose={() => setPicking(null)}
+          onAdd={variantId => post({ op: 'add', productId: picking.id, variantId })} />
+      )}
     </>
   );
 }
