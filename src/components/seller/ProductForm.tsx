@@ -93,6 +93,8 @@ type DraftShape = {
   savedAt: number;
 };
 
+const defaultFronhas = (size: string) => (size === 'solteiro' || size === 'berco' ? 1 : 2);
+
 /* ───────────────────────────── Seção wrapper ───────────────────────────── */
 
 function FormSection({ step, title, hint, children }: { step: number; title: string; hint?: string; children: React.ReactNode }) {
@@ -127,7 +129,6 @@ export default function ProductForm({ initial }: Props) {
   const [description, setDescription] = useState(initial?.description ?? '');
   const [price, setPrice] = useState(initial?.price ? centsToInput(initial.price) : '');
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0]);
-  const [fronhaCount, setFronhaCount] = useState(initial?.fronhaCount ?? 2);
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
 
@@ -139,6 +140,15 @@ export default function ProductForm({ initial }: Props) {
   const initialSizes = new Set((initial?.variants ?? []).map(v => v.size));
   const [size, setSize] = useState<Size>((initial?.variants?.[0]?.size as Size) ?? SIZES[0]);
   const hasMixedLegacySizes = isEdit && initialSizes.size > 1;
+
+  // Fronhas do Jogo de Cama: segue o tamanho (berço e solteiro vêm com 1,
+  // o resto com 2) até alguém mudar à mão em "Mudar".
+  const [fronhaOverride, setFronhaOverride] = useState<number | null>(
+    initial?.fronhaCount && initial.fronhaCount !== defaultFronhas(size) ? initial.fronhaCount : null,
+  );
+  const fronhaCount = fronhaOverride ?? defaultFronhas(size);
+  const setFronhaCount = (n: number) => setFronhaOverride(n);
+  const [fronhaOpen, setFronhaOpen] = useState(fronhaOverride !== null);
 
   // ── Sugestão de preço: tira a maior dúvida de quem não é do ramo ──
   // "quanto eu cobro?" — olha produtos parecidos (mesma categoria, de
@@ -945,21 +955,31 @@ export default function ProductForm({ initial }: Props) {
               </div>
             </div>
 
-            {category === 'Jogos de cama' && (
+            {category === 'Jogos de cama' && (fronhaOpen ? (
               <div>
                 <label id="prod-fronhas-label" className="label">Quantas fronhas vêm no jogo?</label>
                 <Stepper
                   labelledBy="prod-fronhas-label"
-                  value={fronhaCount || 1}
+                  value={fronhaCount}
                   min={1}
                   max={10}
                   onChange={setFronhaCount}
                 />
                 <p className="text-[11.5px] text-faint mt-1.5">
-                  Solteiro e berço costumam vir com 1; casal, queen e king, com 2.
+                  Padrão: berço e solteiro com 1, casal, queen e king com 2.
+                  {fronhaOverride !== null && (
+                    <button type="button" onClick={() => { setFronhaOverride(null); setFronhaOpen(false); }} className="ml-1 font-semibold text-clay underline underline-offset-2">
+                      Voltar ao padrão
+                    </button>
+                  )}
                 </p>
               </div>
-            )}
+            ) : (
+              <p className="text-[13px] text-mid">
+                Vem com <strong className="text-ink">{fronhaCount} {fronhaCount === 1 ? 'fronha' : 'fronhas'}</strong>.{' '}
+                <button type="button" onClick={() => setFronhaOpen(true)} className="font-semibold text-clay underline underline-offset-2">Mudar</button>
+              </p>
+            ))}
     </>
   );
   const nameBlock = (

@@ -139,6 +139,22 @@ export function ProductGallery({ images, name, tag, productId }: Props) {
         if (typeof idx === 'number') setActive(idx);
       });
 
+      // As medidas reais são lidas na hora de abrir, não quando o
+      // visualizador foi montado: antes a foto ainda não tinha carregado,
+      // ficava o tamanho quadrado de reserva e a imagem abria achatada.
+      lightbox.addFilter('itemData', itemData => {
+        const dims = dimsRef.current[itemData.src ?? ''];
+        return dims ? { ...itemData, width: dims.w, height: dims.h } : itemData;
+      });
+      // Se ainda assim abriu com a reserva, corrige assim que a foto chega.
+      lightbox.on('loadComplete', ({ content, slide }) => {
+        const img = content.element as HTMLImageElement | undefined;
+        const src = content.data.src;
+        if (!img?.naturalWidth || !src || dimsRef.current[src]) return;
+        dimsRef.current[src] = { w: img.naturalWidth, h: img.naturalHeight };
+        lightbox.pswp?.refreshSlideContent(slide.index);
+      });
+
       lightbox.init();
       lightboxRef.current = lightbox;
     })();

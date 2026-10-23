@@ -45,26 +45,26 @@ export function ProductSheet({ product, onAdd, onClose }: {
 
   return (
     <Overlay onClose={onClose} variant="responsive" labelledBy={titleId}
-      className="bg-paper w-full sm:max-w-lg sm:border sm:border-mist max-h-[92dvh] relative flex flex-col rounded-t-3xl sm:rounded-2xl overflow-hidden">
+      className="bg-paper w-full sm:max-w-3xl sm:border sm:border-mist max-h-[92dvh] relative flex flex-col rounded-t-3xl sm:rounded-2xl overflow-hidden">
       {close => (<>
         <button type="button" onClick={close} aria-label="Fechar"
             className="absolute top-3 right-3 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-paper/90 text-ink shadow-sm hover:bg-paper">
             <IconX size={18} />
           </button>
 
-        <div className="overflow-y-auto">
+        <div className="overflow-y-auto sm:grid sm:grid-cols-2 sm:items-start">
           {images.length > 0 && (
             <div className="relative">
-              <div className="flex overflow-x-auto snap-x snap-mandatory [scrollbar-width:none]"
-                onScroll={e => setPhoto(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}>
+              <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-px-4 px-4 pt-4 sm:p-0 sm:gap-0 sm:scroll-px-0 [scrollbar-width:none]"
+                onScroll={e => { const w = (e.currentTarget.firstElementChild as HTMLElement | null)?.offsetWidth ?? 1; setPhoto(Math.min(images.length - 1, Math.round(e.currentTarget.scrollLeft / w))); }}>
                 {images.map((src, i) => (
-                  <div key={src + i} className="relative shrink-0 w-full aspect-[4/3] max-h-[42dvh] snap-center bg-warm">
-                    <Image src={src} alt={i === 0 ? product.name : ''} fill sizes="(min-width: 640px) 512px, 100vw" className="object-cover" priority={i === 0} />
+                  <div key={src + i} className="relative shrink-0 w-[72%] sm:w-full aspect-[4/5] snap-start rounded-2xl sm:rounded-none overflow-hidden bg-warm">
+                    <Image src={src} alt={i === 0 ? product.name : ''} fill sizes="(min-width: 640px) 384px, 72vw" className="object-cover" priority={i === 0} />
                   </div>
                 ))}
               </div>
               {images.length > 1 && (
-                <p className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-ink/70 text-paper text-[11px] font-semibold px-2.5 py-1 tabular-nums" aria-hidden="true">
+                <p className="hidden sm:block absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-ink/70 text-paper text-[11px] font-semibold px-2.5 py-1 tabular-nums" aria-hidden="true">
                   {photo + 1} / {images.length}
                 </p>
               )}
