@@ -13,6 +13,7 @@ import type { Cart, CartItem } from '@/types';
 import { CartSkeleton } from '@/components/ui/Skeleton';
 import { getStockUrgency } from '@/lib/stockUrgency';
 import { setReturnTo } from '@/lib/auth/returnTo';
+import { MontarJunto } from '@/components/cart/MontarJunto';
 
 export default function CartPage() {
   // 0 = loja sem frete grátis. Antes começava em R$ 250 e só trocava se a
@@ -268,6 +269,7 @@ export default function CartPage() {
       <h2 id="cart-empty-title" tabIndex={-1} className="font-display font-normal text-ink text-3xl mb-3 focus:outline-none">Carrinho vazio</h2>
       <p className="text-sm text-mid mb-8 max-w-[28ch] leading-relaxed">Explore nossos produtos e escolha os seus lençóis.</p>
       <Link href="/produtos" className="btn-primary px-8 py-3.5 text-sm font-semibold tracking-wide">Ver produtos</Link>
+      {user && <MontarJunto cart={cart} user={user} />}
       {undoBar}
     </div>
   );
@@ -556,6 +558,7 @@ export default function CartPage() {
                 Continuar comprando
               </Link>
             </div>
+            {user && <MontarJunto cart={cart} user={user} />}
           </div>
 
         </div>

@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { setDoc, getDoc, getDocs, updateDoc, deleteDoc, deleteField, doc, collection } from 'firebase/firestore';
+import { setDoc, getDoc, getDocs, updateDoc, deleteDoc, deleteField, doc, collection, Timestamp } from 'firebase/firestore';
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 
 // Testa as regras publicadas em firestore.rules contra o emulador local.
@@ -545,5 +545,33 @@ describe('notifications', () => {
     await assertFails(updateDoc(doc(seller.firestore(), 'notifications/seller/items/n1'), { title: 'Falso' }));
     await assertFails(setDoc(doc(seller.firestore(), 'notifications/buyer1/items/n2'), { title: 'Falso' }));
     await assertFails(getDoc(doc(seller.firestore(), 'notifications/buyer1/items/n1')));
+  });
+});
+
+describe('carrinho compartilhado (Montar junto)', () => {
+  const inDays = (d: number) => Timestamp.fromMillis(Date.now() + d * 86_400_000);
+  it('com o link ligado, qualquer um lê o carrinho; sem ele, não', async () => {
+    const anon = testEnv.unauthenticatedContext().firestore();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'carts/buyer1'), { items: [], share: { token: 't', expiresAt: inDays(7) } });
+      await setDoc(doc(ctx.firestore(), 'carts/buyer2'), { items: [] });
+      await setDoc(doc(ctx.firestore(), 'carts/buyer3'), { items: [], share: { token: 'v', expiresAt: inDays(-1) } });
+    });
+    await assertSucceeds(getDoc(doc(anon, 'carts/buyer1')));
+    await assertFails(getDoc(doc(anon, 'carts/buyer2')));
+    await assertFails(getDoc(doc(anon, 'carts/buyer3')));
+    await assertFails(getDocs(collection(anon, 'carts')));
+    await assertFails(updateDoc(doc(anon, 'carts/buyer1'), { items: [] }));
+  });
+
+  it('link: lê pelo token, mas não lista nem escreve', async () => {
+    const anon = testEnv.unauthenticatedContext().firestore();
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' }).firestore();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'sharedCarts/abc'), { uid: 'buyer1', expiresAt: inDays(7) });
+    });
+    await assertSucceeds(getDoc(doc(anon, 'sharedCarts/abc')));
+    await assertFails(getDocs(collection(anon, 'sharedCarts')));
+    await assertFails(setDoc(doc(buyer, 'sharedCarts/xyz'), { uid: 'buyer2', expiresAt: inDays(7) }));
   });
 });

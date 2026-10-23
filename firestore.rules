@@ -104,6 +104,18 @@ service cloud.firestore {
     // ── Carts ────────────────────────────────────────────────────────────────
     match /carts/{userId} {
       allow read, write: if isSelf(userId);
+      // "Montar junto": com o link ligado, quem o abriu acompanha o
+      // carrinho ao vivo. O uid só chega a quem tem o token (sharedCarts
+      // abaixo), e alterar continua só pela API, que confere o token.
+      allow get: if resource.data.get('share', null) != null
+        && resource.data.share.expiresAt > request.time;
+    }
+
+    // Link secreto do carrinho compartilhado: { uid, expiresAt }. Ler um
+    // pelo id é ter o link; listar ou escrever, só o servidor.
+    match /sharedCarts/{token} {
+      allow get: if true;
+      allow list, write: if false;
     }
 
     // ── Wishlists (favoritos) ───────────────────────────────────────────────

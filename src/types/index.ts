@@ -255,6 +255,12 @@ export interface Cart {
   updatedAt: string
   /** Cupom aplicado no carrinho; o servidor revalida no pagamento. */
   couponCode?: string | null
+  /** Link "Montar junto" ligado (ver src/lib/sharedCart.ts). */
+  share?: {
+    token: string
+    expiresAt: { toMillis(): number }
+    lastEdit?: { by: string; text: string; at: number }
+  }
 }
 
 // ─── Coupons ─────────────────────────────────────────────────────────────────
