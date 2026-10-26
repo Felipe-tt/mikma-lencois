@@ -36,7 +36,6 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [name, setName] = useState(() => readStorage(NAME_KEY));
   const [nameDraft, setNameDraft] = useState('');
-  const [editingName, setEditingName] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [picking, setPicking] = useState<Product | null>(null);
@@ -86,7 +85,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   }
 
   // "Estou aqui": entra na lista de online e renova enquanto a aba está aberta.
-  const live = status === 'ok';
+  const live = status === 'ok' && !!name;
   useEffect(() => {
     if (!live) return;
     const ping = () => { if (document.visibilityState === 'visible') post({ op: 'ping' }); };
@@ -124,6 +123,11 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     .map(([, v]) => v)
     .sort((a, b) => Number(!!b.owner) - Number(!!a.owner));
   const owner = share?.ownerName;
+  // Título da aba com o nome do dono. Reaplicado a cada troca de tela: o
+  // Next devolve o título do layout quando a página muda de estado.
+  useEffect(() => {
+    if (owner) document.title = `Carrinho de ${owner} · Montar junto`;
+  });
   const remaining = Math.max(0, threshold - total);
   const progress = threshold > 0 ? Math.min(100, (total / threshold) * 100) : 0;
 
@@ -138,11 +142,10 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     const clean = v.trim().slice(0, 24);
     if (!clean) return;
     setName(clean);
-    setEditingName(false);
     try { localStorage.setItem(NAME_KEY, clean); } catch { /* sem storage */ }
   }
 
-  const header = (
+  const header = (<>
     <header className="sticky top-0 z-30 border-b border-mist bg-paper/90 backdrop-blur">
       <div className="container-shop h-16 flex items-center justify-between gap-3">
         <Image src="/logo-clay.png" alt="Mikma Lençóis" width={88} height={32} className="h-8 w-auto" priority />
@@ -157,7 +160,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
         )}
       </div>
     </header>
-  );
+  </>);
 
   if (status === 'loading') return <>{header}<p className="container-shop py-16 text-sm text-mid" role="status">Abrindo o carrinho…</p></>;
   if (status === 'off') return (
@@ -169,23 +172,31 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     </>
   );
 
-  const nameCard = !name || editingName ? (
-    <form onSubmit={e => { e.preventDefault(); saveName(nameDraft); }}
-      className="mb-8 rounded-3xl border border-mist bg-warm/50 p-5 animate-fade-up">
-      <label htmlFor="montar-nome" className="block text-[14px] font-semibold text-ink">Como você quer aparecer?</label>
-      <p className="text-[12px] text-mid mt-0.5">{owner ? `${owner} vai ver` : 'Quem compartilhou vai ver'} o que você colocar no carrinho.</p>
-      <div className="mt-3 flex gap-2">
-        <input id="montar-nome" value={nameDraft} onChange={e => setNameDraft(e.target.value)} maxLength={24} autoComplete="given-name" placeholder="Seu nome"
-          className="flex-1 min-w-0 h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink" />
-        <button type="submit" disabled={!nameDraft.trim()} className="h-11 px-5 rounded-full bg-ink text-paper text-[13px] font-semibold disabled:opacity-40">Pronto</button>
+  // Porta de entrada: antes de ver o carrinho, a pessoa diz o nome. Tudo
+  // que ela fizer nesta sessão (histórico, "por Ana", online) usa esse nome.
+  if (!name) return (
+    <>{header}
+      <div className="container-shop min-h-[calc(100dvh-4rem)] flex items-center justify-center py-12">
+        <form onSubmit={e => { e.preventDefault(); saveName(nameDraft); }} className="w-full max-w-sm text-center animate-fade-up">
+          {owner && <span className="inline-block mb-5"><Avatar name={owner} size={56} /></span>}
+          <h1 className="font-display text-3xl sm:text-4xl text-ink leading-tight">
+            {owner ? `${owner} te chamou pra montar o pedido junto` : 'Bora montar o pedido junto'}
+          </h1>
+          <p className="mt-3 text-[14px] text-mid leading-relaxed">
+            {count > 0 ? `Já tem ${count} ${count === 1 ? 'item' : 'itens'} no carrinho. ` : ''}O que você escolher aparece na hora para {owner ?? 'quem compartilhou'}.
+          </p>
+          <label htmlFor="montar-nome" className="sr-only">Seu nome</label>
+          <input id="montar-nome" value={nameDraft} onChange={e => setNameDraft(e.target.value)} maxLength={24}
+            autoComplete="given-name" autoFocus placeholder="Seu nome" enterKeyHint="go"
+            className="mt-8 w-full h-13 min-h-12 rounded-full border border-mist bg-paper px-5 text-center text-[16px] text-ink focus:border-ink outline-none" />
+          <button type="submit" disabled={!nameDraft.trim()}
+            className="mt-3 w-full h-12 rounded-full bg-ink text-paper text-sm font-semibold hover:bg-clay transition-colors disabled:opacity-40">
+            Entrar no carrinho
+          </button>
+          <p className="mt-4 text-[12px] text-faint">Seu nome aparece para quem está montando junto.</p>
+        </form>
       </div>
-    </form>
-  ) : (
-    <p className="mb-8 inline-flex items-center gap-2 text-[13px] text-mid">
-      <Avatar name={name} size={24} ring={false} />
-      Você está como <strong className="text-ink">{name}</strong>
-      <button type="button" onClick={() => { setNameDraft(name); setEditingName(true); }} className="font-semibold text-clay underline underline-offset-2">trocar</button>
-    </p>
+    </>
   );
 
   return (
@@ -204,7 +215,6 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
           <p className="text-[14px] text-mid mb-6 max-w-[52ch] leading-relaxed">
             Tudo que você muda aqui aparece na hora para {owner ?? 'quem compartilhou'}. Escolham juntos; o pagamento fica com {owner ?? 'essa pessoa'}.
           </p>
-          {nameCard}
 
           <section id="montar-itens" aria-labelledby="montar-itens-titulo" className="scroll-mt-20">
             <h2 id="montar-itens-titulo" className="flex items-baseline gap-2 font-display text-2xl text-ink mb-1">
@@ -284,7 +294,12 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                 </button>
               ))}
             </div>
-            {shown.length === 0 && <p className="mt-6 text-sm text-mid">Nenhum produto com esse nome.</p>}
+            {catalog.length === 0 && (
+              <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4" aria-hidden="true">
+                {[0, 1, 2, 3].map(i => <li key={i} className="aspect-[4/5] rounded-2xl bg-warm animate-pulse" />)}
+              </ul>
+            )}
+            {catalog.length > 0 && shown.length === 0 && <p className="mt-6 text-sm text-mid">Nenhum produto com esse nome.</p>}
             <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
               {shown.map(p => {
                 const n = inCart.get(p.id);
