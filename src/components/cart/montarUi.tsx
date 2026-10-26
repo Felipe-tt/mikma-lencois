@@ -51,7 +51,14 @@ export function timeAgo(at: number, now: number) {
 
 /** Histórico das mudanças, da mais nova pra mais antiga. */
 export function ActivityList({ log, now, limit = 15 }: { log: SharedCartEdit[]; now: number; limit?: number }) {
-  const list = [...log].reverse().slice(0, limit);
+  // A mesma mudança repetida em seguida (ex.: + três vezes) vira uma linha "×3".
+  const grouped: (SharedCartEdit & { times: number })[] = [];
+  for (const e of [...log].reverse()) {
+    const prev = grouped[grouped.length - 1];
+    if (prev && prev.by === e.by && prev.text === e.text) prev.times++;
+    else grouped.push({ ...e, times: 1 });
+  }
+  const list = grouped.slice(0, limit);
   if (list.length === 0) return <p className="text-[12px] text-faint">Nenhuma mudança ainda.</p>;
   return (
     <ol className="flex flex-col gap-3">
@@ -60,6 +67,7 @@ export function ActivityList({ log, now, limit = 15 }: { log: SharedCartEdit[]; 
           <Avatar name={e.by} size={22} ring={false} />
           <span className="flex-1 min-w-0 text-mid">
             <strong className="font-semibold text-ink">{e.by}</strong> {e.text}
+            {e.times > 1 && <span className="ml-1 rounded-full bg-warm px-1.5 py-0.5 text-[10px] font-semibold text-mid tabular-nums">×{e.times}</span>}
             <span className="block text-[11px] text-faint mt-0.5">{timeAgo(e.at, now)}</span>
           </span>
         </li>
