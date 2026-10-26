@@ -32,6 +32,23 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ token, expiresAt: expiresAt.toMillis() });
 }
 
+/** PATCH: renova o link por mais SHARE_DAYS dias, sem trocar o endereço. */
+export async function PATCH(req: NextRequest) {
+  const auth = await verifyAuth(req);
+  if (!auth.ok) return auth.response;
+  const cartRef = adminDb.collection('carts').doc(auth.decoded.uid);
+  const expiresAt = Timestamp.fromMillis(Date.now() + SHARE_DAYS * 86_400_000);
+  const ok = await adminDb.runTransaction(async tx => {
+    const share = (await tx.get(cartRef)).data()?.share;
+    if (!share?.token || share.paidAt) return false;
+    tx.set(adminDb.collection('sharedCarts').doc(share.token), { uid: auth.decoded.uid, expiresAt });
+    tx.update(cartRef, { 'share.expiresAt': expiresAt });
+    return true;
+  });
+  if (!ok) return NextResponse.json({ error: 'Nenhum link ligado.' }, { status: 404 });
+  return NextResponse.json({ expiresAt: expiresAt.toMillis() });
+}
+
 /** PUT: o dono está com o carrinho aberto (aparece como online pra quem tem o link). */
 export async function PUT(req: NextRequest) {
   const auth = await verifyAuth(req);

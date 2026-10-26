@@ -376,6 +376,9 @@ export default function CartPage() {
                     {item.note && (
                       <p className="text-xs text-clay font-medium">{item.note}</p>
                     )}
+                    {cart?.share && !cart.share.paidAt && cart.share.addedBy?.[item.sku] && (
+                      <p className="text-xs text-mid">Colocado por {cart.share.addedBy[item.sku]}</p>
+                    )}
                     {cart?.share && !cart.share.paidAt && <LikeButton names={cart.share.likes?.[item.sku] ?? []} me="" />}
                     {(() => {
                       if (activeMap[item.productId] === false) {
