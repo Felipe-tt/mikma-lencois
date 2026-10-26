@@ -42,6 +42,18 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [threshold, setThreshold] = useState(0);
+  // Produto que acabou de entrar pelo + do card (mostra o ✓ por um instante).
+  const [justAdded, setJustAdded] = useState<string | null>(null);
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(''), 6000);
+    return () => clearTimeout(t);
+  }, [error]);
+  useEffect(() => {
+    if (!justAdded) return;
+    const t = setTimeout(() => setJustAdded(null), 1500);
+    return () => clearTimeout(t);
+  }, [justAdded]);
   const [removed, setRemoved] = useState<CartItem | null>(null);
   useEffect(() => {
     if (!removed) return;
@@ -294,7 +306,6 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
             <h2 id="montar-itens-titulo" className="flex items-baseline gap-2 font-display text-2xl text-ink mb-1">
               No carrinho <span className="font-sans text-[13px] text-faint tabular-nums">{count} {count === 1 ? 'item' : 'itens'}</span>
             </h2>
-            {error && <p role="alert" className="my-3 rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-3">{error}</p>}
             {items.length === 0 && (
               <div className="my-4 rounded-3xl border border-dashed border-mist px-6 py-10 text-center">
                 <p className="font-display text-xl text-ink">Ainda vazio</p>
@@ -418,20 +429,29 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
             {shown.map(p => {
               const n = inCart.get(p.id);
               return (
-                <li key={p.id}>
+                <li key={p.id} className="relative">
                   <button type="button" onClick={() => setPicking(p)} aria-haspopup="dialog"
                     className="group w-full text-left rounded-2xl border border-mist overflow-hidden hover:border-ink transition-colors">
                     <span className="relative block aspect-[4/5] bg-warm overflow-hidden">
                       {p.images?.[0] && <Image src={p.images[0]} alt="" fill sizes="(min-width: 640px) 220px, 45vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />}
                       {n && <span className="absolute top-2 left-2 rounded-full bg-ink text-paper text-[11px] font-semibold px-2.5 py-1">No carrinho · {n}</span>}
                     </span>
-                    <span className="block p-3">
+                    <span className="block p-3 pr-14">
                       <span className="block text-[13px] font-semibold text-ink leading-snug">{p.name}</span>
-                      <span className="flex items-center justify-between mt-1">
-                        <span className="text-[12px] text-mid">{formatCurrency(p.price)}</span>
-                        <span aria-hidden="true" className="w-7 h-7 rounded-full bg-warm text-ink flex items-center justify-center text-[16px] group-hover:bg-ink group-hover:text-paper transition-colors">+</span>
-                      </span>
+                      <span className="block mt-1 text-[12px] text-mid">{formatCurrency(p.price)}</span>
                     </span>
+                  </button>
+                  {/* Uma opção só: o + já coloca no carrinho. Várias: abre a escolha. */}
+                  <button type="button" disabled={busy === `quick:${p.id}`}
+                    onClick={async () => {
+                      if (p.variants.length !== 1) { setPicking(p); return; }
+                      if (await send(`quick:${p.id}`, { op: 'add', productId: p.id, variantId: p.variants[0].id })) setJustAdded(p.id);
+                    }}
+                    aria-label={p.variants.length === 1 ? `Adicionar ${p.name}` : `Escolher opção de ${p.name}`}
+                    className={`absolute bottom-3 right-3 w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 ${justAdded === p.id ? 'bg-clay text-paper' : 'bg-warm text-ink hover:bg-ink hover:text-paper'}`}>
+                    {justAdded === p.id
+                      ? <svg key="ok" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="animate-badge-bump"><polyline points="20 6 9 17 4 12" /></svg>
+                      : <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
                   </button>
                 </li>
               );
@@ -439,6 +459,16 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
           </ul>
         </section>
       </div>
+
+      {/* Erros num aviso flutuante: aparecem mesmo rolando o catálogo. */}
+      {error && (
+        <div role="alert" className="fixed z-50 left-1/2 -translate-x-1/2 top-20 w-[calc(100%-2rem)] max-w-sm flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 text-red-700 pl-4 pr-1.5 py-1.5 shadow-lg animate-fade-up">
+          <span className="flex-1 text-[13px] leading-snug">{error}</span>
+          <button type="button" onClick={() => setError('')} aria-label="Fechar aviso" className="shrink-0 w-9 h-9 rounded-full hover:bg-red-100 flex items-center justify-center">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+      )}
 
       {removed && (
         <div role="status" className="fixed z-40 left-1/2 -translate-x-1/2 bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-6 w-[calc(100%-2rem)] max-w-sm flex items-center gap-3 rounded-full bg-ink text-paper pl-5 pr-1.5 py-1.5 shadow-lg animate-fade-up">
