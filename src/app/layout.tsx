@@ -14,14 +14,14 @@ export const metadata: Metadata = {
   keywords: ['lençóis', 'fronhas', 'jogos de cama', 'blumenau', 'mikma'],
   icons: {
     icon: [
-      // Todos com fundo escuro da marca: a lua é clara, e o Google mostra o
-      // ícone num círculo branco (transparente, a lua sumia no resultado).
-      { url: '/favicon.ico', sizes: '16x16 32x32 48x48', type: 'image/x-icon' },
-      { url: '/favicon-48-google.png?v=2', sizes: '48x48', type: 'image/png' },
-      { url: '/favicon-96-google.png?v=2', sizes: '96x96', type: 'image/png' },
-      { url: '/favicon-192-google.png?v=2', sizes: '192x192', type: 'image/png' },
+      // Lua clara num círculo escuro com cantos transparentes: na aba fica
+      // redondo, e no Google (que já recorta em círculo) a lua não some.
+      { url: '/favicon.ico?v=3', sizes: '16x16 32x32 48x48', type: 'image/x-icon' },
+      { url: '/favicon-48-google.png?v=3', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon-96-google.png?v=3', sizes: '96x96', type: 'image/png' },
+      { url: '/favicon-192-google.png?v=3', sizes: '192x192', type: 'image/png' },
     ],
-    apple: [{ url: '/apple-touch-icon.png?v=2', sizes: '180x180' }],
+    apple: [{ url: '/apple-touch-icon.png?v=3', sizes: '180x180' }],
   },
   openGraph: {
     ...baseOpenGraph,

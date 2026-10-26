@@ -14,6 +14,7 @@ import { CartSkeleton } from '@/components/ui/Skeleton';
 import { getStockUrgency } from '@/lib/stockUrgency';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { MontarJunto } from '@/components/cart/MontarJunto';
+import { LOG_MAX } from '@/lib/sharedCart';
 
 export default function CartPage() {
   // 0 = loja sem frete grátis. Antes começava em R$ 250 e só trocava se a
@@ -161,7 +162,8 @@ export default function CartPage() {
     const index = cart.items.findIndex(i => i.sku === sku && i.note === note);
     try {
       focusAfterRemove.current = index;
-      await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.filter(i => !(i.sku === sku && i.note === note)) });
+      const gone = cart.items[index];
+      await updateDoc(doc(db, 'carts', user.uid), { items: cart.items.filter(i => !(i.sku === sku && i.note === note)), ...shareLog(cart?.share, gone ? `tirou ${gone.productName}` : '') });
       if (index >= 0) setLastRemoved({ item: cart.items[index], index });
     } catch {
       focusAfterRemove.current = null;
@@ -180,7 +182,7 @@ export default function CartPage() {
     const next = [...current];
     next.splice(Math.min(index, next.length), 0, item);
     try {
-      await updateDoc(doc(db, 'carts', user.uid), { items: next });
+      await updateDoc(doc(db, 'carts', user.uid), { items: next, ...shareLog(cart?.share, `devolveu ${item.productName}`) });
     } catch {
       setItemError('Não foi possível devolver o item. Adicione de novo pela página do produto.');
     }
@@ -193,6 +195,7 @@ export default function CartPage() {
     try {
       await updateDoc(doc(db, 'carts', user.uid), {
         items: cart.items.map(i => (i.sku === sku && i.note === note) ? { ...i, quantity: qty } : i),
+        ...shareLog(cart?.share, `mudou a quantidade de ${cart.items.find(i => i.sku === sku && i.note === note)?.productName ?? 'um item'}`),
       });
     } catch {
       setItemError('Não foi possível atualizar a quantidade. Verifique sua conexão e tente de novo.');
@@ -595,4 +598,12 @@ function PaymentHint({ total, subtotal, pixRule }: { total: number; subtotal: nu
       )}
     </ul>
   );
+}
+
+// Com o "Montar junto" ligado, o que o dono muda também entra no
+// histórico que as outras pessoas veem.
+function shareLog(share: Cart['share'], text: string) {
+  if (!share || !text) return {};
+  const entry = { by: share.ownerName || 'Dono', text, at: Date.now() };
+  return { 'share.log': [...(share.log ?? []), entry].slice(-LOG_MAX), 'share.lastEdit': entry };
 }
