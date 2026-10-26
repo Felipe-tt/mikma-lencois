@@ -55,7 +55,7 @@ export function ProductSheet({ product, onAdd, onClose }: {
         <div className="overflow-y-auto sm:grid sm:grid-cols-2 sm:items-start">
           {images.length > 0 && (
             <div className="relative">
-              <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-px-4 px-4 pt-4 sm:p-0 sm:gap-0 sm:scroll-px-0 [scrollbar-width:none]"
+              <div tabIndex={0} role="region" aria-label={`Fotos de ${product.name}`} className="flex gap-2 overflow-x-auto snap-x focus-visible:outline-2 focus-visible:outline-ink snap-mandatory scroll-px-4 px-4 pt-4 sm:p-0 sm:gap-0 sm:scroll-px-0 [scrollbar-width:none]"
                 onScroll={e => { const w = (e.currentTarget.firstElementChild as HTMLElement | null)?.offsetWidth ?? 1; setPhoto(Math.min(images.length - 1, Math.round(e.currentTarget.scrollLeft / w))); }}>
                 {images.map((src, i) => (
                   <div key={src + i} className="relative shrink-0 w-[72%] sm:w-full aspect-[4/5] snap-start rounded-2xl sm:rounded-none overflow-hidden bg-warm">

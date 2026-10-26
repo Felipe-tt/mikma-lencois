@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase/client';
 import { formatCurrency } from '@/lib/utils/format';
 import { variantLabel } from '@/lib/variantLabel';
 import { lineKey, VIEWER_TTL_MS } from '@/lib/sharedCart';
-import type { Cart, Product } from '@/types';
+import type { Cart, CartItem, Product } from '@/types';
 import { ProductSheet } from '@/components/cart/ProductSheet';
 import { ActivityList, Avatar, ChatBox, LikeButton, OnlineStack } from '@/components/cart/montarUi';
 
@@ -42,6 +42,12 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [threshold, setThreshold] = useState(0);
+  const [removed, setRemoved] = useState<CartItem | null>(null);
+  useEffect(() => {
+    if (!removed) return;
+    const t = setTimeout(() => setRemoved(null), 6000);
+    return () => clearTimeout(t);
+  }, [removed]);
   const [openedAt] = useState(() => Date.now());
   // Este navegador, pra não aparecer na própria lista de online.
   const [me] = useState(() => (typeof window === 'undefined' ? '' : viewerId()));
@@ -160,6 +166,21 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     const r = await post(change);
     if (r !== true) setError(r);
     setBusy(null);
+    return r === true;
+  }
+
+  // Item tirado por engano: volta com a mesma quantidade e fronha.
+  async function undoRemove() {
+    const item = removed;
+    if (!item) return;
+    setRemoved(null);
+    const steps: object[] = [{ op: 'add', productId: item.productId, variantId: item.variant.id }];
+    if (item.quantity > 1) steps.push({ op: 'qty', line: item.sku, quantity: item.quantity });
+    if (item.swapSku) steps.push({ op: 'swap', line: item.sku, swapSku: item.swapSku });
+    for (const step of steps) {
+      const r = await post(step);
+      if (r !== true) { setError(r); return; }
+    }
   }
 
   function saveName(v: string) {
@@ -312,7 +333,10 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
                         <div className="flex items-center rounded-full border border-mist">
-                          <button type="button" disabled={busy === key} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity - 1 })}
+                          <button type="button" disabled={busy === key} onClick={async () => {
+                            const ok = await send(key, { op: 'qty', line: key, quantity: item.quantity - 1 });
+                            if (ok && item.quantity === 1) setRemoved(item);
+                          }}
                             aria-label={item.quantity === 1 ? `Tirar ${item.productName}` : `Diminuir ${item.productName}`}
                             className="w-11 h-11 text-mid hover:text-ink disabled:opacity-40">{item.quantity === 1 ? '×' : '−'}</button>
                           <span key={item.quantity} className="w-8 text-center text-sm tabular-nums animate-badge-bump" aria-live="polite">{item.quantity}</span>
@@ -415,6 +439,13 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
         </section>
       </div>
 
+      {removed && (
+        <div role="status" className="fixed z-40 left-1/2 -translate-x-1/2 bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-6 w-[calc(100%-2rem)] max-w-sm flex items-center gap-3 rounded-full bg-ink text-paper pl-5 pr-1.5 py-1.5 shadow-lg animate-fade-up">
+          <span className="flex-1 min-w-0 text-[13px] truncate"><span className="font-semibold">Item removido</span><span className="text-paper/60"> · {removed.productName}</span></span>
+          <button type="button" onClick={undoRemove} className="shrink-0 h-10 px-4 rounded-full text-[13px] font-semibold bg-paper/10 hover:bg-paper/20">Desfazer</button>
+        </div>
+      )}
+
       {/* Celular: total sempre à vista, com atalho pro carrinho. */}
       <div className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-mist bg-paper/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
         <div className="container-shop h-16 flex items-center justify-between gap-3">
@@ -423,9 +454,10 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
             <span className="block font-display text-xl text-ink tabular-nums leading-none">{formatCurrency(total)}</span>
           </span>
           <span className="flex items-center gap-2">
-            <a href="#montar-recados" onClick={markSeen} aria-label={`Recados${unread ? ` (${unread} novos)` : ''}`} className="relative w-11 h-11 rounded-full border border-mist text-ink flex items-center justify-center">
+            <a href="#montar-recados" onClick={markSeen} className="relative w-11 h-11 rounded-full border border-mist text-ink flex items-center justify-center">
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z" /></svg>
-              {unread > 0 && <span key={unread} aria-hidden="true" className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-clay text-paper text-[10px] font-bold flex items-center justify-center animate-badge-bump">{unread}</span>}
+              <span className="sr-only">Recados</span>
+              {unread > 0 && <span key={unread} className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-clay text-paper text-[10px] font-bold flex items-center justify-center animate-badge-bump">{unread}<span className="sr-only"> novos</span></span>}
             </a>
             <a href="#montar-itens" className="h-11 px-5 rounded-full bg-ink text-paper text-[13px] font-semibold flex items-center">Ver carrinho</a>
           </span>
