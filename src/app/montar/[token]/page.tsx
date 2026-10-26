@@ -85,7 +85,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   }
 
   // "Estou aqui": entra na lista de online e renova enquanto a aba está aberta.
-  const live = status === 'ok' && !!name;
+  const live = status === 'ok' && !!name && !cart?.share?.paidAt;
   useEffect(() => {
     if (!live) return;
     const ping = () => { if (document.visibilityState === 'visible') post({ op: 'ping' }); };
@@ -168,6 +168,26 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
       <div className="container-shop py-20 text-center">
         <h1 className="font-display text-3xl text-ink mb-3">Esse link não está mais ativo</h1>
         <p className="text-sm text-mid max-w-[36ch] mx-auto">Quem compartilhou desligou o link ou ele expirou. Peça um novo para continuar montando o pedido.</p>
+      </div>
+    </>
+  );
+
+  // Pedido pago: o link fica só com a confirmação.
+  if (share?.paidAt) return (
+    <>{header}
+      <div className="container-shop min-h-[calc(100dvh-4rem)] flex items-center justify-center py-12">
+        <div className="w-full max-w-sm text-center animate-fade-up">
+          <span className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-clay text-paper">
+            <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+          </span>
+          <h1 className="font-display text-3xl sm:text-4xl text-ink leading-tight">{owner ?? 'Quem compartilhou'} finalizou o pedido</h1>
+          <p className="mt-3 text-[14px] text-mid leading-relaxed">
+            {share.paidItems ? `${share.paidItems} ${share.paidItems === 1 ? 'item' : 'itens'} montados juntos. ` : ''}Obrigado por ajudar a escolher. Agora é com a gente: o pedido já está sendo preparado.
+          </p>
+          <ul className="mt-6 flex justify-center -space-x-2" aria-label="Quem montou">
+            {[...new Set((share.log ?? []).map(e => e.by))].slice(0, 6).map(n => <li key={n}><Avatar name={n} size={32} /></li>)}
+          </ul>
+        </div>
       </div>
     </>
   );

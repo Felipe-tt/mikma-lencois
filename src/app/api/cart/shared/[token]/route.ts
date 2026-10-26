@@ -42,6 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       const cart = (await tx.get(cartRef)).data();
       if (cart?.share?.token !== token) return { error: 'Esse link expirou ou foi desligado.' };
       const share = cart.share;
+      if (share.paidAt) return { error: 'Esse pedido já foi finalizado.' };
       const now = Date.now();
       // Online: quem mandou sinal nos últimos minutos (os antigos saem).
       const viewers = Object.fromEntries(Object.entries((share.viewers ?? {}) as Record<string, { at: number }>)
