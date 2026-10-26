@@ -101,6 +101,9 @@ async function isEdgeBypassActive(projectId: string): Promise<boolean> {
 // qualquer leitura/escrita no Firestore ou lookup de geo, corta o custo
 // desses scans a praticamente zero: é só um 404 estático, sem tocar em
 // nada além do próprio isolate.
+// Robôs de busca, para responder 503 durante a manutenção.
+const SEARCH_BOT = /googlebot|google-inspectiontool|bingbot|duckduckbot|yandex|baiduspider|applebot|slurp|petalbot/i;
+
 const SCANNER_PATH_PATTERN = /^\/(wp-admin|wp-login|wp-content|wp-includes|wp-json|xmlrpc\.php|\.env|\.git|phpmyadmin|admin\.php|config\.php|_ignition|actuator|\.well-known\/traffic-advice)/i;
 
 
@@ -220,6 +223,15 @@ export async function proxy(req: NextRequest) {
           // entrada. Quem entra na fila agora é o navegador que abre
           // /manutencao e fica nela (ver /api/maintenance/queue). O caminho
           // pedido vai junto, sem query string (links de e-mail têm token).
+          // Robô de busca recebe 503 com Retry-After (o que o Google pede
+          // para manutenção): sem isso ele seguia o redirecionamento e
+          // tratava /manutencao como cópia da página pedida.
+          if (SEARCH_BOT.test(req.headers.get('user-agent') ?? '')) {
+            return new NextResponse('Em manutenção. Voltamos em breve.', {
+              status: 503,
+              headers: { 'Retry-After': '3600', 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' },
+            });
+          }
           const target = new URL('/manutencao', req.url);
           const wanted = pathOnly(pathname);
           if (wanted && wanted !== '/' && !wanted.startsWith('/manutencao')) target.searchParams.set('de', wanted);
@@ -234,6 +246,8 @@ export async function proxy(req: NextRequest) {
 
   const res = NextResponse.next();
   applySecurityHeaders(res, pathname);
+  // A tela de manutenção nunca deve aparecer no Google.
+  if (pathname.startsWith('/manutencao')) res.headers.set('X-Robots-Tag', 'noindex, follow');
 
   // Páginas do painel e auth: nunca cachear (dados do usuário)
   // Páginas da loja: deixar o Next.js/CDN cachearem normalmente via ISR

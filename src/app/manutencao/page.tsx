@@ -14,8 +14,12 @@ export const revalidate = 30;
 
 export const metadata = {
   // Absoluto: com o modelo do layout virava "Em breve, Mikma Lençóis | Mikma
-  // Lençóis", e é esta página que o Google lê enquanto a loja está fechada.
+  // Lençóis".
   title: { absolute: 'Mikma Lençóis · Lençóis direto da fábrica em Blumenau' },
+  // Fora do Google: era indexada como cópia da home ("cópia sem página
+  // canônica" no Search Console). Os robôs nem chegam aqui (recebem 503
+  // no proxy), isto cobre quem chegar por link direto.
+  robots: { index: false, follow: true },
 };
 
 export default async function ManutencaoPage() {
