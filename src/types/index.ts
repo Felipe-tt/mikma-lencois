@@ -272,6 +272,8 @@ export interface Cart {
     /** Pedido pago a partir deste carrinho: o link vira só a tela de "pedido feito". */
     /** Recados trocados no "Montar junto", do mais antigo pro mais novo. */
     chat?: SharedCartEdit[]
+    /** SKU → nomes de quem curtiu o item. */
+    likes?: Record<string, string[]>
     paidAt?: number
     paidItems?: number
   }

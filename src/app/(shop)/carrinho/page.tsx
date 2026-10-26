@@ -15,6 +15,7 @@ import { getStockUrgency } from '@/lib/stockUrgency';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { MontarJunto } from '@/components/cart/MontarJunto';
 import { LOG_MAX } from '@/lib/sharedCart';
+import { LikeButton } from '@/components/cart/montarUi';
 
 export default function CartPage() {
   // 0 = loja sem frete grátis. Antes começava em R$ 250 e só trocava se a
@@ -375,6 +376,7 @@ export default function CartPage() {
                     {item.note && (
                       <p className="text-xs text-clay font-medium">{item.note}</p>
                     )}
+                    {cart?.share && !cart.share.paidAt && <LikeButton names={cart.share.likes?.[item.sku] ?? []} me="" />}
                     {(() => {
                       if (activeMap[item.productId] === false) {
                         return <p className="text-xs text-red-600 font-semibold">Produto não está mais disponível, remova do carrinho</p>;

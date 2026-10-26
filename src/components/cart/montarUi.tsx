@@ -131,3 +131,31 @@ export function ChatBox({ messages, now, me, onSend, id }: {
     </div>
   );
 }
+
+/** "Ana e Bia curtiram": nomes numa frase curta. */
+export function likeText(names: string[]) {
+  if (names.length === 0) return '';
+  if (names.length === 1) return `${names[0]} curtiu`;
+  if (names.length === 2) return `${names[0]} e ${names[1]} curtiram`;
+  return `${names[0]}, ${names[1]} e mais ${names.length - 2} curtiram`;
+}
+
+/** Coração pra votar num item. Sem `onToggle`, só mostra quem curtiu. */
+export function LikeButton({ names, me, onToggle }: { names: string[]; me: string; onToggle?: () => void }) {
+  const liked = names.includes(me);
+  const heart = (
+    <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z" />
+    </svg>
+  );
+  if (!onToggle) {
+    return names.length > 0 ? <p className="inline-flex items-center gap-1.5 text-[12px] text-clay">{heart}{likeText(names)}</p> : null;
+  }
+  return (
+    <button type="button" onClick={onToggle} aria-pressed={liked}
+      className={`inline-flex items-center gap-1.5 min-h-9 rounded-full px-3 text-[12px] font-semibold transition-colors ${liked ? 'bg-clay/10 text-clay' : 'text-mid hover:text-clay'}`}>
+      <span key={String(liked)} className={liked ? 'animate-heart-pop' : ''}>{heart}</span>
+      {names.length > 0 ? likeText(names) : 'Curtir'}
+    </button>
+  );
+}

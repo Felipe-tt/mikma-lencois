@@ -14,6 +14,7 @@ const schema = z.object({
   viewer: z.string().regex(/^[A-Za-z0-9]{8,24}$/).optional(),
   change: z.discriminatedUnion('op', [
     z.object({ op: z.literal('ping') }),
+    z.object({ op: z.literal('like'), sku: id }),
     z.object({ op: z.literal('msg'), text: z.string().trim().min(1).max(CHAT_TEXT_MAX) }),
     z.object({ op: z.literal('add'), productId: id, variantId: id }),
     z.object({ op: z.literal('qty'), line: z.string().min(1).max(300), quantity: z.number().int() }),
@@ -51,6 +52,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       if (viewer) viewers[viewer] = { name: who, at: now } as { at: number };
       if (change.op === 'ping') {
         tx.update(cartRef, { 'share.viewers': viewers });
+        return { ok: true };
+      }
+      if (change.op === 'like') {
+        const items = (cart.items ?? []) as CartItem[];
+        if (!items.some(i => i.sku === change.sku)) return { error: 'Esse item já saiu do carrinho.' };
+        const skus = new Set(items.map(i => i.sku));
+        const likes = Object.fromEntries(Object.entries((share.likes ?? {}) as Record<string, string[]>).filter(([k]) => skus.has(k)));
+        const list = likes[change.sku] ?? [];
+        likes[change.sku] = list.includes(who) ? list.filter(n => n !== who) : [...list, who].slice(-20);
+        tx.update(cartRef, { 'share.likes': likes, 'share.viewers': viewers });
         return { ok: true };
       }
       if (change.op === 'msg') {
