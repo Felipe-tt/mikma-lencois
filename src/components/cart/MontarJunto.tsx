@@ -2,14 +2,17 @@
 import { useEffect, useState } from 'react';
 import type { Cart } from '@/types';
 import { VIEWER_TTL_MS } from '@/lib/sharedCart';
-import { ActivityList, OnlineStack } from '@/components/cart/montarUi';
+import { ActivityList, ChatBox, OnlineStack } from '@/components/cart/montarUi';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
+import { CHAT_MAX } from '@/lib/sharedCart';
 
 /**
  * "Montar junto": link secreto pra outras pessoas mexerem neste carrinho
  * ao vivo (ver src/lib/sharedCart.ts). Discreto: um link de texto que abre
  * o painel com o endereço, copiar/compartilhar e desligar.
  */
-export function MontarJunto({ cart, user }: { cart: Cart | null; user: { getIdToken(): Promise<string> } }) {
+export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: string; getIdToken(): Promise<string> } }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -48,6 +51,16 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { getIdTo
     .map(([, v]) => v);
   const log = share?.log ?? [];
 
+  // Recado do dono: escreve direto no próprio carrinho (a regra deixa).
+  const me = share?.ownerName || 'Dono';
+  async function sendMsg(text: string): Promise<true | string> {
+    try {
+      const msg = { by: me, text: text.slice(0, 200), at: Date.now() };
+      await updateDoc(doc(db, 'carts', user.uid), { 'share.chat': [...(share?.chat ?? []), msg].slice(-CHAT_MAX) });
+      return true;
+    } catch { return 'Não deu para enviar. Tente de novo.'; }
+  }
+
   async function call(method: 'POST' | 'DELETE') {
     setBusy(true); setError('');
     try {
@@ -69,7 +82,7 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { getIdTo
   return (
     <div className="mt-6 text-center">
       <p role="status" className="min-h-0 text-[12px] text-clay">{notice}</p>
-      {active && (online.length > 0 || log.length > 0) && (
+      {active && (
         <div className="mb-3 rounded-2xl border border-mist p-4 text-left">
           {online.length > 0 && (
             <p className="flex items-center gap-2 text-[12px] text-mid mb-3">
@@ -77,7 +90,9 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { getIdTo
               {online.length === 1 ? `${online[0].name} está montando com você` : `${online.length} pessoas montando com você`}
             </p>
           )}
-          <ActivityList log={log} now={now} limit={3} />
+          {log.length > 0 && <ActivityList log={log} now={now} limit={3} />}
+          <p className="mt-4 mb-2 text-[12px] font-semibold text-ink">Recados</p>
+          <ChatBox id="carrinho-recados" messages={share?.chat ?? []} now={now} me={me} onSend={sendMsg} />
         </div>
       )}
       {!open ? (

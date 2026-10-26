@@ -8,7 +8,7 @@ import { variantLabel } from '@/lib/variantLabel';
 import { lineKey, VIEWER_TTL_MS } from '@/lib/sharedCart';
 import type { Cart, Product } from '@/types';
 import { ProductSheet } from '@/components/cart/ProductSheet';
-import { ActivityList, Avatar, OnlineStack } from '@/components/cart/montarUi';
+import { ActivityList, Avatar, ChatBox, OnlineStack } from '@/components/cart/montarUi';
 
 type Status = 'loading' | 'ok' | 'off';
 
@@ -97,7 +97,13 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
 
   const share = cart?.share;
   const log = share?.log ?? [];
-  const latest = log[log.length - 1];
+  const chat = share?.chat ?? [];
+  const lastLog = log[log.length - 1];
+  const lastMsg = chat[chat.length - 1];
+  // O aviso mostra a novidade mais recente: mudança no carrinho ou recado.
+  const latest = lastMsg && (!lastLog || lastMsg.at > lastLog.at)
+    ? { ...lastMsg, text: `disse: “${lastMsg.text.length > 60 ? lastMsg.text.slice(0, 60) + '…' : lastMsg.text}”` }
+    : lastLog;
   // Aviso quando outra pessoa mexe (some sozinho).
   const toast = latest && latest.at > openedAt && latest.at !== hiddenAt && latest.by !== (name.trim() || 'Alguém') ? latest : null;
   useEffect(() => {
@@ -105,6 +111,14 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     const t = setTimeout(() => setHiddenAt(toast.at), 4500);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // Estoque dos itens do carrinho, pra avisar "só restam 2" e travar o +.
+  const [stock, setStock] = useState<Record<string, number>>({});
+  const skuKey = (cart?.items ?? []).map(i => i.sku).sort().join(',');
+  useEffect(() => {
+    if (!skuKey) return;
+    fetch(`/api/stock?skus=${encodeURIComponent(skuKey)}`).then(r => (r.ok ? r.json() : {})).then(setStock).catch(() => {});
+  }, [skuKey]);
 
   const byId = useMemo(() => new Map(catalog.map(p => [p.id, p])), [catalog]);
   const fronhas = useMemo(() => catalog.filter(p => p.category === 'Fronhas'), [catalog]);
@@ -253,6 +267,8 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                 const product = byId.get(item.productId);
                 const isJogo = product?.category === 'Jogos de cama';
                 const by = share?.addedBy?.[item.sku];
+                const left = stock[item.sku];
+                const gone = (product === undefined && catalog.length > 0) || left === 0;
                 return (
                   <li key={key} className="py-5 flex gap-4 animate-fade-up">
                     <button type="button" onClick={() => product && setPicking(product)} disabled={!product} tabIndex={-1} aria-hidden="true"
@@ -265,6 +281,9 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                         : <p className="text-[15px] font-semibold text-ink">{item.productName}</p>}
                       <p className="text-[12px] text-faint mt-0.5">{variantLabel(item.variant)}</p>
                       {item.note && <p className="text-[12px] text-clay mt-0.5">{item.note}</p>}
+                      {gone
+                        ? <p className="text-[12px] font-semibold text-red-700 mt-1">Esgotado: tire do carrinho ou troque por outro</p>
+                        : left !== undefined && left <= 3 && <p className="text-[12px] font-semibold text-amber-700 mt-1">Só restam {left}</p>}
                       {by && (
                         <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] text-mid">
                           <Avatar name={by} size={16} ring={false} /> por {by}
@@ -272,11 +291,11 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                       )}
                       <div className="mt-3 flex flex-wrap items-center gap-3">
                         <div className="flex items-center rounded-full border border-mist">
-                          <button type="button" disabled={!!busy} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity - 1 })}
+                          <button type="button" disabled={busy === key} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity - 1 })}
                             aria-label={item.quantity === 1 ? `Tirar ${item.productName}` : `Diminuir ${item.productName}`}
                             className="w-11 h-11 text-mid hover:text-ink disabled:opacity-40">{item.quantity === 1 ? '×' : '−'}</button>
                           <span key={item.quantity} className="w-8 text-center text-sm tabular-nums animate-badge-bump" aria-live="polite">{item.quantity}</span>
-                          <button type="button" disabled={!!busy} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity + 1 })}
+                          <button type="button" disabled={busy === key || (left !== undefined && item.quantity >= left)} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity + 1 })}
                             aria-label={`Aumentar ${item.productName}`}
                             className="w-11 h-11 text-mid hover:text-ink disabled:opacity-40">+</button>
                         </div>
@@ -285,7 +304,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                       {isJogo && fronhas.length > 0 && (
                         <label className="mt-3 block text-[12px] text-mid">
                           Fronha
-                          <select value={item.swapSku ?? ''} disabled={!!busy}
+                          <select value={item.swapSku ?? ''} disabled={busy === key}
                             onChange={e => send(key, { op: 'swap', line: key, swapSku: e.target.value || null })}
                             className="mt-1 block w-full max-w-xs h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink">
                             <option value="">A que vem no jogo</option>
@@ -365,6 +384,10 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
             <p className="mt-4 text-[12px] text-faint leading-relaxed">Frete e pagamento ficam com {owner ?? 'quem compartilhou o carrinho'}.</p>
           </div>
           <div className="rounded-3xl border border-mist p-6">
+            <h2 className="text-[13px] font-semibold text-ink mb-4">Recados</h2>
+            <ChatBox id="montar-recados" messages={chat} now={now} me={name} onSend={text => post({ op: 'msg', text })} />
+          </div>
+          <div className="rounded-3xl border border-mist p-6">
             <h2 className="text-[13px] font-semibold text-ink mb-4">O que mudou</h2>
             <ActivityList log={log} now={now} limit={8} />
           </div>
@@ -378,7 +401,13 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
             <span className="block text-[11px] text-faint">{count} {count === 1 ? 'item' : 'itens'}</span>
             <span className="block font-display text-xl text-ink tabular-nums leading-none">{formatCurrency(total)}</span>
           </span>
-          <a href="#montar-itens" className="h-11 px-5 rounded-full bg-ink text-paper text-[13px] font-semibold flex items-center">Ver carrinho</a>
+          <span className="flex items-center gap-2">
+            <a href="#montar-recados" aria-label={`Recados${chat.length ? ` (${chat.length})` : ''}`} className="relative w-11 h-11 rounded-full border border-mist text-ink flex items-center justify-center">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z" /></svg>
+              {chat.length > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-clay text-paper text-[10px] font-bold flex items-center justify-center">{chat.length}</span>}
+            </a>
+            <a href="#montar-itens" className="h-11 px-5 rounded-full bg-ink text-paper text-[13px] font-semibold flex items-center">Ver carrinho</a>
+          </span>
         </div>
       </div>
 

@@ -270,6 +270,8 @@ export interface Cart {
     /** Quem está com o link aberto (id do navegador → nome, último sinal). */
     viewers?: Record<string, { name: string; at: number; owner?: boolean }>
     /** Pedido pago a partir deste carrinho: o link vira só a tela de "pedido feito". */
+    /** Recados trocados no "Montar junto", do mais antigo pro mais novo. */
+    chat?: SharedCartEdit[]
     paidAt?: number
     paidItems?: number
   }
