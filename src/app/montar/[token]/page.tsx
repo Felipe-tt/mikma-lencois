@@ -8,7 +8,7 @@ import { variantLabel } from '@/lib/variantLabel';
 import { lineKey, VIEWER_TTL_MS } from '@/lib/sharedCart';
 import type { Cart, Product } from '@/types';
 import { ProductSheet } from '@/components/cart/ProductSheet';
-import { ActivityList, Avatar, ChatBox, OnlineStack } from '@/components/cart/montarUi';
+import { ActivityList, Avatar, ChatBox, LikeButton, OnlineStack } from '@/components/cart/montarUi';
 
 type Status = 'loading' | 'ok' | 'off';
 
@@ -98,6 +98,15 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   const share = cart?.share;
   const log = share?.log ?? [];
   const chat = share?.chat ?? [];
+  // Recados não lidos (bolinha da barra do celular): lido = tocou no botão.
+  const seenKey = `mikma:montar-lido:${token}`;
+  const [seenAt, setSeenAt] = useState(() => Number(readStorage(seenKey)) || 0);
+  const unread = chat.filter(m => m.at > seenAt && m.by !== name).length;
+  function markSeen() {
+    const at = Date.now();
+    setSeenAt(at);
+    try { localStorage.setItem(seenKey, String(at)); } catch { /* sem storage */ }
+  }
   const lastLog = log[log.length - 1];
   const lastMsg = chat[chat.length - 1];
   // O aviso mostra a novidade mais recente: mudança no carrinho ou recado.
@@ -289,7 +298,10 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                           <Avatar name={by} size={16} ring={false} /> por {by}
                         </p>
                       )}
-                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <div className="mt-1 -ml-2">
+                        <LikeButton names={share?.likes?.[item.sku] ?? []} me={name} onToggle={() => send(`like:${item.sku}`, { op: 'like', sku: item.sku })} />
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
                         <div className="flex items-center rounded-full border border-mist">
                           <button type="button" disabled={busy === key} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity - 1 })}
                             aria-label={item.quantity === 1 ? `Tirar ${item.productName}` : `Diminuir ${item.productName}`}
@@ -402,9 +414,9 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
             <span className="block font-display text-xl text-ink tabular-nums leading-none">{formatCurrency(total)}</span>
           </span>
           <span className="flex items-center gap-2">
-            <a href="#montar-recados" aria-label={`Recados${chat.length ? ` (${chat.length})` : ''}`} className="relative w-11 h-11 rounded-full border border-mist text-ink flex items-center justify-center">
+            <a href="#montar-recados" onClick={markSeen} aria-label={`Recados${unread ? ` (${unread} novos)` : ''}`} className="relative w-11 h-11 rounded-full border border-mist text-ink flex items-center justify-center">
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z" /></svg>
-              {chat.length > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-clay text-paper text-[10px] font-bold flex items-center justify-center">{chat.length}</span>}
+              {unread > 0 && <span key={unread} aria-hidden="true" className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-clay text-paper text-[10px] font-bold flex items-center justify-center animate-badge-bump">{unread}</span>}
             </a>
             <a href="#montar-itens" className="h-11 px-5 rounded-full bg-ink text-paper text-[13px] font-semibold flex items-center">Ver carrinho</a>
           </span>

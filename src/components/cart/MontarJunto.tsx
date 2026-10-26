@@ -71,13 +71,11 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: st
   }
 
   async function shareLink() {
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Monta o pedido comigo', url }); return; } catch { /* cancelado */ }
-    }
     await navigator.clipboard?.writeText(url).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
+
 
   return (
     <div className="mt-6 text-center">
@@ -111,8 +109,13 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: st
               <input readOnly value={url} aria-label="Link do carrinho" onFocus={e => e.currentTarget.select()}
                 className="mt-3 w-full h-10 rounded-full border border-mist bg-warm/50 px-4 text-[12px] text-ink" />
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={shareLink} className="h-11 px-5 rounded-full bg-ink text-paper text-[13px] font-semibold hover:bg-clay transition-colors">
-                  {copied ? 'Link copiado' : 'Compartilhar link'}
+                <a href={`https://wa.me/?text=${encodeURIComponent(`Me ajuda a montar meu pedido na Mikma? ${url}`)}`} target="_blank" rel="noopener noreferrer"
+                  className="h-11 px-5 rounded-full bg-[#1f7a4d] text-white text-[13px] font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-opacity">
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm0 18.2a8.2 8.2 0 01-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1112 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 01-2-1.2 7.4 7.4 0 01-1.4-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.7 11.8 11.8 0 004.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 001.8-1.2 2.2 2.2 0 00.1-1.3c0-.1-.2-.2-.4-.3z" /></svg>
+                  WhatsApp
+                </a>
+                <button type="button" onClick={shareLink} className="h-11 px-5 rounded-full border border-mist text-ink text-[13px] font-semibold hover:border-ink transition-colors">
+                  {copied ? 'Link copiado' : 'Copiar link'}
                 </button>
                 <button type="button" disabled={busy} onClick={() => call('DELETE')} className="h-11 px-4 rounded-full text-[13px] text-mid hover:text-ink disabled:opacity-40">
                   Desligar link
