@@ -51,7 +51,14 @@ export function timeAgo(at: number, now: number) {
 
 /** Histórico das mudanças, da mais nova pra mais antiga. */
 export function ActivityList({ log, now, limit = 15 }: { log: SharedCartEdit[]; now: number; limit?: number }) {
-  const list = [...log].reverse().slice(0, limit);
+  // A mesma mudança repetida em seguida (ex.: + três vezes) vira uma linha "×3".
+  const grouped: (SharedCartEdit & { times: number })[] = [];
+  for (const e of [...log].reverse()) {
+    const prev = grouped[grouped.length - 1];
+    if (prev && prev.by === e.by && prev.text === e.text) prev.times++;
+    else grouped.push({ ...e, times: 1 });
+  }
+  const list = grouped.slice(0, limit);
   if (list.length === 0) return <p className="text-[12px] text-faint">Nenhuma mudança ainda.</p>;
   return (
     <ol className="flex flex-col gap-3">
@@ -60,6 +67,7 @@ export function ActivityList({ log, now, limit = 15 }: { log: SharedCartEdit[]; 
           <Avatar name={e.by} size={22} ring={false} />
           <span className="flex-1 min-w-0 text-mid">
             <strong className="font-semibold text-ink">{e.by}</strong> {e.text}
+            {e.times > 1 && <span className="ml-1 rounded-full bg-warm px-1.5 py-0.5 text-[10px] font-semibold text-mid tabular-nums">×{e.times}</span>}
             <span className="block text-[11px] text-faint mt-0.5">{timeAgo(e.at, now)}</span>
           </span>
         </li>
@@ -103,13 +111,16 @@ export function ChatBox({ messages, now, me, onSend, id }: {
         ? <p className="text-[12px] text-faint mb-3">Mande um recado pra quem está montando, tipo &quot;essa cor combina com o quarto?&quot;.</p>
         : (
           <ol ref={listRef} className="mb-3 flex max-h-72 flex-col gap-2.5 overflow-y-auto pr-1" aria-label="Recados">
-            {messages.map(m => {
+            {messages.map((m, i) => {
               const mine = m.by === me;
+              // Seguidas da mesma pessoa: nome só na primeira, bolinha só na última.
+              const first = messages[i - 1]?.by !== m.by;
+              const last = messages[i + 1]?.by !== m.by;
               return (
-                <li key={m.at + m.by} className={`flex items-end gap-2 ${mine ? 'flex-row-reverse' : ''}`}>
-                  {!mine && <Avatar name={m.by} size={22} ring={false} />}
-                  <span className={`max-w-[80%] rounded-2xl px-3 py-2 text-[13px] leading-snug break-words ${mine ? 'bg-ink text-paper rounded-br-md' : 'bg-warm text-ink rounded-bl-md'}`}>
-                    {!mine && <span className="block text-[11px] font-semibold text-mid mb-0.5">{m.by}</span>}
+                <li key={m.at + m.by} className={`flex items-end gap-2 ${mine ? 'flex-row-reverse' : ''} ${first ? '' : '-mt-1.5'}`}>
+                  {!mine && (last ? <Avatar name={m.by} size={22} ring={false} /> : <span className="w-[22px] shrink-0" aria-hidden="true" />)}
+                  <span className={`max-w-[80%] rounded-2xl px-3 py-2 text-[13px] leading-snug break-words ${mine ? 'bg-ink text-paper' : 'bg-warm text-ink'} ${last ? (mine ? 'rounded-br-md' : 'rounded-bl-md') : ''}`}>
+                    {!mine && first && <span className="block text-[11px] font-semibold text-mid mb-0.5">{m.by}</span>}
                     {m.text}
                     <span className={`block text-[10px] mt-1 ${mine ? 'text-paper/60' : 'text-faint'}`}>{timeAgo(m.at, now)}</span>
                   </span>
@@ -158,4 +169,28 @@ export function LikeButton({ names, me, onToggle }: { names: string[]; me: strin
       {names.length > 0 ? likeText(names) : 'Curtir'}
     </button>
   );
+}
+
+/**
+ * Com a aba em segundo plano, conta as novidades (mudanças e recados de
+ * outras pessoas) no título: "(2) Carrinho de Maria". Some ao voltar.
+ */
+export function useTabBadge(events: { at: number; by: string }[], me: string) {
+  const hiddenSince = useRef<number | null>(null);
+  useEffect(() => {
+    const strip = () => document.title.replace(/^\(\d+\) /, '');
+    const onVis = () => {
+      if (document.hidden) hiddenSince.current = Date.now();
+      else { hiddenSince.current = null; document.title = strip(); }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+  const last = events.reduce((m, e) => Math.max(m, e.at), 0);
+  useEffect(() => {
+    const since = hiddenSince.current;
+    if (since === null || !document.hidden) return;
+    const count = events.filter(e => e.at > since && e.by !== me).length;
+    if (count > 0) document.title = `(${count}) ${document.title.replace(/^\(\d+\) /, '')}`;
+  }, [last]); // eslint-disable-line react-hooks/exhaustive-deps
 }

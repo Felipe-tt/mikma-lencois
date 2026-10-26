@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { Cart } from '@/types';
 import { VIEWER_TTL_MS } from '@/lib/sharedCart';
-import { ActivityList, ChatBox, OnlineStack } from '@/components/cart/montarUi';
+import { ActivityList, ChatBox, OnlineStack, useTabBadge } from '@/components/cart/montarUi';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { CHAT_MAX } from '@/lib/sharedCart';
@@ -53,6 +53,7 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: st
 
   // Recado do dono: escreve direto no próprio carrinho (a regra deixa).
   const me = share?.ownerName || 'Dono';
+  useTabBadge(active ? [...log, ...(share?.chat ?? [])] : [], me);
   async function sendMsg(text: string): Promise<true | string> {
     try {
       const msg = { by: me, text: text.slice(0, 200), at: Date.now() };
