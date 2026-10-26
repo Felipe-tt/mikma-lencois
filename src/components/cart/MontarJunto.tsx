@@ -62,7 +62,7 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: st
     } catch { return 'Não deu para enviar. Tente de novo.'; }
   }
 
-  async function call(method: 'POST' | 'DELETE') {
+  async function call(method: 'POST' | 'DELETE' | 'PATCH') {
     setBusy(true); setError('');
     try {
       const res = await fetch('/api/cart/share', { method, headers: { Authorization: `Bearer ${await user.getIdToken()}` } });
@@ -106,6 +106,9 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: st
       </div>
       <p className="mt-2 px-4 text-[11px] text-faint">
         Vale até {new Date(share!.expiresAt.toMillis()).toLocaleDateString('pt-BR')} ·{' '}
+        {share!.expiresAt.toMillis() - openedAt < 3 * 86_400_000 && (
+          <><button type="button" disabled={busy} onClick={() => call('PATCH')} className="font-semibold text-clay underline underline-offset-2 disabled:opacity-40">renovar por mais 7 dias</button>{' · '}</>
+        )}
         <button type="button" disabled={busy} onClick={() => call('DELETE')} className="underline underline-offset-2 hover:text-ink disabled:opacity-40">desligar link</button>
       </p>
       {error && <p role="alert" className="mt-2 px-4 text-[12px] text-red-700">{error}</p>}
