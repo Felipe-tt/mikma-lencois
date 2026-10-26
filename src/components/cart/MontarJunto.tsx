@@ -16,7 +16,7 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { getIdTo
   const [copied, setCopied] = useState(false);
   const [openedAt] = useState(() => Date.now());
   const share = cart?.share;
-  const active = !!share && share.expiresAt.toMillis() > openedAt;
+  const active = !!share && !share.paidAt && share.expiresAt.toMillis() > openedAt;
   const url = active ? `${window.location.origin}/montar/${share.token}` : '';
 
   // Aviso discreto quando alguém mexe pelo link ("Ana adicionou ...").

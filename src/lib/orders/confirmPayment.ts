@@ -201,7 +201,12 @@ export async function confirmOrderPaid(
   try {
     const batch = adminDb.batch();
     const cartRef = adminDb.collection('carts').doc(order.userId as string);
-    batch.update(cartRef, { items: [], updatedAt: FieldValue.serverTimestamp() });
+    // "Montar junto" ligado: quem estava montando vê que o pedido saiu.
+    const share = (await cartRef.get()).data()?.share;
+    const finished = share?.token && !share.paidAt
+      ? { 'share.paidAt': Date.now(), 'share.paidItems': ((order.items ?? []) as { quantity?: number }[]).reduce((a, i) => a + (i.quantity ?? 0), 0) }
+      : {};
+    batch.update(cartRef, { items: [], updatedAt: FieldValue.serverTimestamp(), ...finished });
 
     const notifRef = adminDb
       .collection('notifications')
