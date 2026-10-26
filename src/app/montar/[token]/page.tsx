@@ -8,7 +8,7 @@ import { variantLabel } from '@/lib/variantLabel';
 import { lineKey, VIEWER_TTL_MS } from '@/lib/sharedCart';
 import type { Cart, CartItem, Product } from '@/types';
 import { ProductSheet } from '@/components/cart/ProductSheet';
-import { ActivityList, Avatar, ChatBox, LikeButton, OnlineStack } from '@/components/cart/montarUi';
+import { ActivityList, Avatar, ChatBox, LikeButton, OnlineStack, useTabBadge } from '@/components/cart/montarUi';
 
 type Status = 'loading' | 'ok' | 'off';
 
@@ -157,7 +157,8 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   // Next devolve o título do layout quando a página muda de estado.
   useEffect(() => {
     if (owner) document.title = `Carrinho de ${owner} · Montar junto`;
-  });
+  }, [owner, name, status]);
+  useTabBadge([...log, ...chat], name.trim() || 'Alguém');
   const remaining = Math.max(0, threshold - total);
   const progress = threshold > 0 ? Math.min(100, (total / threshold) * 100) : 0;
 

@@ -159,3 +159,27 @@ export function LikeButton({ names, me, onToggle }: { names: string[]; me: strin
     </button>
   );
 }
+
+/**
+ * Com a aba em segundo plano, conta as novidades (mudanças e recados de
+ * outras pessoas) no título: "(2) Carrinho de Maria". Some ao voltar.
+ */
+export function useTabBadge(events: { at: number; by: string }[], me: string) {
+  const hiddenSince = useRef<number | null>(null);
+  useEffect(() => {
+    const strip = () => document.title.replace(/^\(\d+\) /, '');
+    const onVis = () => {
+      if (document.hidden) hiddenSince.current = Date.now();
+      else { hiddenSince.current = null; document.title = strip(); }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+  const last = events.reduce((m, e) => Math.max(m, e.at), 0);
+  useEffect(() => {
+    const since = hiddenSince.current;
+    if (since === null || !document.hidden) return;
+    const count = events.filter(e => e.at > since && e.by !== me).length;
+    if (count > 0) document.title = `(${count}) ${document.title.replace(/^\(\d+\) /, '')}`;
+  }, [last]); // eslint-disable-line react-hooks/exhaustive-deps
+}
