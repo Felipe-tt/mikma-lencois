@@ -43,6 +43,8 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   const [category, setCategory] = useState('');
   const [threshold, setThreshold] = useState(0);
   const [openedAt] = useState(() => Date.now());
+  // Este navegador, pra não aparecer na própria lista de online.
+  const [me] = useState(() => (typeof window === 'undefined' ? '' : viewerId()));
   const [now, setNow] = useState(openedAt);
   const [hiddenAt, setHiddenAt] = useState(0);
 
@@ -140,7 +142,6 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   const count = items.reduce((a, i) => a + i.quantity, 0);
   const inCart = new Map<string, number>();
   items.forEach(i => inCart.set(i.productId, (inCart.get(i.productId) ?? 0) + i.quantity));
-  const me = viewerIdSafe();
   const online = Object.entries(share?.viewers ?? {})
     .filter(([id, v]) => now - v.at < VIEWER_TTL_MS && id !== me)
     .map(([, v]) => v)
@@ -221,7 +222,15 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     <>{header}
       <div className="container-shop min-h-[calc(100dvh-4rem)] flex items-center justify-center py-12">
         <form onSubmit={e => { e.preventDefault(); saveName(nameDraft); }} className="w-full max-w-sm text-center animate-fade-up">
-          {owner && <span className="inline-block mb-5"><Avatar name={owner} size={56} /></span>}
+          {/* Prévia do que já está no carrinho, com quem chamou na frente. */}
+          <div className="mb-6 flex items-center justify-center">
+            {owner && <span className="relative z-10"><Avatar name={owner} size={56} /></span>}
+            {items.filter(i => i.image).slice(0, 3).map((i, n) => (
+              <span key={lineKey(i)} className="relative -ml-3 h-14 w-14 overflow-hidden rounded-2xl bg-warm ring-2 ring-paper" style={{ zIndex: 9 - n, transform: `rotate(${(n - 1) * 6}deg)` }}>
+                <Image src={i.image} alt="" fill sizes="56px" className="object-cover" />
+              </span>
+            ))}
+          </div>
           <h1 className="font-display text-3xl sm:text-4xl text-ink leading-tight">
             {owner ? `${owner} te chamou pra montar o pedido junto` : 'Bora montar o pedido junto'}
           </h1>
@@ -251,8 +260,8 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
         </div>
       )}
 
-      <div className="container-shop py-8 pb-32 md:pb-16 grid gap-10 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_360px] items-start">
-        <div>
+      <div className="container-shop py-8 pb-32 md:pb-16 grid gap-10 md:gap-x-10 md:gap-y-12 md:grid-rows-[auto_1fr] md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_360px] items-start">
+        <div className="min-w-0 md:col-start-1 md:row-start-1">
           <p className="font-semibold text-[10px] tracking-[0.24em] uppercase text-faint mb-3">Montando junto</p>
           <h1 className="font-display text-4xl sm:text-5xl text-ink leading-tight mb-2">{owner ? `Carrinho de ${owner}` : 'Carrinho compartilhado'}</h1>
           <p className="text-[14px] text-mid mb-6 max-w-[52ch] leading-relaxed">
@@ -332,52 +341,9 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
               })}
             </ul>
           </section>
-
-          <section aria-labelledby="montar-catalogo" className="mt-12">
-            <h2 id="montar-catalogo" className="font-display text-2xl text-ink mb-4">Adicionar produtos</h2>
-            <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto" aria-label="Buscar produto"
-              className="w-full h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink" />
-            <div className="mt-3 -mx-4 px-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Categorias">
-              {['', ...categories].map(c => (
-                <button key={c || 'tudo'} type="button" aria-pressed={category === c} onClick={() => setCategory(c)}
-                  className={`shrink-0 h-9 px-4 rounded-full border text-[12px] font-semibold transition-colors ${category === c ? 'border-ink bg-ink text-paper' : 'border-mist text-mid hover:border-ink hover:text-ink'}`}>
-                  {c || 'Tudo'}
-                </button>
-              ))}
-            </div>
-            {catalog.length === 0 && (
-              <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4" aria-hidden="true">
-                {[0, 1, 2, 3].map(i => <li key={i} className="aspect-[4/5] rounded-2xl bg-warm animate-pulse" />)}
-              </ul>
-            )}
-            {catalog.length > 0 && shown.length === 0 && <p className="mt-6 text-sm text-mid">Nenhum produto com esse nome.</p>}
-            <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {shown.map(p => {
-                const n = inCart.get(p.id);
-                return (
-                  <li key={p.id}>
-                    <button type="button" onClick={() => setPicking(p)} aria-haspopup="dialog"
-                      className="group w-full text-left rounded-2xl border border-mist overflow-hidden hover:border-ink transition-colors">
-                      <span className="relative block aspect-[4/5] bg-warm overflow-hidden">
-                        {p.images?.[0] && <Image src={p.images[0]} alt="" fill sizes="(min-width: 640px) 220px, 45vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />}
-                        {n && <span className="absolute top-2 left-2 rounded-full bg-ink text-paper text-[11px] font-semibold px-2.5 py-1">No carrinho · {n}</span>}
-                      </span>
-                      <span className="block p-3">
-                        <span className="block text-[13px] font-semibold text-ink leading-snug">{p.name}</span>
-                        <span className="flex items-center justify-between mt-1">
-                          <span className="text-[12px] text-mid">{formatCurrency(p.price)}</span>
-                          <span aria-hidden="true" className="w-7 h-7 rounded-full bg-warm text-ink flex items-center justify-center text-[16px] group-hover:bg-ink group-hover:text-paper transition-colors">+</span>
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
         </div>
 
-        <aside className="md:sticky md:top-24 flex flex-col gap-4">
+        <aside className="min-w-0 md:col-start-2 md:row-start-1 md:row-span-2 md:sticky md:top-24 flex flex-col gap-4">
           <div className="rounded-3xl border border-mist p-6">
             <p className="flex items-baseline justify-between">
               <span className="text-sm text-mid">Subtotal · {count} {count === 1 ? 'item' : 'itens'}</span>
@@ -404,6 +370,49 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
             <ActivityList log={log} now={now} limit={8} />
           </div>
         </aside>
+
+        <section aria-labelledby="montar-catalogo" className="min-w-0 md:col-start-1 md:row-start-2">
+          <h2 id="montar-catalogo" className="font-display text-2xl text-ink mb-4">Adicionar produtos</h2>
+          <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto" aria-label="Buscar produto"
+            className="w-full h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink" />
+          <div className="mt-3 -mx-4 px-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Categorias">
+            {['', ...categories].map(c => (
+              <button key={c || 'tudo'} type="button" aria-pressed={category === c} onClick={() => setCategory(c)}
+                className={`shrink-0 h-9 px-4 rounded-full border text-[12px] font-semibold transition-colors ${category === c ? 'border-ink bg-ink text-paper' : 'border-mist text-mid hover:border-ink hover:text-ink'}`}>
+                {c || 'Tudo'}
+              </button>
+            ))}
+          </div>
+          {catalog.length === 0 && (
+            <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4" aria-hidden="true">
+              {[0, 1, 2, 3].map(i => <li key={i} className="aspect-[4/5] rounded-2xl bg-warm animate-pulse" />)}
+            </ul>
+          )}
+          {catalog.length > 0 && shown.length === 0 && <p className="mt-6 text-sm text-mid">Nenhum produto com esse nome.</p>}
+          <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {shown.map(p => {
+              const n = inCart.get(p.id);
+              return (
+                <li key={p.id}>
+                  <button type="button" onClick={() => setPicking(p)} aria-haspopup="dialog"
+                    className="group w-full text-left rounded-2xl border border-mist overflow-hidden hover:border-ink transition-colors">
+                    <span className="relative block aspect-[4/5] bg-warm overflow-hidden">
+                      {p.images?.[0] && <Image src={p.images[0]} alt="" fill sizes="(min-width: 640px) 220px, 45vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />}
+                      {n && <span className="absolute top-2 left-2 rounded-full bg-ink text-paper text-[11px] font-semibold px-2.5 py-1">No carrinho · {n}</span>}
+                    </span>
+                    <span className="block p-3">
+                      <span className="block text-[13px] font-semibold text-ink leading-snug">{p.name}</span>
+                      <span className="flex items-center justify-between mt-1">
+                        <span className="text-[12px] text-mid">{formatCurrency(p.price)}</span>
+                        <span aria-hidden="true" className="w-7 h-7 rounded-full bg-warm text-ink flex items-center justify-center text-[16px] group-hover:bg-ink group-hover:text-paper transition-colors">+</span>
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       </div>
 
       {/* Celular: total sempre à vista, com atalho pro carrinho. */}
@@ -429,8 +438,4 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
       )}
     </>
   );
-}
-
-function viewerIdSafe() {
-  return typeof window === 'undefined' ? '' : readStorage('mikma:montar-id');
 }
