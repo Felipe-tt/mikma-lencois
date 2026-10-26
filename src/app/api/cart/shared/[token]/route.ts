@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { adminDb } from '@/lib/firebase/admin';
 import { getClientIp, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
-import { applySharedOp, LOG_MAX, TOKEN_RE, VIEWER_TTL_MS, type SharedOp } from '@/lib/sharedCart';
+import { applySharedOp, CHAT_MAX, CHAT_TEXT_MAX, LOG_MAX, TOKEN_RE, VIEWER_TTL_MS, type SharedOp } from '@/lib/sharedCart';
 import type { CartItem } from '@/types';
 
 const id = z.string().min(1).max(120);
@@ -14,6 +14,7 @@ const schema = z.object({
   viewer: z.string().regex(/^[A-Za-z0-9]{8,24}$/).optional(),
   change: z.discriminatedUnion('op', [
     z.object({ op: z.literal('ping') }),
+    z.object({ op: z.literal('msg'), text: z.string().trim().min(1).max(CHAT_TEXT_MAX) }),
     z.object({ op: z.literal('add'), productId: id, variantId: id }),
     z.object({ op: z.literal('qty'), line: z.string().min(1).max(300), quantity: z.number().int() }),
     z.object({ op: z.literal('swap'), line: z.string().min(1).max(300), swapSku: id.nullable() }),
@@ -50,6 +51,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       if (viewer) viewers[viewer] = { name: who, at: now } as { at: number };
       if (change.op === 'ping') {
         tx.update(cartRef, { 'share.viewers': viewers });
+        return { ok: true };
+      }
+      if (change.op === 'msg') {
+        const msg = { by: who, text: change.text, at: now };
+        tx.update(cartRef, { 'share.chat': [...((share.chat ?? []) as unknown[]), msg].slice(-CHAT_MAX), 'share.viewers': viewers });
         return { ok: true };
       }
       const r = await applySharedOp(adminDb, (cart.items ?? []) as CartItem[], change as SharedOp);

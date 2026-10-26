@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useRef, useState } from 'react';
 import type { SharedCartEdit } from '@/types';
 
 // Peças visuais do "Montar junto", usadas pelo dono (carrinho) e por quem
@@ -64,5 +65,69 @@ export function ActivityList({ log, now, limit = 15 }: { log: SharedCartEdit[]; 
         </li>
       ))}
     </ol>
+  );
+}
+
+/** Recados entre quem está montando. `me` é o nome de quem está vendo. */
+export function ChatBox({ messages, now, me, onSend, id }: {
+  messages: SharedCartEdit[];
+  now: number;
+  me: string;
+  onSend: (text: string) => Promise<true | string>;
+  id?: string;
+}) {
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const listRef = useRef<HTMLOListElement>(null);
+  const last = messages[messages.length - 1]?.at;
+  // Rola pro recado mais novo quando chega um.
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [last]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const t = text.trim();
+    if (!t || sending) return;
+    setSending(true); setError('');
+    const r = await onSend(t);
+    setSending(false);
+    if (r === true) setText(''); else setError(r);
+  }
+
+  return (
+    <div id={id} className="scroll-mt-24">
+      {messages.length === 0
+        ? <p className="text-[12px] text-faint mb-3">Mande um recado pra quem está montando, tipo &quot;essa cor combina com o quarto?&quot;.</p>
+        : (
+          <ol ref={listRef} className="mb-3 flex max-h-72 flex-col gap-2.5 overflow-y-auto pr-1" aria-label="Recados">
+            {messages.map(m => {
+              const mine = m.by === me;
+              return (
+                <li key={m.at + m.by} className={`flex items-end gap-2 ${mine ? 'flex-row-reverse' : ''}`}>
+                  {!mine && <Avatar name={m.by} size={22} ring={false} />}
+                  <span className={`max-w-[80%] rounded-2xl px-3 py-2 text-[13px] leading-snug break-words ${mine ? 'bg-ink text-paper rounded-br-md' : 'bg-warm text-ink rounded-bl-md'}`}>
+                    {!mine && <span className="block text-[11px] font-semibold text-mid mb-0.5">{m.by}</span>}
+                    {m.text}
+                    <span className={`block text-[10px] mt-1 ${mine ? 'text-paper/60' : 'text-faint'}`}>{timeAgo(m.at, now)}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      <form onSubmit={submit} className="flex gap-2">
+        <label className="sr-only" htmlFor={`${id ?? 'chat'}-input`}>Recado</label>
+        <input id={`${id ?? 'chat'}-input`} value={text} onChange={e => setText(e.target.value)} maxLength={200} placeholder="Escreva um recado" autoComplete="off" enterKeyHint="send"
+          className="flex-1 min-w-0 h-11 rounded-full border border-mist bg-paper px-4 text-[14px] text-ink" />
+        <button type="submit" disabled={!text.trim() || sending} aria-label="Enviar recado"
+          className="w-11 h-11 shrink-0 rounded-full bg-ink text-paper flex items-center justify-center disabled:opacity-40">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
+        </button>
+      </form>
+      {error && <p role="alert" className="mt-2 text-[12px] text-red-700">{error}</p>}
+    </div>
   );
 }
