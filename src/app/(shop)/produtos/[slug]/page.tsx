@@ -16,7 +16,7 @@ import { serialize } from '@/lib/utils/serialize';
 import { TrackViewItem } from '@/components/product/TrackViewItem';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { toPublicReview, type PublicReview } from '@/lib/reviews';
-import { FABRIC_LABEL } from '@/lib/productOptions';
+import { FABRIC_LABEL, DEFAULT_COMPOSITION } from '@/lib/productOptions';
 
 // ISR: revalida a cada 5 minutos, reduz leituras no Firestore por visita ao produto
 export const revalidate = 300;
@@ -175,6 +175,7 @@ export default async function ProductPage({ params }: Props) {
     sku: product.id,
     category: product.category,
     brand: { '@type': 'Brand', name: 'Mikma Lençóis' },
+    material: product.composition || DEFAULT_COMPOSITION,
     offers: {
       '@type': 'Offer',
       url: productUrl,
