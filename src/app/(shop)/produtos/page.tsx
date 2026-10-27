@@ -1,6 +1,4 @@
-import { adminDb } from '@/lib/firebase/admin';
 import Link from 'next/link';
-import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import { shareMeta } from '@/lib/seo';
 import { searchProducts } from '@/lib/productSearch';
@@ -9,7 +7,7 @@ import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
 import { SortSelect } from '@/components/product/SortSelect';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Product } from '@/types';
-import { serialize } from '@/lib/utils/serialize';
+import { getCatalog } from '@/lib/catalog';
 
 
 interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string; pagina?: string }> }
@@ -36,16 +34,6 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     ...shareMeta({ title, description, path: categoria ? `/produtos?categoria=${encodeURIComponent(categoria)}` : '/produtos' }),
   };
 }
-
-// Catálogo ativo inteiro, em cache no servidor (a página é dinâmica por
-// causa dos filtros na URL, então antes cada visita consultava o Firestore).
-// O painel limpa com revalidateTag('products') ao salvar um produto.
-const MAX_CATALOG = PAGE_SIZE * 10;
-const getCatalog = unstable_cache(async (): Promise<Product[]> => {
-  const snap = await adminDb.collection('products').where('active', '==', true)
-    .orderBy('createdAt', 'desc').limit(MAX_CATALOG).get();
-  return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
-}, ['catalogo-ativo'], { revalidate: 600, tags: ['products'] });
 
 function getCategories(all: Product[]): { name: string; count: number }[] {
   const map: Record<string, number> = {};

@@ -148,6 +148,9 @@ function applySecurityHeaders(res: NextResponse, pathname = ''): void {
   res.headers.delete('X-Powered-By');
 }
 
+// GET públicos e iguais para todo mundo, com Cache-Control próprio.
+const PUBLIC_CACHED_API = new Set(['/api/maintenance/status', '/api/settings/public', '/api/products']);
+
 // ── Middleware principal ──────────────────────────────────────────────────────
 
 export async function proxy(req: NextRequest) {
@@ -254,8 +257,9 @@ export async function proxy(req: NextRequest) {
   // O middleware já garantiu que manutenção ativa redireciona antes de chegar aqui
   if (
     pathname.startsWith('/painel') ||
-    // /api/maintenance/status define o próprio cache (público quando não há manutenção).
-    (pathname.startsWith('/api/') && pathname !== '/api/maintenance/status') ||
+    // Rotas públicas definem o próprio cache (a CDN guarda a resposta); antes
+    // o no-store daqui anulava o s-maxage delas e toda chamada ia ao servidor.
+    (pathname.startsWith('/api/') && !PUBLIC_CACHED_API.has(pathname)) ||
     pathname.startsWith('/conta') ||
     pathname.startsWith('/perfil') ||
     pathname.startsWith('/pedidos') ||
