@@ -18,6 +18,8 @@ export const CHAT_MAX = 40;
 export const CHAT_TEXT_MAX = 200;
 /** Sem sinal por esse tempo, a pessoa sai da lista de online. */
 export const VIEWER_TTL_MS = 2 * 60_000;
+/** Trava do carrinho enquanto o dono está no checkout (renovada enquanto ele fica lá). */
+export const CHECKOUT_LOCK_MS = 20 * 60_000;
 export const TOKEN_RE = /^[A-Za-z0-9_-]{22}$/;
 
 export type SharedOp =

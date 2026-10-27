@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { Cart } from '@/types';
 import { VIEWER_TTL_MS } from '@/lib/sharedCart';
-import { ActivityList, ChatBox, OnlineStack, useTabBadge } from '@/components/cart/montarUi';
+import { ChatBox, OnlineStack, useTabBadge } from '@/components/cart/montarUi';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { CHAT_MAX } from '@/lib/sharedCart';
@@ -51,6 +51,12 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: st
     .map(([, v]) => v);
   const log = share?.log ?? [];
 
+  // Voltou do checkout para o carrinho: destrava para quem tem o link.
+  const locked = !!share?.lockedUntil;
+  useEffect(() => {
+    if (locked) updateDoc(doc(db, 'carts', user.uid), { 'share.lockedUntil': null }).catch(() => {});
+  }, [locked, user.uid]);
+
   // Recado do dono: escreve direto no próprio carrinho (a regra deixa).
   const me = share?.ownerName || 'Dono';
   useTabBadge(active ? [...log, ...(share?.chat ?? [])] : [], me);
@@ -78,51 +84,54 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: st
   }
 
 
+  // Os recados só aparecem depois que alguém entrou pelo link. Antes disso
+  // é só o link, discreto.
+  const othersLog = log.filter(e => e.by !== me);
+  const chat = share?.chat ?? [];
+  const joined = !!share?.joinedAt || othersLog.length > 0 || chat.some(m => m.by !== me);
+  const eyebrow = 'font-sans text-xs font-bold tracking-[0.2em] uppercase text-faint';
+
   if (active) return (
-    <section aria-labelledby="montar-junto-titulo" className="mt-6 rounded-2xl border border-mist text-left overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-4 pt-4">
-        <h2 id="montar-junto-titulo" className="flex items-center gap-2 text-[14px] font-semibold text-ink">
-          Montando junto
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-warm px-2 py-0.5 text-[10px] font-semibold text-mid">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" /> ao vivo
-          </span>
-        </h2>
+    <section aria-labelledby="montar-junto-titulo" className="mt-6 rounded-2xl overflow-hidden border border-mist bg-warm/30 text-left">
+      <div className="px-5 py-4 border-b border-mist flex items-center justify-between gap-3">
+        <h2 id="montar-junto-titulo" className={eyebrow}>Montar junto</h2>
         <OnlineStack people={online} />
       </div>
-      <p className="px-4 mt-1 text-[12px] text-mid">
-        {online.length === 0 ? 'Ninguém abriu o link agora.' : online.length === 1 ? `${online[0].name} está montando com você.` : `${online.length} pessoas montando com você.`}
-      </p>
-      <p role="status" className="px-4 text-[12px] text-clay">{notice}</p>
-
-      <div className="mt-3 px-4 flex flex-wrap gap-2">
-        <a href={`https://wa.me/?text=${encodeURIComponent(`Me ajuda a montar meu pedido na Mikma? ${url}`)}`} target="_blank" rel="noopener noreferrer"
+      <div className="px-5 py-4">
+        <p className="text-[13px] text-mid leading-relaxed">
+          {!joined
+            ? 'Link ligado. Mande para quem vai escolher com você.'
+            : online.length === 0
+              ? 'Ninguém está no link agora.'
+              : online.length === 1 ? `${online[0].name} está montando com você.` : `${online.length} pessoas montando com você.`}
+        </p>
+        <p role="status" className="text-[12px] text-clay empty:hidden">{notice}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a href={`https://wa.me/?text=${encodeURIComponent(`Me ajuda a montar meu pedido na Mikma? ${url}`)}`} target="_blank" rel="noopener noreferrer"
                   className="h-10 px-4 rounded-full bg-[#1f7a4d] text-white text-[13px] font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-opacity">
                   <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm0 18.2a8.2 8.2 0 01-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1112 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 01-2-1.2 7.4 7.4 0 01-1.4-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.7 11.8 11.8 0 004.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 001.8-1.2 2.2 2.2 0 00.1-1.3c0-.1-.2-.2-.4-.3z" /></svg>
                   WhatsApp
                 </a>
-        <button type="button" onClick={shareLink} className="h-10 px-4 rounded-full border border-mist text-ink text-[13px] font-semibold hover:border-ink transition-colors">
-          {copied ? 'Link copiado' : 'Copiar link'}
-        </button>
+          <button type="button" onClick={shareLink} className="h-10 px-4 rounded-full border border-mist bg-paper text-ink text-[13px] font-semibold hover:border-ink transition-colors">
+            {copied ? 'Link copiado' : 'Copiar link'}
+          </button>
+        </div>
+        <p className="mt-3 text-[11px] text-faint">
+          Vale até {new Date(share!.expiresAt.toMillis()).toLocaleDateString('pt-BR')} ·{' '}
+          {share!.expiresAt.toMillis() - openedAt < 3 * 86_400_000 && (
+            <><button type="button" disabled={busy} onClick={() => call('PATCH')} className="font-semibold text-clay underline underline-offset-2 disabled:opacity-40">renovar por mais 7 dias</button>{' · '}</>
+          )}
+          <button type="button" disabled={busy} onClick={() => call('DELETE')} className="underline underline-offset-2 hover:text-ink disabled:opacity-40">desligar link</button>
+        </p>
+        {error && <p role="alert" className="mt-2 text-[12px] text-red-700">{error}</p>}
       </div>
-      <p className="mt-2 px-4 text-[11px] text-faint">
-        Vale até {new Date(share!.expiresAt.toMillis()).toLocaleDateString('pt-BR')} ·{' '}
-        {share!.expiresAt.toMillis() - openedAt < 3 * 86_400_000 && (
-          <><button type="button" disabled={busy} onClick={() => call('PATCH')} className="font-semibold text-clay underline underline-offset-2 disabled:opacity-40">renovar por mais 7 dias</button>{' · '}</>
-        )}
-        <button type="button" disabled={busy} onClick={() => call('DELETE')} className="underline underline-offset-2 hover:text-ink disabled:opacity-40">desligar link</button>
-      </p>
-      {error && <p role="alert" className="mt-2 px-4 text-[12px] text-red-700">{error}</p>}
 
-      {log.length > 0 && (
-        <div className="mt-4 border-t border-mist px-4 pt-4">
-          <p className="mb-3 text-[12px] font-semibold text-ink">O que mudou</p>
-          <ActivityList log={log} now={now} limit={3} />
+      {joined && (
+        <div className="px-5 py-4 border-t border-mist">
+          <h3 className={`${eyebrow} mb-3`}>Recados</h3>
+          <ChatBox id="carrinho-recados" messages={chat} now={now} me={me} onSend={sendMsg} />
         </div>
       )}
-      <div className="mt-4 border-t border-mist px-4 py-4">
-        <p className="mb-3 text-[12px] font-semibold text-ink">Recados</p>
-        <ChatBox id="carrinho-recados" messages={share?.chat ?? []} now={now} me={me} onSend={sendMsg} />
-      </div>
     </section>
   );
 
@@ -133,9 +142,9 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: st
           Montar junto com alguém
         </button>
       ) : (
-        <div className="mt-2 rounded-2xl border border-mist p-4 text-left">
-          <p className="text-[13px] font-semibold text-ink">Montar junto</p>
-          <p className="mt-1 text-[12px] text-mid leading-relaxed">
+        <div className="mt-2 rounded-2xl border border-mist bg-warm/30 p-5 text-left">
+          <h2 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-faint">Montar junto</h2>
+          <p className="mt-2 text-[13px] text-mid leading-relaxed">
             Gere um link e mande pra quem vai escolher com você: a pessoa vê este carrinho e pode adicionar, tirar, trocar fronhas e mandar recados em tempo real. Só você finaliza a compra.
           </p>
           {error && <p role="alert" className="mt-2 text-[12px] text-red-700">{error}</p>}

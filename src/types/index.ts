@@ -276,6 +276,10 @@ export interface Cart {
     likes?: Record<string, string[]>
     paidAt?: number
     paidItems?: number
+    /** Quando alguém entrou pelo link pela primeira vez. */
+    joinedAt?: number
+    /** Dono no checkout: até essa hora quem tem o link não mexe nos itens. */
+    lockedUntil?: number | null
   }
 }
 
