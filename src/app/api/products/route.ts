@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { safeJson, tooManyRequests, productImageUrlSchema } from '@/lib/security';
+import { getCatalog } from '@/lib/catalog';
 
 const VariantSchema = z.object({
   id: z.string().max(64),
@@ -34,9 +35,10 @@ async function getSeller(req: NextRequest) {
   } catch { return null; }
 }
 
+// Pública: lê o catálogo do cache do servidor (antes cada chamada lia todos
+// os produtos no Firestore) e a CDN guarda a resposta (ver proxy.ts).
 export async function GET() {
-  const snap = await adminDb.collection('products').where('active', '==', true).orderBy('createdAt', 'desc').get();
-  const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const products = await getCatalog();
   return NextResponse.json({ products }, {
     headers: {
       // CDN e browser cacheiam 5min; pode revalidar em bg por até 1h

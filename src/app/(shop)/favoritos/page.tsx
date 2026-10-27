@@ -34,20 +34,21 @@ export default function FavoritosPage() {
     const missing = productIds.filter(id => !cache.has(id));
     if (missing.length === 0) { show(); setFetching(false); return; }
     let cancelled = false;
-    Promise.all(missing.map(id =>
-      fetch(`/api/products/${id}`)
-        .then(async r => {
-          // Só guarda "não existe" pra 404; falha de rede tenta de novo depois
-          // (antes o item sumia da lista até recarregar a página).
-          if (r.ok) cache.set(id, await r.json() as Product);
-          else if (r.status === 404) cache.set(id, null);
-        })
-        .catch(() => {})
-    )).finally(() => {
-      if (cancelled) return;
-      show();
-      setFetching(false);
-    });
+    // Um pedido só: o catálogo ativo (em cache na CDN) em vez de um por
+    // produto. Favorito que não está nele saiu de linha ou foi desativado.
+    fetch('/api/products')
+      .then(async r => {
+        if (!r.ok) return; // falha: tenta de novo na próxima mudança
+        const { products: all } = await r.json() as { products: Product[] };
+        const byId = new Map(all.map(p => [p.id, p]));
+        for (const id of missing) cache.set(id, byId.get(id) ?? null);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (cancelled) return;
+        show();
+        setFetching(false);
+      });
     return () => { cancelled = true; };
   }, [productIds, wishlistLoading]);
 
