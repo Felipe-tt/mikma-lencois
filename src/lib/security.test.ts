@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isValidCartQuantity } from './security';
+import { isValidCart, MAX_CART_LINES } from './security';
 
 describe('isValidCartQuantity', () => {
   it('aceita inteiros positivos dentro do limite', () => {
@@ -74,5 +75,22 @@ describe('isPlausibleIp / getClientIp (rate limit por IP)', async () => {
     } finally {
       if (prev === undefined) delete process.env.EDGE_SHARED_SECRET; else process.env.EDGE_SHARED_SECRET = prev;
     }
+  });
+});
+
+describe('isValidCart', () => {
+  const line = { sku: 'abc_queen_algodão', productId: 'abc', quantity: 2 };
+  it('aceita carrinho normal, inclusive SKU com acento', () => {
+    expect(isValidCart([line, { ...line, sku: 'abc_v1', swapSku: 'fr_v1' }])).toBe(true);
+  });
+  it('recusa id que derrubaria a leitura no Firestore', () => {
+    expect(isValidCart([{ ...line, productId: 'a/b' }])).toBe(false);
+    expect(isValidCart([{ ...line, sku: '__x__' }])).toBe(false);
+    expect(isValidCart([{ ...line, swapSku: '..' }])).toBe(false);
+  });
+  it('recusa vazio, quantidade inválida e linhas demais', () => {
+    expect(isValidCart([])).toBe(false);
+    expect(isValidCart([{ ...line, quantity: -1 }])).toBe(false);
+    expect(isValidCart(Array.from({ length: MAX_CART_LINES + 1 }, () => line))).toBe(false);
   });
 });

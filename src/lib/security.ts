@@ -218,3 +218,27 @@ export function isValidCartQuantity(quantity: unknown): quantity is number {
     quantity <= MAX_CART_ITEM_QUANTITY
   );
 }
+
+/** Teto de linhas no carrinho: cada linha custa leituras no checkout. */
+export const MAX_CART_LINES = 40;
+
+// Id que o Firestore aceita como documento (sem barra, sem "."/"..", sem
+// __reservado__). O SKU pode ter acento (tamanho_tecido), então não é só ASCII.
+function isDocId(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0 && v.length <= 200
+    && !v.includes('/') && v !== '.' && v !== '..' && !/^__.*__$/.test(v);
+}
+
+/**
+ * Carrinho vindo do client SDK, validado antes do checkout: ids com cara de
+ * documento (um id com "/" derrubava a rota com erro 500), quantidade válida
+ * e no máximo MAX_CART_LINES linhas.
+ */
+export function isValidCart(items: unknown): items is Array<{ sku: string; productId: string; quantity: number }> {
+  return Array.isArray(items) && items.length > 0 && items.length <= MAX_CART_LINES
+    && items.every(i => !!i && typeof i === 'object'
+      && isDocId((i as { sku?: unknown }).sku)
+      && isDocId((i as { productId?: unknown }).productId)
+      && isValidCartQuantity((i as { quantity?: unknown }).quantity)
+      && ((i as { swapSku?: unknown }).swapSku == null || isDocId((i as { swapSku?: unknown }).swapSku)));
+}
