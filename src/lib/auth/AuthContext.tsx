@@ -1,7 +1,16 @@
 'use client';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, onIdTokenChanged, signOut, signInAnonymously, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import type { User } from 'firebase/auth';
+
+// O SDK do Auth baixa depois da página montar, não junto com ela: o
+// cabeçalho só precisa dele para mostrar a conta, e ninguém espera por isso.
+let authSdk: Promise<typeof import('firebase/auth') & { auth: import('firebase/auth').Auth }> | null = null;
+function loadAuth() {
+  authSdk ??= Promise.all([import('firebase/auth'), import('@/lib/firebase/client')])
+    .then(([sdk, { auth }]) => ({ ...sdk, auth }))
+    .catch(e => { authSdk = null; throw e; });
+  return authSdk;
+}
 
 interface AuthUser {
   uid: string;
@@ -86,28 +95,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const mapped = await mapUser(firebaseUser);
-        if (!firebaseUser.isAnonymous) void mergeGuestInto(firebaseUser);
-        setUser(mapped);
-      } else {
-        // Sessão encerrada por fora (expirou, outra aba saiu): cookie de staff junto.
-        clearStaffCookie();
-        setUser(null);
-      }
-      setLoading(false);
-    });
-    // Mantém o token do convidado em dia (o Firebase renova de hora em hora):
-    // um token vencido não serviria para provar a posse no merge.
-    const unsubToken = onIdTokenChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser?.isAnonymous) return;
-      try { localStorage.setItem(GUEST_TOKEN_KEY, await firebaseUser.getIdToken()); } catch { /* sem storage */ }
-    });
-    return () => { unsub(); unsubToken(); };
+    let alive = true;
+    let unsub = () => {};
+    let unsubToken = () => {};
+    loadAuth().then(({ auth, onAuthStateChanged, onIdTokenChanged }) => {
+      if (!alive) return;
+      unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          const mapped = await mapUser(firebaseUser);
+          if (!firebaseUser.isAnonymous) void mergeGuestInto(firebaseUser);
+          setUser(mapped);
+        } else {
+          // Sessão encerrada por fora (expirou, outra aba saiu): cookie de staff junto.
+          clearStaffCookie();
+          setUser(null);
+        }
+        setLoading(false);
+      });
+      // Mantém o token do convidado em dia (o Firebase renova de hora em hora):
+      // um token vencido não serviria para provar a posse no merge.
+      unsubToken = onIdTokenChanged(auth, async (firebaseUser) => {
+        if (!firebaseUser?.isAnonymous) return;
+        try { localStorage.setItem(GUEST_TOKEN_KEY, await firebaseUser.getIdToken()); } catch { /* sem storage */ }
+      });
+    }).catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; unsub(); unsubToken(); };
   }, []);
 
   const logout = async () => {
+    const { auth, signOut } = await loadAuth();
     // Convidado que sai (computador compartilhado): esquece a sessão dele.
     if (auth.currentUser?.isAnonymous) { try { localStorage.removeItem(GUEST_TOKEN_KEY); } catch { /* ok */ } }
     clearStaffCookie(true);
@@ -116,8 +132,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const startGuest = async () => {
-    if (auth.currentUser) return true;
     try {
+      const { auth, signInAnonymously } = await loadAuth();
+      if (auth.currentUser) return true;
       await signInAnonymously(auth);
       return true;
     } catch (err) {

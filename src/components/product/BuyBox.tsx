@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { installmentFeeRate } from '@/lib/orderPricing';
 import { formatCurrency } from '@/lib/utils/format';

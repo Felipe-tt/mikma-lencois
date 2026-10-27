@@ -1,12 +1,14 @@
 import {
   signInWithPopup,
+  browserPopupRedirectResolver,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
   User as FirebaseUser,
 } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
-import { auth, db } from '@/lib/firebase/client'
+import { auth } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db'
 import type { User } from '@/types'
 
 const googleProvider = new GoogleAuthProvider()
@@ -20,7 +22,7 @@ const googleProvider = new GoogleAuthProvider()
 // mais e nunca era chamada por nenhum componente; foi removida.
 
 export async function loginWithGoogle() {
-  return signInWithPopup(auth, googleProvider)
+  return signInWithPopup(auth, googleProvider, browserPopupRedirectResolver)
 }
 
 export async function logout() {

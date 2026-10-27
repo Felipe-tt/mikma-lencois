@@ -4,7 +4,7 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { Select } from '@/components/ui/Select';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { Field } from '@/components/ui/Field';

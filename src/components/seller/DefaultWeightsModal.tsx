@@ -17,7 +17,7 @@
 
 import { useState } from 'react';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { Overlay } from '@/components/ui/Overlay';
 import { SIZES, SIZE_LABEL } from '@/lib/productOptions';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';

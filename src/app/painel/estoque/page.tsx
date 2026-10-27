@@ -9,7 +9,7 @@ import { NovaVendaSheet } from '@/components/painel/NovaVendaSheet';
 import { useEffect, useId, useMemo, useState, useRef } from 'react';
 import { collection, onSnapshot, doc, updateDoc, getDoc, getDocs, query, where, increment, arrayUnion, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { expandStockLines } from '@/lib/orderStockLines';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Link from 'next/link';
 import { staffActor } from '@/lib/staffActor';

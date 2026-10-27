@@ -4,7 +4,7 @@ import { plural } from '@/lib/plural';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconMoney, IconBox, IconReceipt, IconTrophy, IconTruck, IconReports, IconAlert } from '@/components/ui/Icon';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { carrierNameVendor, type CarrierKey } from '@/lib/carriers';
 import type { Order } from '@/types';
 

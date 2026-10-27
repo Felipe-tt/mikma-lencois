@@ -1,8 +1,7 @@
 'use client';
 
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { doc, onSnapshot, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { loadFirestore, watchDoc } from '@/lib/firebase/lazyDb';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Wishlist } from '@/types';
 
@@ -40,8 +39,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return;
     }
     setLoading(true);
-    return onSnapshot(doc(db, 'wishlists', user.uid), snap => {
-      const data = snap.data() as Wishlist | undefined;
+    return watchDoc<Wishlist>(['wishlists', user.uid], data => {
       setProductIds(data?.productIds ?? []);
       setLoading(false);
     }, () => setLoading(false));
@@ -56,6 +54,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     // Otimista: o coração muda na hora, o snapshot confirma depois.
     setProductIds(ids => favoriting ? [...ids, productId] : ids.filter(id => id !== productId));
     try {
+      const { db, doc, setDoc, arrayUnion, arrayRemove } = await loadFirestore();
       await setDoc(doc(db, 'wishlists', current.uid), {
         productIds: favoriting ? arrayUnion(productId) : arrayRemove(productId),
         updatedAt: new Date().toISOString(),

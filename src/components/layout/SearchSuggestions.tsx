@@ -2,8 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { collection, getDocs, query as q, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { loadFirestore } from '@/lib/firebase/lazyDb';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Product } from '@/types';
 
@@ -15,7 +14,8 @@ import type { Product } from '@/types';
  */
 let cache: Promise<Product[]> | null = null;
 function loadProducts() {
-  cache ??= getDocs(q(collection(db, 'products'), where('active', '==', true)))
+  cache ??= loadFirestore()
+    .then(({ db, collection, getDocs, query, where }) => getDocs(query(collection(db, 'products'), where('active', '==', true))))
     .then(s => s.docs.map(d => ({ id: d.id, ...d.data() }) as Product))
     .catch(() => { cache = null; return []; });
   return cache;

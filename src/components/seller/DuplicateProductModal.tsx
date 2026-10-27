@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { Overlay } from '@/components/ui/Overlay';
 import { collection, getDocs, orderBy, query, limit as fbLimit } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import type { Product } from '@/types';
 import { SIZE_LABEL } from '@/lib/productOptions';
 

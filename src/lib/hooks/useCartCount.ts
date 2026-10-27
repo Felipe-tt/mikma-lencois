@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { watchDoc } from '@/lib/firebase/lazyDb';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Cart } from '@/types';
 
@@ -16,18 +15,9 @@ export function useCartCount(): number {
       return;
     }
 
-    const cartRef = doc(db, 'carts', user.uid);
-    const unsub = onSnapshot(cartRef, (snap) => {
-      if (!snap.exists()) {
-        setCount(0);
-        return;
-      }
-      const cart = snap.data() as Cart;
-      const total = cart.items.reduce((acc, item) => acc + item.quantity, 0);
-      setCount(total);
+    return watchDoc<Cart>(['carts', user.uid], cart => {
+      setCount(cart?.items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0);
     });
-
-    return unsub;
   }, [user]);
 
   return count;

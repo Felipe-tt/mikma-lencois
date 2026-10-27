@@ -13,7 +13,7 @@ import {
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
 import { Select } from '@/components/ui/Select';

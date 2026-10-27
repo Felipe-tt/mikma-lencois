@@ -5,7 +5,7 @@ import { installmentFeeRate } from '@/lib/orderPricing';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { useRouter } from 'next/navigation';

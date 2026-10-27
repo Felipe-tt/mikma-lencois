@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import * as Sentry from '@sentry/nextjs';
+import { reportError } from '@/lib/errorQueue';
 import { isChunkError, reloadOnce } from '@/lib/chunkErrorReload';
 import { fontSans, fontDisplay } from '@/lib/fonts';
 import './globals.css';
@@ -16,7 +16,7 @@ export default function GlobalError({
   const isChunk = isChunkError(error?.message);
 
   useEffect(() => {
-    Sentry.captureException(error);
+    reportError(error);
     // Erro de chunk desatualizado (pós-deploy): o botão "Tentar de novo"
     // não resolveria sozinho, porque reset() só re-renderiza usando os
     // MESMOS arquivos .js já carregados (e já quebrados) — precisa de um

@@ -3,7 +3,7 @@ import { IconBox } from '@/components/ui/Icon';
 import { variantLabel as variantLabelOf } from '@/lib/variantLabel';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import Link from 'next/link';
 import { Select } from '@/components/ui/Select';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';

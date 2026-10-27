@@ -4,7 +4,7 @@ import type { Cart } from '@/types';
 import { VIEWER_TTL_MS } from '@/lib/sharedCart';
 import { ChatBox, OnlineStack, useTabBadge } from '@/components/cart/montarUi';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { CHAT_MAX } from '@/lib/sharedCart';
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { collection, query, orderBy, limit, where, onSnapshot } from 'firebase/firestore';
 import type { Order } from '@/types';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';

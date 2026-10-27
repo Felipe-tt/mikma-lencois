@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import ProductForm from '@/components/seller/ProductForm';
 import type { Product } from '@/types';
 

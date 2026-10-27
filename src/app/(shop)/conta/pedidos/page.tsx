@@ -2,7 +2,8 @@
 import { userMessage } from '@/lib/userMessage';
 import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/client';
+import { auth } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';

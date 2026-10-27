@@ -3,7 +3,7 @@ import { plural } from '@/lib/plural';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, increment, serverTimestamp, runTransaction, query, where, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { ReturnRequest, ReturnStatus } from '@/types';
 import { expandStockLines } from '@/lib/orderStockLines';
