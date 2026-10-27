@@ -3,7 +3,8 @@ import { userMessage } from '@/lib/userMessage';
 import Link from 'next/link';
 import { Fragment, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, onSnapshot, getDoc, setDoc, collection, query, where, getDocs, documentId, orderBy, limit } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc, updateDoc, collection, query, where, getDocs, documentId, orderBy, limit } from 'firebase/firestore';
+import { CHECKOUT_LOCK_MS } from '@/lib/sharedCart';
 import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
@@ -258,6 +259,20 @@ export default function CheckoutPage() {
     } catch { setShipErr('Não foi possível calcular o frete. Tente novamente.'); }
     finally { setShipLoad(false); }
   }, [quotedCep]);
+
+  // "Montar junto" ligado: trava o carrinho para quem tem o link enquanto o
+  // dono está aqui (renova a cada 5 min; some ao voltar pro carrinho ou
+  // sozinha depois de CHECKOUT_LOCK_MS).
+  useEffect(() => {
+    if (!user) return;
+    const ref = doc(db, 'carts', user.uid);
+    const lock = () => getDoc(ref).then(snap => {
+      if (snap.data()?.share?.token) return updateDoc(ref, { 'share.lockedUntil': Date.now() + CHECKOUT_LOCK_MS });
+    }).catch(() => {});
+    lock();
+    const t = setInterval(lock, 5 * 60_000);
+    return () => clearInterval(t);
+  }, [user]);
 
   useEffect(() => {
     if (loading) return;

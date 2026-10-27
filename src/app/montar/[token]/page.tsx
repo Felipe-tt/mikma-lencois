@@ -91,8 +91,14 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     return () => unsub?.();
   }, [token]);
 
+  // Dono no checkout: os itens ficam travados até ele voltar ou a trava vencer.
+  const locked = !!cart?.share?.lockedUntil && cart.share.lockedUntil > now;
+  const lockedMsg = `${cart?.share?.ownerName ?? 'Quem compartilhou'} está finalizando a compra. O carrinho está travado.`;
+
   /** true quando salvou; senão a mensagem de erro. */
   async function post(change: object): Promise<true | string> {
+    const op = (change as { op?: string }).op;
+    if (locked && op !== 'msg' && op !== 'like' && op !== 'ping') return lockedMsg;
     try {
       const res = await fetch(`/api/cart/shared/${token}`, {
         method: 'POST',
@@ -287,6 +293,14 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
 
   return (
     <>{header}
+      {locked && (
+        <div role="status" className="sticky top-16 z-20 border-b border-amber-300/60 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+          <p className="container-shop py-3 text-[13px] font-semibold flex items-center gap-2">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 018 0v4" /></svg>
+            {lockedMsg} Os recados continuam abertos.
+          </p>
+        </div>
+      )}
       {toast && (
         <div role="status" className="fixed z-40 left-1/2 -translate-x-1/2 top-20 w-[calc(100%-2rem)] max-w-sm flex items-center gap-3 rounded-full bg-ink text-paper pl-2 pr-5 py-2 shadow-lg animate-fade-up">
           <Avatar name={toast.by} size={28} ring={false} />
@@ -345,14 +359,14 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
                         <div className="flex items-center rounded-full border border-mist">
-                          <button type="button" disabled={busy === key} onClick={async () => {
+                          <button type="button" disabled={busy === key || locked} onClick={async () => {
                             const ok = await send(key, { op: 'qty', line: key, quantity: item.quantity - 1 });
                             if (ok && item.quantity === 1) setRemoved(item);
                           }}
                             aria-label={item.quantity === 1 ? `Tirar ${item.productName}` : `Diminuir ${item.productName}`}
                             className="w-11 h-11 text-mid hover:text-ink disabled:opacity-40">{item.quantity === 1 ? '×' : '−'}</button>
                           <span key={item.quantity} className="w-8 text-center text-sm tabular-nums animate-badge-bump" aria-live="polite">{item.quantity}</span>
-                          <button type="button" disabled={busy === key || (left !== undefined && item.quantity >= left)} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity + 1 })}
+                          <button type="button" disabled={busy === key || locked || (left !== undefined && item.quantity >= left)} onClick={() => send(key, { op: 'qty', line: key, quantity: item.quantity + 1 })}
                             aria-label={`Aumentar ${item.productName}`}
                             className="w-11 h-11 text-mid hover:text-ink disabled:opacity-40">+</button>
                         </div>
@@ -361,7 +375,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                       {isJogo && fronhas.length > 0 && (
                         <label className="mt-3 block text-[12px] text-mid">
                           Fronha
-                          <select value={item.swapSku ?? ''} disabled={busy === key}
+                          <select value={item.swapSku ?? ''} disabled={busy === key || locked}
                             onChange={e => send(key, { op: 'swap', line: key, swapSku: e.target.value || null })}
                             className="mt-1 block w-full max-w-xs h-11 rounded-full border border-mist bg-paper px-4 text-sm text-ink">
                             <option value="">A que vem no jogo</option>
@@ -438,7 +452,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                     </span>
                   </button>
                   {/* Uma opção só: o + já coloca no carrinho. Várias: abre a escolha. */}
-                  <button type="button" disabled={busy === `quick:${p.id}`}
+                  <button type="button" disabled={busy === `quick:${p.id}` || locked}
                     onClick={async () => {
                       if (p.variants.length !== 1) { setPicking(p); return; }
                       if (await send(`quick:${p.id}`, { op: 'add', productId: p.id, variantId: p.variants[0].id })) setJustAdded(p.id);

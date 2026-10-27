@@ -51,6 +51,12 @@ export function MontarJunto({ cart, user }: { cart: Cart | null; user: { uid: st
     .map(([, v]) => v);
   const log = share?.log ?? [];
 
+  // Voltou do checkout para o carrinho: destrava para quem tem o link.
+  const locked = !!share?.lockedUntil;
+  useEffect(() => {
+    if (locked) updateDoc(doc(db, 'carts', user.uid), { 'share.lockedUntil': null }).catch(() => {});
+  }, [locked, user.uid]);
+
   // Recado do dono: escreve direto no próprio carrinho (a regra deixa).
   const me = share?.ownerName || 'Dono';
   useTabBadge(active ? [...log, ...(share?.chat ?? [])] : [], me);

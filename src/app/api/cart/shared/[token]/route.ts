@@ -56,6 +56,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
         tx.update(cartRef, { 'share.viewers': viewers, ...joined });
         return { ok: true };
       }
+      // Dono finalizando a compra: o total não pode mudar no meio do pagamento.
+      if (change.op !== 'msg' && change.op !== 'like' && share.lockedUntil && share.lockedUntil > now) {
+        return { error: `${share.ownerName || 'Quem compartilhou'} está finalizando a compra. O carrinho está travado.` };
+      }
       if (change.op === 'like') {
         const items = (cart.items ?? []) as CartItem[];
         if (!items.some(i => i.sku === change.sku)) return { error: 'Esse item já saiu do carrinho.' };
