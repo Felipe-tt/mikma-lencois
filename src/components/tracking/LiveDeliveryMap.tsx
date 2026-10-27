@@ -139,8 +139,10 @@ export function LiveDeliveryMap({ routePoints, store, home, courier, phase, etaM
     let cancelled = false;
     let map: MlMap | null = null;
     import('maplibre-gl').then((mod) => {
-      // Bundle UMD: conforme o empacotador, as classes vêm no módulo ou em default.
-      const ml = ((mod as { default?: Ml }).default?.Map ? (mod as { default: Ml }).default : mod) as Ml;
+      const ml: Ml = mod;
+      // O maplibre 6 procura o worker ao lado do próprio arquivo, que o
+      // empacotador renomeia; aponta pro arquivo certo.
+      ml.setWorkerUrl(new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href);
       if (cancelled || !containerRef.current) return;
       try {
         map = new ml.Map({
