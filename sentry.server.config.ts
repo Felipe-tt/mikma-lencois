@@ -3,6 +3,7 @@
 // propósito, pra rodar sem quebrar em ambientes de preview/dev que não
 // têm a env var.
 import * as Sentry from '@sentry/nextjs';
+import { SENTRY_DATA_COLLECTION } from './src/lib/sentryPrivacy';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
@@ -10,7 +11,6 @@ Sentry.init({
   environment: process.env.NODE_ENV,
   // Sem tracesSampleRate: só erros (rastreamento cortado no build, ver
   // compiler.define no next.config).
-  // Nunca manda o conteúdo de request/response (pode conter dados de
-  // pagamento, endereço, etc), só stack trace e contexto do erro.
-  sendDefaultPii: false,
+  // Nada de dados pessoais nem conteúdo de request/response (ver sentryPrivacy.ts).
+  dataCollection: SENTRY_DATA_COLLECTION,
 });

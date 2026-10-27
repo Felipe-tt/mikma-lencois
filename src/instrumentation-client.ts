@@ -6,6 +6,7 @@
 // navegador fica ocioso. Erros que acontecerem antes disso ficam numa fila
 // e são enviados assim que ele inicia.
 import { flushErrors, reportError } from '@/lib/errorQueue';
+import { SENTRY_DATA_COLLECTION } from '@/lib/sentryPrivacy';
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -19,7 +20,8 @@ if (dsn && typeof window !== 'undefined') {
     Sentry.init({
       dsn,
       environment: process.env.NODE_ENV,
-      sendDefaultPii: false,
+      // Nada de dados pessoais nem conteúdo de request/response (ver sentryPrivacy.ts).
+      dataCollection: SENTRY_DATA_COLLECTION,
       // Sem "sessões" (saúde de release): mandavam um aviso ao Sentry a cada
       // página vista, cada um passando pelo servidor no túnel /monitoring.
       integrations: defaults => defaults.filter(i => i.name !== 'BrowserSession'),
