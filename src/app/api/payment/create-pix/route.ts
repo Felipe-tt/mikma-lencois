@@ -8,7 +8,7 @@ import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { randomBytes } from 'crypto';
-import { tooManyRequests, addressSchema, validateBody, getClientIp, isValidCartQuantity } from '@/lib/security';
+import { tooManyRequests, addressSchema, validateBody, getClientIp, isValidCart } from '@/lib/security';
 import { sanitizePixDescription } from '@/lib/abacatepay';
 import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { expandStockLines } from '@/lib/orderStockLines';
@@ -101,14 +101,15 @@ export async function POST(req: NextRequest) {
     }
     const cartData = cartSnap.data()!;
     const cartItems: Array<{ sku: string; productId: string; quantity: number; note?: string; swapSku?: string; swapQtyPerUnit?: number }> = cartData.items;
-    const cartCouponCode: string | null = cartData.couponCode ?? null;
+    // Código vem do carrinho (client SDK): mesmo formato aceito em validate-coupon.
+    const cartCouponCode: string | null = typeof cartData.couponCode === 'string' && /^[A-Z0-9_-]{1,32}$/i.test(cartData.couponCode) ? cartData.couponCode : null;
     const guestUnits = guestUnitsBlock(decoded, cartItems);
     if (guestUnits) return guestUnits;
 
     // Carrinho é escrito direto pelo client SDK, quantity é dado não
     // confiável — quantidade negativa passaria ilesa pela checagem de
     // estoque e ainda diminuiria o total pago (ver isValidCartQuantity).
-    if (cartItems.length === 0 || !cartItems.every(ci => isValidCartQuantity(ci.quantity))) {
+    if (!isValidCart(cartItems)) {
       return NextResponse.json({ error: 'Carrinho inválido' }, { status: 400 });
     }
     // ── Load product prices/pesos from Firestore (nunca confia no cliente) ───

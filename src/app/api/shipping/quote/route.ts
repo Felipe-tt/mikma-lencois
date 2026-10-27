@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { tooManyRequests, validateBody, getClientIp } from '@/lib/security';
+import { tooManyRequests, validateBody, getClientIp, isValidCart } from '@/lib/security';
 import { getSettings } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     const cartItems: Array<{ productId: string; quantity: number }> = cartSnap.data()!.items;
+    if (!isValidCart(cartItems)) return NextResponse.json({ error: 'Carrinho inválido' }, { status: 400 });
     const productIds = Array.from(new Set(cartItems.map(i => i.productId)));
     const productDocs = await Promise.all(productIds.map(id => adminDb.collection('products').doc(id).get()));
     const priceMap: Record<string, number> = {};
