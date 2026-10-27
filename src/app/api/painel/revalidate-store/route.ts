@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { verifyAuth, getClientIp } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { revalidateProduct } from '@/lib/revalidateProduct';
 
 /**
  * Revalida as páginas públicas da loja (ISR) depois de uma mudança de
@@ -26,6 +27,14 @@ export async function POST(req: NextRequest) {
       { error: 'Muitas tentativas. Aguarde um pouco.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil(rateLimitRetryAfter(key) / 1000)) } }
     );
+  }
+
+  // Com { productId }: só as páginas que mostram aquele produto (o
+  // formulário de produto do painel grava direto no Firestore).
+  const body = await req.json().catch(() => null) as { productId?: unknown } | null;
+  if (typeof body?.productId === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(body.productId)) {
+    revalidateProduct(body.productId);
+    return NextResponse.json({ ok: true });
   }
 
   // 'layout' revalida a rota e tudo abaixo dela, cobre páginas dinâmicas

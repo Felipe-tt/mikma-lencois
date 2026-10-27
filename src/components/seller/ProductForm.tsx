@@ -790,6 +790,15 @@ export default function ProductForm({ initial }: Props) {
         }));
       }
       await deleteOldPhotos();
+      // A loja mostra o produto atualizado na hora (sem esperar o ISR).
+      const savedId = isEdit ? initial!.id! : pendingNewRef.current?.id;
+      if (savedId) {
+        user?.getIdToken().then(token => fetch('/api/painel/revalidate-store', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: savedId }),
+        })).catch(() => { /* best-effort */ });
+      }
       pendingCreatedIdRef.current = pendingNewRef.current?.id ?? '';
       pendingNewRef.current = null;
       clearDraft();

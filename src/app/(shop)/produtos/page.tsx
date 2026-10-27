@@ -1,5 +1,6 @@
 import { adminDb } from '@/lib/firebase/admin';
 import Link from 'next/link';
+import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import { shareMeta } from '@/lib/seo';
 import { searchProducts } from '@/lib/productSearch';
@@ -10,8 +11,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import type { Product } from '@/types';
 import { serialize } from '@/lib/utils/serialize';
 
-// ISR: revalida a cada 5 minutos, reduz invocações de Cloud Functions e leituras Firestore
-export const revalidate = 600;
 
 interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string; pagina?: string }> }
 
@@ -38,36 +37,32 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   };
 }
 
-// Cache em memória para categorias: evita query full-scan a cada request dentro do mesmo container
-let _categoriesCache: { data: { name: string; count: number }[]; at: number } | null = null;
-const CATEGORIES_TTL = 5 * 60 * 1000; // 5 min
+// Catálogo ativo inteiro, em cache no servidor (a página é dinâmica por
+// causa dos filtros na URL, então antes cada visita consultava o Firestore).
+// O painel limpa com revalidateTag('products') ao salvar um produto.
+const MAX_CATALOG = PAGE_SIZE * 10;
+const getCatalog = unstable_cache(async (): Promise<Product[]> => {
+  const snap = await adminDb.collection('products').where('active', '==', true)
+    .orderBy('createdAt', 'desc').limit(MAX_CATALOG).get();
+  return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
+}, ['catalogo-ativo'], { revalidate: 600, tags: ['products'] });
 
-async function getCategories(): Promise<{ name: string; count: number }[]> {
-  if (_categoriesCache && Date.now() - _categoriesCache.at < CATEGORIES_TTL) {
-    return _categoriesCache.data;
-  }
-  const snap = await adminDb.collection('products').where('active','==',true).select('category').get();
+function getCategories(all: Product[]): { name: string; count: number }[] {
   const map: Record<string, number> = {};
-  snap.docs.forEach(d => { const c = d.data().category as string; if (c) map[c] = (map[c] ?? 0) + 1; });
-  const data = Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
-  _categoriesCache = { data, at: Date.now() };
-  return data;
+  for (const p of all) if (p.category) map[p.category] = (map[p.category] ?? 0) + 1;
+  return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function getProducts(cat?: string, ordem?: string, search?: string, page = 1): Promise<{ products: Product[]; hasMore: boolean }> {
-  let q = adminDb.collection('products').where('active','==',true);
-  if (cat) q = q.where('category','==',cat) as typeof q;
-  // Busca e ordem por preço precisam do catálogo inteiro (até 300): antes
-  // "Menor preço" ordenava só os 48 mais novos. Sem isso, pagina de 48 em 48.
+function getProducts(all: Product[], cat?: string, ordem?: string, search?: string, page = 1): { products: Product[]; hasMore: boolean } {
+  const inCat = cat ? all.filter(p => p.category === cat) : all;
+  // Busca e ordem por preço usam o catálogo inteiro; o resto pagina de 48 em 48.
   const wantsAll = !!search || ordem === 'preco_asc' || ordem === 'preco_desc';
-  const max = wantsAll ? 300 : PAGE_SIZE * page;
-  const snap = await q.orderBy('createdAt','desc').limit(max + 1).get();
-  const hasMore = !wantsAll && snap.size > max;
-  const docs = snap.docs.slice(0, max);
-  const all = docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
+  const max = wantsAll ? inCat.length : PAGE_SIZE * page;
+  const hasMore = !wantsAll && inCat.length > max;
+  const list = inCat.slice(0, max);
   // Antes o termo aparecia no título mas não filtrava nada: toda busca
   // devolvia o catálogo inteiro.
-  const products = search ? searchProducts(all, search) : all;
+  const products = search ? searchProducts(list, search) : list;
   if (ordem === 'preco_asc')  return { products: [...products].sort((a, b) => a.price - b.price), hasMore };
   if (ordem === 'preco_desc') return { products: [...products].sort((a, b) => b.price - a.price), hasMore };
   return { products, hasMore };
@@ -77,7 +72,9 @@ export default async function ProdutosPage({ searchParams }: Props) {
   const { categoria, q, ordem, pagina } = await searchParams;
   const search = q?.trim() || undefined;
   const page = Math.min(10, Math.max(1, Number(pagina) || 1));
-  const [{ products, hasMore }, categories] = await Promise.all([getProducts(categoria, ordem, search, page), getCategories()]);
+  const all = await getCatalog();
+  const { products, hasMore } = getProducts(all, categoria, ordem, search, page);
+  const categories = getCategories(all);
   // Total real da categoria (a lista pode estar paginada), não só o que veio.
   const catalogTotal = categoria
     ? categories.find(c => c.name === categoria)?.count ?? products.length

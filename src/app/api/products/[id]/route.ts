@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { safeJson, tooManyRequests, productImageUrlSchema } from '@/lib/security';
+import { revalidateProduct } from '@/lib/revalidateProduct';
 
 async function getSeller(req: NextRequest) {
   const auth = req.headers.get('authorization');
@@ -58,6 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     ...allowed.data,
     updatedAt: FieldValue.serverTimestamp(),
   });
+  revalidateProduct(id);
   return NextResponse.json({ ok: true });
 }
 
@@ -106,6 +108,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   invSnap.docs.forEach(d => batch.delete(d.ref));
   batch.delete(productRef);
   await batch.commit();
+  revalidateProduct(id);
 
   return NextResponse.json({ ok: true });
 }
