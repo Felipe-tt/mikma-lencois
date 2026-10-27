@@ -218,19 +218,17 @@ export default async function HomePage() {
           Fundo escuro como ponto final da página.
       ═══════════════════════════════════════════════════════════ */}
       <section className="bg-warm border-t border-mist">
-        {/* Duas colunas no computador: o texto sozinho deixava metade da
-            faixa vazia. */}
-        <div className="container-shop py-14 sm:py-20 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          <div>
+        {/* Centralizado: alinhado à esquerda sobrava metade da faixa vazia. */}
+        <div className="container-shop py-14 sm:py-20 text-center">
           <p className="font-semibold text-[11px] tracking-[0.24em] uppercase text-faint mb-6">
             {s.foundedYear ? `${city} · Desde ${s.foundedYear}` : `${city} · Fábrica própria`}
           </p>
           <h2
-            className="font-display font-normal text-ink leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl text-[clamp(2.4rem,5.5vw,4.5rem)]"
+            className="font-display font-normal text-ink leading-[1.04] tracking-[-0.02em] mb-8 sm:mb-10 max-w-2xl mx-auto text-[clamp(2.4rem,5.5vw,4.5rem)]"
           >
             {ctaLine1}<br /><em className="text-clay">{ctaLine2}</em>
           </h2>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row sm:justify-center gap-4">
             <Link href="/produtos"
               className="inline-flex items-center justify-center h-12 px-7 rounded-full bg-ink text-paper text-[14px] font-semibold hover:bg-clay active:scale-[0.98] transition-[background-color,transform] duration-200">
               {ctaBtn1}
@@ -239,10 +237,6 @@ export default async function HomePage() {
               className="inline-flex items-center justify-center h-12 px-7 rounded-full border border-ink/20 text-ink text-[14px] font-medium hover:border-ink/50 hover:bg-paper transition-colors duration-200">
               {ctaBtn2}
             </Link>
-          </div>
-          </div>
-          <div className="relative hidden lg:block aspect-[4/3] rounded-3xl overflow-hidden bg-mist">
-            <Image src="/sobre-bg.jpg" alt="" fill sizes="(min-width: 1024px) 45vw, 0px" className="object-cover" />
           </div>
         </div>
       </section>
