@@ -20,6 +20,10 @@ describe('verifyChargePaid', () => {
   it('recusa cobrança de outro pedido, vencida ou de outro ambiente', async () => {
     api.getCheckoutStatus.mockResolvedValue(ok({ status: 'PAID', externalId: 'ord_2' }));
     expect((await verifyChargePaid('bill_1', 'ord_1', false)).kind).toBe('rejected');
+    api.getTransparent.mockResolvedValue(ok({ status: 'APPROVED', metadata: { orderId: 'ord_2' } }));
+    expect((await verifyChargePaid('card_1', 'ord_1', false)).kind).toBe('rejected');
+    api.getTransparent.mockResolvedValue(ok({ status: 'APPROVED', metadata: { orderId: 'ord_1' } }));
+    expect((await verifyChargePaid('card_1', 'ord_1', false)).kind).toBe('paid');
     api.checkPixStatus.mockResolvedValue(ok({ status: 'EXPIRED' }));
     expect((await verifyChargePaid('pix_char_1', 'ord_1', false)).kind).toBe('rejected');
     // Não encontrada no ambiente do pedido: nunca confirma (fica para reenvio).

@@ -78,6 +78,7 @@ export async function confirmOrderPaid(
   let order: FirebaseFirestore.DocumentData | null;
   let lateCapture: FirebaseFirestore.DocumentData | null = null;
   let underpaidOrder: { paidCents: number; totalCents: number } | null = null;
+  let duplicate: { message: string } | null = null;
   try {
     order = await adminDb.runTransaction(async (tx) => {
       const orderSnap = await tx.get(orderRef);
@@ -89,6 +90,11 @@ export async function confirmOrderPaid(
       // a quantidade (sem mexer em reserved). O webhook continua exigindo
       // pending_payment.
       const wasExpired = data.status === 'payment_expired';
+      const pay = (data.payment ?? {}) as { txId?: string; paidAt?: unknown; duplicateTxIds?: string[]; confirmedManuallyBy?: string };
+
+      // Reenvio do aviso de um pagamento já contado (o pedido foi pago e
+      // depois cancelado/estornado): não é pagamento novo.
+      if (!manual && pay.paidAt && pay.txId === txId) return null;
 
       // Pagamento real chegando com o pedido já cancelado ou expirado (o
       // cliente terminou de pagar a aba do cartão depois de cancelar, ou o
@@ -113,6 +119,23 @@ export async function confirmOrderPaid(
           }),
         });
         lateCapture = data;
+        return null;
+      }
+
+      // Segunda cobrança paga num pedido já pago (ex.: o cliente pagou o QR
+      // antigo e o novo): antes era ignorada em silêncio e o cliente pagava
+      // duas vezes. Registra uma vez e avisa o vendedor para estornar.
+      if (!manual && data.status !== 'pending_payment' && pay.paidAt && pay.txId && pay.txId !== txId) {
+        if ((pay.duplicateTxIds ?? []).includes(txId)) return null;
+        const msg = pay.confirmedManuallyBy
+          ? `Pagamento pela AbacatePay (${note}) chegou depois de o pedido ser marcado como pago manualmente. Se o cliente também pagou por fora, estorne um dos dois.`
+          : `Segunda cobrança paga (${note}). Estorne esta cobrança no painel da AbacatePay (id ${txId}).`;
+        tx.update(orderRef, {
+          'payment.duplicateTxIds': FieldValue.arrayUnion(txId),
+          updatedAt: FieldValue.serverTimestamp(),
+          timeline: FieldValue.arrayUnion({ status: data.status, at: now, note: msg }),
+        });
+        duplicate = { message: msg };
         return null;
       }
 
@@ -204,6 +227,25 @@ export async function confirmOrderPaid(
 
   if (lateCapture) {
     await alertLateCapture(orderId, lateCapture);
+    return false;
+  }
+
+  if (duplicate) {
+    const { message } = duplicate;
+    Sentry.captureMessage('confirm-order-paid: cobrança paga em dobro', { level: 'error', extra: { orderId, txId } });
+    await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
+      type: 'duplicate_payment',
+      orderId,
+      message: `Pedido #${orderId.slice(-8).toUpperCase()}: ${message}`,
+      read: false,
+      createdAt: FieldValue.serverTimestamp(),
+    }).catch(() => {});
+    await notifySeller({
+      title: 'Pagamento em dobro',
+      body: `#${orderId.slice(-8).toUpperCase()} · confira e estorne`,
+      url: `/painel/pedidos/${orderId}`,
+      data: { orderId, event: 'duplicate_payment' },
+    });
     return false;
   }
 

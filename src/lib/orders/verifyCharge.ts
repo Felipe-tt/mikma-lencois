@@ -24,8 +24,10 @@ export async function verifyChargePaid(chargeId: string, orderId: string, sandbo
     // (syncOrderPayment, pelo id da cobrança do próprio pedido) resolvem.
     return res.status === 404 ? { kind: 'pending' } : { kind: 'unknown' };
   }
-  const data = res.data as { status: string; externalId?: string | null };
-  if (data.externalId && data.externalId !== orderId) return { kind: 'rejected', reason: 'cobrança de outro pedido' };
+  const data = res.data as { status: string; externalId?: string | null; metadata?: { orderId?: unknown } | null };
+  // Cartão no site não tem externalId: o pedido vai no metadata da cobrança.
+  const chargeOrder = data.externalId || (typeof data.metadata?.orderId === 'string' ? data.metadata.orderId : null);
+  if (chargeOrder && chargeOrder !== orderId) return { kind: 'rejected', reason: 'cobrança de outro pedido' };
   if (data.status === 'PAID' || data.status === 'APPROVED') return { kind: 'paid' };
   if (data.status === 'PENDING' || data.status === 'ACTIVE') return { kind: 'pending' };
   return { kind: 'rejected', reason: `cobrança com status ${data.status}` };
