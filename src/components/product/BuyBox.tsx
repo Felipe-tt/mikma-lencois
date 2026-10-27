@@ -6,8 +6,7 @@ import { formatColorName } from '@/lib/colorNameMatch';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/db';
+import { loadFirestore } from '@/lib/firebase/lazyDb';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { installmentFeeRate } from '@/lib/orderPricing';
 import { formatCurrency } from '@/lib/utils/format';
@@ -146,6 +145,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     // mesmo pro mesmo produto/variante — combinar quantidade ali juntaria
     // pedidos com trocas diferentes numa linha só, perdendo a informação.
     const lineKey = note ? `${sku}::${note}` : sku;
+    const { db, doc, getDoc, setDoc, serverTimestamp } = await loadFirestore();
     const cartRef = doc(db, 'carts', user.uid);
     const cartSnap = await getDoc(cartRef);
     const existingItems: CartItem[] = cartSnap.exists() ? (cartSnap.data().items ?? []) : [];
