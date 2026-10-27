@@ -52,12 +52,22 @@ export async function GET(req: NextRequest) {
       // A v2 não manda mais evento de expiração: sem isto o estoque ficava
       // reservado até o cancelamento de 48h. Pago? confirma. Vencido? expira
       // (libera a reserva). Erro de consulta: segue o fluxo normal.
-      const pay = (order.payment ?? {}) as { method?: string; expiresAt?: { toDate?: () => Date } | string };
+      const pay = (order.payment ?? {}) as { method?: string; txId?: string; checkoutId?: string; expiresAt?: { toDate?: () => Date } | string };
       const exp = typeof pay.expiresAt === 'string' ? new Date(pay.expiresAt) : pay.expiresAt?.toDate?.();
-      if (order.status === 'pending_payment' && exp && exp.getTime() < now - 60_000) {
+      const pixDue = !!exp && exp.getTime() < now - 60_000;
+      // Cartão: antes de cancelar, confere se a cobrança não foi aprovada com
+      // o webhook perdido (sem isso o cron cancelava um pedido já cobrado).
+      const cardDue = pay.method === 'card' && !!(pay.txId || pay.checkoutId) && createdAt < cancelCutoff;
+      if (order.status === 'pending_payment' && (pixDue || cardDue)) {
         const synced = await syncOrderPayment(orderId);
         if (synced === 'paid') continue;
         if (synced === 'expired') results.expired++;
+        // Consulta falhou: não cancela às cegas um pedido com cobrança de
+        // cartão; tenta de novo na próxima rodada (até 7 dias).
+        if (synced === 'error' && cardDue && createdAt.getTime() > now - 7 * 24 * 60 * 60 * 1000) {
+          results.errors++;
+          continue;
+        }
       }
 
       // ── Busca e-mail do cliente ─────────────────────────────────────────

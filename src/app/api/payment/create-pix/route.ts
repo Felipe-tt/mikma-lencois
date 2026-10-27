@@ -14,7 +14,7 @@ import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { StockError } from '@/lib/errors';
-import { releaseCouponUse } from '@/lib/orders/couponUsage';
+import { rollbackUnpaidOrder } from '@/lib/orders/rollbackOrder';
 import { carrierName } from '@/lib/carriers';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
@@ -499,17 +499,7 @@ export async function POST(req: NextRequest) {
         tags: { route: 'create-pix', abacatePayStatus: String(pixRes.status) },
         extra: { orderId, responseBody: pixText.slice(0, 1000) },
       });
-      await orderRef.delete();
-      await releaseCouponUse(couponCode);
-      // Liberar reserva de estoque
-      for (let i = 0; i < stockLines.length; i++) {
-        const ref = invDocRefs[i];
-        if (!ref) continue;
-        ref.update({
-          reserved: FieldValue.increment(-stockLines[i].quantity),
-          updatedAt: FieldValue.serverTimestamp(),
-        }).catch(() => {});
-      }
+      await rollbackUnpaidOrder(orderId);
       return NextResponse.json({ error: 'Não foi possível iniciar o pagamento. Tente de novo.' }, { status: 502 });
     }
 
