@@ -12,7 +12,7 @@ import { tooManyRequests, addressSchema, validateBody, getClientIp, isValidCartQ
 import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { StockError } from '@/lib/errors';
-import { releaseCouponUse } from '@/lib/orders/couponUsage';
+import { rollbackUnpaidOrder } from '@/lib/orders/rollbackOrder';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
@@ -327,17 +327,6 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    const releaseReservation = () => {
-      for (let i = 0; i < stockLines.length; i++) {
-        const ref = invDocRefs[i];
-        if (!ref) continue;
-        ref.update({
-          reserved: FieldValue.increment(-stockLines[i].quantity),
-          updatedAt: FieldValue.serverTimestamp(),
-        }).catch(() => {});
-      }
-    };
-
     try {
       await adminDb.runTransaction(async tx => {
         const invSnaps = await Promise.all(
@@ -462,11 +451,7 @@ export async function POST(req: NextRequest) {
         orderId, orderRef, uid, cardToken, totalCents, installments: parsedInstallments,
         customer: { ...customer, email: ((userData.email ?? decoded.email ?? '') as string) },
         sandbox: abacateSandbox,
-        rollback: async () => {
-          await orderRef.delete();
-          await releaseCouponUse(couponCode);
-          releaseReservation();
-        },
+        rollback: async () => { await rollbackUnpaidOrder(orderId); },
       });
     }
 
@@ -493,16 +478,7 @@ export async function POST(req: NextRequest) {
     console.log('AbacatePay product status:', productRes.status, 'body:', productText);
 
     if (!productRes.ok) {
-      await orderRef.delete();
-      await releaseCouponUse(couponCode);
-      for (let i = 0; i < stockLines.length; i++) {
-        const ref = invDocRefs[i];
-        if (!ref) continue;
-        ref.update({
-          reserved: FieldValue.increment(-stockLines[i].quantity),
-          updatedAt: FieldValue.serverTimestamp(),
-        }).catch(() => {});
-      }
+      await rollbackUnpaidOrder(orderId);
       return NextResponse.json({ error: 'Não foi possível iniciar o pagamento. Tente de novo.' }, { status: 502 });
     }
 
@@ -571,17 +547,7 @@ export async function POST(req: NextRequest) {
         tags: { route: 'create-checkout', abacatePayStatus: String(checkRes.status) },
         extra: { orderId, responseBody: checkText.slice(0, 1000) },
       });
-      await orderRef.delete();
-      await releaseCouponUse(couponCode);
-      // Liberar reserva de estoque
-      for (let i = 0; i < stockLines.length; i++) {
-        const ref = invDocRefs[i];
-        if (!ref) continue;
-        ref.update({
-          reserved: FieldValue.increment(-stockLines[i].quantity),
-          updatedAt: FieldValue.serverTimestamp(),
-        }).catch(() => {});
-      }
+      await rollbackUnpaidOrder(orderId);
       // Clean up temp product (best-effort)
       fetch(`${ABACATEPAY_BASE}/products/delete`, {
         method: 'POST',
