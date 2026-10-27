@@ -276,6 +276,8 @@ export interface Cart {
     likes?: Record<string, string[]>
     paidAt?: number
     paidItems?: number
+    /** Quando alguém entrou pelo link pela primeira vez. */
+    joinedAt?: number
   }
 }
 

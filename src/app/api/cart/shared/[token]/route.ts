@@ -50,8 +50,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       const viewers = Object.fromEntries(Object.entries((share.viewers ?? {}) as Record<string, { at: number }>)
         .filter(([, v]) => now - v.at < VIEWER_TTL_MS));
       if (viewer) viewers[viewer] = { name: who, at: now } as { at: number };
+      // Primeira vez que alguém entra pelo link: só daí o dono vê o painel completo.
+      const joined = share.joinedAt ? {} : { 'share.joinedAt': now };
       if (change.op === 'ping') {
-        tx.update(cartRef, { 'share.viewers': viewers });
+        tx.update(cartRef, { 'share.viewers': viewers, ...joined });
         return { ok: true };
       }
       if (change.op === 'like') {
@@ -61,12 +63,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
         const likes = Object.fromEntries(Object.entries((share.likes ?? {}) as Record<string, string[]>).filter(([k]) => skus.has(k)));
         const list = likes[change.sku] ?? [];
         likes[change.sku] = list.includes(who) ? list.filter(n => n !== who) : [...list, who].slice(-20);
-        tx.update(cartRef, { 'share.likes': likes, 'share.viewers': viewers });
+        tx.update(cartRef, { 'share.likes': likes, 'share.viewers': viewers, ...joined });
         return { ok: true };
       }
       if (change.op === 'msg') {
         const msg = { by: who, text: change.text, at: now };
-        tx.update(cartRef, { 'share.chat': [...((share.chat ?? []) as unknown[]), msg].slice(-CHAT_MAX), 'share.viewers': viewers });
+        tx.update(cartRef, { 'share.chat': [...((share.chat ?? []) as unknown[]), msg].slice(-CHAT_MAX), 'share.viewers': viewers, ...joined });
         return { ok: true };
       }
       const r = await applySharedOp(adminDb, (cart.items ?? []) as CartItem[], change as SharedOp);
@@ -86,6 +88,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
         'share.log': [...((share.log ?? []) as unknown[]), entry].slice(-LOG_MAX),
         'share.addedBy': addedBy,
         'share.viewers': viewers,
+        ...joined,
       });
       return { ok: true };
     });

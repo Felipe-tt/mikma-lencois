@@ -8,7 +8,7 @@ import { variantLabel } from '@/lib/variantLabel';
 import { lineKey, VIEWER_TTL_MS } from '@/lib/sharedCart';
 import type { Cart, CartItem, Product } from '@/types';
 import { ProductSheet } from '@/components/cart/ProductSheet';
-import { ActivityList, Avatar, ChatBox, LikeButton, OnlineStack, useTabBadge } from '@/components/cart/montarUi';
+import { Avatar, ChatBox, LikeButton, OnlineStack, useTabBadge } from '@/components/cart/montarUi';
 
 type Status = 'loading' | 'ok' | 'off';
 
@@ -400,10 +400,6 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
           <div className="rounded-3xl border border-mist p-6">
             <h2 className="text-[13px] font-semibold text-ink mb-4">Recados</h2>
             <ChatBox id="montar-recados" messages={chat} now={now} me={name} onSend={text => post({ op: 'msg', text })} />
-          </div>
-          <div className="rounded-3xl border border-mist p-6">
-            <h2 className="text-[13px] font-semibold text-ink mb-4">O que mudou</h2>
-            <ActivityList log={log} now={now} limit={8} />
           </div>
         </aside>
 
