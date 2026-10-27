@@ -65,3 +65,35 @@ export function PainelFormSkeleton() {
     </div>
   );
 }
+
+/** Detalhe de um registro (ex.: pedido): título, ações e cartões em duas colunas. */
+export function PainelDetailSkeleton() {
+  return (
+    <div className="flex flex-col gap-5 animate-pulse">
+      <div className="h-3 w-24 bg-mist rounded" />
+      <div className="flex items-center justify-between gap-4">
+        <div className="h-7 w-56 bg-mist rounded" />
+        <div className="h-9 w-32 bg-mist rounded-full" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex flex-col gap-4">
+          {[1, 2].map(i => (
+            <div key={i} className="border border-mist p-5 rounded-xl flex flex-col gap-3">
+              <div className="h-4 w-32 bg-mist rounded" />
+              {[1, 2, 3].map(j => (
+                <div key={j} className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-warm rounded-lg shrink-0" />
+                  <div className="flex-1 h-3.5 bg-warm rounded" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="border border-mist p-5 rounded-xl flex flex-col gap-3 h-fit">
+          <div className="h-4 w-24 bg-mist rounded" />
+          {[1, 2, 3, 4].map(j => <div key={j} className="h-3.5 bg-warm rounded" />)}
+        </div>
+      </div>
+    </div>
+  );
+}

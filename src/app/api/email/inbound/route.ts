@@ -104,7 +104,7 @@ async function uploadToStorage(
   contentType: string,
   emailId: string,
 ): Promise<string> {
-  const res = await fetch(downloadUrl);
+  const res = await fetch(downloadUrl, { signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error(`Falha ao baixar anexo ${filename}: ${res.status}`);
   const buffer = Buffer.from(await res.arrayBuffer());
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');

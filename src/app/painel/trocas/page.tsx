@@ -1,4 +1,5 @@
 'use client';
+import { PainelSkeleton } from '@/components/painel/PainelSkeleton';
 import { plural } from '@/lib/plural';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -180,7 +181,7 @@ export default function TrocasPage() {
       {loadError ? (
         <PanelErrorState onRetry={() => window.location.reload()} />
       ) : loading ? (
-        <p className="text-[13px] text-faint">Carregando…</p>
+        <PainelSkeleton rows={4} />
       ) : filtered.length === 0 ? (
         <div className="border border-mist bg-paper py-16 text-center rounded-xl">
           <IconExchange size={32} className="text-mist mx-auto mb-3" />

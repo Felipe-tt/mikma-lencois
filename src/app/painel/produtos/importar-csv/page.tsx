@@ -634,7 +634,7 @@ export default function ImportarCsvPage() {
           )}
         </div>
 
-        {loadingDrafts && <p className="ml-[30px] text-[13px] text-faint">Carregando...</p>}
+        {loadingDrafts && <div className="ml-[30px]"><div className="flex flex-col gap-2" aria-busy="true" aria-label="Carregando">{Array.from({ length: 2 }).map((_, i) => <div key={i} className="skeleton h-10 !rounded-lg" />)}</div></div>}
         {draftsError && (
           <div className="ml-[30px] bg-red-50 border border-red-200 text-red-700 text-[12px] px-3 py-2 flex items-start gap-2 max-w-lg rounded-xl">
             <IconAlert size={12} className="shrink-0 mt-0.5" /> {draftsError}

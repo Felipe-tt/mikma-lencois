@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { MontarSkeleton } from '@/components/cart/MontarSkeleton';
 import { use, useEffect, useMemo, useState } from 'react';
 import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
@@ -233,7 +234,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
     </header>
   </>);
 
-  if (status === 'loading') return <>{header}<p className="container-shop py-16 text-sm text-mid" role="status">Abrindo o carrinho…</p></>;
+  if (status === 'loading') return <MontarSkeleton />;
   if (status === 'off') return (
     <>{header}
       <div className="container-shop py-20 text-center">

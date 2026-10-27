@@ -59,7 +59,7 @@ export function DuplicateProductModal({ onPick, onClose }: Props) {
         </div>
 
         <div className="overflow-y-auto flex-1">
-          {loading && <p className="text-[12px] text-faint text-center py-8">Carregando…</p>}
+          {loading && <div className="p-3"><div className="flex flex-col gap-2" aria-busy="true" aria-label="Carregando">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton h-14 !rounded-lg" />)}</div></div>}
           {loadError && <p role="alert" className="text-[12px] text-red-600 text-center py-8">{loadError}</p>}
           {!loading && !loadError && filtered.length === 0 && (
             <p className="text-[12px] text-faint text-center py-8">Nenhum produto encontrado</p>
