@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { shippingBlockReason } from '@/lib/orders/shippingBlock';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
@@ -83,6 +84,10 @@ export async function POST(
       }
       const target = ALLOWED[current.status];
       if (!target) throw new StatusError(400, `Não é possível avançar de "${current.status}"`);
+      if (target === 'shipped') {
+        const blocked = shippingBlockReason(current);
+        if (blocked) throw new StatusError(409, blocked);
+      }
 
       const update: Record<string, unknown> = {
         status: target,

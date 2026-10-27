@@ -1,5 +1,6 @@
 'use client';
 import { formatMeasure, parseMeasure } from '@/lib/measures';
+import { cardMinCents } from '@/lib/orderPricing';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
@@ -520,14 +521,12 @@ export default function ConfiguracoesPage() {
               hint={`O produto aparecerá como "Últimas unidades" quando restar ${settings.lowStockThreshold} ou menos`} />
           </Card>
 
-          <Card icon="card" title="Pagamento por cartão" desc="Habilite cartão de crédito a partir de um valor mínimo, 0 desativa">
+          <Card icon="card" title="Pagamento por cartão" desc="Valor mínimo do pedido para aceitar cartão de crédito">
             <Num label="Valor mínimo para cartão (R$)"
               value={settings.creditMinOrderCents / 100}
               onChange={v => set('creditMinOrderCents', Math.round(v * 100))}
               min={0}
-              hint={settings.creditMinOrderCents === 0
-                ? 'Cartão desativado, apenas PIX disponível'
-                : `Cartão habilitado para pedidos acima de R$ ${(settings.creditMinOrderCents/100).toFixed(2)}`} />
+              hint={`Cartão aceito a partir de R$ ${(cardMinCents(settings.creditMinOrderCents) / 100).toFixed(2)} (produtos, cupom e frete). O mínimo nunca fica abaixo de R$ 100.`} />
           </Card>
 
           <Card icon="tag" title="Desconto PIX" desc="Ofereça desconto percentual para pagamentos via PIX acima de um valor mínimo, 0 desativa">

@@ -21,7 +21,8 @@ const lencol = { name: 'Lençol Queen', price: 120, category: 'Lençóis', image
 const jogo = { name: 'Jogo Queen', price: 300, category: 'Jogos de cama', fronhaCount: 2, images: [], variants: [variant] };
 const fronha = { name: 'Fronha Rosa', price: 40, category: 'Fronhas', images: [], variants: [{ id: 'f1', size: 'unico', color: 'Rosa' }] };
 
-const base: Docs = { products: { lencol, jogo, fronha, inativo: { ...lencol, active: false } }, inventory: {} };
+const stock = { lencol_v1: { quantity: 50 }, jogo_v1: { quantity: 50 }, fronha_f1: { quantity: 50 } };
+const base: Docs = { products: { lencol, jogo, fronha, inativo: { ...lencol, active: false } }, inventory: stock };
 const item = (over: Partial<CartItem> = {}): CartItem =>
   ({ productId: 'lencol', productName: 'Lençol Queen', sku: 'lencol_v1', variant, quantity: 1, unitPrice: 120, image: 'a.jpg', ...over }) as CartItem;
 
@@ -43,8 +44,13 @@ describe('applySharedOp: add', () => {
   });
 
   it('respeita o estoque livre (quantidade menos reservado)', async () => {
-    const db = fakeDb({ ...base, inventory: { lencol_v1: { quantity: 3, reserved: 2 } } });
+    const db = fakeDb({ ...base, inventory: { ...stock, lencol_v1: { quantity: 3, reserved: 2 } } });
     expect(await applySharedOp(db, [item()], { op: 'add', productId: 'lencol', variantId: 'v1' })).toEqual({ error: 'Sem mais unidades em estoque.' });
+  });
+
+  it('trata variação sem estoque cadastrado como esgotada', async () => {
+    const db = fakeDb({ ...base, inventory: {} });
+    expect(await applySharedOp(db, [], { op: 'add', productId: 'lencol', variantId: 'v1' })).toEqual({ error: 'Sem mais unidades em estoque.' });
   });
 
   it('limita linhas e quantidade', async () => {
@@ -71,7 +77,7 @@ describe('applySharedOp: qty', () => {
   });
 
   it('só confere estoque quando aumenta', async () => {
-    const db = fakeDb({ ...base, inventory: { lencol_v1: { quantity: 1 } } });
+    const db = fakeDb({ ...base, inventory: { ...stock, lencol_v1: { quantity: 1 } } });
     expect(await applySharedOp(db, [item({ quantity: 1 })], { op: 'qty', line: 'lencol_v1', quantity: 2 })).toEqual({ error: 'Sem mais unidades em estoque.' });
     expect('items' in await applySharedOp(db, [item({ quantity: 3 })], { op: 'qty', line: 'lencol_v1', quantity: 2 })).toBe(true);
   });
@@ -96,7 +102,7 @@ describe('applySharedOp: swap', () => {
   it('recusa fora de jogo de cama, fronha inválida ou sem estoque', async () => {
     expect(await applySharedOp(fakeDb(base), [item()], { op: 'swap', line: 'lencol_v1', swapSku: 'fronha_f1' })).toEqual({ error: 'Esse item não tem troca de fronha.' });
     expect(await applySharedOp(fakeDb(base), [j], { op: 'swap', line: 'jogo_v1', swapSku: 'lencol_v1' })).toEqual({ error: 'Fronha indisponível.' });
-    const db = fakeDb({ ...base, inventory: { fronha_f1: { quantity: 3 } } });
+    const db = fakeDb({ ...base, inventory: { ...stock, fronha_f1: { quantity: 3 } } });
     expect(await applySharedOp(db, [j], { op: 'swap', line: 'jogo_v1', swapSku: 'fronha_f1' })).toEqual({ error: 'Essa fronha está sem estoque.' });
   });
 });
