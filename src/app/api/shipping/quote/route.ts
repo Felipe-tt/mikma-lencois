@@ -6,6 +6,7 @@ import { tooManyRequests, validateBody, getClientIp } from '@/lib/security';
 import { getSettings } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
+import { cartCouponDiscountCents } from '@/lib/orders/cartCoupon';
 import { z } from 'zod';
 import { quoteSchema } from './schema';
 
@@ -58,8 +59,13 @@ export async function POST(req: NextRequest) {
     const productValueCents = cartItems.reduce((s, i) => s + (priceMap[i.productId] ?? 0) * i.quantity, 0);
     const totalWeightKg = cartItems.reduce((s, i) => s + (weightMap[i.productId] ?? settings.defaultItemWeightKg ?? 0.8) * i.quantity, 0);
 
-    const ledgerBalanceCents = await getShippingLedgerBalanceCents();
-    const result = await computeShippingOptions(destCep, settings, productValueCents, totalWeightKg, ledgerBalanceCents);
+    // Frete grátis conta os produtos menos o cupom do carrinho, igual ao
+    // pagamento (senão a cotação mostrava grátis e o checkout cobrava).
+    const [ledgerBalanceCents, couponCents] = await Promise.all([
+      getShippingLedgerBalanceCents(),
+      cartCouponDiscountCents(cartSnap.data()!.couponCode as string | undefined, productValueCents),
+    ]);
+    const result = await computeShippingOptions(destCep, settings, productValueCents, totalWeightKg, ledgerBalanceCents, productValueCents - couponCents);
 
     return NextResponse.json({
       // realPriceCents é informação interna (custo real de despacho) -

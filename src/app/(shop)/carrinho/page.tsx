@@ -234,9 +234,10 @@ export default function CartPage() {
   const subtotal = items.reduce((a, i) => a + i.unitPrice * i.quantity, 0);
   const discount = couponApplied?.discount ?? 0;
   const total = Math.max(0, subtotal - discount);
-  const remaining = Math.max(0, threshold - subtotal);
-  const progress = Math.min(100, threshold > 0 ? (subtotal / threshold) * 100 : 0);
-  const freeShip = threshold > 0 && subtotal >= threshold;
+  // Frete grátis conta os produtos menos o cupom (mesma regra do pagamento).
+  const remaining = Math.max(0, threshold - total);
+  const progress = Math.min(100, threshold > 0 ? (total / threshold) * 100 : 0);
+  const freeShip = threshold > 0 && total >= threshold;
   const totalItems = items.reduce((a, i) => a + i.quantity, 0);
 
   if (loading || cartLoading || (items.length > 0 && !stockReady)) return <CartSkeleton />;

@@ -361,11 +361,15 @@ export async function computeShippingOptions(
   // verdade nas transportadoras). Opcional, quando omitido, o frete grátis
   // funciona sem teto (comportamento antigo). Ver src/lib/shipping-ledger.ts.
   ledgerBalanceCents?: number,
+  // Valor que conta para o frete grátis: produtos menos o cupom (regra da
+  // loja). Separado de productValueCents, que é o valor declarado no seguro
+  // das transportadoras e continua sendo o valor cheio dos produtos.
+  freeShippingBaseCents: number = productValueCents,
 ): Promise<ShippingQuoteResult> {
   const pkg: PackageDimensions = { weightKg: totalWeightKg, heightCm: 20, widthCm: 40, lengthCm: 50 };
 
   const freeThreshold = settings.freeShippingThresholdCents ?? 0;
-  const thresholdMet  = freeThreshold > 0 && productValueCents >= freeThreshold;
+  const thresholdMet  = freeThreshold > 0 && freeShippingBaseCents >= freeThreshold;
 
   // Blindagem silenciosa: se o prejuízo acumulado no caixa de frete já
   // ultrapassou o teto configurado, o frete grátis é desligado nessa
