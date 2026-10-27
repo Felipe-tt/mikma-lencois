@@ -248,6 +248,7 @@ export function ProductGallery({ images, name, tag, productId }: Props) {
                   alt={`${name}, foto ${active + 1}`}
                   fill
                   priority
+                  fetchPriority="high"
                   sizes="(max-width: 1024px) 100vw, 45vw"
                   className="object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.7,0.2,1)] group-hover:scale-[1.03]"
                 />
