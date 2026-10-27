@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
+import { notifyOrderRefunded } from '@/lib/email/cancelledEmail';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
@@ -43,10 +44,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const note = parsed.data.note?.trim();
 
   const ref = adminDb.collection('orders').doc(orderId);
+  let refunded: FirebaseFirestore.DocumentData | null = null;
   const result = await adminDb.runTransaction(async tx => {
     const snap = await tx.get(ref);
     if (!snap.exists) return 'NOT_FOUND';
     const order = snap.data()!;
+    refunded = order;
     const payment = (order.payment ?? {}) as { paidAt?: unknown; lateCaptureTxId?: string; refundStatus?: string };
     if (payment.refundStatus === 'done') return 'ALREADY';
     const owesRefund = order.status === 'cancelled' && !!payment.paidAt;
@@ -69,5 +72,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   if (result === 'NOT_FOUND') return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
   if (result === 'ALREADY') return NextResponse.json({ error: 'O estorno já foi registrado.' }, { status: 409 });
   if (result === 'NOTHING') return NextResponse.json({ error: 'Este pedido não tem valor a estornar.' }, { status: 400 });
+  // Cliente fica sabendo que o dinheiro voltou (o cancelamento só dizia "será devolvido").
+  if (refunded) await notifyOrderRefunded(orderId, refunded, false);
   return NextResponse.json({ ok: true });
 }

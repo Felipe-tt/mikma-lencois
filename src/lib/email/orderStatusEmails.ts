@@ -305,3 +305,31 @@ export function buildPaymentReminder(
     ].join('\n'),
   };
 }
+
+/** Estorno concluído: o dinheiro voltou (ou foi devolvido por fora pela loja). */
+export function buildRefunded(order: Pick<Order, 'id' | 'totalCents'>, name: string, method: 'card' | 'pix' | 'outro'): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
+  const total = formatCurrency(order.totalCents);
+  const when = method === 'card'
+    ? 'No cartão, o valor aparece na fatura em até duas faturas, conforme o banco.'
+    : method === 'pix'
+      ? 'No PIX, o valor volta para a conta que fez o pagamento.'
+      : 'A devolução foi feita pelo mesmo meio do pagamento.';
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Estorno feito',
+      html: `
+        ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>. Devolvemos <strong>${total}</strong> do pedido #${id}.`)}
+        ${emailCallout(`<p style="margin:0;font-size:14px;color:#2C1F14;line-height:1.6;">${when}</p>`)}
+        ${emailParagraph('Se tiver qualquer dúvida, é só responder este e-mail.', { muted: true })}
+        ${emailCta('Ver pedido', url)}`,
+    })}
+    ${emailSignature()}`, { preheader: `Devolvemos ${total} do pedido #${id}.` });
+  return {
+    subject: orderSubject(id, 'estornado'),
+    html,
+    text: [`Olá, ${name}. Devolvemos ${total} do pedido #${id}.`, when, '', 'Dúvidas? Responda este e-mail.', `Pedido: ${url}`].join('\n'),
+  };
+}

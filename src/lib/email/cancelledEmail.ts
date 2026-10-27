@@ -1,6 +1,6 @@
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { sendEmail, emailEnabled } from '@/lib/email';
-import { buildCancelled } from '@/lib/email/orderStatusEmails';
+import { buildCancelled, buildRefunded } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL, type EmailItem, type EmailMoney } from '@/lib/email/layout';
 
 /**
@@ -45,5 +45,33 @@ export async function notifyOrderCancelled(
     });
   } catch (err) {
     console.error(`[notifyOrderCancelled] falha ao enviar e-mail do pedido ${orderId} (ignorado):`, err);
+  }
+}
+
+/**
+ * Avisa o cliente que o estorno foi concluído (pelo painel, por fora ou
+ * direto na AbacatePay). Antes ele só recebia "será devolvido" no
+ * cancelamento e nunca sabia quando o dinheiro voltou. Best-effort.
+ */
+export async function notifyOrderRefunded(
+  orderId: string,
+  order: { userId?: string; totalCents?: number; payment?: { method?: string } },
+  viaGateway: boolean,
+): Promise<void> {
+  if (!emailEnabled() || !order.userId) return;
+  try {
+    const uSnap = await adminDb.collection('users').doc(order.userId).get();
+    const userData = uSnap.data() ?? {};
+    let email = userData.email as string | undefined;
+    if (!email) {
+      try { email = (await adminAuth.getUser(order.userId)).email ?? undefined; } catch { /* conta removida */ }
+    }
+    if (!email) return;
+    const firstName = String(userData.name ?? userData.displayName ?? '').split(' ')[0] || 'cliente';
+    const method = !viaGateway ? 'outro' : order.payment?.method === 'card' ? 'card' : 'pix';
+    const payload = buildRefunded({ id: orderId, totalCents: order.totalCents ?? 0 }, firstName, method);
+    await sendEmail({ to: email, subject: payload.subject, text: payload.text, html: payload.html, from: 'noreply', replyTo: CONTACT_EMAIL });
+  } catch (err) {
+    console.error(`[notifyOrderRefunded] falha ao enviar e-mail do pedido ${orderId} (ignorado):`, err);
   }
 }

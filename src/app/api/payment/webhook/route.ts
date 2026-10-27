@@ -9,6 +9,7 @@ import { getClientIp } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
 import { expirePixOrder } from '@/lib/orders/expirePixOrder';
+import { notifyOrderRefunded } from '@/lib/email/cancelledEmail';
 import { webhookSchema } from './schema';
 
 
@@ -205,7 +206,11 @@ async function markOrderRefunded(orderId: string, chargeId: string, reason?: str
     });
     return o;
   });
-  if (!order || order.status === 'cancelled') return;
+  if (!order) return;
+  // Estorno chegou primeiro aqui (feito na AbacatePay): avisa o cliente. Pelo
+  // painel o pedido já fica "done" antes, então não sai e-mail em dobro.
+  await notifyOrderRefunded(orderId, order, true);
+  if (order.status === 'cancelled') return;
   const code = orderId.slice(-8).toUpperCase();
   await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
     type: 'refund',
