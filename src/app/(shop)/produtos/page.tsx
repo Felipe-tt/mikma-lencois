@@ -98,13 +98,13 @@ export default async function ProdutosPage({ searchParams }: Props) {
     <div>
       {/* ── Header ── */}
       <div className="border-b border-mist">
-        <div className="container-shop py-8 sm:py-12">
+        <div className="container-shop py-6 sm:py-8">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="font-semibold text-[10px] tracking-[0.24em] uppercase text-faint mb-3">
+              <p className="font-semibold text-[10px] tracking-[0.24em] uppercase text-faint mb-2">
                 {search ? 'Resultado da busca' : categoria ? `Catálogo / ${categoria}` : 'Catálogo'}
               </p>
-              <h1 className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight">
+              <h1 className="font-display font-normal text-ink text-3xl sm:text-4xl leading-tight">
                 {heading}
               </h1>
               <p className="text-[12px] text-faint mt-2 font-semibold">
@@ -124,7 +124,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <div className="container-shop py-8 sm:py-12 pb-20">
+      <div className="container-shop py-6 sm:py-8 pb-20">
         <div className="flex gap-12 items-start">
 
           {/* Sidebar desktop */}
@@ -180,7 +180,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                 ] : []}
               />
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-9">
                 {/* Prioridade alta só nas 2 primeiras (primeira linha no mobile);
                     mais que isso dilui o ganho e disputa banda com o LCP. */}
                 {products.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 2} />)}

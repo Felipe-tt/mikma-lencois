@@ -102,13 +102,13 @@ export default function PedidosPage() {
   return (
     <div>
       <div className="border-b border-mist bg-warm/60">
-        <div className="container-shop py-8 sm:py-12 flex items-end justify-between gap-4">
+        <div className="container-shop py-6 sm:py-8 flex items-end justify-between gap-4">
           <div>
             <Link href="/conta" className="group relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
               Área do cliente
             </Link>
-            <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-5xl leading-[1.05] tracking-[-0.015em]">Meus pedidos</h1>
+            <h1 className="font-display font-normal text-ink text-[1.9rem] sm:text-4xl leading-[1.05] tracking-[-0.015em]">Meus pedidos</h1>
           </div>
           <Link href="/perfil" className="inline-flex items-center h-9 px-4 shrink-0 rounded-full border border-mist-d text-[13px] font-medium text-mid hover:text-ink hover:border-ink hover:bg-paper transition-colors mb-1">
             Meus dados
@@ -116,7 +116,7 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      <div className="container-shop py-8 sm:py-12 pb-20 grid lg:grid-cols-[minmax(0,1fr)_300px] gap-8 lg:gap-12 items-start">
+      <div className="container-shop py-6 sm:py-8 pb-20 grid lg:grid-cols-[minmax(0,1fr)_300px] gap-8 lg:gap-12 items-start">
         <div className="min-w-0">
         {listError ? (
           <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-4 flex items-center justify-between gap-3">
