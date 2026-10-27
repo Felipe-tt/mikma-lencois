@@ -186,17 +186,6 @@ export async function POST(req: NextRequest) {
       0
     );
 
-    // ── Frete, recalculado do zero, nunca confiado do cliente ────────────────
-    const ledgerBalanceCents = await getShippingLedgerBalanceCents();
-    const shippingResult = await computeShippingOptions(address.cep, settings, productsCents, totalWeightKg, ledgerBalanceCents);
-    const matchedShipping = shippingResult.options.find(o => o.carrier === shipping.carrier);
-    if (!matchedShipping) {
-      return NextResponse.json(
-        { error: 'Opção de frete indisponível para este endereço. Recalcule o frete e tente novamente.' },
-        { status: 400 }
-      );
-    }
-    const shippingCents = matchedShipping.priceCents;
 
     // ── Validar cupom server-side (lido do carrinho, nunca do cliente) ────────
     // IMPORTANTE: leitura + checagem de maxUses + incremento de usedCount
@@ -228,6 +217,19 @@ export async function POST(req: NextRequest) {
         couponCode = cartCouponCode;
       }
     }
+
+    // ── Frete, recalculado do zero, nunca confiado do cliente ────────────────
+    const ledgerBalanceCents = await getShippingLedgerBalanceCents();
+    // Frete grátis conta os produtos menos o cupom (o seguro segue com o valor cheio).
+    const shippingResult = await computeShippingOptions(address.cep, settings, productsCents, totalWeightKg, ledgerBalanceCents, productsCents - couponDiscountCents);
+    const matchedShipping = shippingResult.options.find(o => o.carrier === shipping.carrier);
+    if (!matchedShipping) {
+      return NextResponse.json(
+        { error: 'Opção de frete indisponível para este endereço. Recalcule o frete e tente novamente.' },
+        { status: 400 }
+      );
+    }
+    const shippingCents = matchedShipping.priceCents;
 
     // ── Desconto PIX (calculado no servidor, lido das configurações). Depois
     // do cupom: os dois juntos nunca passam do valor dos produtos.
