@@ -29,11 +29,12 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    // Cancela pedidos pendentes
+    // Cancela pedidos não pagos (pendentes e com PIX vencido: este último
+    // ficava parado até o cron, sem o cliente que poderia pagar).
     const pendingOrders = await adminDb
       .collection('orders')
       .where('userId', '==', uid)
-      .where('status', '==', 'pending_payment')
+      .where('status', 'in', ['pending_payment', 'payment_expired'])
       .get();
 
     // Cada pedido pendente é cancelado na própria transação, relendo o
@@ -45,8 +46,9 @@ export async function DELETE(req: NextRequest) {
         const cancelled = await adminDb.runTransaction(async tx => {
           const snap = await tx.get(orderDoc.ref);
           const data = snap.data();
-          if (!data || data.status !== 'pending_payment') return null;
-          const lines = expandStockLines((data.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>);
+          if (!data || (data.status !== 'pending_payment' && data.status !== 'payment_expired')) return null;
+          // Só pending_payment ainda tem reserva (a do PIX vencido já foi liberada).
+          const lines = data.status !== 'pending_payment' ? [] : expandStockLines((data.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>);
           const invRefs = lines.map(l => adminDb.collection('inventory').doc(l.sku));
           const invSnaps = await Promise.all(invRefs.map(r => tx.get(r)));
           const now = new Date().toISOString();
@@ -73,7 +75,14 @@ export async function DELETE(req: NextRequest) {
 
     const batch = adminDb.batch();
     batch.delete(adminDb.doc(`users/${uid}`));
+    // Link do "Montar junto", se ligado: apontava para a conta apagada.
+    const shareToken = (await adminDb.doc(`carts/${uid}`).get()).data()?.share?.token as string | undefined;
+    if (shareToken) batch.delete(adminDb.doc(`sharedCarts/${shareToken}`));
     batch.delete(adminDb.doc(`carts/${uid}`));
+    batch.delete(adminDb.doc(`wishlists/${uid}`));
+    // Tokens de notificação do painel (conta de equipe).
+    const pushSnap = await adminDb.collection('pushTokens').where('uid', '==', uid).get();
+    for (const d of pushSnap.docs) batch.delete(d.ref);
 
     const notifSnap = await adminDb.collection(`notifications/${uid}/items`).get();
     for (const d of notifSnap.docs) batch.delete(d.ref);

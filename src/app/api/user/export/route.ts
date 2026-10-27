@@ -26,22 +26,39 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [userSnap, ordersSnap] = await Promise.all([
+    // Tudo o que a loja guarda ligado à conta (LGPD, direito de acesso),
+    // não só perfil e pedidos.
+    const email = (await adminAuth.getUser(uid).catch(() => null))?.email?.toLowerCase();
+    const [userSnap, ordersSnap, cartSnap, wishSnap, reviewsSnap, returnsSnap, restockSnap] = await Promise.all([
       adminDb.doc(`users/${uid}`).get(),
       adminDb.collection('orders').where('userId', '==', uid).get(),
+      adminDb.doc(`carts/${uid}`).get(),
+      adminDb.doc(`wishlists/${uid}`).get(),
+      adminDb.collection('reviews').where('userId', '==', uid).get(),
+      adminDb.collection('returns').where('userId', '==', uid).get(),
+      email ? adminDb.collection('restockRequests').where('email', '==', email).get() : null,
     ]);
 
     const userData = { ...(userSnap.data() ?? {}) };
     // Remove campos sensíveis
     delete userData.passwordHash;
-    delete userData.lgpdConsent;
 
-    const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Custo real do frete é dado interno da loja, não do cliente.
+    const orders = ordersSnap.docs.map(d => {
+      const o = d.data();
+      if (o.delivery) { const { realPriceCents: _cost, ...delivery } = o.delivery; o.delivery = delivery; }
+      return { id: d.id, ...o };
+    });
 
     const exportData = {
       exportedAt: new Date().toISOString(),
       user: { uid, ...userData },
       orders,
+      cart: cartSnap.data() ?? null,
+      wishlist: wishSnap.data() ?? null,
+      reviews: reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+      returns: returnsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+      restockRequests: restockSnap?.docs.map(d => ({ id: d.id, ...d.data() })) ?? [],
     };
 
     const filename = `meus-dados-${Date.now()}.json`; // não expõe uid no filename
