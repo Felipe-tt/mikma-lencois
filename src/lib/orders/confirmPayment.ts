@@ -109,7 +109,7 @@ export async function confirmOrderPaid(
           timeline: FieldValue.arrayUnion({
             status: data.status,
             at: now,
-            note: `Pagamento recebido depois do ${wasExpired ? 'vencimento' : 'cancelamento'} (${note}). Estorne o cliente ou marque o pedido como pago.`,
+            note: `Pagamento recebido depois do ${wasExpired ? 'vencimento' : 'cancelamento'} (${note}). ${wasExpired ? 'Marque o pedido como pago se ainda tiver os itens, ou estorne o cliente.' : 'Estorne o cliente.'}`,
           }),
         });
         lateCapture = data;
@@ -332,6 +332,11 @@ export async function confirmOrderPaid(
 async function alertLateCapture(orderId: string, order: FirebaseFirestore.DocumentData) {
   const code = orderId.slice(-8).toUpperCase();
   const total = formatCurrency(order.totalCents as number);
+  // PIX vencido ainda pode ser marcado como pago (se houver estoque); pedido
+  // cancelado não volta, só estorno.
+  const expired = order.status === 'payment_expired';
+  const what = expired ? 'estava com o PIX vencido' : 'já estava cancelado';
+  const action = expired ? 'Marque como pago se ainda tiver os itens, ou estorne.' : 'Estorne o cliente.';
   Sentry.captureMessage('confirm-order-paid: pagamento depois do cancelamento', {
     level: 'error', extra: { orderId, status: order.status },
   });
@@ -339,7 +344,7 @@ async function alertLateCapture(orderId: string, order: FirebaseFirestore.Docume
     await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
       type: 'late_payment',
       orderId,
-      message: `Pagamento de ${total} recebido no pedido #${code}, que já estava cancelado. Estorne ou marque como pago.`,
+      message: `Pagamento de ${total} recebido no pedido #${code}, que ${what}. ${action}`,
       read: false,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -347,8 +352,8 @@ async function alertLateCapture(orderId: string, order: FirebaseFirestore.Docume
     console.warn(`[confirm-order-paid] falha ao notificar pagamento atrasado do pedido ${orderId}:`, err);
   }
   await notifySeller({
-    title: 'Pagamento em pedido cancelado',
-    body: `#${code} · ${total} · estorne ou marque como pago`,
+    title: expired ? 'Pagamento em PIX vencido' : 'Pagamento em pedido cancelado',
+    body: `#${code} · ${total} · ${expired ? 'marque como pago ou estorne' : 'estorne o cliente'}`,
     url: `/painel/pedidos/${orderId}`,
     data: { orderId, event: 'late_payment' },
   });
