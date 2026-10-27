@@ -13,6 +13,11 @@ export function escapeHtml(value: unknown): string {
     .replace(/'/g, '&#39;');
 }
 
+/** Escape para XML (feeds): o de HTML serve, menos caracteres de controle, que XML não aceita. */
+export function escapeXml(value: unknown): string {
+  return escapeHtml(String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, ''));
+}
+
 /**
  * Serializa dados para dentro de <script type="application/ld+json">.
  * JSON.stringify não escapa "</script>", então um texto como
