@@ -41,3 +41,32 @@ export function reloadOnce(): boolean {
 export function clearReloadAttempt(): void {
   window.sessionStorage.removeItem(RELOAD_KEY);
 }
+
+// Depois de um deploy, uma aba aberta antes dele pode carregar arquivos
+// novos que usam módulos já carregados da versão antiga. Os nomes internos
+// (minificados) não batem e aparece um erro qualquer, como "(0, n.D) is not
+// a function" (visto em produção depois da atualização do Firebase, Sentry
+// JAVASCRIPT-NEXTJS-H). Não dá para reconhecer pela mensagem, então a cada
+// erro pergunta ao servidor a versão no ar: se mudou, recarrega uma vez.
+let versionCheck: Promise<boolean> | null = null;
+
+export function hasNewVersion(): Promise<boolean> {
+  const mine = process.env.NEXT_PUBLIC_BUILD_VERSION;
+  if (!mine) return Promise.resolve(false);
+  // Uma checagem por vez, e o resultado vale por 10 s (vários erros seguidos
+  // não viram vários pedidos). Falha de rede não fica guardada: durante o
+  // próprio deploy o servidor pode não responder.
+  versionCheck ??= fetch('/api/version', { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+    .then((d: { version?: string }) => {
+      setTimeout(() => { versionCheck = null; }, 10_000);
+      return !!d?.version && d.version !== mine;
+    })
+    .catch(() => { versionCheck = null; return false; });
+  return versionCheck;
+}
+
+/** Erro qualquer: recarrega uma vez se ele veio de código de uma versão velha. */
+export function reloadIfStale(): void {
+  void hasNewVersion().then(stale => { if (stale) reloadOnce(); });
+}

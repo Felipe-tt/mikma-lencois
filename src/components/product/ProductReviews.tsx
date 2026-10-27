@@ -1,7 +1,6 @@
 'use client';
 import { userMessage } from '@/lib/userMessage';
 import { useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase/client';
 import { loadFirestore } from '@/lib/firebase/lazyDb';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { StarRating } from './StarRating';
@@ -54,7 +53,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
     setSubmitting(true);
     setError('');
     try {
-      const token = await auth.currentUser!.getIdToken();
+      const token = await user!.getIdToken();
       const res = await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

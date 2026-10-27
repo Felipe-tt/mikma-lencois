@@ -1,7 +1,14 @@
 import { withSentryConfig } from '@sentry/nextjs/config';
 
+// Identifica este build no navegador e no servidor (ver /api/version e
+// lib/chunkErrorReload.ts): uma aba aberta antes de um deploy que quebra ao
+// misturar código antigo e novo descobre que há versão nova e recarrega.
+const BUILD_VERSION = process.env.K_REVISION || process.env.GITHUB_SHA || String(Date.now());
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: { NEXT_PUBLIC_BUILD_VERSION: BUILD_VERSION },
+
   serverExternalPackages: ['@node-rs/argon2', 'firebase-admin'],
 
   // Sentry só pra erros: corta do bundle os logs de debug e o rastreamento
