@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
+import { notifyOrderRefunded } from '@/lib/email/cancelledEmail';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
@@ -94,18 +95,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   }
 
   const brl = (claim.totalCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  await ref.update({
-    'payment.refundStatus': 'done',
-    'payment.refundedAt': FieldValue.serverTimestamp(),
-    'payment.refundedBy': uid,
-    'payment.refundId': result.data.id,
-    'payment.refundClaimAt': FieldValue.delete(),
-    updatedAt: FieldValue.serverTimestamp(),
-    timeline: FieldValue.arrayUnion({
-      status: 'cancelled',
-      at: new Date().toISOString(),
-      note: `Estorno de ${brl} feito pela AbacatePay por ${email ?? uid}`,
-    }),
+  // Transação: o webhook do estorno pode ter chegado antes e já fechado o
+  // pedido (e avisado o cliente). Só quem fecha agora manda o e-mail.
+  const closedHere = await adminDb.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const o = snap.data();
+    const already = (o?.payment as { refundStatus?: string } | undefined)?.refundStatus === 'done';
+    tx.update(ref, {
+      'payment.refundStatus': 'done',
+      ...(already ? {} : { 'payment.refundedAt': FieldValue.serverTimestamp(), 'payment.refundedBy': uid }),
+      'payment.refundId': result.data.id,
+      'payment.refundClaimAt': FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+      timeline: FieldValue.arrayUnion({
+        status: 'cancelled',
+        at: new Date().toISOString(),
+        note: `Estorno de ${brl} feito pela AbacatePay por ${email ?? uid}`,
+      }),
+    });
+    return already ? null : o ?? null;
   });
+  if (closedHere) await notifyOrderRefunded(orderId, closedHere, true);
   return NextResponse.json({ ok: true, refundId: result.data.id });
 }
