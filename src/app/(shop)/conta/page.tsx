@@ -95,16 +95,16 @@ export default function ContaPage() {
     <div>
       {/* ── Cabeçalho com avatar ── */}
       <div className="border-b border-mist bg-warm/60">
-        <div className="container-shop py-6 sm:py-9 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-8 animate-fade-up">
-          <span aria-hidden="true" className="w-[72px] h-[72px] sm:w-20 sm:h-20 shrink-0 rounded-full bg-clay text-paper font-display text-[2rem] sm:text-[2.3rem] flex items-center justify-center shadow-[0_12px_28px_-14px_rgba(180,87,68,0.7)] ring-4 ring-paper">
+        <div className="container-shop py-6 sm:py-9 flex items-center gap-4 sm:gap-8 animate-fade-up">
+          <span aria-hidden="true" className="w-14 h-14 sm:w-20 sm:h-20 shrink-0 rounded-full bg-clay text-paper font-display text-[1.6rem] sm:text-[2.3rem] flex items-center justify-center shadow-[0_12px_28px_-14px_rgba(180,87,68,0.7)] ring-4 ring-paper">
             {initial}
           </span>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium tracking-[0.08em] text-faint mb-2">Área do cliente</p>
-            <h1 className="font-display font-normal text-ink text-[2rem] sm:text-[2.6rem] leading-[1.05] tracking-[-0.015em]">
+            <p className="text-[11px] font-medium tracking-[0.08em] text-faint mb-1 sm:mb-2">Área do cliente</p>
+            <h1 className="font-display font-normal text-ink text-[1.75rem] sm:text-[2.6rem] leading-[1.05] tracking-[-0.015em]">
               Olá, {firstName}
             </h1>
-            <p className="text-[13px] text-mid mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="text-[12px] sm:text-[13px] text-mid mt-1 sm:mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <span className="truncate">{user.email}</span>
               {since && <><span className="text-mist-d" aria-hidden="true">·</span><span>Cliente desde {since}</span></>}
             </p>
@@ -132,41 +132,36 @@ export default function ContaPage() {
           )}
         </section>
 
-        {/* ── Resumo rápido ── */}
-        <section aria-label="Resumo da conta" className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 animate-fade-up [animation-delay:120ms]">
-          <Stat href="/conta/pedidos" label={placed === 1 ? 'Pedido' : 'Pedidos'} value={placed} />
-          <Stat href="/favoritos" label={productIds.length === 1 ? 'Favorito' : 'Favoritos'} value={productIds.length} />
-          <Stat
-            href="/perfil"
-            label="Endereço"
-            // Rua e número, não só a cidade: dá pra conferir de relance se é
-            // o endereço certo antes de comprar.
-            value={address === undefined ? undefined : address ? (streetLine(address) || cityLine(address)) : 'Adicionar'}
-            hint={address ? cityLine(address) : address === null ? 'Nenhum salvo' : undefined}
-            small
-            className="col-span-2 sm:col-span-1"
-          />
-        </section>
-
         {/* ── Atalhos ── */}
         <section aria-label="Atalhos" className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-fade-up [animation-delay:180ms]">
-          {LINKS.map(({ href, label, desc, icon }) => (
+          {/* As contagens e o endereço vão na própria linha do atalho (antes
+              eram cartões à parte que repetiam os mesmos links). */}
+          {LINKS.map(({ href, label, desc: baseDesc, icon }) => {
+            const desc = href === '/conta/pedidos' && orders !== null
+              ? `${placed} ${placed === 1 ? 'pedido' : 'pedidos'} · status e rastreio`
+              : href === '/favoritos'
+                ? `${productIds.length} ${productIds.length === 1 ? 'produto salvo' : 'produtos salvos'}`
+                : href === '/perfil' && address !== undefined
+                  ? (address ? [streetLine(address), cityLine(address)].filter(Boolean).join(' · ') : 'Nenhum endereço salvo')
+                  : baseDesc;
+            return (
             <Link
               key={href}
               href={href}
-              className="group flex items-center gap-4 sm:gap-5 rounded-2xl border border-mist bg-paper px-5 py-5 sm:px-6 hover:border-mist-d hover:bg-warm/50 hover:shadow-[0_14px_30px_-22px_rgba(30,18,8,0.35)] transition-[background-color,border-color,box-shadow] duration-200"
+              className="group flex items-center gap-4 sm:gap-5 rounded-2xl border border-mist bg-paper px-4 py-3.5 sm:px-6 sm:py-5 hover:border-mist-d hover:bg-warm/50 hover:shadow-[0_14px_30px_-22px_rgba(30,18,8,0.35)] transition-[background-color,border-color,box-shadow] duration-200"
             >
               <span aria-hidden="true" className="w-11 h-11 rounded-full bg-clay/10 text-clay flex items-center justify-center shrink-0 transition-colors duration-200 group-hover:bg-clay group-hover:text-paper">{icon}</span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-semibold text-ink">{label}</span>
-                <span className="block text-[13px] text-mid mt-0.5 leading-snug">{desc}</span>
+                <span className={`block text-[13px] text-mid mt-0.5 leading-snug ${href === '/perfil' ? 'truncate' : ''}`}>{desc}</span>
               </span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
                 className="shrink-0 text-faint transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:text-ink">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </Link>
-          ))}
+            );
+          })}
         </section>
 
         <button
@@ -178,20 +173,6 @@ export default function ContaPage() {
         </button>
       </div>
     </div>
-  );
-}
-
-function Stat({ href, label, value, hint, small, className = '' }: { href: string; label: string; value: number | string | undefined; hint?: string; small?: boolean; className?: string }) {
-  return (
-    <Link href={href} className={`group rounded-2xl border border-mist bg-paper px-4 py-4 sm:px-6 sm:py-5 hover:border-mist-d hover:bg-warm/50 transition-colors duration-200 min-w-0 ${className}`}>
-      <span className="block text-[10px] sm:text-[11px] font-semibold tracking-[0.1em] uppercase text-faint">{label}</span>
-      {value === undefined ? (
-        <span className="skeleton block h-7 w-12 mt-2" />
-      ) : (
-        <span title={typeof value === 'string' ? value : undefined} className={`block font-display text-ink leading-none mt-2 tabular-nums truncate ${small ? 'text-[1.05rem] sm:text-[1.6rem] leading-tight' : 'text-[1.8rem] sm:text-[2.2rem]'}`}>{value}</span>
-      )}
-      {hint && <span className="block text-[11px] sm:text-[12px] text-faint mt-1.5 truncate">{hint}</span>}
-    </Link>
   );
 }
 
