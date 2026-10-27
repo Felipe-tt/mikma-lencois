@@ -25,15 +25,15 @@ export function Avatar({ name, size = 28, ring = true }: { name: string; size?: 
 }
 
 /** Quem está online: bolinhas sobrepostas e o texto pra leitor de tela. */
-export function OnlineStack({ people }: { people: { name: string; owner?: boolean }[] }) {
+export function OnlineStack({ people, max = 5 }: { people: { name: string; owner?: boolean }[]; max?: number }) {
   if (people.length === 0) return null;
   const label = people.map(p => p.owner ? `${p.name} (quem compartilhou)` : p.name).join(', ');
   return (
     <span className="inline-flex items-center gap-2">
       <span className="flex -space-x-2">
-        {people.slice(0, 5).map((p, i) => <Avatar key={p.name + i} name={p.name} />)}
+        {people.slice(0, max).map((p, i) => <Avatar key={p.name + i} name={p.name} />)}
       </span>
-      {people.length > 5 && <span className="text-[12px] text-mid">+{people.length - 5}</span>}
+      {people.length > max && <span className="text-[12px] text-mid">+{people.length - max}</span>}
       <span className="sr-only">Online agora: {label}</span>
     </span>
   );
@@ -83,7 +83,7 @@ export function ChatBox({ messages, now, me, onSend, id }: {
       {messages.length === 0
         ? <p className="text-[12px] text-faint mb-3">Mande um recado pra quem está montando, tipo &quot;essa cor combina com o quarto?&quot;.</p>
         : (
-          <ol ref={listRef} className="mb-3 flex max-h-72 flex-col gap-2.5 overflow-y-auto pr-1" aria-label="Recados">
+          <ol ref={listRef} className="mb-3 flex max-h-[min(60dvh,32rem)] flex-col gap-2.5 overflow-y-auto pr-1" aria-label="Recados">
             {messages.map((m, i) => {
               const mine = m.by === me;
               // Seguidas da mesma pessoa: nome só na primeira, bolinha só na última.
