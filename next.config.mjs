@@ -4,6 +4,14 @@ import { withSentryConfig } from '@sentry/nextjs/config';
 const nextConfig = {
   serverExternalPackages: ['@node-rs/argon2', 'firebase-admin'],
 
+  // Sentry só pra erros: corta do bundle os logs de debug e o rastreamento
+  // de performance (2% das visitas, que ninguém olhava e passava pelo
+  // túnel /monitoring). As opções de "treeshake" do Sentry lá embaixo só
+  // valem pro webpack, e o build usa Turbopack.
+  compiler: {
+    define: { __SENTRY_DEBUG__: 'false', __SENTRY_TRACING__: 'false' },
+  },
+
   images: {
     // Só as fotos do bucket da loja: antes qualquer bucket do Firebase (e
     // qualquer imagem do Google) podia ser otimizada aqui, queimando CPU e

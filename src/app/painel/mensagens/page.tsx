@@ -4,7 +4,8 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, limit } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/client';
+import { auth } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { formatTsDateTime } from '@/lib/utils/format';
 import type { EmailMessage, EmailAttachment, Conversation } from '@/types';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';

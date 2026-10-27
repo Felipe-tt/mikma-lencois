@@ -5,7 +5,7 @@ import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { maskCep, maskPhone } from '@/lib/masks';
 import type { Order, User } from '@/types';

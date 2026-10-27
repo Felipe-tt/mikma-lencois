@@ -29,7 +29,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc, serverTimestamp, setDoc, deleteDoc, collection, query, where, limit as fbLimit, getDocs, type DocumentReference } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { storage } from '@/lib/firebase/storage';
 import type { Product } from '@/types';
 import { hexToColorName, sampleDominantColor, TEXTILE_COLORS } from '@/lib/colorNames';

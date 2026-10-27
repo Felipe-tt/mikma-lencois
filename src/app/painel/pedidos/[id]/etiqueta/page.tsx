@@ -4,7 +4,7 @@ import { SIZE_LABEL } from '@/lib/productOptions';
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import type { Order, User } from '@/types';
 import type { StoreSettings } from '@/lib/store-settings';
 import { STORE_DEFAULTS } from '@/lib/store-settings';

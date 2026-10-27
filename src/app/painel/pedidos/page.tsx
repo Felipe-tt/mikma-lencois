@@ -3,7 +3,8 @@ import React from 'react';
 
 import { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, where, limit } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/client';
+import { auth } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
 import { PainelSkeleton } from '@/components/painel/PainelSkeleton';

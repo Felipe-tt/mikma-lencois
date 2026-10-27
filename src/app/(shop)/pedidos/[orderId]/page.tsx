@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
 
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/types';
 import { formatCurrency, formatTs, formatTsDateTime } from '@/lib/utils/format';

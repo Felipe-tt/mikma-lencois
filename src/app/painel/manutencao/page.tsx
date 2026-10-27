@@ -4,7 +4,7 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { collection, limit, onSnapshot, orderBy, query, doc } from 'firebase/firestore';
 
 type QueueEntry = {

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, browserPopupRedirectResolver } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 
 interface Props { onError?: (msg: string) => void }
@@ -11,7 +11,9 @@ export function GoogleSignInButton({ onError }: Props) {
   async function handleClick() {
     setLoading(true);
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      // O resolver vem aqui (e não no initializeAuth) pra não carregar o
+      // iframe do Google em toda página.
+      await signInWithPopup(auth, new GoogleAuthProvider(), browserPopupRedirectResolver);
     } catch (e: unknown) {
       const code = (e as { code?: string } | null)?.code ?? (e instanceof Error ? e.message : '');
       if (/popup-closed-by-user|cancelled-popup-request/.test(code)) {

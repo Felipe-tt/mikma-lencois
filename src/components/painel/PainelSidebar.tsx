@@ -5,7 +5,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import {
   IconHome, IconOrders, IconMessages, IconProducts,
   IconInventory, IconReports, IconCoupons, IconSettings, IconMaintenance, IconExchange, IconStar,

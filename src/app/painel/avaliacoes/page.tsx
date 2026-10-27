@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/client';
+import { auth } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import type { Review } from '@/types';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';

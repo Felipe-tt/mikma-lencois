@@ -6,15 +6,7 @@ import {
   indexedDBLocalPersistence,
   browserLocalPersistence,
   inMemoryPersistence,
-  browserPopupRedirectResolver,
 } from 'firebase/auth'
-import {
-  connectFirestoreEmulator,
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  memoryLocalCache,
-} from 'firebase/firestore'
 
 // __FIREBASE_DEFAULTS__ is injected at runtime by Firebase Hosting / Cloud Run.
 // NEXT_PUBLIC_* vars only exist at build time.
@@ -74,10 +66,9 @@ function createAuth() {
       persistence: supportsIndexedDbPersistence()
         ? [indexedDBLocalPersistence, browserLocalPersistence, inMemoryPersistence]
         : [browserLocalPersistence, inMemoryPersistence],
-      // getAuth() inclui um popupRedirectResolver por padrão; initializeAuth()
-      // não. Sem isso, signInWithPopup/signInWithRedirect (login com Google)
-      // lança "auth/argument-error" ao tentar resolver o fluxo OAuth.
-      popupRedirectResolver: browserPopupRedirectResolver,
+      // Sem popupRedirectResolver aqui: ele carregava o iframe do Google
+      // (apis.google.com) em toda página. O login com Google passa o
+      // resolver na própria chamada (ver services/auth.ts).
     })
   } catch {
     // initializeAuth já foi chamado para este app (ex.: hot-reload em dev)
@@ -87,28 +78,10 @@ function createAuth() {
 
 export const auth = createAuth()
 
-// Cache local persistente (IndexedDB): o app continua funcionando com
-// internet ruim/instável na loja, as vendas ficam guardadas no
-// aparelho e sincronizam sozinhas assim que a conexão volta, sem o
-// vendedor perceber nada nem precisar refazer a venda.
-// IndexedDB só existe no navegador, então no servidor (SSR/build) cai
-// pro cache em memória, que é o suficiente já que não há usuário ali.
-// Mesma checagem defensiva do Auth acima: ambiente com IndexedDB pela
-// metade cai pro cache em memória em vez de arriscar o mesmo tipo de
-// bug interno do SDK.
-export const db = initializeFirestore(app, {
-  localCache:
-    typeof window !== 'undefined' && supportsIndexedDbPersistence()
-      ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-      : memoryLocalCache(),
-})
-
-// Desenvolvimento local com Firebase Emulator Suite (Auth + Firestore):
-// NEXT_PUBLIC_FIREBASE_EMULATORS=1 no .env.local. Nunca setado em produção.
+// Emulador do Auth em desenvolvimento (o do Firestore fica em db.ts).
 if (process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === '1' && typeof window !== 'undefined') {
   try {
     connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
-    connectFirestoreEmulator(db, '127.0.0.1', 8080)
   } catch {
     // Já conectado (hot-reload em dev)
   }

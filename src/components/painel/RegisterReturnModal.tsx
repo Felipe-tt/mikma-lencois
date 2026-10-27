@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { addDoc, collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Order, ReturnItem, ReturnType } from '@/types';
 import { IconX } from '@/components/ui/Icon';

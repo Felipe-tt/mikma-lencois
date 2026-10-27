@@ -1,8 +1,8 @@
 'use client';
 import { userMessage } from '@/lib/userMessage';
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/client';
+import { auth } from '@/lib/firebase/client';
+import { loadFirestore } from '@/lib/firebase/lazyDb';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { StarRating } from './StarRating';
 import { formatDate } from '@/lib/utils/format';
@@ -34,6 +34,7 @@ export function ProductReviews({ productId, initialReviews }: Props) {
     if (!user) { setEligibleOrderId(null); return; }
     let cancelled = false;
     (async () => {
+      const { db, collection, query, where, getDocs } = await loadFirestore();
       const [ordersSnap, myReviewsSnap] = await Promise.all([
         getDocs(query(collection(db, 'orders'), where('userId', '==', user.uid), where('status', '==', 'delivered'))),
         getDocs(query(collection(db, 'reviews'), where('userId', '==', user.uid), where('productId', '==', productId))),

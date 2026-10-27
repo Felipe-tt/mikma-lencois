@@ -2,7 +2,7 @@
 import { plural } from '@/lib/plural';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { doc, getDoc, writeBatch, increment, arrayUnion, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { IconBox, IconCheck, IconX, IconSearch, IconReceipt, IconMinusCircle, IconPlusCircle } from '@/components/ui/Icon';
 import { variantLabel as variantLabelOf } from '@/lib/variantLabel';
