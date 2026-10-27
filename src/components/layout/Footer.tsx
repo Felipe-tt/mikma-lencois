@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { parseBusinessHours, getOpenStatus } from '@/lib/business-hours';
 import { CookiePreferencesButton } from '@/components/layout/CookiePreferencesButton';
@@ -39,6 +40,22 @@ export function Footer({
   const storeName = storeNameRaw?.trim() || 'Mikma Lençóis';
   const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
   const status = businessHours ? getOpenStatus(parseBusinessHours(businessHours), businessHoursTimezone) : null;
+
+  // No checkout, só uma linha discreta: o rodapé completo (categorias,
+  // links institucionais) tira a atenção de quem está pagando.
+  const pathname = usePathname();
+  if (pathname?.startsWith('/checkout')) return (
+    <footer className="border-t border-mist">
+      <div className="container-shop py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[12px] text-faint">
+        <p>© {year} {storeName}{cnpj ? ` · CNPJ ${cnpj}` : ''}</p>
+        <nav aria-label="Ajuda" className="flex gap-4">
+          <Link href="/trocas-e-devolucoes" className="hover:text-ink transition-colors">Trocas e devoluções</Link>
+          <Link href="/privacidade" className="hover:text-ink transition-colors">Privacidade</Link>
+          <Link href="/termos" className="hover:text-ink transition-colors">Termos</Link>
+        </nav>
+      </div>
+    </footer>
+  );
 
   return (
     <footer className="theme-locked bg-ink text-paper mt-auto overflow-hidden">
