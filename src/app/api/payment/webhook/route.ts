@@ -10,6 +10,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
 import { expirePixOrder } from '@/lib/orders/expirePixOrder';
 import { notifyOrderRefunded } from '@/lib/email/cancelledEmail';
+import { verifyChargePaid } from '@/lib/orders/verifyCharge';
 import { webhookSchema } from './schema';
 
 
@@ -101,6 +102,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    const gate = await gateCharge(orderId, txId, parsed.devMode);
+    if (gate) return gate;
     try {
       const label = txId.startsWith('card_') ? 'Cartão aprovado' : 'PIX confirmado';
       await confirmOrderPaid(orderId, txId, `${label} · txId: ${txId.slice(-8)}`, undefined, chargePaidCents(transparent));
@@ -122,6 +125,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    const gate = await gateCharge(orderId, txId, parsed.devMode);
+    if (gate) return gate;
     try {
       await confirmOrderPaid(orderId, txId, `Cartão confirmado · checkoutId: ${txId.slice(-8)}`, undefined, chargePaidCents(checkoutData));
     } catch {
@@ -173,6 +178,40 @@ function chargeOrderId(charge: Record<string, unknown> | undefined): string | un
   if (typeof charge.externalId === 'string' && charge.externalId) return charge.externalId;
   const meta = charge.metadata as Record<string, unknown> | undefined;
   return typeof meta?.orderId === 'string' && meta.orderId ? meta.orderId : undefined;
+}
+
+// Antes de confirmar um pagamento: o aviso tem que ser do mesmo ambiente do
+// pedido (teste x produção) e a cobrança tem que constar como paga na
+// própria AbacatePay. Devolve a resposta para o gateway quando não segue.
+async function gateCharge(orderId: string, chargeId: string, devMode: unknown): Promise<NextResponse | null> {
+  const order = (await adminDb.collection('orders').doc(orderId).get()).data();
+  if (!order) return NextResponse.json({ ok: true });
+  const sandbox = !!(order.payment as { abacateSandbox?: boolean } | undefined)?.abacateSandbox;
+  if (typeof devMode === 'boolean' && devMode !== sandbox) {
+    await alertSuspicious(orderId, `aviso de ${devMode ? 'teste' : 'produção'} para pedido de ${sandbox ? 'teste' : 'produção'}`);
+    return NextResponse.json({ ok: true, ignored: true });
+  }
+  const verdict = await verifyChargePaid(chargeId, orderId, sandbox);
+  if (verdict.kind === 'pending') {
+    // Ainda não consta como paga: 503 faz a AbacatePay reenviar o aviso.
+    return NextResponse.json({ error: 'Cobrança ainda não confirmada' }, { status: 503 });
+  }
+  if (verdict.kind === 'rejected') {
+    await alertSuspicious(orderId, verdict.reason);
+    return NextResponse.json({ ok: true, ignored: true });
+  }
+  return null; // 'paid' ou consulta indisponível: segue pelo aviso assinado
+}
+
+async function alertSuspicious(orderId: string, reason: string) {
+  Sentry.captureMessage('payment-webhook: pagamento não confirmado na AbacatePay', { level: 'error', extra: { orderId, reason } });
+  await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
+    type: 'payment_check',
+    orderId,
+    message: `Aviso de pagamento do pedido #${orderId.slice(-8).toUpperCase()} não confere com a AbacatePay (${reason}). O pedido não foi marcado como pago.`,
+    read: false,
+    createdAt: FieldValue.serverTimestamp(),
+  }).catch(() => {});
 }
 
 // Valor recebido segundo o evento (centavos), quando ele traz.
