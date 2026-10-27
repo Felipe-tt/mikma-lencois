@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useOverlay } from '@/lib/hooks/useOverlay';
+import { SearchSuggestions } from '@/components/layout/SearchSuggestions';
 import { setReturnTo } from '@/lib/auth/returnTo';
 
 interface Props { topbarText?: string; freeShippingThresholdCents?: number }
@@ -131,6 +132,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
 
           {/* Search inline */}
           <div inert={!searchOpen} className={`hidden items-center flex-1 min-w-0 mx-6 lg:mx-8 ${searchOpen ? 'md:flex animate-fade-in' : ''}`}>
+            <div className="relative flex-1">
             <form onSubmit={handleSearch} className="flex items-center gap-2.5 flex-1 h-10 px-4 rounded-full bg-warm/70 border border-transparent focus-within:border-mist-d focus-within:bg-paper transition-colors">
               <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-faint shrink-0">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -152,6 +154,11 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
               )}
               <button type="submit" className="sr-only">Buscar</button>
             </form>
+            {searchOpen && (
+              <SearchSuggestions query={query} onPick={() => { setSearchOpen(false); setQuery(''); }}
+                className="absolute left-0 right-0 top-12 z-50 rounded-2xl border border-mist bg-paper shadow-[0_18px_40px_-20px_rgba(30,18,8,0.35)] overflow-hidden" />
+            )}
+            </div>
           </div>
 
           {/* Actions */}
@@ -284,6 +291,7 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                   className="flex-1 min-w-0 bg-transparent text-[16px] text-ink placeholder:text-faint outline-none" />
                 <button type="submit" className="sr-only">Buscar</button>
               </form>
+              <SearchSuggestions query={query} onPick={() => { setMenuOpen(false); setQuery(''); }} className="-mx-4 mt-2" />
             </div>
 
             {/* Links principais em tipo de título, cada um numa linha com
