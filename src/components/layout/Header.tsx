@@ -11,6 +11,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useOverlay } from '@/lib/hooks/useOverlay';
 import { SearchSuggestions } from '@/components/layout/SearchSuggestions';
+import { CATEGORIES } from '@/lib/productOptions';
 import { setReturnTo } from '@/lib/auth/returnTo';
 
 interface Props { topbarText?: string; freeShippingThresholdCents?: number }
@@ -316,6 +317,20 @@ export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
                   );
                 })}
               </ul>
+
+              {/* Atalho direto para cada categoria (antes eram dois toques:
+                  Produtos e depois o filtro). */}
+              <div className="animate-drawer-item px-5 pt-5" style={{ animationDelay: `${70 + NAV_LINKS.length * 40}ms` }}>
+                <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-faint mb-2.5">Categorias</p>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.map(c => (
+                    <NavLink key={c} href={`/produtos?categoria=${encodeURIComponent(c)}`}
+                      className="h-10 px-4 inline-flex items-center rounded-full border border-mist text-[13px] font-medium text-ink hover:border-ink transition-colors">
+                      {c}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
 
               <div className="animate-drawer-item px-5 pt-7 pb-6 flex flex-col gap-1" style={{ animationDelay: `${70 + NAV_LINKS.length * 40}ms` }}>
                 {authLoading ? null : user ? (
