@@ -14,6 +14,8 @@ import {
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { NFE_DEFAULTS } from '@/lib/nfe/config';
+import { NfeTokens } from '@/components/painel/NfeTokens';
 import { db } from '@/lib/firebase/db';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
@@ -109,6 +111,14 @@ export default function ConfiguracoesPage() {
     }
     if (settings.storeCnpj && !isValidCnpj(settings.storeCnpj)) {
       setSaveError('CNPJ incompleto, confira antes de salvar.');
+      return;
+    }
+    if (settings.nfeCnpj && !isValidCnpj(settings.nfeCnpj)) {
+      setSaveError('CNPJ da nota fiscal inválido, confira antes de salvar.');
+      return;
+    }
+    if (settings.nfeNcm && settings.nfeNcm.replace(/\D/g, '').length !== 8) {
+      setSaveError('O NCM da nota fiscal precisa ter 8 dígitos.');
       return;
     }
     setSaveError('');
@@ -453,6 +463,44 @@ export default function ConfiguracoesPage() {
               warn="TESTE ATIVO, os PIX/checkouts gerados são de Dev Mode e não cobram nada de verdade. Desligue antes de vender de verdade."
             />
           </Card>
+
+          {isAdmin && (
+            <Card icon="shield" title="Nota fiscal (NF-e)" desc="Emissão pela Focus NFe. Teste em homologação antes de ligar a produção">
+              <Toggle
+                label="Emitir a nota automaticamente quando o pedido for pago"
+                checked={!!settings.nfeAutoEmit}
+                onChange={v => { set('nfeAutoEmit', v); if (v) set('nfeAutoEmitSince', new Date().toISOString()); }}
+                hint="Desligado: a nota é emitida pelo botão no pedido. Ligado: sai sozinha depois do pagamento, só para pedidos pagos a partir de agora."
+              />
+              <Toggle
+                label="Usar ambiente de homologação (teste, sem valor fiscal)"
+                checked={(settings.nfeEnvironment ?? NFE_DEFAULTS.environment) === 'homologacao'}
+                onChange={v => set('nfeEnvironment', v ? 'homologacao' : 'producao')}
+                hint="Com a emissão automática ligada, as notas vão para homologação enquanto isto estiver ligado. No pedido sempre dá para emitir uma nota de teste à parte."
+                warn="HOMOLOGAÇÃO: as notas automáticas não têm valor fiscal. Desligue para emitir de verdade."
+              />
+              <Divider label="Tokens da Focus NFe" />
+              <NfeTokens user={user} />
+              <Divider label="Dados fiscais (confirme com a contabilidade)" />
+              <Row>
+                <F label="CNPJ do emitente" value={settings.nfeCnpj ?? NFE_DEFAULTS.cnpj} onChange={v => set('nfeCnpj', v)} inputMode="numeric" maxLength={18} />
+                <F label="UF do emitente" value={settings.nfeUfEmitente ?? NFE_DEFAULTS.ufEmitente} onChange={v => set('nfeUfEmitente', v.toUpperCase())} maxLength={2} />
+              </Row>
+              <Row>
+                <F label="NCM" value={settings.nfeNcm ?? NFE_DEFAULTS.ncm} onChange={v => set('nfeNcm', v)} inputMode="numeric" maxLength={10} hint="6302.10.00 = roupa de cama de malha" />
+                <F label="CSOSN (ICMS)" value={settings.nfeCsosn ?? NFE_DEFAULTS.csosn} onChange={v => set('nfeCsosn', v)} inputMode="numeric" maxLength={3} hint="102 = Simples Nacional sem crédito" />
+              </Row>
+              <Row>
+                <F label="CST PIS/COFINS" value={settings.nfePisCofinsCst ?? NFE_DEFAULTS.pisCofinsCst} onChange={v => set('nfePisCofinsCst', v)} inputMode="numeric" maxLength={2} />
+                <F label="Natureza da operação" value={settings.nfeNaturezaOperacao ?? NFE_DEFAULTS.naturezaOperacao} onChange={v => set('nfeNaturezaOperacao', v)} maxLength={60} />
+              </Row>
+              <Row>
+                <F label="CFOP dentro do estado" value={settings.nfeCfopInterno ?? NFE_DEFAULTS.cfopInterno} onChange={v => set('nfeCfopInterno', v)} inputMode="numeric" maxLength={4} />
+                <F label="CFOP para outros estados" value={settings.nfeCfopInterestadual ?? NFE_DEFAULTS.cfopInterestadual} onChange={v => set('nfeCfopInterestadual', v)} inputMode="numeric" maxLength={4} />
+              </Row>
+              <TA label="Informações adicionais" value={settings.nfeInfoAdicional ?? NFE_DEFAULTS.infoAdicional} onChange={v => set('nfeInfoAdicional', v)} rows={2} />
+            </Card>
+          )}
 
           <Card icon="shield" title="Margem de erro, Uber Direct" desc="O preço da Uber é recotado no momento do despacho, se a diferença passar dessa margem, o despacho é bloqueado até você confirmar">
             <Row>

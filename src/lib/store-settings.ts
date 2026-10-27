@@ -51,6 +51,20 @@ export type StoreSettings = {
   // não por outra URL — ver ABACATEPAY_SANDBOX_API_KEY em create-pix e
   // create-checkout. Nunca guarda a key aqui, só a flag.
   abacatePaySandboxMode?: boolean;
+  // Nota fiscal (NF-e pela Focus NFe), ver src/lib/nfe/config.ts. Vazio =
+  // padrão de lá. Tokens nunca ficam aqui (secureConfig/nfe, criptografado).
+  nfeAutoEmit?: boolean;
+  nfeAutoEmitSince?: string;
+  nfeEnvironment?: 'producao' | 'homologacao';
+  nfeCnpj?: string;
+  nfeUfEmitente?: string;
+  nfeNcm?: string;
+  nfeCsosn?: string;
+  nfePisCofinsCst?: string;
+  nfeCfopInterno?: string;
+  nfeCfopInterestadual?: string;
+  nfeNaturezaOperacao?: string;
+  nfeInfoAdicional?: string;
   defaultItemWeightKg: number;
   // Peso padrão (kg) sugerido no cadastro de produto conforme o tamanho da
   // 1ª variação, editável no popup "Pesos padrão" e sempre sobrescrevível

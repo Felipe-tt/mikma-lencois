@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/Icon';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { RegisterReturnModal } from '@/components/painel/RegisterReturnModal';
+import { NfeCard } from '@/components/painel/NfeCard';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending_payment: 'Aguardando Pagamento',
@@ -1239,6 +1240,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             </div>
           </div>
         )}
+
+        {/* ── Nota fiscal ── */}
+        <NfeCard order={order} user={user} />
 
         {/* ── Histórico do pedido ── */}
         <Card title="Histórico do pedido" icon="clock">

@@ -380,10 +380,26 @@ describe('settings/store: parâmetros de dinheiro e sandbox só o admin altera',
     await assertFails(updateDoc(ref, { creditMinOrderCents: 100 }));
   });
 
+  it('CRÍTICO: seller não muda nada da nota fiscal', async () => {
+    await seed();
+    const ref = doc(testEnv.authenticatedContext('seller1', { role: 'seller' }).firestore(), 'settings/store');
+    await assertFails(updateDoc(ref, { nfeAutoEmit: true }));
+    await assertFails(updateDoc(ref, { nfeEnvironment: 'producao' }));
+    await assertFails(updateDoc(ref, { nfeCsosn: '101' }));
+    await assertFails(updateDoc(ref, { nfeCnpj: '00000000000000' }));
+  });
+
   it('admin altera tudo, inclusive os campos sensíveis', async () => {
     await seed();
     const ref = doc(testEnv.authenticatedContext('admin1', { role: 'admin' }).firestore(), 'settings/store');
     await assertSucceeds(updateDoc(ref, { pixDiscountPct: 12, abacatePaySandboxMode: true }));
+    await assertSucceeds(updateDoc(ref, { nfeAutoEmit: true, nfeEnvironment: 'producao' }));
+  });
+
+  it('CRÍTICO: tokens da nota fiscal (secureConfig) ninguém lê pelo app', async () => {
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    await assertFails(getDoc(doc(admin.firestore(), 'secureConfig/nfe')));
+    await assertFails(setDoc(doc(admin.firestore(), 'secureConfig/nfe'), { producao: 'x' }));
   });
 
   it('comprador não escreve configurações', async () => {

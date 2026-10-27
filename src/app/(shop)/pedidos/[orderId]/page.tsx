@@ -750,6 +750,12 @@ export default function OrderDetailPage() {
                   Confirmado em {formatTsDateTime(order.payment.paidAt)}
                 </p>
               )}
+              {order.nfe?.status === 'autorizada' && order.nfe.danfeUrl && (
+                <a href={order.nfe.danfeUrl} target="_blank" rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center min-h-10 text-sm font-semibold text-clay hover:text-clay-d">
+                  Nota fiscal nº {order.nfe.numero} (PDF)
+                </a>
+              )}
             </section>
 
           </aside>
