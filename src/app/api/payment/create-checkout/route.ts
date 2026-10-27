@@ -33,6 +33,11 @@ function abacatePayKey(sandbox: boolean): string {
 }
 
 
+// Timeout ou erro de rede viram uma resposta 504: os ramos de erro do POST já
+// desfazem o pedido (apagam, liberam estoque e cupom). Antes a exceção caía
+// no catch geral, que só respondia 500 e deixava tudo reservado.
+const networkError = () => new Response(JSON.stringify({ error: 'timeout' }), { status: 504 });
+
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   if (!await rateLimit(`checkout:ip:${ip}`, 20, 60 * 60 * 1000)) {
@@ -441,7 +446,8 @@ export async function POST(req: NextRequest) {
         price: totalCents,
         currency: 'BRL',
       }),
-    });
+      signal: AbortSignal.timeout(15_000),
+    }).catch(networkError);
 
     const productText = await productRes.text();
     console.log('AbacatePay product status:', productRes.status, 'body:', productText);
@@ -479,6 +485,7 @@ export async function POST(req: NextRequest) {
             name: userData.displayName ?? userData.name ?? '',
             cellphone: userData.phone ?? '',
           }),
+          signal: AbortSignal.timeout(8_000),
         });
         if (custRes.ok) {
           const custData = (await custRes.json()).data;
@@ -512,7 +519,8 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${ABACATEPAY_KEY}`,
       },
       body: JSON.stringify(checkoutPayload),
-    });
+      signal: AbortSignal.timeout(15_000),
+    }).catch(networkError);
 
     const checkText = await checkRes.text();
     console.log('AbacatePay checkout status:', checkRes.status, 'body:', checkText);

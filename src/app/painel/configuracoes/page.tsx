@@ -1039,7 +1039,7 @@ function TeamPanel() {
 
       <Card icon="shield" title="Quem tem acesso hoje" desc="Sellers e admins ativos no painel">
         {loading ? (
-          <p className="text-[13px] text-faint">Carregando…</p>
+          <div className="flex flex-col gap-2" aria-busy="true" aria-label="Carregando">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-12 !rounded-lg" />)}</div>
         ) : members.length === 0 ? (
           <p className="text-[13px] text-faint">Ninguém além de você ainda.</p>
         ) : (
