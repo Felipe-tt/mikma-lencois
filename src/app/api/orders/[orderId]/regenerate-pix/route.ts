@@ -65,6 +65,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     return NextResponse.json({ error: 'Este pedido não pode mais receber um novo PIX.' }, { status: 400 });
   }
 
+  // Só pedido de PIX: num pedido de cartão o PIX novo ficava com o método
+  // "card", a conferência de pagamento consultava o lugar errado e o valor
+  // era o do cartão.
+  if ((order.payment as { method?: string } | undefined)?.method !== 'pix') {
+    return NextResponse.json({ error: 'Este pedido não é de PIX.' }, { status: 400 });
+  }
+
+  // PIX atual ainda vale: devolve o mesmo. Dois QR válidos ao mesmo tempo
+  // deixavam o cliente pagar duas vezes o mesmo pedido.
+  const current = (order.payment ?? {}) as { txId?: string; pixQrCode?: string; pixCopyPaste?: string; expiresAt?: { toDate?: () => Date } | string | null };
+  const currentExp = typeof current.expiresAt === 'string' ? new Date(current.expiresAt) : current.expiresAt?.toDate?.();
+  if (order.status === 'pending_payment' && current.pixCopyPaste && currentExp && currentExp.getTime() > Date.now() + 60_000) {
+    return NextResponse.json({
+      orderId,
+      txId: current.txId,
+      qrCode: current.pixQrCode,
+      copyPaste: current.pixCopyPaste,
+      expiresAt: currentExp.toISOString(),
+      totalCents: order.totalCents,
+    });
+  }
+
   const createdAtMs = new Date(order.createdAt?.toDate?.() ?? order.createdAt).getTime();
   if (Number.isFinite(createdAtMs) && Date.now() - createdAtMs > ORDER_PAYMENT_WINDOW_MS) {
     return NextResponse.json(
