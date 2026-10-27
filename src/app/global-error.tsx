@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { reportError } from '@/lib/errorQueue';
-import { isChunkError, reloadOnce } from '@/lib/chunkErrorReload';
+import { isChunkError, reloadOnce, reloadIfStale } from '@/lib/chunkErrorReload';
 import { fontSans, fontDisplay } from '@/lib/fonts';
 import './globals.css';
 
@@ -25,6 +25,7 @@ export default function GlobalError({
     // outro lugar que cobre a mesma classe de erro chegando como evento
     // global em vez de erro de renderização, ChunkErrorReload.tsx).
     if (isChunk) reloadOnce();
+    else reloadIfStale();
   }, [error, isChunk]);
 
   return (

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from 'react';
-import { isChunkError, reloadOnce, clearReloadAttempt } from '@/lib/chunkErrorReload';
+import { isChunkError, reloadOnce, reloadIfStale, clearReloadAttempt } from '@/lib/chunkErrorReload';
 
 // Pega o erro de chunk desatualizado quando ele aparece como evento global
 // (window.error / unhandledrejection). Ver src/lib/chunkErrorReload.ts pro
@@ -16,9 +16,11 @@ export function ChunkErrorReload() {
 
     function onError(event: ErrorEvent) {
       if (isChunkError(event.error) || isChunkError(event.message)) reloadOnce();
+      else reloadIfStale();
     }
     function onRejection(event: PromiseRejectionEvent) {
       if (isChunkError(event.reason)) reloadOnce();
+      else reloadIfStale();
     }
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRejection);
