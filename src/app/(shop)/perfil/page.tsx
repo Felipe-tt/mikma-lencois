@@ -184,7 +184,7 @@ export default function PerfilPage() {
   return (
     <div>
       <div className="border-b border-mist bg-warm/60">
-        <div className="container-shop py-8 sm:py-12">
+        <div className="container-shop py-6 sm:py-8">
           <Link href="/conta" className="group relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             Área do cliente
@@ -194,14 +194,14 @@ export default function PerfilPage() {
               {initial}
             </span>
             <div className="min-w-0">
-              <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-5xl leading-[1.05] tracking-[-0.015em]">Meus dados</h1>
+              <h1 className="font-display font-normal text-ink text-[1.9rem] sm:text-4xl leading-[1.05] tracking-[-0.015em]">Meus dados</h1>
               <p className="text-[13px] text-mid mt-1.5 truncate">{user.email}</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container-shop py-8 sm:py-12 pb-20">
+      <div className="container-shop py-6 sm:py-8 pb-20">
         {error && (
           <p role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 text-red-700 text-[13px] px-5 py-3.5 animate-fade-in">{error}</p>
         )}

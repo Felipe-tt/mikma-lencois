@@ -56,13 +56,13 @@ export default function FavoritosPage() {
   return (
     <div>
       <div className="border-b border-mist bg-warm/60">
-        <div className="container-shop py-8 sm:py-12">
+        <div className="container-shop py-6 sm:py-8">
           <Link href="/conta" className="group relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             Área do cliente
           </Link>
           <div className="flex items-end justify-between gap-4">
-            <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-5xl leading-[1.05] tracking-[-0.015em]">Favoritos</h1>
+            <h1 className="font-display font-normal text-ink text-[1.9rem] sm:text-4xl leading-[1.05] tracking-[-0.015em]">Favoritos</h1>
             {!isLoading && products.length > 0 && (
               <p className="text-[13px] text-mid mb-1 tabular-nums">{products.length} {products.length === 1 ? 'produto salvo' : 'produtos salvos'}</p>
             )}
@@ -70,9 +70,9 @@ export default function FavoritosPage() {
         </div>
       </div>
 
-      <div className="container-shop py-8 sm:py-12 pb-20">
+      <div className="container-shop py-6 sm:py-8 pb-20">
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-9">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="animate-pulse">
                 <div className="aspect-[4/5] rounded-2xl bg-warm" />
@@ -89,7 +89,7 @@ export default function FavoritosPage() {
             actions={[{ label: 'Ver produtos', href: '/produtos' }]}
           />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-9">
             {products.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         )}

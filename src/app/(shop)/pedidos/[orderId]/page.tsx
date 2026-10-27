@@ -361,13 +361,13 @@ export default function OrderDetailPage() {
   return (
     <div>
       <div className="border-b border-mist bg-warm/60">
-        <div className="container-shop py-8 sm:py-12">
+        <div className="container-shop py-6 sm:py-8">
           <Link href="/conta/pedidos" className="group inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
             Meus pedidos
           </Link>
           <div className="flex items-center gap-3 flex-wrap pb-1">
-            <h1 className="font-display font-normal text-ink text-[2.2rem] sm:text-5xl leading-[1.05] tracking-[-0.015em] tabular-nums">
+            <h1 className="font-display font-normal text-ink text-[1.9rem] sm:text-4xl leading-[1.05] tracking-[-0.015em] tabular-nums">
               Pedido #{order.id.slice(-8).toUpperCase()}
             </h1>
             {isCancelled && (
@@ -386,7 +386,7 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      <div className="container-shop py-8 sm:py-12 [&>*]:max-w-4xl">
+      <div className="container-shop py-6 sm:py-8 [&>*]:max-w-4xl">
 
         {/* ── Cancelado: motivo e reembolso (antes só um selo vermelho) ── */}
         {isCancelled && (() => {

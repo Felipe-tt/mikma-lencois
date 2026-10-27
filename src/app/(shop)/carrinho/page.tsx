@@ -283,9 +283,9 @@ export default function CartPage() {
       {/* Header */}
       <div className="border-b border-mist">
         {/* Mesmo cabeçalho do catálogo: rótulo, título e contagem embaixo */}
-        <div className="container-shop py-8 sm:py-12">
-          <p className="font-semibold text-[10px] tracking-[0.24em] uppercase text-faint mb-3">Seu carrinho</p>
-          <h1 ref={headingRef} tabIndex={-1} className="font-display font-normal text-ink text-4xl sm:text-5xl leading-tight focus:outline-none">Carrinho</h1>
+        <div className="container-shop py-6 sm:py-8">
+          <p className="font-semibold text-[10px] tracking-[0.24em] uppercase text-faint mb-2">Seu carrinho</p>
+          <h1 ref={headingRef} tabIndex={-1} className="font-display font-normal text-ink text-3xl sm:text-4xl leading-tight focus:outline-none">Carrinho</h1>
           <p className="text-[12px] text-faint mt-2 font-semibold tabular-nums">{totalItems} {totalItems === 1 ? 'item' : 'itens'}</p>
         </div>
       </div>

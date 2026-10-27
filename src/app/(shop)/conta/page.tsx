@@ -95,13 +95,13 @@ export default function ContaPage() {
     <div>
       {/* ── Cabeçalho com avatar ── */}
       <div className="border-b border-mist bg-warm/60">
-        <div className="container-shop py-10 sm:py-14 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-8 animate-fade-up">
+        <div className="container-shop py-6 sm:py-9 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-8 animate-fade-up">
           <span aria-hidden="true" className="w-[72px] h-[72px] sm:w-20 sm:h-20 shrink-0 rounded-full bg-clay text-paper font-display text-[2rem] sm:text-[2.3rem] flex items-center justify-center shadow-[0_12px_28px_-14px_rgba(180,87,68,0.7)] ring-4 ring-paper">
             {initial}
           </span>
           <div className="min-w-0">
             <p className="text-[11px] font-medium tracking-[0.08em] text-faint mb-2">Área do cliente</p>
-            <h1 className="font-display font-normal text-ink text-[2.4rem] sm:text-5xl leading-[1.05] tracking-[-0.015em]">
+            <h1 className="font-display font-normal text-ink text-[2rem] sm:text-[2.6rem] leading-[1.05] tracking-[-0.015em]">
               Olá, {firstName}
             </h1>
             <p className="text-[13px] text-mid mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -112,7 +112,7 @@ export default function ContaPage() {
         </div>
       </div>
 
-      <div className="container-shop py-8 sm:py-12 pb-20 flex flex-col gap-8 sm:gap-10">
+      <div className="container-shop py-6 sm:py-8 pb-20 flex flex-col gap-8 sm:gap-10">
 
         {/* ── Pedido em andamento ── */}
         <section aria-labelledby="pedido-atual" className="animate-fade-up [animation-delay:60ms]">

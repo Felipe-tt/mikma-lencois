@@ -198,7 +198,7 @@ export default async function HomePage() {
             /* Mesma grade da página de produtos: o cartão é arredondado e tem
                fundo próprio (a grade antiga, de linhas de 1px sobre fundo
                bege, espremia os cartões e encavalava as cores no preço). */
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-9">
               {products.map((p, i) => (
                 <ProductCard key={p.id} product={p} priority={i < 4} />
               ))}
@@ -218,7 +218,10 @@ export default async function HomePage() {
           Fundo escuro como ponto final da página.
       ═══════════════════════════════════════════════════════════ */}
       <section className="bg-warm border-t border-mist">
-        <div className="container-shop py-16 sm:py-24">
+        {/* Duas colunas no computador: o texto sozinho deixava metade da
+            faixa vazia. */}
+        <div className="container-shop py-14 sm:py-20 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div>
           <p className="font-semibold text-[11px] tracking-[0.24em] uppercase text-faint mb-6">
             {s.foundedYear ? `${city} · Desde ${s.foundedYear}` : `${city} · Fábrica própria`}
           </p>
@@ -236,6 +239,10 @@ export default async function HomePage() {
               className="inline-flex items-center justify-center h-12 px-7 rounded-full border border-ink/20 text-ink text-[14px] font-medium hover:border-ink/50 hover:bg-paper transition-colors duration-200">
               {ctaBtn2}
             </Link>
+          </div>
+          </div>
+          <div className="relative hidden lg:block aspect-[4/3] rounded-3xl overflow-hidden bg-mist">
+            <Image src="/sobre-bg.jpg" alt="" fill sizes="(min-width: 1024px) 45vw, 0px" className="object-cover" />
           </div>
         </div>
       </section>

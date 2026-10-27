@@ -175,7 +175,7 @@ export function SizeGuideCalculator({ products, widths }: Props) {
           </div>
 
           {matchingProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-9 sm:gap-x-5 sm:gap-y-12">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-9">
               {matchingProducts.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           ) : (
