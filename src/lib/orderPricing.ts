@@ -57,17 +57,23 @@ export function validateCoupon(coupon: CouponLike, productsCents: number, now: D
   return { valid: true, discountCents };
 }
 
-/** Desconto automático por pagar em PIX, só se o subtotal bater o piso configurado. */
+/**
+ * Desconto automático por pagar em PIX, só se o subtotal bater o piso
+ * configurado. Somado ao cupom, nunca passa do valor dos produtos (senão
+ * abatia o frete, que a loja paga de verdade).
+ */
 export function computePixDiscountCents(
   productsCents: number,
-  settings: { pixDiscountThresholdCents: number; pixDiscountPct: number }
+  settings: { pixDiscountThresholdCents: number; pixDiscountPct: number },
+  couponDiscountCents = 0,
 ): number {
   if (settings.pixDiscountThresholdCents <= 0) return 0;
   if (productsCents < settings.pixDiscountThresholdCents) return 0;
-  return Math.round(productsCents * (settings.pixDiscountPct / 100));
+  const raw = Math.round(productsCents * (settings.pixDiscountPct / 100));
+  return Math.max(0, Math.min(raw, productsCents - couponDiscountCents));
 }
 
-/** Total final de um pedido pago via PIX. Nunca fica negativo. */
+/** Total final de um pedido pago via PIX. Descontos nunca abatem o frete. */
 export function computePixTotalCents(args: {
   productsCents: number
   pixDiscountCents: number
@@ -75,7 +81,8 @@ export function computePixTotalCents(args: {
   shippingCents: number
 }): number {
   const { productsCents, pixDiscountCents, couponDiscountCents, shippingCents } = args;
-  return Math.max(0, productsCents - pixDiscountCents - couponDiscountCents + shippingCents);
+  const discount = Math.min(productsCents, pixDiscountCents + couponDiscountCents);
+  return Math.max(0, productsCents - discount + shippingCents);
 }
 
 /** Total final de um pedido pago via cartão, sem desconto PIX, com taxa da adquirente embutida. */
@@ -111,4 +118,24 @@ export const INSTALLMENT_FEES: Readonly<Record<number, number>> = {
 
 export function installmentFeeRate(installments: number): number {
   return INSTALLMENT_FEES[installments] ?? 0;
+}
+
+/** Cartão só a partir deste valor, mesmo que o painel configure menos. */
+export const CARD_MIN_CENTS = 10_000;
+export const MAX_INSTALLMENTS = 8;
+/** Cada parcela tem pelo menos este valor (sobre o preço à vista). */
+export const MIN_INSTALLMENT_CENTS = 10_000;
+
+/**
+ * Valor mínimo do pedido para pagar com cartão: o do painel
+ * (creditMinOrderCents), nunca abaixo de R$ 100. Comparado com o valor à
+ * vista no cartão (produtos - cupom + frete), no checkout e no servidor.
+ */
+export function cardMinCents(settingCents?: number | null): number {
+  return Math.max(CARD_MIN_CENTS, settingCents ?? 0);
+}
+
+/** Máximo de parcelas para um valor à vista: até 8x, parcela mínima de R$ 100. */
+export function maxInstallments(baseCents: number): number {
+  return Math.max(1, Math.min(MAX_INSTALLMENTS, Math.floor(baseCents / MIN_INSTALLMENT_CENTS)));
 }

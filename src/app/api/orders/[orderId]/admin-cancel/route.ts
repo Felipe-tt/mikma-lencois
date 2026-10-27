@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { recordShippingCollected } from '@/lib/shipping-ledger';
 import { extractBearer, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
@@ -66,6 +67,8 @@ export async function POST(
   // e um pagamento confirmado pelo webhook no meio fazia o estoque ser
   // tratado como "só reservado" num pedido que já tinha debitado quantity.
   let unpaidCouponCode: string | undefined;
+  // Frete já creditado na caixa de frete quando o pedido foi pago.
+  let shippingToReverse = 0;
   let uberToCancel: { id: string; sandbox: boolean } | null = null;
   // Dados pro e-mail ao cliente, enviado só depois do commit.
   let cancelled: { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean } | null = null;
@@ -101,6 +104,7 @@ export async function POST(
 
       // Pedido que nunca foi pago devolve o uso do cupom (fora da transação).
       unpaidCouponCode = mode === 'restock' ? undefined : (order.couponCode as string | undefined);
+      shippingToReverse = mode === 'restock' ? ((order.shippingCents as number | undefined) ?? 0) : 0;
 
       const lines = mode === 'none'
         ? []
@@ -139,6 +143,14 @@ export async function POST(
   }
 
   await releaseCouponUse(unpaidCouponCode);
+
+  // Pedido pago cancelado vira estorno integral, frete incluso: sai da caixa
+  // de frete o que entrou na confirmação. Sem isso o saldo ficava inflado e
+  // o frete grátis seguia ligado além do teto de prejuízo configurado.
+  if (shippingToReverse > 0) {
+    try { await recordShippingCollected(-shippingToReverse); }
+    catch (err) { console.warn(`[shipping-ledger] falha ao estornar frete do pedido ${orderId}:`, err); }
+  }
 
   // Melhor esforço: o pedido já está cancelado. Se a Uber recusar (motoboy
   // já entregou, corrida já encerrada...), fica registrado na timeline pra

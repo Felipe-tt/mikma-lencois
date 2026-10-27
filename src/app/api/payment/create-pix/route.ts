@@ -20,6 +20,7 @@ import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { computeProductsCents, validateCoupon, computePixDiscountCents, computePixTotalCents } from '@/lib/orderPricing';
+import { MAX_PENDING_ORDERS_PER_USER } from '@/lib/orders/pendingLimit';
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 import { createPixSchema } from './schema';
@@ -41,8 +42,6 @@ async function createPixWithRetry(call: () => Promise<Response>): Promise<Respon
   // o pedido (liberar estoque e cupom) em vez de deixar tudo reservado.
   return call().catch(() => new Response(JSON.stringify({ error: 'timeout' }), { status: 504 }));
 }
-/** Máximo de pedidos "aguardando pagamento" simultâneos por cliente. */
-const MAX_PENDING_ORDERS_PER_USER = 3;
 // Ambiente da AbacatePay é decidido por qual API key é usada (chave de Dev
 // Mode vs produção), não por outra base URL. settings.abacatePaySandboxMode
 // (editável em /painel/configuracoes) escolhe qual env var usar, sem
@@ -187,9 +186,6 @@ export async function POST(req: NextRequest) {
       0
     );
 
-    // ── Desconto PIX (calculado no servidor, lido das configurações) ──────────
-    const pixDiscountCents = computePixDiscountCents(productsCents, settings);
-
     // ── Frete, recalculado do zero, nunca confiado do cliente ────────────────
     const ledgerBalanceCents = await getShippingLedgerBalanceCents();
     const shippingResult = await computeShippingOptions(address.cep, settings, productsCents, totalWeightKg, ledgerBalanceCents);
@@ -232,6 +228,10 @@ export async function POST(req: NextRequest) {
         couponCode = cartCouponCode;
       }
     }
+
+    // ── Desconto PIX (calculado no servidor, lido das configurações). Depois
+    // do cupom: os dois juntos nunca passam do valor dos produtos.
+    const pixDiscountCents = computePixDiscountCents(productsCents, settings, couponDiscountCents);
 
     const amountCents = computePixTotalCents({ productsCents, pixDiscountCents, couponDiscountCents, shippingCents });
 
@@ -311,6 +311,17 @@ export async function POST(req: NextRequest) {
       stockLines.map(line => adminDb.collection('inventory').doc(line.sku).get())
     );
     const invDocRefs = inventorySnaps.map(snap => (snap.exists ? snap.ref : null));
+    // Sem documento de estoque = indisponível, como a página do produto já
+    // mostra (antes passava sem checar nem reservar: variação removida num
+    // carrinho antigo era vendida sem controle).
+    const missingStock = inventorySnaps.findIndex(snap => !snap.exists);
+    if (missingStock >= 0) {
+      const name = productMap[stockLines[missingStock].productId]?.name ?? 'Um item';
+      return NextResponse.json(
+        { error: `"${name}" nesta opção não está mais disponível. Remova do carrinho e tente novamente.` },
+        { status: 409 }
+      );
+    }
 
     try {
       await adminDb.runTransaction(async tx => {

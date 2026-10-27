@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   computeProductsCents,
   installmentFeeRate,
+  cardMinCents,
+  maxInstallments,
   validateCoupon,
   computePixDiscountCents,
   computePixTotalCents,
@@ -172,5 +174,33 @@ describe('installmentFeeRate', () => {
   it('parcela fora da tabela não tem juros', () => {
     expect(installmentFeeRate(0)).toBe(0);
     expect(installmentFeeRate(99)).toBe(0);
+  });
+});
+
+describe('PIX + cupom nunca abatem o frete', () => {
+  const settings = { pixDiscountThresholdCents: 10000, pixDiscountPct: 10 };
+  it('limita o desconto PIX ao que sobra dos produtos depois do cupom', () => {
+    // produtos 200, cupom 190: sobram 10; PIX de 10% (20) vira 10
+    expect(computePixDiscountCents(20000, settings, 19000)).toBe(1000);
+    expect(computePixDiscountCents(20000, settings, 20000)).toBe(0);
+  });
+  it('total nunca fica abaixo do frete', () => {
+    const total = computePixTotalCents({ productsCents: 10000, pixDiscountCents: 1000, couponDiscountCents: 10000, shippingCents: 1500 });
+    expect(total).toBe(1500);
+  });
+});
+
+describe('cartão: mínimo e parcelas', () => {
+  it('mínimo do painel com piso de R$ 100', () => {
+    expect(cardMinCents(0)).toBe(10000);
+    expect(cardMinCents(5000)).toBe(10000);
+    expect(cardMinCents(25000)).toBe(25000);
+    expect(cardMinCents(undefined)).toBe(10000);
+  });
+  it('até 8x com parcela mínima de R$ 100', () => {
+    expect(maxInstallments(9999)).toBe(1);
+    expect(maxInstallments(10000)).toBe(1);
+    expect(maxInstallments(35000)).toBe(3);
+    expect(maxInstallments(500000)).toBe(8);
   });
 });

@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const label = txId.startsWith('card_') ? 'Cartão aprovado' : 'PIX confirmado';
-      await confirmOrderPaid(orderId, txId, `${label} · txId: ${txId.slice(-8)}`);
+      await confirmOrderPaid(orderId, txId, `${label} · txId: ${txId.slice(-8)}`, undefined, chargePaidCents(transparent));
     } catch {
       // Falha transitória (contenção, timeout): 500 faz a AbacatePay
       // reenviar o evento. confirmOrderPaid é idempotente.
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      await confirmOrderPaid(orderId, txId, `Cartão confirmado · checkoutId: ${txId.slice(-8)}`);
+      await confirmOrderPaid(orderId, txId, `Cartão confirmado · checkoutId: ${txId.slice(-8)}`, undefined, chargePaidCents(checkoutData));
     } catch {
       // Falha transitória (contenção, timeout): 500 faz a AbacatePay
       // reenviar o evento. confirmOrderPaid é idempotente.
@@ -172,6 +172,12 @@ function chargeOrderId(charge: Record<string, unknown> | undefined): string | un
   if (typeof charge.externalId === 'string' && charge.externalId) return charge.externalId;
   const meta = charge.metadata as Record<string, unknown> | undefined;
   return typeof meta?.orderId === 'string' && meta.orderId ? meta.orderId : undefined;
+}
+
+// Valor recebido segundo o evento (centavos), quando ele traz.
+function chargePaidCents(charge: Record<string, unknown> | undefined): number | undefined {
+  const v = charge?.paidAmount ?? charge?.amount;
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
 }
 
 // Registra o estorno no pedido. Se a loja cancelou e marcou o estorno como

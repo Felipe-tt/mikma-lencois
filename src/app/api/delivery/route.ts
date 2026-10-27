@@ -8,6 +8,7 @@
  * pelo painel informando o código de rastreio (update-status).
  */
 export const dynamic = 'force-dynamic';
+import { shippingBlockReason } from '@/lib/orders/shippingBlock';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -70,6 +71,8 @@ export async function POST(req: NextRequest) {
     if (!['paid', 'preparing'].includes(order.status)) {
       return NextResponse.json({ error: `Pedido não pode ser despachado no status "${order.status}"` }, { status: 409 });
     }
+    const blocked = shippingBlockReason(order);
+    if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
 
     // Prioridade: body (painel) → selectedShipping (escolha do cliente) → delivery.carrier → fallback
     const orderAny = order as unknown as { selectedShipping?: { carrier?: string } };

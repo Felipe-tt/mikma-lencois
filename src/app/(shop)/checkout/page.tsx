@@ -20,7 +20,7 @@ import { Select } from '@/components/ui/Select';
 import type { ShippingOption } from '@/lib/shipping-pricing';
 import Image from 'next/image';
 import { trackBeginCheckout } from '@/lib/analytics';
-import { computePixTotalCents, computeCardTotalCents, installmentFeeRate } from '@/lib/orderPricing';
+import { computePixTotalCents, computePixDiscountCents, computeCardTotalCents, installmentFeeRate, cardMinCents, maxInstallments } from '@/lib/orderPricing';
 import { toAddress, streetLine, cityLine } from '@/lib/address';
 import { LEGAL_VERSION } from '@/lib/legal';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
@@ -235,6 +235,7 @@ export default function CheckoutPage() {
 
   // Configurações de desconto PIX vindas do servidor (painel → settings)
   const [pixThresholdCents, setPixThreshold] = useState(180000);
+  const [cardMin, setCardMin] = useState(cardMinCents());
   const [pixDiscountPct, setPixDiscountPct]  = useState(10);
 
 
@@ -338,6 +339,7 @@ export default function CheckoutPage() {
         if (d) {
           setPixThreshold(d.pixDiscountThresholdCents);
           setPixDiscountPct(d.pixDiscountPct);
+          if (typeof d.cardMinCents === 'number') setCardMin(d.cardMinCents);
         }
       })
       .catch(() => { /* mantém defaults */ });
@@ -574,12 +576,11 @@ export default function CheckoutPage() {
   const items       = cart?.items ?? [];
   const subtotal    = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const shipCents   = selectedShipping?.priceCents ?? 0;
-  const PIX_DISCOUNT_THRESHOLD = pixThresholdCents;
-  const pixDiscount  = pixThresholdCents > 0 && subtotal >= PIX_DISCOUNT_THRESHOLD ? Math.round(subtotal * (pixDiscountPct / 100)) : 0;
   // Mesmas funções que o servidor usa pra cobrar (lib/orderPricing): antes
   // esta tela ignorava o cupom do carrinho e os juros do parcelamento, e o
   // valor cobrado saía diferente do mostrado.
   const couponDiscount = couponApplied && couponApplied.code === (cart?.couponCode ?? null) ? couponApplied.discount : 0;
+  const pixDiscount  = computePixDiscountCents(subtotal, { pixDiscountThresholdCents: pixThresholdCents, pixDiscountPct }, couponDiscount);
   const pixTotal     = computePixTotalCents({ productsCents: subtotal, pixDiscountCents: pixDiscount, couponDiscountCents: couponDiscount, shippingCents: shipCents });
   const cardTotalFor = (n: number) => computeCardTotalCents({ productsCents: subtotal, couponDiscountCents: couponDiscount, shippingCents: shipCents, feeRate: installmentFeeRate(n) });
   const creditBase   = cardTotalFor(1);
@@ -587,8 +588,13 @@ export default function CheckoutPage() {
   const creditFees   = creditTotal - creditBase;
   const total        = payMethod === 'pix' ? pixTotal : creditTotal;
   const totalItems   = items.reduce((s, i) => s + i.quantity, 0);
-  // Parcelamento: mín R$100/parcela, máx 8x
-  const maxInstall   = Math.min(8, Math.floor(creditBase / 10000));
+  // Cartão e parcelamento: mesma regra do servidor (lib/orderPricing).
+  const cardAllowed  = creditBase >= cardMin;
+  const maxInstall   = maxInstallments(creditBase);
+  // Carrinho, cupom ou frete mudou e a escolha deixou de valer: volta para o
+  // que o servidor aceita (antes ia e voltava com erro na hora de pagar).
+  if (payMethod === 'credit' && !cardAllowed && subtotal > 0) setPayMethod('pix');
+  if (installments > maxInstall) setInstall(maxInstall);
   const installVal   = Math.round(creditTotal / installments);
   // Maior parcelamento sem juros (a tabela cobra juros a partir de certa parcela).
   const noFeeInstall = (() => { for (let n = maxInstall; n >= 1; n--) if (installmentFeeRate(n) === 0) return n; return 1; })();
@@ -1034,7 +1040,7 @@ export default function CheckoutPage() {
                     </button>
 
                     {/* Crédito */}
-                    {creditBase >= 10000 && (
+                    {cardAllowed && (
                       <div className={`transition-colors ${payMethod === 'credit' ? 'bg-warm' : ''}`}>
                       <button type="button" role="radio" aria-checked={payMethod === 'credit'} onClick={() => setPayMethod('credit')}
                         className={`flex flex-col w-full px-4 py-4 text-left transition-colors ${payMethod === 'credit' ? '' : 'hover:bg-paper'}`}>

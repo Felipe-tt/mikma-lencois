@@ -1,7 +1,7 @@
 'use client';
 import { variantLabel } from '@/lib/variantLabel';
 import Image from 'next/image';
-import { installmentFeeRate } from '@/lib/orderPricing';
+import { installmentFeeRate, maxInstallments } from '@/lib/orderPricing';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
@@ -583,7 +583,7 @@ export default function CartPage() {
 function PaymentHint({ total, subtotal, pixRule }: { total: number; subtotal: number; pixRule: { thresholdCents: number; pct: number } | null }) {
   const pixEligible = !!pixRule && pixRule.thresholdCents > 0 && pixRule.pct > 0 && subtotal >= pixRule.thresholdCents;
   const pixPrice = pixEligible ? total - Math.round(subtotal * (pixRule!.pct / 100)) : null;
-  const maxInstall = Math.min(8, Math.floor(total / 10000));
+  const maxInstall = maxInstallments(total);
   let noFee = 1;
   for (let n = maxInstall; n >= 1; n--) { if (installmentFeeRate(n) === 0) { noFee = n; break; } }
   if (!pixPrice && noFee < 2) return null;

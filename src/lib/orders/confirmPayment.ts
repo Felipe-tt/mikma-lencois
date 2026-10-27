@@ -21,6 +21,23 @@ export class InsufficientStockError extends Error {
   }
 }
 
+type CartLine = { sku: string; quantity: number };
+// Pelo SKU: a observação (troca de fronha) é refeita pelo servidor no pedido
+// e pode não bater letra por letra com a do carrinho.
+const lineKey = (i: CartLine) => i.sku;
+
+/** Carrinho depois da compra: desconta de cada SKU a quantidade comprada. */
+export function remainingCartItems<T extends CartLine>(cart: T[], bought: CartLine[]): T[] {
+  const left = new Map<string, number>();
+  for (const b of bought) left.set(lineKey(b), (left.get(lineKey(b)) ?? 0) + b.quantity);
+  return cart.flatMap(item => {
+    const take = Math.min(item.quantity, left.get(lineKey(item)) ?? 0);
+    if (take > 0) left.set(lineKey(item), (left.get(lineKey(item)) ?? 0) - take);
+    const quantity = item.quantity - take;
+    return quantity > 0 ? [{ ...item, quantity }] : [];
+  });
+}
+
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -51,13 +68,16 @@ export async function confirmOrderPaid(
   orderId: string,
   txId: string,
   note: string,
-  manual?: { uid: string; note: string; force?: boolean }
+  manual?: { uid: string; note: string; force?: boolean },
+  /** Valor que o gateway diz ter recebido, quando o evento traz. */
+  paidCents?: number,
 ): Promise<boolean> {
   const orderRef = adminDb.collection('orders').doc(orderId);
   const now = new Date().toISOString();
 
   let order: FirebaseFirestore.DocumentData | null;
   let lateCapture: FirebaseFirestore.DocumentData | null = null;
+  let underpaidOrder: { paidCents: number; totalCents: number } | null = null;
   try {
     order = await adminDb.runTransaction(async (tx) => {
       const orderSnap = await tx.get(orderRef);
@@ -104,9 +124,17 @@ export async function confirmOrderPaid(
       // parado. Só deixamos o alerta visível no histórico para conferência.
       const registeredTxId = (data.payment as { txId?: string } | undefined)?.txId;
       const txMismatch = !!registeredTxId && registeredTxId !== txId;
-      const auditNote = txMismatch
-        ? `${note} · ATENÇÃO: txId do evento difere do registrado (${registeredTxId.slice(-8)})`
-        : note;
+      // Mesmo espírito: valor recebido menor que o total não trava a
+      // confirmação (o formato do valor muda entre PIX e cartão), mas fica
+      // marcado no pedido e o vendedor é avisado antes de enviar.
+      const totalCents = (data.totalCents as number | undefined) ?? 0;
+      const underpaid = typeof paidCents === 'number' && paidCents > 0 && paidCents < totalCents;
+      if (underpaid) underpaidOrder = { paidCents, totalCents };
+      const auditNote = [
+        note,
+        txMismatch ? `ATENÇÃO: txId do evento difere do registrado (${registeredTxId.slice(-8)})` : '',
+        underpaid ? `ATENÇÃO: valor recebido ${formatCurrency(paidCents)} é menor que o total ${formatCurrency(totalCents)}` : '',
+      ].filter(Boolean).join(' · ');
 
       // Leituras antes das escritas (exigência da transação). SKU sem
       // documento de estoque (produto/variação apagado depois do pedido)
@@ -132,6 +160,7 @@ export async function confirmOrderPaid(
         'payment.paidAt': FieldValue.serverTimestamp(),
         'payment.txId': txId,
         ...(txMismatch ? { 'payment.txIdMismatch': true, 'payment.previousTxId': registeredTxId } : {}),
+        ...(underpaid ? { 'payment.amountMismatch': { paidCents, totalCents } } : {}),
         // Pagamento atrasado aceito: não há mais o que estornar.
         ...((data.payment as { lateCaptureTxId?: string } | undefined)?.lateCaptureTxId ? { 'payment.refundStatus': FieldValue.delete() } : {}),
         ...(manual ? {
@@ -183,6 +212,18 @@ export async function confirmOrderPaid(
     return false;
   }
 
+  if (underpaidOrder) {
+    const { paidCents: got, totalCents: due } = underpaidOrder;
+    Sentry.captureMessage('confirm-order-paid: valor recebido menor que o total', { level: 'error', extra: { orderId, got, due } });
+    await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
+      type: 'amount_mismatch',
+      orderId,
+      message: `Pedido #${orderId.slice(-8).toUpperCase()}: recebido ${formatCurrency(got)}, total ${formatCurrency(due)}. Confira antes de enviar.`,
+      read: false,
+      createdAt: FieldValue.serverTimestamp(),
+    }).catch(() => {});
+  }
+
   // ── Caixa de frete: registra o que foi de fato cobrado do cliente ─────
   // Best-effort, nunca deve travar a confirmação do pedido.
   try {
@@ -202,11 +243,15 @@ export async function confirmOrderPaid(
     const batch = adminDb.batch();
     const cartRef = adminDb.collection('carts').doc(order.userId as string);
     // "Montar junto" ligado: quem estava montando vê que o pedido saiu.
-    const share = (await cartRef.get()).data()?.share;
+    const cartData = (await cartRef.get()).data();
+    const share = cartData?.share;
     const finished = share?.token && !share.paidAt
       ? { 'share.paidAt': Date.now(), 'share.paidItems': ((order.items ?? []) as { quantity?: number }[]).reduce((a, i) => a + (i.quantity ?? 0), 0) }
       : {};
-    batch.update(cartRef, { items: [], updatedAt: FieldValue.serverTimestamp(), ...finished });
+    // Tira só o que foi comprado: o que o cliente pôs no carrinho depois de
+    // gerar o PIX continua lá (antes o carrinho era esvaziado inteiro).
+    const items = remainingCartItems((cartData?.items ?? []) as CartLine[], (order.items ?? []) as CartLine[]);
+    batch.update(cartRef, { items, updatedAt: FieldValue.serverTimestamp(), ...finished });
 
     const notifRef = adminDb
       .collection('notifications')

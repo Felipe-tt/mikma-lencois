@@ -16,7 +16,8 @@ import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
-import { computeProductsCents, validateCoupon, computeCardTotalCents, installmentFeeRate } from '@/lib/orderPricing';
+import { computeProductsCents, validateCoupon, computeCardTotalCents, installmentFeeRate, cardMinCents, maxInstallments } from '@/lib/orderPricing';
+import { MAX_PENDING_ORDERS_PER_USER } from '@/lib/orders/pendingLimit';
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 import { createCheckoutSchema } from './schema';
@@ -82,9 +83,6 @@ export async function POST(req: NextRequest) {
       console.error(abacateSandbox ? 'ABACATEPAY_SANDBOX_API_KEY not set' : 'ABACATEPAY_API_KEY not set');
       return NextResponse.json({ error: 'Pagamento indisponível no momento. Tente em alguns minutos.' }, { status: 500 });
     }
-
-    // Mínimo fixo de R$100 para cartão
-    const creditMinCents = 10000;
 
     // ── Load cart from Firestore ──────────────────────────────────────────────
     const cartSnap = await adminDb.collection('carts').doc(uid).get();
@@ -174,13 +172,6 @@ export async function POST(req: NextRequest) {
     const subtotalCents = computeProductsCents(verifiedItems.map(i => ({ unitPrice: i.unitPrice, quantity: i.quantity })));
     const productsCents = subtotalCents;
 
-    if (subtotalCents < creditMinCents) {
-      return NextResponse.json(
-        { error: `Pagamento por cartão disponível a partir de R$ ${(creditMinCents / 100).toFixed(2)}` },
-        { status: 422 }
-      );
-    }
-
     if (subtotalCents <= 0) {
       return NextResponse.json({ error: 'Valor inválido' }, { status: 400 });
     }
@@ -227,6 +218,25 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── Mínimo do cartão e parcelas: mesma regra do checkout (lib/orderPricing),
+    // sobre o valor à vista. Antes o servidor usava R$ 100 fixo sobre os
+    // produtos e ignorava o mínimo do painel; o checkout comparava com o total
+    // com frete e oferecia cartão que o servidor recusava.
+    const cardBaseCents = computeCardTotalCents({ productsCents, couponDiscountCents, shippingCents, feeRate: 0 });
+    const minCard = cardMinCents(settings.creditMinOrderCents);
+    if (cardBaseCents < minCard) {
+      return NextResponse.json(
+        { error: `Pagamento por cartão disponível a partir de R$ ${(minCard / 100).toFixed(2)}` },
+        { status: 422 }
+      );
+    }
+    if (parsedInstallments > maxInstallments(cardBaseCents)) {
+      return NextResponse.json(
+        { error: `Para este valor, o parcelamento vai até ${maxInstallments(cardBaseCents)}x.` },
+        { status: 422 }
+      );
+    }
+
     // ── Aplica juros de parcelamento (se houver) ──────────────────────────────
     const feeRate = installmentFeeRate(parsedInstallments);
     const totalCents = computeCardTotalCents({ productsCents, couponDiscountCents, shippingCents, feeRate });
@@ -271,6 +281,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── Teto de pedidos aguardando pagamento (mesmo do PIX) ─────────────────
+    // Pedido de cartão pendente também reserva estoque até pagar ou ser
+    // cancelado (48h): sem teto, dava para segurar o estoque da loja.
+    {
+      const pendingSnap = await adminDb.collection('orders')
+        .where('userId', '==', uid)
+        .where('status', '==', 'pending_payment')
+        .limit(MAX_PENDING_ORDERS_PER_USER)
+        .get();
+      if (pendingSnap.size >= MAX_PENDING_ORDERS_PER_USER) {
+        return NextResponse.json(
+          { error: 'Você já tem pedidos aguardando pagamento. Conclua ou cancele um deles para criar outro.' },
+          { status: 409 }
+        );
+      }
+    }
+
     // ── Checar e reservar estoque ATOMICAMENTE (evita oversell por concorrência) ──
     // Ver mesmo fix em create-pix/route.ts: check e reserve unidos numa transação
     // do Firestore em vez de dois passos separados (que permitiam duas compras
@@ -287,6 +314,17 @@ export async function POST(req: NextRequest) {
       stockLines.map(line => adminDb.collection('inventory').doc(line.sku).get())
     );
     const invDocRefs = inventorySnaps.map(snap => (snap.exists ? snap.ref : null));
+    // Sem documento de estoque = indisponível, como a página do produto já
+    // mostra (antes passava sem checar nem reservar: variação removida num
+    // carrinho antigo era vendida sem controle).
+    const missingStock = inventorySnaps.findIndex(snap => !snap.exists);
+    if (missingStock >= 0) {
+      const name = productMap[stockLines[missingStock].productId]?.name ?? 'Um item';
+      return NextResponse.json(
+        { error: `"${name}" nesta opção não está mais disponível. Remova do carrinho e tente novamente.` },
+        { status: 409 }
+      );
+    }
     const releaseReservation = () => {
       for (let i = 0; i < stockLines.length; i++) {
         const ref = invDocRefs[i];

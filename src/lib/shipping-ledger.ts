@@ -52,7 +52,7 @@ export async function getShippingLedger(): Promise<ShippingLedger> {
   };
 }
 
-/** Registra que o cliente pagou X de frete (chamado quando o pagamento é confirmado). */
+/** Registra que o cliente pagou X de frete (chamado quando o pagamento é confirmado). Negativo: frete devolvido no estorno. */
 export async function recordShippingCollected(cents: number): Promise<void> {
   if (!cents) return;
   await LEDGER_REF().set(

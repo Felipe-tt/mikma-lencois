@@ -31,7 +31,8 @@ export const lineKey = (i: Pick<CartItem, 'sku' | 'note'>) => (i.note ? `${i.sku
 
 async function available(db: Firestore, sku: string): Promise<number> {
   const inv = (await db.collection('inventory').doc(sku).get()).data();
-  return inv ? Math.max(0, (inv.quantity ?? 0) - (inv.reserved ?? 0)) : MAX_SHARED_QTY;
+  // Sem documento de estoque = indisponível (mesma regra da loja e do checkout).
+  return inv ? Math.max(0, (inv.quantity ?? 0) - (inv.reserved ?? 0)) : 0;
 }
 
 async function activeProduct(db: Firestore, id: string): Promise<Product | null> {

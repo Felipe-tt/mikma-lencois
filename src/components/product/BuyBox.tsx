@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { loadFirestore } from '@/lib/firebase/lazyDb';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { installmentFeeRate } from '@/lib/orderPricing';
+import { installmentFeeRate, maxInstallments } from '@/lib/orderPricing';
 import { formatCurrency } from '@/lib/utils/format';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import type { Product, InventoryItem, ProductVariant, CartItem } from '@/types';
@@ -128,7 +128,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const lineTotal = product.price * qty;
   // Só anuncia "sem juros" até a última parcela que é de fato sem juros
   // (tabela em lib/orderPricing; a partir de 4x o cartão cobra juros).
-  const maxByValue = Math.min(8, Math.max(1, Math.floor(lineTotal / 10000)));
+  const maxByValue = maxInstallments(lineTotal);
   let maxInstall = 1;
   for (let n = maxByValue; n >= 1; n--) { if (installmentFeeRate(n) === 0) { maxInstall = n; break; } }
   const installVal = Math.round(lineTotal / maxInstall);
