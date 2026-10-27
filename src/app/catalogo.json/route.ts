@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAgentCatalog, SITE_URL } from '@/lib/agentCatalog';
 import { getSettings } from '@/lib/settings';
 
-export const revalidate = 600;
+// Gerado na hora (o build não tem acesso ao banco); o catálogo já vem do cache.
+export const dynamic = 'force-dynamic';
 
 /**
  * Catálogo em JSON para assistentes de compra e buscadores: produtos,

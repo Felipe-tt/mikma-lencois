@@ -1,6 +1,7 @@
 import { getAgentCatalog, brl, SITE_URL } from '@/lib/agentCatalog';
 
-export const revalidate = 600;
+// Gerado na hora (o build não tem acesso ao banco); o catálogo já vem do cache.
+export const dynamic = 'force-dynamic';
 
 const money = (cents: number) => `R$ ${brl(cents).replace('.', ',')}`;
 
