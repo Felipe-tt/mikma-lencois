@@ -11,6 +11,7 @@ import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { readPendingPurchase } from '@/lib/pendingPurchase';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
+import { PasskeySignInButton } from '@/components/auth/PasskeySignInButton';
 import { BrandLogo } from '@/components/BrandLogo';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
@@ -388,7 +389,10 @@ export function AuthModal() {
                 <div className="flex items-center gap-3 my-5">
                   <div className="flex-1 divider" /><span className="text-xs text-faint uppercase tracking-wider">ou</span><div className="flex-1 divider" />
                 </div>
-                <GoogleSignInButton onError={setLoginError} />
+                <div className="flex flex-col gap-3">
+                  <PasskeySignInButton onError={setLoginError} />
+                  <GoogleSignInButton onError={setLoginError} />
+                </div>
               </>
             )}
           </>

@@ -402,6 +402,15 @@ describe('settings/store: parâmetros de dinheiro e sandbox só o admin altera',
     await assertFails(setDoc(doc(admin.firestore(), 'secureConfig/nfe'), { producao: 'x' }));
   });
 
+  it('CRÍTICO: passkeys e desafios WebAuthn ninguém lê nem grava pelo app', async () => {
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const owner = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await assertFails(getDoc(doc(owner.firestore(), 'passkeys/cred1')));
+    await assertFails(setDoc(doc(owner.firestore(), 'passkeys/cred1'), { uid: 'buyer1', publicKey: 'x', counter: 0 }));
+    await assertFails(getDoc(doc(admin.firestore(), 'passkeys/cred1')));
+    await assertFails(setDoc(doc(owner.firestore(), 'webauthnChallenges/c1'), { challenge: 'x', kind: 'login' }));
+  });
+
   it('comprador não escreve configurações', async () => {
     await seed();
     const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });

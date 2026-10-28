@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { PerfilSkeleton } from '@/components/ui/Skeleton';
+import { PasskeyManager } from '@/components/auth/PasskeyManager';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import type { Address } from '@/types';
 import { Select } from '@/components/ui/Select';
@@ -331,6 +332,7 @@ export default function PerfilPage() {
             ) : (
               <p className="text-[13px] text-mid leading-relaxed">Sua senha é a da sua conta Google. Pra trocar, use as configurações do Google.</p>
             )}
+            <PasskeyManager />
           </Card>
 
           {/* ── Privacidade ── */}

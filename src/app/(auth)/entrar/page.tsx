@@ -9,6 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
+import { PasskeySignInButton, usePasskeyAutofill } from '@/components/auth/PasskeySignInButton';
 import { consumeReturnTo, peekReturnTo, returnToReason } from '@/lib/auth/returnTo';
 import { Overlay } from '@/components/ui/Overlay';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
@@ -187,6 +188,8 @@ export default function LoginPage() {
     return () => { cancelled = true; clearInterval(interval); };
   }, [awaitingChallenge, email, password]);
 
+  usePasskeyAutofill(setError, !awaitingChallenge);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true); setError(''); setChallengeExpired(false);
@@ -341,7 +344,7 @@ export default function LoginPage() {
                 <label htmlFor="login-email" className="label">E-mail</label>
                 <input id="login-email" type="email" required value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="input" placeholder="seu@email.com" autoComplete="email" />
+                  className="input" placeholder="seu@email.com" autoComplete="email webauthn" />
               </div>
 
               <div>
@@ -372,7 +375,10 @@ export default function LoginPage() {
                   <div className="flex-1 divider" />
                 </div>
 
-                <GoogleSignInButton onError={setError} />
+                <div className="flex flex-col gap-3">
+                  <PasskeySignInButton onError={setError} />
+                  <GoogleSignInButton onError={setError} />
+                </div>
               </>
             )}
           </div>
