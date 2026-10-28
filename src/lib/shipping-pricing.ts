@@ -75,7 +75,8 @@ export async function geocodeCep(cep: string): Promise<{ lat: number; lng: numbe
     const [hit] = await g.json();
     if (!hit) return null;
     const coords = { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) };
-    adminDb.collection('geocache').doc(clean).set({ ...coords, cep: clean, cachedAt: new Date().toISOString() }).catch(() => {});
+    // expireAt: o TTL do Firestore apaga em 30 dias (se voltar, busca de novo).
+    adminDb.collection('geocache').doc(clean).set({ ...coords, cep: clean, cachedAt: new Date().toISOString(), expireAt: new Date(Date.now() + 30 * 86_400_000) }).catch(() => {});
     return coords;
   } catch { return null; }
 }

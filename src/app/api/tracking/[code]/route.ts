@@ -157,7 +157,7 @@ export async function GET(
     return NextResponse.json({ error: 'Código não encontrado. Pode levar até 24h após a postagem.' }, { status: 404 });
   }
 
-  // expireAt: o TTL do Firestore apaga código parado há 60 dias.
-  await cacheRef.set({ ...result, expireAt: new Date(Date.now() + 60 * 86_400_000) });
+  // expireAt: o TTL do Firestore apaga código sem consulta há 3 dias.
+  await cacheRef.set({ ...result, expireAt: new Date(Date.now() + 3 * 86_400_000) });
   return NextResponse.json(result);
 }
