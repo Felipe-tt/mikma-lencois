@@ -55,6 +55,11 @@ const nextConfig = {
     minimumCacheTTL: 604800,
   },
 
+  // security.txt (RFC 9116) mora em /.well-known; a rota fica em app/security.txt.
+  async rewrites() {
+    return [{ source: '/.well-known/security.txt', destination: '/security.txt' }];
+  },
+
   async headers() {
     return [
       {

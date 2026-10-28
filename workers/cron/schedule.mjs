@@ -23,3 +23,6 @@ export function dueJobs(date) {
 
 /** Saúde do site a cada 10 min, defasada das rotinas (minutos 5, 15, 25...). */
 export const healthDue = date => date.getUTCMinutes() % 10 === 5;
+
+/** Backup diário do Firestore às 06:00 UTC (03:00 em Brasília), pouco movimento. */
+export const backupDue = date => date.getUTCHours() === 6 && date.getUTCMinutes() === 0;

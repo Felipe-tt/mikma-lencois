@@ -1,4 +1,4 @@
-import { dueJobs, healthDue } from './schedule.mjs';
+import { backupDue, dueJobs, healthDue } from './schedule.mjs';
 
 /**
  * Worker "mikma-cron": chama as rotinas da loja e confere a saúde do site
@@ -27,6 +27,21 @@ async function call(env, path) {
   }
 }
 
+/** Dispara um workflow do GitHub (precisa de GH_DISPATCH_TOKEN). */
+async function dispatch(env, workflow, inputs) {
+  if (!env.GH_DISPATCH_TOKEN) return false;
+  const gh = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/dispatches`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${env.GH_DISPATCH_TOKEN}`,
+      accept: 'application/vnd.github+json',
+      'user-agent': 'MikmaCron/1.0',
+    },
+    body: JSON.stringify({ ref: 'main', ...(inputs ? { inputs } : {}) }),
+  }).catch(() => null);
+  return gh?.status === 204;
+}
+
 async function health(env) {
   const r = await call(env, '/api/cron/health');
   let data = {};
@@ -36,16 +51,8 @@ async function health(env) {
   const blocked = r.status === 403 || r.status === 429;
   if (ok || blocked || !env.GH_DISPATCH_TOKEN) return { ...r, ok, dispatched: false };
   // Site com problema: o workflow do GitHub repete o teste e decide o rollback.
-  const gh = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/saude-site.yml/dispatches`, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${env.GH_DISPATCH_TOKEN}`,
-      accept: 'application/vnd.github+json',
-      'user-agent': 'MikmaCron/1.0',
-    },
-    body: JSON.stringify({ ref: 'main', inputs: { dry_run: 'false' } }),
-  }).catch(() => null);
-  return { ...r, ok, dispatched: gh?.status === 204 };
+  const dispatched = await dispatch(env, 'saude-site.yml', { dry_run: 'false' });
+  return { ...r, ok, dispatched };
 }
 
 export default {
@@ -53,6 +60,9 @@ export default {
     const when = new Date(event.scheduledTime);
     const tasks = dueJobs(when).map(path => call(env, path));
     if (healthDue(when)) tasks.push(health(env));
+    if (backupDue(when)) {
+      tasks.push(dispatch(env, 'backup-firestore.yml').then(ok => ({ path: 'backup-firestore.yml', status: ok ? 200 : 0, ms: 0, body: ok ? 'disparado' : 'sem GH_DISPATCH_TOKEN ou erro no GitHub' })));
+    }
     if (!tasks.length) return;
     const results = await Promise.all(tasks);
     // Aparece no log do Worker (Cloudflare → Workers → mikma-cron → Logs).

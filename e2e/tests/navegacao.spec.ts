@@ -24,10 +24,14 @@ test('visitante navega pela loja sem erros', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('páginas de máquina respondem (feed, llms.txt, catálogo)', async ({ request }) => {
-  for (const [path, type] of [['/feed/google.xml', 'xml'], ['/llms.txt', 'text/plain'], ['/catalogo.json', 'json']]) {
+test('páginas de máquina respondem (feed, llms.txt, catálogo, security.txt)', async ({ request }) => {
+  for (const [path, type] of [['/feed/google.xml', 'xml'], ['/llms.txt', 'text/plain'], ['/catalogo.json', 'json'], ['/.well-known/security.txt', 'text/plain']]) {
     const res = await request.get(path);
     expect(res.status(), path).toBe(200);
     expect(res.headers()['content-type'], path).toContain(type);
   }
+  // RFC 9116: contato e validade futura.
+  const sec = await (await request.get('/.well-known/security.txt')).text();
+  expect(sec).toMatch(/^Contact: /m);
+  expect(Date.parse(sec.match(/^Expires: (.+)$/m)![1])).toBeGreaterThan(Date.now());
 });
