@@ -17,6 +17,7 @@ import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
 import { PasswordInput } from '@/components/auth/PasswordInput';
 import { useOverlay } from '@/lib/hooks/useOverlay';
+import { withSecondFactor } from '@/lib/auth/secondFactor';
 
 type SignupStep = 'form' | 'awaiting';
 type ForgotStep = 'email' | 'sent';
@@ -116,7 +117,7 @@ export function AuthModal() {
         if (d.confirmed) {
           setAwaitingChallenge(false);
           try {
-            await signInWithEmailAndPassword(auth, email, password);
+            await withSecondFactor(() => signInWithEmailAndPassword(auth, email, password));
           } catch {
             setLoginError('Confirmado, mas não foi possível concluir o login. Tente novamente.');
           }
@@ -155,7 +156,7 @@ export function AuthModal() {
         return;
       }
 
-      await signInWithEmailAndPassword(auth, email, password);
+      await withSecondFactor(() => signInWithEmailAndPassword(auth, email, password));
       // O AuthModalProvider detecta o login (via onAuthStateChanged) e
       // fecha o modal + roda a ação pendente sozinho, nada a fazer aqui.
     } catch (err: unknown) {

@@ -15,6 +15,7 @@ import { Overlay } from '@/components/ui/Overlay';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
 import { PasswordInput } from '@/components/auth/PasswordInput';
+import { withSecondFactor } from '@/lib/auth/secondFactor';
 
 
 // ── Modal recuperação de senha ────────────────────────────────────────────────
@@ -175,7 +176,7 @@ export default function LoginPage() {
         if (d.confirmed) {
           setAwaitingChallenge(false);
           try {
-            await signInWithEmailAndPassword(auth, email, password);
+            await withSecondFactor(() => signInWithEmailAndPassword(auth, email, password));
           } catch {
             setError('Confirmado, mas não foi possível concluir o login. Tente novamente.');
           }
@@ -212,7 +213,7 @@ export default function LoginPage() {
       }
 
       // Firebase Auth é a fonte da verdade para a senha
-      await signInWithEmailAndPassword(auth, email, password);
+      await withSecondFactor(() => signInWithEmailAndPassword(auth, email, password));
       // Redirect fica a cargo do useEffect acima (respeita returnTo, e
       // evita corrida: se pusesse aqui, sobrescreveria o destino certo
       // com '/' antes do consumeReturnTo() do effect rodar).
