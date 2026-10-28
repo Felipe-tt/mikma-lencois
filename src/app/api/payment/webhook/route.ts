@@ -164,8 +164,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (deliveryRef) {
-    // expireAt: o TTL do Firestore apaga depois de 30 dias (reenvio vem em horas).
-    await deliveryRef.set({ event: eventType, at: FieldValue.serverTimestamp(), expireAt: new Date(Date.now() + 30 * 86_400_000) }).catch(() => {});
+    // expireAt: o TTL do Firestore apaga depois de 3 dias (reenvio vem em horas).
+    await deliveryRef.set({ event: eventType, at: FieldValue.serverTimestamp(), expireAt: new Date(Date.now() + 3 * 86_400_000) }).catch(() => {});
   }
   return NextResponse.json({ ok: true });
 }

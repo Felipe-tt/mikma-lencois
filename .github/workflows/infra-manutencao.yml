@@ -80,11 +80,12 @@ jobs:
           # Documentos temporários com expireAt (Timestamp). Com o TTL ligado,
           # o Firestore apaga sozinho depois da data (grátis, sem cron):
           # - webauthnChallenges: desafio de passkey (5 min);
-          # - webhook_deliveries: anti-duplicidade do webhook (30 dias);
-          # - trackingCache: rastreio dos Correios (60 dias parado).
+          # - webhook_deliveries: anti-duplicidade do webhook (3 dias);
+          # - trackingCache: rastreio dos Correios (3 dias sem consulta);
+          # - geocache: coordenadas por CEP para o frete (30 dias).
           gcloud firestore fields ttls list --format='table(name,ttlConfig.state)' 2>&1 | head -10
           if [ "$TTL" = "true" ]; then
-            for col in webauthnChallenges webhook_deliveries trackingCache; do
+            for col in webauthnChallenges webhook_deliveries trackingCache geocache; do
               if gcloud firestore fields ttls update expireAt --collection-group=$col --enable-ttl --async; then
                 echo "TTL pedido: $col"
               else

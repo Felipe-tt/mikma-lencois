@@ -10,6 +10,11 @@ on:
   schedule:
     - cron: '47 7 * * *'
   workflow_dispatch:
+    inputs:
+      limpar_antigos:
+        description: 'Em vez do backup: apagar documentos temporários antigos sem expireAt (scripts/firestore-limpar-antigos.mjs)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -35,7 +40,18 @@ jobs:
       - name: Dependências (sem scripts de instalação)
         run: npm ci --ignore-scripts
 
+      - name: Limpar temporários antigos
+        if: ${{ inputs.limpar_antigos }}
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          umask 077
+          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" node scripts/firestore-limpar-antigos.mjs --aplicar
+          rm -f "$RUNNER_TEMP/sa.json"
+
       - name: Backup
+        if: ${{ !inputs.limpar_antigos }}
         env:
           SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
@@ -52,6 +68,7 @@ jobs:
           echo "DIA=$dia" >> "$GITHUB_ENV"
 
       - name: Guardar por 14 dias
+        if: ${{ !inputs.limpar_antigos }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: firestore-${{ env.DIA }}
