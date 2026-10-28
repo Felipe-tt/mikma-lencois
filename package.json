@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run typecheck && next build",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rules": "firebase emulators:exec --only firestore --project mikma-rules-test \"vitest run --config vitest.rules.config.ts\"",
-    "e2e": "firebase emulators:exec --only auth,firestore --project demo-mikma \"node e2e/run.mjs\""
+    "e2e": "firebase emulators:exec --only auth,firestore --project demo-mikma \"node e2e/run.mjs\"",
+    "typecheck": "node node_modules/typescript-7/bin/tsc --noEmit -p ."
   },
   "dependencies": {
     "@brazilian-utils/brazilian-utils": "2.4.0",
@@ -60,8 +61,9 @@
     "firebase-tools": "^15.26.0",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5",
-    "vitest": "^4.1.10"
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vitest": "^4.1.10",
+    "typescript-7": "npm:typescript@7.0.2"
   },
   "overrides": {
     "undici": "^6.27.0",
