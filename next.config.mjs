@@ -56,6 +56,10 @@ const nextConfig = {
   },
 
   // security.txt (RFC 9116) mora em /.well-known; a rota fica em app/security.txt.
+  // Sem X-Powered-By: Next.js nas respostas (não diz a tecnologia a quem
+  // procura falha conhecida).
+  poweredByHeader: false,
+
   async rewrites() {
     return [{ source: '/.well-known/security.txt', destination: '/security.txt' }];
   },
@@ -76,8 +80,16 @@ const nextConfig = {
         headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=2592000' }],
       },
       {
+        // Vale também para o que o proxy não toca (fontes, favicon, robots,
+        // sitemap, JS): o DAST (ZAP) apontava esses arquivos sem nosniff,
+        // HSTS e Permissions-Policy. As páginas recebem o resto no proxy.ts.
         source: '/(.*)',
-        headers: [{ key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' }],
+        headers: [
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()' },
+        ],
       },
     ];
   },

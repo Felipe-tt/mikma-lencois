@@ -1,3 +1,8 @@
 10055	IGNORE	CSP com unsafe-inline: necessario pelo cache de HTML na borda (ver proxy.ts)
 10049	IGNORE	Conteudo cacheavel: o HTML da loja e cacheado de proposito na Cloudflare
 10027	IGNORE	Comentarios suspeitos no JS: falso positivo comum em bundles do Next
+10015	IGNORE	Cache-control das paginas: o HTML e cacheado de proposito (edgeCache.ts)
+10050	IGNORE	Recuperado do cache: e o cache da Cloudflare funcionando
+10109	IGNORE	Aplicacao web moderna: so informativo
+10110	IGNORE	Funcoes JS perigosas: falso positivo em bundles minificados
+90004	IGNORE	COEP: exigir quebraria pagamento, mapa e fontes de outros dominios
