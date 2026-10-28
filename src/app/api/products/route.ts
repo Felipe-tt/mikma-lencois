@@ -1,5 +1,4 @@
-export const dynamic = 'force-dynamic';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, connection } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { z } from 'zod';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -38,6 +37,7 @@ async function getSeller(req: NextRequest) {
 // Pública: lê o catálogo do cache do servidor (antes cada chamada lia todos
 // os produtos no Firestore) e a CDN guarda a resposta (ver proxy.ts).
 export async function GET() {
+  await connection(); // na hora, não no build (o build não lê o banco)
   const products = await getCatalog();
   return NextResponse.json({ products }, {
     headers: {

@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
@@ -9,7 +8,6 @@ import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { z } from 'zod';
 import { shippingEstimateSchema } from './schema';
-
 
 interface Params { params: Promise<{ id: string }> }
 

@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { timingSafeEqual } from 'crypto';
 import { checkPassword } from '@/lib/validation/password';
 import { plural } from '@/lib/plural';

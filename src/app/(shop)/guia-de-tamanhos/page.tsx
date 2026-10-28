@@ -1,20 +1,13 @@
 import type { Metadata } from 'next';
-import { adminDb } from '@/lib/firebase/admin';
+import { getCatalog } from '@/lib/catalog';
 import { shareMeta } from '@/lib/seo';
 import type { Product } from '@/types';
-import { serialize } from '@/lib/utils/serialize';
 import { SizeGuideCalculator } from '@/components/product/SizeGuideCalculator';
-import { getSettings } from '@/lib/settings';
+import { getStoreSettings } from '@/lib/settings';
 import { parseMattressWidthsFromBedSizeTable } from '@/lib/mattressSizeMatch';
 
-// ISR: os produtos mudam pouco; antes renderizava (e lia até 200 produtos) a cada visita.
-export const revalidate = 600;
-
 async function getActiveProducts(): Promise<Product[]> {
-  try {
-    const snap = await adminDb.collection('products').where('active', '==', true).limit(200).get();
-    return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
-  } catch { return []; } // build sem credenciais: a página se refaz na primeira revalidação
+  try { return await getCatalog(); } catch { return []; }
 }
 
 const GUIA_DESCRIPTION = 'Não sabe se seu colchão é Solteiro, Casal, Queen ou King? Informe as medidas e a gente te mostra o tamanho certo, sem achismo.';
@@ -29,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export default async function GuiaDeTamanhosPage() {
-  const [products, settings] = await Promise.all([getActiveProducts(), getSettings()]);
+  const [products, settings] = await Promise.all([getActiveProducts(), getStoreSettings()]);
   const widths = parseMattressWidthsFromBedSizeTable(settings.bedSizeRows);
 
   return (

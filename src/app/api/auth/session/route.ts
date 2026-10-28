@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/security';
 import { signStaffSession, STAFF_SESSION_COOKIE, STAFF_SESSION_MAX_AGE_SECONDS } from '@/lib/staffSession';

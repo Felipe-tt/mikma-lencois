@@ -1,6 +1,6 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { notFound } from 'next/navigation';
-import { cache } from 'react';
+import { cacheLife, cacheTag } from 'next/cache';
 import Link from 'next/link';
 import type { Product, InventoryItem, Review } from '@/types';
 import { BuyBox } from '@/components/product/BuyBox';
@@ -9,7 +9,7 @@ import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCarousel } from '@/components/product/ProductCarousel';
 import { ProductReviews } from '@/components/product/ProductReviews';
 import { SizeGuideModal } from '@/components/product/SizeGuideModal';
-import { getSettings } from '@/lib/settings';
+import { getStoreSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
 import { shareMeta } from '@/lib/seo';
 import { serialize } from '@/lib/utils/serialize';
@@ -18,27 +18,13 @@ import { JsonLd } from '@/components/seo/JsonLd';
 import { toPublicReview, type PublicReview } from '@/lib/reviews';
 import { FABRIC_LABEL, DEFAULT_COMPOSITION } from '@/lib/productOptions';
 
-// ISR: revalida a cada 5 minutos, reduz leituras no Firestore por visita ao produto
-export const revalidate = 300;
-// Sem isto a rota com [slug] era gerada a cada visita (ƒ no build) e o
-// revalidate acima não valia: cada acesso lia o Firestore. Lista vazia =
-// nenhuma página pronta no build; cada produto é gerado no 1º acesso e fica
-// em cache (o painel limpa com revalidatePath ao salvar).
-export async function generateStaticParams() {
-  return [];
-}
 interface Props { params: Promise<{ slug: string }> }
 
-// cache() do React: deduplica a leitura entre generateMetadata e a página
-// na MESMA requisição. Antes era um Map por container com TTL de 5 min,
-// que o revalidatePath do painel não limpava: preço alterado continuava
-// velho na página (e o checkout já cobrava o novo), e produto reativado
-// seguia dando 404.
-const getProduct = cache(async (id: string): Promise<Product | null> => {
+async function getProduct(id: string): Promise<Product | null> {
   const snap = await adminDb.collection('products').doc(id).get();
   if (!snap.exists || !snap.data()?.active) return null;
   return serialize<Product>({ id: snap.id, ...snap.data() });
-});
+}
 async function getInventory(id: string): Promise<InventoryItem[]> {
   // select() reduz o payload: só campos necessários para exibir disponibilidade
   const snap = await adminDb.collection('inventory')
@@ -109,9 +95,26 @@ async function getFronhaInventory(fronhaIds: string[]): Promise<InventoryItem[]>
   } catch { return []; }
 }
 
+/**
+ * Tudo que a página do produto lê do banco, numa entrada de cache só por
+ * produto ('use cache', 5 min). generateMetadata e a página usam a mesma
+ * entrada. O painel limpa na hora (revalidateTag 'products' ao salvar um
+ * produto, 'avaliacoes-<id>' ao moderar uma avaliação).
+ */
+async function getProductPage(id: string) {
+  'use cache';
+  cacheLife({ stale: 60, revalidate: 300, expire: 86_400 });
+  cacheTag('products', `produto-${id}`, `avaliacoes-${id}`);
+  const [product, inventory] = await Promise.all([getProduct(id), getInventory(id)]);
+  if (!product) return null;
+  const [related, reviews, fronhaOptions] = await Promise.all([getRelated(product), getReviews(product.id), getFronhaOptions(product)]);
+  const fronhaInventory = await getFronhaInventory(fronhaOptions.map(f => f.id));
+  return { product, inventory, related, reviews, fronhaOptions, fronhaInventory };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const p = await getProduct(slug);
+  const p = (await getProductPage(slug))?.product;
   if (!p) return { title: 'Produto não encontrado' };
   return {
     title: p.name,
@@ -130,11 +133,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const [product, inventory, s] = await Promise.all([getProduct(slug), getInventory(slug), getSettings()]);
-  if (!product) notFound();
-  const [related, reviews, fronhaOptions] = await Promise.all([getRelated(product), getReviews(product.id), getFronhaOptions(product)]);
+  const [data, s] = await Promise.all([getProductPage(slug), getStoreSettings()]);
+  if (!data) notFound();
+  const { product, inventory, related, reviews, fronhaOptions, fronhaInventory } = data;
   const relatedSameCategory = related.every(p => p.category === product.category);
-  const fronhaInventory = await getFronhaInventory(fronhaOptions.map(f => f.id));
 
   // Size guide data from settings
   let sizeGuideColumns: string[] = [];
@@ -155,7 +157,6 @@ export default async function ProductPage({ params }: Props) {
     s.productTrust2 || 'Frete para todo o Brasil com rastreio',
     s.productTrust3 || 'Pagamento PIX com confirmação imediata',
   ].filter(Boolean);
-
 
   // Dados estruturados (schema.org), pro Google mostrar preço, estoque e
   // estrelas de avaliação direto no resultado de busca (rich snippet) —

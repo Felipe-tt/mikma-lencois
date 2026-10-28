@@ -8,6 +8,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 export function revalidateProduct(id: string) {
   try {
     revalidateTag('products', { expire: 0 });
+    revalidateTag(`produto-${id}`, { expire: 0 });
     revalidatePath('/');
     revalidatePath('/produtos');
     revalidatePath(`/produtos/${id}`);

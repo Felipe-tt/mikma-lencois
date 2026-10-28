@@ -1,7 +1,6 @@
-export const revalidate = 86400; // 24h, conteúdo estático
 
 import { shareMeta } from '@/lib/seo';
-import { getSettings } from '@/lib/settings';
+import { getStoreSettings } from '@/lib/settings';
 import { storeIdentity } from '@/lib/legal';
 import { LegalPage, A, B, clause, contactClause, type LegalSection } from '@/components/legal/LegalPage';
 
@@ -13,7 +12,7 @@ export const metadata = {
 };
 
 export default async function TrocasEDevolucoesPage() {
-  const s = await getSettings();
+  const s = await getStoreSettings();
   const id = storeIdentity(s);
 
   const sections: LegalSection[] = [

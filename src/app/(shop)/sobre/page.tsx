@@ -1,5 +1,4 @@
-export const revalidate = 86400;
-import { getSettings } from '@/lib/settings';
+import { getStoreSettings } from '@/lib/settings';
 import { BrandLogo } from '@/components/BrandLogo';
 import { BusinessHoursCard } from '@/components/storefront/BusinessHoursCard';
 import Image from 'next/image';
@@ -10,7 +9,7 @@ import { shareMeta, STORE_SUMMARY } from '@/lib/seo';
 
 // Sem isso a página herdava o título e a descrição da home.
 export async function generateMetadata(): Promise<Metadata> {
-  const s = await getSettings();
+  const s = await getStoreSettings();
   const name = s.storeName || 'Mikma Lençóis';
   const city = s.storeCity || 'Blumenau';
   const title = 'Sobre';
@@ -24,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SobrePage() {
-  const s = await getSettings();
+  const s = await getStoreSettings();
 
   const heroLine1 = s.aboutHeroLine1 || s.storeName || 'Mikma Lençóis';
   const heroLine2 = s.aboutHeroLine2 || `em ${s.storeCity || 'Blumenau'}, SC.`;

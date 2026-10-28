@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';

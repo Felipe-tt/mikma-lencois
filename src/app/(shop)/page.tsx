@@ -1,42 +1,22 @@
-import { adminDb } from '@/lib/firebase/admin';
-import { getSettings } from '@/lib/settings';
+import { getCatalog } from '@/lib/catalog';
+import { getStoreSettings } from '@/lib/settings';
 import { ProductCard } from '@/components/product/ProductCard';
 import type { Product } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { serialize } from '@/lib/utils/serialize';
 
-export const revalidate = 900; // ISR: revalida a cada 15 minutos
-
-async function getFeatured(): Promise<Product[]> {
+// Prerender parcial: a página sai pronta do cache; o catálogo e as
+// configurações vêm de funções 'use cache' que o painel limpa ao salvar.
+async function getHomeData(): Promise<{ products: Product[]; categories: string[] }> {
   try {
-    const snap = await adminDb
-      .collection('products')
-      .where('active', '==', true)
-      .orderBy('createdAt', 'desc')
-      .limit(8)
-      .get();
-    return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
-  } catch { return []; }
-}
-
-async function getCategories(): Promise<string[]> {
-  try {
-    const snap = await adminDb
-      .collection('products')
-      .where('active', '==', true)
-      .select('category')
-      .get();
-    return Array.from(new Set(
-      snap.docs.map(d => d.data().category as string).filter(Boolean)
-    )).sort();
-  } catch { return []; }
+    const all = await getCatalog();
+    const categories = Array.from(new Set(all.map(p => p.category).filter(Boolean))).sort();
+    return { products: all.slice(0, 8), categories };
+  } catch { return { products: [], categories: [] }; }
 }
 
 export default async function HomePage() {
-  const [products, categories, s] = await Promise.all([
-    getFeatured(), getCategories(), getSettings(),
-  ]);
+  const [{ products, categories }, s] = await Promise.all([getHomeData(), getStoreSettings()]);
 
   const city      = s.storeCity?.split(',')[0] || 'Blumenau';
 
