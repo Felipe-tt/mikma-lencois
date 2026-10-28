@@ -4,18 +4,18 @@ import { z } from 'zod';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
-import { cancelNfe, issueNfe, NfeError, nfeField, syncNfe } from '@/lib/nfe/service';
-import { FocusConfigError } from '@/lib/nfe/focusApi';
+import { cancelNfe, inutilizeNfe, issueNfe, NfeError, nfeField, syncNfe } from '@/lib/nfe/service';
 
 const bodySchema = z.object({
-  action: z.enum(['emit', 'sync', 'cancel']),
+  action: z.enum(['emit', 'sync', 'cancel', 'inutilizar']),
   environment: z.enum(['producao', 'homologacao']),
   justificativa: z.string().trim().max(255).optional(),
 });
 
 /**
  * POST /api/orders/[orderId]/nfe (equipe)
- * emit: emite (ou retoma) a nota; sync: consulta a Focus; cancel: cancela.
+ * emit: emite (ou retoma) a nota; sync: consulta a SEFAZ; cancel: cancela;
+ * inutilizar: inutiliza o número de uma nota rejeitada.
  * environment "homologacao" é a nota de teste, sem valor fiscal.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
@@ -40,16 +40,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
 
   try {
     const status = action === 'emit'
-      ? await issueNfe(orderId, environment, { by: uid, waitMs: 4000 })
+      ? await issueNfe(orderId, environment, { by: uid })
       : action === 'sync'
         ? await syncNfe(orderId, environment)
-        : await cancelNfe(orderId, environment, justificativa ?? '');
+        : action === 'cancel'
+          ? await cancelNfe(orderId, environment, justificativa ?? '')
+          : await inutilizeNfe(orderId, environment);
     const nfe = (await adminDb.collection('orders').doc(orderId).get()).get(nfeField(environment)) ?? null;
     return NextResponse.json({ status, nfe });
   } catch (err) {
     if (err instanceof NfeError) return NextResponse.json({ error: err.message }, { status: err.httpStatus });
-    if (err instanceof FocusConfigError) return NextResponse.json({ error: err.message }, { status: 400 });
     console.error('[nfe route]', err);
-    return NextResponse.json({ error: 'Não foi possível falar com o emissor agora. Tente de novo.' }, { status: 502 });
+    return NextResponse.json({ error: 'Não foi possível falar com a SEFAZ agora. Tente de novo em instantes.' }, { status: 502 });
   }
 }

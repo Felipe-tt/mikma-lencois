@@ -15,7 +15,7 @@ import {
 import { useEffect, useId, useRef, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { NFE_DEFAULTS } from '@/lib/nfe/config';
-import { NfeTokens } from '@/components/painel/NfeTokens';
+import { NfeCertificate } from '@/components/painel/NfeCertificate';
 import { db } from '@/lib/firebase/db';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
@@ -465,7 +465,10 @@ export default function ConfiguracoesPage() {
           </Card>
 
           {isAdmin && (
-            <Card icon="shield" title="Nota fiscal (NF-e)" desc="Emissão pela Focus NFe. Teste em homologação antes de ligar a produção">
+            <Card icon="shield" title="Nota fiscal (NF-e)" desc="Emitida direto na SEFAZ com o certificado digital da loja, sem mensalidade. Sem certificado, nenhuma nota é gerada">
+              <Divider label="Certificado digital A1" />
+              <NfeCertificate user={user} />
+              <Divider label="Emissão" />
               <Toggle
                 label="Emitir a nota automaticamente quando o pedido for pago"
                 checked={!!settings.nfeAutoEmit}
@@ -479,13 +482,21 @@ export default function ConfiguracoesPage() {
                 hint="Com a emissão automática ligada, as notas vão para homologação enquanto isto estiver ligado. No pedido sempre dá para emitir uma nota de teste à parte."
                 warn="HOMOLOGAÇÃO: as notas automáticas não têm valor fiscal. Desligue para emitir de verdade."
               />
-              <Divider label="Tokens da Focus NFe" />
-              <NfeTokens user={user} />
-              <Divider label="Dados fiscais (confirme com a contabilidade)" />
+              <Divider label="Empresa (o endereço vem dos dados da loja)" />
               <Row>
-                <F label="CNPJ do emitente" value={settings.nfeCnpj ?? NFE_DEFAULTS.cnpj} onChange={v => set('nfeCnpj', v)} inputMode="numeric" maxLength={18} />
-                <F label="UF do emitente" value={settings.nfeUfEmitente ?? NFE_DEFAULTS.ufEmitente} onChange={v => set('nfeUfEmitente', v.toUpperCase())} maxLength={2} />
+                <F label="CNPJ" value={settings.nfeCnpj ?? settings.storeCnpj ?? NFE_DEFAULTS.cnpj} onChange={v => set('nfeCnpj', v)} inputMode="numeric" maxLength={18} />
+                <F label="Inscrição estadual" value={settings.nfeIe ?? ''} onChange={v => set('nfeIe', v)} inputMode="numeric" maxLength={20} hint="Obrigatória na nota" />
               </Row>
+              <F label="Razão social" value={settings.nfeRazaoSocial ?? ''} onChange={v => set('nfeRazaoSocial', v)} maxLength={60} hint="Como está no cartão CNPJ" />
+              <Row>
+                <F label="Regime (CRT)" value={String(settings.nfeCrt ?? NFE_DEFAULTS.crt)} onChange={v => set('nfeCrt', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={1} hint="1 = Simples Nacional, 4 = MEI, 3 = regime normal" />
+                <F label="Código IBGE do município" value={settings.nfeCodMunicipio ?? NFE_DEFAULTS.codMunicipio} onChange={v => set('nfeCodMunicipio', v)} inputMode="numeric" maxLength={7} hint="Blumenau = 4202404" />
+              </Row>
+              <Row>
+                <F label="Série" value={String(settings.nfeSerie ?? NFE_DEFAULTS.serie)} onChange={v => set('nfeSerie', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={3} />
+                <F label="Próximo número da nota" value={String(settings.nfeProximoNumero ?? NFE_DEFAULTS.proximoNumero)} onChange={v => set('nfeProximoNumero', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={9} hint="Se já emitiu notas em outro sistema, continue da última + 1" />
+              </Row>
+              <Divider label="Dados fiscais (confirme com a contabilidade)" />
               <Row>
                 <F label="NCM" value={settings.nfeNcm ?? NFE_DEFAULTS.ncm} onChange={v => set('nfeNcm', v)} inputMode="numeric" maxLength={10} hint="6302.10.00 = roupa de cama de malha" />
                 <F label="CSOSN (ICMS)" value={settings.nfeCsosn ?? NFE_DEFAULTS.csosn} onChange={v => set('nfeCsosn', v)} inputMode="numeric" maxLength={3} hint="102 = Simples Nacional sem crédito" />

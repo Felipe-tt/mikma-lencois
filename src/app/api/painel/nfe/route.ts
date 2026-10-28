@@ -1,16 +1,19 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminAuth } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
-import { saveFocusToken, tokenStatus } from '@/lib/nfe/tokens';
-import { focusGet, FocusConfigError } from '@/lib/nfe/focusApi';
+import { getSettings } from '@/lib/settings';
+import { nfeConfigFrom } from '@/lib/nfe/config';
+import { CertificateError, certificateInfo, removeCertificate, saveCertificate } from '@/lib/nfe/certificate';
 
 /**
- * Tokens da Focus NFe (só admin). GET: quais ambientes têm token.
- * POST save: grava (ou apaga, com token vazio). POST test: confere o token.
- * O token nunca volta para o navegador.
+ * Certificado digital A1 da nota fiscal (só admin).
+ * GET: dados do certificado importado (titular, CNPJ, validade) ou null.
+ * POST: importa o .pfx (base64) com a senha. DELETE: remove.
+ * O arquivo e a senha nunca voltam para o navegador.
  */
 async function admin(req: NextRequest): Promise<{ uid: string } | NextResponse> {
   const bearer = extractBearer(req);
@@ -27,41 +30,39 @@ async function admin(req: NextRequest): Promise<{ uid: string } | NextResponse> 
 export async function GET(req: NextRequest) {
   const who = await admin(req);
   if (who instanceof NextResponse) return who;
-  return NextResponse.json(await tokenStatus());
+  return NextResponse.json({ certificate: await certificateInfo() });
 }
 
-const bodySchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('save'), environment: z.enum(['producao', 'homologacao']), token: z.string().trim().max(200) }),
-  z.object({ action: z.literal('test'), environment: z.enum(['producao', 'homologacao']) }),
-]);
+// .pfx de A1 tem poucos KB; 100 KB em base64 cobre com folga.
+const bodySchema = z.object({
+  pfxBase64: z.string().min(100).max(140_000).regex(/^[A-Za-z0-9+/=]+$/),
+  password: z.string().min(1).max(200),
+});
 
 export async function POST(req: NextRequest) {
   const who = await admin(req);
   if (who instanceof NextResponse) return who;
-  if (!await rateLimit(`nfe-config:${who.uid}`, 10, 60_000)) {
+  if (!await rateLimit(`nfe-cert:${who.uid}`, 10, 60 * 60_000)) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde um pouco.' }, { status: 429 });
   }
   const parsed = await validateBody(req, bodySchema);
   if (!parsed.ok) return parsed.response;
-  const body = parsed.data;
-
-  if (body.action === 'save') {
-    if (body.token && !/^[A-Za-z0-9_-]{10,200}$/.test(body.token)) {
-      return NextResponse.json({ error: 'Token com formato inesperado. Copie de novo no painel da Focus.' }, { status: 400 });
-    }
-    await saveFocusToken(body.environment, body.token || null);
-    return NextResponse.json(await tokenStatus());
-  }
-
-  // Teste: consulta uma referência que não existe. 404 = token aceito.
   try {
-    const res = await focusGet(body.environment, `teste-conexao-${Date.now()}`);
-    if (res.status === 404) return NextResponse.json({ ok: true, message: 'Conexão com a Focus NFe funcionando.' });
-    if (res.status === 401 || res.status === 403) return NextResponse.json({ ok: false, message: 'A Focus recusou o token deste ambiente.' });
-    if (res.status === 0) return NextResponse.json({ ok: false, message: `Sem resposta da Focus (${res.ok ? '' : res.error}).` });
-    return NextResponse.json({ ok: res.ok, message: res.ok ? 'Conexão com a Focus NFe funcionando.' : `Resposta inesperada da Focus: ${res.error}` });
+    const config = nfeConfigFrom(await getSettings() as unknown as Record<string, unknown>);
+    const info = await saveCertificate(Buffer.from(parsed.data.pfxBase64, 'base64'), parsed.data.password, config.cnpj);
+    // Só a validade vai para as settings (públicas): o painel sabe que há certificado.
+    await adminDb.collection('settings').doc('store').set({ nfeCertificado: { validTo: info.validTo } }, { merge: true });
+    return NextResponse.json({ certificate: info });
   } catch (err) {
-    if (err instanceof FocusConfigError) return NextResponse.json({ ok: false, message: err.message });
+    if (err instanceof CertificateError) return NextResponse.json({ error: err.message }, { status: 400 });
     throw err;
   }
+}
+
+export async function DELETE(req: NextRequest) {
+  const who = await admin(req);
+  if (who instanceof NextResponse) return who;
+  await removeCertificate();
+  await adminDb.collection('settings').doc('store').set({ nfeCertificado: FieldValue.delete() }, { merge: true });
+  return NextResponse.json({ certificate: null });
 }

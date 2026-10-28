@@ -2,9 +2,9 @@ import { isValidCpf, isValidCep } from '@/lib/masks';
 import type { NfeConfig } from './config';
 
 /**
- * Montagem da NF-e (modelo 55) de um pedido no formato JSON da Focus NFe.
- * Função pura: recebe o pedido, o cliente e a configuração e devolve o
- * corpo da requisição, ou lança NfeDataError com tudo o que falta.
+ * Montagem da NF-e (modelo 55, leiaute 4.00) de um pedido, no formato de
+ * objeto da biblioteca nfewizard-io (mesmos nomes das tags do XML). Funções
+ * puras: validam, calculam e montam; quem envia é o sefaz.ts.
  *
  * Valores: o desconto (PIX + cupom), o frete e o acréscimo do parcelamento
  * no cartão são rateados entre os itens, ao centavo, de forma que a soma da
@@ -47,15 +47,28 @@ export interface NfeCustomer {
   phone?: string;
 }
 
+/** Dados da nota que precisam ser os mesmos em toda nova tentativa (a chave depende deles). */
+export interface NfeIdentity {
+  numero: number;
+  serie: number;
+  cNF: string; // código numérico aleatório de 8 dígitos
+  dhEmi: string; // ISO com -03:00
+  homologacao: boolean;
+  cMunDest: string; // IBGE do município do cliente
+}
+
 // Exigência da SEFAZ: em homologação o nome do destinatário é este texto.
 export const HOMOLOGACAO_DEST_NAME = 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL';
 
-const UFS = new Set(['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']);
+export const UF_CODE: Record<string, number> = {
+  RO: 11, AC: 12, AM: 13, RR: 14, PA: 15, AP: 16, TO: 17, MA: 21, PI: 22, CE: 23, RN: 24, PB: 25, PE: 26, AL: 27, SE: 28, BA: 29,
+  MG: 31, ES: 32, RJ: 33, SP: 35, PR: 41, SC: 42, RS: 43, MS: 50, MT: 51, GO: 52, DF: 53,
+};
 
 const reais = (cents: number) => (cents / 100).toFixed(2);
 const digits = (v: string | undefined) => (v ?? '').replace(/\D/g, '');
-// A SEFAZ recusa quebras de linha e caracteres de controle nos campos de texto.
-const clean = (v: string | undefined, max: number) => (v ?? '').replace(/[\u0000-\u001F\u007F]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+// A SEFAZ recusa quebras de linha, caracteres de controle e espaços nas pontas.
+const clean = (v: string | undefined, max: number) => (v ?? '').replace(/[\u0000-\u001F\u007F]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max).trim();
 
 /**
  * Reparte `total` centavos entre pesos, proporcionalmente, sem perder
@@ -83,33 +96,37 @@ export function brasiliaIso(date: Date): string {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}-03:00`;
 }
 
-export function buildNfePayload(
-  order: NfeOrder,
-  customer: NfeCustomer,
-  config: NfeConfig,
-  opts: { homologacao: boolean; now?: Date },
-): Record<string, unknown> {
-  const problems: string[] = [];
-  const addr = order.address ?? {};
-  const uf = (addr.state ?? '').trim().toUpperCase();
-  const cpf = digits(customer.cpf);
+/** Dígito verificador da chave de acesso (módulo 11, pesos 2 a 9 da direita para a esquerda). */
+export function chaveDv(base43: string): number {
+  let sum = 0;
+  let weight = 2;
+  for (let i = base43.length - 1; i >= 0; i--) {
+    sum += Number(base43[i]) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  const r = sum % 11;
+  return r < 2 ? 0 : 11 - r;
+}
 
-  if (!isValidCpf(cpf)) problems.push('CPF do cliente ausente ou inválido');
-  if (!clean(customer.name, 60) && !opts.homologacao) problems.push('nome do cliente');
-  if (!isValidCep(addr.cep ?? '')) problems.push('CEP do endereço');
-  if (!clean(addr.street, 60)) problems.push('rua do endereço');
-  if (!clean(addr.number, 60)) problems.push('número do endereço');
-  if (!clean(addr.neighborhood, 60)) problems.push('bairro do endereço');
-  if (!clean(addr.city, 60)) problems.push('cidade do endereço');
-  if (!UFS.has(uf)) problems.push('UF do endereço');
-  if (!UFS.has(config.ufEmitente)) problems.push('UF do emitente nas configurações');
-  if (digits(config.cnpj).length !== 14) problems.push('CNPJ do emitente nas configurações');
-  if (!/^\d{8}$/.test(config.ncm)) problems.push('NCM nas configurações (8 dígitos)');
-  const items = (order.items ?? []).filter(i => i.quantity > 0);
-  if (items.length === 0) problems.push('pedido sem itens');
-  if (items.some(i => !Number.isInteger(i.unitPrice) || i.unitPrice <= 0 || !Number.isInteger(i.quantity))) problems.push('item com preço ou quantidade inválidos');
+/** Chave de acesso de 44 dígitos. */
+export function chaveAcesso(uf: string, dhEmi: string, cnpj: string, serie: number, numero: number, cNF: string): string {
+  const aamm = dhEmi.slice(2, 4) + dhEmi.slice(5, 7);
+  const base = `${UF_CODE[uf]}${aamm}${cnpj}55${String(serie).padStart(3, '0')}${String(numero).padStart(9, '0')}1${cNF}`;
+  return base + chaveDv(base);
+}
 
-  // Valores do pedido, em centavos.
+/** Código numérico aleatório da chave (8 dígitos, diferente do número da nota). */
+export function randomCNF(numero: number): string {
+  for (;;) {
+    const c = String(Math.floor(Math.random() * 1e8)).padStart(8, '0');
+    if (Number(c) !== numero) return c;
+  }
+}
+
+interface Amounts { gross: number[]; productsCents: number; shippingCents: number; discountCents: number; otherCents: number }
+
+function amounts(order: NfeOrder): Amounts {
+  const items = order.items ?? [];
   const gross = items.map(i => i.unitPrice * i.quantity);
   const productsCents = gross.reduce((a, b) => a + b, 0);
   const shippingCents = Math.max(0, order.shippingCents ?? 0);
@@ -117,89 +134,194 @@ export function buildNfePayload(
   // O que o cliente pagou além de produtos − descontos + frete: o acréscimo
   // do parcelamento no cartão. Entra como "outras despesas acessórias".
   const otherCents = order.totalCents - (productsCents - discountCents + shippingCents);
-  if (typeof order.productsCents === 'number' && order.productsCents !== productsCents) problems.push('soma dos itens diferente do valor de produtos do pedido');
-  if (discountCents > productsCents) problems.push('desconto maior que o valor dos produtos');
-  if (otherCents < 0) problems.push('total do pedido menor que produtos − desconto + frete');
+  return { gross, productsCents, shippingCents, discountCents, otherCents };
+}
 
+/**
+ * Tudo o que impede a nota de sair, antes de gastar um número. Vazio = ok.
+ * (O município do cliente é conferido depois, pela consulta do CEP.)
+ */
+export function nfeProblems(order: NfeOrder, customer: NfeCustomer, config: NfeConfig, homologacao: boolean): string[] {
+  const problems: string[] = [];
+  const addr = order.address ?? {};
+  const uf = (addr.state ?? '').trim().toUpperCase();
+  if (!isValidCpf(digits(customer.cpf))) problems.push('CPF do cliente ausente ou inválido');
+  if (!homologacao && clean(customer.name, 60).length < 2) problems.push('nome do cliente');
+  if (!isValidCep(addr.cep ?? '')) problems.push('CEP do endereço');
+  if (!clean(addr.street, 60)) problems.push('rua do endereço');
+  if (!clean(addr.number, 60)) problems.push('número do endereço');
+  if (!clean(addr.neighborhood, 60)) problems.push('bairro do endereço');
+  if (!clean(addr.city, 60)) problems.push('cidade do endereço');
+  if (!UF_CODE[uf]) problems.push('UF do endereço');
+
+  if (digits(config.cnpj).length !== 14) problems.push('CNPJ da loja (configurações)');
+  if (clean(config.razaoSocial, 60).length < 2) problems.push('razão social (configurações)');
+  if (!config.ie) problems.push('inscrição estadual (configurações)');
+  if (!UF_CODE[config.ufEmitente]) problems.push('UF da loja (configurações)');
+  if (!/^\d{7}$/.test(config.codMunicipio)) problems.push('código IBGE do município da loja (configurações)');
+  if (!clean(config.logradouro, 60) || !clean(config.bairro, 60) || config.cep.length !== 8) problems.push('endereço completo da loja (configurações)');
+  if (!/^\d{8}$/.test(config.ncm)) problems.push('NCM (8 dígitos, configurações)');
+
+  const items = (order.items ?? []).filter(i => i.quantity > 0);
+  if (items.length === 0) problems.push('pedido sem itens');
+  if (items.length > 990) problems.push('pedido com itens demais para uma nota');
+  if (items.some(i => !Number.isInteger(i.unitPrice) || i.unitPrice <= 0 || !Number.isInteger(i.quantity))) problems.push('item com preço ou quantidade inválidos');
+  const a = amounts(order);
+  if (typeof order.productsCents === 'number' && order.productsCents !== a.productsCents) problems.push('soma dos itens diferente do valor de produtos do pedido');
+  if (a.discountCents > a.productsCents) problems.push('desconto maior que o valor dos produtos');
+  if (a.otherCents < 0) problems.push('total do pedido menor que produtos − desconto + frete');
+  return problems;
+}
+
+const PIS_NT = new Set(['04', '05', '06', '07', '08', '09']);
+
+/** Monta a NF-e no formato da nfewizard-io. Lança NfeDataError se faltar algo. */
+export function buildNfe(order: NfeOrder, customer: NfeCustomer, config: NfeConfig, id: NfeIdentity) {
+  const problems = nfeProblems(order, customer, config, id.homologacao);
+  if (!/^\d{7}$/.test(id.cMunDest)) problems.push('código IBGE da cidade do cliente (CEP não encontrado)');
   if (problems.length > 0) throw new NfeDataError(problems);
 
-  const discounts = apportion(discountCents, gross);
-  const freights = apportion(shippingCents, gross);
-  const others = apportion(otherCents, gross);
+  const addr = order.address!;
+  const uf = addr.state!.trim().toUpperCase();
+  const items = order.items.filter(i => i.quantity > 0);
+  const a = amounts({ ...order, items });
+  const discounts = apportion(a.discountCents, a.gross);
+  const freights = apportion(a.shippingCents, a.gross);
+  const others = apportion(a.otherCents, a.gross);
   const interestadual = uf !== config.ufEmitente;
-  const cfop = interestadual ? config.cfopInterestadual : config.cfopInterno;
+  const cfop = Number(interestadual ? config.cfopInterestadual : config.cfopInterno);
+  const pickup = order.delivery?.carrier === 'pickup';
+  const chave = chaveAcesso(config.ufEmitente, id.dhEmi, digits(config.cnpj), id.serie, id.numero, id.cNF);
+  const pisGroup = (cst: string) => (PIS_NT.has(cst) ? 'NT' : 'Outr');
 
-  const itens = items.map((item, i) => {
+  const det = items.map((item, i) => {
     const variant = [item.variant?.size, item.variant?.colorName ?? item.variant?.color].filter(Boolean).join(' ');
-    const descricao = clean(variant && !item.productName.toLowerCase().includes(variant.toLowerCase()) ? `${item.productName} ${variant}` : item.productName, 120);
+    const xProd = clean(variant && !item.productName.toLowerCase().includes(variant.toLowerCase()) ? `${item.productName} ${variant}` : item.productName, 120);
+    const pis = pisGroup(config.pisCofinsCst);
     return {
-      numero_item: i + 1,
-      codigo_produto: clean(item.sku, 60),
-      descricao,
-      cfop,
-      codigo_ncm: config.ncm,
-      unidade_comercial: 'UN',
-      quantidade_comercial: item.quantity,
-      valor_unitario_comercial: reais(item.unitPrice),
-      unidade_tributavel: 'UN',
-      quantidade_tributavel: item.quantity,
-      valor_unitario_tributavel: reais(item.unitPrice),
-      valor_bruto: reais(gross[i]),
-      ...(discounts[i] > 0 ? { valor_desconto: reais(discounts[i]) } : {}),
-      ...(freights[i] > 0 ? { valor_frete: reais(freights[i]) } : {}),
-      ...(others[i] > 0 ? { valor_outras_despesas: reais(others[i]) } : {}),
-      inclui_no_total: 1,
-      icms_origem: config.origem,
-      icms_situacao_tributaria: config.csosn,
-      pis_situacao_tributaria: config.pisCofinsCst,
-      cofins_situacao_tributaria: config.pisCofinsCst,
-      ...(item.note ? { informacoes_adicionais_item: clean(item.note, 500) } : {}),
+      prod: {
+        cProd: clean(item.sku, 60),
+        cEAN: 'SEM GTIN',
+        xProd,
+        NCM: config.ncm,
+        CFOP: cfop,
+        uCom: 'UN',
+        qCom: item.quantity,
+        vUnCom: reais(item.unitPrice),
+        vProd: reais(a.gross[i]),
+        cEANTrib: 'SEM GTIN',
+        uTrib: 'UN',
+        qTrib: item.quantity,
+        vUnTrib: reais(item.unitPrice),
+        ...(freights[i] > 0 ? { vFrete: reais(freights[i]) } : {}),
+        ...(discounts[i] > 0 ? { vDesc: reais(discounts[i]) } : {}),
+        ...(others[i] > 0 ? { vOutro: reais(others[i]) } : {}),
+        indTot: 1,
+      },
+      imposto: {
+        ICMS: { ICMSSN102: { orig: Number(config.origem), CSOSN: Number(config.csosn) as 102 } },
+        PIS: pis === 'NT' ? { PISNT: { CST: config.pisCofinsCst } } : { PISOutr: { CST: config.pisCofinsCst, vBC: 0, pPIS: 0, vPIS: 0 } },
+        COFINS: pis === 'NT' ? { COFINSNT: { CST: config.pisCofinsCst } } : { COFINSOutr: { CST: config.pisCofinsCst, vBC: 0, pCOFINS: 0, vCOFINS: 0 } },
+      },
+      ...(item.note ? { infAdProd: clean(item.note, 500) } : {}),
     };
   });
 
-  const pickup = order.delivery?.carrier === 'pickup';
-  const isPix = order.payment?.method === 'pix';
-  const now = opts.now ?? new Date();
-
-  return {
-    natureza_operacao: clean(config.naturezaOperacao, 60),
-    data_emissao: brasiliaIso(now),
-    data_entrada_saida: brasiliaIso(now),
-    tipo_documento: 1, // saída
-    finalidade_emissao: 1, // normal
-    local_destino: interestadual ? 2 : 1,
-    consumidor_final: 1,
-    presenca_comprador: 2, // internet
-    indicador_intermediario: 0, // site próprio, sem marketplace
-    cnpj_emitente: digits(config.cnpj),
-    nome_destinatario: opts.homologacao ? HOMOLOGACAO_DEST_NAME : clean(customer.name, 60),
-    cpf_destinatario: cpf,
-    indicador_inscricao_estadual_destinatario: 9, // não contribuinte
-    ...(customer.email ? { email_destinatario: clean(customer.email, 60) } : {}),
-    ...(digits(customer.phone).length >= 10 ? { telefone_destinatario: digits(customer.phone).slice(0, 14) } : {}),
-    logradouro_destinatario: clean(addr.street, 60),
-    numero_destinatario: clean(addr.number, 60),
-    ...(clean(addr.complement, 60) ? { complemento_destinatario: clean(addr.complement, 60) } : {}),
-    bairro_destinatario: clean(addr.neighborhood, 60),
-    municipio_destinatario: clean(addr.city, 60),
-    uf_destinatario: uf,
-    cep_destinatario: digits(addr.cep),
-    pais_destinatario: 'Brasil',
+  const zero = '0.00';
+  const infNFe = {
+    Id: chave,
+    ide: {
+      cUF: UF_CODE[config.ufEmitente],
+      cNF: id.cNF,
+      natOp: clean(config.naturezaOperacao, 60),
+      mod: 55,
+      serie: String(id.serie),
+      nNF: id.numero,
+      dhEmi: id.dhEmi,
+      dhSaiEnt: id.dhEmi,
+      tpNF: 1,
+      idDest: interestadual ? 2 : 1,
+      cMunFG: Number(config.codMunicipio),
+      tpImp: 1,
+      tpEmis: 1,
+      cDV: Number(chave.slice(-1)),
+      tpAmb: id.homologacao ? 2 : 1,
+      finNFe: 1,
+      indFinal: 1,
+      indPres: 2, // internet
+      indIntermed: 0, // site próprio
+      procEmi: 0,
+      verProc: 'Mikma 1.0',
+    },
+    emit: {
+      CNPJCPF: digits(config.cnpj),
+      xNome: clean(config.razaoSocial, 60),
+      ...(config.nomeFantasia ? { xFant: clean(config.nomeFantasia, 60) } : {}),
+      enderEmit: {
+        xLgr: clean(config.logradouro, 60),
+        nro: clean(config.numero, 60),
+        ...(config.complemento ? { xCpl: clean(config.complemento, 60) } : {}),
+        xBairro: clean(config.bairro, 60),
+        cMun: Number(config.codMunicipio),
+        xMun: clean(config.municipio, 60),
+        UF: config.ufEmitente,
+        CEP: config.cep,
+        cPais: 1058,
+        xPais: 'BRASIL',
+        ...(config.telefone.length >= 10 ? { fone: config.telefone.slice(0, 14) } : {}),
+      },
+      IE: config.ie,
+      CRT: config.crt,
+    },
+    dest: {
+      CNPJCPF: digits(customer.cpf),
+      xNome: id.homologacao ? HOMOLOGACAO_DEST_NAME : clean(customer.name, 60),
+      enderDest: {
+        xLgr: clean(addr.street, 60),
+        nro: clean(addr.number, 60),
+        ...(clean(addr.complement, 60) ? { xCpl: clean(addr.complement, 60) } : {}),
+        xBairro: clean(addr.neighborhood, 60),
+        cMun: Number(id.cMunDest),
+        xMun: clean(addr.city, 60),
+        UF: uf,
+        CEP: digits(addr.cep),
+        cPais: 1058,
+        xPais: 'BRASIL',
+        ...(digits(customer.phone).length >= 10 ? { fone: digits(customer.phone).slice(0, 14) } : {}),
+      },
+      indIEDest: 9, // não contribuinte
+      ...(customer.email ? { email: clean(customer.email, 60) } : {}),
+    },
+    det,
+    total: {
+      ICMSTot: {
+        vBC: zero, vICMS: zero, vICMSDeson: zero, vFCP: zero, vBCST: zero, vST: zero, vFCPST: zero, vFCPSTRet: zero,
+        vProd: reais(a.productsCents),
+        vFrete: reais(a.shippingCents),
+        vSeg: zero,
+        vDesc: reais(a.discountCents),
+        vII: zero, vIPI: zero, vIPIDevol: zero, vPIS: zero, vCOFINS: zero,
+        vOutro: reais(a.otherCents),
+        vNF: reais(order.totalCents),
+      },
+    },
     // Retirada na loja: sem frete. Entrega: contratada pela loja (CIF).
-    modalidade_frete: pickup ? 9 : 0,
-    valor_produtos: reais(productsCents),
-    ...(shippingCents > 0 ? { valor_frete: reais(shippingCents) } : {}),
-    ...(discountCents > 0 ? { valor_desconto: reais(discountCents) } : {}),
-    ...(otherCents > 0 ? { valor_outras_despesas: reais(otherCents) } : {}),
-    valor_total: reais(order.totalCents),
-    items: itens,
-    formas_pagamento: [{
-      // 17 = PIX dinâmico; 03 = cartão de crédito. Pagamento não integrado
-      // à automação (feito pela AbacatePay).
-      forma_pagamento: isPix ? '17' : '03',
-      valor_pagamento: reais(order.totalCents),
-      tipo_integracao: 2,
-    }],
-    informacoes_adicionais_contribuinte: clean(`${config.infoAdicional} Pedido ${order.id.slice(-8).toUpperCase()}.`, 2000),
+    transp: { modFrete: pickup ? 9 : 0 },
+    pag: {
+      detPag: {
+        indPag: 0,
+        // 17 = PIX dinâmico; 03 = cartão de crédito. Pagamento não integrado
+        // à automação (feito pela AbacatePay).
+        tPag: order.payment?.method === 'pix' ? '17' : '03',
+        vPag: reais(order.totalCents),
+        card: { tpIntegra: '2' as const },
+      },
+    },
+    infAdic: { infCpl: clean(`${config.infoAdicional} Pedido ${order.id.slice(-8).toUpperCase()}.`, 2000) },
+    ...(config.email && config.telefone.length >= 10 ? {
+      infRespTec: { CNPJ: digits(config.cnpj), xContato: clean(config.razaoSocial, 60), email: clean(config.email, 60), fone: config.telefone.slice(0, 14) },
+    } : {}),
   };
+
+  return { chave, nfe: { indSinc: 1, idLote: id.numero, NFe: { infNFe } } };
 }

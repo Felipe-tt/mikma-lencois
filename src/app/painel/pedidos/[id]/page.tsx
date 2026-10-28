@@ -158,6 +158,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const { user } = useAuth();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
+  // Certificado da nota fiscal importado? (settings guarda só a validade)
+  const [hasNfeCert, setHasNfeCert] = useState(false);
+  useEffect(() => {
+    getDoc(doc(db, 'settings', 'store')).then(snap => setHasNfeCert(!!snap.get('nfeCertificado'))).catch(() => {});
+  }, []);
   useUberSync(
     order?.id,
     order?.delivery?.carrier === 'uber_direct' && !!order.delivery.uberDirectDeliveryId && order.status === 'shipped',
@@ -1242,7 +1247,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         )}
 
         {/* ── Nota fiscal ── */}
-        <NfeCard order={order} user={user} />
+        <NfeCard order={order} user={user} hasCertificate={hasNfeCert} />
 
         {/* ── Histórico do pedido ── */}
         <Card title="Histórico do pedido" icon="clock">

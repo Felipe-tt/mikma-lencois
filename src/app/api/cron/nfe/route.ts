@@ -5,12 +5,13 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getSettings } from '@/lib/settings';
 import { nfeConfigFrom, type NfeEnvironment } from '@/lib/nfe/config';
 import { issueNfe, nfeField, syncNfe } from '@/lib/nfe/service';
+import { certificateInfo } from '@/lib/nfe/certificate';
 
 const PAID = new Set(['paid', 'preparing', 'shipped', 'delivered']);
 const BACKLOG_MS = 3 * 24 * 60 * 60 * 1000;
 
 /**
- * GET /api/cron/nfe (a cada 10 min): confere na Focus as notas em
+ * GET /api/cron/nfe (a cada 10 min): consulta na SEFAZ as notas em
  * processamento (reenvia as que nunca chegaram) e, com a emissão automática
  * ligada, emite as dos pedidos pagos que ficaram sem nota.
  */
@@ -20,6 +21,9 @@ export async function GET(req: NextRequest) {
   if (!secret || !expected || secret.length !== expected.length || !timingSafeEqual(Buffer.from(secret), Buffer.from(expected))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Sem certificado importado, não há nota: nada a fazer.
+  if (!(await certificateInfo())) return NextResponse.json({ ok: true, skipped: 'sem certificado' });
 
   const results = { synced: 0, issued: 0, errors: 0 };
   const run = async (fn: () => Promise<unknown>) => {
