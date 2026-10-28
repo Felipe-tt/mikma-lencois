@@ -7,17 +7,33 @@ import { NotificationBell } from './NotificationBell';
 import { IconSettings } from '@/components/ui/Icon';
 import { useOverlayBehavior } from '@/lib/hooks/useOverlay';
 
-// Distância mínima (px) pro gesto contar como swipe intencional, e não
-// um toque acidental ou scroll vertical.
-const SWIPE_THRESHOLD = 60;
-// Só considera abrir o menu se o toque começar perto da borda esquerda
-// da tela, evita conflito com swipes de conteúdo (carrossel, etc).
-const EDGE_ZONE = 24;
+// Gesto de abrir o menu arrastando da esquerda para a direita, de
+// qualquer ponto da tela (a borda de 24px de antes brigava com o "voltar"
+// do Android e do iPhone e quase nunca funcionava). Para contar como
+// intencional: andar pelo menos 70px na horizontal, bem mais na
+// horizontal que na vertical (não é rolagem) e num gesto rápido.
+const SWIPE_MIN_DX = 70;
+const SWIPE_RATIO = 2;
+const SWIPE_MAX_MS = 700;
+
+// Começou em algo que já arrasta de lado (carrossel, tabela larga, campo
+// de texto, mapa): o gesto é dele, não do menu.
+function startsInHorizontalScroller(target: EventTarget | null): boolean {
+  let el = target instanceof Element ? target : null;
+  while (el && el !== document.body) {
+    if (el.closest('input, textarea, select, [contenteditable="true"], [data-no-swipe], [data-nav-editing]')) return true;
+    if (el instanceof HTMLElement && el.scrollWidth > el.clientWidth + 1) {
+      const ox = getComputedStyle(el).overflowX;
+      if (ox === 'auto' || ox === 'scroll') return true;
+    }
+    el = el.parentElement;
+  }
+  return false;
+}
 
 export function PainelSidebarWrapper({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -25,32 +41,31 @@ export function PainelSidebarWrapper({ children }: { children: React.ReactNode }
   // scroll, fecha com Esc e prende o foco enquanto está aberto.
   useOverlayBehavior({ active: open, onClose: () => setOpen(false), panelRef: drawerRef });
 
-  // Gesto de swipe pra abrir/fechar o menu no mobile. Aberto: swipe pra
-  // qualquer lugar do drawer fecha ao arrastar pra esquerda. Fechado:
-  // só abre se o gesto começar perto da borda esquerda da tela (evita
-  // interceptar swipes horizontais de outros elementos, tipo carrosséis).
+  // Swipe no celular: fechado, arrastar para a direita abre; aberto,
+  // arrastar para a esquerda fecha. Ver SWIPE_* acima.
   useEffect(() => {
+    let start: { x: number; y: number; t: number } | null = null;
+
     function onTouchStart(e: TouchEvent) {
+      start = null;
+      if (e.touches.length !== 1 || window.innerWidth >= 1024) return;
+      if (startsInHorizontalScroller(e.target)) return;
+      // Outra janela (modal, confirmação) aberta por cima do painel.
+      if (!open && document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       const t = e.touches[0];
-      if (!open && t.clientX > EDGE_ZONE) {
-        touchStart.current = null;
-        return;
-      }
-      touchStart.current = { x: t.clientX, y: t.clientY };
+      start = { x: t.clientX, y: t.clientY, t: performance.now() };
     }
 
     function onTouchEnd(e: TouchEvent) {
-      if (!touchStart.current) return;
+      if (!start) return;
       const t = e.changedTouches[0];
-      const dx = t.clientX - touchStart.current.x;
-      const dy = t.clientY - touchStart.current.y;
-      touchStart.current = null;
-
-      // Ignora se o movimento vertical dominar (é scroll, não swipe lateral)
-      if (Math.abs(dy) > Math.abs(dx)) return;
-
-      if (!open && dx > SWIPE_THRESHOLD) setOpen(true);
-      if (open && dx < -SWIPE_THRESHOLD) setOpen(false);
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      const quick = performance.now() - start.t <= SWIPE_MAX_MS;
+      start = null;
+      if (!quick || Math.abs(dx) < SWIPE_MIN_DX || Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
+      if (!open && dx > 0) setOpen(true);
+      if (open && dx < 0) setOpen(false);
     }
 
     window.addEventListener('touchstart', onTouchStart, { passive: true });

@@ -36,7 +36,7 @@ service cloud.firestore {
       function editableKeys() {
         return ['name', 'cpf', 'phone', 'address', 'staffPrefs',
                 'staffPrefs.lastYarnCount', 'staffPrefs.lastCategory',
-                'staffPrefs.lastSize', 'staffPrefs.lastFabrics'];
+                'staffPrefs.lastSize', 'staffPrefs.lastFabrics', 'staffPrefs.navOrder'];
       }
       // `keys` = os campos que estão sendo gravados (todos no create, só os
       // alterados no update). Valida tipo e tamanho; nome sem < nem >.

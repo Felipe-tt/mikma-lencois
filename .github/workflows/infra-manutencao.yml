@@ -109,11 +109,24 @@ jobs:
           C="https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJECT_ID/config"
           curl -sS -H "Authorization: Bearer $T" "$C" | jq -c '{mfa, identityPlatform: (.subtype // "firebase")}'
           if [ "$MFA_TOTP" = "true" ]; then
-            r=$(curl -sS -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" "$C?updateMask=mfa" \
-              --data '{"mfa":{"state":"ENABLED","providerConfigs":[{"state":"ENABLED","totpProviderConfig":{"adjacentIntervals":5}}]}}')
+            ligar() {
+              curl -sS -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" "$C?updateMask=mfa" \
+                --data '{"mfa":{"state":"ENABLED","providerConfigs":[{"state":"ENABLED","totpProviderConfig":{"adjacentIntervals":5}}]}}'
+            }
+            r=$(ligar)
+            # MFA exige o Firebase Auth com Identity Platform. O console nem
+            # sempre mostra o botão de upgrade; a API faz o mesmo (usuários,
+            # provedores e chaves continuam iguais).
+            if echo "$r" | jq -r '.error.message // empty' | grep -qi 'upgraded\|GCIP'; then
+              echo "Fazendo o upgrade para o Identity Platform"
+              curl -sS -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+                "https://identitytoolkit.googleapis.com/v2/projects/$PROJECT_ID/identityPlatform:initializeAuth" --data '{}' | jq -c .
+              sleep 10
+              r=$(ligar)
+            fi
             echo "$r" | jq -c '{mfa, error}'
             if echo "$r" | jq -e '.error' >/dev/null; then
-              echo "::warning::Não liguei o TOTP. Se o erro fala em Identity Platform, faça o upgrade em Firebase > Authentication > Configurações (grátis) e rode de novo."
+              echo "::warning::Não liguei o TOTP: $(echo "$r" | jq -r '.error.message')"
             fi
           fi
 
