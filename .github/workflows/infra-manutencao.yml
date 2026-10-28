@@ -85,7 +85,11 @@ jobs:
           gcloud firestore fields ttls list --format='table(name,ttlConfig.state)' 2>&1 | head -10
           if [ "$TTL" = "true" ]; then
             for col in webauthnChallenges webhook_deliveries trackingCache; do
-              gcloud firestore fields ttls update expireAt --collection-group=$col --enable-ttl --async && echo "TTL pedido: $col"
+              if gcloud firestore fields ttls update expireAt --collection-group=$col --enable-ttl --async; then
+                echo "TTL pedido: $col"
+              else
+                echo "::warning::Sem permissão para o TTL de $col. A service account precisa do papel Cloud Datastore Index Admin (roles/datastore.indexAdmin)."
+              fi
             done
           fi
 
