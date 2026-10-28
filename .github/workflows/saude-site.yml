@@ -1,0 +1,103 @@
+name: Saúde do site · rollback automático
+
+# Testa o site no ar como um cliente (home, produtos, asset JS, APIs e o
+# banco via /api/cron/health). Se falhar 3 vezes seguidas logo depois de um
+# deploy, volta o App Hosting para a versão anterior que funcionava (o build
+# já pronto, sem recompilar) e abre um aviso nas Issues (chega por e-mail).
+# Bloqueio da Cloudflare ou só o banco fora contam como inconclusivo: nunca
+# disparam rollback. Ver scripts/site-health.mjs e scripts/apphosting-rollback.mjs.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Só simular o rollback (não muda nada)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: saude-site
+  cancel-in-progress: false
+
+jobs:
+  saude:
+    name: Saúde do site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+
+      - name: Testar o site
+        id: health
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scripts/site-health.mjs 3 45 || true
+
+      - name: Autenticar no Google Cloud
+        if: steps.health.outputs.verdict == 'fail'
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          umask 077
+          printf '%s' "$SA_JSON" > "$HOME/sa.json"
+          gcloud auth activate-service-account --key-file="$HOME/sa.json" --quiet
+          rm -f "$HOME/sa.json"
+
+      - name: Voltar para a versão anterior
+        id: rollback
+        if: steps.health.outputs.verdict == 'fail'
+        env:
+          PROJECT_ID: mikma-lencois
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
+        run: |
+          export ACCESS_TOKEN="$(gcloud auth print-access-token)"
+          node scripts/apphosting-rollback.mjs || true
+
+      - name: Conferir de novo depois do rollback
+        id: after
+        if: steps.rollback.outputs.action == 'rollback'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          # O App Hosting leva alguns minutos para trocar a versão.
+          sleep 300
+          node scripts/site-health.mjs 3 45 || true
+
+      - name: Avisar nas Issues
+        if: steps.health.outputs.verdict == 'fail'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTION: ${{ steps.rollback.outputs.action }}
+          REASON: ${{ steps.rollback.outputs.reason }}
+          FROM: ${{ steps.rollback.outputs.from_build }}
+          TO: ${{ steps.rollback.outputs.to_build }}
+          AFTER: ${{ steps.after.outputs.verdict }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          case "$ACTION" in
+            rollback) msg="O site falhou logo depois de um deploy e foi **voltado automaticamente** para a versão anterior (build \`$TO\`, saindo de \`$FROM\`). Depois do rollback o teste deu: **${AFTER:-não conferido}**. Corrija o problema antes de publicar de novo." ;;
+            dry-run)  msg="Simulação: o rollback voltaria para o build \`$TO\` (saindo de \`$FROM\`). Nada foi mudado." ;;
+            none)     msg="O site está falhando, mas **não houve rollback**: $REASON." ;;
+            *)        msg="O site está falhando e o rollback automático **não funcionou**: $REASON. Volte a versão pelo console do Firebase (App Hosting > Rollouts)." ;;
+          esac
+          body="$msg"$'\n\n'"Detalhes dos testes: $RUN_URL"
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label site-fora-do-ar --state open --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh label create site-fora-do-ar --repo "$GITHUB_REPOSITORY" --color B60205 --description "Site falhando (monitor automático)" 2>/dev/null || true
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Site com falha detectada pelo monitor" --label site-fora-do-ar --body "$body"
+          fi
