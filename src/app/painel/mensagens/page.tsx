@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase/db';
 import { formatTsDateTime } from '@/lib/utils/format';
 import type { EmailMessage, EmailAttachment, Conversation } from '@/types';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
-import { escapeHtml } from '@/lib/html';
+import { escapeHtml, htmlToText } from '@/lib/html';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 
 const PAGE = 30;
@@ -531,7 +531,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
   const textContent = msg.text;
 
   // Usa text quando: não há HTML, ou o HTML resultante é só tags vazias/brancos
-  const htmlIsEmpty = !htmlContent || htmlContent.replace(/<[^>]*>/g, '').trim().length === 0;
+  const htmlIsEmpty = !htmlContent || htmlToText(htmlContent).trim().length === 0;
   const showHtml = !isOut && !htmlIsEmpty && !!htmlContent;
 
   return (

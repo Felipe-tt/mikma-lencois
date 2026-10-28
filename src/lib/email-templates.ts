@@ -1,4 +1,4 @@
-import { escapeHtml } from '@/lib/html';
+import { escapeHtml, htmlToText } from '@/lib/html';
 import { emailCallout, emailCta, emailLayout, emailParagraph, emailSection, emailSignature } from '@/lib/email/layout';
 
 interface ActionEmailInput {
@@ -46,7 +46,7 @@ export function deliveryStatusEmailHtml({
 
 // Prévia da caixa de entrada a partir de um trecho com HTML.
 function plainPreview(html: string): string {
-  return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 110);
+  return htmlToText(html).replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 110);
 }
 
 /**

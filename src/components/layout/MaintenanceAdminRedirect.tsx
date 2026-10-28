@@ -18,7 +18,14 @@ export function MaintenanceAdminRedirect() {
     let cancelled = false;
     (async () => {
       const de = new URLSearchParams(window.location.search).get('de');
-      let target = de && de.startsWith('/') && !de.startsWith('//') ? de : '/';
+      let target = '/';
+      // Só caminho do próprio site: "/\\evil.com" o navegador lê como //evil.com.
+      if (de) {
+        try {
+          const u = new URL(de, window.location.origin);
+          if (u.origin === window.location.origin) target = u.pathname + u.search + u.hash;
+        } catch { /* inválido: vai pra home */ }
+      }
       // Trava de segurança: se já voltou daqui há menos de 30s, algo mandou de
       // novo pra manutenção; vai pro painel em vez de ficar num vaivém.
       try {

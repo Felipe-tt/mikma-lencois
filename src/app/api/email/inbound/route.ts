@@ -227,8 +227,8 @@ export async function POST(req: NextRequest) {
     // Remove qualquer <hr> isolado que geralmente separa o histórico
     stripped = stripped.replace(/<hr[^>]*>/gi, '');
 
-    // Remove estilos externos que clientes de email injetam (resets, fonts)
-    stripped = stripped.replace(/<style[\s\S]*?<\/style>/gi, '');
+    // <style> injetado pelos clientes de e-mail: o sanitizeHtml descarta
+    // a tag inteira, com o conteúdo.
 
     // Limpa espaço em branco resultante de tags removidas
     stripped = stripped.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');

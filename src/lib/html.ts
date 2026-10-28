@@ -46,3 +46,20 @@ export function sanitizeDisplayName(value: unknown, max = 100): string {
     .trim()
     .slice(0, max);
 }
+
+/**
+ * Texto visível de um trecho de HTML (para prévia ou para ver se está vazio).
+ * Pula tudo entre "<" e ">" num passo só, sem regex: tirar tags com replace
+ * deixa sobrar "<script" em entradas como "<scr<b>ipt". O resultado é texto,
+ * não HTML seguro: escape antes de pôr em HTML.
+ */
+export function htmlToText(html: string): string {
+  let out = '';
+  let inTag = false;
+  for (const ch of html) {
+    if (ch === '<') inTag = true;
+    else if (ch === '>') inTag = false;
+    else if (!inTag) out += ch;
+  }
+  return out;
+}
