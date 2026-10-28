@@ -14,6 +14,8 @@ import {
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { NFE_DEFAULTS } from '@/lib/nfe/config';
+import { NfeCertificate } from '@/components/painel/NfeCertificate';
 import { db } from '@/lib/firebase/db';
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
@@ -109,6 +111,14 @@ export default function ConfiguracoesPage() {
     }
     if (settings.storeCnpj && !isValidCnpj(settings.storeCnpj)) {
       setSaveError('CNPJ incompleto, confira antes de salvar.');
+      return;
+    }
+    if (settings.nfeCnpj && !isValidCnpj(settings.nfeCnpj)) {
+      setSaveError('CNPJ da nota fiscal inválido, confira antes de salvar.');
+      return;
+    }
+    if (settings.nfeNcm && settings.nfeNcm.replace(/\D/g, '').length !== 8) {
+      setSaveError('O NCM da nota fiscal precisa ter 8 dígitos.');
       return;
     }
     setSaveError('');
@@ -453,6 +463,55 @@ export default function ConfiguracoesPage() {
               warn="TESTE ATIVO, os PIX/checkouts gerados são de Dev Mode e não cobram nada de verdade. Desligue antes de vender de verdade."
             />
           </Card>
+
+          {isAdmin && (
+            <Card icon="shield" title="Nota fiscal (NF-e)" desc="Emitida direto na SEFAZ com o certificado digital da loja, sem mensalidade. Sem certificado, nenhuma nota é gerada">
+              <Divider label="Certificado digital A1" />
+              <NfeCertificate user={user} />
+              <Divider label="Emissão" />
+              <Toggle
+                label="Emitir a nota automaticamente quando o pedido for pago"
+                checked={!!settings.nfeAutoEmit}
+                onChange={v => { set('nfeAutoEmit', v); if (v) set('nfeAutoEmitSince', new Date().toISOString()); }}
+                hint="Desligado: a nota é emitida pelo botão no pedido. Ligado: sai sozinha depois do pagamento, só para pedidos pagos a partir de agora."
+              />
+              <Toggle
+                label="Usar ambiente de homologação (teste, sem valor fiscal)"
+                checked={(settings.nfeEnvironment ?? NFE_DEFAULTS.environment) === 'homologacao'}
+                onChange={v => set('nfeEnvironment', v ? 'homologacao' : 'producao')}
+                hint="Com a emissão automática ligada, as notas vão para homologação enquanto isto estiver ligado. No pedido sempre dá para emitir uma nota de teste à parte."
+                warn="HOMOLOGAÇÃO: as notas automáticas não têm valor fiscal. Desligue para emitir de verdade."
+              />
+              <Divider label="Empresa (o endereço vem dos dados da loja)" />
+              <Row>
+                <F label="CNPJ" value={settings.nfeCnpj ?? settings.storeCnpj ?? NFE_DEFAULTS.cnpj} onChange={v => set('nfeCnpj', v)} inputMode="numeric" maxLength={18} />
+                <F label="Inscrição estadual" value={settings.nfeIe ?? ''} onChange={v => set('nfeIe', v)} inputMode="numeric" maxLength={20} hint="Obrigatória na nota" />
+              </Row>
+              <F label="Razão social" value={settings.nfeRazaoSocial ?? ''} onChange={v => set('nfeRazaoSocial', v)} maxLength={60} hint="Como está no cartão CNPJ" />
+              <Row>
+                <F label="Regime (CRT)" value={String(settings.nfeCrt ?? NFE_DEFAULTS.crt)} onChange={v => set('nfeCrt', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={1} hint="1 = Simples Nacional, 4 = MEI, 3 = regime normal" />
+                <F label="Código IBGE do município" value={settings.nfeCodMunicipio ?? NFE_DEFAULTS.codMunicipio} onChange={v => set('nfeCodMunicipio', v)} inputMode="numeric" maxLength={7} hint="Blumenau = 4202404" />
+              </Row>
+              <Row>
+                <F label="Série" value={String(settings.nfeSerie ?? NFE_DEFAULTS.serie)} onChange={v => set('nfeSerie', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={3} />
+                <F label="Próximo número da nota" value={String(settings.nfeProximoNumero ?? NFE_DEFAULTS.proximoNumero)} onChange={v => set('nfeProximoNumero', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={9} hint="Se já emitiu notas em outro sistema, continue da última + 1" />
+              </Row>
+              <Divider label="Dados fiscais (confirme com a contabilidade)" />
+              <Row>
+                <F label="NCM" value={settings.nfeNcm ?? NFE_DEFAULTS.ncm} onChange={v => set('nfeNcm', v)} inputMode="numeric" maxLength={10} hint="6302.10.00 = roupa de cama de malha" />
+                <F label="CSOSN (ICMS)" value={settings.nfeCsosn ?? NFE_DEFAULTS.csosn} onChange={v => set('nfeCsosn', v)} inputMode="numeric" maxLength={3} hint="102 = Simples Nacional sem crédito" />
+              </Row>
+              <Row>
+                <F label="CST PIS/COFINS" value={settings.nfePisCofinsCst ?? NFE_DEFAULTS.pisCofinsCst} onChange={v => set('nfePisCofinsCst', v)} inputMode="numeric" maxLength={2} />
+                <F label="Natureza da operação" value={settings.nfeNaturezaOperacao ?? NFE_DEFAULTS.naturezaOperacao} onChange={v => set('nfeNaturezaOperacao', v)} maxLength={60} />
+              </Row>
+              <Row>
+                <F label="CFOP dentro do estado" value={settings.nfeCfopInterno ?? NFE_DEFAULTS.cfopInterno} onChange={v => set('nfeCfopInterno', v)} inputMode="numeric" maxLength={4} />
+                <F label="CFOP para outros estados" value={settings.nfeCfopInterestadual ?? NFE_DEFAULTS.cfopInterestadual} onChange={v => set('nfeCfopInterestadual', v)} inputMode="numeric" maxLength={4} />
+              </Row>
+              <TA label="Informações adicionais" value={settings.nfeInfoAdicional ?? NFE_DEFAULTS.infoAdicional} onChange={v => set('nfeInfoAdicional', v)} rows={2} />
+            </Card>
+          )}
 
           <Card icon="shield" title="Margem de erro, Uber Direct" desc="O preço da Uber é recotado no momento do despacho, se a diferença passar dessa margem, o despacho é bloqueado até você confirmar">
             <Row>

@@ -23,6 +23,7 @@ import { customerTimeline, customerCancelReason } from '@/lib/orders/customerTim
 import { variantLabel } from '@/lib/variantLabel';
 import { trackPurchase } from '@/lib/analytics';
 import { requestNewPix, type NewPix } from '@/lib/orders/requestNewPix';
+import { nfeDocUrl } from '@/lib/nfe/links';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PIXModal } from '@/components/checkout/PIXModal';
@@ -749,6 +750,12 @@ export default function OrderDetailPage() {
                 <p className="text-xs text-faint mt-1">
                   Confirmado em {formatTsDateTime(order.payment.paidAt)}
                 </p>
+              )}
+              {order.nfe?.status === 'autorizada' && nfeDocUrl(order.id, order.nfe, 'danfe') && (
+                <a href={nfeDocUrl(order.id, order.nfe, 'danfe')!} target="_blank" rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center min-h-10 text-sm font-semibold text-clay hover:text-clay-d">
+                  Nota fiscal nº {order.nfe.numero} (PDF)
+                </a>
               )}
             </section>
 

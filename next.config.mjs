@@ -9,7 +9,9 @@ const BUILD_VERSION = process.env.K_REVISION || process.env.GITHUB_SHA || String
 const nextConfig = {
   env: { NEXT_PUBLIC_BUILD_VERSION: BUILD_VERSION },
 
-  serverExternalPackages: ['@node-rs/argon2', 'firebase-admin'],
+  // Nota fiscal: a nfewizard-io lê schemas XSD e fontes do PDF do próprio
+  // pacote em tempo de execução; empacotar quebraria esses caminhos.
+  serverExternalPackages: ['@node-rs/argon2', 'firebase-admin', 'nfewizard-io', '@nfewizard/danfe', '@nfewizard/shared', 'pdfkit'],
 
   // Sentry só pra erros: corta do bundle os logs de debug e o rastreamento
   // de performance (2% das visitas, que ninguém olhava e passava pelo

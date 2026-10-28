@@ -1,3 +1,5 @@
+import type { NfeRecord } from '@/lib/nfe/types';
+
 // ─── Users ───────────────────────────────────────────────────────────────────
 export type UserRole = 'buyer' | 'seller' | 'admin'
 
@@ -201,6 +203,8 @@ export interface Order {
   createdAt: string
   updatedAt?: string
   timeline?: OrderTimelineEvent[]
+  nfe?: NfeRecord       // nota fiscal de produção (ver src/lib/nfe)
+  nfeTeste?: NfeRecord  // nota de teste, em homologação
 }
 
 // ─── Trocas e devoluções ─────────────────────────────────────────────────────

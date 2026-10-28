@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { handleNfeOnOrderCancel } from '@/lib/nfe/service';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
@@ -175,6 +176,8 @@ export async function POST(
 
   const c = cancelled as { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean } | null;
   if (c) await notifyOrderCancelled(orderId, c, { refund: c.wasPaid });
+  // Nota fiscal já autorizada: cancela (até 24h) ou avisa da devolução.
+  if (c?.wasPaid) await handleNfeOnOrderCancel(orderId);
 
   return NextResponse.json({ ok: true, ...(uberCancelFailed ? { uberCancelFailed: true } : {}) });
 }

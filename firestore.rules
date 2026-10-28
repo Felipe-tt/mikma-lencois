@@ -202,7 +202,12 @@ service cloud.firestore {
             && request.resource.data.get('freeShippingThresholdCents', 0) == resource.data.get('freeShippingThresholdCents', 0)
             && request.resource.data.get('freeShippingMaxLossCents', 0) == resource.data.get('freeShippingMaxLossCents', 0)
             && request.resource.data.get('uberOverspendMarginCents', 0) == resource.data.get('uberOverspendMarginCents', 0)
-            && request.resource.data.get('creditMinOrderCents', 0) == resource.data.get('creditMinOrderCents', 0);
+            && request.resource.data.get('creditMinOrderCents', 0) == resource.data.get('creditMinOrderCents', 0)
+            // Nota fiscal: dados fiscais e emissão automática, só o admin.
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+              'nfeAutoEmit', 'nfeAutoEmitSince', 'nfeEnvironment', 'nfeCertificado', 'nfeCnpj', 'nfeRazaoSocial', 'nfeIe',
+              'nfeCrt', 'nfeSerie', 'nfeProximoNumero', 'nfeCodMunicipio', 'nfeUfEmitente', 'nfeNcm', 'nfeCsosn',
+              'nfePisCofinsCst', 'nfeCfopInterno', 'nfeCfopInterestadual', 'nfeNaturezaOperacao', 'nfeInfoAdicional']);
       }
       allow create, delete: if hasRole('admin');
       allow update: if hasRole('admin') || (hasRole('seller') && moneyAndSandboxUnchanged());
