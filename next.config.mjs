@@ -16,6 +16,11 @@ const nextConfig = {
   reactCompiler: true,
   cacheComponents: true,
 
+  // A checagem de tipos roda antes, no "npm run build", com o TypeScript 7
+  // (compilador nativo, ~1s). A do Next usaria a API do TypeScript 6
+  // (pacote "typescript", mantido para o ESLint), bem mais lenta.
+  typescript: { ignoreBuildErrors: true },
+
   // Nota fiscal: a nfewizard-io lê schemas XSD e fontes do PDF do próprio
   // pacote em tempo de execução; empacotar quebraria esses caminhos.
   serverExternalPackages: ['@node-rs/argon2', 'firebase-admin', 'nfewizard-io', '@nfewizard/danfe', '@nfewizard/shared', 'pdfkit'],
