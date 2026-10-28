@@ -34,8 +34,9 @@ jobs:
         with:
           node-version: "24"
 
+      # Versão do package-lock (fixada), sem scripts de instalação.
       - name: Instalar firebase-admin
-        run: npm install firebase-admin@12 --no-save
+        run: npm ci --ignore-scripts
 
       - name: Definir role
         env:

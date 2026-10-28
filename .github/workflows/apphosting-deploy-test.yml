@@ -38,10 +38,7 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
 
-      - name: Instalar Firebase CLI
-        run: npm install -g firebase-tools@latest
-
       - name: Deploy (local source) para o backend de teste do App Hosting
         run: |
           GOOGLE_APPLICATION_CREDENTIALS="$HOME/sa.json" \
-            firebase deploy --only apphosting --project mikma-lencois --non-interactive
+            npx --no-install firebase deploy --only apphosting --project mikma-lencois --non-interactive
