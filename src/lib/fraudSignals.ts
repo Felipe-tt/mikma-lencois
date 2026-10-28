@@ -64,3 +64,92 @@ export function computeFraudSignals(order: OrderLike, candidates: OrderLike[]): 
 
   return signals;
 }
+
+// ── Avaliação de risco (pontuação) ────────────────────────────────────────
+// Soma pontos de vários sinais. Só o nível "alto" segura algo: o ENVIO (e a
+// nota automática) até alguém da equipe conferir e liberar. O pagamento e o
+// pedido seguem normais; o cliente não vê nada disso.
+
+export type RiskLevel = 'baixo' | 'atencao' | 'alto';
+
+export interface RiskSignal extends FraudSignal {
+  points: number;
+}
+
+export interface RiskContext {
+  /** Pedidos com o mesmo endereço ou IP (janela recente, já consultados). */
+  candidates: OrderLike[];
+  /** Outras contas cadastradas com o mesmo CPF. */
+  sameCpfAccounts: number;
+  /** Cartões recusados desta conta nas últimas 24h. */
+  cardDeclines24h: number;
+  /** Idade da conta no momento do pedido (ms), se conhecida. */
+  accountAgeMs?: number;
+  isGuest: boolean;
+  email?: string;
+  pickup: boolean;
+}
+
+export interface RiskAssessment {
+  score: number;
+  level: RiskLevel;
+  signals: RiskSignal[];
+}
+
+/** Resultado gravado no pedido (`order.risk`). */
+export interface OrderRisk extends RiskAssessment {
+  assessedAt: string;
+  hold: boolean;
+  releasedBy?: string;
+  releasedAt?: string;
+}
+
+export const RISK_ATTENTION = 30;
+export const RISK_HIGH = 60;
+
+// Domínios de e-mail temporário mais comuns (lista curta e conservadora).
+const DISPOSABLE_DOMAINS = new Set([
+  'mailinator.com', 'guerrillamail.com', 'guerrillamail.net', 'sharklasers.com', '10minutemail.com', 'temp-mail.org',
+  'tempmail.com', 'tempmail.net', 'yopmail.com', 'yopmail.net', 'trashmail.com', 'getnada.com', 'dispostable.com',
+  'maildrop.cc', 'fakeinbox.com', 'throwawaymail.com', 'mohmal.com', 'emailondeck.com', 'mintemail.com', 'tempr.email',
+]);
+
+export function isDisposableEmail(email: string | undefined): boolean {
+  const domain = email?.split('@')[1]?.trim().toLowerCase();
+  return !!domain && DISPOSABLE_DOMAINS.has(domain);
+}
+
+const POINTS = { address: 30, ip: 25, cpf: 35, declines: 30, manyDeclines: 40, newAccount: 15, guest: 10, disposable: 15 };
+
+export function assessRisk(order: OrderLike, ctx: RiskContext): RiskAssessment {
+  const signals: RiskSignal[] = computeFraudSignals(order, ctx.candidates).map(s => ({
+    ...s,
+    points: s.reason.startsWith('Mesmo endereço') ? POINTS.address : POINTS.ip,
+  }));
+  const high = order.totalCents >= HIGH_VALUE_CENTS;
+
+  if (ctx.sameCpfAccounts > 0) {
+    signals.push({
+      reason: `CPF já cadastrado em ${ctx.sameCpfAccounts === 1 ? 'outra conta' : `${ctx.sameCpfAccounts} outras contas`}`,
+      relatedOrderIds: [], points: POINTS.cpf,
+    });
+  }
+  if (ctx.cardDeclines24h >= 3) {
+    signals.push({
+      reason: `${ctx.cardDeclines24h} cartões recusados nas últimas 24h antes deste pagamento`,
+      relatedOrderIds: [], points: ctx.cardDeclines24h >= 5 ? POINTS.manyDeclines : POINTS.declines,
+    });
+  }
+  if (high && !ctx.pickup && ctx.accountAgeMs !== undefined && ctx.accountAgeMs < 30 * 60_000) {
+    signals.push({ reason: 'Conta criada minutos antes de uma compra de valor alto', relatedOrderIds: [], points: POINTS.newAccount });
+  }
+  if (high && ctx.isGuest) {
+    signals.push({ reason: 'Compra de valor alto sem conta (convidado)', relatedOrderIds: [], points: POINTS.guest });
+  }
+  if (isDisposableEmail(ctx.email)) {
+    signals.push({ reason: 'E-mail de serviço temporário', relatedOrderIds: [], points: POINTS.disposable });
+  }
+
+  const score = signals.reduce((a, s) => a + s.points, 0);
+  return { score, level: score >= RISK_HIGH ? 'alto' : score >= RISK_ATTENTION ? 'atencao' : 'baixo', signals };
+}

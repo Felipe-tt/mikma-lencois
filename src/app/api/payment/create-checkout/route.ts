@@ -13,6 +13,7 @@ import { normalizeAddressKey } from '@/lib/fraudSignals';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { StockError } from '@/lib/errors';
 import { rollbackUnpaidOrder } from '@/lib/orders/rollbackOrder';
+import { recordCardDecline } from '@/lib/orders/risk';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
@@ -645,6 +646,7 @@ async function chargeCardOnSite(input: {
       });
       return NextResponse.json({ error: 'O pagamento com cartão no site está indisponível agora. Use a página de pagamento.', code: 'UNAVAILABLE' }, { status: 503 });
     }
+    await recordCardDecline(input.uid);
     return NextResponse.json({ error: message, code }, { status: 402 });
   }
 
@@ -674,5 +676,6 @@ async function chargeCardOnSite(input: {
 
   // FAILED (ou outro estado final) já na criação: recusa.
   await input.rollback();
+  await recordCardDecline(input.uid);
   return NextResponse.json({ error: cardErrorMessage('').message, code: 'DECLINED' }, { status: 402 });
 }

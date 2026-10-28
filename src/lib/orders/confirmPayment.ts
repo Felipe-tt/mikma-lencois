@@ -10,6 +10,7 @@ import { recordShippingCollected } from '@/lib/shipping-ledger';
 import { buildConfirmed } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
 import { autoIssueNfe } from '@/lib/nfe/service';
+import { storeOrderRisk } from '@/lib/orders/risk';
 
 /**
  * Confirmação manual de um PIX expirado sem estoque livre pra cobrir: a
@@ -366,6 +367,9 @@ export async function confirmOrderPaid(
     // Falha de email não deve quebrar a confirmação, pedido já foi confirmado
     console.error('[confirm-order-paid] falha ao enviar email de confirmação:', emailErr);
   }
+
+  // Detector de golpe: risco alto segura o envio e a nota até a equipe conferir.
+  await Promise.race([storeOrderRisk(orderId), new Promise(r => setTimeout(r, 5_000))]);
 
   // Nota fiscal automática (se ligada no painel). No máximo 8s aqui: o resto
   // segue pelo cron de NF-e, que consulta e reenvia pela mesma referência.
