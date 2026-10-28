@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 import { cameThroughEdge, clientIpFromHeaders } from '@/lib/ip';
 import { maintenanceDocId, pathOnly } from '@/lib/maintenanceQueue';
+import { edgeHtmlCache } from '@/lib/edgeCache';
 
 // Firebase Emulator Suite em desenvolvimento local (ver lib/firebase/client.ts).
 const EMULATOR_CONNECT_SRC =
@@ -194,12 +195,14 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith('/robots') ||
     pathname.startsWith('/sitemap');
 
+  let maintenanceActive = false;
   if (!isExempt) {
     // Mesma regra do getClientIp (lib/ip.ts): Cloudflare comprovada >
     // x-fah-client-ip do App Hosting > x-forwarded-for só no ambiente local.
     const ip = clientIpFromHeaders(req.headers);
 
     const active = await getMaintenanceStatus(projectId);
+    maintenanceActive = active;
 
     if (active) {
       // ID do documento = HMAC do IP (ver lib/maintenanceQueue.ts).
@@ -255,11 +258,8 @@ export async function proxy(req: NextRequest) {
   // Páginas do painel e auth: nunca cachear (dados do usuário)
   // Páginas da loja: deixar o Next.js/CDN cachearem normalmente via ISR
   // O middleware já garantiu que manutenção ativa redireciona antes de chegar aqui
-  if (
+  const privatePage =
     pathname.startsWith('/painel') ||
-    // Rotas públicas definem o próprio cache (a CDN guarda a resposta); antes
-    // o no-store daqui anulava o s-maxage delas e toda chamada ia ao servidor.
-    (pathname.startsWith('/api/') && !PUBLIC_CACHED_API.has(pathname)) ||
     pathname.startsWith('/conta') ||
     pathname.startsWith('/perfil') ||
     pathname.startsWith('/pedidos') ||
@@ -268,12 +268,20 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith('/entrar') ||
     pathname.startsWith('/cadastro') ||
     pathname.startsWith('/redefinir-senha') ||
-    pathname.startsWith('/confirmar-email')
+    pathname.startsWith('/confirmar-email');
+  if (
+    privatePage ||
+    // Rotas públicas definem o próprio cache (a CDN guarda a resposta); antes
+    // o no-store daqui anulava o s-maxage delas e toda chamada ia ao servidor.
+    (pathname.startsWith('/api/') && !PUBLIC_CACHED_API.has(pathname))
   ) {
     res.headers.set('Cache-Control', 'private, no-store');
   }
-  // Páginas públicas da loja (/, /produtos, /sobre, etc.) NÃO recebem Cache-Control aqui
-  //, o Next.js ISR cuida disso via revalidate nas páginas
+  // Páginas públicas da loja (/, /produtos, /sobre, etc.): o Next define o
+  // Cache-Control (páginas estáticas) e a Cloudflare guarda o HTML.
+  if (!privatePage && !isExempt) {
+    res.headers.set('Cloudflare-CDN-Cache-Control', edgeHtmlCache(req, maintenanceActive));
+  }
 
   return res;
 }
