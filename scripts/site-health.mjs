@@ -24,9 +24,9 @@ async function get(path, headers = {}) {
   try {
     const res = await fetch(BASE + path, { headers: { 'user-agent': UA, ...extra, ...headers }, redirect: 'follow', signal: AbortSignal.timeout(20_000) });
     const body = await res.text();
-    return { status: res.status, body, ms: Date.now() - started };
+    return { status: res.status, body, ms: Date.now() - started, cache: res.headers.get('cf-cache-status') ?? '' };
   } catch (err) {
-    return { status: 0, body: String(err?.message ?? err), ms: Date.now() - started };
+    return { status: 0, body: String(err?.message ?? err), ms: Date.now() - started, cache: '' };
   }
 }
 
@@ -53,6 +53,14 @@ async function round() {
     const r = await get(path);
     const okJson = path.startsWith('/api') ? (() => { try { JSON.parse(r.body); return true; } catch { return false; } })() : true;
     add(path, blocked(r.status) ? 'inconclusive' : r.status === 200 && okJson ? 'ok' : 'fail', `HTTP ${r.status} ${r.ms}ms`);
+  }
+
+  // Cache do HTML na Cloudflare: a segunda visita à home deve vir da borda.
+  // Só aviso (nunca derruba o veredito): cache frio não é site quebrado.
+  if (home.status === 200 && BASE.startsWith('https://')) {
+    const again = await get('/');
+    const hit = /^(HIT|STALE|UPDATING|REVALIDATED)$/.test(again.cache);
+    add('cache', hit ? 'ok' : 'aviso', `cf-cache-status ${again.cache || '(ausente)'} ${again.ms}ms`);
   }
 
   if (SECRET) {
