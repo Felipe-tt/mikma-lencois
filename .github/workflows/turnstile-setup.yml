@@ -1,0 +1,74 @@
+name: Cloudflare · Turnstile
+
+# Cria (ou reaproveita) o widget do Turnstile da loja e guarda a chave
+# secreta direto no Secret Manager (TURNSTILE_SECRET_KEY), com o mesmo
+# acesso dos outros secrets do App Hosting. A chave nunca aparece no log.
+# A chave do site (pública) sai no log para ir no apphosting.yaml.
+# O token da Cloudflare precisa de "Account · Turnstile · Edit".
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  turnstile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Widget
+        run: |
+          set -euo pipefail
+          api() { curl -sS -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" "$@"; }
+          acc=$(api "https://api.cloudflare.com/client/v4/zones?name=mikma.com.br" | jq -r '.result[0].account.id // empty')
+          [ -n "$acc" ] || { echo "::error::Zona não encontrada com este token"; exit 1; }
+          W="https://api.cloudflare.com/client/v4/accounts/$acc/challenges/widgets"
+          list=$(api "$W?per_page=50")
+          if [ "$(echo "$list" | jq -r '.success')" != "true" ]; then
+            echo "::error::Sem acesso ao Turnstile: $(echo "$list" | jq -c '.errors')"
+            echo "Adicione a permissão Account · Turnstile · Edit no token CLOUDFLARE_API_TOKEN."
+            exit 1
+          fi
+          key=$(echo "$list" | jq -r '[.result[] | select(.name == "mikma")][0].sitekey // empty')
+          if [ -z "$key" ]; then
+            created=$(api -X POST "$W" --data '{"name":"mikma","domains":["mikma.com.br","www.mikma.com.br"],"mode":"managed","region":"world"}')
+            [ "$(echo "$created" | jq -r '.success')" = "true" ] || { echo "::error::$(echo "$created" | jq -c '.errors')"; exit 1; }
+            key=$(echo "$created" | jq -r '.result.sitekey')
+            echo "Widget criado"
+          else
+            echo "Widget já existia"
+          fi
+          secret=$(api "$W/$key" | jq -r '.result.secret // empty')
+          [ -n "$secret" ] || { echo "::error::Não consegui ler a chave secreta do widget"; exit 1; }
+          echo "::add-mask::$secret"
+          umask 077
+          printf '%s' "$secret" > "$RUNNER_TEMP/ts"
+          echo "SITEKEY=$key" >> "$GITHUB_ENV"
+          echo "## Chave do site (pública, vai no apphosting.yaml): $key"
+
+      - name: Secret Manager
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" >/dev/null 2>&1
+          gcloud config set project mikma-lencois >/dev/null 2>&1
+          if gcloud secrets describe TURNSTILE_SECRET_KEY >/dev/null 2>&1; then
+            current=$(gcloud secrets versions access latest --secret TURNSTILE_SECRET_KEY)
+            echo "::add-mask::$current"
+            if [ "$current" = "$(cat "$RUNNER_TEMP/ts")" ]; then echo "TURNSTILE_SECRET_KEY já está certo"
+            else gcloud secrets versions add TURNSTILE_SECRET_KEY --data-file="$RUNNER_TEMP/ts" >/dev/null && echo "TURNSTILE_SECRET_KEY: nova versão"; fi
+          else
+            gcloud secrets create TURNSTILE_SECRET_KEY --replication-policy=automatic --data-file="$RUNNER_TEMP/ts" >/dev/null && echo "TURNSTILE_SECRET_KEY criado"
+          fi
+          # Mesmo acesso dos secrets que já funcionam no build e no runtime do App Hosting.
+          gcloud secrets get-iam-policy CRON_SECRET --format=json | jq -r '.bindings[]? | .role as $r | .members[] | "\($r) \(.)"' | while read -r role m; do
+            gcloud secrets add-iam-policy-binding TURNSTILE_SECRET_KEY --member="$m" --role="$role" >/dev/null && echo "acesso: $role $m"
+          done
+          rm -f "$RUNNER_TEMP/sa.json" "$RUNNER_TEMP/ts"
+          echo "## Pronto. Chave do site: $SITEKEY"

@@ -62,3 +62,40 @@ describe('reCAPTCHA', () => {
     expect(await checkRecaptchaScore('tok', 'login')).toBe('block');
   });
 });
+
+describe('Turnstile (tem prioridade sobre o reCAPTCHA)', () => {
+  const original = process.env.TURNSTILE_SECRET_KEY;
+  beforeEach(() => {
+    process.env.TURNSTILE_SECRET_KEY = 'ts-secret';
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (original === undefined) delete process.env.TURNSTILE_SECRET_KEY;
+    else process.env.TURNSTILE_SECRET_KEY = original;
+  });
+
+  it('confere na Cloudflare com a ação normalizada', async () => {
+    const f = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      okResponse({ success: true, action: 'send_reset' }),
+    );
+    expect(await verifyRecaptcha('tok', 'send_reset')).toBe(true);
+    expect(String(f.mock.calls[0][0])).toContain('challenges.cloudflare.com');
+    expect(String((f.mock.calls[0][1] as RequestInit).body)).toContain('secret=ts-secret');
+  });
+
+  it('aprovado vira pass e reprovado vira block (sem score)', async () => {
+    const f = vi.spyOn(globalThis, 'fetch');
+    f.mockImplementationOnce(() => okResponse({ success: true, action: 'login' }));
+    expect(await checkRecaptchaScore('tok', 'login')).toBe('pass');
+    f.mockImplementationOnce(() => okResponse({ success: false, 'error-codes': ['invalid-input-response'] }));
+    expect(await checkRecaptchaScore('tok', 'login')).toBe('block');
+    f.mockImplementationOnce(() => okResponse({ success: true, action: 'register' }));
+    expect(await checkRecaptchaScore('tok', 'login')).toBe('block');
+  });
+
+  it('token ausente pede confirmação; Cloudflare fora do ar não bloqueia', async () => {
+    expect(await checkRecaptchaScore(undefined, 'login')).toBe('challenge');
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('timeout'));
+    expect(await verifyRecaptcha('tok', 'register')).toBe(true);
+  });
+});

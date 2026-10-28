@@ -109,7 +109,7 @@ export default async function PrivacidadePage() {
           'processamento de Pedidos: pagamento, separação, envio, rastreamento, trocas, devoluções e atendimento (execução de contrato, inciso V);',
           'comunicações sobre a conta e os Pedidos, como verificação de e-mail, redefinição de senha, confirmações e avisos de entrega (execução de contrato, inciso V);',
           'emissão de documento fiscal e cumprimento de obrigações fiscais, tributárias e de defesa do consumidor (obrigação legal, inciso II);',
-          'segurança e prevenção a fraudes e abusos, por meio de reCAPTCHA, limitação de requisições e registros de acesso (legítimo interesse, inciso IX, e obrigação legal prevista no Marco Civil da Internet, Lei nº 12.965/2014);',
+          'segurança e prevenção a fraudes e abusos, por meio de verificação contra robôs (Cloudflare Turnstile), limitação de requisições e registros de acesso (legítimo interesse, inciso IX, e obrigação legal prevista no Marco Civil da Internet, Lei nº 12.965/2014);',
           ...(hasAnalytics
             ? [
                 <>
@@ -137,6 +137,11 @@ export default async function PrivacidadePage() {
               {hasGA && <> e Google Analytics</>}): hospedagem do Site e do banco de dados,
               autenticação, proteção contra robôs{hasGA && <> e medição de audiência</>}. Dados:
               conta, Pedidos e dados técnicos de acesso;
+            </>,
+            <>
+              <B>Cloudflare:</B> rede de entrega e proteção do Site (firewall, bloqueio de robôs com
+              Turnstile e checagem de senhas que já apareceram em vazamentos públicos). Dados: dados
+              técnicos de acesso e, no login, uma comparação da senha feita sem armazená-la;
             </>,
             <>
               <B>AbacatePay:</B> cobrança por PIX e cartão. Dados: nome, e-mail, telefone, CPF e
@@ -283,7 +288,7 @@ export default async function PrivacidadePage() {
         clause('A Loja adota medidas técnicas e administrativas para proteger os dados pessoais, entre elas:', [
           'comunicação protegida por criptografia (HTTPS/TLS) em todo o Site;',
           'senhas protegidas por hash irreversível, gerenciado pelo Firebase Authentication, sem cópia no banco de dados da Loja;',
-          'autenticação gerenciada pelo Firebase Authentication, com proteção contra robôs (reCAPTCHA) e limitação de tentativas nos formulários sensíveis;',
+          'autenticação gerenciada pelo Firebase Authentication, com proteção contra robôs (Cloudflare Turnstile) e limitação de tentativas nos formulários sensíveis;',
           'regras de acesso ao banco de dados, de modo que cada Cliente acesse apenas os próprios dados, e restrição das áreas administrativas a perfis autorizados;',
           'infraestrutura em nuvem do Google, com criptografia dos dados em repouso, e compartilhamento com terceiros limitado ao necessário.',
         ]),

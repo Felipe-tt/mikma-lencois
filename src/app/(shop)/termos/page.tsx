@@ -219,7 +219,7 @@ export default async function TermosPage() {
           'publicar conteúdo ilícito ou ofensivo.',
         ]),
         clause(
-          'Para proteger a Loja e os Clientes, o Site utiliza mecanismos como reCAPTCHA e limitação de requisições. A Loja poderá bloquear acessos que violem estas regras, sem prejuízo das medidas legais cabíveis.',
+          'Para proteger a Loja e os Clientes, o Site utiliza mecanismos como verificação contra robôs (Cloudflare Turnstile) e limitação de requisições. A Loja poderá bloquear acessos que violem estas regras, sem prejuízo das medidas legais cabíveis.',
         ),
       ],
     },
