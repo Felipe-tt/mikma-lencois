@@ -69,6 +69,17 @@ jobs:
             done
           fi
 
+      - name: Firestore · apagar desafios de passkey vencidos (TTL)
+        run: |
+          set +e
+          # Desafio de login com passkey abandonado ficava para sempre em
+          # webauthnChallenges. Com o TTL, o Firestore apaga sozinho (grátis)
+          # depois do expireAt (5 min).
+          gcloud firestore fields ttls list --format='table(name.basename(),ttlConfig.state)' 2>&1 | head -10
+          if [ "$APLICAR" = "true" ]; then
+            gcloud firestore fields ttls update expireAt --collection-group=webauthnChallenges --enable-ttl --async
+          fi
+
       - name: Serviços ligados (App Hosting, Cloud Run, funções)
         run: |
           set +e
