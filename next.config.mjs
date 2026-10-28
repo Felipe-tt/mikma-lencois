@@ -14,6 +14,10 @@ const nextConfig = {
   // Componente que quebra as regras do React é pulado, não quebrado; o
   // ESLint (react-hooks) aponta quais são.
   reactCompiler: true,
+
+  // Prerender parcial: cada página sai como HTML estático e o que depende
+  // da URL chega no mesmo envio. Dados da loja ficam em funções 'use cache'
+  // (lib/catalog, lib/settings) que o painel limpa por tag ao salvar.
   cacheComponents: true,
 
   // A checagem de tipos roda antes, no "npm run build", com o TypeScript 7
