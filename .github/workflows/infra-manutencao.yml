@@ -18,7 +18,7 @@ on:
         type: boolean
         default: false
       cloudflare:
-        description: 'Configurar a Cloudflare (SSL, firewall, limite de requisições, trava de origem)'
+        description: 'Configurar a Cloudflare (SSL, firewall, limite de requisições, trava de origem, cache do HTML)'
         type: boolean
         default: false
       verificar_ip:
@@ -199,6 +199,25 @@ jobs:
               \"action_parameters\": {\"headers\": {\"x-mikma-edge\": {\"operation\": \"set\", \"value\": \"$EDGE\"}}}
             }]
           }" | jq -c '{transform:.success,errors}'
+
+          # Cache do HTML da loja na borda. Quem decide o que guarda e por
+          # quanto tempo é o site, pelo header Cloudflare-CDN-Cache-Control
+          # (ver src/lib/edgeCache.ts: 2 min, nada em manutenção). A regra só
+          # deixa o HTML elegível e tira daqui APIs, painel, arquivos do Next
+          # e os pedidos internos do Next (RSC/prefetch), que têm outro
+          # conteúdo na mesma URL e envenenariam o cache.
+          api -X PUT "$B/rulesets/phases/http_request_cache_settings/entrypoint" --data '{
+            "rules": [{
+              "description": "HTML da loja em cache (o site decide o tempo)",
+              "expression": "(http.request.method in {\"GET\" \"HEAD\"}) and not starts_with(http.request.uri.path, \"/api/\") and not starts_with(http.request.uri.path, \"/painel\") and not starts_with(http.request.uri.path, \"/_next/\") and not starts_with(http.request.uri.path, \"/monitoring\") and not (http.request.uri.query contains \"_rsc\") and not (http.cookie contains \"__session=\") and not any(lower(http.request.headers.names[*])[*] in {\"rsc\" \"next-router-prefetch\" \"next-router-state-tree\" \"next-router-segment-prefetch\" \"next-action\"})",
+              "action": "set_cache_settings",
+              "action_parameters": {
+                "cache": true,
+                "edge_ttl": {"mode": "respect_origin"},
+                "browser_ttl": {"mode": "respect_origin"}
+              }
+            }]
+          }' | jq -c '{cache_html:.success,errors}'
 
           echo "## DNS publicados pelo registro.br (servidor oficial do .br)"
           dig +norec NS mikma.com.br @a.dns.br | grep -E "IN\s+NS" || true
