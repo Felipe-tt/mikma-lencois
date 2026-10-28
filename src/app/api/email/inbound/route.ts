@@ -32,6 +32,11 @@ function extractName(raw: string): string | undefined {
   return name && name.length > 0 ? name : undefined;
 }
 
+const REPORT_ADDRESS = 'relatorios@mikma.com.br';
+function isReportAddress(raw: string): boolean {
+  return extractEmail(raw) === REPORT_ADDRESS;
+}
+
 function conversationIdFor(email: string): string {
   return email.toLowerCase().replace(/[^a-z0-9.@_-]/g, '_');
 }
@@ -149,6 +154,12 @@ export async function POST(req: NextRequest) {
   const { from, email_id } = event.data;
   if (!from || !email_id) {
     return NextResponse.json({ error: 'Payload incompleto' }, { status: 400 });
+  }
+
+  // Relatórios automáticos de TLS (TLS-RPT, ver dominio-seguranca.yml):
+  // não são conversa com cliente, então nem buscam o conteúdo nem gravam.
+  if (event.data.to.length > 0 && event.data.to.every(isReportAddress)) {
+    return NextResponse.json({ ok: true, ignored: 'report' });
   }
 
   // ── 1. Busca conteúdo completo (webhook só traz metadados) ─────────────────

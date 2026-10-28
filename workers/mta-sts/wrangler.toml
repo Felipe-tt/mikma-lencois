@@ -1,0 +1,6 @@
+name = "mikma-mta-sts"
+main = "index.mjs"
+compatibility_date = "2026-06-01"
+workers_dev = false
+# Domínio próprio: a Cloudflare cria o DNS e o certificado sozinha.
+routes = [{ pattern = "mta-sts.mikma.com.br", custom_domain = true }]

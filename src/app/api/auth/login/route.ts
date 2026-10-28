@@ -7,6 +7,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { generateActionToken } from '@/lib/auth-token';
 import { sendEmail } from '@/lib/email';
 import { actionButtonEmailHtml } from '@/lib/email-templates';
+import { passwordLeaked } from '@/lib/leakedCredentials';
 
 const schema = z.object({
   email: z.string().email().max(256),
@@ -73,7 +74,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 });
     }
 
-    const outcome = await checkRecaptchaScore(recaptchaToken, 'login');
+    let outcome = await checkRecaptchaScore(recaptchaToken, 'login');
+    // Senha que já apareceu em vazamento público (a Cloudflare compara e
+    // manda o header; ver infra-manutencao.yml): mesmo com reCAPTCHA bom,
+    // pede a confirmação por e-mail. Quem só tem a senha vazada não entra.
+    if (outcome === 'pass' && passwordLeaked(req.headers.get('exposed-credential-check'))) outcome = 'challenge';
 
     if (outcome === 'block') {
       return NextResponse.json(
