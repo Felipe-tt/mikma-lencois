@@ -145,18 +145,19 @@ export async function GET(
 
   const cacheRef = adminDb.collection('trackingCache').doc(clean);
   const cacheSnap = await cacheRef.get();
-  if (cacheSnap.exists) {
-    const cached = cacheSnap.data() as TrackingResult;
-    const age = Date.now() - new Date(cached.updatedAt).getTime();
-    if (age < CACHE_TTL_MS) return NextResponse.json({ ...cached, source: 'cache' });
+  // expireAt é só para o TTL do Firestore, não vai na resposta.
+  const { expireAt: _expireAt, ...cached } = (cacheSnap.data() ?? {}) as Partial<TrackingResult> & { expireAt?: unknown };
+  if (cacheSnap.exists && Date.now() - new Date(cached.updatedAt!).getTime() < CACHE_TTL_MS) {
+    return NextResponse.json({ ...cached, source: 'cache' });
   }
 
   const result = await fetchCorreios(clean);
   if (!result) {
-    if (cacheSnap.exists) return NextResponse.json({ ...cacheSnap.data(), source: 'cache' });
+    if (cacheSnap.exists) return NextResponse.json({ ...cached, source: 'cache' });
     return NextResponse.json({ error: 'Código não encontrado. Pode levar até 24h após a postagem.' }, { status: 404 });
   }
 
-  await cacheRef.set(result);
+  // expireAt: o TTL do Firestore apaga código parado há 60 dias.
+  await cacheRef.set({ ...result, expireAt: new Date(Date.now() + 60 * 86_400_000) });
   return NextResponse.json(result);
 }

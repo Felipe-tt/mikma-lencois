@@ -21,6 +21,10 @@ on:
         description: 'Configurar a Cloudflare (SSL, firewall, limite de requisições, trava de origem, cache do HTML)'
         type: boolean
         default: false
+      ttl_firestore:
+        description: 'Ligar a limpeza automática (TTL) do Firestore nas coleções temporárias'
+        type: boolean
+        default: false
       verificar_ip:
         description: 'Testar em produção se o limite por IP resiste a IP forjado'
         type: boolean
@@ -41,6 +45,7 @@ jobs:
       APLICAR: ${{ inputs.aplicar }}
       APAGAR_SSR: ${{ inputs.apagar_ssr_antigo }}
       CLOUDFLARE: ${{ inputs.cloudflare }}
+      TTL: ${{ inputs.ttl_firestore }}
     steps:
       - name: Autenticar no Google Cloud
         run: |
@@ -69,15 +74,19 @@ jobs:
             done
           fi
 
-      - name: Firestore · apagar desafios de passkey vencidos (TTL)
+      - name: Firestore · limpeza automática (TTL)
         run: |
           set +e
-          # Desafio de login com passkey abandonado ficava para sempre em
-          # webauthnChallenges. Com o TTL, o Firestore apaga sozinho (grátis)
-          # depois do expireAt (5 min).
-          gcloud firestore fields ttls list --format='table(name.basename(),ttlConfig.state)' 2>&1 | head -10
-          if [ "$APLICAR" = "true" ]; then
-            gcloud firestore fields ttls update expireAt --collection-group=webauthnChallenges --enable-ttl --async
+          # Documentos temporários com expireAt (Timestamp). Com o TTL ligado,
+          # o Firestore apaga sozinho depois da data (grátis, sem cron):
+          # - webauthnChallenges: desafio de passkey (5 min);
+          # - webhook_deliveries: anti-duplicidade do webhook (30 dias);
+          # - trackingCache: rastreio dos Correios (60 dias parado).
+          gcloud firestore fields ttls list --format='table(name,ttlConfig.state)' 2>&1 | head -10
+          if [ "$TTL" = "true" ]; then
+            for col in webauthnChallenges webhook_deliveries trackingCache; do
+              gcloud firestore fields ttls update expireAt --collection-group=$col --enable-ttl --async && echo "TTL pedido: $col"
+            done
           fi
 
       - name: Serviços ligados (App Hosting, Cloud Run, funções)
@@ -161,8 +170,9 @@ jobs:
           echo "Zona: $STATUS"
           B="https://api.cloudflare.com/client/v4/zones/$ZONE"
 
-          # SSL ponta a ponta com certificado válido na origem (App Hosting) e HTTPS sempre.
-          for kv in 'ssl:"strict"' 'always_use_https:"on"' 'min_tls_version:"1.2"' 'browser_check:"on"' 'security_level:"medium"'; do
+          # SSL ponta a ponta com certificado válido na origem (App Hosting), HTTPS
+          # sempre, TLS 1.3 e HTTP/3 (mais rápido no 4G), links http:// viram https://.
+          for kv in 'ssl:"strict"' 'always_use_https:"on"' 'min_tls_version:"1.2"' 'browser_check:"on"' 'security_level:"medium"' 'tls_1_3:"on"' 'http3:"on"' 'automatic_https_rewrites:"on"'; do
             k=${kv%%:*}; v=${kv#*:}
             api -X PATCH "$B/settings/$k" --data "{\"value\":$v}" | jq -c '{setting:"'"$k"'",success,errors}'
           done
