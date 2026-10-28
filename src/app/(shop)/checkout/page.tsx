@@ -525,7 +525,7 @@ export default function CheckoutPage() {
         // Fica "enviando" até a página do pagamento abrir: antes o botão
         // voltava a ficar clicável durante o redirecionamento e um segundo
         // clique criava outro pedido.
-        window.location.href = d.checkoutUrl;
+        window.location.assign(d.checkoutUrl);
         return;
       }
       setSub(false);
