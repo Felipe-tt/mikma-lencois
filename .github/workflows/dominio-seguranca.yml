@@ -1,10 +1,10 @@
 name: Domínio · DNSSEC, CAA, e-mail e HSTS
 
 # Blindagem do mikma.com.br, tudo grátis. Sem "aplicar", só mostra o estado.
-# Com "aplicar", cria só o que falta (nunca altera nem apaga registro existente):
+# Com "aplicar", cria só o que falta (nunca apaga registro; só endurece o DMARC):
 # - DNSSEC na Cloudflare: depois, o registro DS mostrado no fim vai no registro.br;
 # - CAA: só Let's Encrypt, Google, SSL.com, Sectigo e DigiCert emitem certificado;
-# - DMARC (e SPF "-all" se o domínio raiz não manda nem recebe e-mail);
+# - DMARC (endurece p=none para quarantine com o DKIM da Resend) e SPF "-all" no raiz;
 # - pede a inclusão na lista HSTS preload dos navegadores, se o site estiver apto.
 # O token da Cloudflare precisa da permissão "Zone · DNS · Edit".
 
@@ -69,23 +69,31 @@ jobs:
           else echo "CAA já existe: mantido"; fi
 
           echo "## DMARC"
-          if [ "$(has TXT "_dmarc.$DOMAIN" "v=DMARC1")" = "0" ]; then
-            # Com a assinatura DKIM da Resend (d=mikma.com.br) o e-mail da loja passa
-            # no DMARC; quem falsificar o domínio vai para o spam.
-            if [ -n "$(dig +short TXT "resend._domainkey.$DOMAIN" @1.1.1.1)" ]; then pol="p=quarantine"; else pol="p=none"; fi
+          # Com a assinatura DKIM da Resend (d=mikma.com.br) o e-mail da loja passa
+          # no DMARC; quem falsificar o domínio vai para o spam.
+          if [ -n "$(dig +short TXT "resend._domainkey.$DOMAIN" @1.1.1.1)" ]; then pol="p=quarantine"; else pol="p=none"; fi
+          dmarc="v=DMARC1; $pol; adkim=r; aspf=r; pct=100"
+          rec=$(api "$B/dns_records?type=TXT&name=_dmarc.$DOMAIN&per_page=100" | jq -c '[.result[]? | select(.content | contains("v=DMARC1"))][0] // empty')
+          if [ -z "$rec" ]; then
             if [ "$APLICAR" = "true" ]; then
-              api -X POST "$B/dns_records" --data "{\"type\":\"TXT\",\"name\":\"_dmarc.$DOMAIN\",\"content\":\"\\\"v=DMARC1; $pol; adkim=r; aspf=r; pct=100\\\"\",\"ttl\":3600}" | jq -c '{dmarc:.success,errors}'
-            else echo "sem DMARC (seria criado com $pol)"; fi
-          else echo "DMARC já existe: mantido"; fi
+              api -X POST "$B/dns_records" --data "{\"type\":\"TXT\",\"name\":\"_dmarc.$DOMAIN\",\"content\":\"\\\"$dmarc\\\"\",\"ttl\":3600}" | jq -c '{dmarc_criado:.success,errors}'
+            else echo "sem DMARC (seria criado: $dmarc)"; fi
+          elif echo "$rec" | jq -r .content | grep -q "p=none" && [ "$pol" = "p=quarantine" ]; then
+            # Só observava (p=none): com o DKIM alinhado, passa a mandar o falso para o spam.
+            if [ "$APLICAR" = "true" ]; then
+              id=$(echo "$rec" | jq -r .id)
+              api -X PATCH "$B/dns_records/$id" --data "{\"content\":\"\\\"$dmarc\\\"\"}" | jq -c '{dmarc_endurecido:.success,errors}'
+            else echo "DMARC em p=none (seria endurecido: $dmarc)"; fi
+          else echo "DMARC já protege: $(echo "$rec" | jq -r .content)"; fi
 
           echo "## SPF do domínio raiz"
+          # O raiz só RECEBE e-mail (MX da Amazon SES, caixa de entrada da Resend);
+          # o envio usa send.mikma.com.br, que tem o próprio SPF. "-all" no raiz
+          # diz que ninguém envia com remetente técnico @mikma.com.br.
           if [ "$(has TXT "$DOMAIN" "v=spf1")" = "0" ]; then
-            if [ -z "$(dig +short MX "$DOMAIN" @1.1.1.1)" ]; then
-              # A Resend usa send.mikma.com.br como remetente técnico; o raiz não envia.
-              if [ "$APLICAR" = "true" ]; then
-                api -X POST "$B/dns_records" --data "{\"type\":\"TXT\",\"name\":\"$DOMAIN\",\"content\":\"\\\"v=spf1 -all\\\"\",\"ttl\":3600}" | jq -c '{spf:.success,errors}'
-              else echo "sem SPF e sem MX (seria criado v=spf1 -all)"; fi
-            else echo "o domínio recebe e-mail (MX) e não tem SPF: conferir o provedor antes de criar"; fi
+            if [ "$APLICAR" = "true" ]; then
+              api -X POST "$B/dns_records" --data "{\"type\":\"TXT\",\"name\":\"$DOMAIN\",\"content\":\"\\\"v=spf1 -all\\\"\",\"ttl\":3600}" | jq -c '{spf:.success,errors}'
+            else echo "sem SPF no raiz (seria criado v=spf1 -all)"; fi
           else echo "SPF já existe: mantido"; fi
 
           echo "## Registro DS para colar no registro.br (DNSSEC)"
