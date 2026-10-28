@@ -84,7 +84,7 @@ describe('buildNfe', () => {
     expect(n.pag.detPag.tPag).toBe('17');
     expect(det[0].imposto.ICMS).toEqual({ ICMSSN102: { orig: 0, CSOSN: 102 } });
     expect(det[0].imposto.PIS).toEqual({ PISOutr: { CST: '49', vBC: 0, pPIS: 0, vPIS: 0 } });
-    expect(n.infRespTec.CNPJ).toBe('29966649000143');
+    expect(n.infRespTec.CNPJ).toBe('05338341000195');
   });
 
   it('desconto e acréscimo do cartão rateados, fora de SC', () => {
