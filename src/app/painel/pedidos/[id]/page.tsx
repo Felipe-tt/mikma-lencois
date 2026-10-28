@@ -24,6 +24,7 @@ import {
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { RegisterReturnModal } from '@/components/painel/RegisterReturnModal';
 import { NfeCard } from '@/components/painel/NfeCard';
+import { RiskCard } from '@/components/painel/RiskCard';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending_payment: 'Aguardando Pagamento',
@@ -188,7 +189,6 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [markPaidError, setMarkPaidError] = useState<string | null>(null);
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnRegistered, setReturnRegistered] = useState(false);
-  const [fraudSignals, setFraudSignals] = useState<{ reason: string; relatedOrderIds: string[] }[]>([]);
 
   useEffect(() => {
     if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
@@ -260,28 +260,6 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     });
     return () => { alive = false; };
   }, [orderUserId]);
-
-  // Sinais de fraude leve (endereço/IP compartilhado com outra conta),
-  // ver src/lib/fraudSignals.ts. Não bloqueia nada, só avisa o vendedor.
-  const orderIdForSignals = order?.id;
-  useEffect(() => {
-    if (!orderIdForSignals || !user) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const token = await user.getIdToken();
-        const res = await fetch(`/api/painel/pedidos/${orderIdForSignals}/fraud-signals`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok || cancelled) return;
-        const data = await res.json().catch(() => ({}));
-        if (!cancelled) setFraudSignals(data.signals ?? []);
-      } catch {
-        // Falha silenciosa: é um alerta a mais, não algo crítico pro fluxo do pedido
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [orderIdForSignals, user]);
 
   function copy(text: string, key: string) {
     navigator.clipboard.writeText(text);
@@ -777,20 +755,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
       <div className="flex flex-col gap-4">
 
-        {/* ── Sinais de fraude leve (endereço/IP repetido em outra conta) ── */}
-        {fraudSignals.length > 0 && (
-          <div className="border-2 border-red-400 bg-red-50 px-5 py-4 rounded-xl">
-            <p className="text-[14px] font-bold text-ink mb-1">⚠️ Revisar antes de despachar</p>
-            <ul className="text-[13px] text-ink/80 list-disc pl-5 space-y-0.5">
-              {fraudSignals.map((s, i) => (
-                <li key={i}>{s.reason}</li>
-              ))}
-            </ul>
-            <p className="text-[11px] text-faint mt-1">
-              Não é uma confirmação de fraude, só um cruzamento simples de dados. Use seu julgamento.
-            </p>
-          </div>
-        )}
+        {/* ── Detector de golpe (ver src/lib/orders/risk.ts) ── */}
+        <RiskCard order={order} user={user} />
 
         {/* ── Contestação (chargeback/MED) aberta pelo cliente ── */}
         {order.payment.dispute && (

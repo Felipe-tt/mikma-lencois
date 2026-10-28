@@ -334,6 +334,8 @@ export async function autoIssueNfe(orderId: string): Promise<void> {
     const config = nfeConfigFrom(await getSettings() as unknown as Record<string, unknown>);
     if (!config.autoEmit) return;
     if (!(await loadCertificate())) return; // sem certificado, não gera
+    // Pedido suspeito segurado: a nota sai depois que a equipe liberar (cron).
+    if ((await orderRef(orderId).get()).get('risk.hold') === true) return;
     await issueNfe(orderId, config.environment, { by: 'auto' });
   } catch (err) {
     console.error(`[nfe] emissão automática falhou (${orderId}):`, err);

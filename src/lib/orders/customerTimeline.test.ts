@@ -67,3 +67,14 @@ describe('customerCancelReason', () => {
     expect(customerCancelReason([{ status: 'cancelled', at, note: 'Pagamento recebido depois do cancelamento (x).' }])).toBeUndefined();
   });
 });
+
+describe('anotações internas da equipe', () => {
+  it('não aparecem para o cliente', () => {
+    const t = customerTimeline([
+      { status: 'paid', at: '2026-01-01T10:00:00Z', note: 'PIX confirmado' },
+      { status: 'paid', at: '2026-01-01T11:00:00Z', note: 'Pedido conferido pela equipe: envio liberado' },
+      { status: 'paid', at: '2026-01-01T12:00:00Z', note: 'Segunda cobrança paga (PIX confirmado · txId: x). Estorne esta cobrança no painel da AbacatePay (id y).' },
+    ]);
+    expect(t).toHaveLength(1);
+  });
+});

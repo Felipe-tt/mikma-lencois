@@ -52,7 +52,7 @@ const UBER_TITLE: Record<string, string | null> = {
 };
 
 // Eventos inteiros que são só operação da loja.
-const INTERNAL_EVENT = [/^Pagamento recebido depois d/, /^Contestação/, /^Código de rastreio corrigido/];
+const INTERNAL_EVENT = [/^Pagamento recebido depois d/, /^Contestação/, /^Código de rastreio corrigido/, /^Pedido conferido pela equipe/, /^Segunda cobrança paga/, /^Pagamento pela AbacatePay .*chegou depois/];
 const REFUND = /^Estorno/;
 
 function cancelReasonIsPublic(note: string): boolean {

@@ -1,4 +1,5 @@
 import type { NfeRecord } from '@/lib/nfe/types';
+import type { OrderRisk } from '@/lib/fraudSignals';
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export type UserRole = 'buyer' | 'seller' | 'admin'
@@ -205,6 +206,9 @@ export interface Order {
   timeline?: OrderTimelineEvent[]
   nfe?: NfeRecord       // nota fiscal de produção (ver src/lib/nfe)
   nfeTeste?: NfeRecord  // nota de teste, em homologação
+  risk?: OrderRisk      // detector de golpe (ver src/lib/orders/risk.ts)
+  customerName?: string
+  customerEmail?: string
 }
 
 // ─── Trocas e devoluções ─────────────────────────────────────────────────────
