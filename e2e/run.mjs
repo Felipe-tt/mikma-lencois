@@ -36,6 +36,8 @@ const env = {
   EDGE_SHARED_SECRET: 'e2e-edge',
   NEXT_TELEMETRY_DISABLED: '1',
   E2E_BASE_URL: `http://localhost:${PORT}`,
+  // Passkeys: o domínio aceito vem daqui (localhost nos testes).
+  NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
 };
 
 function run(cmd, args, extra = {}) {
