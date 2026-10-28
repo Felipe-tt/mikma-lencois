@@ -1,0 +1,11 @@
+name = "mikma-cron"
+main = "index.mjs"
+compatibility_date = "2026-06-01"
+# Só agenda: sem rota pública nem subdomínio workers.dev.
+workers_dev = false
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[observability]
+enabled = true

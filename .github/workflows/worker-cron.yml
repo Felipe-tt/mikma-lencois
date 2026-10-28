@@ -1,0 +1,73 @@
+name: Cloudflare · Worker de rotinas
+
+# Publica o Worker "mikma-cron" (workers/cron): a cada 5 minutos ele chama as
+# rotinas da loja (expirar pedidos, notas fiscais, avisos de estoque) e
+# confere a saúde do site. O agendamento do GitHub Actions atrasa horas ou
+# pula execuções; o Cron Trigger da Cloudflare (grátis) roda na hora.
+# O token da Cloudflare precisa da permissão "Account · Workers Scripts · Edit".
+
+on:
+  push:
+    branches: [main]
+    paths: ['workers/cron/**', '.github/workflows/worker-cron.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-cron
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: workers/cron
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+
+      - name: Conta da Cloudflare (pela zona)
+        run: |
+          id=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/zones?name=mikma.com.br" | jq -r '.result[0].account.id // empty')
+          [ -n "$id" ] || { echo "::error::Zona mikma.com.br não encontrada com este token"; exit 1; }
+          echo "CLOUDFLARE_ACCOUNT_ID=$id" >> "$GITHUB_ENV"
+
+      - name: Segredo de origem (Secret Manager)
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          umask 077
+          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" >/dev/null 2>&1
+          edge=$(gcloud secrets versions access latest --secret EDGE_SHARED_SECRET --project mikma-lencois)
+          rm -f "$RUNNER_TEMP/sa.json"
+          echo "::add-mask::$edge"
+          printf '%s' "$edge" > "$RUNNER_TEMP/edge"
+
+      - name: Publicar
+        working-directory: workers/cron
+        run: |
+          npx -y wrangler@4.147.0 deploy
+          printf '%s' "$CRON_SECRET" | npx -y wrangler@4.147.0 secret put CRON_SECRET
+          npx -y wrangler@4.147.0 secret put EDGE_SHARED_SECRET < "$RUNNER_TEMP/edge"
+          rm -f "$RUNNER_TEMP/edge"
+          # Opcional: token só com "Actions: write" neste repositório, para
+          # uma falha na saúde disparar o rollback (saude-site.yml).
+          if [ -n "$GH_DISPATCH_TOKEN" ]; then
+            printf '%s' "$GH_DISPATCH_TOKEN" | npx -y wrangler@4.147.0 secret put GH_DISPATCH_TOKEN
+          else
+            echo "::notice::Sem GH_DISPATCH_TOKEN: o Worker confere a saúde, mas não dispara o rollback."
+          fi
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GH_DISPATCH_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
