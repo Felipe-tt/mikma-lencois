@@ -25,6 +25,10 @@ on:
         description: 'Ligar a limpeza automática (TTL) do Firestore nas coleções temporárias'
         type: boolean
         default: false
+      mfa_totp:
+        description: 'Ligar a verificação em duas etapas por app autenticador (TOTP) no Firebase Auth'
+        type: boolean
+        default: false
       verificar_ip:
         description: 'Testar em produção se o limite por IP resiste a IP forjado'
         type: boolean
@@ -46,6 +50,7 @@ jobs:
       APAGAR_SSR: ${{ inputs.apagar_ssr_antigo }}
       CLOUDFLARE: ${{ inputs.cloudflare }}
       TTL: ${{ inputs.ttl_firestore }}
+      MFA_TOTP: ${{ inputs.mfa_totp }}
     steps:
       - name: Autenticar no Google Cloud
         run: |
@@ -92,6 +97,24 @@ jobs:
                 echo "::warning::Sem permissão para o TTL de $col. A service account precisa do papel Cloud Datastore Index Admin (roles/datastore.indexAdmin)."
               fi
             done
+          fi
+
+      - name: Firebase Auth · verificação em duas etapas (TOTP)
+        run: |
+          set +e
+          # TOTP é do Identity Platform (grátis até 50 mil usuários ativos por
+          # mês, sem SMS). Só quem cadastrar um app em /painel/seguranca passa
+          # a ver o pedido do código; os clientes não mudam nada.
+          T=$(gcloud auth print-access-token)
+          C="https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJECT_ID/config"
+          curl -sS -H "Authorization: Bearer $T" "$C" | jq -c '{mfa, identityPlatform: (.subtype // "firebase")}'
+          if [ "$MFA_TOTP" = "true" ]; then
+            r=$(curl -sS -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" "$C?updateMask=mfa" \
+              --data '{"mfa":{"state":"ENABLED","providerConfigs":[{"state":"ENABLED","totpProviderConfig":{"adjacentIntervals":5}}]}}')
+            echo "$r" | jq -c '{mfa, error}'
+            if echo "$r" | jq -e '.error' >/dev/null; then
+              echo "::warning::Não liguei o TOTP. Se o erro fala em Identity Platform, faça o upgrade em Firebase > Authentication > Configurações (grátis) e rode de novo."
+            fi
           fi
 
       - name: Serviços ligados (App Hosting, Cloud Run, funções)

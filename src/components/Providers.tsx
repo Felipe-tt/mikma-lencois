@@ -15,6 +15,10 @@ const ConfirmDialogHost = dynamic(
   () => import('@/components/ui/ConfirmDialog').then(m => m.ConfirmDialogHost),
   { ssr: false }
 );
+const SecondFactorPromptHost = dynamic(
+  () => import('@/components/auth/SecondFactorPrompt').then(m => m.SecondFactorPromptHost),
+  { ssr: false }
+);
 const AuthModal = dynamic(
   () => import('@/components/auth/AuthModal').then(m => m.AuthModal),
   { ssr: false }
@@ -40,6 +44,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             {children}
             <ChunkErrorReload />
             <ConfirmDialogHost />
+            <SecondFactorPromptHost />
             <AuthModalOnDemand />
           </NavigationProvider>
         </WishlistProvider>

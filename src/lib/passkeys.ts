@@ -233,7 +233,10 @@ export async function authenticate(challengeId: unknown, response: Authenticatio
   if (user.disabled) throw new PasskeyError('Esta conta está desativada. Fale com a loja pelo WhatsApp.', 403);
 
   await ref.update({ counter: verification.authenticationInfo.newCounter, lastUsedAt: new Date().toISOString(), backedUp: verification.authenticationInfo.credentialBackedUp });
-  const token = await adminAuth.createCustomToken(stored.uid);
+  // passkey: true vai no token de ID desta sessão: a passkey já é login
+  // forte (aparelho + biometria/PIN) e vale como verificação em duas etapas
+  // para quem é da equipe (ver hasSecondFactor em lib/staffMfa.ts).
+  const token = await adminAuth.createCustomToken(stored.uid, { passkey: true });
   return { token, uid: stored.uid };
 }
 

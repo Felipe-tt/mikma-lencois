@@ -7,6 +7,7 @@ import { auth } from '@/lib/firebase/client';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/BrandLogo';
 import { IconAlert } from '@/components/ui/Icon';
+import { withSecondFactor } from '@/lib/auth/secondFactor';
 
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
@@ -91,7 +92,7 @@ function ResetForm() {
       // mesmo, então já temos tudo para autenticar direto no client,
       // sem precisar pedir a senha de novo na tela de login.
       try {
-        await signInWithEmailAndPassword(auth, emailParam, password);
+        await withSecondFactor(() => signInWithEmailAndPassword(auth, emailParam, password));
       } catch (loginErr) {
         // Troca de senha já aconteceu com sucesso, se o login automático
         // falhar por qualquer motivo, a pessoa ainda consegue entrar

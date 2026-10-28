@@ -18,6 +18,7 @@ import {
 import { checkPassword, PASSWORD_MAX, PASSWORD_MIN, type PasswordReport } from '@/lib/validation/password';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
+import { withSecondFactor } from '@/lib/auth/secondFactor';
 
 type Step = 'email' | 'awaiting' | 'password' | 'done';
 
@@ -234,7 +235,7 @@ function RegisterContent() {
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
-      await signInWithEmailAndPassword(auth, normalizeEmail(email), password);
+      await withSecondFactor(() => signInWithEmailAndPassword(auth, normalizeEmail(email), password));
       setStep('done');
       setTimeout(() => router.push(consumeReturnTo() ?? '/'), 2000);
     } catch (err: unknown) {
