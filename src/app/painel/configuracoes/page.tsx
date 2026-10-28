@@ -29,7 +29,7 @@ import { parseBusinessHours, serializeBusinessHours } from '@/lib/business-hours
 import { maskCnpj, isValidCnpj, maskPhone, isValidPhone, maskCep, isValidCep } from '@/lib/masks';
 import { useAuth } from '@/lib/auth/AuthContext';
 
-type Tab = 'loja' | 'vitrine' | 'produto' | 'entrega' | 'equipe';
+type Tab = 'loja' | 'vitrine' | 'produto' | 'entrega' | 'fiscal' | 'equipe';
 
 const TABS: { id: Tab; icon: string; label: string; sub: string }[] = [
   { id: 'loja',    icon: 'loja',    label: 'Minha loja',   sub: 'Nome, endereço, contato' },
@@ -41,11 +41,15 @@ const TABS: { id: Tab; icon: string; label: string; sub: string }[] = [
 // Só admin vê essa aba, sellers não gerenciam quem tem acesso ao painel.
 const EQUIPE_TAB: { id: Tab; icon: string; label: string; sub: string } =
   { id: 'equipe', icon: 'shield', label: 'Equipe', sub: 'Quem acessa o painel' };
+// Nota fiscal: certificado A1 e dados fiscais, só admin (antes ficava no
+// fim da aba Entrega, onde ninguém achava).
+const FISCAL_TAB: { id: Tab; icon: string; label: string; sub: string } =
+  { id: 'fiscal', icon: 'receipt', label: 'Nota fiscal', sub: 'Certificado e NF-e' };
 
 export default function ConfiguracoesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const visibleTabs = isAdmin ? [...TABS, EQUIPE_TAB] : TABS;
+  const visibleTabs = isAdmin ? [...TABS, FISCAL_TAB, EQUIPE_TAB] : TABS;
   const [settings, setSettings] = useState<StoreSettings>(STORE_DEFAULTS);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
@@ -464,55 +468,6 @@ export default function ConfiguracoesPage() {
             />
           </Card>
 
-          {isAdmin && (
-            <Card icon="shield" title="Nota fiscal (NF-e)" desc="Emitida direto na SEFAZ com o certificado digital da loja, sem mensalidade. Sem certificado, nenhuma nota é gerada">
-              <Divider label="Certificado digital A1" />
-              <NfeCertificate user={user} />
-              <Divider label="Emissão" />
-              <Toggle
-                label="Emitir a nota automaticamente quando o pedido for pago"
-                checked={!!settings.nfeAutoEmit}
-                onChange={v => { set('nfeAutoEmit', v); if (v) set('nfeAutoEmitSince', new Date().toISOString()); }}
-                hint="Desligado: a nota é emitida pelo botão no pedido. Ligado: sai sozinha depois do pagamento, só para pedidos pagos a partir de agora."
-              />
-              <Toggle
-                label="Usar ambiente de homologação (teste, sem valor fiscal)"
-                checked={(settings.nfeEnvironment ?? NFE_DEFAULTS.environment) === 'homologacao'}
-                onChange={v => set('nfeEnvironment', v ? 'homologacao' : 'producao')}
-                hint="Com a emissão automática ligada, as notas vão para homologação enquanto isto estiver ligado. No pedido sempre dá para emitir uma nota de teste à parte."
-                warn="HOMOLOGAÇÃO: as notas automáticas não têm valor fiscal. Desligue para emitir de verdade."
-              />
-              <Divider label="Empresa (o endereço vem dos dados da loja)" />
-              <Row>
-                <F label="CNPJ" value={settings.nfeCnpj ?? settings.storeCnpj ?? NFE_DEFAULTS.cnpj} onChange={v => set('nfeCnpj', v)} inputMode="numeric" maxLength={18} />
-                <F label="Inscrição estadual" value={settings.nfeIe ?? ''} onChange={v => set('nfeIe', v)} inputMode="numeric" maxLength={20} hint="Obrigatória na nota" />
-              </Row>
-              <F label="Razão social" value={settings.nfeRazaoSocial ?? ''} onChange={v => set('nfeRazaoSocial', v)} maxLength={60} hint="Como está no cartão CNPJ" />
-              <Row>
-                <F label="Regime (CRT)" value={String(settings.nfeCrt ?? NFE_DEFAULTS.crt)} onChange={v => set('nfeCrt', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={1} hint="1 = Simples Nacional, 4 = MEI, 3 = regime normal" />
-                <F label="Código IBGE do município" value={settings.nfeCodMunicipio ?? NFE_DEFAULTS.codMunicipio} onChange={v => set('nfeCodMunicipio', v)} inputMode="numeric" maxLength={7} hint="Blumenau = 4202404" />
-              </Row>
-              <Row>
-                <F label="Série" value={String(settings.nfeSerie ?? NFE_DEFAULTS.serie)} onChange={v => set('nfeSerie', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={3} />
-                <F label="Próximo número da nota" value={String(settings.nfeProximoNumero ?? NFE_DEFAULTS.proximoNumero)} onChange={v => set('nfeProximoNumero', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={9} hint="Se já emitiu notas em outro sistema, continue da última + 1" />
-              </Row>
-              <Divider label="Dados fiscais (confirme com a contabilidade)" />
-              <Row>
-                <F label="NCM" value={settings.nfeNcm ?? NFE_DEFAULTS.ncm} onChange={v => set('nfeNcm', v)} inputMode="numeric" maxLength={10} hint="6302.10.00 = roupa de cama de malha" />
-                <F label="CSOSN (ICMS)" value={settings.nfeCsosn ?? NFE_DEFAULTS.csosn} onChange={v => set('nfeCsosn', v)} inputMode="numeric" maxLength={3} hint="102 = Simples Nacional sem crédito" />
-              </Row>
-              <Row>
-                <F label="CST PIS/COFINS" value={settings.nfePisCofinsCst ?? NFE_DEFAULTS.pisCofinsCst} onChange={v => set('nfePisCofinsCst', v)} inputMode="numeric" maxLength={2} />
-                <F label="Natureza da operação" value={settings.nfeNaturezaOperacao ?? NFE_DEFAULTS.naturezaOperacao} onChange={v => set('nfeNaturezaOperacao', v)} maxLength={60} />
-              </Row>
-              <Row>
-                <F label="CFOP dentro do estado" value={settings.nfeCfopInterno ?? NFE_DEFAULTS.cfopInterno} onChange={v => set('nfeCfopInterno', v)} inputMode="numeric" maxLength={4} />
-                <F label="CFOP para outros estados" value={settings.nfeCfopInterestadual ?? NFE_DEFAULTS.cfopInterestadual} onChange={v => set('nfeCfopInterestadual', v)} inputMode="numeric" maxLength={4} />
-              </Row>
-              <TA label="Informações adicionais" value={settings.nfeInfoAdicional ?? NFE_DEFAULTS.infoAdicional} onChange={v => set('nfeInfoAdicional', v)} rows={2} />
-            </Card>
-          )}
-
           <Card icon="shield" title="Margem de erro, Uber Direct" desc="O preço da Uber é recotado no momento do despacho, se a diferença passar dessa margem, o despacho é bloqueado até você confirmar">
             <Row>
               <Num label="Margem fixa (R$)"
@@ -610,6 +565,58 @@ export default function ConfiguracoesPage() {
             </Row>
           </Card>
 
+        </div>
+      )}
+
+      {/* ── NOTA FISCAL (admin only) ── */}
+      {tab === 'fiscal' && isAdmin && (
+        <div className="flex flex-col gap-5">
+          <Card icon="shield" title="Nota fiscal (NF-e)" desc="Emitida direto na SEFAZ com o certificado digital da loja, sem mensalidade. Sem certificado, nenhuma nota é gerada">
+            <Divider label="Certificado digital A1" />
+            <NfeCertificate user={user} />
+            <Divider label="Emissão" />
+            <Toggle
+              label="Emitir a nota automaticamente quando o pedido for pago"
+              checked={!!settings.nfeAutoEmit}
+              onChange={v => { set('nfeAutoEmit', v); if (v) set('nfeAutoEmitSince', new Date().toISOString()); }}
+              hint="Desligado: a nota é emitida pelo botão no pedido. Ligado: sai sozinha depois do pagamento, só para pedidos pagos a partir de agora."
+            />
+            <Toggle
+              label="Usar ambiente de homologação (teste, sem valor fiscal)"
+              checked={(settings.nfeEnvironment ?? NFE_DEFAULTS.environment) === 'homologacao'}
+              onChange={v => set('nfeEnvironment', v ? 'homologacao' : 'producao')}
+              hint="Com a emissão automática ligada, as notas vão para homologação enquanto isto estiver ligado. No pedido sempre dá para emitir uma nota de teste à parte."
+              warn="HOMOLOGAÇÃO: as notas automáticas não têm valor fiscal. Desligue para emitir de verdade."
+            />
+            <Divider label="Empresa (o endereço vem dos dados da loja)" />
+            <Row>
+              <F label="CNPJ" value={settings.nfeCnpj ?? settings.storeCnpj ?? NFE_DEFAULTS.cnpj} onChange={v => set('nfeCnpj', v)} inputMode="numeric" maxLength={18} />
+              <F label="Inscrição estadual" value={settings.nfeIe ?? ''} onChange={v => set('nfeIe', v)} inputMode="numeric" maxLength={20} hint="Obrigatória na nota" />
+            </Row>
+            <F label="Razão social" value={settings.nfeRazaoSocial ?? ''} onChange={v => set('nfeRazaoSocial', v)} maxLength={60} hint="Como está no cartão CNPJ" />
+            <Row>
+              <F label="Regime (CRT)" value={String(settings.nfeCrt ?? NFE_DEFAULTS.crt)} onChange={v => set('nfeCrt', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={1} hint="1 = Simples Nacional, 4 = MEI, 3 = regime normal" />
+              <F label="Código IBGE do município" value={settings.nfeCodMunicipio ?? NFE_DEFAULTS.codMunicipio} onChange={v => set('nfeCodMunicipio', v)} inputMode="numeric" maxLength={7} hint="Blumenau = 4202404" />
+            </Row>
+            <Row>
+              <F label="Série" value={String(settings.nfeSerie ?? NFE_DEFAULTS.serie)} onChange={v => set('nfeSerie', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={3} />
+              <F label="Próximo número da nota" value={String(settings.nfeProximoNumero ?? NFE_DEFAULTS.proximoNumero)} onChange={v => set('nfeProximoNumero', Number(v.replace(/\D/g, '')) || 1)} inputMode="numeric" maxLength={9} hint="Se já emitiu notas em outro sistema, continue da última + 1" />
+            </Row>
+            <Divider label="Dados fiscais (confirme com a contabilidade)" />
+            <Row>
+              <F label="NCM" value={settings.nfeNcm ?? NFE_DEFAULTS.ncm} onChange={v => set('nfeNcm', v)} inputMode="numeric" maxLength={10} hint="6302.10.00 = roupa de cama de malha" />
+              <F label="CSOSN (ICMS)" value={settings.nfeCsosn ?? NFE_DEFAULTS.csosn} onChange={v => set('nfeCsosn', v)} inputMode="numeric" maxLength={3} hint="102 = Simples Nacional sem crédito" />
+            </Row>
+            <Row>
+              <F label="CST PIS/COFINS" value={settings.nfePisCofinsCst ?? NFE_DEFAULTS.pisCofinsCst} onChange={v => set('nfePisCofinsCst', v)} inputMode="numeric" maxLength={2} />
+              <F label="Natureza da operação" value={settings.nfeNaturezaOperacao ?? NFE_DEFAULTS.naturezaOperacao} onChange={v => set('nfeNaturezaOperacao', v)} maxLength={60} />
+            </Row>
+            <Row>
+              <F label="CFOP dentro do estado" value={settings.nfeCfopInterno ?? NFE_DEFAULTS.cfopInterno} onChange={v => set('nfeCfopInterno', v)} inputMode="numeric" maxLength={4} />
+              <F label="CFOP para outros estados" value={settings.nfeCfopInterestadual ?? NFE_DEFAULTS.cfopInterestadual} onChange={v => set('nfeCfopInterestadual', v)} inputMode="numeric" maxLength={4} />
+            </Row>
+            <TA label="Informações adicionais" value={settings.nfeInfoAdicional ?? NFE_DEFAULTS.infoAdicional} onChange={v => set('nfeInfoAdicional', v)} rows={2} />
+          </Card>
         </div>
       )}
 
