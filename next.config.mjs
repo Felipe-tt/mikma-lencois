@@ -9,6 +9,12 @@ const BUILD_VERSION = process.env.K_REVISION || process.env.GITHUB_SHA || String
 const nextConfig = {
   env: { NEXT_PUBLIC_BUILD_VERSION: BUILD_VERSION },
 
+  // React Compiler: memoiza componentes e hooks sozinho no build, então a
+  // tela só refaz o que mudou (menos trabalho a cada toque no celular).
+  // Componente que quebra as regras do React é pulado, não quebrado; o
+  // ESLint (react-hooks) aponta quais são.
+  reactCompiler: true,
+
   // A checagem de tipos roda antes, no "npm run build", com o TypeScript 7
   // (compilador nativo, ~1s). A do Next usaria a API do TypeScript 6
   // (pacote "typescript", mantido para o ESLint), bem mais lenta.
