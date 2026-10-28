@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dueJobs, healthDue, JOBS } from '../../../workers/cron/schedule.mjs';
+import { backupDue, dueJobs, healthDue, JOBS } from '../../../workers/cron/schedule.mjs';
 
 const at = (h: number, m: number) => new Date(Date.UTC(2026, 9, 28, h, m));
 
@@ -34,5 +34,12 @@ describe('agenda do Worker de rotinas', () => {
     expect(healthDue(at(13, 5))).toBe(true);
     expect(healthDue(at(13, 15))).toBe(true);
     expect(healthDue(at(13, 10))).toBe(false);
+  });
+
+  it('backup do banco uma vez por dia, às 06:00 UTC', () => {
+    let n = 0;
+    for (let h = 0; h < 24; h++) for (let m = 0; m < 60; m += 5) if (backupDue(at(h, m))) n++;
+    expect(n).toBe(1);
+    expect(backupDue(at(6, 0))).toBe(true);
   });
 });

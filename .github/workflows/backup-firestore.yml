@@ -1,0 +1,61 @@
+name: Firestore · backup diário
+
+# Cópia do banco inteiro (menos coleções descartáveis), comprimida e
+# criptografada com BACKUP_KEY. Fica como artifact por 14 dias e some
+# sozinha: grátis (repositório público) e sem armazenamento pago no Google.
+# Disparado pelo Worker mikma-cron às 06:00 UTC; o agendamento abaixo é
+# reserva. Restaurar: scripts/firestore-restore.mjs (ver cabeçalho).
+
+on:
+  schedule:
+    - cron: '47 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-firestore
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Dependências (sem scripts de instalação)
+        run: npm ci --ignore-scripts
+
+      - name: Backup
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
+        run: |
+          if [ -z "$BACKUP_KEY" ]; then echo "::error::Falta o secret BACKUP_KEY (senha do backup)"; exit 1; fi
+          umask 077
+          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          dia=$(date -u +%Y-%m-%d)
+          node scripts/firestore-backup.mjs "$RUNNER_TEMP/firestore-$dia.mikmabk"
+          # Confere que o arquivo abre com a senha antes de guardar.
+          node scripts/firestore-restore.mjs "$RUNNER_TEMP/firestore-$dia.mikmabk" | head -1
+          rm -f "$RUNNER_TEMP/sa.json"
+          echo "DIA=$dia" >> "$GITHUB_ENV"
+
+      - name: Guardar por 14 dias
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: firestore-${{ env.DIA }}
+          path: ${{ runner.temp }}/firestore-${{ env.DIA }}.mikmabk
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error

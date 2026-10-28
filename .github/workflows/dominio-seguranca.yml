@@ -1,0 +1,103 @@
+name: Domínio · DNSSEC, CAA, e-mail e HSTS
+
+# Blindagem do mikma.com.br, tudo grátis. Sem "aplicar", só mostra o estado.
+# Com "aplicar", cria só o que falta (nunca altera nem apaga registro existente):
+# - DNSSEC na Cloudflare: depois, o registro DS mostrado no fim vai no registro.br;
+# - CAA: só Let's Encrypt, Google, SSL.com, Sectigo e DigiCert emitem certificado;
+# - DMARC (e SPF "-all" se o domínio raiz não manda nem recebe e-mail);
+# - pede a inclusão na lista HSTS preload dos navegadores, se o site estiver apto.
+# O token da Cloudflare precisa da permissão "Zone · DNS · Edit".
+
+on:
+  workflow_dispatch:
+    inputs:
+      aplicar:
+        description: 'Aplicar (sem isso, só mostra o estado)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  dominio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      APLICAR: ${{ inputs.aplicar }}
+      DOMAIN: mikma.com.br
+    steps:
+      - name: Estado atual (DNS público)
+        run: |
+          for q in "TXT $DOMAIN" "MX $DOMAIN" "CAA $DOMAIN" "TXT _dmarc.$DOMAIN" "TXT resend._domainkey.$DOMAIN" "TXT send.$DOMAIN" "MX send.$DOMAIN"; do
+            set -- $q; echo "## $1 $2"; dig +short "$1" "$2" @1.1.1.1 || true
+          done
+          echo "## DS no registro.br (DNSSEC ativo de ponta a ponta se aparecer algo)"
+          dig +short DS "$DOMAIN" @a.dns.br || true
+          echo "## HSTS preload"
+          curl -s "https://hstspreload.org/api/v2/status?domain=$DOMAIN"; echo
+          curl -s "https://hstspreload.org/api/v2/preloadable?domain=$DOMAIN"; echo
+
+      - name: Cloudflare
+        run: |
+          set -u
+          api() { curl -sS -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" "$@"; }
+          Z=$(api "https://api.cloudflare.com/client/v4/zones?name=$DOMAIN" | jq -r '.result[0].id // empty')
+          [ -n "$Z" ] || { echo "::error::Zona não encontrada com este token"; exit 1; }
+          B="https://api.cloudflare.com/client/v4/zones/$Z"
+          has() { api "$B/dns_records?type=$1&name=$2&per_page=100" | jq -r --arg c "${3:-}" '[.result[]? | select(($c == "") or ((.content // "") | contains($c)))] | length'; }
+
+          echo "## DNSSEC"
+          api "$B/dnssec" | jq -c '.result | {status, ds, key_tag, algorithm, digest_type, digest}'
+          if [ "$APLICAR" = "true" ]; then
+            st=$(api "$B/dnssec" | jq -r '.result.status')
+            if [ "$st" != "active" ] && [ "$st" != "pending" ]; then
+              api -X PATCH "$B/dnssec" --data '{"status":"active"}' | jq -c '{dnssec:.success,errors,status:.result.status}'
+            fi
+          fi
+
+          echo "## CAA"
+          if [ "$(has CAA "$DOMAIN")" = "0" ]; then
+            if [ "$APLICAR" = "true" ]; then
+              for ca in letsencrypt.org pki.goog ssl.com sectigo.com digicert.com; do
+                for tag in issue issuewild; do
+                  api -X POST "$B/dns_records" --data "{\"type\":\"CAA\",\"name\":\"$DOMAIN\",\"data\":{\"flags\":0,\"tag\":\"$tag\",\"value\":\"$ca\"}}" | jq -c "{caa:\"$tag $ca\",ok:.success,errors}"
+                done
+              done
+            else echo "sem CAA (seria criado)"; fi
+          else echo "CAA já existe: mantido"; fi
+
+          echo "## DMARC"
+          if [ "$(has TXT "_dmarc.$DOMAIN" "v=DMARC1")" = "0" ]; then
+            # Com a assinatura DKIM da Resend (d=mikma.com.br) o e-mail da loja passa
+            # no DMARC; quem falsificar o domínio vai para o spam.
+            if [ -n "$(dig +short TXT "resend._domainkey.$DOMAIN" @1.1.1.1)" ]; then pol="p=quarantine"; else pol="p=none"; fi
+            if [ "$APLICAR" = "true" ]; then
+              api -X POST "$B/dns_records" --data "{\"type\":\"TXT\",\"name\":\"_dmarc.$DOMAIN\",\"content\":\"\\\"v=DMARC1; $pol; adkim=r; aspf=r; pct=100\\\"\",\"ttl\":3600}" | jq -c '{dmarc:.success,errors}'
+            else echo "sem DMARC (seria criado com $pol)"; fi
+          else echo "DMARC já existe: mantido"; fi
+
+          echo "## SPF do domínio raiz"
+          if [ "$(has TXT "$DOMAIN" "v=spf1")" = "0" ]; then
+            if [ -z "$(dig +short MX "$DOMAIN" @1.1.1.1)" ]; then
+              # A Resend usa send.mikma.com.br como remetente técnico; o raiz não envia.
+              if [ "$APLICAR" = "true" ]; then
+                api -X POST "$B/dns_records" --data "{\"type\":\"TXT\",\"name\":\"$DOMAIN\",\"content\":\"\\\"v=spf1 -all\\\"\",\"ttl\":3600}" | jq -c '{spf:.success,errors}'
+              else echo "sem SPF e sem MX (seria criado v=spf1 -all)"; fi
+            else echo "o domínio recebe e-mail (MX) e não tem SPF: conferir o provedor antes de criar"; fi
+          else echo "SPF já existe: mantido"; fi
+
+          echo "## Registro DS para colar no registro.br (DNSSEC)"
+          api "$B/dnssec" | jq -r '.result | "status: \(.status)\nKey tag (identificador): \(.key_tag)\nAlgoritmo: \(.algorithm)\nTipo de digest: \(.digest_type)\nDigest: \(.digest)"'
+
+      - name: HSTS preload
+        if: ${{ inputs.aplicar }}
+        run: |
+          errs=$(curl -s "https://hstspreload.org/api/v2/preloadable?domain=$DOMAIN" | jq '.errors | length')
+          status=$(curl -s "https://hstspreload.org/api/v2/status?domain=$DOMAIN" | jq -r '.status')
+          if [ "$status" = "unknown" ] && [ "$errs" = "0" ]; then
+            curl -s -X POST "https://hstspreload.org/api/v2/submit?domain=$DOMAIN"; echo
+          else
+            echo "status: $status, erros: $errs (não enviado)"
+          fi
