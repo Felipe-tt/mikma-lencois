@@ -1,0 +1,54 @@
+name: Cloudflare · Worker do MTA-STS
+
+# Publica o Worker "mikma-mta-sts" (workers/mta-sts) em mta-sts.mikma.com.br.
+# Grátis: só servidores de e-mail buscam a política, poucas vezes por dia.
+# O token precisa de "Account · Workers Scripts · Edit" e
+# "Zone · Workers Routes · Edit" (domínio próprio do Worker).
+
+on:
+  push:
+    branches: [main]
+    paths: ['workers/mta-sts/**', '.github/workflows/worker-mta-sts.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-mta-sts
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: workers/mta-sts
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+
+      - name: Conta da Cloudflare (pela zona)
+        run: |
+          id=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/zones?name=mikma.com.br" | jq -r '.result[0].account.id // empty')
+          [ -n "$id" ] || { echo "::error::Zona mikma.com.br não encontrada com este token"; exit 1; }
+          echo "CLOUDFLARE_ACCOUNT_ID=$id" >> "$GITHUB_ENV"
+
+      - name: Publicar
+        working-directory: workers/mta-sts
+        run: npx -y wrangler@4.147.0 deploy
+
+      - name: Conferir
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS https://mta-sts.mikma.com.br/.well-known/mta-sts.txt; then exit 0; fi
+            sleep 20
+          done
+          echo "::error::Política não respondeu em mta-sts.mikma.com.br"; exit 1

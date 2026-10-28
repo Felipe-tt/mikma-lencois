@@ -96,6 +96,26 @@ jobs:
             else echo "sem SPF no raiz (seria criado v=spf1 -all)"; fi
           else echo "SPF já existe: mantido"; fi
 
+          echo "## MTA-STS e TLS-RPT (e-mail recebido só com TLS)"
+          # A política fica em https://mta-sts.$DOMAIN (workers/mta-sts). O id
+          # muda quando a política muda, para os servidores buscarem de novo.
+          # Os relatórios TLS vão para relatorios@ e são descartados pelo
+          # /api/email/inbound (só servem para olhar na Resend se der problema).
+          sts="v=STSv1; id=20261028"
+          rpt="v=TLSRPTv1; rua=mailto:relatorios@$DOMAIN"
+          for pair in "_mta-sts.$DOMAIN|$sts|v=STSv1" "_smtp._tls.$DOMAIN|$rpt|v=TLSRPTv1"; do
+            IFS='|' read -r name val tag <<< "$pair"
+            rec=$(api "$B/dns_records?type=TXT&name=$name&per_page=100" | jq -c --arg t "$tag" '[.result[]? | select(.content | contains($t))][0] // empty')
+            if [ -z "$rec" ]; then
+              if [ "$APLICAR" = "true" ]; then
+                api -X POST "$B/dns_records" --data "{\"type\":\"TXT\",\"name\":\"$name\",\"content\":\"\\\"$val\\\"\",\"ttl\":3600}" | jq -c "{registro:\"$name\",ok:.success,errors}"
+              else echo "sem $name (seria criado: $val)"; fi
+            elif [ "$(echo "$rec" | jq -r .content | tr -d '"')" != "$val" ] && [ "$APLICAR" = "true" ]; then
+              api -X PATCH "$B/dns_records/$(echo "$rec" | jq -r .id)" --data "{\"content\":\"\\\"$val\\\"\"}" | jq -c "{atualizado:\"$name\",ok:.success,errors}"
+            else echo "$name: $(echo "$rec" | jq -r .content)"; fi
+          done
+          curl -fsS "https://mta-sts.$DOMAIN/.well-known/mta-sts.txt" || echo "política MTA-STS ainda não publicada (worker-mta-sts.yml)"
+
           echo "## Registro DS para colar no registro.br (DNSSEC)"
           api "$B/dnssec" | jq -r '.result | "status: \(.status)\nKey tag (identificador): \(.key_tag)\nAlgoritmo: \(.algorithm)\nTipo de digest: \(.digest_type)\nDigest: \(.digest)"'
 
