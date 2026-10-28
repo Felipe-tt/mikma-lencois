@@ -1,0 +1,3 @@
+10055	IGNORE	CSP com unsafe-inline: necessario pelo cache de HTML na borda (ver proxy.ts)
+10049	IGNORE	Conteudo cacheavel: o HTML da loja e cacheado de proposito na Cloudflare
+10027	IGNORE	Comentarios suspeitos no JS: falso positivo comum em bundles do Next
