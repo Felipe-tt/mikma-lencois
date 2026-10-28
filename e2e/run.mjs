@@ -10,6 +10,7 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
+import { appendFileSync } from 'node:fs';
 import { startAbacatePayMock } from './mocks/abacatepay-server.mjs';
 import { seed } from './seed.mjs';
 
@@ -63,8 +64,8 @@ const server = spawn('npx', ['next', 'start', '-p', PORT], {
   env: { ...env, NODE_OPTIONS: `${env.NODE_OPTIONS ?? ''} --import ./e2e/mocks/preload.mjs`.trim() },
 });
 let serverLog = '';
-server.stdout.on('data', d => { serverLog += d; });
-server.stderr.on('data', d => { serverLog += d; });
+server.stdout.on('data', d => { serverLog += d; process.env.E2E_SERVER_LOG && appendFileSync(process.env.E2E_SERVER_LOG, d); });
+server.stderr.on('data', d => { serverLog += d; process.env.E2E_SERVER_LOG && appendFileSync(process.env.E2E_SERVER_LOG, d); });
 
 let up = false;
 for (let i = 0; i < 60 && !up; i++) {
@@ -80,6 +81,14 @@ if (!up) {
   // Assíncrono: o simulador da AbacatePay roda neste processo e precisa responder.
   const pw = spawn('npx', ['playwright', 'test', '-c', 'e2e/playwright.config.ts', ...extraArgs], { stdio: 'inherit', env });
   code = await new Promise(resolve => pw.on('close', c => resolve(c ?? 1)));
+  // Prerender parcial: se a página retomada não bate com o HTML estático, o
+  // React desiste e renderiza no navegador. O site segue de pé, então nenhum
+  // teste de tela pega; só o log do servidor mostra.
+  const resumeErrors = serverLog.match(/Couldn't find all resumable slots[^\n]*/g) ?? [];
+  if (resumeErrors.length) {
+    console.error(`\n✘ ${resumeErrors.length} erro(s) de retomada do prerender parcial no servidor:\n${resumeErrors[0]}`);
+    code = code || 1;
+  }
   if (code !== 0) console.error('\n── log do servidor (fim) ──\n' + serverLog.slice(-4000));
 }
 // E2E_KEEP=1: mantém a loja e os simuladores no ar para investigar (Ctrl+C sai).

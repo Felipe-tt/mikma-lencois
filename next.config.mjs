@@ -7,7 +7,7 @@ const BUILD_VERSION = process.env.K_REVISION || process.env.GITHUB_SHA || String
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: { NEXT_PUBLIC_BUILD_VERSION: BUILD_VERSION },
+  env: { NEXT_PUBLIC_BUILD_VERSION: BUILD_VERSION, NEXT_PUBLIC_BUILD_YEAR: String(new Date().getFullYear()) },
 
   // React Compiler: memoiza componentes e hooks sozinho no build, então a
   // tela só refaz o que mudou (menos trabalho a cada toque no celular).
