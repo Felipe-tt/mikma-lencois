@@ -8,6 +8,10 @@ import {
   memoryLocalCache,
 } from 'firebase/firestore'
 import app, { supportsIndexedDbPersistence } from '@/lib/firebase/client'
+import { ensureAppCheck } from '@/lib/firebase/appCheck'
+
+// Antes do primeiro pedido ao banco (ver appCheck.ts).
+ensureAppCheck()
 
 // Cache local persistente (IndexedDB): o app continua funcionando com
 // internet ruim/instável na loja, as vendas ficam guardadas no

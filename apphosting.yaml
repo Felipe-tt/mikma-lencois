@@ -49,6 +49,11 @@ env:
   - variable: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
     value: "6Lc-ehMtAAAAALcFa9kjxdxqXmXJi-VfYKzqjgXD"
     availability: [BUILD, RUNTIME]
+  # App Check (src/lib/firebase/appCheck.ts): "1" só depois de registrar a
+  # chave do reCAPTCHA no console do Firebase, em App Check.
+  - variable: NEXT_PUBLIC_APP_CHECK
+    value: "0"
+    availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_SENTRY_DSN
     value: "https://79c7607bec5f121b2c57e38c25f80ec7@o4511700453556224.ingest.us.sentry.io/4511700455653376"
     availability: [BUILD, RUNTIME]
