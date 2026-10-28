@@ -45,7 +45,8 @@
     "sanitize-html": "^2.17.6",
     "svix": "^1.98.0",
     "validator": "13.15.35",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "xsd-schema-validator": "file:vendor/xsd-schema-validator"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^6.0.0",
@@ -68,7 +69,8 @@
   "overrides": {
     "undici": "^6.27.0",
     "uuid": "^11.1.1",
-    "@grpc/grpc-js": "^1.14.6"
+    "@grpc/grpc-js": "^1.14.6",
+    "xsd-schema-validator": "$xsd-schema-validator"
   },
   "engines": {
     "node": "24"

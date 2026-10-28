@@ -1,0 +1,7 @@
+{
+  "name": "xsd-schema-validator",
+  "version": "0.7.0-mikma.1",
+  "description": "Substituto vazio: a nota fiscal valida o XML com libxmljs2 (validateSchemaJsBased). O pacote original compila um helper Java no install e quebra o build do App Hosting, que não tem JDK.",
+  "main": "index.js",
+  "license": "MIT"
+}

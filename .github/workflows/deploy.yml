@@ -91,6 +91,28 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
+  # ── 1a) Instala como o App Hosting: Node 24 sem Java ─────────────────────
+  # O runner do GitHub já vem com JDK, então um pacote que precisa de Java no
+  # "npm install" passava aqui e quebrava só no build do App Hosting (foi o
+  # que aconteceu com a nota fiscal). Este job instala num container node:24,
+  # que, como o builder do Google, não tem Java.
+  instalar-como-app-hosting:
+    name: instalar-como-app-hosting
+    runs-on: ubuntu-latest
+    container: node:24
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Sem Java (como o App Hosting)
+        run: if command -v java || command -v javac; then echo "::error::este container tem Java"; exit 1; fi
+      - name: npm ci
+        run: npm ci
+      - name: Nota fiscal carrega (validação de XML sem Java)
+        run: npx vitest run src/lib/nfe
+
   # ── 1b) Ponta a ponta: compra completa num navegador de verdade ──────────
   # Sobe a loja contra os emuladores do Firebase e um simulador local da
   # AbacatePay (e2e/), sem nenhum segredo. Cliente entra, compra com PIX, o
