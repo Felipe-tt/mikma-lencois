@@ -44,3 +44,5 @@ ui-debug.log
 
 # Backup local de secrets/config antes de apagar recursos do GCP — nunca comitar
 backup-apphosting-*/
+test-results/
+playwright-report/
