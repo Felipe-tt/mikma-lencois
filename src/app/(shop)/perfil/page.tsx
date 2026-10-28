@@ -176,8 +176,8 @@ export default function PerfilPage() {
   };
 
   const providers = auth.currentUser?.providerData.map(p => p.providerId) ?? [];
-  const usesPassword = providers.includes('password');
-  const usesGoogle = providers.includes('google.com');
+  const usesPassword = providers.some(id => id === 'password');
+  const usesGoogle = providers.some(id => id === 'google.com');
   const initial = (name || user.email || '?').trim().charAt(0).toUpperCase();
   const dirty = name.trim() !== (savedName ?? userData?.name ?? user.displayName ?? '').trim() || phone !== savedPhone;
 

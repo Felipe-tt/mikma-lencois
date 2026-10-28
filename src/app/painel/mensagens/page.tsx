@@ -531,7 +531,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
   const textContent = msg.text;
 
   // Usa text quando: não há HTML, ou o HTML resultante é só tags vazias/brancos
-  const htmlIsEmpty = !htmlContent || htmlContent.replace(/<[^>]*>/g, '').trim().length === 0;
+  const htmlIsEmpty = !htmlContent || htmlContent.replace(/<[^>]*>/g, '').replace(/[<>]/g, '').trim().length === 0;
   const showHtml = !isOut && !htmlIsEmpty && !!htmlContent;
 
   return (

@@ -46,7 +46,7 @@ export function deliveryStatusEmailHtml({
 
 // Prévia da caixa de entrada a partir de um trecho com HTML.
 function plainPreview(html: string): string {
-  return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 110);
+  return html.replace(/<[^>]+>/g, '').replace(/[<>]/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 110);
 }
 
 /**

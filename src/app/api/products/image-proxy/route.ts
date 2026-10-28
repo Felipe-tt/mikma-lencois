@@ -6,6 +6,14 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 // fazer proxy (são os mesmos domínios já liberados em img-src no middleware).
 const ALLOWED_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com']);
 
+// Só fotos do bucket da loja: os hosts acima servem qualquer bucket público.
+const BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '';
+function inStoreBucket(u: URL): boolean {
+  if (!BUCKET || u.username || u.password || u.port) return false;
+  const prefix = u.hostname === 'firebasestorage.googleapis.com' ? `/v0/b/${BUCKET}/o/` : `/${BUCKET}/`;
+  return u.pathname.startsWith(prefix);
+}
+
 /**
  * Proxy de imagens do Storage para uso no color picker (PhotoColorPicker).
  *
@@ -41,7 +49,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'URL inválida' }, { status: 400 });
   }
 
-  if (parsed.protocol !== 'https:' || !ALLOWED_HOSTS.has(parsed.hostname)) {
+  if (parsed.protocol !== 'https:' || !ALLOWED_HOSTS.has(parsed.hostname) || !inStoreBucket(parsed)) {
     return NextResponse.json({ error: 'Origem não permitida' }, { status: 400 });
   }
 
