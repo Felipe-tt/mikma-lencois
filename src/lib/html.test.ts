@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escapeHtml, serializeJsonLd, sanitizeDisplayName } from './html';
+import { escapeHtml, serializeJsonLd, sanitizeDisplayName, htmlToText } from './html';
 
 describe('escapeHtml', () => {
   it('escapa os caracteres que abrem tags e atributos', () => {
@@ -46,5 +46,17 @@ describe('sanitizeDisplayName', () => {
   it('vazio vira string vazia (o chamador usa fallback)', () => {
     expect(sanitizeDisplayName(undefined)).toBe('');
     expect(sanitizeDisplayName('<>')).toBe('');
+  });
+});
+
+describe('htmlToText', () => {
+  it('tira as tags e fica com o texto', () => {
+    expect(htmlToText('<p>Olá <b>Ana</b></p>')).toBe('Olá Ana');
+  });
+  it('não remonta tag quebrada no meio', () => {
+    expect(htmlToText('<scr<b>ipt>alert(1)')).not.toContain('<');
+  });
+  it('só tags vira vazio', () => {
+    expect(htmlToText('<div><br/></div>').trim()).toBe('');
   });
 });
