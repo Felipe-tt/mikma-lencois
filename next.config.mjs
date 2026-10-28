@@ -14,6 +14,7 @@ const nextConfig = {
   // Componente que quebra as regras do React é pulado, não quebrado; o
   // ESLint (react-hooks) aponta quais são.
   reactCompiler: true,
+  cacheComponents: true,
 
   // Nota fiscal: a nfewizard-io lê schemas XSD e fontes do PDF do próprio
   // pacote em tempo de execução; empacotar quebraria esses caminhos.

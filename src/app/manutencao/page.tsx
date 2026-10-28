@@ -1,16 +1,11 @@
-import { getSettings } from '@/lib/settings';
+import { getStoreSettings } from '@/lib/settings';
 import { MaintenanceAdminRedirect } from '@/components/layout/MaintenanceAdminRedirect';
 import { MaintenancePoll } from '@/components/layout/MaintenancePoll';
 
-// Antes era 'force-dynamic': cada visita (incluindo bots/scanners) virava
-// uma invocação de compute sem cache, gerando custo constante em "Non-Firebase
-// Services" mesmo sem tráfego real. O conteúdo desta página (Instagram/
-// WhatsApp vindos de getSettings()) é igual pra todo mundo — a lógica de
-// "quem pode ver o site de verdade" (IP liberado, staff logado) já é
-// resolvida à parte, no client, via /api/maintenance/status (que continua
-// dinâmico). 30s de revalidação é uma defasagem aceitável pra esse conteúdo
-// estático da tela, e corta a maior parte do custo de compute por visita.
-export const revalidate = 30;
+// Estática (prerender): o conteúdo (Instagram/WhatsApp das configurações)
+// é igual pra todo mundo e vem do cache de getStoreSettings, limpo quando a
+// manutenção liga ou desliga. Quem pode ver o site de verdade (IP liberado,
+// staff logado) é resolvido no client, via /api/maintenance/status.
 
 export const metadata = {
   // Absoluto: com o modelo do layout virava "Em breve, Mikma Lençóis | Mikma
@@ -23,7 +18,7 @@ export const metadata = {
 };
 
 export default async function ManutencaoPage() {
-  const s = await getSettings();
+  const s = await getStoreSettings();
 
   const instagramUrl = s.instagramUrl || null;
   const whatsappUrl =

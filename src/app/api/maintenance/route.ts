@@ -1,14 +1,12 @@
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { extractBearer, tooManyRequests, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { maintenanceActionSchema } from './schema';
 import { maintenanceDocId } from '@/lib/maintenanceQueue';
-
 
 // Validação simples de IPv4/IPv6, evita que um valor arbitrário em
 // body.ip vire parte de um ID de documento no Firestore sem checagem
@@ -78,6 +76,7 @@ export async function POST(req: NextRequest) {
     // Resultado sem isso: toggle fica "ativo" no Firestore mas o
     // visitante continua vendo o site normal até o cache expirar.
     revalidatePath('/', 'layout');
+    revalidateTag('settings', { expire: 0 });
 
     return NextResponse.json({ active: !current });
   }

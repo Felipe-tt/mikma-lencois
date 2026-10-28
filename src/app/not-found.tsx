@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { getSettings } from '@/lib/settings';
+import { getStoreSettings } from '@/lib/settings';
 import { BrandLogo } from '@/components/BrandLogo';
 import type { Metadata } from 'next';
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 // logo pra pessoa ter por onde voltar. A lua grande e apagada no fundo é
 // a mesma do login/cadastro, centralizada atrás do texto.
 export default async function NotFound() {
-  const s = await getSettings();
+  const s = await getStoreSettings();
 
   return (
     <div className="relative min-h-screen bg-paper flex flex-col overflow-hidden">

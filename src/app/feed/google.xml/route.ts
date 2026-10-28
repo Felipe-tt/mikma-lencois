@@ -1,8 +1,6 @@
+import { connection } from 'next/server';
 import { getAgentCatalog, brl, SITE_URL } from '@/lib/agentCatalog';
 import { escapeXml } from '@/lib/html';
-
-// Gerado na hora (o build não tem acesso ao banco); o catálogo já vem do cache.
-export const dynamic = 'force-dynamic';
 
 // Merchant Center aceita até 150 caracteres no título e 5000 na descrição.
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -14,6 +12,7 @@ const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…`
  * Produtos > Fontes de dados > adicionar por URL.
  */
 export async function GET() {
+  await connection(); // na hora, não no build (o build não lê o banco)
   const products = await getAgentCatalog();
   const items = products.flatMap(p => {
     const variants = p.variants.length > 0 ? p.variants : [{ sku: p.id, size: '', color: '', inStock: false }];

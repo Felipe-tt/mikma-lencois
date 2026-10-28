@@ -1,9 +1,9 @@
-export const dynamic = 'force-dynamic';
-import { NextResponse } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { getSettings } from '@/lib/settings';
 
 // Expõe apenas campos públicos (sem dados sensíveis de logística/admin)
 export async function GET() {
+  await connection(); // na hora, não no build (o build não lê o banco)
   try {
     const s = await getSettings();
     return NextResponse.json({

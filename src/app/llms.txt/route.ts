@@ -1,7 +1,5 @@
+import { connection } from 'next/server';
 import { getAgentCatalog, brl, SITE_URL } from '@/lib/agentCatalog';
-
-// Gerado na hora (o build não tem acesso ao banco); o catálogo já vem do cache.
-export const dynamic = 'force-dynamic';
 
 const money = (cents: number) => `R$ ${brl(cents).replace('.', ',')}`;
 
@@ -10,6 +8,7 @@ const money = (cents: number) => `R$ ${brl(cents).replace('.', ',')}`;
  * assistentes de IA, com o catálogo atual e onde estão as regras.
  */
 export async function GET() {
+  await connection(); // na hora, não no build (o build não lê o banco)
   const products = await getAgentCatalog();
   const byCategory = new Map<string, typeof products>();
   for (const p of products) byCategory.set(p.category, [...(byCategory.get(p.category) ?? []), p]);

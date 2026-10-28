@@ -2,8 +2,6 @@
 import { userMessage } from '@/lib/userMessage';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';

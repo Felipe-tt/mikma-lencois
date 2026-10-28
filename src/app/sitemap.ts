@@ -1,13 +1,14 @@
 import { MetadataRoute } from 'next';
+import { cacheLife, cacheTag } from 'next/cache';
 import { adminDb } from '@/lib/firebase/admin';
 
 const BASE = 'https://mikma.com.br';
 
-// Sem isso o sitemap era gerado uma vez no build (rota estática) e produto
-// novo só aparecia pro Google no próximo deploy.
-export const revalidate = 3600;
-
+// Em cache por 1h (e limpo ao salvar um produto): sem isso o sitemap era
+// gerado uma vez no build e produto novo só aparecia pro Google no deploy.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  'use cache';
+  cacheTag('products');
   const now = new Date();
 
   // Static pages
@@ -37,8 +38,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
+    cacheLife('hours');
     return [...statics, ...products];
   } catch {
+    cacheLife({ stale: 30, revalidate: 60, expire: 300 });
     return statics;
   }
 }

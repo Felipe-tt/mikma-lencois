@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { plural } from '@/lib/plural';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';

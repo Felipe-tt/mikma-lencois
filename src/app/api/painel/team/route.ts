@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
@@ -6,9 +5,6 @@ import { verifyAuth, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { addMemberSchema, removeMemberSchema } from './schema';
-
-
-
 
 // IMPORTANTE: só 'admin' pode gerenciar a equipe, não 'seller'.
 // Se qualquer seller pudesse promover outros sellers, uma única conta

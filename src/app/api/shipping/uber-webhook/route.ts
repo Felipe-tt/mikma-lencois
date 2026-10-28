@@ -12,8 +12,6 @@
  * do Uber e atualize a env var no Cloud Run.
  */
 
-export const dynamic = 'force-dynamic';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual }  from 'crypto';
 import { adminDb }                      from '@/lib/firebase/admin';
@@ -23,7 +21,6 @@ import { rateLimit }                    from '@/lib/rateLimit';
 import { uberDirectWebhookSecret }      from '@/lib/uber-direct';
 import { applyUberStatus, courierUpdate, ensureRoutePoints, type CourierInfo } from '@/lib/uberDeliverySync';
 import { uberWebhookSchema } from './schema';
-
 
 function verifySignature(rawBody: Buffer, header: string): boolean {
   // Testa contra os dois secrets configurados (produção e sandbox), o

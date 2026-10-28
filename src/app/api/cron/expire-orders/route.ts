@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { syncOrderPayment } from '@/lib/orders/syncPayment';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
@@ -87,7 +86,6 @@ export async function GET(req: NextRequest) {
           // sem email, pula
         }
       }
-
 
       // ── CANCELAR: pedido criado há mais de 48h ─────────────────────────
       if (createdAt < cancelCutoff) {

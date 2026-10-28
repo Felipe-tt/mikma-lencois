@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
@@ -27,13 +26,11 @@ import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { createCardCharge } from '@/lib/abacatepayApi';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
 
-
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 // Ver nota equivalente em create-pix/route.ts.
 function abacatePayKey(sandbox: boolean): string {
   return (sandbox ? process.env.ABACATEPAY_SANDBOX_API_KEY : process.env.ABACATEPAY_API_KEY) ?? '';
 }
-
 
 // Timeout ou erro de rede viram uma resposta 504: os ramos de erro do POST já
 // desfazem o pedido (apagam, liberam estoque e cupom). Antes a exceção caía
@@ -182,7 +179,6 @@ export async function POST(req: NextRequest) {
       (s, ci) => s + (productMap[ci.productId]?.weightKg ?? settings.defaultItemWeightKg ?? 0.8) * ci.quantity,
       0
     );
-
 
     // ── Validar cupom server-side ─────────────────────────────────────────────
     // Leitura + checagem de maxUses + incremento de usedCount na MESMA
@@ -485,7 +481,6 @@ export async function POST(req: NextRequest) {
     }
 
     const abacateProduct = JSON.parse(productText).data;
-
 
     // ── Upsert customer on AbacatePay ─────────────────────────────────────────
     let customerId: string | undefined;

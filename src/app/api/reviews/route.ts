@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { z } from 'zod';
@@ -7,7 +6,7 @@ import { getClientIp, safeJson, extractBearer, tooManyRequests, verifyAuth } fro
 import { serialize } from '@/lib/utils/serialize';
 import type { Review } from '@/types';
 import { sanitizeDisplayName } from '@/lib/html';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { shortReviewerName, toPublicReview } from '@/lib/reviews';
 
 const schema = z.object({
@@ -118,9 +117,9 @@ export async function POST(req: NextRequest) {
       throw err;
     }
 
-    // Sem isso a página do produto (ISR de 5 min) não mostrava a avaliação
+    // Sem isso a página do produto (cache de 5 min) não mostrava a avaliação
     // nova pra quem acabou de avaliar e recarregou.
-    try { revalidatePath(`/produtos/${productId}`); } catch { /* best-effort */ }
+    try { revalidateTag(`avaliacoes-${productId}`, { expire: 0 }); } catch { /* best-effort */ }
 
     return NextResponse.json({ id: ref.id, userName: shortReviewerName(name) }, { status: 201 });
   } catch (err) {
@@ -145,7 +144,7 @@ export async function DELETE(req: NextRequest) {
   const productId = snap.data()?.productId as string | undefined;
   await ref.delete();
   if (productId) {
-    try { revalidatePath(`/produtos/${productId}`); } catch { /* best-effort */ }
+    try { revalidateTag(`avaliacoes-${productId}`, { expire: 0 }); } catch { /* best-effort */ }
   }
   return NextResponse.json({ ok: true });
 }
