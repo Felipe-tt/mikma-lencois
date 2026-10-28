@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { WithPathname } from '@/components/ui/Pathname';
 import Image from 'next/image';
 import { parseBusinessHours, getOpenStatus } from '@/lib/business-hours';
 import { CookiePreferencesButton } from '@/components/layout/CookiePreferencesButton';
@@ -21,7 +21,12 @@ interface Props {
   businessHoursTimezone?: string;
 }
 
-export function Footer({
+export function Footer(props: Props) {
+  return <WithPathname>{pathname => <FooterView {...props} pathname={pathname} />}</WithPathname>;
+}
+
+function FooterView({
+  pathname,
   storeName: storeNameRaw,
   storeCity = 'Blumenau, SC',
   storePhone,
@@ -34,7 +39,7 @@ export function Footer({
   address,
   businessHours,
   businessHoursTimezone,
-}: Props) {
+}: Props & { pathname: string }) {
   const year = new Date().getFullYear();
   // Nome vazio nas configurações virava "© 2026 · Todos os direitos...".
   const storeName = storeNameRaw?.trim() || 'Mikma Lençóis';
@@ -43,8 +48,7 @@ export function Footer({
 
   // No checkout, só uma linha discreta: o rodapé completo (categorias,
   // links institucionais) tira a atenção de quem está pagando.
-  const pathname = usePathname();
-  if (pathname?.startsWith('/checkout')) return (
+  if (pathname.startsWith('/checkout')) return (
     <footer className="border-t border-mist">
       <div className="container-shop py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[12px] text-faint">
         <p>© {year} {storeName}{cnpj ? ` · CNPJ ${cnpj}` : ''}</p>

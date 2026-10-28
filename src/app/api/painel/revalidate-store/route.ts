@@ -1,6 +1,5 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { verifyAuth, getClientIp } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { revalidateProduct } from '@/lib/revalidateProduct';
@@ -40,6 +39,8 @@ export async function POST(req: NextRequest) {
   // 'layout' revalida a rota e tudo abaixo dela, cobre páginas dinâmicas
   // (ex: /produtos/[slug]) sem precisar listar cada uma individualmente.
   revalidatePath('/', 'layout');
+  revalidateTag('settings', { expire: 0 });
+  revalidateTag('products', { expire: 0 });
 
   return NextResponse.json({ ok: true });
 }

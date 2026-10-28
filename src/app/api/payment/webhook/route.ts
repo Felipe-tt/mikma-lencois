@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { verifyAbacateWebhook } from '@/lib/abacatepayWebhook';
@@ -12,7 +11,6 @@ import { expirePixOrder } from '@/lib/orders/expirePixOrder';
 import { notifyOrderRefunded } from '@/lib/email/cancelledEmail';
 import { verifyChargePaid } from '@/lib/orders/verifyCharge';
 import { webhookSchema } from './schema';
-
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

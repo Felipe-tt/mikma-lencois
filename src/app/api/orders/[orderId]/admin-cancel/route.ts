@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { handleNfeOnOrderCancel } from '@/lib/nfe/service';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -13,7 +12,6 @@ import { orderStockLog } from '@/lib/stockHistory';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { uberCancelDelivery } from '@/lib/uber-direct';
 import { notifyOrderCancelled } from '@/lib/email/cancelledEmail';
-
 
 // Statuses que ainda não tiveram o estoque debitado (só reservado)
 const PENDING_STATUSES = new Set(['pending_payment']);

@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
@@ -9,7 +8,6 @@ import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { cartCouponDiscountCents } from '@/lib/orders/cartCoupon';
 import { z } from 'zod';
 import { quoteSchema } from './schema';
-
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 

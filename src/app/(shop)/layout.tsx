@@ -3,20 +3,18 @@ import { Footer } from '@/components/layout/Footer';
 import { CookieBanner } from '@/components/layout/CookieBanner';
 import { PageTransition } from '@/components/ui/PageTransition';
 import { MaintenanceGate } from '@/components/layout/MaintenanceGate';
-import { getSettings } from '@/lib/settings';
+import { getStoreSettings } from '@/lib/settings';
 import { storeIdentity } from '@/lib/legal';
 import { JsonLd } from '@/components/seo/JsonLd';
 
-// Sem force-dynamic: páginas públicas usam ISR normalmente.
-// A checagem de manutenção "de verdade" acontece no middleware (Edge), sem
-// Cloud Run, MAS isso só roda em cache-miss. Em cache-hit na CDN do
-// Firebase Hosting (ex.: homepage com revalidate=900), a resposta cacheada
-// é servida direto e o middleware nunca executa. O <MaintenanceGate />
-// cobre esse caso: confere no client, via fetch dinâmico, e redireciona
-// pra /manutencao se necessário.
+// Prerender parcial (cacheComponents): o layout sai no HTML estático com as
+// configurações em cache (getStoreSettings). A checagem de manutenção "de
+// verdade" acontece no proxy, mas uma página servida do cache da CDN não
+// passa por ele: o <MaintenanceGate /> cobre esse caso no client, via fetch
+// dinâmico, e redireciona pra /manutencao se necessário.
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const s = await getSettings();
+  const s = await getStoreSettings();
   const identity = storeIdentity(s);
   const siteUrl = 'https://mikma.com.br';
   const orgJsonLd = {

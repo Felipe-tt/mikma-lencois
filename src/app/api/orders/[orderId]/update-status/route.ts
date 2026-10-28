@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { shippingBlockReason } from '@/lib/orders/shippingBlock';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -11,7 +10,6 @@ import { updateStatusSchema } from './schema';
 import { buildPreparing, buildShipped, buildDelivered } from '@/lib/email/orderStatusEmails';
 import { isManualDispatch } from '@/lib/carriers';
 import { recordShippingSpent } from '@/lib/shipping-ledger';
-
 
 const ALLOWED: Partial<Record<OrderStatus, OrderStatus>> = {
   paid: 'preparing',

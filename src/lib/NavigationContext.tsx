@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
+import { OnPathnameChange } from '@/components/ui/Pathname';
 
 interface NavigationCtx {
   navigating: boolean;
@@ -18,21 +18,15 @@ export function useNavigation() {
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const [navigating, setNavigating] = useState(false);
-  const pathname = usePathname();
-  const prevPathname = useRef(pathname);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // When pathname actually changes -> the new page is rendering -> fade it in
-  useEffect(() => {
-    if (prevPathname.current === pathname) return;
-    prevPathname.current = pathname;
-
+  const onPathnameChange = useCallback(() => {
     clearTimeout(timerRef.current);
     // Small delay so the new page DOM is painted before we remove the overlay
     timerRef.current = setTimeout(() => setNavigating(false), 50);
-
-    return () => clearTimeout(timerRef.current);
-  }, [pathname]);
+  }, []);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const startNavigation = useCallback(() => {
     clearTimeout(timerRef.current);
@@ -41,6 +35,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <NavigationContext.Provider value={{ navigating, startNavigation }}>
+      <OnPathnameChange onChange={onPathnameChange} />
       {children}
     </NavigationContext.Provider>
   );

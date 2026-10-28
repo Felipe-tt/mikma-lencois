@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
@@ -28,7 +27,6 @@ import { sendEmail, emailEnabled } from '@/lib/email';
 import { buildPixPending } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
 import { guardGuestPayment, guestUnitsBlock } from '@/lib/guestGuard';
-
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 
@@ -186,7 +184,6 @@ export async function POST(req: NextRequest) {
       (s, ci) => s + (productMap[ci.productId]?.weightKg ?? settings.defaultItemWeightKg ?? 0.8) * ci.quantity,
       0
     );
-
 
     // ── Validar cupom server-side (lido do carrinho, nunca do cliente) ────────
     // IMPORTANTE: leitura + checagem de maxUses + incremento de usedCount
@@ -441,7 +438,6 @@ export async function POST(req: NextRequest) {
       orderId,
       url: `/painel/pedidos/${orderId}`,
     });
-
 
     // ── AbacatePay v2, POST /transparents/create ─────────────────────────────
     // Only include customer if we have at least email; metadata must be omitted

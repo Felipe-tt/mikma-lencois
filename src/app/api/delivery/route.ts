@@ -7,7 +7,6 @@
  * Correios e Jadlog são postados na agência e marcados como despachados
  * pelo painel informando o código de rastreio (update-status).
  */
-export const dynamic = 'force-dynamic';
 import { shippingBlockReason } from '@/lib/orders/shippingBlock';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
@@ -19,7 +18,6 @@ import type { Order } from '@/types';
 import { sendEmail } from '@/lib/email';
 import { buildDelivered } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
-
 
 import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
 import { recordShippingSpent } from '@/lib/shipping-ledger';

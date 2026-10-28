@@ -2,7 +2,7 @@
 // (precisa estar na raiz do domínio para o escopo de push cobrir o site todo).
 // Servido via rota dinâmica (não public/) porque precisamos injetar a config
 // do Firebase, que só existe em process.env em runtime/build.
-export const dynamic = 'force-dynamic';
+import { connection } from 'next/server';
 
 function getConfig() {
   const raw = process.env.__FIREBASE_DEFAULTS__;
@@ -25,6 +25,7 @@ function getConfig() {
 }
 
 export async function GET() {
+  await connection(); // na hora: __FIREBASE_DEFAULTS__ só existe no servidor
   const config = getConfig();
 
   const body = `

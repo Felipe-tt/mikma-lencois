@@ -1,4 +1,4 @@
-import { unstable_cache } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
 import { adminDb } from '@/lib/firebase/admin';
 import { getCatalog } from '@/lib/catalog';
 import { SIZE_LABEL, FABRIC_LABEL, DEFAULT_COMPOSITION } from '@/lib/productOptions';
@@ -32,7 +32,10 @@ export interface CatalogEntry {
  * a loja mostra, com disponibilidade por variação. Nunca expõe a quantidade
  * em estoque, só se há ou não. Mesmo cache e tag do catálogo da loja.
  */
-export const getAgentCatalog = unstable_cache(async (): Promise<CatalogEntry[]> => {
+export async function getAgentCatalog(): Promise<CatalogEntry[]> {
+  'use cache';
+  cacheLife({ stale: 300, revalidate: 600, expire: 86_400 });
+  cacheTag('products');
   const [products, invSnap] = await Promise.all([
     getCatalog(),
     adminDb.collection('inventory').select('quantity', 'reserved').get(),
@@ -60,7 +63,7 @@ export const getAgentCatalog = unstable_cache(async (): Promise<CatalogEntry[]> 
       };
     }),
   }));
-}, ['catalogo-agentes'], { revalidate: 600, tags: ['products'] });
+}
 
 export function brl(cents: number): string {
   return (cents / 100).toFixed(2);

@@ -1,8 +1,7 @@
-export const revalidate = 86400; // 24h, conteúdo estático
 
 import { shareMeta } from '@/lib/seo';
 import type { ReactNode } from 'react';
-import { getSettings } from '@/lib/settings';
+import { getStoreSettings } from '@/lib/settings';
 import { storeIdentity } from '@/lib/legal';
 import { CookiePreferencesButton } from '@/components/layout/CookiePreferencesButton';
 import { LegalPage, A, B, Table, clause, contactClause, type LegalSection } from '@/components/legal/LegalPage';
@@ -15,7 +14,7 @@ export const metadata = {
 };
 
 export default async function PoliticaDeCookiesPage() {
-  const s = await getSettings();
+  const s = await getStoreSettings();
   const id = storeIdentity(s);
 
   // Só listamos ferramentas que estão realmente ativas neste deploy.

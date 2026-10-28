@@ -1,9 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { getAgentCatalog, SITE_URL } from '@/lib/agentCatalog';
 import { getSettings } from '@/lib/settings';
-
-// Gerado na hora (o build não tem acesso ao banco); o catálogo já vem do cache.
-export const dynamic = 'force-dynamic';
 
 /**
  * Catálogo em JSON para assistentes de compra e buscadores: produtos,
@@ -11,6 +8,7 @@ export const dynamic = 'force-dynamic';
  * A compra em si continua sendo pelo site.
  */
 export async function GET() {
+  await connection(); // na hora, não no build (o build não lê o banco)
   const [products, s] = await Promise.all([getAgentCatalog(), getSettings()]);
   return NextResponse.json({
     store: {

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { WithPathname } from '@/components/ui/Pathname';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import {
   HAS_OPTIONAL_COOKIES,
   OPEN_PREFERENCES_EVENT,
@@ -22,8 +22,11 @@ const HIDDEN_ON = ['/checkout'];
  * peso visual de propósito.
  */
 export function CookieBanner() {
+  return <WithPathname>{pathname => <CookieBannerView pathname={pathname} />}</WithPathname>;
+}
+
+function CookieBannerView({ pathname }: { pathname: string }) {
   const status = useCookieConsent();
-  const pathname = usePathname();
 
   const [ready, setReady] = useState(false); // atraso inicial, pra não competir com o 1º carregamento
   const [reopened, setReopened] = useState(false); // aberto pelo link "Preferências de cookies"

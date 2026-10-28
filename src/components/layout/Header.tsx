@@ -1,10 +1,11 @@
 'use client';
 import Image from 'next/image';
+import { WithPathname } from '@/components/ui/Pathname';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useCartCount } from '@/lib/hooks/useCartCount';
 import { useCartTotal } from '@/lib/hooks/useCartTotal';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { NavLink } from '@/components/ui/NavLink';
 import { formatCurrency } from '@/lib/utils/format';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -22,11 +23,14 @@ const NAV_LINKS = [
   { href: '/sobre',            label: 'Sobre' },
 ];
 
-export function Header({ topbarText, freeShippingThresholdCents = 0 }: Props) {
+export function Header(props: Props) {
+  return <WithPathname>{pathname => <HeaderView {...props} pathname={pathname} />}</WithPathname>;
+}
+
+function HeaderView({ topbarText, freeShippingThresholdCents = 0, pathname }: Props & { pathname: string }) {
   const { user, logout, loading: authLoading } = useAuth();
   const count      = useCartCount();
   const cartTotal  = useCartTotal();
-  const pathname   = usePathname();
   const router     = useRouter();
   const [scrolled, setScrolled]     = useState(false);
   const [menuOpen, setMenuOpen]     = useState(false);
