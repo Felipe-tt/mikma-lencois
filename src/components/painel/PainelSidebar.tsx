@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/BrandLogo';
 import { usePathname } from 'next/navigation';
@@ -11,6 +11,14 @@ import {
   IconInventory, IconReports, IconCoupons, IconSettings, IconMaintenance, IconExchange, IconStar, IconShield,
 } from '@/components/ui/Icon';
 import { NotificationBell } from './NotificationBell';
+import { applyNavOrder, moveItem } from '@/lib/navOrder';
+import { getStaffPrefs, setStaffPref } from '@/lib/staffPrefs';
+
+// Segurar um item do menu por 2s entra no modo de reorganizar; aí é só
+// arrastar para cima ou para baixo. A ordem fica salva na conta (vale em
+// qualquer aparelho). Mexer o dedo antes dos 2s é rolagem normal.
+const HOLD_MS = 2000;
+const MOVE_TOLERANCE = 8;
 
 export const NAV = [
   { href: '/painel',                label: 'Início',         desc: 'Resumo da loja',             exact: true, Icon: IconHome },
@@ -35,6 +43,100 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
   const pathname = usePathname();
   const { logout, user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const uid = user?.uid;
+
+  const [order, setOrder] = useState<string[] | null>(null);
+  const items = useMemo(() => applyNavOrder(NAV, order), [order]);
+  const itemsRef = useRef(items);
+  useEffect(() => { itemsRef.current = items; }, [items]);
+  const [editing, setEditing] = useState(false);
+  const [dragHref, setDragHref] = useState<string | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const press = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const dragging = useRef(false);
+  const suppressClick = useRef(false);
+
+  useEffect(() => {
+    if (!uid) return;
+    let alive = true;
+    getStaffPrefs(uid)
+      .then(p => { if (alive && Array.isArray(p.navOrder)) setOrder(p.navOrder); })
+      .catch(() => { /* sem preferência: ordem padrão */ });
+    return () => { alive = false; };
+  }, [uid]);
+
+  const save = useCallback((hrefs: string[] | null) => {
+    if (uid) setStaffPref(uid, 'navOrder', hrefs ?? []).catch(() => {});
+  }, [uid]);
+
+  const startDrag = useCallback((href: string, el: HTMLElement, pointerId: number) => {
+    dragging.current = true;
+    suppressClick.current = true;
+    setDragHref(href);
+    try { el.setPointerCapture(pointerId); } catch { /* ponteiro já solto */ }
+  }, []);
+
+  function onPointerDown(e: React.PointerEvent<HTMLLIElement>, href: string) {
+    if (e.button !== 0) return;
+    const el = e.currentTarget;
+    const { pointerId } = e;
+    if (editing) { startDrag(href, el, pointerId); return; }
+    press.current = {
+      x: e.clientX,
+      y: e.clientY,
+      timer: setTimeout(() => {
+        press.current = null;
+        setEditing(true);
+        navigator.vibrate?.(30);
+        startDrag(href, el, pointerId);
+      }, HOLD_MS),
+    };
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLLIElement>) {
+    const p = press.current;
+    if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > MOVE_TOLERANCE) {
+      clearTimeout(p.timer);
+      press.current = null;
+    }
+    if (!dragging.current || !dragHref || !listRef.current) return;
+    // Posição alvo: o primeiro item cuja metade está abaixo do dedo.
+    const rows = Array.from(listRef.current.children) as HTMLElement[];
+    let to = rows.length - 1;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i].getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) { to = i; break; }
+    }
+    const list = itemsRef.current;
+    const from = list.findIndex(i => i.href === dragHref);
+    if (from === -1 || from === to) return;
+    setOrder(moveItem(list, from, to).map(i => i.href));
+  }
+
+  function endPress() {
+    if (press.current) { clearTimeout(press.current.timer); press.current = null; }
+    if (!dragging.current) return;
+    dragging.current = false;
+    setDragHref(null);
+    save(itemsRef.current.map(i => i.href));
+  }
+
+  // Arrastando com o dedo: impede a página de rolar junto (o touchmove
+  // precisa ser não passivo para o preventDefault valer).
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const stop = (e: TouchEvent) => { if (dragging.current) e.preventDefault(); };
+    el.addEventListener('touchmove', stop, { passive: false });
+    return () => el.removeEventListener('touchmove', stop);
+  }, []);
+
+  useEffect(() => {
+    if (!editing) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setEditing(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editing]);
 
   useEffect(() => {
     // Contador de não lidas: se falhar, some o selinho e nada mais.
@@ -70,15 +172,39 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
       </div>
 
       {/* Nav */}
-      <nav aria-label="Navegação principal" className="flex-1 px-3 py-2 overflow-y-auto scrollbar-none">
-        <ul className="flex flex-col gap-1">
-          {NAV.map(({ href, label, desc, exact, Icon }) => {
+      <nav aria-label="Navegação principal" data-nav-editing={editing ? '' : undefined} className="flex-1 px-3 py-2 overflow-y-auto scrollbar-none">
+        {editing && (
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-clay/10 px-3 py-2">
+            <span className="text-[11.5px] font-medium text-ink">Arraste para mudar a ordem</span>
+            <span className="flex gap-1">
+              <button type="button" onClick={() => { setOrder(null); save(null); }} className="rounded-lg px-2 py-1 text-[11px] text-mid hover:bg-warm">Padrão</button>
+              <button type="button" onClick={() => setEditing(false)} className="rounded-lg bg-ink px-2.5 py-1 text-[11px] font-semibold text-paper">Pronto</button>
+            </span>
+          </div>
+        )}
+        <ul ref={listRef} className="flex flex-col gap-1">
+          {items.map(({ href, label, desc, exact, Icon }) => {
             const active = exact ? pathname === href : pathname.startsWith(href);
+            const isDragged = dragHref === href;
             return (
-              <li key={href}>
+              <li
+                key={href}
+                onPointerDown={e => onPointerDown(e, href)}
+                onPointerMove={onPointerMove}
+                onPointerUp={endPress}
+                onPointerCancel={endPress}
+                onContextMenu={e => e.preventDefault()}
+                className={`select-none [-webkit-touch-callout:none] rounded-xl transition-[transform,box-shadow] duration-150 ${
+                  editing ? 'touch-none cursor-grab' : ''
+                } ${isDragged ? 'relative z-10 scale-[1.03] shadow-lg bg-paper cursor-grabbing' : ''}`}
+              >
                 <Link
                   href={href}
-                  onClick={onClose}
+                  draggable={false}
+                  onClick={e => {
+                    if (editing || suppressClick.current) { e.preventDefault(); suppressClick.current = false; return; }
+                    onClose?.();
+                  }}
                   aria-current={active ? 'page' : undefined}
                   className={`panel-nav-item ${active ? 'is-active' : ''}`}
                 >
@@ -98,6 +224,11 @@ export function PainelSidebar({ onClose }: { onClose?: () => void } = {}) {
                     </span>
                     <span className="text-[10px] leading-tight truncate text-faint">{desc}</span>
                   </span>
+                  {editing && (
+                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-faint">
+                      <path d="M4 8h16M4 16h16" />
+                    </svg>
+                  )}
                 </Link>
               </li>
             );

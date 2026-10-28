@@ -17,11 +17,22 @@ export interface StaffPrefs {
   lastCategory?: string;
   lastSize?: string;
   lastFabrics?: string[];
+  /** Ordem do menu lateral do painel (hrefs), ver lib/navOrder.ts. */
+  navOrder?: string[];
 }
 
 export async function getStaffPrefs(uid: string): Promise<StaffPrefs> {
   const snap = await getDoc(doc(db, 'users', uid));
-  return (snap.exists() ? snap.data().staffPrefs : undefined) ?? {};
+  if (!snap.exists()) return {};
+  const data = snap.data();
+  // setDoc grava 'staffPrefs.x' como campo literal (com o ponto no nome),
+  // não aninhado: antes só o mapa aninhado era lido e a preferência
+  // salva nunca voltava. Lê os dois formatos; o literal é o mais novo.
+  const prefs: Record<string, unknown> = { ...(data.staffPrefs ?? {}) };
+  for (const [k, v] of Object.entries(data)) {
+    if (k.startsWith('staffPrefs.')) prefs[k.slice('staffPrefs.'.length)] = v;
+  }
+  return prefs as StaffPrefs;
 }
 
 export async function setStaffPref<K extends keyof StaffPrefs>(

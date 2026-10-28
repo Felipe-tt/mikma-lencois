@@ -247,6 +247,10 @@ describe('users/{uid}: whitelist de campos graváveis pelo próprio usuário', (
     await assertSucceeds(
       setDoc(doc(seller.firestore(), 'users/seller1'), { 'staffPrefs.lastSize': 'Queen' }, { merge: true })
     );
+    // Ordem do menu lateral (segurar e arrastar).
+    await assertSucceeds(
+      setDoc(doc(seller.firestore(), 'users/seller1'), { 'staffPrefs.navOrder': ['/painel/pedidos', '/painel'] }, { merge: true })
+    );
   });
 
   it('create: dono cria o próprio documento só com campos da whitelist', async () => {
