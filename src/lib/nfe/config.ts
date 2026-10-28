@@ -39,7 +39,7 @@ export interface NfeConfig {
 export const NFE_DEFAULTS = {
   autoEmit: false,
   environment: 'homologacao' as NfeEnvironment,
-  cnpj: '29966649000143',
+  cnpj: '05338341000195',
   crt: 1,
   serie: 1,
   proximoNumero: 1,
