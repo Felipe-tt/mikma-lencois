@@ -4,6 +4,9 @@ import { WithPathname } from '@/components/ui/Pathname';
 import Image from 'next/image';
 import { parseBusinessHours, getOpenStatus } from '@/lib/business-hours';
 import { CookiePreferencesButton } from '@/components/layout/CookiePreferencesButton';
+import { useEffect, useState } from 'react';
+
+const BUILD_YEAR = Number(process.env.NEXT_PUBLIC_BUILD_YEAR) || 2026;
 
 interface Props {
   storeName?: string;
@@ -40,11 +43,22 @@ function FooterView({
   businessHours,
   businessHoursTimezone,
 }: Props & { pathname: string }) {
-  const year = new Date().getFullYear();
+  // Ano e "aberto agora" dependem da hora: calculados só no navegador.
+  // Ler a hora durante o prerender abre um trecho dinâmico no HTML estático
+  // e, dentro do fallback do WithPathname, quebrava a retomada da página
+  // ("Couldn't find all resumable slots" no Sentry). Até montar, o ano é o
+  // do build.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const year = now !== null ? new Date(now).getFullYear() : BUILD_YEAR;
   // Nome vazio nas configurações virava "© 2026 · Todos os direitos...".
   const storeName = storeNameRaw?.trim() || 'Mikma Lençóis';
   const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
-  const status = businessHours ? getOpenStatus(parseBusinessHours(businessHours), businessHoursTimezone) : null;
+  const status = businessHours && now !== null ? getOpenStatus(parseBusinessHours(businessHours), businessHoursTimezone) : null;
 
   // No checkout, só uma linha discreta: o rodapé completo (categorias,
   // links institucionais) tira a atenção de quem está pagando.
