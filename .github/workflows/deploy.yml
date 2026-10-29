@@ -223,14 +223,11 @@ jobs:
         if: always()
         run: rm -f "$HOME/sa.json"
 
-# ── Nota: migração para o Firebase App Hosting ───────────────────────────────
-# O deploy do site em si (hosting classico, "frameworksBackend") foi removido
-# deste workflow. O App Hosting já está conectado direto ao GitHub e faz
-# rollout automático a cada push nesta branch, de forma independente deste
-# workflow (ver console do Firebase → App Hosting, ou migracao-app-hosting.md
-# para o histórico completo da migração). Firestore rules/indexes e Storage
-# rules continuam sendo deployados aqui, já que são serviços separados do
-# hosting e não mudam com essa migração.
+# ── Nota: o site é publicado pelo Firebase App Hosting ───────────────────────
+# O App Hosting está conectado direto ao GitHub e faz rollout automático a
+# cada push nesta branch, independente deste workflow (ver console do
+# Firebase → App Hosting). Regras e índices do Firestore e regras do Storage
+# são serviços separados e continuam sendo publicados aqui.
 
 # ── Nota: permissão de índices do Firestore ──────────────────────────────────
 # O passo "Deploy Firestore Indexes" acima falha com 403 porque a service

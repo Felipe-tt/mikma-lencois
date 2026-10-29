@@ -38,51 +38,6 @@ export function ProductGridSkeleton({ count = 8 }: { count?: number }) {
   );
 }
 
-/* ─── Product Detail Skeleton ───────────────────────────────────── */
-export function ProductDetailSkeleton() {
-  return (
-    <div className="container-shop py-12 lg:py-16">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-        {/* Galeria */}
-        <div className="flex flex-col gap-3">
-          <Skeleton className="aspect-[3/4] w-full !rounded-3xl" />
-          <div className="grid grid-cols-4 gap-2">
-            {[1,2,3,4].map(i => <Skeleton key={i} className="aspect-square !rounded-xl" />)}
-          </div>
-        </div>
-        {/* Info */}
-        <div className="flex flex-col gap-5">
-          <Skeleton className="h-3 w-20" />
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-8 w-4/5" />
-            <Skeleton className="h-8 w-3/5" />
-          </div>
-          <Skeleton className="h-7 w-28" />
-          <div className="flex gap-2">
-            <Skeleton className="h-6 w-16" />
-            <Skeleton className="h-6 w-16" />
-          </div>
-          <Skeleton className="h-3.5 w-full" />
-          <Skeleton className="h-3.5 w-full" />
-          <Skeleton className="h-3.5 w-2/3" />
-          <div className="border-t border-mist pt-6 flex flex-col gap-3">
-            <Skeleton className="h-3 w-20" />
-            <div className="flex gap-2">
-              {[1,2,3,4].map(i => <Skeleton key={i} className="h-11 w-14" />)}
-            </div>
-            <Skeleton className="h-14 w-full mt-2 !rounded-full" />
-          </div>
-          <div className="flex flex-col gap-2 mt-2">
-            <Skeleton className="h-11 w-full" />
-            <Skeleton className="h-11 w-full" />
-            <Skeleton className="h-11 w-full" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Cart Skeleton ─────────────────────────────────────────────── */
 export function CartSkeleton() {
   return (
@@ -217,35 +172,6 @@ export function CheckoutSkeleton() {
           <Skeleton className="h-3.5 w-3/4" />
           <div className="border-t border-mist pt-3">
             <Skeleton className="h-7 w-28" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Produtos Page Skeleton ────────────────────────────────────── */
-export function ProdutosPageSkeleton() {
-  return (
-    <div>
-      {/* Page header */}
-      <div className="border-b border-mist">
-        <div className="container-shop">
-          <Skeleton className="h-2.5 w-14 mb-3" />
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-3 w-24 mt-2" />
-        </div>
-      </div>
-      <div className="container-shop py-12">
-        <div className="flex gap-12 items-start">
-          {/* Sidebar */}
-          <aside className="hidden lg:flex w-44 shrink-0 flex-col gap-2">
-            <Skeleton className="h-2.5 w-20 mb-2" />
-            {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-8 w-full" />)}
-          </aside>
-          <div className="flex-1 min-w-0">
-            <Skeleton className="h-3 w-28 mb-5" />
-            <ProductGridSkeleton count={8} />
           </div>
         </div>
       </div>

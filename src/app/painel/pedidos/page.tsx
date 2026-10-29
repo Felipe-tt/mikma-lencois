@@ -267,7 +267,7 @@ export default function PainelPedidos() {
       });
     }
     return list;
-  }, [orders, customers, filter, search]);
+  }, [orders, customers, search]);
 
   const needActionCount  = active.filter(o => o.status === 'paid').length;
   const cancelledCount   = orders.filter(o => o.status === 'cancelled').length;

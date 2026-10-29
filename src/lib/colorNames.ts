@@ -117,28 +117,6 @@ export function hexToColorName(hex: string): string {
 }
 
 /**
- * Busca cores pelo nome digitado (busca por substring, acento-insensível).
- * Local e instantâneo.
- */
-export function searchColorsByName(query: string, limit = 6): NamedColor[] {
-  const q = normalize(query.trim());
-  if (!q) return [];
-  const starts = TEXTILE_COLORS.filter(c => normalize(c.name).startsWith(q));
-  const contains = TEXTILE_COLORS.filter(c => !normalize(c.name).startsWith(q) && normalize(c.name).includes(q));
-  return [...starts, ...contains].slice(0, limit);
-}
-
-/** Resolve um nome digitado pra cor mais próxima no banco, ou null se não achar nada parecido */
-export function resolveColorName(name: string): NamedColor | null {
-  const results = searchColorsByName(name, 1);
-  return results[0] ?? null;
-}
-
-function normalize(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-/**
  * Amostra a cor dominante de uma foto — usado pra sugerir a cor do
  * tecido sozinho assim que a pessoa marca um tecido, sem precisar
  * descobrir/clicar em "pegar da foto" manualmente. Pra quem não é técnico,

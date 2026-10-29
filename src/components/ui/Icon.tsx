@@ -66,12 +66,9 @@ export const IconShield = base(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 
 export const IconRuler = base(<><path d="M21 3H3v18h18V3z"/><path d="M9 3v18"/><path d="M14 3v18"/><path d="M3 9h6"/><path d="M15 9h6"/><path d="M3 14h6"/><path d="M15 14h6"/></>);
 export const IconPrint = base(<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>);
 export const IconMail = base(<><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></>);
-export const IconPackage = base(<><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>);
 export const IconHourglass = base(<><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 00-.586-1.414L12 12l-4.414 4.414A2 2 0 007 17.828V22"/><path d="M7 2v4.172a2 2 0 00.586 1.414L12 12l4.414-4.414A2 2 0 0017 6.172V2"/></>);
 export const IconLogOut = base(<><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>);
-export const IconPostOffice = base(<><path d="M22 17a2 2 0 01-2 2H4a2 2 0 01-2-2V9.5C2 7 4 5 6.5 5H18c2.2 0 4 1.8 4 4v8z"/><polyline points="15 9 18 9 18 11"/><path d="M6.5 5C9 5 11 7 11 9.5V17a2 2 0 01-2 2v0"/><line x1="6" y1="10" x2="7" y2="10"/></>);
 export const IconBolt = base(<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>);
-export const IconComputer = base(<><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></>);
 export const IconMobile = base(<><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></>);
 export const IconMinusCircle = base(<><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></>);
 export const IconPlusCircle = base(<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></>);

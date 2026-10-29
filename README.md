@@ -262,7 +262,7 @@ workers/             # Workers da Cloudflare: rotinas e MTA-STS
 firestore.rules      # regras do banco (+ firestore.rules.test.ts)
 storage.rules        # regras das fotos (+ storage.rules.test.ts)
 scripts/             # checagem de commits, papéis, fallback e limpezas
-docs/                # Cloudflare e custos, BIMI, histórico
+docs/                # Cloudflare, trava de origem e custos; BIMI
 .github/workflows/   # CI, deploy, rotinas, segurança e infraestrutura
 ```
 
