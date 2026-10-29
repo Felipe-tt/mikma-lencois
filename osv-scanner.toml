@@ -1,0 +1,5 @@
+# Vulnerabilidades revisadas e aceitas (lidas pelo osv-scanner e pelo Scorecard).
+
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+reason = "deepmerge só entra pelo plugin do Rollup, dependência de @nfewizard/shared > xsd-assembler que não carrega em produção. Sem versão corrigida."
