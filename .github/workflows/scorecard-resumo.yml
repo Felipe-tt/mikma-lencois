@@ -1,0 +1,26 @@
+name: OpenSSF Scorecard · achados
+
+# Lista todos os achados do Scorecard no resumo do run (o alerta do Code
+# scanning mostra só o primeiro local de cada regra). Fica fora do
+# scorecard.yml porque o scorecard-action só aceita passos aprovados lá.
+
+on:
+  workflow_run:
+    workflows: ['OpenSSF Scorecard']
+    types: [completed]
+
+permissions:
+  actions: read
+
+jobs:
+  resumo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Achados no resumo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          gh run download "$RUN_ID" -R "$GITHUB_REPOSITORY" -n scorecard-sarif
+          jq -r '.runs[0].results[] | "\(.ruleId) | \(.locations[0].physicalLocation.artifactLocation.uri // "-"):\(.locations[0].physicalLocation.region.startLine // "-") | \(.message.text | gsub("\n"; " ") | .[0:400])"' results.sarif | tee -a "$GITHUB_STEP_SUMMARY"
