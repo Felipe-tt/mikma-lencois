@@ -263,6 +263,26 @@ jobs:
             }]
           }' | jq -c '{firewall:.success,errors}'
 
+          # WAF gerenciado grátis da Cloudflare: bloqueia na borda ataques a
+          # falhas conhecidas e muito exploradas (Log4j, Shellshock etc.). Os
+          # webhooks e o cron ficam de fora: vêm de servidores e não podem
+          # correr risco de bloqueio (pagamento confirmado depende deles).
+          # O Bot Fight Mode não entra: no plano grátis ele não aceita exceção
+          # e desafiaria o webhook da AbacatePay.
+          FREE_WAF=$(api "$B/rulesets" | jq -r '[.result[] | select(.kind=="managed" and .phase=="http_request_firewall_managed" and (.name | test("free"; "i")))][0].id // empty')
+          if [ -n "$FREE_WAF" ]; then
+            api -X PUT "$B/rulesets/phases/http_request_firewall_managed/entrypoint" --data "{
+              \"rules\": [{
+                \"description\": \"WAF gerenciado grátis (fora webhooks e cron)\",
+                \"expression\": \"not starts_with(http.request.uri.path, \\\"/api/payment/webhook\\\") and not starts_with(http.request.uri.path, \\\"/api/shipping/uber-webhook\\\") and not starts_with(http.request.uri.path, \\\"/api/cron/\\\") and not starts_with(http.request.uri.path, \\\"/api/email/\\\")\",
+                \"action\": \"execute\",
+                \"action_parameters\": {\"id\": \"$FREE_WAF\"}
+              }]
+            }" | jq -c '{waf_gerenciado:.success,errors}'
+          else
+            echo "::warning::WAF gerenciado grátis não encontrado na zona"
+          fi
+
           # Limite por IP nas APIs (fora webhooks e cron, que vêm de servidores).
           api -X PUT "$B/rulesets/phases/http_ratelimit/entrypoint" --data '{
             "rules": [{
