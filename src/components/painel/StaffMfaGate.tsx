@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { createPasskey, passkeyCancelled, passkeySupported, signInWithPasskey } from '@/lib/auth/passkeyClient';
 import { TotpSetup } from '@/components/painel/TotpSetup';
 import { BrandLogo } from '@/components/BrandLogo';
-import { IconArrowLeft, IconArrowRight, IconBolt, IconCheck, IconFingerprint, IconLock, IconLogOut, IconMobile, IconShield } from '@/components/ui/Icon';
+import { IconArrowLeft, IconArrowRight, IconBolt, IconCheck, IconKey, IconLock, IconLogOut, IconMobile, IconShield } from '@/components/ui/Icon';
 
 const noopSubscribe = () => () => {};
 
@@ -95,7 +95,7 @@ export function StaffMfaGate() {
                 <div className="relative mx-auto w-20 h-20">
                   <span aria-hidden className="absolute inset-0 rounded-full bg-clay/10 motion-safe:animate-ping [animation-duration:2.4s]" />
                   <span className="relative flex w-20 h-20 items-center justify-center rounded-full bg-gradient-to-b from-clay/20 to-clay/5 ring-1 ring-clay/25 text-clay">
-                    <IconFingerprint size={38} strokeWidth={1.5} />
+                    <IconKey size={36} strokeWidth={1.5} />
                   </span>
                 </div>
 
@@ -107,7 +107,7 @@ export function StaffMfaGate() {
 
                 <ul className="mt-6 grid gap-2.5">
                   {[
-                    { icon: IconFingerprint, text: 'Entra com digital, rosto ou PIN' },
+                    { icon: IconLock, text: 'Entra com digital, rosto ou PIN' },
                     { icon: IconShield, text: 'Quem souber sua senha não entra' },
                     { icon: IconBolt, text: 'Leva segundos e é uma vez só' },
                   ].map(({ icon: I, text }) => (
@@ -131,7 +131,7 @@ export function StaffMfaGate() {
                         className="btn-primary w-full h-12 text-[14px] font-semibold flex items-center justify-center gap-2.5 disabled:opacity-70">
                         {busy
                           ? <><span className="spinner" /> Confirme no seu aparelho…</>
-                          : <><IconFingerprint size={18} /> {hasPasskey ? 'Entrar com minha passkey' : 'Criar passkey e entrar'}</>}
+                          : <><IconKey size={18} /> {hasPasskey ? 'Entrar com minha passkey' : 'Criar passkey e entrar'}</>}
                       </button>
                       {hasPasskey && (
                         <p className="mt-2.5 text-center text-[12px] text-faint">Sua passkey está em outro aparelho? Entre por ele ou use o app autenticador.</p>

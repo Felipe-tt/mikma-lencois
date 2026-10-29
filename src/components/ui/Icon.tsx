@@ -76,6 +76,6 @@ export const IconMobile = base(<><rect x="5" y="2" width="14" height="20" rx="2"
 export const IconMinusCircle = base(<><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></>);
 export const IconPlusCircle = base(<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></>);
 export const IconListCheck = base(<><path d="M3 6h5"/><path d="M3 12h5"/><path d="M3 18h5"/><polyline points="12 6 13.5 7.5 17 4"/><polyline points="12 13 13.5 14.5 17 11"/><polyline points="12 20 13.5 21.5 17 18"/></>);
-export const IconFingerprint = base(<><path d="M12 10a2 2 0 00-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0118-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 01.34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 019 5.2v2"/></>);
+export const IconKey = base(<><path d="M2.586 17.414A2 2 0 002 18.828V21a1 1 0 001 1h3a1 1 0 001-1v-1a1 1 0 011-1h1a1 1 0 001-1v-1a1 1 0 011-1h.172a2 2 0 001.414-.586l.814-.814a6.5 6.5 0 10-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></>);
 export const IconLock = base(<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></>);
 export const IconArrowLeft = base(<><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></>);
