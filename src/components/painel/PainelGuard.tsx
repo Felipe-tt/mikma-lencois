@@ -15,6 +15,8 @@ export function PainelGuard({ children }: { children: React.ReactNode }) {
   // A segunda etapa vale por sessão (está no token): acompanha a troca de
   // token, que acontece ao entrar com a passkey na tela obrigatória.
   const [secondFactor, setSecondFactor] = useState<boolean | null>(null);
+  // A tela da passkey pede para ficar montada enquanto comemora a entrada.
+  const [holdGate, setHoldGate] = useState(false);
   useEffect(() => onIdTokenChanged(auth, async u => {
     if (!u) { setSecondFactor(null); return; }
     const t = await u.getIdTokenResult();
@@ -26,6 +28,10 @@ export function PainelGuard({ children }: { children: React.ReactNode }) {
     if (!user) { router.push('/entrar'); return; }
     if (user.role !== 'seller' && user.role !== 'admin') router.push('/');
   }, [user, loading, router]);
+
+  // Comemorando a entrada com a passkey: a sessão troca por baixo (o token
+  // novo passa por "loading"), mas a tela fica até a animação acabar.
+  if (holdGate) return <StaffMfaGate onHold={setHoldGate} />;
 
   // onAuthStateChanged dispara loading=true não só na primeira carga, mas
   // toda vez que o Firebase revalida/reconecta a sessão (ex: voltar à aba
@@ -43,7 +49,7 @@ export function PainelGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!secondFactor) return <StaffMfaGate />;
+  if (!secondFactor) return <StaffMfaGate onHold={setHoldGate} />;
 
   return <>{children}</>;
 }

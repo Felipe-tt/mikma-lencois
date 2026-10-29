@@ -62,7 +62,6 @@ const config: Config = {
         slideIn:  { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(0)' } },
         slideUp:  { '0%': { transform: 'translateY(100%)' }, '100%': { transform: 'translateY(0)' } },
         scaleIn:  { '0%': { opacity: '0', transform: 'scale(0.96)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
-        floatY:   { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-6px)' } },
         shimmer:  { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
       },
       animation: {
@@ -73,7 +72,6 @@ const config: Config = {
         'slide-in':  'slideIn 0.3s cubic-bezier(0.4,0,0.2,1) both',
         'slide-up':  'slideUp 0.32s cubic-bezier(0.4,0,0.2,1) both',
         'scale-in':  'scaleIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both',
-        'float-y':   'floatY 5s ease-in-out infinite',
       },
     },
   },
