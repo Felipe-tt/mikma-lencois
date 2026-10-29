@@ -86,8 +86,8 @@ export async function POST(req: NextRequest) {
       from: 'noreply',
     });
   } catch (err) {
+    // Mesma resposta de sempre: um erro só aqui diria que o e-mail tem conta.
     console.error('[send-reset]', err);
-    return NextResponse.json({ error: 'Não conseguimos enviar o e-mail. Tente novamente.' }, { status: 500 });
   }
 
   return OK;
