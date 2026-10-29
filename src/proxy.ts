@@ -3,10 +3,14 @@ import { STAFF_SESSION_COOKIE, verifyStaffSession } from '@/lib/staffSession';
 import { cameThroughEdge, clientIpFromHeaders } from '@/lib/ip';
 import { maintenanceDocId, pathOnly } from '@/lib/maintenanceQueue';
 import { edgeHtmlCache } from '@/lib/edgeCache';
+import { SCRIPT_ORIGINS, isCheckoutPath } from '@/lib/scriptOrigins';
+import { cspReportUrl } from '@/lib/cspReport';
 
-// Firebase Emulator Suite em desenvolvimento local (ver lib/firebase/client.ts).
+// Firebase Emulator Suite em desenvolvimento local e nos testes E2E, que
+// rodam o build de produção com a CSP valendo (ver lib/firebase/client.ts).
+// A variável só existe nesses ambientes, nunca no deploy.
 const EMULATOR_CONNECT_SRC =
-  process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === '1'
+  process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === '1'
     ? ' http://127.0.0.1:9099 http://127.0.0.1:8080 ws://127.0.0.1:8080'
     : '';
 
@@ -117,8 +121,11 @@ const SCANNER_PATH_PATTERN = /^\/(wp-admin|wp-login|wp-content|wp-includes|wp-js
 // rede; no resto do site continua fechada.
 const CHECKOUT_PAYMENT_SRC = ' https:';
 
+// Bloqueios da CSP viram relatório no Sentry (só com DSN, ou seja, produção).
+const CSP_REPORT_URL = cspReportUrl(process.env.NEXT_PUBLIC_SENTRY_DSN);
+
 function applySecurityHeaders(res: NextResponse, pathname = ''): void {
-  const pay = pathname === '/checkout' || pathname.startsWith('/checkout/') ? CHECKOUT_PAYMENT_SRC : '';
+  const pay = isCheckoutPath(pathname) ? CHECKOUT_PAYMENT_SRC : '';
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -128,10 +135,10 @@ function applySecurityHeaders(res: NextResponse, pathname = ''): void {
   res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   res.headers.set('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://accounts.google.com https://www.googletagmanager.com https://connect.facebook.net https://abacatepay.com https://challenges.cloudflare.com" + pay,
+    `script-src 'self' 'unsafe-inline' ${SCRIPT_ORIGINS.join(' ')}` + pay,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://d1w2poirtb3as9.cloudfront.net https://*.tile.openstreetmap.org https://www.facebook.com",
+    "img-src 'self' data: blob: https://www.google.com https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://d1w2poirtb3as9.cloudfront.net https://*.tile.openstreetmap.org https://www.facebook.com",
     // www.google.com também em connect-src (não só script-src): o próprio
     // script do reCAPTCHA faz uma chamada de rede pra /recaptcha/api2/clr,
     // sem isso ela quebrava silenciosamente por CSP (bug preexistente,
@@ -144,7 +151,12 @@ function applySecurityHeaders(res: NextResponse, pathname = ''): void {
     "form-action 'self'",
     "frame-ancestors 'self'",
     "upgrade-insecure-requests",
+    // Todo script carregado passa pela política de Trusted Types do site
+    // (src/components/TrustedTypesScript.tsx).
+    "require-trusted-types-for 'script'",
+    ...(CSP_REPORT_URL ? [`report-uri ${CSP_REPORT_URL}`, 'report-to csp'] : []),
   ].join('; '));
+  if (CSP_REPORT_URL) res.headers.set('Reporting-Endpoints', `csp="${CSP_REPORT_URL}"`);
   res.headers.delete('Server');
   res.headers.delete('X-Powered-By');
 }
