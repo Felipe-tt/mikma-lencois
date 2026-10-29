@@ -5,67 +5,141 @@
 
   Loja própria de lençóis, fronhas e jogos de lençol em malha 100% algodão, direto da fábrica em Blumenau (SC).
 
-  [![CI](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/ci-checks.yml/badge.svg)](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/ci-checks.yml)
   [![Deploy](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/deploy.yml/badge.svg)](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/deploy.yml)
+  [![CI Checks](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/ci-checks.yml/badge.svg)](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/ci-checks.yml)
+  [![CodeQL](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/codeql.yml/badge.svg)](https://github.com/Felipe-tt/mikma-lencois/actions/workflows/codeql.yml)
+  [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Felipe-tt/mikma-lencois/badge)](https://scorecard.dev/viewer/?uri=github.com/Felipe-tt/mikma-lencois)
+  <br />
   ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
-  ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+  ![React](https://img.shields.io/badge/React-19-149eca?logo=react)
+  ![TypeScript](https://img.shields.io/badge/TypeScript-7-3178c6?logo=typescript)
   ![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth%20%7C%20Storage-orange?logo=firebase)
+  ![Cloudflare](https://img.shields.io/badge/Cloudflare-WAF%20%7C%20CDN%20%7C%20Workers-f38020?logo=cloudflare)
 
-  [mikma.com.br](https://mikma.com.br)
+  **[mikma.com.br](https://mikma.com.br)**
 </div>
 
 ---
 
+## Sumário
+
+- [Sobre](#sobre)
+- [Arquitetura](#arquitetura)
+- [Stack](#stack)
+- [Funcionalidades](#funcionalidades)
+- [Segurança](#segurança)
+- [Qualidade e testes](#qualidade-e-testes)
+- [Rodando localmente](#rodando-localmente)
+- [Scripts](#scripts)
+- [Deploy](#deploy)
+- [Rotinas automáticas](#rotinas-automáticas)
+- [Webhooks](#webhooks)
+- [Estrutura do repositório](#estrutura-do-repositório)
+- [Reportar uma vulnerabilidade](#reportar-uma-vulnerabilidade)
+- [Licença](#licença)
+
 ## Sobre
 
-E-commerce completo e independente (sem Shopify ou Nuvemshop), em produção em [mikma.com.br](https://mikma.com.br). Inclui a loja, o checkout com PIX e cartão, o cálculo de frete, a entrega local em até 1 hora e um painel para quem vende, pensado para ser usado no celular por quem não é da área de tecnologia.
+E-commerce completo e independente (sem Shopify ou Nuvemshop), em produção em [mikma.com.br](https://mikma.com.br). Reúne a loja, o checkout com PIX e cartão, o cálculo de frete, a entrega local em até 1 hora, a emissão de nota fiscal e um painel de gestão pensado para ser usado no celular por quem não é da área de tecnologia.
 
 Princípios do projeto:
 
 - **O servidor decide.** Preço, estoque, frete e cupom são recalculados no servidor em toda compra. O navegador nunca é a fonte da verdade.
-- **Custo baixo.** As páginas da loja vêm de cache (ISR), as tarefas agendadas rodam no GitHub Actions e o rate limit cai para memória se o Redis faltar.
+- **Seguro por padrão.** Toda rota nega acesso até provar o contrário, e cada camada (borda, servidor, banco) se defende sozinha.
+- **Custo próximo de zero.** As páginas da loja são pré-renderizadas e servidas do cache da Cloudflare, as rotinas rodam num Worker gratuito e o servidor escala até zero quando não há visitas.
 - **Feito para o celular,** tanto na loja quanto no painel.
+
+## Arquitetura
+
+```
+Visitante ──► Cloudflare ──────────────► Firebase App Hosting ──► Firestore / Auth / Storage
+              • WAF e limite por IP       (Cloud Run, us-east4)
+              • cache do HTML da loja     • Next.js 16 (prerender parcial)
+              • Turnstile                 • só aceita tráfego da Cloudflare
+              • Worker de rotinas ───────► /api/cron/*  (a cada 5 min)
+
+Integrações: AbacatePay (PIX e cartão) · Melhor Envio, Correios, Jadlog e Uber Direct (frete)
+             · SEFAZ (NF-e) · Resend (e-mail) · Sentry (erros e relatórios de CSP)
+```
+
+- **Renderização:** as páginas da vitrine usam Partial Prerendering (`cacheComponents`). A casca estática sai do cache da Cloudflare, e só o que é dinâmico (estoque, sessão) é renderizado sob demanda.
+- **Trava de origem:** o Cloud Run recusa qualquer requisição sem o segredo que a Cloudflare injeta (`x-mikma-edge`), então não dá para contornar o WAF acessando o servidor direto.
+- **Resiliência:** se a Cloudflare cair, um workflow aponta o DNS direto para a origem e volta sozinho depois. Um deploy que derrube o site é revertido automaticamente.
 
 ## Stack
 
 | Camada | Tecnologia |
 |---|---|
-| Framework | Next.js 16 (App Router, ISR, View Transitions), React 19, TypeScript |
+| Framework | Next.js 16 (App Router, Partial Prerendering, React Compiler, View Transitions), React 19 |
+| Linguagem | TypeScript (checagem com o compilador nativo do TypeScript 7) |
 | Estilo | Tailwind CSS 4, fontes DM Serif Display e Inter (`next/font`) |
-| Dados e login | Firebase (Firestore, Auth, Storage), com Firebase Admin no servidor |
-| Hospedagem | Firebase App Hosting (Cloud Run, `southamerica-east1`) atrás da Cloudflare |
+| Dados e login | Firebase: Firestore, Auth (senha, Google, anônimo, TOTP), Storage, App Check e Cloud Messaging |
+| Passkeys | WebAuthn com `@simplewebauthn` (login sem senha para clientes e equipe) |
+| Hospedagem | Firebase App Hosting (Cloud Run, `us-east4`) atrás da Cloudflare |
+| Borda | Cloudflare: WAF gerenciado, regras próprias, limite por IP, cache de HTML, Turnstile e Workers |
 | Pagamento | AbacatePay: PIX e cartão no próprio site (`abacatepay.js`) |
-| Frete | Cotação de PAC, SEDEX e Jadlog (Melhor Envio, Correios, Jadlog) e entrega local pela Uber Direct |
+| Frete e entrega | Melhor Envio, Correios e Jadlog (PAC, SEDEX, expresso), entrega local pela Uber Direct |
 | Rastreio | Linketrack (Correios) e Uber Direct ao vivo, com mapa MapLibre |
-| E-mail | Resend (transacional e caixa de entrada), Svix para verificar webhooks |
-| Proteção | reCAPTCHA v3, rate limit no Upstash Redis, senha com `@node-rs/argon2` e checagem em Have I Been Pwned |
+| Nota fiscal | NF-e direto na SEFAZ (`nfewizard-io`), com certificado A1 enviado pelo painel |
+| E-mail | Resend (envio e caixa de entrada), Svix para verificar webhooks |
 | Validação | Zod nas APIs, `sanitize-html` no conteúdo rico do painel |
-| Fotos | PhotoSwipe (visualizador do produto) e `next/image` |
-| Importação | PapaParse (catálogo por CSV) |
-| Observabilidade | Sentry, opcional |
-| Testes | Vitest e `@firebase/rules-unit-testing` (regras do Firestore no emulador) |
+| Limite de requisições | Upstash Redis, com recuo para memória se o Redis falhar |
+| Observabilidade | Sentry (erros, desempenho e violações de CSP) |
+| Testes | Vitest, fast-check, `@firebase/rules-unit-testing` e Playwright |
 
 ## Funcionalidades
 
-**Loja**
-- Catálogo com filtros por categoria, variações de tamanho e cor, e guia de tamanhos que calcula a medida do colchão.
-- Carrinho e checkout em 3 passos, com frete cotado na hora e compra sem criar conta.
-- Pagamento por PIX (QR Code e copia e cola, confirmação automática) ou cartão em até 3x sem sair do site.
-- Cupons, favoritos, avaliações com nota no Google (JSON-LD), "Avise-me quando chegar" e acompanhamento do pedido com mapa da entrega.
-- E-mails em cada etapa do pedido, tema claro e escuro, e consentimento de cookies (LGPD).
+### Loja
 
-**Painel** (`/painel`)
-- Pedidos, com marcar como pago, despacho, código de rastreio, estorno e etiqueta.
-- Produtos, com cadastro guiado em passos, fotos pela câmera, nome da cor escrito à mão com verificação de cores parecidas, e importação por CSV com rascunhos.
-- Estoque, com venda no balcão, histórico e alerta de estoque baixo.
-- Trocas, avaliações, mensagens (e-mails respondidos pelo painel), cupons, relatórios e equipe (seller e admin).
-- Modo manutenção com fila de visitantes e liberação por IP, e a equipe logada passa direto.
+- Catálogo com filtros por categoria, variações de tamanho e cor, e guia de tamanhos que calcula a medida a partir do colchão.
+- Carrinho com barra de progresso até o frete grátis, e checkout em 3 passos com frete cotado na hora.
+- Compra sem criar conta (convidado) e login com senha, Google ou passkey.
+- Pagamento por PIX (QR Code e copia e cola, com confirmação automática) ou cartão em até 3x sem sair do site.
+- Cupons, desconto no PIX, favoritos, avaliações com estrelas no Google (JSON-LD) e "Avise-me quando chegar".
+- Acompanhamento do pedido com mapa da entrega ao vivo e e-mail em cada etapa.
+- Tema claro e escuro, transições entre páginas e consentimento de cookies (LGPD).
+- Feed do Google Merchant, `llms.txt` e catálogo em JSON para buscadores e assistentes de IA.
 
-**Segurança**
-- CSP, HSTS e demais headers. A origem só aceita tráfego que passou pela Cloudflare (`EDGE_SHARED_SECRET`).
-- Rate limit nas rotas sensíveis, login com desafio e verificação de e-mail.
-- Regras do Firestore e do Storage por papel (`buyer`, `seller`, `admin`), testadas no emulador. Ninguém consegue se promover a admin.
-- Webhooks com assinatura verificada em tempo constante.
+### Painel (`/painel`)
+
+- **Pedidos:** marcar como pago, despacho, código de rastreio, estorno, etiqueta e sinais de golpe por pedido.
+- **Nota fiscal:** emissão de NF-e na SEFAZ, com fila automática a cada 10 minutos.
+- **Produtos:** cadastro guiado com fotos pela câmera, verificação de cores parecidas, guia de medidas e importação por CSV com rascunhos.
+- **Estoque:** venda no balcão, histórico, auditoria e alerta de estoque baixo.
+- **Atendimento:** trocas, avaliações e mensagens (e-mails respondidos pelo painel).
+- **Gestão:** cupons, relatórios, configurações da loja, equipe (vendedor e admin) e notificações push de novos pedidos.
+- **Manutenção:** modo manutenção com fila de visitantes e liberação por IP; a equipe logada continua acessando.
+- **Acesso da equipe:** exige segunda etapa (passkey ou app autenticador) em todas as telas e APIs do painel.
+
+## Segurança
+
+| Camada | Proteções |
+|---|---|
+| Borda (Cloudflare) | WAF gerenciado e regras contra scanners, limite por IP nas APIs, bloqueio de credenciais vazadas, TLS 1.2+ com HSTS preload |
+| Origem | Aceita só tráfego da Cloudflare (segredo de borda); URLs diretas do Cloud Run respondem 403 |
+| Navegador | CSP com Trusted Types e relatório de violações no Sentry, `X-Frame-Options`, `Permissions-Policy`, COOP |
+| Autenticação | Senhas checadas no Have I Been Pwned e na detecção de vazamento da Cloudflare, Turnstile nos formulários públicos, passkeys, 2FA obrigatório para a equipe, App Check |
+| Autorização | Papel lido do token em toda rota; teste automático garante que nenhuma rota da equipe dispense a segunda etapa |
+| Dados | Regras do Firestore e do Storage por papel (`buyer`, `seller`, `admin`), testadas no emulador; ninguém consegue se promover |
+| Integrações | Webhooks com assinatura verificada em tempo constante; preço e estoque nunca vêm do navegador |
+| Domínio e e-mail | DNSSEC, CAA, SPF, DKIM, DMARC com relatórios e MTA-STS |
+| Cadeia de dependências | Actions e imagens Docker fixadas por hash, Dependabot, CodeQL, secret scanning e OpenSSF Scorecard |
+
+## Qualidade e testes
+
+Tudo roda no CI a cada pull request, e o merge só acontece com tudo verde.
+
+| Verificação | O que garante |
+|---|---|
+| `npm run typecheck` e `npm run lint` | Tipos (TypeScript 7) e ESLint |
+| `npm test` | Testes unitários das regras de negócio, APIs e utilitários (Vitest) |
+| Fuzzing | Testes de propriedade com fast-check: escape de HTML, JSON-LD e permissões da equipe contra milhares de entradas aleatórias |
+| `npm run test:rules` | Regras do Firestore e do Storage no emulador |
+| `npm run e2e` | Compra completa com PIX, passkey e navegação num build de produção, com a CSP valendo, contra os emuladores e uma AbacatePay simulada |
+| Orçamento de desempenho | No E2E, celular simulado (CPU 4x mais lenta, 4G fraco): limites de JavaScript, LCP e CLS por página |
+| CodeQL | Análise estática do código e dos workflows |
+| OWASP ZAP | Varredura dinâmica semanal da loja em produção |
+| Pentest em produção | Workflow manual com curl, nmap, testssl.sh, WhatWeb, Nikto e Nuclei |
 
 ## Rodando localmente
 
@@ -123,39 +197,43 @@ Preencha o `.env.local` com as chaves do projeto e das integrações que for usa
 | Comando | O que faz |
 |---|---|
 | `npm run dev` | Ambiente de desenvolvimento |
-| `npm run build` / `npm start` | Build de produção e servidor |
+| `npm run build` / `npm start` | Checagem de tipos, build de produção e servidor |
+| `npm run typecheck` | Checagem de tipos com o TypeScript 7 |
 | `npm run lint` | ESLint |
-| `npm test` | Testes unitários (Vitest) |
-| `npm run test:rules` | Testes das regras do Firestore (sobe o emulador sozinho) |
+| `npm test` / `npm run test:watch` | Testes unitários e de propriedade (Vitest) |
+| `npm run test:rules` | Regras do Firestore e do Storage (sobe o emulador sozinho) |
+| `npm run e2e` | Testes ponta a ponta (sobe emuladores, compila e roda o Playwright) |
 | `bash scripts/repo-checks.sh origin/main HEAD` | Mesma checagem de commits que o CI faz |
+
+`npm run e2e` aceita `E2E_SKIP_BUILD=1` para reaproveitar o build, `E2E_ARGS=<arquivo>` para rodar um teste só e `E2E_KEEP=1` para manter a loja de teste no ar.
 
 ## Deploy
 
-Não há deploy manual: **todo push na `main` publica o site.**
+Não há deploy manual: **todo merge na `main` publica o site.**
 
-1. **Firebase App Hosting:** vê o commit novo, faz o build e publica a loja em cerca de 10 minutos.
-2. **GitHub Actions (`deploy.yml`):** roda testes, lint, testes das regras e o build. Na `main`, também publica as regras do Firestore e do Storage, os índices e o CORS do bucket.
+1. **Firebase App Hosting** detecta o commit, faz o build e publica a loja.
+2. **GitHub Actions (`deploy.yml`)** roda tipos, lint, testes unitários, regras, E2E e build. Na `main`, também publica as regras do Firestore e do Storage, os índices e o CORS do bucket.
+3. **Saúde do site** confere a loja a cada 10 minutos e, se um deploy novo a derrubar, volta para a última versão boa sozinho.
 
-Os PRs passam pelos mesmos testes e pelo `CI Checks`, que valida as mensagens de commit:
-- assunto com até 72 caracteres;
-- mensagem com até 500 caracteres;
-- sem travessão.
+Os pull requests passam pelos mesmos testes e pelo `CI Checks`, que valida as mensagens de commit (assunto com até 72 caracteres, mensagem com até 500 e sem travessão). As chaves de produção ficam no Secret Manager do Google Cloud e são ligadas em `apphosting.yaml`.
 
-As chaves de produção ficam no Secret Manager do Google Cloud e são ligadas em `apphosting.yaml`.
+## Rotinas automáticas
 
-## Tarefas automáticas (GitHub Actions)
+As rotinas sensíveis ao horário são disparadas por um **Worker da Cloudflare** a cada 5 minutos (`workers/cron`), porque o agendamento do GitHub Actions atrasa ou pula execuções. Os workflows equivalentes continuam como reserva e para disparo manual.
 
-| Workflow | Quando | O que faz |
+| Rotina | Frequência | O que faz |
 |---|---|---|
-| `Cron · Expirar pedidos sem pagamento` | a cada 15 min | Avisa o cliente com 24h e cancela com 48h os pedidos sem pagamento, devolvendo o estoque |
-| `Cron · Verificar estoque baixo` | a cada 6h | Avisa a equipe sobre produtos acabando |
-| `Cron · Avisar estoque de volta` | de hora em hora | Manda o "Avise-me quando chegar" quando o produto volta |
-| `Cloudflare · fallback automático` | a cada 5 min | Se a Cloudflare cair, serve o site direto e volta sozinho depois |
-| `Storage · limpar fotos sem uso` | manual | Lista (e, se marcado, apaga) fotos que nenhum produto ou pedido usa |
-| `Infra · manutenção do Google Cloud` | manual | Limpeza de imagens antigas e checagens de infraestrutura |
-| `Definir role de usuário` | manual | Cria o primeiro admin (o painel não deixa ninguém se promover) |
+| Expirar pedidos | 15 min | Avisa o cliente com 24 h e cancela com 48 h os pedidos sem pagamento, devolvendo o estoque |
+| Notas fiscais | 10 min | Emite na SEFAZ as NF-e pendentes |
+| Estoque de volta | 1 h | Envia o "Avise-me quando chegar" quando o produto volta |
+| Estoque baixo | 6 h | Avisa a equipe sobre produtos acabando |
+| Saúde do site | 10 min | Confere a loja e faz rollback automático se o deploy quebrou |
+| Fallback da Cloudflare | 5 min | Se a Cloudflare cair, serve o site direto e volta sozinho depois |
+| Backup do Firestore | diário | Cópia do banco comprimida e criptografada, conferida antes de ser guardada por 14 dias |
+| OWASP ZAP | semanal | Varredura dinâmica de segurança |
+| OpenSSF Scorecard | semanal e a cada merge | Nota de segurança do projeto, com os achados no resumo do run |
 
-O agendamento do GitHub pode atrasar em horários de pico, por isso as tarefas mais sensíveis também são disparadas de fora (cron-job.org).
+Workflows manuais: pentest em produção, infraestrutura do Google Cloud e da Cloudflare, domínio (DNSSEC, CAA, e-mail e HSTS), Turnstile, limpeza de fotos sem uso e definição do primeiro admin.
 
 ## Webhooks
 
@@ -165,26 +243,33 @@ O agendamento do GitHub pode atrasar em horários de pico, por isso as tarefas m
 | Uber Direct (entrega local) | `/api/shipping/uber-webhook` | HMAC (`webhookSecret` em `UBER_DIRECT_CREDS`) |
 | Resend (e-mails recebidos) | `/api/email/inbound` | Assinatura Svix (`RESEND_WEBHOOK_SECRET`) |
 
-## Estrutura
+## Estrutura do repositório
 
 ```
 src/
 ├─ app/
-│  ├─ (shop)/       # loja: home, produtos, carrinho, checkout, conta, pedidos
-│  ├─ (auth)/       # entrar, cadastro, redefinir senha
-│  ├─ painel/       # painel da equipe
-│  ├─ manutencao/   # página de manutenção
-│  └─ api/          # rotas de API (pagamento, frete, pedidos, painel, cron...)
-├─ components/      # loja, painel, cadastro de produto, layout, ui
-├─ lib/             # regras de negócio, integrações, e-mails, segurança
+│  ├─ (shop)/        # loja: home, produtos, carrinho, checkout, conta, pedidos
+│  ├─ (auth)/        # entrar, cadastro, redefinir senha
+│  ├─ painel/        # painel da equipe
+│  ├─ manutencao/    # página de manutenção
+│  └─ api/           # APIs: pagamento, frete, pedidos, painel, cron, webhooks
+├─ components/       # loja, painel, cadastro de produto, layout, ui
+├─ lib/              # regras de negócio, integrações, e-mails, segurança
 ├─ types/
-└─ proxy.ts         # manutenção, trava da Cloudflare e headers de segurança
-firestore.rules     # regras do banco (+ firestore.rules.test.ts)
-storage.rules       # regras das fotos
-scripts/            # checagem de commits, fallback da Cloudflare, limpezas
-docs/               # Cloudflare e custos, BIMI, histórico da migração
+└─ proxy.ts          # trava de origem, manutenção, cache e headers de segurança
+e2e/                 # testes ponta a ponta (Playwright) e simuladores
+workers/             # Workers da Cloudflare: rotinas e MTA-STS
+firestore.rules      # regras do banco (+ firestore.rules.test.ts)
+storage.rules        # regras das fotos (+ storage.rules.test.ts)
+scripts/             # checagem de commits, papéis, fallback e limpezas
+docs/                # Cloudflare e custos, BIMI, histórico
+.github/workflows/   # CI, deploy, rotinas, segurança e infraestrutura
 ```
+
+## Reportar uma vulnerabilidade
+
+Não abra issue pública. Siga a [política de segurança](SECURITY.md): o contato é **contato@mikma.com.br** (também em [`/.well-known/security.txt`](https://mikma.com.br/.well-known/security.txt)), com resposta em até 5 dias úteis.
 
 ## Licença
 
-Repositório privado. Todos os direitos reservados.
+Software proprietário. O código é público apenas para transparência; todos os direitos são reservados à Mikma Lençóis. Veja [LICENSE](LICENSE).
