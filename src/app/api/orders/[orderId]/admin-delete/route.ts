@@ -7,6 +7,7 @@ import { expandStockLines } from '@/lib/orderStockLines';
 import { orderCode } from '@/lib/stockHistory';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { uberCancelDelivery } from '@/lib/uber-direct';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 const PAID_ACTIVE = new Set(['paid', 'preparing', 'shipped']);
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   try {
     // checkRevoked: admin rebaixado não apaga com token antigo.
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    if ((decoded as { role?: string }).role !== 'admin') {
+    if ((decoded as { role?: string }).role !== 'admin' || !hasSecondFactor(decoded)) {
       return NextResponse.json({ error: 'Só o administrador pode apagar este pedido.' }, { status: 403 });
     }
     uid = decoded.uid;

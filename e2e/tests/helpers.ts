@@ -36,3 +36,32 @@ export async function payPix(baseURL: string, chargeId: string, orderId: string,
     body,
   });
 }
+
+/**
+ * Autenticador virtual do Chromium (faz o papel do Face ID/digital) para
+ * criar e usar passkey nos testes.
+ */
+export async function virtualAuthenticator(page: Page) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('WebAuthn.enable');
+  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
+    options: {
+      protocol: 'ctap2', transport: 'internal',
+      hasResidentKey: true, hasUserVerification: true, isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+  return { cdp, authenticatorId };
+}
+
+/**
+ * Equipe entrando no painel: senha, e na primeira vez a tela obrigatória
+ * pede a passkey (a segunda etapa que o painel e as regras exigem).
+ */
+export async function staffLogin(page: Page, email: string, password: string) {
+  await virtualAuthenticator(page);
+  await login(page, email, password);
+  await page.goto('/painel');
+  await page.getByRole('button', { name: /Criar passkey e entrar|Entrar com minha passkey/ }).click();
+  await page.getByRole('heading', { name: 'Proteja sua conta da equipe' }).waitFor({ state: 'detached', timeout: 30_000 });
+}

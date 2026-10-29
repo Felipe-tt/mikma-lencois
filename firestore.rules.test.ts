@@ -8,6 +8,10 @@ import {
 import { setDoc, getDoc, getDocs, updateDoc, deleteDoc, deleteField, doc, collection, Timestamp } from 'firebase/firestore';
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 
+// Equipe entra com verificação em duas etapas (as regras exigem, ver
+// hasSecondFactor em firestore.rules); aqui, código do app autenticador.
+const MFA = { firebase: { sign_in_provider: 'password', sign_in_second_factor: 'totp' } } as const;
+
 // Testa as regras publicadas em firestore.rules contra o emulador local.
 // Precisa do emulador rodando: `npm run test:rules` (sobe o emulador,
 // roda este arquivo, derruba o emulador). Rodar `npm test` sozinho NÃO
@@ -57,7 +61,7 @@ describe('users/{uid}', () => {
   });
 
   it('seller lê o documento de um comprador (precisa pra ver pedido)', async () => {
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'users/buyer1'), { name: 'Ana', role: 'buyer' });
     });
@@ -65,8 +69,8 @@ describe('users/{uid}', () => {
   });
 
   it('ninguém lista a coleção de clientes inteira (CPF e endereço de todos)', async () => {
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
-    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     await assertFails(getDocs(collection(seller.firestore(), 'users')));
     await assertFails(getDocs(collection(admin.firestore(), 'users')));
   });
@@ -77,7 +81,7 @@ describe('users/{uid}', () => {
       await setDoc(doc(ctx.firestore(), 'users/buyer1'), { name: 'Ana', role: 'buyer' });
     });
     await assertFails(
-      updateDoc(doc(buyer.firestore(), 'users/buyer1'), { role: 'admin' })
+      updateDoc(doc(buyer.firestore(), 'users/buyer1'), { role: 'admin', ...MFA })
     );
   });
 
@@ -92,12 +96,12 @@ describe('users/{uid}', () => {
   });
 
   it('admin consegue promover outro usuário', async () => {
-    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'users/buyer1'), { name: 'Ana', role: 'buyer' });
     });
     await assertSucceeds(
-      updateDoc(doc(admin.firestore(), 'users/buyer1'), { role: 'seller' })
+      updateDoc(doc(admin.firestore(), 'users/buyer1'), { role: 'seller', ...MFA })
     );
   });
 });
@@ -127,7 +131,7 @@ describe('orders/{orderId}', () => {
   });
 
   it('seller só apaga pedido cancelado, não um pedido pago', async () => {
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'paid' });
     });
@@ -155,7 +159,7 @@ describe('products/{productId}', () => {
   });
 
   it('seller consegue editar produto', async () => {
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'products/p1'), { name: 'Lençol', price: 10000 });
     });
@@ -167,15 +171,15 @@ describe('products/{productId}', () => {
 
 describe('team/{uid} e pushTokens/{id} — acesso exclusivo Admin SDK', () => {
   it('CRÍTICO: nem admin autenticado lê /team pelo client SDK', async () => {
-    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'team/admin1'), { role: 'admin' });
+      await setDoc(doc(ctx.firestore(), 'team/admin1'), { role: 'admin', ...MFA });
     });
     await assertFails(getDoc(doc(admin.firestore(), 'team/admin1')));
   });
 
   it('CRÍTICO: ninguém lê pushTokens pelo client SDK', async () => {
-    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'pushTokens/tok1'), { uid: 'admin1' });
     });
@@ -185,7 +189,7 @@ describe('team/{uid} e pushTokens/{id} — acesso exclusivo Admin SDK', () => {
 
 describe('deny-by-default: coleção não listada em nenhuma regra', () => {
   it('CRÍTICO: qualquer coleção desconhecida é bloqueada mesmo pra admin', async () => {
-    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     await assertFails(
       setDoc(doc(admin.firestore(), 'algumaColecaoNovaNaoMapeada/doc1'), { x: 1 })
     );
@@ -240,7 +244,7 @@ describe('users/{uid}: whitelist de campos graváveis pelo próprio usuário', (
   });
 
   it('preferências do painel (staffPrefs) continuam graváveis', async () => {
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'users/seller1'), { uid: 'seller1', role: 'seller' });
     });
@@ -270,8 +274,8 @@ describe('orders/{orderId}: sem update pelo client SDK', () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'pending_payment' });
     });
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
-    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     await assertFails(updateDoc(doc(seller.firestore(), 'orders/order1'), { status: 'paid' }));
     await assertFails(updateDoc(doc(admin.firestore(), 'orders/order1'), { status: 'paid' }));
   });
@@ -288,7 +292,7 @@ describe('orders/{orderId}: sem update pelo client SDK', () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'cancelled' });
     });
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await assertSucceeds(deleteDoc(doc(seller.firestore(), 'orders/order1')));
   });
 
@@ -297,7 +301,7 @@ describe('orders/{orderId}: sem update pelo client SDK', () => {
       await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'cancelled', payment: { method: 'pix', paidAt: new Date() } });
       await setDoc(doc(ctx.firestore(), 'orders/order2'), { userId: 'buyer1', status: 'cancelled', payment: { method: 'card', lateCaptureTxId: 'tx1' } });
     });
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order1')));
     await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order2')));
   });
@@ -307,7 +311,7 @@ describe('orders/{orderId}: sem update pelo client SDK', () => {
       await setDoc(doc(ctx.firestore(), 'orders/order1'), { userId: 'buyer1', status: 'paid' });
       await setDoc(doc(ctx.firestore(), 'orders/order2'), { userId: 'buyer1', status: 'delivered' });
     });
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order1')));
     await assertFails(deleteDoc(doc(seller.firestore(), 'orders/order2')));
   });
@@ -318,7 +322,7 @@ describe('orders/{orderId}: sem update pelo client SDK', () => {
       await setDoc(doc(ctx.firestore(), 'orders/order2'), { userId: 'buyer1', status: 'delivered' });
       await setDoc(doc(ctx.firestore(), 'orders/order3'), { userId: 'buyer1', status: 'preparing' });
     });
-    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     await assertSucceeds(deleteDoc(doc(admin.firestore(), 'orders/order1')));
     await assertSucceeds(deleteDoc(doc(admin.firestore(), 'orders/order2')));
     await assertFails(deleteDoc(doc(admin.firestore(), 'orders/order3')));
@@ -346,7 +350,7 @@ describe('coupons/{code}: só a equipe lê', () => {
 
   it('seller lê e lista (painel de cupons)', async () => {
     await seed();
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await assertSucceeds(getDocs(collection(seller.firestore(), 'coupons')));
   });
 });
@@ -367,7 +371,7 @@ describe('settings/store: parâmetros de dinheiro e sandbox só o admin altera',
 
   it('seller edita configuração comum (merge sem mudar os campos sensíveis)', async () => {
     await seed();
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await assertSucceeds(
       setDoc(doc(seller.firestore(), 'settings/store'),
         { storeName: 'Mikma Lençóis', pixDiscountPct: 10, abacatePaySandboxMode: false }, { merge: true })
@@ -376,7 +380,7 @@ describe('settings/store: parâmetros de dinheiro e sandbox só o admin altera',
 
   it('CRÍTICO: seller não muda desconto PIX, frete grátis, cartão nem modos sandbox', async () => {
     await seed();
-    const ref = doc(testEnv.authenticatedContext('seller1', { role: 'seller' }).firestore(), 'settings/store');
+    const ref = doc(testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA }).firestore(), 'settings/store');
     await assertFails(updateDoc(ref, { pixDiscountPct: 99 }));
     await assertFails(updateDoc(ref, { abacatePaySandboxMode: true }));
     await assertFails(updateDoc(ref, { uberDirectSandboxMode: true }));
@@ -386,7 +390,7 @@ describe('settings/store: parâmetros de dinheiro e sandbox só o admin altera',
 
   it('CRÍTICO: seller não muda nada da nota fiscal', async () => {
     await seed();
-    const ref = doc(testEnv.authenticatedContext('seller1', { role: 'seller' }).firestore(), 'settings/store');
+    const ref = doc(testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA }).firestore(), 'settings/store');
     await assertFails(updateDoc(ref, { nfeAutoEmit: true }));
     await assertFails(updateDoc(ref, { nfeEnvironment: 'producao' }));
     await assertFails(updateDoc(ref, { nfeCsosn: '101' }));
@@ -395,19 +399,19 @@ describe('settings/store: parâmetros de dinheiro e sandbox só o admin altera',
 
   it('admin altera tudo, inclusive os campos sensíveis', async () => {
     await seed();
-    const ref = doc(testEnv.authenticatedContext('admin1', { role: 'admin' }).firestore(), 'settings/store');
+    const ref = doc(testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA }).firestore(), 'settings/store');
     await assertSucceeds(updateDoc(ref, { pixDiscountPct: 12, abacatePaySandboxMode: true }));
     await assertSucceeds(updateDoc(ref, { nfeAutoEmit: true, nfeEnvironment: 'producao' }));
   });
 
   it('CRÍTICO: tokens da nota fiscal (secureConfig) ninguém lê pelo app', async () => {
-    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     await assertFails(getDoc(doc(admin.firestore(), 'secureConfig/nfe')));
     await assertFails(setDoc(doc(admin.firestore(), 'secureConfig/nfe'), { producao: 'x' }));
   });
 
   it('CRÍTICO: passkeys e desafios WebAuthn ninguém lê nem grava pelo app', async () => {
-    const admin = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     const owner = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
     await assertFails(getDoc(doc(owner.firestore(), 'passkeys/cred1')));
     await assertFails(setDoc(doc(owner.firestore(), 'passkeys/cred1'), { uid: 'buyer1', publicKey: 'x', counter: 0 }));
@@ -450,7 +454,7 @@ describe('maintenance_queue: leitura por ID, listagem só da equipe, criação r
   it('seller lista (painel de manutenção)', async () => {
     await seed();
     await assertSucceeds(
-      getDocs(collection(testEnv.authenticatedContext('seller1', { role: 'seller' }).firestore(), 'maintenance_queue'))
+      getDocs(collection(testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA }).firestore(), 'maintenance_queue'))
     );
   });
 
@@ -477,7 +481,7 @@ describe('maintenance_queue: leitura por ID, listagem só da equipe, criação r
 
   it('seller libera (released=true) e apaga', async () => {
     await seed();
-    const ref = doc(testEnv.authenticatedContext('seller1', { role: 'seller' }).firestore(), `maintenance_queue/${ID}`);
+    const ref = doc(testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA }).firestore(), `maintenance_queue/${ID}`);
     await assertSucceeds(updateDoc(ref, { released: true }));
     await assertSucceeds(deleteDoc(ref));
   });
@@ -485,7 +489,7 @@ describe('maintenance_queue: leitura por ID, listagem só da equipe, criação r
 
 describe('inventory/{sku} delete', () => {
   it('seller apaga SKU sem reserva (variação removida do produto)', async () => {
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'inventory/p1_v1'), { productId: 'p1', quantity: 2, reserved: 0, history: [] });
     });
@@ -493,7 +497,7 @@ describe('inventory/{sku} delete', () => {
   });
 
   it('seller não apaga SKU com reserva de pedido pendente', async () => {
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'inventory/p1_v1'), { productId: 'p1', quantity: 2, reserved: 1, history: [] });
     });
@@ -517,7 +521,7 @@ describe('inventory: leitura só da equipe e revogação imediata', () => {
     const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
     await assertFails(getDoc(doc(buyer.firestore(), 'inventory/p1_v1')));
     await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'inventory/p1_v1')));
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await assertSucceeds(getDoc(doc(seller.firestore(), 'inventory/p1_v1')));
   });
 
@@ -526,7 +530,7 @@ describe('inventory: leitura só da equipe e revogação imediata', () => {
       await setDoc(doc(ctx.firestore(), 'inventory/p1_v1'), { productId: 'p1', quantity: 2, reserved: 0, history: [] });
       await setDoc(doc(ctx.firestore(), 'staffRevoked/seller1'), { at: new Date() });
     });
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await assertFails(getDoc(doc(seller.firestore(), 'inventory/p1_v1')));
   });
 });
@@ -557,7 +561,7 @@ describe('edge/status: fallback da Cloudflare', () => {
       await setDoc(doc(ctx.firestore(), 'edge/status'), { bypass: false });
     });
     await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'edge/status')));
-    const adminCtx = testEnv.authenticatedContext('admin1', { role: 'admin' });
+    const adminCtx = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA });
     await assertFails(setDoc(doc(adminCtx.firestore(), 'edge/status'), { bypass: true }));
     await assertFails(setDoc(doc(testEnv.unauthenticatedContext().firestore(), 'edge/status'), { bypass: true }));
   });
@@ -565,7 +569,7 @@ describe('edge/status: fallback da Cloudflare', () => {
 
 describe('notifications', () => {
   it('equipe marca aviso do painel como lido, mas não escreve na conta de cliente', async () => {
-    const seller = testEnv.authenticatedContext('seller1', { role: 'seller' });
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'notifications/seller/items/n1'), { title: 'Pedido', read: false });
       await setDoc(doc(ctx.firestore(), 'notifications/buyer1/items/n1'), { title: 'Oi', read: false });
@@ -604,3 +608,29 @@ describe('carrinho compartilhado (Montar junto)', () => {
     await assertFails(setDoc(doc(buyer, 'sharedCarts/xyz'), { uid: 'buyer2', expiresAt: inDays(7) }));
   });
 });
+
+describe('equipe exige verificação em duas etapas', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/o1'), { userId: 'buyer1', status: 'pending', total: 100 });
+    });
+  });
+
+  it('CRÍTICO: vendedor ou admin só com senha não lê pedido de cliente', async () => {
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', firebase: { sign_in_provider: 'password' } });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', firebase: { sign_in_provider: 'google.com' } });
+    await assertFails(getDoc(doc(seller.firestore(), 'orders/o1')));
+    await assertFails(getDoc(doc(admin.firestore(), 'orders/o1')));
+  });
+
+  it('passkey (token próprio do servidor) vale como segunda etapa', async () => {
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', passkey: true, firebase: { sign_in_provider: 'custom' } });
+    await assertSucceeds(getDoc(doc(seller.firestore(), 'orders/o1')));
+  });
+
+  it('claim passkey num login com senha não vale', async () => {
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', passkey: true, firebase: { sign_in_provider: 'password' } });
+    await assertFails(getDoc(doc(seller.firestore(), 'orders/o1')));
+  });
+});
+

@@ -4,6 +4,7 @@ export { isPlausibleIp };
 import { adminAuth } from '@/lib/firebase/admin';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { z, type ZodType, type ZodError } from 'zod';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 /** Extrai o IP real do cliente.
  *
@@ -134,11 +135,13 @@ export type AuthResult =
   | { ok: false; response: NextResponse };
 
 /** Verifica Bearer token e opcionalmente checa roles. checkRevoked=true por padrão. */
+const STAFF_ROLES = new Set(['seller', 'admin']);
+
 export async function verifyAuth(
   req: NextRequest,
-  options: { roles?: string[]; checkRevoked?: boolean } = {}
+  options: { roles?: string[]; checkRevoked?: boolean; allowWithoutSecondFactor?: boolean } = {}
 ): Promise<AuthResult> {
-  const { roles, checkRevoked = true } = options;
+  const { roles, checkRevoked = true, allowWithoutSecondFactor = false } = options;
   const header = req.headers.get('authorization');
   if (!header?.startsWith('Bearer ')) {
     return { ok: false, response: NextResponse.json({ error: 'Não autenticado' }, { status: 401 }) };
@@ -153,6 +156,11 @@ export async function verifyAuth(
       const role = (decoded as DecodedIdToken & { role?: string }).role ?? '';
       if (!roles.includes(role)) {
         return { ok: false, response: NextResponse.json({ error: 'Acesso negado' }, { status: 403 }) };
+      }
+      // Equipe só com verificação em duas etapas nesta sessão (app
+      // autenticador ou passkey, ver lib/staffMfa.ts e PainelGuard).
+      if (STAFF_ROLES.has(role) && !allowWithoutSecondFactor && !hasSecondFactor(decoded)) {
+        return { ok: false, response: NextResponse.json({ error: 'Verificação em duas etapas obrigatória para a equipe.', code: 'mfa_required' }, { status: 403 }) };
       }
     }
     return { ok: true, decoded };

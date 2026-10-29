@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { syncOrderPayment } from '@/lib/orders/syncPayment';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 /**
  * POST /api/orders/[orderId]/check-payment
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     // Equipe confere se o acesso não foi revogado (removido da equipe há
     // pouco ainda tem token válido por até 1h). Comprador não precisa: só
     // vê o próprio pedido, e assim o polling não paga a consulta extra.
-    staff = (role === 'seller' || role === 'admin')
+    staff = (role === 'seller' || role === 'admin') && hasSecondFactor(decoded)
       && await adminAuth.verifyIdToken(bearer.token, true).then(() => true, () => false);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });

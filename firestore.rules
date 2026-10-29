@@ -11,8 +11,16 @@ service cloud.firestore {
     }
     // O papel vem do token (custom claim), que só expira em até 1h. Quem
     // sai da equipe ganha um staffRevoked/{uid}: perde o acesso na hora.
+    // Equipe só com verificação em duas etapas NESTA sessão: código do app
+    // autenticador (sign_in_second_factor) ou passkey (token próprio do
+    // servidor com passkey: true). Ver src/lib/staffMfa.ts e PainelGuard.
+    function hasSecondFactor() {
+      return request.auth.token.firebase.get('sign_in_second_factor', null) != null
+        || (request.auth.token.firebase.sign_in_provider == 'custom'
+            && request.auth.token.get('passkey', false) == true);
+    }
     function hasRole(role) {
-      return isAuth() && request.auth.token.role == role
+      return isAuth() && request.auth.token.role == role && hasSecondFactor()
         && !exists(/databases/$(database)/documents/staffRevoked/$(request.auth.uid));
     }
     function isSellerOrAdmin() {

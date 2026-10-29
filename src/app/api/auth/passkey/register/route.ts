@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
-import { PasskeyError, registerPasskey, registrationOptions } from '@/lib/passkeys';
+import { listPasskeys, PasskeyError, registerPasskey, registrationOptions } from '@/lib/passkeys';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 /**
  * Cadastro de passkey pela conta logada, em dois passos no mesmo endereço:
@@ -21,6 +22,15 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null) as { step?: string; challengeId?: unknown; response?: unknown } | null;
   try {
+    // Equipe que já tem passkey só cria outra entrando com uma delas (ou
+    // com o app autenticador): quem tiver só a senha não cadastra a própria
+    // passkey e ganha a segunda etapa. A primeira passkey é livre, é ela que
+    // a tela obrigatória do painel pede (ver PainelGuard).
+    const role = (auth.decoded as { role?: string }).role;
+    if ((role === 'seller' || role === 'admin') && !hasSecondFactor(auth.decoded)
+      && (await listPasskeys(uid)).length > 0) {
+      return NextResponse.json({ error: 'Entre com a passkey que você já tem para criar outra.', code: 'mfa_required' }, { status: 403 });
+    }
     if (body?.step === 'options') {
       return NextResponse.json(await registrationOptions({ uid, email, name: typeof name === 'string' ? name : undefined }));
     }

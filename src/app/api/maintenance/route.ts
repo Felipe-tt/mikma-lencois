@@ -7,6 +7,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { maintenanceActionSchema } from './schema';
 import { maintenanceDocId } from '@/lib/maintenanceQueue';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 // Validação simples de IPv4/IPv6, evita que um valor arbitrário em
 // body.ip vire parte de um ID de documento no Firestore sem checagem
@@ -25,6 +26,7 @@ async function verifySeller(req: NextRequest) {
   try {
     const decoded = await adminAuth.verifyIdToken(result.token, true);
     if (decoded.role !== 'seller' && decoded.role !== 'admin') return null;
+    if (!hasSecondFactor(decoded)) return null;
     return decoded;
   } catch { return null; }
 }
