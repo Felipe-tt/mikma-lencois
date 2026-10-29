@@ -862,15 +862,19 @@ function TableEditor({ colsJson, rowsJson, onRowsChange, measures = false }: {
   return (
     <div className="flex flex-col gap-2">
       {/* Header */}
-      <div className="grid gap-2 pr-8 [grid-template-columns:repeat(var(--cols),1fr)]" style={{ '--cols': cols.length } as React.CSSProperties}>
+      <div className={`${measures ? 'hidden sm:grid' : 'grid'} gap-2 pr-8 [grid-template-columns:repeat(var(--cols),1fr)]`} style={{ '--cols': cols.length } as React.CSSProperties}>
         {cols.map(c => (
           <p key={c} className="text-[9px] font-bold tracking-[0.14em] uppercase text-faint">{c}</p>
         ))}
       </div>
       {/* Rows */}
       {rows.map((row, i) => (
-        <div key={i} className="flex gap-2 items-center">
-          <div className="grid gap-2 flex-1 [grid-template-columns:repeat(var(--cols),1fr)]" style={{ '--cols': cols.length } as React.CSSProperties}>
+        // No celular, a tabela de medidas vira um cartão por linha: as três
+        // caixas (L × C × A) de cada peça não cabem lado a lado na tela.
+        <div key={i} className={measures
+          ? 'relative flex flex-col sm:flex-row gap-2 sm:items-center rounded-xl border border-mist p-3 pr-10 sm:p-0 sm:pr-0 sm:border-0'
+          : 'flex gap-2 items-center'}>
+          <div className={`grid gap-2 flex-1 ${measures ? 'sm:[grid-template-columns:repeat(var(--cols),1fr)]' : '[grid-template-columns:repeat(var(--cols),1fr)]'}`} style={{ '--cols': cols.length } as React.CSSProperties}>
             {cols.map((col, j) => {
               const setCell = (v: string) => {
                 const next = [...rows]; next[i] = { ...next[i], [col]: v };
@@ -882,12 +886,16 @@ function TableEditor({ colsJson, rowsJson, onRowsChange, measures = false }: {
                   onChange={e => setCell(e.target.value)}
                   className="w-full border border-mist bg-white dark:bg-warm px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-clay-l/30 rounded-xl" />
               ) : (
-                <MeasureInput key={col} value={row[col] ?? ''} label={`${col}, linha ${i + 1}`} onChange={setCell} />
+                <div key={col} className="min-w-0">
+                  <p className="sm:hidden text-[9px] font-bold tracking-[0.14em] uppercase text-faint mb-1">{col}</p>
+                  <MeasureInput value={row[col] ?? ''} label={`${col}, linha ${i + 1}`} onChange={setCell} />
+                </div>
               );
             })}
           </div>
           <button onClick={() => onRowsChange(JSON.stringify(rows.filter((_,idx)=>idx!==i)))}
-            className="w-7 h-7 flex items-center justify-center text-faint hover:text-red-400 transition-colors shrink-0 text-sm">
+            aria-label={`Remover linha ${i + 1}`}
+            className={`w-7 h-7 flex items-center justify-center text-faint hover:text-red-400 transition-colors shrink-0 text-sm ${measures ? 'absolute top-3.5 right-2 sm:static' : ''}`}>
             <IconX size={14} />
           </button>
         </div>
