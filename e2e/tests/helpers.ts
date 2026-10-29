@@ -63,5 +63,7 @@ export async function staffLogin(page: Page, email: string, password: string) {
   await login(page, email, password);
   await page.goto('/painel');
   await page.getByRole('button', { name: /Criar passkey e entrar|Entrar com minha passkey/ }).click();
-  await page.getByRole('heading', { name: 'Proteja sua conta da equipe' }).waitFor({ state: 'detached', timeout: 30_000 });
+  // O texto do botão muda enquanto espera o aparelho: o sinal de que entrou
+  // é a tela obrigatória (com as etapas do acesso) sumir.
+  await page.getByRole('list', { name: 'Etapas do acesso' }).waitFor({ state: 'detached', timeout: 30_000 });
 }
