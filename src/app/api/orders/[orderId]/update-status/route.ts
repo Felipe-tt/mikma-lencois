@@ -10,6 +10,7 @@ import { updateStatusSchema } from './schema';
 import { buildPreparing, buildShipped, buildDelivered } from '@/lib/email/orderStatusEmails';
 import { isManualDispatch } from '@/lib/carriers';
 import { recordShippingSpent } from '@/lib/shipping-ledger';
+import { effectiveRole } from '@/lib/staffMfa';
 
 const ALLOWED: Partial<Record<OrderStatus, OrderStatus>> = {
   paid: 'preparing',
@@ -41,7 +42,7 @@ export async function POST(
     // próprio documento /users/{uid} (regra allow update: if isSelf(uid)),
     // então ler o role de lá permitiria qualquer comprador se autopromover
     // a seller e alterar status/cancelar pedidos de qualquer cliente.
-    role = (decoded as { role?: string }).role ?? '';
+    role = effectiveRole(decoded);
     uid = decoded.uid;
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });

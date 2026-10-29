@@ -108,7 +108,7 @@ describe('POST /api/delivery (despacho)', () => {
     for (const k of Object.keys(orders)) delete orders[k];
     for (const k of Object.keys(users)) delete users[k];
     for (const k of Object.keys(settingsDocs)) delete settingsDocs[k];
-    (adminAuth.verifyIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'seller-1', role: 'seller' });
+    (adminAuth.verifyIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'seller-1', role: 'seller', firebase: { sign_in_provider: 'password', sign_in_second_factor: 'totp' } });
   });
 
   it('rejeita sem token', async () => {
@@ -163,7 +163,7 @@ describe('DELETE /api/delivery (cancelamento)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     for (const k of Object.keys(orders)) delete orders[k];
-    (adminAuth.verifyIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'seller-1', role: 'seller', email: 'seller@mikma.com.br' });
+    (adminAuth.verifyIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'seller-1', role: 'seller', email: 'seller@mikma.com.br', firebase: { sign_in_provider: 'password', sign_in_second_factor: 'totp' } });
   });
 
   it('rejeita cancelar pedido que não está "shipped"', async () => {

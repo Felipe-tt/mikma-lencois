@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 import { extractBearer } from '@/lib/security';
 import { getShippingLedger } from '@/lib/shipping-ledger';
+import { effectiveRole } from '@/lib/staffMfa';
 
 export async function GET(req: NextRequest) {
   const bearer = extractBearer(req);
@@ -9,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    const role = decoded.role as string | undefined;
+    const role = effectiveRole(decoded);
     if (role !== 'seller' && role !== 'admin') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }

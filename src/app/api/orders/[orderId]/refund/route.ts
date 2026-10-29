@@ -6,6 +6,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { refundCharge } from '@/lib/abacatepayApi';
+import { effectiveRole } from '@/lib/staffMfa';
 
 const bodySchema = z.object({ reason: z.string().trim().max(300).optional() });
 
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   let email: string | undefined;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    const role = (decoded as { role?: string }).role ?? '';
+    const role = effectiveRole(decoded);
     if (role !== 'seller' && role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     uid = decoded.uid;
     email = decoded.email;

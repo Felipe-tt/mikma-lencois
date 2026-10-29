@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, getClientIp } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { effectiveRole } from '@/lib/staffMfa';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   let uid: string;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    role = (decoded as { role?: string }).role ?? '';
+    role = effectiveRole(decoded);
     uid = decoded.uid;
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });

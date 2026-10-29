@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { effectiveRole } from '@/lib/staffMfa';
 
 export async function DELETE(req: NextRequest) {
   // Verificar autenticação
@@ -11,7 +12,7 @@ export async function DELETE(req: NextRequest) {
   let role: string | undefined;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    role = decoded.role as string | undefined;
+    role = effectiveRole(decoded);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
