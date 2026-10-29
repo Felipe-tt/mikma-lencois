@@ -24,7 +24,8 @@ function friendly(e: unknown): string {
  * App autenticador (TOTP do Firebase Auth): ligar com QR code, ver e
  * desligar. Usado em /painel/seguranca e na tela obrigatória do PainelGuard.
  */
-export function TotpSetup({ onEnrolled }: { onEnrolled?: () => void } = {}) {
+/** bare: sem a moldura de cartão, para ir dentro de outro cartão (tela obrigatória). */
+export function TotpSetup({ onEnrolled, bare = false }: { onEnrolled?: () => void; bare?: boolean } = {}) {
   const [factors, setFactors] = useState<MultiFactorInfo[]>([]);
   const [secret, setSecret] = useState<TotpSecret | null>(null);
   const [qr, setQr] = useState('');
@@ -111,7 +112,7 @@ export function TotpSetup({ onEnrolled }: { onEnrolled?: () => void } = {}) {
   const groupedKey = secret?.secretKey.replace(/(.{4})/g, '$1 ').trim();
 
   return (
-    <section className="rounded-2xl border border-mist bg-paper p-5 sm:p-6">
+    <section className={bare ? '' : 'rounded-2xl border border-mist bg-paper p-5 sm:p-6'}>
       <p className="text-[14px] font-semibold text-ink">App autenticador</p>
       <p className="text-[12.5px] text-mid mt-1 leading-relaxed">
         Google Authenticator, Microsoft Authenticator, Authy ou o app de senhas do iPhone. A cada login com senha
@@ -135,7 +136,7 @@ export function TotpSetup({ onEnrolled }: { onEnrolled?: () => void } = {}) {
       )}
 
       {totp.length === 0 && !secret && (
-        <button onClick={start} disabled={busy} className="btn-outline mt-4">
+        <button onClick={start} disabled={busy} className={bare ? 'btn-primary w-full h-12 mt-5 text-[14px] font-semibold' : 'btn-outline mt-4'}>
           {busy ? 'Preparando…' : 'Ligar app autenticador'}
         </button>
       )}
