@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { createPasskey, passkeyCancelled, passkeySupported, signInWithPasskey } from '@/lib/auth/passkeyClient';
 import { TotpSetup } from '@/components/painel/TotpSetup';
 import { BrandLogo } from '@/components/BrandLogo';
-import { IconArrowLeft, IconArrowRight, IconBolt, IconCheck, IconKey, IconLock, IconLogOut, IconMobile, IconShield } from '@/components/ui/Icon';
+import { IconArrowLeft, IconArrowRight, IconCheck, IconKey, IconLock, IconLogOut, IconMobile, IconShield } from '@/components/ui/Icon';
 
 const noopSubscribe = () => () => {};
 
@@ -63,130 +63,185 @@ export function StaffMfaGate() {
   }
 
   const email = user?.email ?? '';
+  const steps = hasPasskey
+    ? ['Toque em entrar com a passkey', 'Desbloqueie o aparelho como sempre faz', 'Pronto, o painel abre']
+    : ['Toque em criar passkey', 'Desbloqueie o aparelho como sempre faz', 'Pronto, o painel abre'];
 
   return (
-    <div className="painel-scope relative min-h-dvh overflow-hidden bg-warm flex items-center justify-center px-4 py-10">
-      {/* Brilho suave do accent atrás do cartão */}
-      <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full opacity-[0.14] blur-3xl"
+    <div className="painel-scope relative min-h-dvh overflow-hidden bg-warm flex items-center justify-center px-4 py-8 sm:py-12">
+      {/* Fundo: dois brilhos suaves do accent */}
+      <div aria-hidden className="pointer-events-none absolute -top-48 -left-32 w-[560px] h-[560px] rounded-full opacity-[0.16] blur-3xl"
         style={{ background: 'radial-gradient(circle, rgb(var(--c-clay)), transparent 65%)' }} />
+      <div aria-hidden className="pointer-events-none absolute -bottom-56 -right-40 w-[620px] h-[620px] rounded-full opacity-[0.10] blur-3xl"
+        style={{ background: 'radial-gradient(circle, rgb(var(--c-clay-l)), transparent 65%)' }} />
 
-      <div className="relative w-full max-w-[420px] motion-safe:animate-fade-up">
-        <div className="flex justify-center mb-6">
-          <BrandLogo alt="Mikma" className="h-7 w-auto object-contain" priority />
-        </div>
+      <div className="relative w-full max-w-[440px] lg:max-w-[920px] motion-safe:animate-fade-up">
+        <div className="lg:grid lg:grid-cols-[1fr_1.05fr] rounded-[28px] bg-paper border border-mist/80 shadow-[0_30px_80px_-30px_rgba(40,20,5,0.35)] overflow-hidden">
 
-        <div className="panel-card rounded-3xl shadow-card-hover overflow-hidden">
-          {/* Progresso: senha feita, falta a segunda etapa */}
-          <div className="flex items-center gap-2 px-6 pt-5 text-[11px] font-semibold tracking-[0.08em] uppercase">
-            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-              <span className="w-4 h-4 rounded-full bg-emerald-500/15 flex items-center justify-center"><IconCheck size={10} strokeWidth={3} /></span>
-              Senha
-            </span>
-            <span className="flex-1 h-px bg-mist" />
-            <span className="inline-flex items-center gap-1.5 text-clay">
-              <span className="w-4 h-4 rounded-full bg-clay/15 flex items-center justify-center text-[9px]">2</span>
-              Segunda etapa
-            </span>
-          </div>
+          {/* ── Lado da marca: ilustração e título ── */}
+          <div className="relative overflow-hidden px-6 pt-7 pb-6 sm:px-8 lg:p-10 lg:flex lg:flex-col lg:justify-between bg-gradient-to-b from-clay/[0.13] via-clay/[0.05] to-transparent lg:bg-gradient-to-br lg:from-clay/[0.16] lg:via-clay/[0.07] lg:to-warm/40 lg:border-r lg:border-mist/70">
+            <div className="flex items-center justify-between">
+              <BrandLogo alt="Mikma" className="h-7 w-auto object-contain" priority />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-paper/80 backdrop-blur px-2.5 py-1 text-[10.5px] font-semibold tracking-[0.12em] uppercase text-clay ring-1 ring-clay/20">
+                <IconShield size={11} strokeWidth={2.2} /> Equipe
+              </span>
+            </div>
 
-          <div className="px-6 sm:px-8 pt-7 pb-7">
-            {!useApp ? (
-              <>
-                <div className="relative mx-auto w-20 h-20">
-                  <span aria-hidden className="absolute inset-0 rounded-full bg-clay/10 motion-safe:animate-ping [animation-duration:2.4s]" />
-                  <span className="relative flex w-20 h-20 items-center justify-center rounded-full bg-gradient-to-b from-clay/20 to-clay/5 ring-1 ring-clay/25 text-clay">
-                    <IconKey size={36} strokeWidth={1.5} />
-                  </span>
-                </div>
+            <PasskeyArt busy={busy} />
 
-                <h1 className="mt-6 text-center font-display text-[26px] leading-tight text-ink">Proteja sua conta da equipe</h1>
-                <p className="mt-2 text-center text-[13.5px] text-mid leading-relaxed">
-                  O painel pede uma segunda etapa além da senha. Com a <strong className="text-ink font-semibold">passkey</strong>, você
-                  confirma com a digital, o rosto ou o PIN do aparelho.
-                </p>
-
-                <ul className="mt-6 grid gap-2.5">
-                  {[
-                    { icon: IconLock, text: 'Entra com digital, rosto ou PIN' },
-                    { icon: IconShield, text: 'Quem souber sua senha não entra' },
-                    { icon: IconBolt, text: 'Leva segundos e é uma vez só' },
-                  ].map(({ icon: I, text }) => (
-                    <li key={text} className="flex items-center gap-3 rounded-xl bg-warm/70 px-3.5 py-2.5 text-[13px] text-ink">
-                      <span className="flex w-7 h-7 shrink-0 items-center justify-center rounded-lg bg-paper text-clay shadow-card"><I size={15} /></span>
-                      {text}
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-6">
-                  {hasPasskey === null ? (
-                    <div className="h-12 flex items-center justify-center"><span className="spinner-dark w-5 h-5" /></div>
-                  ) : !supported ? (
-                    <p className="rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-[13px] text-amber-800 dark:text-amber-300">
-                      Este navegador não cria passkey. Use o app autenticador abaixo ou abra o painel em outro navegador.
-                    </p>
-                  ) : (
-                    <>
-                      <button onClick={hasPasskey ? enterWithPasskey : createAndEnter} disabled={busy}
-                        className="btn-primary w-full h-12 text-[14px] font-semibold flex items-center justify-center gap-2.5 disabled:opacity-70">
-                        {busy
-                          ? <><span className="spinner" /> Confirme no seu aparelho…</>
-                          : <><IconKey size={18} /> {hasPasskey ? 'Entrar com minha passkey' : 'Criar passkey e entrar'}</>}
-                      </button>
-                      {hasPasskey && (
-                        <p className="mt-2.5 text-center text-[12px] text-faint">Sua passkey está em outro aparelho? Entre por ele ou use o app autenticador.</p>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 my-5">
-                  <div className="flex-1 h-px bg-mist" />
-                  <span className="text-[11px] text-faint uppercase tracking-wider">ou</span>
-                  <div className="flex-1 h-px bg-mist" />
-                </div>
-
-                <button onClick={() => { setUseApp(true); setError(''); }}
-                  className="group w-full flex items-center gap-3 rounded-xl border border-mist px-4 py-3 text-left transition-colors hover:border-clay-l/40 hover:bg-warm/60">
-                  <span className="flex w-9 h-9 shrink-0 items-center justify-center rounded-lg bg-warm text-mid"><IconMobile size={17} /></span>
-                  <span className="flex-1">
-                    <span className="block text-[13.5px] font-medium text-ink">Usar app autenticador</span>
-                    <span className="block text-[12px] text-faint">Código de 6 dígitos no celular</span>
-                  </span>
-                  <IconArrowRight size={16} className="text-faint transition-transform group-hover:translate-x-0.5" />
-                </button>
-              </>
-            ) : (
-              <div className="motion-safe:animate-fade-in">
-                <button onClick={() => setUseApp(false)} className="inline-flex items-center gap-1.5 text-[13px] text-mid hover:text-ink -ml-1 px-1 py-1">
-                  <IconArrowLeft size={15} /> Voltar para passkey
-                </button>
-                <div className="mt-3">
-                  <TotpSetup bare onEnrolled={reloginWithCode} />
-                </div>
-                <p className="mt-4 rounded-xl bg-warm/70 px-3.5 py-2.5 text-[12px] text-mid leading-relaxed">
-                  Depois de ligar o app, você entra de novo com a senha e o código, e o painel abre.
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10 px-3.5 py-2.5 text-[12.5px] font-medium text-red-700 dark:text-red-300">
-                {error}
+            <div className="text-center lg:text-left">
+              <p className="text-[10.5px] font-semibold tracking-[0.2em] uppercase text-clay">Último passo para entrar</p>
+              <h1 className="mt-2 font-display text-[28px] sm:text-[32px] leading-[1.1] text-ink text-balance">
+                {useApp ? 'Ligue o app autenticador' : hasPasskey ? 'Entre com sua passkey' : 'Crie sua passkey de acesso'}
+              </h1>
+              <p className="mt-3 text-[13.5px] text-mid leading-relaxed text-pretty lg:max-w-[34ch]">
+                {useApp
+                  ? 'Um código novo a cada 30 segundos no seu celular. Mesmo que alguém descubra sua senha, não entra no painel.'
+                  : 'Uma chave guardada no seu aparelho, liberada só por você. Mesmo que alguém descubra sua senha, não entra no painel.'}
               </p>
-            )}
+            </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t border-mist/70 bg-warm/50 px-6 py-3.5">
-            <span className="flex items-center gap-2 min-w-0 text-[12px] text-faint">
-              <IconLock size={13} className="shrink-0" />
-              <span className="truncate">{email}</span>
-            </span>
-            <button onClick={logout} className="inline-flex items-center gap-1.5 shrink-0 text-[12.5px] font-medium text-mid hover:text-ink py-2 -my-2">
-              <IconLogOut size={14} /> Sair
-            </button>
+          {/* ── Lado da ação ── */}
+          <div className="flex flex-col">
+            <div className="px-6 sm:px-8 lg:px-10 pt-2 lg:pt-10 pb-7 flex-1">
+              {/* Progresso: a senha já foi, falta a passkey */}
+              <ol aria-label="Etapas do acesso" className="flex items-center gap-2 text-[11px] font-semibold">
+                <li className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                  <span className="w-5 h-5 rounded-full bg-emerald-500/15 flex items-center justify-center"><IconCheck size={11} strokeWidth={3} /></span>
+                  Senha
+                </li>
+                <li aria-hidden className="flex-1 h-px bg-gradient-to-r from-emerald-500/40 to-clay/40" />
+                <li aria-current="step" className="inline-flex items-center gap-1.5 text-ink">
+                  <span className="w-5 h-5 rounded-full bg-clay text-paper flex items-center justify-center"><IconKey size={11} strokeWidth={2.4} /></span>
+                  Passkey
+                </li>
+              </ol>
+
+              {!useApp ? (
+                <>
+                  <p className="mt-7 text-[11px] font-semibold tracking-[0.14em] uppercase text-faint">Como funciona</p>
+                  <ol className="mt-3 relative">
+                    {steps.map((step, i) => (
+                      <li key={step} className="relative flex gap-3.5 pb-4 last:pb-0">
+                        {i < steps.length - 1 && <span aria-hidden className="absolute left-[13px] top-7 bottom-0.5 w-px bg-mist" />}
+                        <span className={`relative z-[1] flex w-[27px] h-[27px] shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${
+                          i === steps.length - 1 ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/25' : 'bg-paper text-clay ring-1 ring-clay/25 shadow-card'}`}>
+                          {i === steps.length - 1 ? <IconCheck size={13} strokeWidth={2.6} /> : i + 1}
+                        </span>
+                        <span className="pt-[4px] text-[13.5px] text-ink leading-snug">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+
+                  <div className="mt-7">
+                    {hasPasskey === null ? (
+                      <div className="h-[52px] rounded-2xl bg-warm/70 animate-pulse" />
+                    ) : !supported ? (
+                      <p className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-[13px] text-amber-800 dark:text-amber-300">
+                        Este navegador não cria passkey. Use o app autenticador abaixo ou abra o painel em outro navegador.
+                      </p>
+                    ) : (
+                      <>
+                        <button onClick={hasPasskey ? enterWithPasskey : createAndEnter} disabled={busy}
+                          className="group relative w-full h-[52px] overflow-hidden rounded-2xl bg-clay text-paper text-[14.5px] font-semibold flex items-center justify-center gap-2.5
+                            shadow-[0_10px_28px_-10px_rgb(var(--c-clay)/0.75)] transition-[transform,box-shadow,background-color] duration-200
+                            hover:bg-clay-d hover:shadow-[0_14px_32px_-10px_rgb(var(--c-clay)/0.85)] active:scale-[0.985] disabled:opacity-80 disabled:cursor-wait">
+                          <span aria-hidden className="absolute inset-0 bg-gradient-to-b from-white/[0.14] to-transparent" />
+                          {busy
+                            ? <><span className="spinner" /> Desbloqueie o aparelho…</>
+                            : <><IconKey size={18} strokeWidth={2} /> {hasPasskey ? 'Entrar com minha passkey' : 'Criar passkey e entrar'}
+                                <IconArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-0.5" /></>}
+                        </button>
+                        <p className="mt-3 text-center text-[12px] text-faint leading-relaxed">
+                          {hasPasskey
+                            ? 'Sua passkey está em outro aparelho? Entre por ele, ou use o app autenticador.'
+                            : 'Fica salva no iCloud, no Google ou no Windows Hello do seu aparelho.'}
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  <button onClick={() => { setUseApp(true); setError(''); }}
+                    className="group mt-6 w-full flex items-center gap-3 rounded-2xl border border-dashed border-mist-d/70 px-4 py-3 text-left transition-colors hover:border-clay-l/50 hover:bg-warm/50">
+                    <span className="flex w-9 h-9 shrink-0 items-center justify-center rounded-xl bg-warm text-mid group-hover:text-clay transition-colors"><IconMobile size={17} /></span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[13px] font-medium text-ink">Prefiro um app autenticador</span>
+                      <span className="block text-[11.5px] text-faint">Código de 6 dígitos a cada login</span>
+                    </span>
+                    <IconArrowRight size={15} className="text-faint transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                </>
+              ) : (
+                <div className="mt-6 motion-safe:animate-fade-in">
+                  <button onClick={() => setUseApp(false)} className="inline-flex items-center gap-1.5 text-[13px] text-mid hover:text-ink -ml-1 px-1 py-1">
+                    <IconArrowLeft size={15} /> Voltar para passkey
+                  </button>
+                  <div className="mt-3">
+                    <TotpSetup bare onEnrolled={reloginWithCode} />
+                  </div>
+                  <p className="mt-4 rounded-2xl bg-warm/70 px-4 py-3 text-[12px] text-mid leading-relaxed">
+                    Depois de ligar o app, você entra de novo com a senha e o código, e o painel abre.
+                  </p>
+                </div>
+              )}
+
+              {error && (
+                <p role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10 px-4 py-3 text-[12.5px] font-medium text-red-700 dark:text-red-300">
+                  {error}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-mist/70 px-6 sm:px-8 lg:px-10 py-4">
+              <span className="flex items-center gap-2 min-w-0 text-[12px] text-faint">
+                <IconLock size={13} className="shrink-0" />
+                <span className="truncate">{email}</span>
+              </span>
+              <button onClick={logout} className="inline-flex items-center gap-1.5 shrink-0 text-[12.5px] font-medium text-mid hover:text-ink py-2 -my-2">
+                <IconLogOut size={14} /> Sair
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ilustração da passkey: celular com a chave na tela e o selo de "ok".
+ * Só usa as cores do tema, então acompanha o claro e o escuro.
+ */
+function PasskeyArt({ busy }: { busy: boolean }) {
+  return (
+    <div aria-hidden className="relative mx-auto my-6 lg:my-8 w-[200px] h-[168px] lg:w-[240px] lg:h-[200px]">
+      <svg viewBox="0 0 240 200" className="absolute inset-0 w-full h-full overflow-visible">
+        <circle cx="120" cy="100" r="92" fill="rgb(var(--c-clay))" opacity="0.06" />
+        <circle cx="120" cy="100" r="68" fill="rgb(var(--c-clay))" opacity="0.07" />
+        {/* brilhos */}
+        <path d="M40 46l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="rgb(var(--c-clay-l))" opacity="0.7" />
+        <path d="M200 140l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="rgb(var(--c-clay-l))" opacity="0.6" />
+        <circle cx="212" cy="96" r="3" fill="rgb(var(--c-clay))" opacity="0.35" />
+        <circle cx="48" cy="150" r="2.5" fill="rgb(var(--c-clay))" opacity="0.3" />
+      </svg>
+
+      {/* celular */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[86px] h-[150px] lg:w-[100px] lg:h-[176px] motion-safe:animate-float-y">
+        <div className="relative w-full h-full rounded-[22px] bg-paper ring-1 ring-ink/10 shadow-[0_18px_40px_-14px_rgba(40,20,5,0.4)] p-[5px]">
+          <div className="relative w-full h-full rounded-[17px] bg-gradient-to-b from-warm to-paper overflow-hidden flex flex-col items-center">
+            <span className="mt-2 w-7 h-[5px] rounded-full bg-ink/80" />
+            <span className={`relative mt-6 lg:mt-8 flex w-11 h-11 lg:w-12 lg:h-12 items-center justify-center rounded-2xl bg-clay text-paper shadow-[0_8px_18px_-6px_rgb(var(--c-clay)/0.8)] ${busy ? 'motion-safe:animate-pulse' : ''}`}>
+              <IconKey size={22} strokeWidth={2} />
+            </span>
+            <span className="mt-4 w-12 h-[5px] rounded-full bg-mist" />
+            <span className="mt-1.5 w-8 h-[5px] rounded-full bg-mist/70" />
+          </div>
+        </div>
+        {/* selo de ok */}
+        <span className="absolute -right-4 top-5 flex w-9 h-9 items-center justify-center rounded-full bg-emerald-500 text-white ring-4 ring-paper shadow-lg motion-safe:animate-scale-in [animation-delay:400ms]">
+          <IconCheck size={17} strokeWidth={3} />
+        </span>
       </div>
     </div>
   );
