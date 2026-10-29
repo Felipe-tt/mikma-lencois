@@ -1,0 +1,46 @@
+name: Repositório · apagar branches antigos
+
+# Apaga os branches que não são a main nem a origem de um PR aberto.
+# Branch de PR fechado ou mergeado volta pelo botão "Restore branch" na
+# página do PR. Comece com "aplicar" desmarcado: só lista o que sairia.
+
+on:
+  workflow_dispatch:
+    inputs:
+      aplicar:
+        description: 'Apagar de verdade (desmarcado: só lista)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: limpar-branches
+
+jobs:
+  limpar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      APLICAR: ${{ inputs.aplicar }}
+    steps:
+      - name: Apagar branches
+        run: |
+          set -euo pipefail
+          R="$GITHUB_REPOSITORY"
+          gh api --paginate "repos/$R/pulls?state=open&per_page=100" --jq '.[].head.ref' | sort -u > abertos.txt
+          gh api --paginate "repos/$R/branches?per_page=100" --jq '.[].name' | sort -u > todos.txt
+          grep -vxF -f abertos.txt todos.txt | grep -vx main > apagar.txt || true
+          echo "Branches: $(wc -l < todos.txt) · PRs abertos: $(wc -l < abertos.txt) · a apagar: $(wc -l < apagar.txt)"
+          { echo "## Branches a apagar ($(wc -l < apagar.txt))"; echo '```'; cat apagar.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          [ "$APLICAR" = "true" ] || { echo "Só listagem (aplicar desmarcado)."; exit 0; }
+          falhas=0
+          while read -r b; do
+            if gh api -X DELETE "repos/$R/git/refs/heads/$b" >/dev/null 2>&1; then echo "apagado: $b"; else echo "::warning::não apagou: $b"; falhas=$((falhas+1)); fi
+          done < apagar.txt
+          echo "Falhas: $falhas"
