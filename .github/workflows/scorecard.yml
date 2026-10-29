@@ -36,8 +36,9 @@ jobs:
           sarif_file: results.sarif
           category: scorecard
 
-      # Achados no log e no resumo (o alerta do Code scanning mostra só o primeiro local).
-      - name: Achados no resumo
-        if: always()
-        run: |
-          jq -r '.runs[0].results[] | "\(.ruleId) | \(.locations[0].physicalLocation.artifactLocation.uri // "-"):\(.locations[0].physicalLocation.region.startLine // "-") | \(.message.text | gsub("\n"; " ") | .[0:400])"' results.sarif | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: scorecard-sarif
+          path: results.sarif
+          retention-days: 7
+
