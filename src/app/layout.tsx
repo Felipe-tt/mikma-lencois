@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { ThemeScript } from '@/components/ThemeScript';
+import { TrustedTypesScript } from '@/components/TrustedTypesScript';
 import { Analytics } from '@/components/Analytics';
 import { fontSans, fontDisplay } from '@/lib/fonts';
 import { baseOpenGraph, SITE_DESCRIPTION, STORE_JSON_LD, WEBSITE_JSON_LD } from '@/lib/seo';
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth" className={`${fontSans.variable} ${fontDisplay.variable}`} suppressHydrationWarning>
       <head>
+        <TrustedTypesScript />
         <ThemeScript />
       </head>
       <body suppressHydrationWarning>
