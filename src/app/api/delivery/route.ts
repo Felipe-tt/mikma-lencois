@@ -31,6 +31,7 @@ import {
   formatPhone,
   type UberManifestItem,
 } from '@/lib/uber-direct';
+import { effectiveRole } from '@/lib/staffMfa';
 
 async function getStoreSettings(): Promise<StoreSettings> {
   const snap = await adminDb.collection('settings').doc('store').get();
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
-    if (!['seller', 'admin'].includes((decoded as { role?: string }).role ?? '')) {
+    if (!['seller', 'admin'].includes(effectiveRole(decoded))) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
@@ -336,7 +337,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
-    if (!['seller', 'admin'].includes((decoded as { role?: string }).role ?? '')) {
+    if (!['seller', 'admin'].includes(effectiveRole(decoded))) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 

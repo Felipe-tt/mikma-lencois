@@ -12,6 +12,7 @@ import { orderStockLog } from '@/lib/stockHistory';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { uberCancelDelivery } from '@/lib/uber-direct';
 import { notifyOrderCancelled } from '@/lib/email/cancelledEmail';
+import { effectiveRole } from '@/lib/staffMfa';
 
 // Statuses que ainda não tiveram o estoque debitado (só reservado)
 const PENDING_STATUSES = new Set(['pending_payment']);
@@ -36,7 +37,7 @@ export async function POST(
     // usuário (regra allow update: if isSelf(uid)), então usá-lo aqui
     // permitiria qualquer comprador se autopromover e cancelar pedidos
     // de qualquer cliente.
-    role = (decoded as { role?: string }).role ?? '';
+    role = effectiveRole(decoded);
     uid = decoded.uid;
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });

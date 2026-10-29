@@ -94,7 +94,7 @@ describe('POST /api/orders/[orderId]/update-status', () => {
     vi.clearAllMocks();
     for (const k of Object.keys(orders)) delete orders[k];
     for (const k of Object.keys(users)) delete users[k];
-    (adminAuth.verifyIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'seller-1', role: 'seller' });
+    (adminAuth.verifyIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'seller-1', role: 'seller', firebase: { sign_in_provider: 'password', sign_in_second_factor: 'totp' } });
     users['user-1'] = { email: 'cliente@example.com', name: 'Cliente Teste' };
   });
 
@@ -105,6 +105,12 @@ describe('POST /api/orders/[orderId]/update-status', () => {
 
   it('rejeita quem não é seller/admin', async () => {
     (adminAuth.verifyIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'buyer-1', role: '' });
+    const res = await POST(req({}), { params });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejeita equipe que entrou só com a senha (sem segunda etapa)', async () => {
+    (adminAuth.verifyIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'seller-1', role: 'seller', firebase: { sign_in_provider: 'password' } });
     const res = await POST(req({}), { params });
     expect(res.status).toBe(403);
   });

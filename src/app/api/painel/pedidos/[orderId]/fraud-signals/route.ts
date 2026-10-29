@@ -5,6 +5,7 @@ import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { assessOrderRisk, releaseOrderRisk, storeOrderRisk } from '@/lib/orders/risk';
 import type { OrderRisk } from '@/lib/fraudSignals';
+import { effectiveRole } from '@/lib/staffMfa';
 
 /**
  * Detector de golpe do pedido (equipe). GET: avaliação gravada no pagamento
@@ -17,7 +18,7 @@ async function staff(req: NextRequest): Promise<{ uid: string; name: string } | 
   if ('response' in bearer) return bearer.response;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    const role = (decoded as { role?: string }).role ?? '';
+    const role = effectiveRole(decoded);
     if (role !== 'seller' && role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     return { uid: decoded.uid, name: decoded.email ?? decoded.uid };
   } catch {

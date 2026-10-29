@@ -3,6 +3,7 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, extractBearer } from '@/lib/security';
 import { normalizeTrackingCode, isCorreiosTrackingCode, carrierName, trackingUrl } from '@/lib/carriers';
+import { effectiveRole } from '@/lib/staffMfa';
 
 export interface TrackingEvent {
   date: string;
@@ -86,7 +87,7 @@ export async function GET(
     try {
       const decoded = await adminAuth.verifyIdToken(bearer.token, true);
       requesterUid = decoded.uid;
-      requesterRole = decoded.role as string | undefined;
+      requesterRole = effectiveRole(decoded);
     } catch {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }

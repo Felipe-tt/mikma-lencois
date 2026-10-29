@@ -4,6 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, getClientIp } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { confirmOrderPaid, InsufficientStockError } from '@/lib/orders/confirmPayment';
+import { effectiveRole } from '@/lib/staffMfa';
 
 const bodySchema = z.object({
   // Como o cliente pagou de fato: obrigatório, fica registrado no pedido e
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   let uid: string;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    role = (decoded as { role?: string }).role ?? '';
+    role = effectiveRole(decoded);
     uid = decoded.uid;
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });

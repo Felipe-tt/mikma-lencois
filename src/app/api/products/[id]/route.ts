@@ -18,8 +18,12 @@ async function getSeller(req: NextRequest) {
   } catch { return null; }
 }
 
+// ID de documento simples: barra ou ".." viraria outro caminho no Firestore.
+const VALID_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!VALID_ID.test(id)) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
   const snap = await adminDb.collection('products').doc(id).get();
   if (!snap.exists) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
   const data = snap.data()!;
@@ -41,6 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
+  if (!VALID_ID.test(id)) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
   const body = await safeJson(req, 32768);
   if (!body.ok) return body.response;
 
@@ -74,6 +79,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   const { id } = await params;
+  if (!VALID_ID.test(id)) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
 
   const productRef = adminDb.collection('products').doc(id);
   const snap = await productRef.get();

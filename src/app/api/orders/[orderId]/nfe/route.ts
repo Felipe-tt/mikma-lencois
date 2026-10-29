@@ -4,6 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { cancelNfe, inutilizeNfe, issueNfe, NfeError, nfeField, syncNfe } from '@/lib/nfe/service';
+import { effectiveRole } from '@/lib/staffMfa';
 
 const bodySchema = z.object({
   action: z.enum(['emit', 'sync', 'cancel', 'inutilizar']),
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   let uid: string;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    const role = (decoded as { role?: string }).role ?? '';
+    const role = effectiveRole(decoded);
     if (role !== 'seller' && role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     uid = decoded.uid;
   } catch {
