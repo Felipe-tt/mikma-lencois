@@ -1153,3 +1153,53 @@ html.dark .cookie-glass {
   .mk-pswp-thumb::after { display: none; }
   .mk-pswp-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
 }
+
+/* ── Tela obrigatória da passkey (StaffMfaGate) ─────────────────────────
+   Animações só com "movimento liberado". Todas usam fill "both" com estado
+   inicial no "from": sem movimento, cada peça já aparece no estado final. */
+@property --mfa-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+@keyframes mfa-rise    { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mfa-float   { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes mfa-twinkle { 0%, 100% { opacity: .25; transform: scale(.55) rotate(0deg); } 50% { opacity: 1; transform: scale(1) rotate(45deg); } }
+@keyframes mfa-orbit   { to { transform: rotate(360deg); } }
+@keyframes mfa-ripple  { from { transform: scale(.7); opacity: .55; } to { transform: scale(1.6); opacity: 0; } }
+@keyframes mfa-drift   { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(60px, 40px) scale(1.12); } }
+@keyframes mfa-shine   { 0%, 70% { transform: translateX(-160%) skewX(-20deg); } 100% { transform: translateX(260%) skewX(-20deg); } }
+@keyframes mfa-shake   { 0%, 100% { transform: none; } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+@keyframes mfa-draw    { from { stroke-dashoffset: var(--len, 60); } to { stroke-dashoffset: 0; } }
+@keyframes mfa-pop     { 0% { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes mfa-fill    { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes mfa-glow    { 0%, 100% { box-shadow: 0 8px 18px -6px rgb(var(--c-clay) / .75); } 50% { box-shadow: 0 10px 34px -4px rgb(var(--c-clay) / .95); } }
+@keyframes mfa-spin    { to { --mfa-angle: 360deg; } }
+@keyframes mfa-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mfa-leave   { to { opacity: 0; transform: scale(1.03); filter: blur(4px); } }
+@keyframes mfa-active  { 0%, 100% { box-shadow: 0 0 0 0 rgb(var(--c-clay) / .45); } 50% { box-shadow: 0 0 0 7px rgb(var(--c-clay) / 0); } }
+
+/* Borda com um brilho que corre em volta do cartão */
+.mfa-border {
+  background:
+    conic-gradient(from var(--mfa-angle), transparent 0deg, rgb(var(--c-clay) / .85) 50deg, rgb(var(--c-clay-l) / .4) 80deg, transparent 120deg),
+    linear-gradient(rgb(var(--c-mist)), rgb(var(--c-mist)));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mfa-border   { animation: mfa-spin 6s linear infinite; }
+  .mfa-rise     { animation: mfa-rise .6s cubic-bezier(.22, 1, .36, 1) both; }
+  .mfa-float    { animation: mfa-float 5s ease-in-out infinite; }
+  .mfa-twinkle  { animation: mfa-twinkle 2.6s ease-in-out infinite both; }
+  .mfa-orbit    { animation: mfa-orbit 14s linear infinite; }
+  .mfa-orbit-r  { animation: mfa-orbit 20s linear infinite reverse; }
+  .mfa-ripple   { animation: mfa-ripple 3.2s cubic-bezier(.2, .6, .3, 1) infinite both; }
+  .mfa-ripple-fast { animation-duration: 1.4s; }
+  .mfa-drift    { animation: mfa-drift 18s ease-in-out infinite; }
+  .mfa-shine    { animation: mfa-shine 3.6s ease-in-out infinite; }
+  .mfa-shake    { animation: mfa-shake .45s ease-in-out; }
+  .mfa-draw     { stroke-dasharray: var(--len, 60); animation: mfa-draw .55s cubic-bezier(.65, 0, .35, 1) both; }
+  .mfa-pop      { animation: mfa-pop .55s cubic-bezier(.34, 1.56, .64, 1) both; }
+  .mfa-fill     { animation: mfa-fill 1.9s cubic-bezier(.4, 0, .2, 1) both; }
+  .mfa-glow     { animation: mfa-glow 2.4s ease-in-out infinite; }
+  .mfa-fade-in  { animation: mfa-fade-in .35s ease both; }
+  .mfa-leave    { animation: mfa-leave .45s cubic-bezier(.4, 0, 1, 1) both; }
+  .mfa-active   { animation: mfa-active 1.4s ease-out infinite; }
+}
