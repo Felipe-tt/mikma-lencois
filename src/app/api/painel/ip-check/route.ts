@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 import { extractBearer, getClientIp } from '@/lib/security';
 import { cameThroughEdge } from '@/lib/ip';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 /**
  * GET /api/painel/ip-check (só admin)
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
   if ('response' in bearer) return bearer.response;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    if ((decoded as { role?: string }).role !== 'admin') return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    if ((decoded as { role?: string }).role !== 'admin' || !hasSecondFactor(decoded)) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
   } catch {
     return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
   }

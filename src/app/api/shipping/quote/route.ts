@@ -8,6 +8,7 @@ import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { cartCouponDiscountCents } from '@/lib/orders/cartCoupon';
 import { z } from 'zod';
 import { quoteSchema } from './schema';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
       // Diagnóstico temporário: só exposto pra seller/admin, nunca pro
       // comprador final. Motivo exato de o Uber Direct ter sido omitido
       // da lista (undefined = não se aplicava ou funcionou normalmente).
-      ...(result.uberDebug && (decoded.role === 'seller' || decoded.role === 'admin')
+      ...(result.uberDebug && (decoded.role === 'seller' || decoded.role === 'admin') && hasSecondFactor(decoded)
         ? { uberDebug: result.uberDebug, uberSandbox: result.uberSandbox }
         : {}),
     });

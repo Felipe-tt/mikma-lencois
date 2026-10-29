@@ -8,6 +8,10 @@ import {
 import { ref, uploadBytes, getBytes, deleteObject } from 'firebase/storage';
 import { beforeAll, afterAll, describe, it } from 'vitest';
 
+// Equipe entra com verificação em duas etapas (as regras exigem, ver
+// hasSecondFactor em firestore.rules); aqui, código do app autenticador.
+const MFA = { firebase: { sign_in_provider: 'password', sign_in_second_factor: 'totp' } } as const;
+
 // Regras de storage.rules contra o emulador (npm run test:rules): fotos de
 // produto são públicas para ler, mas só vendedor/admin envia e apaga, só
 // imagem raster e até 8 MB. Fora de products/ nada passa.
@@ -30,8 +34,8 @@ afterAll(async () => {
 });
 
 const png = new Uint8Array([137, 80, 78, 71]);
-const seller = () => testEnv.authenticatedContext('vendedor', { role: 'seller' }).storage();
-const admin = () => testEnv.authenticatedContext('admin', { role: 'admin' }).storage();
+const seller = () => testEnv.authenticatedContext('vendedor', { role: 'seller', ...MFA }).storage();
+const admin = () => testEnv.authenticatedContext('admin', { role: 'admin', ...MFA }).storage();
 const customer = () => testEnv.authenticatedContext('cliente', { role: 'customer' }).storage();
 const anon = () => testEnv.unauthenticatedContext().storage();
 

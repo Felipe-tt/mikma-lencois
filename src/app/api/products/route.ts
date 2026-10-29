@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { safeJson, tooManyRequests, productImageUrlSchema } from '@/lib/security';
 import { getCatalog } from '@/lib/catalog';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 const VariantSchema = z.object({
   id: z.string().max(64),
@@ -30,6 +31,7 @@ async function getSeller(req: NextRequest) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth.slice(7), true); // checkRevoked
     if (decoded.role !== 'seller' && decoded.role !== 'admin') return null;
+    if (!hasSecondFactor(decoded)) return null;
     return decoded;
   } catch { return null; }
 }

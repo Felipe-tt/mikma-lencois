@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { safeJson, tooManyRequests, productImageUrlSchema } from '@/lib/security';
 import { revalidateProduct } from '@/lib/revalidateProduct';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 async function getSeller(req: NextRequest) {
   const auth = req.headers.get('authorization');
@@ -12,6 +13,7 @@ async function getSeller(req: NextRequest) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth.slice(7), true); // checkRevoked
     if (decoded.role !== 'seller' && decoded.role !== 'admin') return null;
+    if (!hasSecondFactor(decoded)) return null;
     return decoded;
   } catch { return null; }
 }

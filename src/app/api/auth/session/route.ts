@@ -12,7 +12,9 @@ import type { MfaClaims } from '@/lib/staffMfa';
  * essas continuam exigindo o Bearer token normalmente.
  */
 export async function POST(req: NextRequest) {
-  const auth = await verifyAuth(req, { roles: ['seller', 'admin'] });
+  // Sem 2FA também: o cookie só serve para pular a tela de manutenção, e
+  // o alerta de aparelho novo precisa valer antes da pessoa ligar o 2FA.
+  const auth = await verifyAuth(req, { roles: ['seller', 'admin'], allowWithoutSecondFactor: true });
   if (!auth.ok) return auth.response;
 
   const secret = process.env.STAFF_SESSION_SECRET;

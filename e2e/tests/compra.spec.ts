@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { charges, login, payPix, prepare } from './helpers';
+import { charges, login, payPix, prepare, staffLogin } from './helpers';
 
 test.beforeEach(async ({ context }) => { await prepare(context); });
 
@@ -48,7 +48,7 @@ test('cliente compra com PIX, o pagamento confirma e a loja vê o pedido pago', 
   const staff = await browser.newContext();
   await prepare(staff);
   const panel = await staff.newPage();
-  await login(panel, 'admin@e2e.mikma', 'senha-e2e-123');
+  await staffLogin(panel, 'admin@e2e.mikma', 'senha-e2e-123');
   await panel.goto(`/painel/pedidos/${orderId}`);
   await expect(panel.getByText('Pago', { exact: true }).first()).toBeVisible();
   await staff.close();

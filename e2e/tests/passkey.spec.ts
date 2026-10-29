@@ -1,20 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { login, prepare } from './helpers';
+import { login, prepare, virtualAuthenticator } from './helpers';
 
 test.beforeEach(async ({ context }) => { await prepare(context); });
 
-test('cria passkey no perfil e entra com ela, sem senha', async ({ page, context }) => {
+test('cria passkey no perfil e entra com ela, sem senha', async ({ page }) => {
   test.setTimeout(120_000);
-  // Autenticador virtual do Chromium: faz o papel do Face ID/digital.
-  const cdp = await context.newCDPSession(page);
-  await cdp.send('WebAuthn.enable');
-  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
-    options: {
-      protocol: 'ctap2', transport: 'internal',
-      hasResidentKey: true, hasUserVerification: true, isUserVerified: true,
-      automaticPresenceSimulation: true,
-    },
-  });
+  const { cdp, authenticatorId } = await virtualAuthenticator(page);
 
   await login(page, 'cliente@e2e.mikma', 'senha-e2e-123');
   await page.goto('/perfil');

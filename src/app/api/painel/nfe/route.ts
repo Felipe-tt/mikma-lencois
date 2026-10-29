@@ -7,6 +7,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { getSettings } from '@/lib/settings';
 import { nfeConfigFrom } from '@/lib/nfe/config';
 import { CertificateError, certificateInfo, removeCertificate, saveCertificate } from '@/lib/nfe/certificate';
+import { hasSecondFactor } from '@/lib/staffMfa';
 
 /**
  * Certificado digital A1 da nota fiscal (só admin).
@@ -19,7 +20,7 @@ async function admin(req: NextRequest): Promise<{ uid: string } | NextResponse> 
   if ('response' in bearer) return bearer.response;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    if ((decoded as { role?: string }).role !== 'admin') return NextResponse.json({ error: 'Só administradores' }, { status: 403 });
+    if ((decoded as { role?: string }).role !== 'admin' || !hasSecondFactor(decoded)) return NextResponse.json({ error: 'Só administradores' }, { status: 403 });
     return { uid: decoded.uid };
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
