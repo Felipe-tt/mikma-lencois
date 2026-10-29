@@ -24,7 +24,7 @@ const ident: NfeIdentity = { numero: 123, serie: 1, cNF: '12345678', dhEmi: '202
 type Det = { prod: Record<string, string | number>; imposto: Record<string, unknown> };
 function inf(order: NfeOrder, id: Partial<NfeIdentity> = {}) {
   const { nfe, chave } = buildNfe(order, customer, config, { ...ident, ...id });
-  return { chave, inf: (nfe.NFe as { infNFe: Record<string, unknown> }).infNFe as Record<string, any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  return { chave, inf: (nfe.NFe as { infNFe: Record<string, unknown> }).infNFe as Record<string, any> };
 }
 function itemSum(det: Det[], k: string) { return det.reduce((a, d) => a + cents(d.prod[k]), 0); }
 

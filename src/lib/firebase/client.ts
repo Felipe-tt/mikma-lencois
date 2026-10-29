@@ -68,7 +68,7 @@ function createAuth() {
         : [browserLocalPersistence, inMemoryPersistence],
       // Sem popupRedirectResolver aqui: ele carregava o iframe do Google
       // (apis.google.com) em toda página. O login com Google passa o
-      // resolver na própria chamada (ver services/auth.ts).
+      // resolver na própria chamada (ver components/ui/GoogleSignInButton.tsx).
     })
   } catch {
     // initializeAuth já foi chamado para este app (ex.: hot-reload em dev)

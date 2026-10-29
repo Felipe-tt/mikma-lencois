@@ -55,7 +55,7 @@ async function health(env) {
   return { ...r, ok, dispatched };
 }
 
-export default {
+const worker = {
   async scheduled(event, env, ctx) {
     const when = new Date(event.scheduledTime);
     const tasks = dueJobs(when).map(path => call(env, path));
@@ -71,3 +71,5 @@ export default {
     if (failed.length) throw new Error(`rotinas com erro: ${failed.map(r => `${r.path} ${r.status}`).join(', ')}`);
   },
 };
+
+export default worker;

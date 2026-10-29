@@ -1,6 +1,5 @@
-# Config do Firebase App Hosting. Só é lido pelo *backend do App Hosting*
-# quando ele existir — não afeta o hosting clássico (frameworksBackend) que
-# roda em produção hoje. Ver migracao-app-hosting.md para o plano completo.
+# Configuração do Firebase App Hosting (servidor da loja em produção):
+# recursos do Cloud Run e variáveis de ambiente do build e da execução.
 
 runConfig:
   minInstances: 0

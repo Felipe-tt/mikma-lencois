@@ -211,22 +211,6 @@ export default function ManutencaoPage() {
         </div>
       </div>
 
-      {/* CLI hint */}
-      <div className="border border-mist bg-paper px-5 py-4 mb-6 rounded-xl">
-        <p className="text-[11px] font-bold text-mid mb-2 tracking-[0.1em] uppercase">Pelo terminal</p>
-        <div className="flex flex-col gap-1.5">
-          <code className="text-[11px] bg-ink text-paper px-3 py-2 block font-mono rounded-lg">
-            node scripts/maintenance.js on
-          </code>
-          <code className="text-[11px] bg-ink text-paper px-3 py-2 block font-mono rounded-lg">
-            node scripts/maintenance.js allow
-          </code>
-          <p className="text-[10px] text-faint">
-            Rode dentro da pasta do projeto. Vai pedir seu e-mail e senha de vendedor (os mesmos deste painel), não precisa de Firebase CLI nem de nenhuma configuração extra. O comando <strong>allow</strong> detecta e libera seu IP automaticamente.
-          </p>
-        </div>
-      </div>
-
       {/* Queue */}
       <div className="border border-mist bg-white dark:bg-warm rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-mist bg-paper">

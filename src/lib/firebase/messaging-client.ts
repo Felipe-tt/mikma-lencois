@@ -59,28 +59,3 @@ export function getPushPermissionState(): NotificationPermission | 'unsupported'
   if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
   return Notification.permission;
 }
-
-/** Desativa push neste navegador, remove o token local e no backend. */
-export async function disablePush(getIdToken: () => Promise<string>): Promise<void> {
-  try {
-    if (!(await isSupported())) return;
-    const messaging = getMessaging(app);
-    const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
-    const token = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-      serviceWorkerRegistration: registration ?? undefined,
-    }).catch(() => null);
-
-    if (token) {
-      const idToken = await getIdToken();
-      await fetch('/api/painel/push-token', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ token }),
-      }).catch(() => {});
-      await deleteToken(messaging).catch(() => {});
-    }
-  } catch {
-    // best-effort
-  }
-}
