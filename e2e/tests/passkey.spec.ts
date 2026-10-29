@@ -19,8 +19,14 @@ test('cria passkey no perfil e entra com ela, sem senha', async ({ page }) => {
   await page.getByRole('button', { name: 'Sair da conta' }).click();
   await page.waitForURL(u => !u.pathname.startsWith('/perfil'));
   await page.goto('/entrar');
-  await page.getByRole('button', { name: 'Entrar com passkey' }).click();
-  await page.waitForURL(u => !u.pathname.startsWith('/entrar'), { timeout: 30_000 });
+  // O preenchimento automático (autenticador virtual aprova sozinho) pode
+  // entrar com a passkey antes do clique: os dois caminhos valem.
+  const left = page.waitForURL(u => !u.pathname.startsWith('/entrar'), { timeout: 30_000 });
+  await Promise.race([
+    left,
+    page.getByRole('button', { name: 'Entrar com passkey' }).click({ timeout: 10_000 }).catch(() => {}),
+  ]);
+  await left;
 
   await page.goto('/perfil');
   await expect(page.getByText(/usada em/).first()).toBeVisible();
