@@ -29,6 +29,10 @@ on:
         description: 'Ligar a verificação em duas etapas por app autenticador (TOTP) no Firebase Auth'
         type: boolean
         default: false
+      login_convidado:
+        description: 'Ligar o login anônimo no Firebase Auth (comprar sem criar conta)'
+        type: boolean
+        default: false
       verificar_ip:
         description: 'Testar em produção se o limite por IP resiste a IP forjado'
         type: boolean
@@ -51,6 +55,7 @@ jobs:
       CLOUDFLARE: ${{ inputs.cloudflare }}
       TTL: ${{ inputs.ttl_firestore }}
       MFA_TOTP: ${{ inputs.mfa_totp }}
+      LOGIN_CONVIDADO: ${{ inputs.login_convidado }}
     steps:
       - name: Autenticar no Google Cloud
         run: |
@@ -97,6 +102,24 @@ jobs:
                 echo "::warning::Sem permissão para o TTL de $col. A service account precisa do papel Cloud Datastore Index Admin (roles/datastore.indexAdmin)."
               fi
             done
+          fi
+
+      - name: Firebase Auth · login anônimo (checkout de convidado)
+        run: |
+          set +e
+          # "Comprar sem criar conta" entra como usuário anônimo do Firebase.
+          # Com o provedor desligado, o cadastro anônimo volta ADMIN_ONLY_OPERATION
+          # e o botão de convidado não funciona (o pentest acusa isso).
+          T=$(gcloud auth print-access-token)
+          C="https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJECT_ID/config"
+          echo "Login anônimo agora: $(curl -sS -H "Authorization: Bearer $T" "$C" | jq -c '.signIn.anonymous // {enabled:false}')"
+          if [ "$LOGIN_CONVIDADO" = "true" ]; then
+            r=$(curl -sS -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+              "$C?updateMask=signIn.anonymous.enabled" --data '{"signIn":{"anonymous":{"enabled":true}}}')
+            echo "$r" | jq -c '{anonimo: .signIn.anonymous, error}'
+            if echo "$r" | jq -e '.error' >/dev/null; then
+              echo "::warning::Não liguei o login anônimo: $(echo "$r" | jq -r '.error.message')"
+            fi
           fi
 
       - name: Firebase Auth · verificação em duas etapas (TOTP)
