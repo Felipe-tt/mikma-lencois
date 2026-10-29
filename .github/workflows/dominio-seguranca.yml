@@ -28,6 +28,10 @@ jobs:
       APLICAR: ${{ inputs.aplicar }}
       DOMAIN: mikma.com.br
     steps:
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - name: Estado atual (DNS público)
         run: |
           for q in "TXT $DOMAIN" "MX $DOMAIN" "CAA $DOMAIN" "TXT _dmarc.$DOMAIN" "TXT resend._domainkey.$DOMAIN" "TXT send.$DOMAIN" "MX send.$DOMAIN"; do
