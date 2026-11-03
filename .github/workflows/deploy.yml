@@ -123,7 +123,9 @@ jobs:
   # webhook assinado confirma e o pedido aparece pago no painel.
   e2e:
     name: e2e
-    runs-on: ubuntu-latest
+    # Fixo no 24.04: o ubuntu-latest passou para o 26.04, onde o Playwright
+    # ainda não instala o Chromium ("does not support chromium on ubuntu26.04").
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
