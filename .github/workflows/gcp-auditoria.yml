@@ -1,0 +1,71 @@
+name: Google Cloud · auditoria de mudanças sensíveis
+
+# A cada 6 horas lê o registro de auditoria do Google Cloud (Admin Activity,
+# sempre ligado e grátis) atrás de mudanças raras e perigosas:
+# - chave nova de conta de serviço;
+# - mudança de permissão no projeto ou numa conta de serviço;
+# - mudança ou exclusão de registros (sink, bucket, exclusão de log).
+# Se achar alguma, o job falha e o GitHub avisa por e-mail. Mudança feita por
+# você mesmo (ex.: rodar o workflow de infra) também aparece: é só conferir.
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      horas:
+        description: 'Quantas horas para trás conferir'
+        default: '6'
+
+permissions:
+  contents: read
+
+jobs:
+  auditar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PROJECT_ID: mikma-lencois
+    steps:
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Autenticar no Google Cloud
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          umask 077
+          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" --quiet
+          rm -f "$RUNNER_TEMP/sa.json"
+          gcloud config set project "$PROJECT_ID" --quiet
+
+      - name: Mudanças sensíveis
+        env:
+          HORAS: ${{ inputs.horas || '6' }}
+        run: |
+          set -uo pipefail
+          desde=$(date -u -d "$HORAS hours ago" +%Y-%m-%dT%H:%M:%SZ)
+          filtro="logName=\"projects/$PROJECT_ID/logs/cloudaudit.googleapis.com%2Factivity\" AND timestamp>=\"$desde\" AND ("
+          filtro+="protoPayload.methodName=\"google.iam.admin.v1.CreateServiceAccountKey\""
+          filtro+=" OR protoPayload.methodName=\"google.iam.admin.v1.UploadServiceAccountKey\""
+          filtro+=" OR protoPayload.methodName=\"google.iam.admin.v1.CreateServiceAccount\""
+          filtro+=" OR (protoPayload.methodName=\"SetIamPolicy\" AND protoPayload.serviceName=\"cloudresourcemanager.googleapis.com\")"
+          filtro+=" OR protoPayload.methodName=\"google.iam.admin.v1.SetIAMPolicy\""
+          filtro+=" OR (protoPayload.serviceName=\"logging.googleapis.com\" AND protoPayload.methodName=~\"(DeleteSink|UpdateSink|CreateExclusion|UpdateExclusion|DeleteBucket|UpdateBucket|DeleteLog)\")"
+          filtro+=")"
+          if ! gcloud logging read "$filtro" --format=json --limit=50 > eventos.json; then
+            echo "::warning::não consegui ler o registro de auditoria (a conta precisa de roles/logging.viewer)"
+            exit 0
+          fi
+          n=$(jq length eventos.json)
+          { echo "## Mudanças sensíveis desde $desde"; echo '```'
+            jq -r '.[] | "\(.timestamp[0:19])  \(.protoPayload.methodName)  por \(.protoPayload.authenticationInfo.principalEmail // "?")  em \(.protoPayload.resourceName // "-")"' eventos.json
+            echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$n" -gt 0 ]; then
+            echo "::error::$n mudança(s) sensível(is) no Google Cloud. Confira o resumo do run: se não foi você, troque as chaves e revise as permissões."
+            jq -r '.[] | "\(.timestamp[0:19])  \(.protoPayload.methodName)  por \(.protoPayload.authenticationInfo.principalEmail // "?")"' eventos.json
+            exit 1
+          fi
+          echo "Nenhuma mudança sensível."
