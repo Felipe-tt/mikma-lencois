@@ -2,7 +2,7 @@
 // Rodado só via GitHub Actions (workflow_dispatch), nunca em produção
 // automaticamente, é o mecanismo de bootstrap pra criar o primeiro admin,
 // já que o app não tem (por design) nenhuma forma de auto-promoção.
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 const email = process.env.TARGET_EMAIL;
@@ -18,12 +18,17 @@ if (!VALID_ROLES.has(role)) {
   process.exit(1);
 }
 
+// Com FIREBASE_PRIVATE_KEY (uso local, .env.local) usa a chave; sem ela, a
+// credencial do ambiente (no GitHub Actions, a identidade federada).
 const app = initializeApp({
-  credential: cert({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  }),
+  credential: process.env.FIREBASE_PRIVATE_KEY
+    ? cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      })
+    : applicationDefault(),
+  projectId: process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT,
 });
 const auth = getAuth(app);
 

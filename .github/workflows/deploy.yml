@@ -166,7 +166,7 @@ jobs:
           retention-days: 7
 
   # ── 2) Deploy de regras/índices/Storage: SÓ na main, único job com a chave ─
-  # A service account (GOOGLE_APPLICATION_CREDENTIALS) só existe neste job, que
+  # O acesso ao Google Cloud (identidade federada) só existe neste job, que
   # só roda em push/workflow_dispatch na main depois da validação acima passar.
   # `environment: production` permite proteger isso no GitHub (Settings ->
   # Environments -> production: restringir a branch main e, se quiser, exigir
@@ -177,6 +177,9 @@ jobs:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      id-token: write # identidade federada no Google Cloud
     concurrency:
       group: deploy-firebase
       cancel-in-progress: false
@@ -202,20 +205,22 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Write service account key
-        env:
-          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-        run: |
-          umask 077
-          printf '%s' "$SA_JSON" > "$HOME/sa.json"
+      # Entra no Google Cloud pela identidade federada: token de curta duração
+      # emitido para este repositório, sem chave JSON guardada no GitHub.
+      - name: Entrar no Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: mikma-lencois
+          workload_identity_provider: projects/915579306587/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
 
       - name: Configurar CORS do bucket de Storage (upload direto do navegador)
-        run: node scripts/set-bucket-cors.mjs "$HOME/sa.json"
+        run: node scripts/set-bucket-cors.mjs
         env:
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
 
       - name: Deploy Firestore Rules
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json npx firebase deploy --only firestore:rules --project mikma-lencois
+        run: npx firebase deploy --only firestore:rules --project mikma-lencois
 
       - name: Deploy Firestore Indexes
         # A service account do CI ainda não tem a permissão de IAM pra gerenciar
@@ -223,19 +228,15 @@ jobs:
         # no IAM do projeto, não deixamos essa falha travar o deploy do site -
         # é só um passo a mais de infra, não algo que quebra produção na hora.
         # Ver nota no fim do arquivo sobre como resolver a permissão.
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json npx firebase deploy --only firestore:indexes --project mikma-lencois
+        run: npx firebase deploy --only firestore:indexes --project mikma-lencois
         continue-on-error: true
 
       - name: Deploy Storage Rules
         # continue-on-error mantido como rede de segurança: se faltar
         # alguma permissão de IAM específica do Storage no futuro, isso
         # não deve travar o deploy do site (que depende só do Firestore).
-        run: GOOGLE_APPLICATION_CREDENTIALS=$HOME/sa.json npx firebase deploy --only storage --project mikma-lencois
+        run: npx firebase deploy --only storage --project mikma-lencois
         continue-on-error: true
-
-      - name: Remover a chave do disco
-        if: always()
-        run: rm -f "$HOME/sa.json"
 
 # ── Nota: o site é publicado pelo Firebase App Hosting ───────────────────────
 # O App Hosting está conectado direto ao GitHub e faz rollout automático a

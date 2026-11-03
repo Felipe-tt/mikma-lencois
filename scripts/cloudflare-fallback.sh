@@ -46,9 +46,9 @@ origin_ip() {
 }
 
 token() {
+  # O workflow já entrou no Google Cloud (identidade federada): o gcloud
+  # usa essa credencial.
   if [ -z "${GTOKEN:-}" ]; then
-    printf '%s' "$SA_JSON" > /tmp/sa.json
-    gcloud auth activate-service-account --key-file=/tmp/sa.json >/dev/null 2>&1
     GTOKEN=$(gcloud auth print-access-token)
   fi
   echo "$GTOKEN"

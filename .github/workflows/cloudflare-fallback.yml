@@ -17,7 +17,8 @@ on:
         options: [auto, ativar, desativar, certificado]
         default: auto
 
-permissions: {}
+permissions:
+  id-token: write # identidade federada no Google Cloud
 
 concurrency:
   group: cloudflare-fallback
@@ -36,9 +37,17 @@ jobs:
         with:
           sparse-checkout: scripts/cloudflare-fallback.sh
           sparse-checkout-cone-mode: false
+      # Entra no Google Cloud pela identidade federada: token de curta duração
+      # emitido para este repositório, sem chave JSON guardada no GitHub.
+      - name: Entrar no Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: mikma-lencois
+          workload_identity_provider: projects/915579306587/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
+
       - name: Checar
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           ACAO: ${{ github.event.schedule == '41 11 * * *' && 'certificado' || inputs.acao || 'auto' }}
         run: bash scripts/cloudflare-fallback.sh "$ACAO"

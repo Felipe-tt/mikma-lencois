@@ -12,25 +12,23 @@
  * Uso (CI): node scripts/set-bucket-cors.mjs /caminho/para/service-account.json
  */
 import { readFileSync } from 'node:fs';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { initializeApp, cert, getApps, applicationDefault } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 
 const keyPath = process.argv[2];
 const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
-if (!keyPath) {
-  console.error('[set-bucket-cors] Uso: node scripts/set-bucket-cors.mjs <caminho-service-account.json>');
-  process.exit(1);
-}
 if (!bucketName) {
   console.error('[set-bucket-cors] Faltou a env NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET');
   process.exit(1);
 }
 
-const serviceAccount = JSON.parse(readFileSync(keyPath, 'utf8'));
+// Sem arquivo de chave: credencial do ambiente (no GitHub Actions, a
+// identidade federada; ver deploy.yml).
+const credential = keyPath ? cert(JSON.parse(readFileSync(keyPath, 'utf8'))) : applicationDefault();
 
 if (!getApps().length) {
-  initializeApp({ credential: cert(serviceAccount), storageBucket: bucketName });
+  initializeApp({ credential, storageBucket: bucketName });
 }
 
 const bucket = getStorage().bucket();
