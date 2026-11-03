@@ -16,7 +16,7 @@ const BUDGET = {
   /** Pulos de layout (CLS). Medido: 0. */
   cls: 0.1,
 };
-/** JavaScript baixado até a página abrir (comprimido), em KB, por página. */
+/** JavaScript que o HTML da página pede para abrir (comprimido), em KB, por página. */
 const JS_KB = {
   vitrine: 260, // medido: 176 (home) e 188 (/produtos)
   produto: 290, // medido: 202
@@ -51,21 +51,26 @@ async function measure(page: Page, path: string) {
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(1000);
 
-  return page.evaluate(() => {
+  // JS que o HTML da página pede para abrir (as tags <script src> e os
+  // preloads de script). É fixo para um mesmo build: o que o Next carrega
+  // depois, sob demanda ou pré-carregando links, varia com o tempo de rede
+  // e não entra (antes a conta mudava de 202 para 459 KB entre rodadas).
+  const html = await (await page.request.get(path)).text();
+  const critical = [...html.matchAll(/<script[^>]+src="([^"]+\.js)"|<link[^>]+rel="preload"[^>]+as="script"[^>]+href="([^"]+)"|<link[^>]+href="([^"]+\.js)"[^>]+rel="preload"/g)]
+    .map(m => m[1] ?? m[2] ?? m[3]);
+
+  return page.evaluate((criticalPaths) => {
     const w = window as unknown as { __lcp: number; __cls: number };
-    // Só o que a página precisou para abrir: depois do load o Next pré-carrega
-    // o JS dos links visíveis, e isso varia de uma rodada para outra.
-    const loaded = (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming).loadEventStart;
+    const wanted = new Set(criticalPaths.map(p => new URL(p, location.href).pathname));
     const js = performance.getEntriesByType('resource')
-      .filter(r => r.startTime < loaded)
-      .filter(r => (r as PerformanceResourceTiming).initiatorType === 'script' || r.name.endsWith('.js'))
-      .filter(r => new URL(r.name).origin === location.origin)
+      .filter(r => new URL(r.name).origin === location.origin && wanted.has(new URL(r.name).pathname))
       .reduce((s, r) => s + (r as PerformanceResourceTiming).encodedBodySize, 0);
-    return { lcpMs: Math.round(w.__lcp), cls: Number(w.__cls.toFixed(3)), jsKb: Math.round(js / 1024) };
-  });
+    return { lcpMs: Math.round(w.__lcp), cls: Number(w.__cls.toFixed(3)), jsKb: Math.round(js / 1024), scripts: wanted.size };
+  }, critical);
 }
 
-function check(label: string, m: { lcpMs: number; cls: number; jsKb: number }, jsKb: number) {
+function check(label: string, m: { lcpMs: number; cls: number; jsKb: number; scripts: number }, jsKb: number) {
+  expect(m.scripts, `${label}: achou os scripts do HTML`).toBeGreaterThan(0);
   console.log(`desempenho ${label}: ${JSON.stringify(m)}`);
   expect(m.jsKb, `${label}: JavaScript em KB`).toBeLessThanOrEqual(jsKb);
   expect(m.lcpMs, `${label}: LCP em ms`).toBeLessThanOrEqual(BUDGET.lcpMs);

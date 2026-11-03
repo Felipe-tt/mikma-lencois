@@ -42,7 +42,9 @@ service cloud.firestore {
       // exemplo, marcar emailVerified:true ou forjar o próprio lgpdConsent.
       // As chaves 'staffPrefs.x' cobrem o setDoc(merge) com dot-notation.
       function editableKeys() {
-        return ['name', 'cpf', 'phone', 'address', 'staffPrefs',
+        // Sem cpf e phone: ficam criptografados e só o servidor grava
+        // (/api/user/pii, ver src/lib/piiCrypto.ts).
+        return ['name', 'address', 'staffPrefs',
                 'staffPrefs.lastYarnCount', 'staffPrefs.lastCategory',
                 'staffPrefs.lastSize', 'staffPrefs.lastFabrics', 'staffPrefs.navOrder'];
       }
@@ -51,8 +53,6 @@ service cloud.firestore {
       function validProfile(d, keys) {
         return (!('name' in keys) || (d.name is string && d.name.size() >= 1
                   && d.name.size() <= 100 && !d.name.matches('.*[<>].*')))
-            && (!('cpf' in keys) || (d.cpf is string && d.cpf.size() <= 14))
-            && (!('phone' in keys) || (d.phone is string && d.phone.size() <= 20))
             && (!('address' in keys) || !('address' in d) || validAddress(d.address)
                   || (d.address is string && d.address.size() <= 500));
       }
