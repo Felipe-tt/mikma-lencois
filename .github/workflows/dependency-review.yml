@@ -1,0 +1,35 @@
+name: Dependências · revisão no PR
+
+# Barra o PR que adiciona ou atualiza um pacote com vulnerabilidade
+# conhecida (severidade moderada ou maior), antes de chegar na main.
+# Só olha o que o PR muda: o que já existe é papel do Dependabot.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          # deepmerge: só no build, sem versão corrigida (ver osv-scanner.toml).
+          allow-ghsas: GHSA-gcqx-w48m-w2h4
+          comment-summary-in-pr: on-failure

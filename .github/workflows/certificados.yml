@@ -1,0 +1,56 @@
+name: Domínio · certificados emitidos
+
+# Todo certificado HTTPS emitido fica num registro público (Certificate
+# Transparency). Uma vez por dia confere os emitidos nos últimos 2 dias para
+# mikma.com.br e subdomínios: se algum veio de uma autoridade fora da lista
+# (as mesmas do registro CAA), o job falha e o GitHub avisa por e-mail. É o
+# sinal de alguém tentando se passar pelo site.
+
+on:
+  schedule:
+    - cron: '13 12 * * *'
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: 'Quantos dias para trás conferir'
+        default: '2'
+
+permissions:
+  contents: read
+
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Certificados novos
+        env:
+          DIAS: ${{ inputs.dias || '2' }}
+        run: |
+          set -uo pipefail
+          json=""
+          for i in 1 2 3; do
+            json=$(curl -sS --max-time 60 'https://crt.sh/?q=%25.mikma.com.br&output=json&exclude=expired') && [ -n "$json" ] && break
+            sleep 20
+          done
+          if ! echo "$json" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::warning::crt.sh não respondeu; tenta de novo amanhã"
+            exit 0
+          fi
+          desde=$(date -u -d "$DIAS days ago" +%Y-%m-%dT%H:%M:%S)
+          # Organizações das autoridades liberadas no CAA do domínio.
+          ok='Google Trust Services|Let.s Encrypt|SSL Corporation|Sectigo|DigiCert|COMODO'
+          echo "$json" | jq -r --arg d "$desde" '.[] | select(.entry_timestamp >= $d) | [.entry_timestamp[0:16], .issuer_name, (.name_value | gsub("\n"; " "))] | @tsv' | sort -u > novos.tsv
+          { echo "## Certificados emitidos desde $desde (UTC)"; echo '```'; cat novos.tsv; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          echo "Novos: $(wc -l < novos.tsv)"
+          estranhos=$(grep -vE "O=($ok)" novos.tsv || true)
+          if [ -n "$estranhos" ]; then
+            echo "::error::Certificado emitido por autoridade fora da lista:"
+            echo "$estranhos"
+            exit 1
+          fi
+          echo "Tudo emitido por autoridades conhecidas."
