@@ -8,6 +8,7 @@ import { verifyRecaptcha } from '@/lib/recaptcha';
 import { LEGAL_VERSION } from '@/lib/legal';
 import { sanitizeDisplayName } from '@/lib/html';
 import { validateEmail, validatePhone, validateCpf } from '@/lib/validation/signup';
+import { piiPatch } from '@/lib/piiCrypto';
 import { checkPassword, PASSWORD_MAX } from '@/lib/validation/password';
 
 const schema = z
@@ -120,8 +121,8 @@ export async function POST(req: NextRequest) {
       email,
       role: 'buyer',
       emailVerified: true,
-      ...(phone ? { phone } : {}),
-      ...(cpf ? { cpf } : {}),
+      // CPF e telefone criptografados (ver lib/piiCrypto.ts).
+      ...piiPatch({ cpf, phone }, { newDoc: true }),
       lgpdConsent: { date: new Date().toISOString(), version: LEGAL_VERSION, ip },
       createdAt: new Date().toISOString(),
     });

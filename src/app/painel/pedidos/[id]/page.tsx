@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { fetchCustomerPii } from '@/lib/piiClient';
 import { maskCep, maskPhone } from '@/lib/masks';
 import type { Order, User } from '@/types';
 import dynamic from 'next/dynamic';
@@ -241,9 +242,11 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   useEffect(() => {
     if (!orderUserId) return;
     let alive = true;
-    getDoc(doc(db, 'users', orderUserId)).then(uSnap => {
+    // CPF e telefone vêm da API (criptografados no banco, ver lib/piiCrypto.ts).
+    const pii = user ? fetchCustomerPii(user, orderUserId).catch(() => ({ cpf: '', phone: '' })) : Promise.resolve({ cpf: '', phone: '' });
+    Promise.all([getDoc(doc(db, 'users', orderUserId)), pii]).then(([uSnap, p]) => {
       if (!alive || !uSnap.exists()) return;
-      const ur = uSnap.data();
+      const ur: Record<string, unknown> = { ...uSnap.data(), cpf: p.cpf, phone: p.phone };
       const toIso = (v: unknown) => (typeof v === 'object' && v !== null && 'seconds' in v)
         ? new Date((v as { seconds: number }).seconds * 1000).toISOString()
         : typeof v === 'string' ? v : undefined;
@@ -259,7 +262,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       console.error('Erro ao buscar dados do cliente:', err);
     });
     return () => { alive = false; };
-  }, [orderUserId]);
+  }, [orderUserId, user]);
 
   function copy(text: string, key: string) {
     navigator.clipboard.writeText(text);

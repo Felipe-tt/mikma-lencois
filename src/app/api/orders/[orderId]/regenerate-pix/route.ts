@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { withPii } from '@/lib/piiCrypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { extractBearer, getClientIp, tooManyRequests } from '@/lib/security';
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
 
   // Carrega dados do usuário para customer
   const userSnap = await adminDb.collection('users').doc(uid).get();
-  const userData = userSnap.data() ?? {};
+  const userData = withPii(userSnap.data());
   const hasAllCustomerFields = userData.email && userData.cpf && userData.phone && (userData.displayName ?? userData.name);
   const customerData = hasAllCustomerFields ? {
     name:      userData.displayName ?? userData.name,

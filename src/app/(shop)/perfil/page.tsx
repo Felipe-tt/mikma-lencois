@@ -8,6 +8,7 @@ import { deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { db } from '@/lib/firebase/db';
+import { fetchMyPii, saveMyPii } from '@/lib/piiClient';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { PerfilSkeleton } from '@/components/ui/Skeleton';
@@ -59,13 +60,14 @@ export default function PerfilPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    getDoc(doc(db, 'users', user.uid))
-      .then(snap => {
+    // CPF e telefone vêm da API (criptografados no banco, ver lib/piiCrypto.ts).
+    Promise.all([getDoc(doc(db, 'users', user.uid)), fetchMyPii(user).catch(() => ({ cpf: '', phone: '' }))])
+      .then(([snap, pii]) => {
         if (cancelled) return;
         const d = snap.data();
         setAddress(toAddress(d?.address));
-        const ph = typeof d?.phone === 'string' ? maskPhone(d.phone) : '';
-        const cp = typeof d?.cpf === 'string' ? maskCpf(d.cpf) : '';
+        const ph = pii.phone ? maskPhone(pii.phone) : '';
+        const cp = pii.cpf ? maskCpf(pii.cpf) : '';
         // Não apaga o que a pessoa já começou a digitar (rede lenta).
         if (!phoneTouched.current) setPhone(ph);
         setSavedPhone(ph);
@@ -87,7 +89,8 @@ export default function PerfilPage() {
     setPhoneErr('');
     setSaving(true); setError('');
     try {
-      await setDoc(doc(db, 'users', user.uid), { name: clean, phone: onlyDigits(phone) }, { merge: true });
+      await setDoc(doc(db, 'users', user.uid), { name: clean }, { merge: true });
+      if (onlyDigits(phone) !== onlyDigits(savedPhone)) await saveMyPii(user, { phone: onlyDigits(phone) });
       setSavedPhone(phone);
       setSavedName(clean);
       // Atualiza também o nome do login, que é o que aparece em "Olá, X".

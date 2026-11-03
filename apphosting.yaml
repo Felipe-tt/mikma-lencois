@@ -143,6 +143,12 @@ env:
     secret: EDGE_SHARED_SECRET
     availability: [RUNTIME]
 
+  # Chave que criptografa CPF e telefone no Firestore (src/lib/piiCrypto.ts).
+  # Criada pelo workflow de infra (opção chave_dados_pessoais); nunca trocar.
+  - variable: PII_ENCRYPTION_KEY
+    secret: PII_ENCRYPTION_KEY
+    availability: [RUNTIME]
+
 # NAO incluído aqui (nao sao secrets de app, sao credenciais do proprio
 # processo de CI/deploy, nao devem ir para dentro do backend rodando):
 #   GOOGLE_APPLICATION_CREDENTIALS

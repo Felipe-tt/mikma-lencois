@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { cpfBlindIndex, readPii } from '@/lib/piiCrypto';
 import { assessRisk, type OrderRisk, type RiskAssessment } from '@/lib/fraudSignals';
 
 export type { OrderRisk } from '@/lib/fraudSignals';
@@ -46,10 +47,18 @@ export async function assessOrderRisk(orderId: string): Promise<RiskAssessment |
   const seen = new Map<string, Order>();
   for (const qs of [byAddress, byIp]) for (const d of qs?.docs ?? []) seen.set(d.id, { id: d.id, ...d.data() } as Order);
 
-  const cpf = String(userSnap.get('cpf') ?? '').replace(/\D/g, '');
-  const sameCpfAccounts = cpf.length === 11
-    ? (await adminDb.collection('users').where('cpf', '==', cpf).limit(10).get()).docs.filter(d => d.id !== uid).length
-    : 0;
+  // CPF criptografado: compara pelo HMAC (cpfHash) e, enquanto houver perfis
+  // antigos em claro, também pelo campo cpf (ver lib/piiCrypto.ts).
+  const cpf = readPii(userSnap.data()).cpf.replace(/\D/g, '');
+  let sameCpfAccounts = 0;
+  if (cpf.length === 11) {
+    const hash = process.env.PII_ENCRYPTION_KEY ? cpfBlindIndex(cpf) : null;
+    const [byHash, byPlain] = await Promise.all([
+      hash ? adminDb.collection('users').where('cpfHash', '==', hash).limit(10).get() : { docs: [] },
+      adminDb.collection('users').where('cpf', '==', cpf).limit(10).get(),
+    ]);
+    sameCpfAccounts = new Set([...byHash.docs, ...byPlain.docs].map(d => d.id).filter(id => id !== uid)).size;
+  }
 
   const orderTime = Date.parse(order.createdAt) || Date.now();
   const declines = ((declinesSnap.get('at') as number[] | undefined) ?? []).filter(t => t <= orderTime + 60 * 60_000 && orderTime - t < DAY);
