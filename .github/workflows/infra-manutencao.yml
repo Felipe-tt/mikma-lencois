@@ -41,6 +41,14 @@ on:
         description: 'Apagar a função SSR da hospedagem antiga (ssrmikmalencois), só se o domínio já estiver no App Hosting'
         type: boolean
         default: false
+      identidade_github:
+        description: 'Criar o acesso do GitHub ao Google Cloud sem chave fixa (Workload Identity Federation)'
+        type: boolean
+        default: false
+      chave_dados_pessoais:
+        description: 'Criar a chave que criptografa CPF e telefone no banco (PII_ENCRYPTION_KEY)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -56,6 +64,8 @@ jobs:
       TTL: ${{ inputs.ttl_firestore }}
       MFA_TOTP: ${{ inputs.mfa_totp }}
       LOGIN_CONVIDADO: ${{ inputs.login_convidado }}
+      IDENTIDADE_GITHUB: ${{ inputs.identidade_github }}
+      CHAVE_PII: ${{ inputs.chave_dados_pessoais }}
     steps:
       - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
@@ -361,6 +371,68 @@ jobs:
           done
           echo "Respostas 429: $bloqueou de 70"
           if [ "$bloqueou" -gt 0 ]; then echo "OK: o IP forjado não engana o limite"; else echo "ATENÇÃO: limite não disparou"; fi
+
+      - name: Permissões das contas (revisão)
+        continue-on-error: true
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          set +e
+          # Quem tem papel amplo no projeto (dono ou editor pode tudo). Conta
+          # de serviço com papel amplo é a que mais estraga se a chave vazar.
+          echo "## Papéis por conta"
+          gcloud projects get-iam-policy "$PROJECT_ID" --format=json \
+            | jq -r '.bindings[] | .role as $r | .members[] | "\(.)\t\($r)"' | sort | tee papeis.tsv
+          echo "## Atenção: contas de serviço com papel amplo"
+          grep -E "^serviceAccount:.*\s+roles/(owner|editor)$" papeis.tsv || echo "nenhuma"
+          echo "## Chaves fixas (JSON) por conta de serviço"
+          for sa in $(gcloud iam service-accounts list --format='value(email)'); do
+            gcloud iam service-accounts keys list --iam-account "$sa" --managed-by=user --format='value(name.basename(),validAfterTime)' \
+              | while read -r id quando; do echo "$sa  chave=$id  criada=$quando"; done
+          done
+          echo "Chave usada pelo GitHub: $(printf '%s' "$SA_JSON" | jq -r '.client_email + "  chave=" + .private_key_id')"
+
+      - name: Acesso do GitHub sem chave fixa (Workload Identity Federation)
+        if: ${{ inputs.identidade_github }}
+        env:
+          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          set +e
+          SA=$(printf '%s' "$SA_JSON" | jq -r .client_email)
+          PN=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+          REPO="${GITHUB_REPOSITORY}"
+          gcloud services enable iamcredentials.googleapis.com sts.googleapis.com
+          gcloud iam workload-identity-pools describe github --location=global >/dev/null 2>&1 \
+            || gcloud iam workload-identity-pools create github --location=global --display-name="GitHub Actions"
+          # Só tokens deste repositório: outro repositório do GitHub não entra.
+          gcloud iam workload-identity-pools providers describe github-actions --location=global --workload-identity-pool=github >/dev/null 2>&1 \
+            || gcloud iam workload-identity-pools providers create-oidc github-actions --location=global --workload-identity-pool=github \
+                 --display-name="GitHub Actions" --issuer-uri="https://token.actions.githubusercontent.com" \
+                 --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+                 --attribute-condition="assertion.repository=='${REPO}'"
+          gcloud iam service-accounts add-iam-policy-binding "$SA" --role=roles/iam.workloadIdentityUser \
+            --member="principalSet://iam.googleapis.com/projects/${PN}/locations/global/workloadIdentityPools/github/attribute.repository/${REPO}" >/dev/null \
+            && echo "conta $SA liberada para o repositório $REPO"
+          echo "## Provedor (vai nos workflows):"
+          echo "projects/${PN}/locations/global/workloadIdentityPools/github/providers/github-actions"
+          echo "Conta: $SA"
+
+      - name: Chave de criptografia dos dados pessoais
+        if: ${{ inputs.chave_dados_pessoais }}
+        run: |
+          set +e
+          # CPF e telefone ficam criptografados no Firestore (AES-256-GCM, ver
+          # src/lib/piiCrypto.ts). Nunca troca uma chave existente: os dados
+          # gravados com ela ficariam ilegíveis.
+          if gcloud secrets describe PII_ENCRYPTION_KEY >/dev/null 2>&1; then
+            echo "PII_ENCRYPTION_KEY já existe: mantida"
+          else
+            openssl rand -base64 32 | tr -d '\n' | gcloud secrets create PII_ENCRYPTION_KEY --replication-policy=automatic --data-file=- >/dev/null && echo "PII_ENCRYPTION_KEY criada"
+          fi
+          # Mesmo acesso dos secrets que já funcionam (build e runtime do App Hosting).
+          gcloud secrets get-iam-policy CRON_SECRET --format=json | jq -r '.bindings[]? | .role as $r | .members[] | "\($r) \(.)"' | while read -r role m; do
+            gcloud secrets add-iam-policy-binding PII_ENCRYPTION_KEY --member="$m" --role="$role" >/dev/null && echo "acesso: $role $m"
+          done
 
       - name: Último build com falha (App Hosting)
         continue-on-error: true
