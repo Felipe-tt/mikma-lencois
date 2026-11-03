@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
 
   let account, guest;
   try {
-    account = await adminAuth.verifyIdToken(authHeader.slice(7));
-    guest = await adminAuth.verifyIdToken(body.data.guestToken);
+    account = await adminAuth.verifyIdToken(authHeader.slice(7), true);
+    guest = await adminAuth.verifyIdToken(body.data.guestToken, true);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }

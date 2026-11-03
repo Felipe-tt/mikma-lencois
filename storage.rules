@@ -18,10 +18,11 @@ service firebase.storage {
       // envio e era sempre negado, e as fotos trocadas ficavam acumulando.
       allow delete: if isStaff();
       allow create, update: if isStaff()
-        && request.resource.size < 8 * 1024 * 1024  // 8 MB
-        // Sem image/svg+xml: SVG pode carregar <script> e seria servido do
-        // domínio do Storage. Só formatos raster.
-        && request.resource.contentType.matches('image/(webp|jpeg|png|gif|avif)');
+        && request.resource.size < 5 * 1024 * 1024  // 5 MB
+        // Só o que o painel gera: toda foto passa por um canvas que regrava
+        // em WebP ou JPEG e descarta os metadados (EXIF com GPS). Sem SVG,
+        // que pode carregar <script> servido do domínio do Storage.
+        && request.resource.contentType.matches('image/(webp|jpeg)');
     }
 
     // Bloquear tudo mais

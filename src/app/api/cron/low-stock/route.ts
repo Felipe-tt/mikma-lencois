@@ -6,6 +6,7 @@ import { notifySeller } from '@/lib/push/notifySeller';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { hexToColorName } from '@/lib/colorNames';
 import { SIZE_LABEL } from '@/lib/productOptions';
+import { ensureHoneyDoc } from '@/lib/honeytoken';
 
 // Antes: uma notificação por SKU, repetida a cada 24h e a cada venda que
 // baixava o estoque, inclusive de madrugada. Agora:
@@ -34,6 +35,10 @@ export async function GET(req: NextRequest) {
   }
 
   const results = { checked: 0, low: 0, notified: 0, recovered: 0, errors: 0 };
+
+  // Armadilha da chave de API falsa: planta o documento se ainda não existe
+  // (ver lib/honeytoken.ts). Falha aqui não atrapalha o resto da rotina.
+  await ensureHoneyDoc(process.env.STAFF_SESSION_SECRET).catch(err => console.error('honeytoken:', err));
 
   const invSnap = await adminDb.collection('inventory').get();
   results.checked = invSnap.size;
