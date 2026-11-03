@@ -33,9 +33,11 @@ jobs:
         run: |
           set -uo pipefail
           json=""
-          for i in 1 2 3; do
-            json=$(curl -sS --max-time 60 'https://crt.sh/?q=%25.mikma.com.br&output=json&exclude=expired') && [ -n "$json" ] && break
-            sleep 20
+          # O crt.sh às vezes devolve uma página de erro em vez da lista: tenta de novo.
+          for i in 1 2 3 4; do
+            json=$(curl -sS --max-time 60 'https://crt.sh/?q=%25.mikma.com.br&output=json&exclude=expired' || true)
+            echo "$json" | jq -e 'type == "array"' >/dev/null 2>&1 && break
+            sleep 30
           done
           if ! echo "$json" | jq -e 'type == "array"' >/dev/null 2>&1; then
             echo "::warning::crt.sh não respondeu; tenta de novo amanhã"
