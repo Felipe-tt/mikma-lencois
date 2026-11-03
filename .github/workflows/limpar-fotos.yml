@@ -1,13 +1,19 @@
 name: Storage · limpar fotos sem uso
 
 # Rodado manualmente. Sem "apagar", só lista as fotos de produto que nenhum
-# documento do Firestore usa (ver scripts/limpar-fotos-orfas.mjs).
+# documento do Firestore usa (ver scripts/limpar-fotos-orfas.mjs). Com
+# "metadados", confere (ou regrava, junto com "apagar") as fotos que ainda
+# têm EXIF/GPS (ver scripts/limpar-metadados-fotos.mjs).
 
 on:
   workflow_dispatch:
     inputs:
       apagar:
         description: 'Apagar as fotos sem uso (sem isso, só lista)'
+        type: boolean
+        default: false
+      metadados:
+        description: 'Tirar metadados (EXIF, GPS) das fotos em vez de procurar fotos sem uso'
         type: boolean
         default: false
 
@@ -37,11 +43,14 @@ jobs:
           SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
           APAGAR: ${{ inputs.apagar }}
+          METADADOS: ${{ inputs.metadados }}
         run: |
           umask 077
           printf '%s' "$SA_JSON" > "$HOME/sa.json"
           trap 'rm -f "$HOME/sa.json"' EXIT
-          if [ "$APAGAR" = "true" ]; then
+          if [ "$METADADOS" = "true" ]; then
+            node scripts/limpar-metadados-fotos.mjs "$HOME/sa.json" $([ "$APAGAR" = "true" ] && echo --apply)
+          elif [ "$APAGAR" = "true" ]; then
             node scripts/limpar-fotos-orfas.mjs "$HOME/sa.json" --apply
           else
             node scripts/limpar-fotos-orfas.mjs "$HOME/sa.json"

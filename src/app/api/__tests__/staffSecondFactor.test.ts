@@ -34,3 +34,36 @@ describe('rotas da equipe exigem a segunda etapa', () => {
     it(rel, () => expect(src).toMatch(ENFORCES_SECOND_FACTOR));
   }
 });
+
+/**
+ * Toda rota confere se o login foi revogado (verifyIdToken com true): sem
+ * isso, quem saiu de todos os aparelhos, trocou a senha ou foi removido da
+ * equipe seguiria usando a API até o token expirar (1 h). Exceção: as rotas
+ * consultadas em loop pela tela do pedido, que conferem só para a equipe.
+ */
+const POLLING = new Set(['orders/[orderId]/check-payment/route.ts', 'orders/[orderId]/uber-sync/route.ts']);
+
+/** Argumentos de cada chamada a verifyIdToken (com parênteses aninhados). */
+function verifyCalls(src: string): string[] {
+  const out: string[] = [];
+  for (let i = src.indexOf('verifyIdToken('); i !== -1; i = src.indexOf('verifyIdToken(', i + 1)) {
+    let depth = 0;
+    let j = i + 'verifyIdToken'.length;
+    for (; j < src.length; j++) {
+      if (src[j] === '(') depth++;
+      else if (src[j] === ')' && --depth === 0) break;
+    }
+    out.push(src.slice(i, j + 1));
+  }
+  return out;
+}
+
+describe('rotas conferem se o login foi revogado', () => {
+  for (const file of routes(API)) {
+    const rel = file.slice(API.length + 1);
+    if (POLLING.has(rel)) continue;
+    const calls = verifyCalls(readFileSync(file, 'utf8'));
+    if (!calls.length) continue;
+    it(rel, () => { for (const c of calls) expect(c).toMatch(/,\s*true\)$/); });
+  }
+});

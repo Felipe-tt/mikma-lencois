@@ -8,6 +8,7 @@ import { generateActionToken } from '@/lib/auth-token';
 import { sendEmail } from '@/lib/email';
 import { actionButtonEmailHtml } from '@/lib/email-templates';
 import { passwordLeaked } from '@/lib/leakedCredentials';
+import { HONEY_LOGIN_EMAILS, triggerHoneytoken } from '@/lib/honeytoken';
 
 const schema = z.object({
   email: z.string().email().max(256),
@@ -66,6 +67,12 @@ export async function POST(req: NextRequest) {
 
     const { email, password, recaptchaToken } = parsed.data;
     const emailLower = email.toLowerCase();
+    // Isca: e-mail de administrador que não existe. Responde como senha
+    // errada e avisa a equipe (ver lib/honeytoken.ts).
+    if (HONEY_LOGIN_EMAILS.has(emailLower)) {
+      await triggerHoneytoken({ kind: 'login-isca', ip, userAgent: req.headers.get('user-agent'), detail: emailLower, country: req.headers.get('cf-ipcountry') });
+      return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 400 });
+    }
     // Por IP + e-mail: só o e-mail deixava qualquer pessoa travar o login
     // de outra (8 tentativas erradas com o e-mail dela). O limite por IP
     // acima continua segurando força bruta.

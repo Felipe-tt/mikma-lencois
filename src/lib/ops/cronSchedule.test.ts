@@ -27,7 +27,13 @@ describe('agenda do Worker de rotinas', () => {
       [JOBS.notasFiscais]: 144,
       [JOBS.avisoReposicao]: 24,
       [JOBS.estoqueBaixo]: 4,
+      [JOBS.retencao]: 1,
     });
+  });
+
+  it('retenção (LGPD) uma vez por dia, depois do backup', () => {
+    expect(dueJobs(at(6, 35))).toContain(JOBS.retencao);
+    expect(dueJobs(at(6, 0))).not.toContain(JOBS.retencao);
   });
 
   it('saúde a cada 10 min, nos minutos 5, 15, 25...', () => {

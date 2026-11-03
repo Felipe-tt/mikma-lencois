@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   let decoded;
-  try { decoded = await adminAuth.verifyIdToken(authHeader.slice(7)); } catch {
+  try { decoded = await adminAuth.verifyIdToken(authHeader.slice(7), true); } catch {
     return NextResponse.json({ error: 'Sessão expirada. Recarregue a página.' }, { status: 401 });
   }
   if (decoded.firebase?.sign_in_provider !== 'anonymous') {

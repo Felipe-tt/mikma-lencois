@@ -12,6 +12,7 @@ import { AccountSkeleton } from '@/components/ui/Skeleton';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import type { Address, Order, OrderStatus } from '@/types';
 import { toAddress, streetLine, cityLine } from '@/lib/address';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 const ICON = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
@@ -57,6 +58,24 @@ function memberSince(creationTime?: string) {
   const d = new Date(creationTime);
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
+/** Invalida o login em todos os aparelhos (celular perdido, computador emprestado). */
+async function signOutEverywhere(logout: () => Promise<void>) {
+  const { confirmed } = await confirmDialog({
+    message: 'Sair de todos os aparelhos?',
+    detail: 'Sua conta será desconectada em todos os celulares e computadores, inclusive neste. Depois é só entrar de novo.',
+    confirmLabel: 'Sair de todos',
+  });
+  if (!confirmed) return;
+  try {
+    const token = await auth.currentUser?.getIdToken();
+    const res = await fetch('/api/auth/revoke-sessions', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error();
+    await logout();
+  } catch {
+    await confirmDialog({ message: 'Não foi possível sair dos outros aparelhos. Tente de novo.', alertOnly: true });
+  }
 }
 
 export default function ContaPage() {
@@ -165,13 +184,21 @@ export default function ContaPage() {
           })}
         </section>
 
-        <button
-          onClick={logout}
-          className="self-start inline-flex items-center gap-2 h-10 px-4 -ml-4 rounded-full text-[13px] text-mid hover:text-ink hover:bg-warm transition-colors"
-        >
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Sair da conta
-        </button>
+        <div className="flex flex-wrap items-center gap-x-2 -ml-4">
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-full text-[13px] text-mid hover:text-ink hover:bg-warm transition-colors"
+          >
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sair da conta
+          </button>
+          <button
+            onClick={() => signOutEverywhere(logout)}
+            className="inline-flex items-center h-10 px-4 rounded-full text-[13px] text-faint hover:text-ink hover:bg-warm transition-colors"
+          >
+            Sair de todos os aparelhos
+          </button>
+        </div>
       </div>
     </div>
   );

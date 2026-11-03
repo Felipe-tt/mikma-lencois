@@ -45,13 +45,18 @@ describe('products/', () => {
   });
 
   it('vendedor e admin enviam imagem', async () => {
-    await assertSucceeds(uploadBytes(ref(seller(), 'products/p2/a.png'), png, { contentType: 'image/png' }));
+    await assertSucceeds(uploadBytes(ref(seller(), 'products/p2/a.webp'), png, { contentType: 'image/webp' }));
     await assertSucceeds(uploadBytes(ref(admin(), 'products/p2/b.jpg'), png, { contentType: 'image/jpeg' }));
   });
 
   it('cliente e visitante não enviam', async () => {
-    await assertFails(uploadBytes(ref(customer(), 'products/p2/c.png'), png, { contentType: 'image/png' }));
-    await assertFails(uploadBytes(ref(anon(), 'products/p2/d.png'), png, { contentType: 'image/png' }));
+    await assertFails(uploadBytes(ref(customer(), 'products/p2/c.webp'), png, { contentType: 'image/webp' }));
+    await assertFails(uploadBytes(ref(anon(), 'products/p2/d.webp'), png, { contentType: 'image/webp' }));
+  });
+
+  it('só WebP e JPEG, os formatos que o painel gera', async () => {
+    await assertFails(uploadBytes(ref(seller(), 'products/p2/x.png'), png, { contentType: 'image/png' }));
+    await assertFails(uploadBytes(ref(seller(), 'products/p2/x.gif'), png, { contentType: 'image/gif' }));
   });
 
   it('SVG e outros tipos são recusados (SVG pode ter script)', async () => {
@@ -59,9 +64,9 @@ describe('products/', () => {
     await assertFails(uploadBytes(ref(seller(), 'products/p2/x.html'), png, { contentType: 'text/html' }));
   });
 
-  it('arquivo de 8 MB ou mais é recusado', async () => {
-    const big = new Uint8Array(8 * 1024 * 1024);
-    await assertFails(uploadBytes(ref(seller(), 'products/p2/grande.png'), big, { contentType: 'image/png' }));
+  it('arquivo de 5 MB ou mais é recusado', async () => {
+    const big = new Uint8Array(5 * 1024 * 1024);
+    await assertFails(uploadBytes(ref(seller(), 'products/p2/grande.webp'), big, { contentType: 'image/webp' }));
   });
 
   it('só vendedor/admin apaga', async () => {
