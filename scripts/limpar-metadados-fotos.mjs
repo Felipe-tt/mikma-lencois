@@ -7,12 +7,12 @@
  * painel, chegaria com tudo. Este script pega essas e as antigas.
  *
  * Uso:
- *   node scripts/limpar-metadados-fotos.mjs chave.json            # só lista
- *   node scripts/limpar-metadados-fotos.mjs chave.json --apply    # regrava
+ *   node scripts/limpar-metadados-fotos.mjs [chave.json]          # só lista
+ *   node scripts/limpar-metadados-fotos.mjs [chave.json] --apply  # regrava
  * Precisa de NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET no ambiente.
  */
 import { readFileSync } from 'node:fs';
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import sharp from 'sharp';
 
@@ -20,12 +20,15 @@ const args = process.argv.slice(2);
 const apply = args.includes('--apply');
 const keyPath = args.find((a) => !a.startsWith('--'));
 const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-if (!keyPath || !bucketName) {
-  console.error('Uso: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=... node scripts/limpar-metadados-fotos.mjs chave.json [--apply]');
+if (!bucketName) {
+  console.error('Uso: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=... node scripts/limpar-metadados-fotos.mjs [chave.json] [--apply]');
   process.exit(1);
 }
 
-initializeApp({ credential: cert(JSON.parse(readFileSync(keyPath, 'utf8'))), storageBucket: bucketName });
+// Sem arquivo de chave: credencial do ambiente (no GitHub Actions, a identidade
+// federada; ver .github/workflows/limpar-fotos.yml).
+const credential = keyPath ? cert(JSON.parse(readFileSync(keyPath, 'utf8'))) : applicationDefault();
+initializeApp({ credential, storageBucket: bucketName });
 const bucket = getStorage().bucket();
 
 const [files] = await bucket.getFiles({ prefix: 'products/' });

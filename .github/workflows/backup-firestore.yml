@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # identidade federada no Google Cloud
 
 concurrency:
   group: backup-firestore
@@ -44,31 +45,30 @@ jobs:
       - name: Dependências (sem scripts de instalação)
         run: npm ci --ignore-scripts
 
+      # Entra no Google Cloud pela identidade federada: token de curta duração
+      # emitido para este repositório, sem chave JSON guardada no GitHub.
+      - name: Entrar no Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: mikma-lencois
+          workload_identity_provider: projects/915579306587/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
+
       - name: Limpar temporários antigos
         if: ${{ inputs.limpar_antigos }}
-        env:
-          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-        run: |
-          umask 077
-          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
-          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" node scripts/firestore-limpar-antigos.mjs --aplicar
-          rm -f "$RUNNER_TEMP/sa.json"
+        run: node scripts/firestore-limpar-antigos.mjs --aplicar
 
       - name: Backup
         if: ${{ !inputs.limpar_antigos }}
         env:
-          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
         run: |
           if [ -z "$BACKUP_KEY" ]; then echo "::error::Falta o secret BACKUP_KEY (senha do backup)"; exit 1; fi
           umask 077
-          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
-          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           dia=$(date -u +%Y-%m-%d)
           node scripts/firestore-backup.mjs "$RUNNER_TEMP/firestore-$dia.mikmabk"
           # Confere que o arquivo abre com a senha antes de guardar.
           node scripts/firestore-restore.mjs "$RUNNER_TEMP/firestore-$dia.mikmabk" | head -1
-          rm -f "$RUNNER_TEMP/sa.json"
           echo "DIA=$dia" >> "$GITHUB_ENV"
 
       - name: Guardar por 14 dias

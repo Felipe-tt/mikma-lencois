@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # identidade federada no Google Cloud
 
 jobs:
   auditar:
@@ -31,15 +32,14 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Autenticar no Google Cloud
-        env:
-          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-        run: |
-          umask 077
-          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
-          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" --quiet
-          rm -f "$RUNNER_TEMP/sa.json"
-          gcloud config set project "$PROJECT_ID" --quiet
+      # Entra no Google Cloud pela identidade federada: token de curta duração
+      # emitido para este repositório, sem chave JSON guardada no GitHub.
+      - name: Entrar no Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: mikma-lencois
+          workload_identity_provider: projects/915579306587/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
 
       - name: Mudanças sensíveis
         env:

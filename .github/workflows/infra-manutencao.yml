@@ -52,6 +52,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # identidade federada no Google Cloud
 
 jobs:
   infra:
@@ -71,13 +72,14 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Autenticar no Google Cloud
-        run: |
-          echo "$SA_JSON" > /tmp/sa.json
-          gcloud auth activate-service-account --key-file=/tmp/sa.json
-          gcloud config set project "$PROJECT_ID"
-        env:
-          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      # Entra no Google Cloud pela identidade federada: token de curta duração
+      # emitido para este repositório, sem chave JSON guardada no GitHub.
+      - name: Entrar no Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: mikma-lencois
+          workload_identity_provider: projects/915579306587/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
 
       - name: Artifact Registry
         run: |
@@ -172,7 +174,7 @@ jobs:
         run: |
           set +e
           echo "## App Hosting"
-          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx -y firebase-tools@14 apphosting:backends:list --project "$PROJECT_ID"
+          npx -y firebase-tools@14 apphosting:backends:list --project "$PROJECT_ID"
           echo "## Cloud Run"
           gcloud run services list --format='table(metadata.name,region,status.url)'
           echo "## Cloud Functions"
@@ -212,9 +214,9 @@ jobs:
               echo "Acesso para $m"
               gcloud secrets add-iam-policy-binding ABACATEPAY_WEBHOOK_SECRET --member="$m" --role=roles/secretmanager.secretAccessor >/dev/null && echo ok
             done
-            for b in $(GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx -y firebase-tools@14 apphosting:backends:list --project "$PROJECT_ID" --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const r=JSON.parse(s).result||[];for(const b of r)console.log(String(b.name).split("/").pop())}catch{}})'); do
+            for b in $(npx -y firebase-tools@14 apphosting:backends:list --project "$PROJECT_ID" --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const r=JSON.parse(s).result||[];for(const b of r)console.log(String(b.name).split("/").pop())}catch{}})'); do
               echo "Acesso ao backend $b"
-              GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx -y firebase-tools@14 apphosting:secrets:grantaccess ABACATEPAY_WEBHOOK_SECRET --backend "$b" --project "$PROJECT_ID"
+              npx -y firebase-tools@14 apphosting:secrets:grantaccess ABACATEPAY_WEBHOOK_SECRET --backend "$b" --project "$PROJECT_ID"
             done
           fi
 
@@ -374,8 +376,6 @@ jobs:
 
       - name: Permissões das contas (revisão)
         continue-on-error: true
-        env:
-          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
         run: |
           set +e
           # Quem tem papel amplo no projeto (dono ou editor pode tudo). Conta
@@ -390,15 +390,13 @@ jobs:
             gcloud iam service-accounts keys list --iam-account "$sa" --managed-by=user --format='value(name.basename(),validAfterTime)' \
               | while read -r id quando; do echo "$sa  chave=$id  criada=$quando"; done
           done
-          echo "Chave usada pelo GitHub: $(printf '%s' "$SA_JSON" | jq -r '.client_email + "  chave=" + .private_key_id')"
+          echo "O GitHub entra como: $(gcloud config get-value account 2>/dev/null) (identidade federada, sem chave)"
 
       - name: Acesso do GitHub sem chave fixa (Workload Identity Federation)
         if: ${{ inputs.identidade_github }}
-        env:
-          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
         run: |
           set +e
-          SA=$(printf '%s' "$SA_JSON" | jq -r .client_email)
+          SA=firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
           PN=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
           REPO="${GITHUB_REPOSITORY}"
           gcloud services enable iamcredentials.googleapis.com sts.googleapis.com

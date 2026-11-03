@@ -11,12 +11,12 @@
  * Arquivos enviados nos últimos 3 dias também ficam (cadastro em andamento).
  *
  * Uso:
- *   node scripts/limpar-fotos-orfas.mjs chave.json            # só lista (dry-run)
- *   node scripts/limpar-fotos-orfas.mjs chave.json --apply    # apaga de fato
+ *   node scripts/limpar-fotos-orfas.mjs [chave.json]          # só lista (dry-run)
+ *   node scripts/limpar-fotos-orfas.mjs [chave.json] --apply  # apaga de fato
  * Precisa de NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET no ambiente.
  */
 import { readFileSync } from 'node:fs';
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
@@ -24,12 +24,15 @@ const args = process.argv.slice(2);
 const apply = args.includes('--apply');
 const keyPath = args.find((a) => !a.startsWith('--'));
 const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-if (!keyPath || !bucketName) {
-  console.error('Uso: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=... node scripts/limpar-fotos-orfas.mjs chave.json [--apply]');
+if (!bucketName) {
+  console.error('Uso: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=... node scripts/limpar-fotos-orfas.mjs [chave.json] [--apply]');
   process.exit(1);
 }
 
-initializeApp({ credential: cert(JSON.parse(readFileSync(keyPath, 'utf8'))), storageBucket: bucketName });
+// Sem arquivo de chave: credencial do ambiente (no GitHub Actions, a identidade
+// federada; ver .github/workflows/limpar-fotos.yml).
+const credential = keyPath ? cert(JSON.parse(readFileSync(keyPath, 'utf8'))) : applicationDefault();
+initializeApp({ credential, storageBucket: bucketName });
 const db = getFirestore();
 const bucket = getStorage().bucket();
 const MIN_AGE_MS = Number(process.env.IDADE_MIN_DIAS ?? 3) * 24 * 60 * 60 * 1000;

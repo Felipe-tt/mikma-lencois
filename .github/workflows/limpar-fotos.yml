@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # identidade federada no Google Cloud
 
 jobs:
   limpar:
@@ -42,20 +43,25 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      # Entra no Google Cloud pela identidade federada: token de curta duração
+      # emitido para este repositório, sem chave JSON guardada no GitHub.
+      - name: Entrar no Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: mikma-lencois
+          workload_identity_provider: projects/915579306587/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
+
       - name: Limpar fotos
         env:
-          SA_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
           APAGAR: ${{ inputs.apagar }}
           METADADOS: ${{ inputs.metadados }}
         run: |
-          umask 077
-          printf '%s' "$SA_JSON" > "$HOME/sa.json"
-          trap 'rm -f "$HOME/sa.json"' EXIT
           if [ "$METADADOS" = "true" ]; then
-            node scripts/limpar-metadados-fotos.mjs "$HOME/sa.json" $([ "$APAGAR" = "true" ] && echo --apply)
+            node scripts/limpar-metadados-fotos.mjs $([ "$APAGAR" = "true" ] && echo --apply)
           elif [ "$APAGAR" = "true" ]; then
-            node scripts/limpar-fotos-orfas.mjs "$HOME/sa.json" --apply
+            node scripts/limpar-fotos-orfas.mjs --apply
           else
-            node scripts/limpar-fotos-orfas.mjs "$HOME/sa.json"
+            node scripts/limpar-fotos-orfas.mjs
           fi
