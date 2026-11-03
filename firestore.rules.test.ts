@@ -219,15 +219,23 @@ describe('users/{uid}: whitelist de campos graváveis pelo próprio usuário', (
     await assertFails(updateDoc(ref, { uid: 'buyer2' }));
   });
 
-  it('comprador atualiza nome, telefone, CPF e endereço (mapa), como o checkout faz', async () => {
+  it('comprador atualiza nome e endereço (mapa), como o checkout faz', async () => {
     const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
     await seedUser();
     await assertSucceeds(
       setDoc(doc(buyer.firestore(), 'users/buyer1'), {
-        name: 'Ana Souza', cpf: '12345678901', phone: '47999999999',
+        name: 'Ana Souza',
         address: { cep: '89010000', street: 'Rua X', number: '1' },
       }, { merge: true })
     );
+  });
+
+  it('CPF e telefone só pelo servidor (criptografados): o cliente não grava', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await seedUser();
+    for (const field of ['cpf', 'phone', 'cpfEnc', 'phoneEnc', 'cpfHash']) {
+      await assertFails(setDoc(doc(buyer.firestore(), 'users/buyer1'), { [field]: '12345678901' }, { merge: true }));
+    }
   });
 
   it('nome com < ou > é recusado (higiene contra injeção)', async () => {
@@ -240,7 +248,7 @@ describe('users/{uid}: whitelist de campos graváveis pelo próprio usuário', (
   it('um update que não toca no nome passa mesmo se o nome legado tiver < (não trava o usuário)', async () => {
     const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
     await seedUser({ name: '<legado>' });
-    await assertSucceeds(updateDoc(doc(buyer.firestore(), 'users/buyer1'), { phone: '47999999999' }));
+    await assertSucceeds(updateDoc(doc(buyer.firestore(), 'users/buyer1'), { address: { cep: '89010000', street: 'Rua X', number: '1' } }));
   });
 
   it('preferências do painel (staffPrefs) continuam graváveis', async () => {
@@ -259,7 +267,7 @@ describe('users/{uid}: whitelist de campos graváveis pelo próprio usuário', (
 
   it('create: dono cria o próprio documento só com campos da whitelist', async () => {
     const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
-    await assertSucceeds(setDoc(doc(buyer.firestore(), 'users/buyer1'), { name: 'Ana', phone: '47999999999' }));
+    await assertSucceeds(setDoc(doc(buyer.firestore(), 'users/buyer1'), { name: 'Ana' }));
   });
 
   it('CRÍTICO: create com role/admin ou em documento de outro usuário é recusado', async () => {
