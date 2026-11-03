@@ -5,6 +5,8 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
+import { auth } from '@/lib/firebase/client';
+import { fetchCustomerPii } from '@/lib/piiClient';
 import type { Order, User } from '@/types';
 import type { StoreSettings } from '@/lib/store-settings';
 import { STORE_DEFAULTS } from '@/lib/store-settings';
@@ -46,7 +48,9 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
         const o = { id: snap.id, ...snap.data() } as Order;
         setOrder(o);
         const uSnap = await getDoc(doc(db, 'users', o.userId));
-        if (uSnap.exists()) setCustomer(uSnap.data() as User);
+        // CPF e telefone vêm da API (criptografados no banco, ver lib/piiCrypto.ts).
+        const pii = auth.currentUser ? await fetchCustomerPii(auth.currentUser, o.userId).catch(() => null) : null;
+        if (uSnap.exists()) setCustomer({ ...uSnap.data(), ...(pii ?? {}) } as User);
         const sSnap = await getDoc(doc(db, 'settings', 'store'));
         if (sSnap.exists()) setSettings({ ...STORE_DEFAULTS, ...sSnap.data() } as StoreSettings);
       } finally {

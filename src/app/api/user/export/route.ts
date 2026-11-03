@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { withPii } from '@/lib/piiCrypto';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 
 export async function GET(req: NextRequest) {
@@ -38,9 +39,10 @@ export async function GET(req: NextRequest) {
       email ? adminDb.collection('restockRequests').where('email', '==', email).get() : null,
     ]);
 
-    const userData = { ...(userSnap.data() ?? {}) };
-    // Remove campos sensíveis
-    delete userData.passwordHash;
+    // CPF e telefone abertos (no banco ficam criptografados), sem os campos
+    // internos da criptografia.
+    const userData: Record<string, unknown> = withPii(userSnap.data());
+    for (const k of ['passwordHash', 'cpfEnc', 'phoneEnc', 'cpfHash']) delete userData[k];
 
     // Custo real do frete é dado interno da loja, não do cliente.
     const orders = ordersSnap.docs.map(d => {

@@ -8,6 +8,7 @@
  * pelo painel informando o código de rastreio (update-status).
  */
 import { shippingBlockReason } from '@/lib/orders/shippingBlock';
+import { withPii } from '@/lib/piiCrypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
 
       // Busca dados do cliente (nome + telefone)
       const userSnap   = await adminDb.collection('users').doc(order.userId).get();
-      const userData   = userSnap.data() ?? {};
+      const userData   = withPii(userSnap.data());
       const customerName  = (userData.name as string | undefined) || 'Cliente';
       const customerPhone = formatPhone((userData.phone as string | undefined) || '47999999999');
 

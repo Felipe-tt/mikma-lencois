@@ -7,6 +7,7 @@ import { doc, onSnapshot, getDoc, setDoc, updateDoc, collection, query, where, g
 import { CHECKOUT_LOCK_MS } from '@/lib/sharedCart';
 import { auth } from '@/lib/firebase/client';
 import { db } from '@/lib/firebase/db';
+import { fetchMyPii, saveMyPii } from '@/lib/piiClient';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { SIZE_LABEL } from '@/lib/productOptions';
@@ -302,7 +303,8 @@ export default function CheckoutPage() {
       setCL(false);
       setApiErr('Não conseguimos carregar seu carrinho. Verifique a conexão e recarregue a página.');
     });
-    getDoc(doc(db, 'users', user.uid)).then(s => {
+    // CPF e telefone vêm da API (criptografados no banco, ver lib/piiCrypto.ts).
+    Promise.all([getDoc(doc(db, 'users', user.uid)), fetchMyPii(user).catch(() => ({ cpf: '', phone: '' }))]).then(([s, pii]) => {
       // A pessoa já começou a digitar (rede lenta): não sobrescreve nem pula etapa.
       if (formTouched.current) return;
       const d = s.data();
@@ -311,8 +313,8 @@ export default function CheckoutPage() {
       if (savedAddr) setAddr(savedAddr);
       const c = {
         name: d?.name ?? user.displayName ?? '',
-        cpf: d?.cpf ? maskCpf(d.cpf) : '',
-        phone: d?.phone ? maskPhone(d.phone) : '',
+        cpf: pii.cpf ? maskCpf(pii.cpf) : '',
+        phone: pii.phone ? maskPhone(pii.phone) : '',
         // Convidado: o e-mail que ele deu numa compra anterior (servidor).
         email: user.email ?? (typeof d?.email === 'string' ? d.email : ''),
       };
@@ -439,7 +441,8 @@ export default function CheckoutPage() {
   }
   function advanceToStep2() {
     if (!validateStep1()) return;
-    saveProgress({ name: customer.name.trim(), cpf: onlyDigits(customer.cpf), phone: onlyDigits(customer.phone) });
+    saveProgress({ name: customer.name.trim() });
+    if (user) saveMyPii(user, { cpf: onlyDigits(customer.cpf), phone: onlyDigits(customer.phone) }).catch(() => {});
     setS1Done(true);
     goToStep(2);
   }
@@ -496,10 +499,9 @@ export default function CheckoutPage() {
         });
         if (!g.ok) throw new Error((await g.json().catch(() => ({}))).error ?? 'Confira o e-mail e tente de novo.');
       }
-      await setDoc(doc(db, 'users', user.uid), {
-        address: addr, name: customer.name,
-        cpf: onlyDigits(customer.cpf), phone: onlyDigits(customer.phone),
-      }, { merge: true });
+      await setDoc(doc(db, 'users', user.uid), { address: addr, name: customer.name }, { merge: true });
+      // O pagamento lê o CPF e o telefone do perfil: grava antes de cobrar.
+      await saveMyPii(user, { cpf: onlyDigits(customer.cpf), phone: onlyDigits(customer.phone) });
 
       if (payMethod === 'pix') {
         const res = await fetch('/api/payment/create-pix', {

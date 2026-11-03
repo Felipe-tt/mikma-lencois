@@ -1,6 +1,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Auth } from 'firebase-admin/auth';
+import { piiPatch } from '@/lib/piiCrypto';
 
 /**
  * Prazos de retenção (LGPD), os mesmos da Política de Privacidade:
@@ -12,6 +13,8 @@ import type { Auth } from 'firebase-admin/auth';
  * - conta de convidado sem pedido: 90 dias sem uso;
  * - pedido de "Avise-me quando chegar": 1 ano;
  * - fila da manutenção: 30 dias.
+ * A mesma rotina criptografa o CPF e o telefone que ainda estejam em claro
+ * em perfis antigos.
  */
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const RETENTION = {
@@ -46,6 +49,7 @@ export function anonymizedOrderPatch(address: { city?: string; state?: string } 
 }
 
 export interface RetentionResult {
+  piiEncrypted: number;
   ordersAnonymized: number;
   orderIpsRemoved: number;
   guestsDeleted: number;
@@ -59,7 +63,20 @@ const BATCH = 300;
 
 export async function runRetention(db: Firestore, auth: Auth, now = new Date()): Promise<RetentionResult> {
   const nowIso = now.toISOString();
-  const r: RetentionResult = { ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0 };
+  const r: RetentionResult = { piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0 };
+
+  // Perfis antigos com CPF/telefone em claro: criptografa (ver lib/piiCrypto.ts).
+  if (process.env.PII_ENCRYPTION_KEY) {
+    for (const field of ['cpf', 'phone'] as const) {
+      const legacy = await db.collection('users').orderBy(field).limit(BATCH).get();
+      for (const doc of legacy.docs) {
+        const value = doc.get(field);
+        if (typeof value !== 'string') continue;
+        await doc.ref.set(piiPatch({ [field]: value }), { merge: true });
+        r.piiEncrypted++;
+      }
+    }
+  }
 
   // Pedidos: um cursor (ops/retention) guarda até onde cada limpeza já foi,
   // para cada pedido ser lido uma vez só, e não todo dia.

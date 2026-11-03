@@ -35,6 +35,8 @@ const env = {
   CRON_SECRET: 'e2e_cron_secret_0123456789',
   STAFF_SESSION_SECRET: 'e2e_staff_session_secret_0123456789abcdef',
   EDGE_SHARED_SECRET: 'e2e-edge',
+  // Chave de teste (32 bytes) para a criptografia de CPF e telefone.
+  PII_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
   NEXT_TELEMETRY_DISABLED: '1',
   E2E_BASE_URL: `http://localhost:${PORT}`,
   // Passkeys: o domínio aceito vem daqui (localhost nos testes).

@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/nextjs';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { withPii } from '@/lib/piiCrypto';
 import { getSettings } from '@/lib/settings';
 import { nfeConfigFrom, type NfeConfig, type NfeEnvironment } from './config';
 import { brasiliaIso, buildNfe, chaveAcesso, nfeProblems, randomCNF, UF_CODE, type NfeOrder } from './payload';
@@ -76,7 +77,7 @@ async function notify(orderId: string, env: NfeEnvironment, message: string) {
 
 async function loadCustomer(order: FirebaseFirestore.DocumentData) {
   const uid = order.userId as string | undefined;
-  const user = uid ? (await adminDb.collection('users').doc(uid).get()).data() ?? {} : {};
+  const user = withPii(uid ? (await adminDb.collection('users').doc(uid).get()).data() : {});
   let email = (user.email as string | undefined) || (order.customerEmail as string | undefined);
   if (!email && uid) email = await adminAuth.getUser(uid).then(u => u.email, () => undefined);
   return { name: String(user.name ?? user.displayName ?? order.customerName ?? ''), cpf: String(user.cpf ?? ''), email, phone: user.phone as string | undefined };

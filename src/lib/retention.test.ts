@@ -13,7 +13,12 @@ function fakeDb(data: Record<string, Record<string, Doc>>) {
   const ref = (col: string, id: string) => ({
     id,
     get: async () => ({ exists: !!data[col]?.[id], data: () => data[col]?.[id] }),
-    set: async (v: Doc, opt?: { merge?: boolean }) => { data[col] ??= {}; data[col][id] = opt?.merge ? { ...data[col][id], ...v } : v; },
+    set: async (v: Doc, opt?: { merge?: boolean }) => {
+      data[col] ??= {};
+      const cur: Doc = opt?.merge ? { ...data[col][id] } : {};
+      for (const [k, val] of Object.entries(v)) { if (val === DELETE) delete cur[k]; else cur[k] = val; }
+      data[col][id] = cur;
+    },
     update: async (v: Doc) => {
       const cur = { ...data[col][id] };
       for (const [k, val] of Object.entries(v)) { if (val === DELETE) delete cur[k]; else cur[k] = val; }
@@ -31,7 +36,7 @@ function fakeDb(data: Record<string, Record<string, Doc>>) {
         if (x === undefined) return false;
         return op === '<' ? x < (v as string) : op === '>=' ? x >= (v as string) : op === '==' ? x === v : false;
       }));
-      if (order) rows = rows.sort(([, a], [, b]) => String(a[order]).localeCompare(String(b[order])));
+      if (order) rows = rows.filter(([, d]) => d[order] !== undefined).sort(([, a], [, b]) => String(a[order]).localeCompare(String(b[order])));
       const docs = rows.slice(0, lim).map(([id, d]) => ({ id, ref: ref(col, id), get: (k: string) => d[k], data: () => d }));
       return { docs, size: docs.length, empty: docs.length === 0 };
     },
@@ -104,6 +109,24 @@ describe('retenção (LGPD)', () => {
     expect(data.users).not.toHaveProperty('guest-parado');
     expect(data.carts).not.toHaveProperty('guest-parado');
     expect(data.users).toHaveProperty('guest-comprou');
+  });
+
+  it('criptografa CPF e telefone que ainda estão em claro', async () => {
+    process.env.PII_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
+    try {
+      const data: Record<string, Record<string, Doc>> = {
+        users: { antigo: { name: 'Ana', cpf: '52998224725', phone: '47999990000' }, novo: { name: 'Bia' } },
+      };
+      const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+      expect(r.piiEncrypted).toBe(2);
+      expect(data.users.antigo).not.toHaveProperty('cpf');
+      expect(data.users.antigo).not.toHaveProperty('phone');
+      expect(String(data.users.antigo.cpfEnc)).toMatch(/^enc1:/);
+      expect(String(data.users.antigo.phoneEnc)).toMatch(/^enc1:/);
+      expect(data.users.novo).toEqual({ name: 'Bia' });
+    } finally {
+      delete process.env.PII_ENCRYPTION_KEY;
+    }
   });
 
   it('apaga "avise-me" com mais de 1 ano e fila de manutenção com mais de 30 dias', async () => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { withPii } from '@/lib/piiCrypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getSettings } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
@@ -370,7 +371,7 @@ export async function POST(req: NextRequest) {
     // ── (lido antes de criar o pedido: nome/e-mail vão no próprio pedido)
     // ── Load user profile ─────────────────────────────────────────────────────
     const userSnap = await adminDb.collection('users').doc(uid).get();
-    const userData = userSnap.data() ?? {};
+    const userData = withPii(userSnap.data());
 
     // ── Create order ──────────────────────────────────────────────────────────
     const orderId = `ord_${randomBytes(8).toString('hex')}`;
