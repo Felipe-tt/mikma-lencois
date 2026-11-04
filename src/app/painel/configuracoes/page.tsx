@@ -23,7 +23,7 @@ import { Select } from '@/components/ui/Select';
 import { HeroPreview, FeaturedPreview, CtaPreview } from '@/components/painel/preview/HomePreview';
 import { FooterPreview } from '@/components/painel/preview/FooterPreview';
 import { SobrePreview } from '@/components/painel/preview/SobrePreview';
-import { ProductTrustPreview, SizeGuidePreview, BedSizeGuidePreview } from '@/components/painel/preview/ProductPreview';
+import { ProductTrustPreview, SizeGuidePreview } from '@/components/painel/preview/ProductPreview';
 import { BusinessHoursEditor } from '@/components/painel/BusinessHoursEditor';
 import { parseBusinessHours, serializeBusinessHours } from '@/lib/business-hours';
 import { maskCnpj, isValidCnpj, maskPhone, isValidPhone, maskCep, isValidCep } from '@/lib/masks';
@@ -56,7 +56,7 @@ export default function ConfiguracoesPage() {
   const [saved, setSaved]       = useState(false);
   const [saveError, setSaveError] = useState('');
   const [tab, setTab]           = useState<Tab>('loja');
-  const [preview, setPreview]   = useState<null|'hero'|'featured'|'cta'|'footer'|'sobre'|'trust'|'sizeguide'|'bedguide'>(null);
+  const [preview, setPreview]   = useState<null|'hero'|'featured'|'cta'|'footer'|'sobre'|'trust'|'sizeguide'>(null);
   const [shippingLedger, setShippingLedger] = useState<{ collectedCents: number; spentCents: number; balanceCents: number } | null>(null);
 
   // Último estado salvo: o salvamento grava só o que mudou. Mandar o
@@ -374,48 +374,33 @@ export default function ConfiguracoesPage() {
             <F label="Garantia 3" value={settings.productTrust3 ?? ''} onChange={v => set('productTrust3', v)} placeholder="Pagamento PIX com confirmação imediata" />
           </Card>
 
-          <Card icon="ruler" title="Guia de medidas" desc="Tabela que abre quando o cliente clica em 'Guia de medidas' na página do produto, dimensões por PEÇA (lençol, fronha, capa de duvet...)" onPreview={() => setPreview('sizeguide')}>
+          <Card icon="ruler" title="Medidas da embalagem" desc="O mesmo texto do cartão que vai dentro de cada pacote. Aparece na página do produto em “Esta embalagem contém”." onPreview={() => setPreview('sizeguide')}>
             <Info>
-              Diferente da tabela &quot;Guia de tamanhos de cama&quot; logo abaixo: esta aqui é por tipo de peça (uma
-              coluna pra Lençol, outra pra Fronha, outra pra Capa duvet...). Configure as colunas (separadas por
-              vírgula) e depois preencha as linhas. A primeira coluna é sempre o nome do tamanho; nas outras,
-              preencha largura, comprimento e altura em centímetros.
+              Preencha cada tamanho igual ao cartão da embalagem: o <strong>lençol</strong> em largura × comprimento ×
+              altura (ex.: 88 × 188 × 40) e a <strong>fronha</strong> em largura × comprimento (ex.: 50 × 70). O site
+              monta sozinho “01 Lençol (88 × 188 × 40 cm) / 01 fronha (50 × 70 cm)”: Solteiro com 1 fronha, os outros com 2.
+              Como o lençol é box, a medida dele é a do colchão, então a calculadora do{' '}
+              <code className="text-[11px] bg-warm px-1 rounded">/guia-de-tamanhos</code> usa esses mesmos números.
+              Para a fronha avulsa, crie uma linha “Par de fronhas” e preencha só a fronha.
             </Info>
-            <F label="Colunas da tabela"
-              value={(() => { try { return JSON.parse(settings.sizeGuideColumns || '[]').join(', '); } catch { return ''; } })()}
-              onChange={v => set('sizeGuideColumns', JSON.stringify(v.split(',').map((s: string) => s.trim()).filter(Boolean)))}
-              placeholder="Tamanho, Lençol, Fronha, Capa duvet" />
             <TableEditor
               measures
               colsJson={settings.sizeGuideColumns}
               rowsJson={settings.sizeGuideRows}
               onRowsChange={v => set('sizeGuideRows', v)}
             />
-            <p className="text-[11px] text-faint -mt-1">Medidas em centímetros: largura × comprimento × altura. A altura é opcional (fronha não tem).</p>
-            <F label="Observação (rodapé da tabela)"
+            <F label="Observação (aparece embaixo da lista)"
               value={settings.sizeGuideNote ?? ''} onChange={v => set('sizeGuideNote', v)}
               placeholder="Medidas podem variar ±2 cm após lavagem. Recomendamos lavar antes do primeiro uso." />
-          </Card>
-
-          <Card icon="ruler" title="Guia de tamanhos de cama" desc="Tabela na página do produto + fonte da largura usada na calculadora do /guia-de-tamanhos" onPreview={() => setPreview('bedguide')}>
-            <Info>
-              Uma tabela, dois usos: <strong>1)</strong> aparece na página do produto pra mostrar o tamanho do
-              lençol acabado (ele é maior que o colchão de propósito, pra sobrar pano e prender o elástico -
-              por isso &quot;Comprimento&quot;/&quot;Largura&quot; aqui são maiores que a medida real do colchão). <strong>2)</strong> a
-              coluna <strong>&quot;Cama&quot;</strong> é lida pela calculadora do{' '}
-              <code className="text-[11px] bg-warm px-1 rounded">/guia-de-tamanhos</code> pra descobrir o tamanho a
-              partir da largura que o cliente mede em casa, não existe uma tabela separada pra isso, é sempre
-              este mesmo valor. Se editar a coluna &quot;Cama&quot;, os dois lugares atualizam juntos.
-            </Info>
-            <F label="Colunas da tabela"
-              value={(() => { try { return JSON.parse(settings.bedSizeColumns || '[]').join(', '); } catch { return ''; } })()}
-              onChange={v => set('bedSizeColumns', JSON.stringify(v.split(',').map((s: string) => s.trim()).filter(Boolean)))}
-              placeholder="Tamanho, Cama, Comprimento, Largura" />
-            <TableEditor
-              colsJson={settings.bedSizeColumns}
-              rowsJson={settings.bedSizeRows}
-              onRowsChange={v => set('bedSizeRows', v)}
-            />
+            <details className="text-[12px] text-mid">
+              <summary className="cursor-pointer text-faint">Avançado: peças da tabela</summary>
+              <div className="mt-3">
+                <F label="Peças (separadas por vírgula; a primeira é o nome do tamanho)"
+                  value={(() => { try { return JSON.parse(settings.sizeGuideColumns || '[]').join(', '); } catch { return ''; } })()}
+                  onChange={v => set('sizeGuideColumns', JSON.stringify(v.split(',').map((s: string) => s.trim()).filter(Boolean)))}
+                  placeholder="Tamanho, Lençol, Fronha" />
+              </div>
+            </details>
           </Card>
 
         </div>
@@ -658,8 +643,7 @@ export default function ConfiguracoesPage() {
       <PreviewModal open={preview==='footer'}    onClose={() => setPreview(null)} title="Rodapé"                routeLabel="/"><FooterPreview s={settings}/></PreviewModal>
       <PreviewModal open={preview==='sobre'}     onClose={() => setPreview(null)} title="Sobre nós"             routeLabel="/sobre"><SobrePreview s={settings}/></PreviewModal>
       <PreviewModal open={preview==='trust'}     onClose={() => setPreview(null)} title="Garantias do produto"  routeLabel="/produtos/[produto]"><ProductTrustPreview s={settings}/></PreviewModal>
-      <PreviewModal open={preview==='sizeguide'} onClose={() => setPreview(null)} title="Guia de medidas"       routeLabel="/produtos/[produto]"><SizeGuidePreview s={settings}/></PreviewModal>
-      <PreviewModal open={preview==='bedguide'}  onClose={() => setPreview(null)} title="Guia de tamanhos"      routeLabel="/produtos/[produto]"><BedSizeGuidePreview s={settings}/></PreviewModal>
+      <PreviewModal open={preview==='sizeguide'} onClose={() => setPreview(null)} title="Medidas da embalagem"  routeLabel="/produtos/[produto]"><SizeGuidePreview s={settings}/></PreviewModal>
     </div>
   );
 }
