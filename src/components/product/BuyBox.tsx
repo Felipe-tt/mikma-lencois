@@ -19,6 +19,8 @@ import { useOverlay } from '@/lib/hooks/useOverlay';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { useCartCount } from '@/lib/hooks/useCartCount';
 import { savePendingPurchase, readPendingPurchase, clearPendingPurchase } from '@/lib/pendingPurchase';
+import { SizeMeasures, lineForSize } from '@/components/product/SizeMeasures';
+import type { PackageLine } from '@/lib/packageContents';
 
 interface Props {
   product: Product;
@@ -29,6 +31,8 @@ interface Props {
   swapSku?: string; // SKU da fronha trocada, pra reservar estoque dela junto (ver JogoDeCamaBuyBox)
   maxQty?: number; // limite extra (ex: estoque da fronha trocada cobre só N jogos)
   swapQtyPerUnit?: number; // quantas fronhas por unidade deste item (não multiplicado aqui — expandStockLines faz isso na hora de reservar/liberar)
+  packageLines?: PackageLine[]; // o que vem no pacote de cada tamanho (cartão da embalagem), ver src/lib/packageContents.ts
+  packageNote?: string; // observação das medidas (ex.: ±2 cm após lavagem)
 }
 
 interface ShipOption {
@@ -42,7 +46,7 @@ interface ShipOption {
 // Mesmos selos do checkout.
 const SHIP_TAG: Record<string, string> = { economico: 'Econômico', rapido: 'Mais rápido' };
 
-export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapQtyPerUnit, maxQty }: Props) {
+export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapQtyPerUnit, maxQty, packageLines = [], packageNote }: Props) {
   // Carrinho e compra aceitam o convidado ("comprar sem cadastro").
   const { buyer: user, loading } = useAuth();
   const router = useRouter();
@@ -72,6 +76,20 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const [shipError, setShipError] = useState<string | null>(null);
 
   const selectedVariant = product.variants.find(v => v.id === selectedVariantId);
+  // O que muda entre as variações: o botão mostra só isso.
+  const sizesVary = new Set(product.variants.map(v => v.size)).size > 1;
+  const colorsVary = new Set(product.variants.map(v => v.colorName ?? '')).size > 1;
+  // Tamanho "Único" (fronha avulsa) não diz nada ao cliente: some do botão.
+  const sizeMatters = product.variants.some(v => v.size !== 'unico');
+  const variantLabel = (v: ProductVariant) => {
+    const size = v.size === 'unico' ? '' : SIZE_LABEL[v.size] ?? v.size;
+    const color = v.colorName ? formatColorName(v.colorName) : '';
+    if (!colorsVary && size) return size;
+    if (colorsVary && !sizesVary) return color || size;
+    return [size, color].filter(Boolean).join(' · ') || SIZE_LABEL[v.size] || v.size;
+  };
+  // O que vem no pacote do tamanho escolhido (cartão da embalagem).
+  const packageLine = lineForSize(packageLines, selectedVariant ? SIZE_LABEL[selectedVariant.size] ?? selectedVariant.size : undefined);
 
   function getStock(variant: ProductVariant): number {
     const sku = `${product.id}_${variant.id}`;
@@ -294,49 +312,82 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
 
         {/* Variante */}
         <div className="border-t border-mist pt-5">
-          <div className="flex items-center justify-between mb-3">
-            <p className="label">Tamanho / Variação</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {product.variants.map(variant => {
-              const stock = getStock(variant);
-              const isSelected = variant.id === selectedVariantId;
-              const unavailable = stock === 0;
+          {product.variants.length === 1 ? (
+            // Uma variação só (o normal: cada produto é um tamanho): nada a
+            // escolher, então nada de botão. O tamanho e a cor aparecem como texto.
+            (() => {
+              const v = product.variants[0];
+              const color = v.colorName ? formatColorName(v.colorName) : '';
+              const size = v.size === 'unico' ? '' : SIZE_LABEL[v.size] ?? v.size;
               return (
-                <button
-                  key={variant.id}
-                  onClick={() => { if (!unavailable) { setSelectedVariantId(variant.id); setQty(1); } }}
-                  disabled={unavailable}
-                  title={unavailable ? 'Fora de estoque' : undefined}
-                  aria-pressed={isSelected}
-                  className={[
-                    'relative rounded-full border px-4 py-2.5 text-[13px] font-medium transition-all duration-150',
-                    isSelected
-                      ? 'border-ink bg-ink text-paper'
-                      : unavailable
-                      ? 'cursor-not-allowed border-mist text-faint'
-                      : 'border-mist text-mid hover:border-ink/50 hover:text-ink',
-                  ].join(' ')}
-                >
-                  {unavailable && (
-                    <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
-                      <span className="absolute top-[calc(50%-0.5px)] left-0 w-[141%] h-px bg-mist origin-left rotate-[-27deg] translate-x-[-10%]" />
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-2">
-                    {SIZE_LABEL[variant.size] ?? variant.size}
-                    {variant.colorName ? ` · ${formatColorName(variant.colorName)}` : ''}
-                  </span>
-                </button>
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="flex items-baseline gap-2.5">
+                    <span className="label">{size ? 'Tamanho' : 'Cor'}</span>
+                    <span className="text-[15px] font-semibold text-ink">{size || color}</span>
+                  </p>
+                  {size && color && <p className="text-[12px] text-mid">Cor: <span className="font-medium text-ink">{color}</span></p>}
+                </div>
               );
-            })}
-          </div>
-          {/* Inline: o pontilhado acompanha só o texto, não a largura toda. */}
-          <p className="mt-2.5 text-[11.5px] text-pretty">
-            <Link href="/guia-de-tamanhos" className="relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] text-faint hover:text-clay-l transition-colors border-b border-dotted border-faint-l hover:border-clay-l">
-              Não sabe seu tamanho? Meça o colchão e a gente te diz
-            </Link>
-          </p>
+            })()
+          ) : (
+            <>
+              {/* Só o que varia vai no botão: com uma cor só, "Casal" em vez de
+                  "Casal · Bege" (a cor aparece uma vez, ao lado do título). */}
+              {(() => {
+                const fixedColor = !colorsVary && product.variants[0]?.colorName ? formatColorName(product.variants[0].colorName) : '';
+                return (
+                  <div className="flex items-baseline justify-between gap-3 mb-3">
+                    <p className="label">{sizesVary && colorsVary ? 'Tamanho e cor' : colorsVary || !sizeMatters ? 'Cor' : 'Tamanho'}</p>
+                    {fixedColor && sizeMatters && <p className="text-[12px] text-mid">Cor: <span className="text-ink font-medium">{fixedColor}</span></p>}
+                  </div>
+                );
+              })()}
+              <div className="flex flex-wrap gap-2">
+                {product.variants.map(variant => {
+                  const stock = getStock(variant);
+                  const isSelected = variant.id === selectedVariantId;
+                  const unavailable = stock === 0;
+                  return (
+                    <button
+                      key={variant.id}
+                      onClick={() => { if (!unavailable) { setSelectedVariantId(variant.id); setQty(1); } }}
+                      disabled={unavailable}
+                      title={unavailable ? 'Fora de estoque' : undefined}
+                      aria-pressed={isSelected}
+                      className={[
+                        'relative rounded-full border px-4 py-2.5 text-[13px] font-medium transition-all duration-150',
+                        isSelected
+                          ? 'border-ink bg-ink text-paper'
+                          : unavailable
+                          ? 'cursor-not-allowed border-mist text-faint'
+                          : 'border-mist text-mid hover:border-ink/50 hover:text-ink',
+                      ].join(' ')}
+                    >
+                      {unavailable && (
+                        <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
+                          <span className="absolute top-[calc(50%-0.5px)] left-0 w-[141%] h-px bg-mist origin-left rotate-[-27deg] translate-x-[-10%]" />
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-2">
+                        {variantLabel(variant)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          {/* O que vem no pacote do tamanho escolhido (cartão da embalagem). */}
+          {packageLine ? (
+            <SizeMeasures line={packageLine} note={packageNote} />
+          ) : (
+            // Inline: o pontilhado acompanha só o texto, não a largura toda.
+            <p className="mt-2.5 text-[11.5px] text-pretty">
+              <Link href="/guia-de-tamanhos" className="relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] text-faint hover:text-clay-l transition-colors border-b border-dotted border-faint-l hover:border-clay-l">
+                Não sabe seu tamanho? Meça o colchão e a gente te diz
+              </Link>
+            </p>
+          )}
         </div>
 
         {/* Quantidade */}

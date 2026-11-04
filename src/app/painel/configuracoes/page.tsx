@@ -374,7 +374,7 @@ export default function ConfiguracoesPage() {
             <F label="Garantia 3" value={settings.productTrust3 ?? ''} onChange={v => set('productTrust3', v)} placeholder="Pagamento PIX com confirmação imediata" />
           </Card>
 
-          <Card icon="ruler" title="Medidas da embalagem" desc="O mesmo texto do cartão que vai dentro de cada pacote. Aparece na página do produto em “Esta embalagem contém”." onPreview={() => setPreview('sizeguide')}>
+          <Card icon="ruler" title="Medidas da embalagem" desc="As medidas do cartão que vai dentro de cada pacote. Aparecem na página do produto, embaixo do tamanho que o cliente escolhe." onPreview={() => setPreview('sizeguide')}>
             <Info>
               Preencha cada tamanho igual ao cartão da embalagem: o <strong>lençol</strong> em largura × comprimento ×
               altura (ex.: 88 × 188 × 40) e a <strong>fronha</strong> em largura × comprimento (ex.: 50 × 70). O site

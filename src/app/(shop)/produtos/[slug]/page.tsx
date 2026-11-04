@@ -8,7 +8,6 @@ import { JogoDeCamaBuyBox } from '@/components/product/JogoDeCamaBuyBox';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCarousel } from '@/components/product/ProductCarousel';
 import { ProductReviews } from '@/components/product/ProductReviews';
-import { PackageContents } from '@/components/product/PackageContents';
 import { linesForProduct, packageContents, parseTable } from '@/lib/packageContents';
 import { getStoreSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
@@ -302,6 +301,8 @@ export default async function ProductPage({ params }: Props) {
                 pixDiscountPct={s.pixDiscountPct ?? 0}
                 fronhaOptions={fronhaOptions}
                 fronhaInventory={fronhaInventory}
+                packageLines={packageLines}
+                packageNote={sizeGuideNote}
               />
             ) : (
               <BuyBox
@@ -309,6 +310,8 @@ export default async function ProductPage({ params }: Props) {
                 inventory={inventory}
                 pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
                 pixDiscountPct={s.pixDiscountPct ?? 0}
+                packageLines={packageLines}
+                packageNote={sizeGuideNote}
               />
             )}
           </div>
@@ -326,12 +329,6 @@ export default async function ProductPage({ params }: Props) {
                   <p className="text-[15px] text-ink/80 leading-relaxed max-w-[62ch] whitespace-pre-line">
                     {product.description}
                   </p>
-                )}
-                {packageLines.length > 0 && (
-                  <a href="#medidas" className="mt-5 inline-flex items-center gap-2 py-3 -my-3 text-[11px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.1em]">
-                    <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-                    Medidas e o que vem na embalagem
-                  </a>
                 )}
               </div>
 
@@ -374,23 +371,6 @@ export default async function ProductPage({ params }: Props) {
                   </dl>
                 </div>
 
-              {/* Mesmo conteúdo do cartão que vai dentro do pacote. */}
-              {packageLines.length > 0 && (
-                <div id="medidas" className="pt-8 scroll-mt-24">
-                  <span className="eyebrow mb-3 block">Esta embalagem contém</span>
-                  <PackageContents lines={packageLines} />
-                  {(sizeGuideNote || s.whatsappUrl) && (
-                    <p className="text-[11.5px] text-faint leading-relaxed mt-3">
-                      {sizeGuideNote}
-                      {s.whatsappUrl && (
-                        <> Dúvidas sobre o tamanho?{' '}
-                          <a href={s.whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-clay font-medium hover:text-clay-d transition-colors">Fale conosco no WhatsApp</a>.
-                        </>
-                      )}
-                    </p>
-                  )}
-                </div>
-              )}
               </div>
             </div>
           </div>

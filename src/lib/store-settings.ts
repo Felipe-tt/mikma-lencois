@@ -199,7 +199,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   ctaBtn1: '',
   ctaBtn2: '',
   featuredTitle: 'Escolhas da semana',
-  // Igual ao cartão que vai dentro da embalagem (lençol box = medida do colchão).
+  // Igual ao cartão que vai dentro da embalagem (lençol = medida do colchão).
   sizeGuideRows: JSON.stringify([
     { Tamanho: 'Solteiro', 'Lençol': '88×188×40', Fronha: '50×70' },
     { Tamanho: 'Casal',    'Lençol': '138×188×40', Fronha: '50×70' },

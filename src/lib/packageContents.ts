@@ -1,4 +1,4 @@
-import { formatMeasure, parseMeasure } from '@/lib/measures';
+import { formatMeasure, parseMeasure, type Measure } from '@/lib/measures';
 
 /**
  * "Esta embalagem contém": o mesmo texto do cartão que vai dentro de cada
@@ -12,6 +12,9 @@ import { formatMeasure, parseMeasure } from '@/lib/measures';
  */
 
 export interface PackagePiece {
+  kind: 'lencol' | 'fronha' | 'outro';
+  /** Medidas separadas, em cm (largura, comprimento, altura). */
+  dims: Measure;
   /** Sem quantidade, o texto sai só "Fronha (50 × 70 cm)". */
   qty?: number;
   /** "Lençol", "fronha", "fronhas", "Capa duvet"... */
@@ -21,7 +24,10 @@ export interface PackagePiece {
 }
 
 export interface PackageLine {
+  /** Nome do tamanho como no painel ("Casal"): vai no seletor. */
   size: string;
+  /** Título como no cartão ("Jogo Box Casal"). */
+  title: string;
   pieces: PackagePiece[];
   /** "88 × 188 cm, até 40 cm de altura", só quando o lençol tem as 3 medidas. */
   mattress?: string;
@@ -60,15 +66,15 @@ export function packageContents(columns: string[], rows: Record<string, string>[
       if (!measure) continue;
       if (isPillowcase(col)) {
         const qty = pillowcasesFor(size);
-        pieces.push({ qty, label: qty === 1 ? 'fronha' : 'fronhas', measure });
+        pieces.push({ kind: 'fronha', dims: m, qty, label: qty === 1 ? 'fronha' : 'fronhas', measure });
       } else {
-        pieces.push({ qty: 1, label: col.trim(), measure });
+        pieces.push({ kind: isSheet(col) ? 'lencol' : 'outro', dims: m, qty: 1, label: col.trim(), measure });
       }
       if (isSheet(col) && m.l && m.c && m.a) {
         mattress = `${formatMeasure({ l: m.l, c: m.c })}, até ${String(m.a).replace('.', ',')} cm de altura`;
       }
     }
-    if (pieces.length) lines.push({ size, pieces, mattress });
+    if (pieces.length) lines.push({ size, title: size, pieces, mattress });
   }
   return lines;
 }
@@ -85,7 +91,7 @@ export function packageLineText(line: PackageLine): string {
  * não achar nada (nome de tamanho diferente no painel), mostra tudo.
  */
 export function linesForProduct(lines: PackageLine[], product: { category?: string; sizes: string[] }): PackageLine[] {
-  const isSheetPiece = (p: PackagePiece) => norm(p.label).startsWith('lencol');
+  const isSheetPiece = (p: PackagePiece) => p.kind === 'lencol';
   const hasSheet = (l: PackageLine) => l.pieces.some(isSheetPiece);
   const category = norm(product.category ?? '');
 
@@ -94,8 +100,8 @@ export function linesForProduct(lines: PackageLine[], product: { category?: stri
     if (only.length) return only;
     // Sem a linha "Par de fronhas" no painel: mostra só a medida da fronha
     // (a mesma de todos os jogos), sem chutar a quantidade.
-    const measure = lines.flatMap(l => l.pieces).find(p => norm(p.label).startsWith('fronha'))?.measure;
-    return measure ? [{ size: 'Fronha', pieces: [{ label: 'Fronha', measure }] }] : [];
+    const piece = lines.flatMap(l => l.pieces).find(p => p.kind === 'fronha');
+    return piece ? [{ size: 'Fronha', title: 'Fronha', pieces: [{ kind: 'fronha', dims: piece.dims, label: 'Fronha', measure: piece.measure }] }] : [];
   }
 
   const wanted = new Set(product.sizes.map(norm));
@@ -104,11 +110,11 @@ export function linesForProduct(lines: PackageLine[], product: { category?: stri
 
   // Como no cartão: "Jogo Box Casal". Lençol avulso vem sem fronha.
   if (category.startsWith('jogo')) {
-    return chosen.map(l => ({ ...l, size: norm(l.size).includes('jogo') ? l.size : `Jogo Box ${l.size}` }));
+    return chosen.map(l => ({ ...l, title: norm(l.size).includes('jogo') ? l.size : `Jogo Box ${l.size}` }));
   }
   if (category.startsWith('lenc')) {
     return chosen
-      .map(l => ({ ...l, size: norm(l.size).includes('lencol') ? l.size : `Lençol Box ${l.size}`, pieces: l.pieces.filter(isSheetPiece) }))
+      .map(l => ({ ...l, title: norm(l.size).includes('lencol') ? l.size : `Lençol ${l.size}`, pieces: l.pieces.filter(isSheetPiece) }))
       .filter(l => l.pieces.length);
   }
   return chosen;
