@@ -1,0 +1,42 @@
+name: Cron · Lembrete de avaliação
+
+on:
+  schedule:
+    # Uma vez por dia (13:41 UTC, 10:41 em Brasília): lembra quem recebeu
+    # o pedido há 5 dias e ainda não avaliou. Um lembrete por pedido.
+    - cron: '41 13 * * *'
+  workflow_dispatch: # permite rodar manualmente
+
+permissions: {}
+
+jobs:
+  review-reminders:
+    name: Lembrete de avaliação
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          # Só estes destinos: qualquer outro é bloqueado (um pacote ou ação
+          # comprometido não consegue mandar os segredos para fora).
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+            *.githubusercontent.com:443
+            *.blob.core.windows.net:443
+            mikma.com.br:443
+
+      - name: Chamar API de lembretes
+        run: |
+          STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            https://mikma.com.br/api/cron/review-reminders)
+
+          echo "HTTP status: $STATUS"
+          echo "Resposta:"
+          cat /tmp/response.json
+
+          if [ "$STATUS" != "200" ]; then
+            echo "Erro: status $STATUS"
+            exit 1
+          fi
