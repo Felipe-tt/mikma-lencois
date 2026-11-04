@@ -36,6 +36,22 @@ export async function seed() {
       quantity: 20, reserved: 0, lowStockThreshold: 3, history: [],
     });
   }
+  // Jogo com os 4 tamanhos: as medidas embaixo do tamanho mudam ao trocar.
+  const sizes = ['solteiro', 'casal', 'queen', 'king'];
+  await db.collection('products').doc('p5').set({
+    name: 'Jogo de Cama Malha Bege', category: 'Jogos de cama', price: 29990, tags: [], active: true, weightKg: 1,
+    description: 'Jogo de Cama Malha Bege. Malha 100% algodão, feita em Blumenau.',
+    images: ['/hero-mikma.jpg'],
+    variants: sizes.map(size => ({ id: size, size, fabric: 'Malha', color: '#E8DCC8', colorName: 'Bege' })),
+    createdAt: new Date(Date.now() - 10 * 3_600_000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  for (const size of sizes) {
+    await db.collection('inventory').doc(`p5_${size}`).set({
+      sku: `p5_${size}`, productId: 'p5', variant: { id: size, size, fabric: 'Malha', color: '#E8DCC8' },
+      quantity: 10, reserved: 0, lowStockThreshold: 3, history: [],
+    });
+  }
   await db.collection('maintenance').doc('status').set({ active: false });
   await db.collection('settings').doc('store').set({
     storeName: 'Mikma Lençóis', storeCity: 'Blumenau', storeState: 'SC', storeCep: '89010100',
