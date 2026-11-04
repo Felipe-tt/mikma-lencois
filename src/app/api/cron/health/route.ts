@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { adminDb } from '@/lib/firebase/admin';
+import { envPrivateKey, signRsaSha256Hex } from '@/lib/firebase/signer';
 
 /**
  * GET /api/cron/health (com x-cron-secret): saúde do servidor para o
  * monitor pós-deploy (.github/workflows/saude-site.yml). Lê do banco e
  * confere se as configurações essenciais existem. Só devolve sim/não,
  * nunca valores.
+ *
+ * `signing`: a conta do servidor consegue assinar pela API IAM (passkey e
+ * envio de foto dependem disso). Só no Cloud Run (K_SERVICE), e só conta
+ * para o `ok` quando não há chave fixa no ambiente.
  */
-const REQUIRED_ENV = ['FIREBASE_PRIVATE_KEY', 'ABACATEPAY_API_KEY', 'ABACATEPAY_WEBHOOK_SECRET', 'CRON_SECRET', 'STAFF_SESSION_SECRET'];
+const REQUIRED_ENV = ['ABACATEPAY_API_KEY', 'ABACATEPAY_WEBHOOK_SECRET', 'CRON_SECRET', 'STAFF_SESSION_SECRET'];
 
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret');
@@ -25,10 +30,19 @@ export async function GET(req: NextRequest) {
     ]);
     firestore = true;
   } catch { /* firestore = false */ }
+  let signing: boolean | null = null;
+  if (process.env.K_SERVICE) {
+    try {
+      signing = (await signRsaSha256Hex('health', { forceIam: true })).length > 0;
+    } catch (err) {
+      console.error('[health] assinatura pela API IAM falhou', err);
+      signing = false;
+    }
+  }
   const env = Object.fromEntries(REQUIRED_ENV.map(k => [k, !!process.env[k]]));
-  const ok = firestore && Object.values(env).every(Boolean);
+  const ok = firestore && Object.values(env).every(Boolean) && (signing !== false || !!envPrivateKey());
   return NextResponse.json(
-    { ok, firestore, env, version: process.env.NEXT_PUBLIC_BUILD_VERSION ?? '', ms: Date.now() - started },
+    { ok, firestore, signing, env, version: process.env.NEXT_PUBLIC_BUILD_VERSION ?? '', ms: Date.now() - started },
     { status: ok ? 200 : 503, headers: { 'Cache-Control': 'no-store' } },
   );
 }

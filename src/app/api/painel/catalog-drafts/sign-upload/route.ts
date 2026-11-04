@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyAuth, tooManyRequests } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
-import { getServiceAccountCredentials } from '@/lib/firebase/admin';
+import { signerEmail } from '@/lib/firebase/signer';
 import { generateV4SignedUploadUrl } from '@/lib/gcsSignedUrl';
 import crypto from 'node:crypto';
 
@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { clientEmail, privateKey, bucket } = getServiceAccountCredentials();
+  const bucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '';
+  const clientEmail = await signerEmail();
   const now = new Date();
   const folder = `products/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -54,11 +55,10 @@ export async function POST(req: NextRequest) {
       const token = crypto.randomUUID();
       const destination = `${folder}/draft_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.webp`;
 
-      const signedUrl = generateV4SignedUploadUrl({
+      const signedUrl = await generateV4SignedUploadUrl({
         bucket,
         objectPath: destination,
         clientEmail,
-        privateKey,
         contentType: 'image/webp',
         expiresInSeconds: 15 * 60,
         extensionHeaders: {
