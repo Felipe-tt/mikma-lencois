@@ -8,6 +8,7 @@ import { orderCode } from '@/lib/stockHistory';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { uberCancelDelivery } from '@/lib/uber-direct';
 import { hasSecondFactor } from '@/lib/staffMfa';
+import { recomputeShippingLedger } from '@/lib/shipping-ledger';
 
 const PAID_ACTIVE = new Set(['paid', 'preparing', 'shipped']);
 
@@ -122,6 +123,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     [...notifs.docs, ...returns.docs].slice(0, 450).forEach(d => batch.delete(d.ref));
     await batch.commit();
   }).catch(err => console.error('[admin-delete] falha ao limpar notificações/trocas (ignorado):', err));
+
+  // O frete do pedido apagado sai do caixa de frete (melhor esforço).
+  await recomputeShippingLedger().catch(err => console.error('[admin-delete] falha ao refazer o caixa de frete (ignorado):', err));
 
   // Melhor esforço: o pedido já foi apagado; se a Uber recusar, avisa o admin.
   let uberCancelFailed = false;

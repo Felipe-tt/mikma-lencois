@@ -282,6 +282,7 @@ export async function POST(req: NextRequest) {
         'delivery.trackingCode':          null,
         'delivery.dispatchedAt':          FieldValue.serverTimestamp(),
         'delivery.dispatchLockAt':        FieldValue.delete(),
+        'delivery.shippingCostCents':     uberDelivery.feeCents,
         updatedAt:                        FieldValue.serverTimestamp(),
         timeline: FieldValue.arrayUnion({
           status: 'shipped',

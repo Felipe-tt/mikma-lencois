@@ -14,6 +14,7 @@
  */
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { isManualDispatch, type CarrierKey } from '@/lib/carriers';
 
 const LEDGER_REF = () => adminDb.collection('stats').doc('shipping-ledger');
 
@@ -68,4 +69,50 @@ export async function recordShippingSpent(cents: number): Promise<void> {
     { spentCents: FieldValue.increment(cents), updatedAt: FieldValue.serverTimestamp() },
     { merge: true }
   );
+}
+
+// Pedido pago e não cancelado: o frete dele está no caixa. Cancelado pago
+// vira estorno integral (frete incluso), então sai.
+const COLLECTED_STATUSES = new Set(['paid', 'preparing', 'shipped', 'delivered']);
+const SHIPPED_STATUSES = new Set(['shipped', 'delivered']);
+
+export interface LedgerOrder {
+  status?: string;
+  shippingCents?: number;
+  payment?: { abacateSandbox?: boolean };
+  delivery?: { carrier?: string; shippingCostCents?: number; realPriceCents?: number; uberSandbox?: boolean };
+}
+
+/**
+ * Caixa de frete a partir dos pedidos que existem. Pedido apagado some da
+ * conta sozinho; pedido de teste (Dev Mode / sandbox da Uber) não entra.
+ */
+export function ledgerFromOrders(orders: LedgerOrder[]): { collectedCents: number; spentCents: number } {
+  let collectedCents = 0;
+  let spentCents = 0;
+  for (const o of orders) {
+    if (!o.payment?.abacateSandbox && COLLECTED_STATUSES.has(o.status ?? '')) {
+      collectedCents += Math.max(0, o.shippingCents ?? 0);
+    }
+    const d = o.delivery;
+    if (!d || d.uberSandbox) continue;
+    if (typeof d.shippingCostCents === 'number') {
+      // Gravado no despacho: a transportadora cobrou, mesmo se cancelou depois.
+      spentCents += Math.max(0, d.shippingCostCents);
+    } else if (SHIPPED_STATUSES.has(o.status ?? '') && isManualDispatch((d.carrier ?? '') as CarrierKey)) {
+      // Pedidos antigos, de antes do campo: o valor cotado era o custo estimado.
+      spentCents += Math.max(0, d.realPriceCents ?? 0);
+    }
+  }
+  return { collectedCents, spentCents };
+}
+
+/** Refaz o caixa de frete lendo os pedidos (chamado ao apagar pedido e ao abrir o painel). */
+export async function recomputeShippingLedger(): Promise<ShippingLedger> {
+  const snap = await adminDb.collection('orders')
+    .select('status', 'shippingCents', 'payment.abacateSandbox', 'delivery.carrier', 'delivery.shippingCostCents', 'delivery.realPriceCents', 'delivery.uberSandbox')
+    .get();
+  const { collectedCents, spentCents } = ledgerFromOrders(snap.docs.map(d => d.data() as LedgerOrder));
+  await LEDGER_REF().set({ collectedCents, spentCents, updatedAt: FieldValue.serverTimestamp() });
+  return { collectedCents, spentCents, balanceCents: collectedCents - spentCents, updatedAt: new Date().toISOString() };
 }

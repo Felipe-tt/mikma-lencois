@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 import { extractBearer } from '@/lib/security';
-import { getShippingLedger } from '@/lib/shipping-ledger';
+import { recomputeShippingLedger } from '@/lib/shipping-ledger';
 import { effectiveRole } from '@/lib/staffMfa';
 
+// Refaz o saldo a partir dos pedidos a cada leitura: pedido apagado (pelo
+// painel ou direto no banco) deixa de contar sem depender de quem apagou.
 export async function GET(req: NextRequest) {
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
@@ -18,6 +20,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
 
-  const ledger = await getShippingLedger();
+  const ledger = await recomputeShippingLedger();
   return NextResponse.json(ledger);
 }

@@ -637,6 +637,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         }
       } else {
         await deleteDoc(doc(db, 'orders', id));
+        // Refaz o caixa de frete sem o pedido apagado (o servidor relê os pedidos).
+        user!.getIdToken().then(token => fetch('/api/painel/shipping-ledger', { headers: { Authorization: `Bearer ${token}` } })).catch(() => {});
       }
       router.push('/painel/pedidos');
     } catch (err) {
