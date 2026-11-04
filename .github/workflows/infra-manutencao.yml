@@ -247,10 +247,13 @@ jobs:
             printf '%s' "$CHAVE" | gcloud secrets create "$NOME" --replication-policy=automatic --data-file=- >/dev/null
             echo "$NOME criado"
           fi
-          gcloud secrets add-iam-policy-binding "$NOME" \
-            --member=serviceAccount:firebase-app-hosting-compute@mikma-lencois.iam.gserviceaccount.com \
-            --role=roles/secretmanager.secretAccessor >/dev/null
-          echo "Acesso do site ok"
+          # O build do App Hosting resolve "latest" com outras contas além da
+          # do site (viewer e secretVersionManager). Copia as permissões da
+          # chave de produção, que funciona.
+          gcloud secrets get-iam-policy ABACATEPAY_API_KEY --format=json | jq 'del(.etag)' > /tmp/policy.json
+          gcloud secrets set-iam-policy "$NOME" /tmp/policy.json >/dev/null
+          echo "Permissões copiadas de ABACATEPAY_API_KEY:"
+          gcloud secrets get-iam-policy "$NOME" --format='yaml(bindings)'
           gcloud secrets versions list "$NOME" --limit=1 --format='value(name,state)'
 
       - name: Quem serve mikma.com.br e servidor antigo
