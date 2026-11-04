@@ -9,6 +9,8 @@ name: Infra · manutenção do Google Cloud
 #   recentes de cada pacote, apaga o resto com mais de 14 dias);
 # - cria o ABACATEPAY_WEBHOOK_SECRET no Secret Manager a partir do secret do
 #   GitHub (se ainda não existir) e dá acesso aos backends do App Hosting.
+# Com "chave_teste_abacatepay": copia ABACATEPAY_SANDBOX_API_KEY do GitHub
+#   para o Secret Manager (Dev Mode da AbacatePay) e dá acesso ao site.
 
 on:
   workflow_dispatch:
@@ -47,6 +49,10 @@ on:
         default: false
       chave_dados_pessoais:
         description: 'Criar a chave que criptografa CPF e telefone no banco (PII_ENCRYPTION_KEY)'
+        type: boolean
+        default: false
+      chave_teste_abacatepay:
+        description: 'Copiar a chave de teste (Dev Mode) da AbacatePay do GitHub para o Secret Manager'
         type: boolean
         default: false
       app_check:
@@ -224,6 +230,28 @@ jobs:
               npx -y firebase-tools@14 apphosting:secrets:grantaccess ABACATEPAY_WEBHOOK_SECRET --backend "$b" --project "$PROJECT_ID"
             done
           fi
+
+      # O painel liga o Dev Mode da AbacatePay sem novo deploy, mas o site só
+      # lê secrets do Secret Manager; o do GitHub não chega em produção.
+      - name: Chave de teste da AbacatePay
+        if: inputs.chave_teste_abacatepay
+        env:
+          CHAVE: ${{ secrets.ABACATEPAY_SANDBOX_API_KEY }}
+          NOME: ABACATEPAY_SANDBOX_API_KEY
+        run: |
+          if [ -z "$CHAVE" ]; then echo "::error::O secret $NOME do GitHub está vazio ou não existe."; exit 1; fi
+          if gcloud secrets describe "$NOME" >/dev/null 2>&1; then
+            printf '%s' "$CHAVE" | gcloud secrets versions add "$NOME" --data-file=- >/dev/null
+            echo "Nova versão de $NOME"
+          else
+            printf '%s' "$CHAVE" | gcloud secrets create "$NOME" --replication-policy=automatic --data-file=- >/dev/null
+            echo "$NOME criado"
+          fi
+          gcloud secrets add-iam-policy-binding "$NOME" \
+            --member=serviceAccount:firebase-app-hosting-compute@mikma-lencois.iam.gserviceaccount.com \
+            --role=roles/secretmanager.secretAccessor >/dev/null
+          echo "Acesso do site ok"
+          gcloud secrets versions list "$NOME" --limit=1 --format='value(name,state)'
 
       - name: Quem serve mikma.com.br e servidor antigo
         run: |
