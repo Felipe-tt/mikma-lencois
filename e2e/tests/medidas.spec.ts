@@ -8,17 +8,16 @@ const shots = process.env.E2E_SHOTS;
 // de página deixa a anterior na tela por um instante.
 const sizeBlock = (page: Page) => page.getByTestId('medidas').filter({ visible: true });
 
-// Medidas do cartão da embalagem, embaixo do tamanho escolhido (seed: p1 =
-// lençol Casal, p3 = Jogo King, p4 = fronha avulsa).
+// Medidas do cartão da embalagem, embaixo do tamanho do produto (seed: p1 =
+// lençol Casal, p3 = Jogo King, p4 = fronha avulsa; cada produto tem um tamanho).
 test('a compra mostra o que vem no pacote do tamanho escolhido', async ({ page }) => {
   await page.goto('/produtos/p3');
   const jogo = sizeBlock(page);
-  await expect(jogo.getByText('1 lençol box')).toBeVisible();
+  await expect(jogo.getByText('1 lençol', { exact: true })).toBeVisible();
   await expect(jogo.getByText(/para colchão de até 40 cm de altura/)).toBeVisible();
   await expect(jogo.getByText('193 × 198')).toBeVisible();
   await expect(jogo.getByText('2 Fronhas')).toBeVisible();
   await expect(jogo.getByText('50 × 70')).toBeVisible();
-  if (shots) await jogo.locator('..').screenshot({ path: `${shots}/compra-jogo.png` });
 
   await page.goto('/produtos/p1');
   const lencol = sizeBlock(page);
@@ -33,27 +32,19 @@ test('a compra mostra o que vem no pacote do tamanho escolhido', async ({ page }
 
 });
 
-test('trocar o tamanho troca as medidas e o desenho da cama', async ({ page }) => {
-  await page.goto('/produtos/p5');
-  const block = sizeBlock(page);
-  for (const [size, sheet, pillows] of [['Solteiro', '88 × 188', '1 fronha'], ['Casal', '138 × 188', '2 fronhas'], ['Queen', '158 × 198', '2 fronhas'], ['King', '193 × 198', '2 fronhas']] as const) {
-    await page.getByRole('button', { name: new RegExp(`^${size}`) }).first().click();
-    await expect(block.getByText(sheet)).toBeVisible();
-    await expect(block.getByText(pillows)).toBeVisible();
-    if (shots) {
-      await page.waitForTimeout(600); // fim da animação do desenho
-      await block.locator('..').screenshot({ path: `${shots}/tam-${size}.png` });
-    }
-  }
+test('produto de um tamanho só mostra o tamanho como texto, sem botão de escolha', async ({ page }) => {
+  await page.goto('/produtos/p3');
+  const block = sizeBlock(page).locator('..');
+  await expect(block.getByText('Tamanho', { exact: true })).toBeVisible();
+  await expect(block.getByText('King', { exact: true })).toBeVisible();
+  await expect(block.getByText('Cinza', { exact: true })).toBeVisible();
+  await expect(block.getByRole('button', { name: /King/ })).toHaveCount(0);
   if (shots) {
+    await block.screenshot({ path: `${shots}/compra-jogo.png` });
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.getByRole('button', { name: /^Casal/ }).first().click();
-    await page.waitForTimeout(600);
+    await page.goto('/produtos/p3');
     await page.screenshot({ path: `${shots}/compra-desktop.png` });
     await page.evaluate(() => document.documentElement.classList.add('dark'));
-    await block.locator('..').screenshot({ path: `${shots}/compra-escuro.png` });
-    await page.goto('/produtos/p4');
-    await page.evaluate(() => document.documentElement.classList.add('dark'));
-    await sizeBlock(page).locator('..').screenshot({ path: `${shots}/fronha-escuro.png` });
+    await sizeBlock(page).locator('..').screenshot({ path: `${shots}/compra-escuro.png` });
   }
 });

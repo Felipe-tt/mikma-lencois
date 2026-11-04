@@ -21,7 +21,7 @@ describe('esta embalagem contém', () => {
     expect(packageLineText(lines[4])).toBe('02 fronhas (50 × 70 cm)');
   });
 
-  it('diz em qual colchão o lençol box serve', () => {
+  it('diz em qual colchão o lençol serve', () => {
     expect(lines[0].mattress).toBe('88 × 188 cm, até 40 cm de altura');
     expect(lines[4].mattress).toBeUndefined();
   });
@@ -38,7 +38,7 @@ describe('esta embalagem contém', () => {
 
   it('lençol avulso mostra só o lençol, sem as fronhas do jogo', () => {
     const [queen] = linesForProduct(lines, { category: 'Lençóis', sizes: ['Queen'] });
-    expect(queen.title).toBe('Lençol Box Queen');
+    expect(queen.title).toBe('Lençol Queen');
     expect(packageLineText(queen)).toBe('01 Lençol (158 × 198 × 40 cm)');
     expect(queen.mattress).toBe('158 × 198 cm, até 40 cm de altura');
   });

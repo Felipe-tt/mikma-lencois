@@ -114,7 +114,7 @@ export function linesForProduct(lines: PackageLine[], product: { category?: stri
   }
   if (category.startsWith('lenc')) {
     return chosen
-      .map(l => ({ ...l, title: norm(l.size).includes('lencol') ? l.size : `Lençol Box ${l.size}`, pieces: l.pieces.filter(isSheetPiece) }))
+      .map(l => ({ ...l, title: norm(l.size).includes('lencol') ? l.size : `Lençol ${l.size}`, pieces: l.pieces.filter(isSheetPiece) }))
       .filter(l => l.pieces.length);
   }
   return chosen;
