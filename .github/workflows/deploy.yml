@@ -230,11 +230,11 @@ jobs:
         run: npx firebase deploy --only firestore:indexes --project mikma-lencois
 
       - name: Deploy Storage Rules
-        # continue-on-error mantido como rede de segurança: se faltar
-        # alguma permissão de IAM específica do Storage no futuro, isso
-        # não deve travar o deploy do site (que depende só do Firestore).
+        # Sem continue-on-error: as regras do Storage limitam o que entra no
+        # bucket (tipo e tamanho das fotos); uma falha aqui deixava as regras
+        # antigas no ar sem ninguém ver. Precisa de roles/firebasestorage.viewer
+        # (firebasestorage.defaultBucket.get) na conta do GitHub.
         run: npx firebase deploy --only storage --project mikma-lencois
-        continue-on-error: true
 
 # ── Nota: o site é publicado pelo Firebase App Hosting ───────────────────────
 # O App Hosting está conectado direto ao GitHub e faz rollout automático a
