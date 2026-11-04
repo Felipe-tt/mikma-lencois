@@ -242,14 +242,8 @@ jobs:
 # Firebase → App Hosting). Regras e índices do Firestore e regras do Storage
 # são serviços separados e continuam sendo publicados aqui.
 
-# ── Nota: permissão de índices do Firestore ──────────────────────────────────
-# O passo "Deploy Firestore Indexes" acima falha com 403 porque a service
-# account usada pelo CI (a mesma de FIREBASE_CLIENT_EMAIL/GOOGLE_APPLICATION_
-# CREDENTIALS) não tem a role de IAM pra criar/editar índices compostos.
-# Pra corrigir de vez (e então poder tirar o continue-on-error acima):
-#   1. console.cloud.google.com/iam-admin/iam?project=mikma-lencois
-#   2. Encontre a service account (o e-mail que está em FIREBASE_CLIENT_EMAIL)
-#   3. Edite as permissões e adicione a role "Cloud Datastore Index Admin"
-#      (roles/datastore.indexAdmin) -- ou, mais simples, "Firebase Admin"
-#      (roles/firebase.admin), que já cobre isso e outras operações do CI.
-#   4. Rode o workflow de novo (Actions -> Deploy -> Run workflow).
+# ── Nota: permissões do deploy-firebase ──────────────────────────────────────
+# A conta do GitHub (firebase-adminsdk-fbsvc, pela identidade federada) usa:
+# firebaserules.admin (regras), datastore.indexAdmin (índices),
+# serviceusage.serviceUsageConsumer (o firebase-tools confere as APIs) e
+# firebasestorage.viewer (bucket padrão, para as regras do Storage).
