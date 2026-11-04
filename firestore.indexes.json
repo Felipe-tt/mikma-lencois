@@ -37,16 +37,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "delivery.melhorEnvioOrderId",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "orders",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
           "fieldPath": "userId",
           "order": "ASCENDING"
         },
