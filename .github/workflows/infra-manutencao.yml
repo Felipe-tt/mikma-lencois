@@ -458,15 +458,15 @@ jobs:
             SEGREDO=$(gcloud secrets versions access latest --secret=RECAPTCHA_SECRET_KEY)
             # Token vale 12 h: menos avaliações do reCAPTCHA (fica no limite grátis).
             jq -n --arg s "$SEGREDO" '{siteSecret: $s, tokenTtl: "43200s"}' \
-              | call -X PATCH "$API/apps/${APP}/recaptchaV3Config?updateMask=siteSecret,tokenTtl" -d @- | jq '{name, tokenTtl, siteSecretSet}'
+              | call -X PATCH "$API/apps/${APP}/recaptchaV3Config?updateMask=siteSecret,tokenTtl" -d @- | jq '.error // {tokenTtl, siteSecretSet}'
           fi
           if [ "$MODO" = "aplicar" ]; then
             for svc in firestore.googleapis.com firebasestorage.googleapis.com; do
-              call -X PATCH "$API/services/${svc}?updateMask=enforcementMode" -d '{"enforcementMode":"ENFORCED"}' | jq '{name, enforcementMode}'
+              call -X PATCH "$API/services/${svc}?updateMask=enforcementMode" -d '{"enforcementMode":"ENFORCED"}' | jq '.error // {name, enforcementMode}'
             done
           fi
           echo "## Situação"
-          call "$API/apps/${APP}/recaptchaV3Config" | jq '{tokenTtl, siteSecretSet}'
+          call "$API/apps/${APP}/recaptchaV3Config" | jq '.error // {tokenTtl, siteSecretSet}'
           call "$API/services" | jq -r '.services[]? | "\(.name | split("/") | last): \(.enforcementMode // "OFF")"'
 
       - name: Último build com falha (App Hosting)
