@@ -22,9 +22,10 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
  * - webauthnChallenges/{id}: desafio de uso único, vale 5 minutos.
  *
  * Depois de conferir a assinatura, o servidor gera um custom token do
- * Firebase e o navegador entra com signInWithCustomToken. O Admin SDK
- * assina com a chave da service account (FIREBASE_PRIVATE_KEY), sem
- * precisar de permissão de IAM.
+ * Firebase e o navegador entra com signInWithCustomToken. Em produção o
+ * Admin SDK assina pela API IAM Credentials, com a conta do próprio
+ * servidor (precisa de roles/iam.serviceAccountTokenCreator nela mesma);
+ * localmente, com FIREBASE_PRIVATE_KEY.
  */
 
 export const MAX_PASSKEYS = 10;
