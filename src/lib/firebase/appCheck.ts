@@ -7,9 +7,9 @@ import app from '@/lib/firebase/client'
  * copiou a chave pública do Firebase. Só é chamado por db.ts e storage.ts,
  * então as páginas que não usam o banco não baixam nada a mais.
  *
- * Ligado por NEXT_PUBLIC_APP_CHECK=1 (apphosting.yaml) depois de registrar
- * a chave do reCAPTCHA no console do Firebase (App Check > Apps). Até
- * alguém clicar em "Aplicar" lá, o Firebase só mede: nada é bloqueado.
+ * Ligado por NEXT_PUBLIC_APP_CHECK=1 (apphosting.yaml). A chave secreta do
+ * reCAPTCHA é registrada pelo workflow de infra (app_check: registrar); até
+ * rodar app_check: aplicar, o Firebase só mede: nada é bloqueado.
  */
 let started = false
 
