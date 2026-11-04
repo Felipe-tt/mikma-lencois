@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, getAdminAppCheck } from '@/lib/firebase/admin';
 import { envPrivateKey, signRsaSha256Hex } from '@/lib/firebase/signer';
 
 /**
@@ -12,6 +12,9 @@ import { envPrivateKey, signRsaSha256Hex } from '@/lib/firebase/signer';
  * `signing`: a conta do servidor consegue assinar pela API IAM (passkey e
  * envio de foto dependem disso). Só no Cloud Run (K_SERVICE), e só conta
  * para o `ok` quando não há chave fixa no ambiente.
+ *
+ * `appCheck`: o servidor consegue emitir token do App Check (provedor
+ * próprio, src/app/api/app-check). Só informa, não conta para o `ok`.
  */
 const REQUIRED_ENV = ['ABACATEPAY_API_KEY', 'ABACATEPAY_WEBHOOK_SECRET', 'CRON_SECRET', 'STAFF_SESSION_SECRET'];
 
@@ -39,10 +42,20 @@ export async function GET(req: NextRequest) {
       signing = false;
     }
   }
+  let appCheck: boolean | null = null;
+  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+  if (process.env.K_SERVICE && appId) {
+    try {
+      appCheck = !!(await getAdminAppCheck().createToken(appId, { ttlMillis: 30 * 60 * 1000 })).token;
+    } catch (err) {
+      console.error('[health] App Check não emitiu token', err);
+      appCheck = false;
+    }
+  }
   const env = Object.fromEntries(REQUIRED_ENV.map(k => [k, !!process.env[k]]));
   const ok = firestore && Object.values(env).every(Boolean) && (signing !== false || !!envPrivateKey());
   return NextResponse.json(
-    { ok, firestore, signing, env, version: process.env.NEXT_PUBLIC_BUILD_VERSION ?? '', ms: Date.now() - started },
+    { ok, firestore, signing, appCheck, env, version: process.env.NEXT_PUBLIC_BUILD_VERSION ?? '', ms: Date.now() - started },
     { status: ok ? 200 : 503, headers: { 'Cache-Control': 'no-store' } },
   );
 }

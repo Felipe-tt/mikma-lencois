@@ -50,9 +50,9 @@ on:
         type: boolean
         default: false
       app_check:
-        description: 'App Check: registrar o reCAPTCHA (só mede) ou aplicar (bloqueia o que não vem do site)'
+        description: 'App Check: ver a situação ou aplicar (Firestore e Storage bloqueiam o que não vem do site)'
         type: choice
-        options: [nao, registrar, aplicar]
+        options: [nao, situacao, aplicar]
         default: nao
 
 permissions:
@@ -437,36 +437,26 @@ jobs:
             gcloud secrets add-iam-policy-binding PII_ENCRYPTION_KEY --member="$m" --role="$role" >/dev/null && echo "acesso: $role $m"
           done
 
-      - name: App Check (reCAPTCHA v3)
+      - name: App Check
         if: ${{ inputs.app_check != 'nao' }}
         env:
           MODO: ${{ inputs.app_check }}
         run: |
           set -uo pipefail
-          # App Check: o Firestore e o Storage só aceitam pedido do navegador
-          # que traz a prova do reCAPTCHA v3 (src/lib/firebase/appCheck.ts).
-          # "registrar" grava a chave secreta do reCAPTCHA no App Check (o
-          # Firebase passa a medir, nada é bloqueado); "aplicar" liga o
-          # bloqueio no Firestore e no Storage. O servidor (Admin SDK) não
-          # passa pelo App Check.
+          # App Check com provedor próprio (Cloudflare Turnstile trocado por
+          # token no servidor, src/app/api/app-check). "aplicar" liga o
+          # bloqueio no Firestore e no Storage: só aceitam pedido do
+          # navegador com token. O servidor (Admin SDK) não passa por isso.
           PN=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
-          APP="1:${PN}:web:12ff909a08105b75eb757e"
           API="https://firebaseappcheck.googleapis.com/v1/projects/${PN}"
           TOKEN=$(gcloud auth print-access-token)
           call() { curl -sS -m 30 -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJECT_ID" -H 'Content-Type: application/json' "$@"; }
-          if [ "$MODO" = "registrar" ]; then
-            SEGREDO=$(gcloud secrets versions access latest --secret=RECAPTCHA_SECRET_KEY)
-            # Token vale 12 h: menos avaliações do reCAPTCHA (fica no limite grátis).
-            jq -n --arg s "$SEGREDO" '{siteSecret: $s, tokenTtl: "43200s"}' \
-              | call -X PATCH "$API/apps/${APP}/recaptchaV3Config?updateMask=siteSecret,tokenTtl" -d @- | jq '.error // {tokenTtl, siteSecretSet}'
-          fi
           if [ "$MODO" = "aplicar" ]; then
             for svc in firestore.googleapis.com firebasestorage.googleapis.com; do
               call -X PATCH "$API/services/${svc}?updateMask=enforcementMode" -d '{"enforcementMode":"ENFORCED"}' | jq '.error // {name, enforcementMode}'
             done
           fi
           echo "## Situação"
-          call "$API/apps/${APP}/recaptchaV3Config" | jq '.error // {tokenTtl, siteSecretSet}'
           call "$API/services" | jq -r '.services[]? | "\(.name | split("/") | last): \(.enforcementMode // "OFF")"'
 
       - name: Último build com falha (App Hosting)

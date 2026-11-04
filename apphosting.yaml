@@ -53,9 +53,9 @@ env:
   - variable: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
     value: "6Lc-ehMtAAAAALcFa9kjxdxqXmXJi-VfYKzqjgXD"
     availability: [BUILD, RUNTIME]
-  # App Check (src/lib/firebase/appCheck.ts). A chave do reCAPTCHA é
-  # registrada pelo workflow de infra (app_check: registrar); o bloqueio é
-  # ligado depois, com app_check: aplicar.
+  # App Check com Turnstile (src/lib/firebase/appCheck.ts). O bloqueio no
+  # Firestore e no Storage é ligado depois, pelo workflow de infra
+  # (app_check: aplicar).
   - variable: NEXT_PUBLIC_APP_CHECK
     value: "1"
     availability: [BUILD, RUNTIME]
