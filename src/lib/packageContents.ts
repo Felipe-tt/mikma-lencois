@@ -85,8 +85,11 @@ export function packageLineText(line: PackageLine): string {
  * não achar nada (nome de tamanho diferente no painel), mostra tudo.
  */
 export function linesForProduct(lines: PackageLine[], product: { category?: string; sizes: string[] }): PackageLine[] {
-  const hasSheet = (l: PackageLine) => l.pieces.some(p => norm(p.label).startsWith('lencol'));
-  if (norm(product.category ?? '').startsWith('fronha')) {
+  const isSheetPiece = (p: PackagePiece) => norm(p.label).startsWith('lencol');
+  const hasSheet = (l: PackageLine) => l.pieces.some(isSheetPiece);
+  const category = norm(product.category ?? '');
+
+  if (category.startsWith('fronha')) {
     const only = lines.filter(l => !hasSheet(l));
     if (only.length) return only;
     // Sem a linha "Par de fronhas" no painel: mostra só a medida da fronha
@@ -94,7 +97,19 @@ export function linesForProduct(lines: PackageLine[], product: { category?: stri
     const measure = lines.flatMap(l => l.pieces).find(p => norm(p.label).startsWith('fronha'))?.measure;
     return measure ? [{ size: 'Fronha', pieces: [{ label: 'Fronha', measure }] }] : [];
   }
+
   const wanted = new Set(product.sizes.map(norm));
   const bySize = lines.filter(l => hasSheet(l) && wanted.has(norm(l.size)));
-  return bySize.length ? bySize : lines;
+  const chosen = bySize.length ? bySize : lines.filter(hasSheet).length ? lines.filter(hasSheet) : lines;
+
+  // Como no cartão: "Jogo Box Casal". Lençol avulso vem sem fronha.
+  if (category.startsWith('jogo')) {
+    return chosen.map(l => ({ ...l, size: norm(l.size).includes('jogo') ? l.size : `Jogo Box ${l.size}` }));
+  }
+  if (category.startsWith('lenc')) {
+    return chosen
+      .map(l => ({ ...l, size: norm(l.size).includes('lencol') ? l.size : `Lençol Box ${l.size}`, pieces: l.pieces.filter(isSheetPiece) }))
+      .filter(l => l.pieces.length);
+  }
+  return chosen;
 }
