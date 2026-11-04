@@ -1,5 +1,8 @@
-# Vulnerabilidades revisadas e aceitas (lidas pelo osv-scanner e pelo Scorecard).
+# Vulnerabilidades conhecidas que só existem em ferramentas de
+# desenvolvimento (não vão para o servidor da loja). O Scorecard e o
+# osv-scanner leem este arquivo. Rever até a data de cada entrada.
 
 [[IgnoredVulns]]
-id = "GHSA-gcqx-w48m-w2h4"
-reason = "deepmerge só entra pelo plugin do Rollup, dependência de @nfewizard/shared > xsd-assembler que não carrega em produção. Sem versão corrigida."
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2027-02-04
+reason = "minimatch 3, 5 e 6 só no ESLint e no firebase-tools (lint e deploy no CI, com padrões do próprio repositório). O código do servidor usa só o minimatch 11, já corrigido (overrides do glob)."
