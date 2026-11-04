@@ -1,35 +1,33 @@
 import { describe, it, expect } from 'vitest';
-import { matchMattressSize, lookupAlias, parseMattressWidthsFromBedSizeTable } from './mattressSizeMatch';
+import { matchMattressSize, lookupAlias, parseMattressWidthsFromSizeGuide } from './mattressSizeMatch';
 
-// Fallback padrão (mesmos valores default de settings.bedSizeRows: coluna "Cama")
-const widths = parseMattressWidthsFromBedSizeTable(null);
+// Fallback padrão: as medidas do cartão da embalagem.
+const widths = parseMattressWidthsFromSizeGuide(null);
 
-describe('parseMattressWidthsFromBedSizeTable', () => {
-  it('lê a largura a partir da coluna "Cama" da tabela real usada no site', () => {
+describe('parseMattressWidthsFromSizeGuide', () => {
+  it('lê a largura do lençol na tabela de medidas usada no site', () => {
     const json = JSON.stringify([
-      { Tamanho: 'Solteiro', Cama: '0,88m', Comprimento: '2,20m', Largura: '1,40m' },
-      { Tamanho: 'Solteiro Plus', Cama: '1,00m', Comprimento: '2,20m', Largura: '1,50m' },
-      { Tamanho: 'Casal', Cama: '1,38m', Comprimento: '2,28m', Largura: '1,80m' },
-      { Tamanho: 'Queen', Cama: '1,58m', Comprimento: '2,28m', Largura: '2,10m' },
-      { Tamanho: 'King', Cama: '1,93m', Comprimento: '2,28m', Largura: '2,40m' },
+      { Tamanho: 'Solteiro', 'Lençol': '90×188×40 cm', Fronha: '50×70 cm' },
+      { Tamanho: 'Solteiro Plus', 'Lençol': '100×200×40 cm', Fronha: '50×70 cm' },
+      { Tamanho: 'Casal', 'Lençol': '138×188×40 cm', Fronha: '50×70 cm' },
+      { Tamanho: 'Queen', 'Lençol': '158 x 198 x 40', Fronha: '50×70 cm' },
+      { Tamanho: 'King', lencol: '193×198×40', Fronha: '50×70 cm' },
     ]);
-    const w = parseMattressWidthsFromBedSizeTable(json);
-    expect(w.solteiro.widthCm).toBe(88);
+    const w = parseMattressWidthsFromSizeGuide(json);
+    expect(w.solteiro.widthCm).toBe(90);
     expect(w.casal.widthCm).toBe(138);
     expect(w.queen.widthCm).toBe(158);
     expect(w.king.widthCm).toBe(193);
   });
 
   it('ignora linhas com nome que não é um dos 4 tamanhos vendidos (ex: Solteiro Plus)', () => {
-    const json = JSON.stringify([{ Tamanho: 'Solteiro Plus', Cama: '1,00m' }]);
-    const w = parseMattressWidthsFromBedSizeTable(json);
-    // não deve ter sobrescrito "solteiro" com o valor de "Solteiro Plus"
+    const w = parseMattressWidthsFromSizeGuide(JSON.stringify([{ Tamanho: 'Solteiro Plus', 'Lençol': '100×200×40' }]));
     expect(w.solteiro.widthCm).toBe(88);
   });
 
   it('cai no fallback quando o JSON está vazio ou ilegível', () => {
-    expect(parseMattressWidthsFromBedSizeTable(null).casal.widthCm).toBe(138);
-    expect(parseMattressWidthsFromBedSizeTable('não é json').casal.widthCm).toBe(138);
+    expect(parseMattressWidthsFromSizeGuide(null).casal.widthCm).toBe(138);
+    expect(parseMattressWidthsFromSizeGuide('não é json').casal.widthCm).toBe(138);
   });
 });
 
@@ -75,9 +73,9 @@ describe('matchMattressSize', () => {
     expect(r.confidence).toBe('incerta');
   });
 
-  it('avisa sobre colchão muito alto (>35cm)', () => {
-    const r = matchMattressSize(widths, 138, undefined, 40);
-    expect(r.heightWarning).toBeDefined();
+  it('avisa sobre colchão mais alto que o lençol (o do cartão vai até 40 cm)', () => {
+    expect(matchMattressSize(widths, 138, undefined, 40).heightWarning).toBeUndefined();
+    expect(matchMattressSize(widths, 138, undefined, 42).heightWarning).toBeDefined();
   });
 
   it('avisa sobre colchão muito fino (<12cm)', () => {
@@ -96,12 +94,20 @@ describe('matchMattressSize', () => {
   });
 
   it('usa largura customizada vinda da tabela de configs em vez de fixa', () => {
-    const custom = parseMattressWidthsFromBedSizeTable(JSON.stringify([
-      { Tamanho: 'Queen', Cama: '1,60m' },
+    const custom = parseMattressWidthsFromSizeGuide(JSON.stringify([
+      { Tamanho: 'Queen', 'Lençol': '160×198×40 cm' },
     ]));
     const r = matchMattressSize(custom, 160);
     expect(r.size).toBe('queen');
     expect(r.confidence).toBe('exata');
+  });
+});
+
+describe('altura do colchão', () => {
+  it('avisa quando o colchão passa da altura do lençol daquele tamanho', () => {
+    const w = parseMattressWidthsFromSizeGuide(JSON.stringify([{ Tamanho: 'Casal', 'Lençol': '138×188×40 cm' }]));
+    expect(matchMattressSize(w, 138, undefined, 38).heightWarning).toBeUndefined();
+    expect(matchMattressSize(w, 138, undefined, 45).heightWarning).toContain('até 40 cm');
   });
 });
 

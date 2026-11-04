@@ -1,32 +1,27 @@
+import { parseMeasure } from '@/lib/measures';
+
 // Guia de tamanhos, 100% determinístico, sem chamada a nenhuma API paga.
 //
-// A largura de cada tamanho de colchão vem da MESMA tabela que já existe em
-// Configurações > Produto > "Guia de tamanhos de cama" (settings.bedSizeRows),
-// lendo a coluna "Cama" (ex: Solteiro → 0,88m). Não existe um campo
-// duplicado só pra isso, o admin edita em UM lugar só, e tanto a tabela
-// visível na página do produto quanto esta calculadora usam o mesmo dado.
+// A largura de cada tamanho vem da MESMA tabela que a página do produto
+// mostra ("Esta embalagem contém", Configurações > Produto > "Guia de
+// medidas", settings.sizeGuideRows): a largura do LENÇOL. O lençol é box,
+// então ele tem a medida do colchão (Solteiro 88 × 188 × 40 cm serve em
+// colchão de 88 × 188). Um lugar só para editar.
 //
-// Por que só largura (não largura+comprimento)? A tabela "Guia de tamanhos
-// de cama" guarda o comprimento do LENÇOL, não do colchão (o lençol é
-// maior de propósito, pra sobrar pano e prender o elástico, ex: colchão
-// Solteiro tem 188cm de comprimento, mas o lençol Solteiro sai com 220cm).
-// Comparar a medida real do colchão do cliente com o comprimento do lençol
-// nunca bateria certo. A largura, por outro lado, é a mesma para colchão e
-// pra "tamanho de cama" (0,88m é 0,88m nos dois), e sozinha já separa bem
-// os 4 tamanhos padrão (88 / 138 / 158 / 193cm, nunca ficam a menos de
-// 20cm um do outro), então é a métrica confiável disponível hoje.
+// Só a largura entra na conta: ela sozinha já separa bem os 4 tamanhos
+// (88 / 138 / 158 / 193 cm, sempre a mais de 20 cm um do outro).
 
 export type MattressSizeKey = 'solteiro' | 'casal' | 'queen' | 'king';
 
-export type MattressWidthMap = Record<MattressSizeKey, { widthCm: number; label: string }>;
+export type MattressWidthMap = Record<MattressSizeKey, { widthCm: number; label: string; /** Altura máxima do colchão que o elástico do lençol cobre. */ heightCm?: number }>;
 
-// Fallback só pra quando a tabela de configurações está vazia/ilegível -
-// mesmos valores que já vêm como default de bedSizeRows em store-settings.ts.
+// Fallback só pra quando a tabela está vazia ou ilegível: as medidas do
+// cartão que vai na embalagem.
 const FALLBACK_WIDTHS: MattressWidthMap = {
-  solteiro: { widthCm: 88,  label: 'Solteiro' },
-  casal:    { widthCm: 138, label: 'Casal' },
-  queen:    { widthCm: 158, label: 'Queen' },
-  king:     { widthCm: 193, label: 'King' },
+  solteiro: { widthCm: 88,  label: 'Solteiro', heightCm: 40 },
+  casal:    { widthCm: 138, label: 'Casal',    heightCm: 40 },
+  queen:    { widthCm: 158, label: 'Queen',    heightCm: 40 },
+  king:     { widthCm: 193, label: 'King',     heightCm: 40 },
 };
 
 const KEY_BY_NAME: Record<string, MattressSizeKey> = {
@@ -40,37 +35,25 @@ function normalize(s: string): string {
   return s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-/** "0,88m" | "0.88m" | "88" | "88cm" → 88 (cm). Retorna null se não conseguir ler. */
-function parseMetersOrCm(raw: string): number | null {
-  const cleaned = raw.trim().toLowerCase().replace(',', '.');
-  const num = parseFloat(cleaned);
-  if (!Number.isFinite(num) || num <= 0) return null;
-  // Valores digitados como "0,88" ou "0.88m" são metros; "88" ou "88cm" já é cm.
-  return /m(?!m)/.test(cleaned) || num < 10 ? num * 100 : num;
-}
-
 /**
- * Lê settings.bedSizeRows (a MESMA tabela mostrada na página do produto) e
- * extrai a largura (coluna "Cama") de cada um dos 4 tamanhos que vendemos.
- * Linhas com nome desconhecido (ex: "Solteiro Plus") são ignoradas, só
- * entram solteiro/casal/queen/king, que são os únicos valores válidos de
- * `size` nas variações de produto (ver src/lib/productOptions.ts SIZES).
+ * Lê settings.sizeGuideRows (a mesma tabela da página do produto) e pega a
+ * largura do lençol de cada um dos 4 tamanhos vendidos. Linhas com outro
+ * nome (ex: "Solteiro Plus") são ignoradas: só entram solteiro/casal/
+ * queen/king, os valores válidos de `size` nas variações (productOptions).
  */
-export function parseMattressWidthsFromBedSizeTable(bedSizeRowsJson: string | undefined | null): MattressWidthMap {
+export function parseMattressWidthsFromSizeGuide(sizeGuideRowsJson: string | undefined | null): MattressWidthMap {
   const map: MattressWidthMap = { ...FALLBACK_WIDTHS };
   try {
-    const rows: Record<string, string>[] = JSON.parse(bedSizeRowsJson || '[]');
+    const rows: Record<string, string>[] = JSON.parse(sizeGuideRowsJson || '[]');
     for (const row of rows) {
       const nameField = row['Tamanho'] ?? Object.values(row)[0];
       if (!nameField) continue;
       const key = KEY_BY_NAME[normalize(nameField)];
-      if (!key) continue; // ex: "Solteiro Plus" não é um dos 4 tamanhos vendidos
-
-      // Aceita a coluna se chamar "Cama" (nome padrão) OU qualquer variação
-      // de maiúscula/acento, colunas são editáveis pelo admin.
-      const widthField = Object.entries(row).find(([col]) => normalize(col) === 'cama')?.[1];
-      const widthCm = widthField ? parseMetersOrCm(widthField) : null;
-      if (widthCm) map[key] = { widthCm, label: nameField };
+      if (!key) continue;
+      // Coluna "Lençol" (ou variação de maiúscula/acento: colunas são editáveis).
+      const sheet = Object.entries(row).find(([col]) => normalize(col).startsWith('lencol'))?.[1];
+      const { l: widthCm, a: heightCm } = parseMeasure(sheet);
+      if (widthCm && widthCm > 0) map[key] = { widthCm, label: nameField, heightCm };
     }
   } catch {
     // mantém FALLBACK_WIDTHS
@@ -92,7 +75,7 @@ export interface SizeMatchResult {
 
 /**
  * Encontra o tamanho de cama padrão mais próximo da LARGURA informada.
- * `widths` vem sempre de parseMattressWidthsFromBedSizeTable (ou seja, das
+ * `widths` vem sempre de parseMattressWidthsFromSizeGuide (ou seja, das
  * configurações da loja), nunca de uma constante fixa no componente.
  */
 export function matchMattressSize(widths: MattressWidthMap, widthCm: number, _lengthCm?: number, heightCm?: number): SizeMatchResult {
@@ -113,7 +96,10 @@ export function matchMattressSize(widths: MattressWidthMap, widthCm: number, _le
 
   let heightWarning: string | undefined;
   if (heightCm !== undefined) {
-    if (heightCm > 35) {
+    const limit = widths[best.key].heightCm;
+    if (limit && heightCm > limit) {
+      heightWarning = `Seu colchão tem ${heightCm} cm de altura e nosso lençol ${widths[best.key].label} vai até ${limit} cm. Pode ficar justo: se tiver dúvida, manda uma mensagem antes de comprar.`;
+    } else if (!limit && heightCm > 35) {
       heightWarning = 'Seu colchão é bem alto (mais de 35cm). Nossos lençóis têm elástico padrão de mercado, pode ficar justo. Se tiver dúvida, manda uma mensagem antes de comprar.';
     } else if (heightCm < 12) {
       heightWarning = 'Colchão fino (menos de 12cm). O elástico pode ficar folgado, mas geralmente segura bem.';

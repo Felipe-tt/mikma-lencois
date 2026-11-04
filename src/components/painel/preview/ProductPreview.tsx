@@ -1,15 +1,8 @@
 'use client';
 
-import { normalizeMeasureText } from '@/lib/measures';
+import { PackageContents } from '@/components/product/PackageContents';
+import { packageContents, parseTable } from '@/lib/packageContents';
 import type { StoreSettings } from '@/lib/store-settings';
-
-function parseTable(colsJson: string, rowsJson: string): { columns: string[]; rows: Record<string, string>[] } {
-  let columns: string[] = [];
-  let rows: Record<string, string>[] = [];
-  try { columns = JSON.parse(colsJson || '[]'); } catch { /* ignore */ }
-  try { rows = JSON.parse(rowsJson || '[]'); } catch { /* ignore */ }
-  return { columns, rows };
-}
 
 function EmptyTableHint({ label }: { label: string }) {
   return (
@@ -44,104 +37,20 @@ export function ProductTrustPreview({ s }: { s: StoreSettings }) {
   );
 }
 
-/** Espelha src/components/product/SizeGuideModal.tsx (tabela "Guia de medidas") */
+/** Espelha o bloco "Esta embalagem contém" da página do produto */
 export function SizeGuidePreview({ s }: { s: StoreSettings }) {
   const { columns, rows } = parseTable(s.sizeGuideColumns, s.sizeGuideRows);
-  const hasTable = columns.length > 0 && rows.length > 0;
+  const lines = packageContents(columns, rows);
 
   return (
     <div className="bg-white dark:bg-warm px-6 sm:px-10 py-10 sm:py-14">
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-faint mb-5">
-        Como abre no botão &quot;Guia de medidas&quot; da página do produto
+        Como aparece na página do produto (cada produto mostra só os tamanhos dele)
       </p>
-      <div className="max-w-xl border border-mist rounded-sm overflow-hidden shadow-sm">
-        <div className="px-6 py-5 border-b border-mist">
-          <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-faint mb-1">Produto</p>
-          <h3 className="font-display font-normal text-ink text-xl leading-none">Guia de medidas</h3>
-        </div>
-
-        {hasTable ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px]">
-              <thead>
-                <tr className="bg-warm border-b border-mist">
-                  {columns.map(col => (
-                    <th key={col} className="text-left px-5 py-3 text-[10px] font-bold tracking-[0.16em] uppercase text-faint whitespace-nowrap">
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-mist">
-                {rows.map((row, i) => (
-                  <tr key={i}>
-                    {columns.map((col, j) => (
-                      <td key={col} className={`px-5 py-3.5 whitespace-nowrap ${j === 0 ? 'font-semibold text-ink' : 'text-mid font-mono text-[12px]'}`}>
-                        {j === 0 ? (row[col] ?? '') : normalizeMeasureText(row[col])}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="px-6 py-10 text-center text-sm text-faint">Guia de medidas não configurado.</div>
-        )}
-
-        {s.sizeGuideNote && (
-          <div className="px-6 py-4 border-t border-mist bg-warm/50">
-            <p className="text-[11px] text-faint leading-relaxed">{s.sizeGuideNote}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** Espelha o bloco "Guia de tamanhos" (accordion) da página do produto */
-export function BedSizeGuidePreview({ s }: { s: StoreSettings }) {
-  const { columns, rows } = parseTable(s.bedSizeColumns, s.bedSizeRows);
-  const hasTable = columns.length > 0 && rows.length > 0;
-
-  return (
-    <div className="bg-white dark:bg-warm px-6 sm:px-10 py-10 sm:py-14">
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-faint mb-5">
-        Como aparece (aberto) na página do produto
-      </p>
-      <div className="max-w-xl border-t border-mist pt-4">
-        <p className="text-[12px] font-semibold text-mid tracking-[0.08em] uppercase mb-4">Guia de tamanhos</p>
-
-        {hasTable ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-[12px] border-collapse">
-              <thead>
-                <tr className="border-b border-mist">
-                  {columns.map(h => (
-                    <th key={h} className="text-left font-semibold text-[10px] tracking-[0.12em] uppercase text-faint pb-2 pr-4">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, i) => (
-                  <tr key={i} className="border-b border-mist/50 last:border-0">
-                    {columns.map((col, j) => (
-                      <td key={col} className={`py-2 pr-4 ${j === 0 ? 'font-medium text-ink' : 'text-mid'}`}>
-                        {row[col] ?? ''}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyTableHint label="Guia de tamanhos de cama não configurado ainda." />
-        )}
-
-        <p className="text-[11px] text-faint mt-4">
-          A coluna &quot;Cama&quot; também alimenta a calculadora em /guia-de-tamanhos.
-        </p>
+      <div className="max-w-xl">
+        <span className="eyebrow mb-3 block">Esta embalagem contém</span>
+        {lines.length > 0 ? <PackageContents lines={lines} /> : <EmptyTableHint label="Preencha as medidas do lençol e da fronha para aparecer aqui." />}
+        {s.sizeGuideNote && <p className="text-[11.5px] text-faint leading-relaxed mt-3">{s.sizeGuideNote}</p>}
       </div>
     </div>
   );

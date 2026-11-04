@@ -4,7 +4,7 @@ import { shareMeta } from '@/lib/seo';
 import type { Product } from '@/types';
 import { SizeGuideCalculator } from '@/components/product/SizeGuideCalculator';
 import { getStoreSettings } from '@/lib/settings';
-import { parseMattressWidthsFromBedSizeTable } from '@/lib/mattressSizeMatch';
+import { parseMattressWidthsFromSizeGuide } from '@/lib/mattressSizeMatch';
 
 async function getActiveProducts(): Promise<Product[]> {
   try { return await getCatalog(); } catch { return []; }
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 
 export default async function GuiaDeTamanhosPage() {
   const [products, settings] = await Promise.all([getActiveProducts(), getStoreSettings()]);
-  const widths = parseMattressWidthsFromBedSizeTable(settings.bedSizeRows);
+  const widths = parseMattressWidthsFromSizeGuide(settings.sizeGuideRows);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 sm:py-14">

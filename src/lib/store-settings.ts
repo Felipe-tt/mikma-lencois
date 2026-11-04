@@ -199,13 +199,15 @@ export const STORE_DEFAULTS: StoreSettings = {
   ctaBtn1: '',
   ctaBtn2: '',
   featuredTitle: 'Escolhas da semana',
+  // Igual ao cartão que vai dentro da embalagem (lençol box = medida do colchão).
   sizeGuideRows: JSON.stringify([
-    { Tamanho: 'Solteiro', 'Lençol': '150×220 cm', Fronha: '50×70 cm', 'Capa duvet': '150×200 cm' },
-    { Tamanho: 'Casal',   'Lençol': '180×220 cm', Fronha: '50×70 cm', 'Capa duvet': '180×200 cm' },
-    { Tamanho: 'Queen',   'Lençol': '200×230 cm', Fronha: '50×70 cm', 'Capa duvet': '200×200 cm' },
-    { Tamanho: 'King',    'Lençol': '220×240 cm', Fronha: '50×70 cm', 'Capa duvet': '220×200 cm' },
+    { Tamanho: 'Solteiro', 'Lençol': '88×188×40', Fronha: '50×70' },
+    { Tamanho: 'Casal',    'Lençol': '138×188×40', Fronha: '50×70' },
+    { Tamanho: 'Queen',    'Lençol': '158×198×40', Fronha: '50×70' },
+    { Tamanho: 'King',     'Lençol': '193×198×40', Fronha: '50×70' },
+    { Tamanho: 'Par de fronhas', 'Lençol': '', Fronha: '50×70' },
   ]),
-  sizeGuideColumns: JSON.stringify(['Tamanho', 'Lençol', 'Fronha', 'Capa duvet']),
+  sizeGuideColumns: JSON.stringify(['Tamanho', 'Lençol', 'Fronha']),
   sizeGuideNote: 'Medidas podem variar ±2 cm após lavagem. Recomendamos lavar antes do primeiro uso.',
   bedSizeColumns: JSON.stringify(['Tamanho', 'Cama', 'Comprimento', 'Largura']),
   bedSizeRows: JSON.stringify([

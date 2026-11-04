@@ -8,7 +8,8 @@ import { JogoDeCamaBuyBox } from '@/components/product/JogoDeCamaBuyBox';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductCarousel } from '@/components/product/ProductCarousel';
 import { ProductReviews } from '@/components/product/ProductReviews';
-import { SizeGuideModal } from '@/components/product/SizeGuideModal';
+import { PackageContents } from '@/components/product/PackageContents';
+import { linesForProduct, packageContents, parseTable } from '@/lib/packageContents';
 import { getStoreSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
 import { shareMeta } from '@/lib/seo';
@@ -16,7 +17,7 @@ import { serialize } from '@/lib/utils/serialize';
 import { TrackViewItem } from '@/components/product/TrackViewItem';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { toPublicReview, type PublicReview } from '@/lib/reviews';
-import { FABRIC_LABEL, DEFAULT_COMPOSITION } from '@/lib/productOptions';
+import { FABRIC_LABEL, DEFAULT_COMPOSITION, SIZE_LABEL } from '@/lib/productOptions';
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -139,10 +140,11 @@ export default async function ProductPage({ params }: Props) {
   const relatedSameCategory = related.every(p => p.category === product.category);
 
   // Size guide data from settings
-  let sizeGuideColumns: string[] = [];
-  let sizeGuideRows: Record<string, string>[] = [];
-  try { sizeGuideColumns = JSON.parse(s.sizeGuideColumns || '[]'); } catch { sizeGuideColumns = []; }
-  try { sizeGuideRows = JSON.parse(s.sizeGuideRows || '[]'); } catch { sizeGuideRows = []; }
+  const sizeTable = parseTable(s.sizeGuideColumns, s.sizeGuideRows);
+  const packageLines = linesForProduct(packageContents(sizeTable.columns, sizeTable.rows), {
+    category: product.category,
+    sizes: [...new Set(product.variants.map(v => SIZE_LABEL[v.size] ?? v.size))],
+  });
   const sizeGuideNote = s.sizeGuideNote || '';
   // Especificações: o tecido é sempre malha; o resto, quando cadastrado.
   const specRows: { k: string; v: string; clay?: boolean }[] = [
@@ -325,14 +327,12 @@ export default async function ProductPage({ params }: Props) {
                     {product.description}
                   </p>
                 )}
-                <div className="mt-5">
-                  <SizeGuideModal
-                    columns={sizeGuideColumns}
-                    rows={sizeGuideRows}
-                    note={sizeGuideNote}
-                    whatsappUrl={s.whatsappUrl || undefined}
-                  />
-                </div>
+                {packageLines.length > 0 && (
+                  <a href="#medidas" className="mt-5 inline-flex items-center gap-2 py-3 -my-3 text-[11px] font-semibold text-clay hover:text-clay-d transition-colors uppercase tracking-[0.1em]">
+                    <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                    Medidas e o que vem na embalagem
+                  </a>
+                )}
               </div>
 
               {/* Selos, especificações e a sanfona formam uma pilha só, com
@@ -374,10 +374,23 @@ export default async function ProductPage({ params }: Props) {
                   </dl>
                 </div>
 
-              <SizeGuide
-                columns={(() => { try { return JSON.parse(s.bedSizeColumns || '[]'); } catch { return ['Tamanho','Cama','Comprimento','Largura']; } })()}
-                rows={(() => { try { return JSON.parse(s.bedSizeRows || '[]'); } catch { return []; } })()}
-              />
+              {/* Mesmo conteúdo do cartão que vai dentro do pacote. */}
+              {packageLines.length > 0 && (
+                <div id="medidas" className="pt-8 scroll-mt-24">
+                  <span className="eyebrow mb-3 block">Esta embalagem contém</span>
+                  <PackageContents lines={packageLines} />
+                  {(sizeGuideNote || s.whatsappUrl) && (
+                    <p className="text-[11.5px] text-faint leading-relaxed mt-3">
+                      {sizeGuideNote}
+                      {s.whatsappUrl && (
+                        <> Dúvidas sobre o tamanho?{' '}
+                          <a href={s.whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-clay font-medium hover:text-clay-d transition-colors">Fale conosco no WhatsApp</a>.
+                        </>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
               </div>
             </div>
           </div>
@@ -400,42 +413,6 @@ export default async function ProductPage({ params }: Props) {
         </section>
       )}
     </div>
-  );
-}
-
-function SizeGuide({ columns, rows }: { columns: string[]; rows: Record<string, string>[] }) {
-  if (!columns.length || !rows.length) return null;
-  return (
-    <details className="group border-b first:border-t [ul+&]:mt-8 [ul+&]:border-t border-mist py-4">
-      <summary className="flex items-center justify-between cursor-pointer list-none text-[12px] font-semibold text-mid tracking-[0.08em] uppercase hover:text-ink transition-colors">
-        Tamanhos de cama e colchão
-        <svg aria-hidden="true" className="w-3.5 h-3.5 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M6 9l6 6 6-6"/>
-        </svg>
-      </summary>
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-[12px] border-collapse">
-          <thead>
-            <tr className="border-b border-mist">
-              {columns.map(h => (
-                <th key={h} className="text-left font-semibold text-[10px] tracking-[0.12em] uppercase text-faint pb-2 pr-4">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i} className="border-b border-mist/50 last:border-0">
-                {columns.map((col, j) => (
-                  <td key={col} className={`py-2 pr-4 ${j === 0 ? 'font-medium text-ink' : 'text-mid'}`}>
-                    {row[col] ?? ''}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </details>
   );
 }
 
