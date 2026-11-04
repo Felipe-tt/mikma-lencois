@@ -13,8 +13,8 @@ const sizeBlock = (page: Page) => page.getByTestId('medidas').filter({ visible: 
 test('a compra mostra o que vem no pacote do tamanho escolhido', async ({ page }) => {
   await page.goto('/produtos/p3');
   const jogo = sizeBlock(page);
-  await expect(jogo.getByText('Lençol com elástico')).toBeVisible();
-  await expect(jogo.getByText('colchão de até 40 cm de altura')).toBeVisible();
+  await expect(jogo.getByText('1 lençol box')).toBeVisible();
+  await expect(jogo.getByText(/para colchão de até 40 cm de altura/)).toBeVisible();
   await expect(jogo.getByText('193 × 198')).toBeVisible();
   await expect(jogo.getByText('2 Fronhas')).toBeVisible();
   await expect(jogo.getByText('50 × 70')).toBeVisible();
