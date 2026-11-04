@@ -99,6 +99,11 @@ env:
   - variable: ABACATEPAY_API_KEY
     secret: ABACATEPAY_API_KEY
     availability: [RUNTIME]
+  # Chave de Dev Mode, usada quando o painel liga o teste. Criada pelo
+  # workflow "Infra · manutenção do Google Cloud" (chave_teste_abacatepay).
+  - variable: ABACATEPAY_SANDBOX_API_KEY
+    secret: ABACATEPAY_SANDBOX_API_KEY
+    availability: [RUNTIME]
   # Secret do webhook v2 da AbacatePay (o mesmo valor cadastrado no webhook
   # de https://mikma.com.br/api/payment/webhook). Versão e acesso do backend
   # são cuidados pelo workflow "Infra · manutenção do Google Cloud".

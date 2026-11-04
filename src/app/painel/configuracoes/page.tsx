@@ -94,6 +94,18 @@ export default function ConfiguracoesPage() {
     );
   }, [user]);
 
+  // null = ainda não sabemos; só trava o Dev Mode quando o servidor confirma que falta a chave.
+  const [abacateTestKey, setAbacateTestKey] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    user.getIdToken().then(token =>
+      fetch('/api/painel/pagamento-ambiente', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => data && setAbacateTestKey(!!data.teste))
+        .catch(() => {})
+    );
+  }, [user]);
+
   const set = (field: keyof StoreSettings, value: string | number | boolean) =>
     setSettings(s => ({ ...s, [field]: value }));
 
@@ -441,11 +453,14 @@ export default function ConfiguracoesPage() {
           </Card>
 
           <Card icon="produto" title="AbacatePay, ambiente" desc="Alterna entre a chave de Dev Mode e a de produção da AbacatePay, sem novo deploy">
-            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mb-2.5">
-              O secret ABACATEPAY_SANDBOX_API_KEY ainda não foi configurado no Secret Manager do Firebase (só existe como secret do GitHub Actions, que não é lido em produção). Ligar este toggle agora vai gerar erro &ldquo;provedor de pagamento não configurado&rdquo; no checkout.
-            </p>
+            {abacateTestKey === false && (
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mb-2.5 dark:text-amber-200 dark:bg-amber-950/40 dark:border-amber-800">
+                A chave de Dev Mode ainda não chegou ao servidor, então o teste fica desligado. Rode o workflow &ldquo;Infra · manutenção do Google Cloud&rdquo; com &ldquo;Copiar a chave de teste da AbacatePay&rdquo; marcado.
+              </p>
+            )}
             <Toggle
               label="Usar ambiente de teste (Dev Mode)"
+              disabled={abacateTestKey === false && !settings.abacatePaySandboxMode}
               checked={!!settings.abacatePaySandboxMode}
               onChange={v => set('abacatePaySandboxMode', v)}
               hint="Ligado: usa a chave de Dev Mode da AbacatePay, o PIX/cartão gerado é de teste, nenhum valor real é cobrado. No pedido, aparece um botão para simular o pagamento (aprova na hora, sem PIX de verdade). Desligado: usa a chave de produção, pagamentos reais."
@@ -741,16 +756,17 @@ function TA({ label, value, onChange, rows=3, placeholder, hint }: {
     </div>
   );
 }
-function Toggle({ label, checked, onChange, hint, warn }: {
-  label:string; checked:boolean; onChange:(v:boolean)=>void; hint?:string; warn?:string;
+function Toggle({ label, checked, onChange, hint, warn, disabled }: {
+  label:string; checked:boolean; onChange:(v:boolean)=>void; hint?:string; warn?:string; disabled?:boolean;
 }) {
   return (
     <div>
-      <label className="flex items-center gap-3 cursor-pointer select-none">
+      <label className={`flex items-center gap-3 select-none ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
         <button
           type="button"
           role="switch"
           aria-checked={checked}
+          disabled={disabled}
           onClick={() => onChange(!checked)}
           className={`relative w-10 h-6 rounded-full shrink-0 transition-colors duration-150 ${checked ? 'bg-clay-l' : 'bg-mist'}`}
         >
