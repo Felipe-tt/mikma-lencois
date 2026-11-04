@@ -49,6 +49,11 @@ on:
         description: 'Criar a chave que criptografa CPF e telefone no banco (PII_ENCRYPTION_KEY)'
         type: boolean
         default: false
+      app_check:
+        description: 'App Check: ver a situação ou aplicar (Firestore e Storage bloqueiam o que não vem do site)'
+        type: choice
+        options: [nao, situacao, aplicar]
+        default: nao
 
 permissions:
   contents: read
@@ -432,12 +437,34 @@ jobs:
             gcloud secrets add-iam-policy-binding PII_ENCRYPTION_KEY --member="$m" --role="$role" >/dev/null && echo "acesso: $role $m"
           done
 
+      - name: App Check
+        if: ${{ inputs.app_check != 'nao' }}
+        env:
+          MODO: ${{ inputs.app_check }}
+        run: |
+          set -uo pipefail
+          # App Check com provedor próprio (Cloudflare Turnstile trocado por
+          # token no servidor, src/app/api/app-check). "aplicar" liga o
+          # bloqueio no Firestore e no Storage: só aceitam pedido do
+          # navegador com token. O servidor (Admin SDK) não passa por isso.
+          PN=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+          API="https://firebaseappcheck.googleapis.com/v1/projects/${PN}"
+          TOKEN=$(gcloud auth print-access-token)
+          call() { curl -sS -m 30 -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJECT_ID" -H 'Content-Type: application/json' "$@"; }
+          if [ "$MODO" = "aplicar" ]; then
+            for svc in firestore.googleapis.com firebasestorage.googleapis.com; do
+              call -X PATCH "$API/services/${svc}?updateMask=enforcementMode" -d '{"enforcementMode":"ENFORCED"}' | jq '.error // {name, enforcementMode}'
+            done
+          fi
+          echo "## Situação"
+          call "$API/services" | jq -r '.services[]? | "\(.name | split("/") | last): \(.enforcementMode // "OFF")"'
+
       - name: Último build com falha (App Hosting)
         continue-on-error: true
         run: |
           set +e
           id=$(gcloud builds list --region us-east4 --filter='status=FAILURE' --limit 1 --format='value(id)')
-          gcloud builds list --region us-east4 --limit 3 --format='table(id,status,createTime)'
+          gcloud builds list --region us-east4 --limit 3 --format='table(id,status,createTime,serviceAccount)'
           [ -n "$id" ] && gcloud builds describe "$id" --region us-east4 --format='yaml(failureInfo,statusDetail,steps[].id,steps[].status,steps[].name)' 2>&1 | head -60
           for sec in CRON_SECRET ABACATEPAY_WEBHOOK_SECRET EDGE_SHARED_SECRET; do
             echo "--- $sec"

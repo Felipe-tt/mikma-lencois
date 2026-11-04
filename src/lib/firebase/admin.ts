@@ -3,6 +3,7 @@ import { envPrivateKey } from './signer'
 import { getFirestore, Firestore } from 'firebase-admin/firestore'
 import { getAuth, Auth } from 'firebase-admin/auth'
 import { getMessaging, Messaging } from 'firebase-admin/messaging'
+import { getAppCheck, AppCheck } from 'firebase-admin/app-check'
 
 // Evita MaxListenersExceededWarning do Firebase Admin em SSR
 if (typeof process !== 'undefined' && process.setMaxListeners) {
@@ -55,6 +56,11 @@ export function getAdminMessaging(): Messaging {
     _messaging = getMessaging(getAdminApp());
   }
   return _messaging
+}
+
+// App Check: emite o token do provedor próprio (src/app/api/app-check/route.ts).
+export function getAdminAppCheck(): AppCheck {
+  return getAppCheck(getAdminApp())
 }
 
 // Storage admin
