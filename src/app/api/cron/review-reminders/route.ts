@@ -11,6 +11,14 @@ export async function GET(req: NextRequest) {
     && timingSafeEqual(Buffer.from(secret), Buffer.from(expected));
   if (!isValid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const result = await sendReviewReminders();
-  return NextResponse.json({ ok: true, ...result });
+  try {
+    const result = await sendReviewReminders();
+    return NextResponse.json({ ok: true, ...result });
+  } catch (err) {
+    // Código do erro (ex.: FAILED_PRECONDITION = índice do Firestore ainda
+    // sendo criado) no corpo, para o log do workflow dizer o motivo.
+    const e = err as { code?: unknown; message?: string };
+    console.error('[review-reminders] falhou', err);
+    return NextResponse.json({ ok: false, code: String(e.code ?? ''), error: String(e.message ?? '').slice(0, 200) }, { status: 500 });
+  }
 }
