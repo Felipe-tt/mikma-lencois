@@ -391,18 +391,9 @@ export default async function ProductPage({ params }: Props) {
       {related.length > 0 && (
         <section className="border-t border-mist section-md">
           <div className="container-shop">
-            <div className="flex items-end justify-between mb-10">
-              <div>
-                <span className="eyebrow mb-3 block">Você também pode gostar</span>
-                <h2 className="font-display font-normal text-ink text-3xl">{relatedSameCategory ? `Mais em ${product.category}` : 'Mais da Mikma'}</h2>
-              </div>
-              <Link
-                href={relatedSameCategory ? `/produtos?categoria=${encodeURIComponent(product.category)}` : '/produtos'}
-                className={`hidden sm:inline-flex items-center gap-2 text-[13px] font-medium text-mid hover:text-ink transition-colors duration-150 group mb-1.5 ${related.length > 4 ? 'mr-[104px]' : ''}`}
-              >
-                Ver todos
-                <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:translate-x-0.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-              </Link>
+            <div className="mb-10">
+              <span className="eyebrow mb-3 block">Você também pode gostar</span>
+              <h2 className="font-display font-normal text-ink text-3xl">{relatedSameCategory ? `Mais em ${product.category}` : 'Mais da Mikma'}</h2>
             </div>
             <ProductCarousel products={related} />
           </div>
