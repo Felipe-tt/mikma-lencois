@@ -1,32 +1,39 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { prepare } from './helpers';
 
 test.beforeEach(async ({ context }) => { await prepare(context); });
 
-// "Esta embalagem contém": o mesmo texto do cartão que vai dentro do pacote,
-// só com os tamanhos do produto (seed: p1 = lençol Casal, p3 = Jogo King,
-// p4 = fronha avulsa).
-test('página do produto mostra o conteúdo da embalagem igual ao cartão', async ({ page }) => {
+const shots = process.env.E2E_SHOTS;
+// Bloco do tamanho (seletor + medidas), só o que está visível: a transição
+// de página deixa a anterior na tela por um instante.
+const sizeBlock = (page: Page) => page.getByTestId('medidas').filter({ visible: true });
+
+// Medidas do cartão da embalagem, embaixo do tamanho escolhido (seed: p1 =
+// lençol Casal, p3 = Jogo King, p4 = fronha avulsa).
+test('a compra mostra o que vem no pacote do tamanho escolhido', async ({ page }) => {
   await page.goto('/produtos/p3');
-  const box = page.locator('#medidas');
-  await expect(box.getByText('Esta embalagem contém')).toBeVisible();
-  await expect(box.getByText('Jogo Box King', { exact: true })).toBeVisible();
-  await expect(box.getByText('01 Lençol (193 × 198 × 40 cm) / 02 fronhas (50 × 70 cm)')).toBeVisible();
-  await expect(box.getByText('Serve em colchão de 193 × 198 cm, até 40 cm de altura')).toBeVisible();
-  await expect(box.getByText('Jogo Box Casal', { exact: true })).toHaveCount(0);
-  if (process.env.E2E_SHOTS) await box.screenshot({ path: `${process.env.E2E_SHOTS}/medidas-jogo.png` });
+  const jogo = sizeBlock(page);
+  await expect(jogo.getByText('Lençol com elástico')).toBeVisible();
+  await expect(jogo.getByText('colchão de até 40 cm de altura')).toBeVisible();
+  await expect(jogo.getByText('193 × 198')).toBeVisible();
+  await expect(jogo.getByText('2 Fronhas')).toBeVisible();
+  await expect(jogo.getByText('50 × 70')).toBeVisible();
+  if (shots) await jogo.locator('..').screenshot({ path: `${shots}/compra-jogo.png` });
 
   await page.goto('/produtos/p1');
-  const lencol = page.locator('#medidas').filter({ visible: true });
-  await expect(lencol.getByText('Lençol Box Casal', { exact: true })).toBeVisible();
-  await expect(lencol.getByText('01 Lençol (138 × 188 × 40 cm)', { exact: true })).toBeVisible();
-  await expect(lencol.getByText(/fronha/)).toHaveCount(0);
-  if (process.env.E2E_SHOTS) await lencol.screenshot({ path: `${process.env.E2E_SHOTS}/medidas-lencol.png` });
+  const lencol = sizeBlock(page);
+  await expect(lencol.getByText('138 × 188')).toBeVisible();
+  await expect(lencol.getByText(/fronha/i)).toHaveCount(0);
 
-  // A transição de página deixa a anterior por um instante: só o que está visível.
   await page.goto('/produtos/p4');
-  const fronha = page.locator('#medidas').filter({ visible: true });
-  await expect(fronha.getByText('02 fronhas (50 × 70 cm)')).toBeVisible();
-  await expect(fronha.getByText('Lençol')).toHaveCount(0);
-  if (process.env.E2E_SHOTS) await fronha.screenshot({ path: `${process.env.E2E_SHOTS}/medidas-fronha.png` });
+  const fronha = sizeBlock(page);
+  await expect(fronha.getByText('2 Fronhas')).toBeVisible();
+  await expect(fronha.getByText(/lençol/i)).toHaveCount(0);
+  if (shots) await fronha.locator('..').screenshot({ path: `${shots}/compra-fronha.png` });
+
+  if (shots) {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/produtos/p3');
+    await page.screenshot({ path: `${shots}/compra-desktop.png` });
+  }
 });

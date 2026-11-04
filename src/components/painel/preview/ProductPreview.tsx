@@ -1,6 +1,6 @@
 'use client';
 
-import { PackageContents } from '@/components/product/PackageContents';
+import { SizeMeasures } from '@/components/product/SizeMeasures';
 import { packageContents, parseTable } from '@/lib/packageContents';
 import type { StoreSettings } from '@/lib/store-settings';
 
@@ -37,21 +37,30 @@ export function ProductTrustPreview({ s }: { s: StoreSettings }) {
   );
 }
 
-/** Espelha o bloco "Esta embalagem contém" da página do produto */
+/** Espelha as medidas que aparecem embaixo do seletor de tamanho, na compra */
 export function SizeGuidePreview({ s }: { s: StoreSettings }) {
   const { columns, rows } = parseTable(s.sizeGuideColumns, s.sizeGuideRows);
   const lines = packageContents(columns, rows);
 
   return (
     <div className="bg-white dark:bg-warm px-6 sm:px-10 py-10 sm:py-14">
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-faint mb-5">
-        Como aparece na página do produto (cada produto mostra só os tamanhos dele)
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-faint mb-2">
+        Como aparece embaixo do tamanho, na compra
       </p>
-      <div className="max-w-xl">
-        <span className="eyebrow mb-3 block">Esta embalagem contém</span>
-        {lines.length > 0 ? <PackageContents lines={lines} /> : <EmptyTableHint label="Preencha as medidas do lençol e da fronha para aparecer aqui." />}
-        {s.sizeGuideNote && <p className="text-[11.5px] text-faint leading-relaxed mt-3">{s.sizeGuideNote}</p>}
-      </div>
+      <p className="text-[12px] text-faint mb-6">O cliente vê só o tamanho que escolheu; aqui aparecem todos.</p>
+      {lines.length > 0 ? (
+        <div className="max-w-[420px] flex flex-col gap-6">
+          {lines.map(line => (
+            <div key={line.size}>
+              <p className="text-[13px] font-semibold text-ink">{line.size}</p>
+              <SizeMeasures line={line} />
+            </div>
+          ))}
+          {s.sizeGuideNote && <p className="text-[11px] text-faint">{s.sizeGuideNote}</p>}
+        </div>
+      ) : (
+        <EmptyTableHint label="Preencha as medidas do lençol e da fronha para aparecer aqui." />
+      )}
     </div>
   );
 }

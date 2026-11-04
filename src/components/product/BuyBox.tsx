@@ -19,6 +19,8 @@ import { useOverlay } from '@/lib/hooks/useOverlay';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { useCartCount } from '@/lib/hooks/useCartCount';
 import { savePendingPurchase, readPendingPurchase, clearPendingPurchase } from '@/lib/pendingPurchase';
+import { SizeMeasures, lineForSize } from '@/components/product/SizeMeasures';
+import type { PackageLine } from '@/lib/packageContents';
 
 interface Props {
   product: Product;
@@ -29,6 +31,8 @@ interface Props {
   swapSku?: string; // SKU da fronha trocada, pra reservar estoque dela junto (ver JogoDeCamaBuyBox)
   maxQty?: number; // limite extra (ex: estoque da fronha trocada cobre só N jogos)
   swapQtyPerUnit?: number; // quantas fronhas por unidade deste item (não multiplicado aqui — expandStockLines faz isso na hora de reservar/liberar)
+  packageLines?: PackageLine[]; // o que vem no pacote de cada tamanho (cartão da embalagem), ver src/lib/packageContents.ts
+  packageNote?: string; // observação das medidas (ex.: ±2 cm após lavagem)
 }
 
 interface ShipOption {
@@ -42,7 +46,7 @@ interface ShipOption {
 // Mesmos selos do checkout.
 const SHIP_TAG: Record<string, string> = { economico: 'Econômico', rapido: 'Mais rápido' };
 
-export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapQtyPerUnit, maxQty }: Props) {
+export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapQtyPerUnit, maxQty, packageLines = [], packageNote }: Props) {
   // Carrinho e compra aceitam o convidado ("comprar sem cadastro").
   const { buyer: user, loading } = useAuth();
   const router = useRouter();
@@ -331,6 +335,11 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               );
             })}
           </div>
+          {/* O que vem no pacote do tamanho escolhido (cartão da embalagem). */}
+          {(() => {
+            const line = lineForSize(packageLines, selectedVariant ? SIZE_LABEL[selectedVariant.size] ?? selectedVariant.size : undefined);
+            return line ? <SizeMeasures line={line} note={packageNote} /> : null;
+          })()}
           {/* Inline: o pontilhado acompanha só o texto, não a largura toda. */}
           <p className="mt-2.5 text-[11.5px] text-pretty">
             <Link href="/guia-de-tamanhos" className="relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] text-faint hover:text-clay-l transition-colors border-b border-dotted border-faint-l hover:border-clay-l">

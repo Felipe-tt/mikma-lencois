@@ -27,7 +27,7 @@ describe('esta embalagem contém', () => {
   });
 
   it('jogo mostra só os tamanhos que ele tem; fronha avulsa só a linha das fronhas', () => {
-    expect(linesForProduct(lines, { category: 'Jogos de cama', sizes: ['Casal', 'Queen'] }).map(l => l.size)).toEqual(['Jogo Box Casal', 'Jogo Box Queen']);
+    expect(linesForProduct(lines, { category: 'Jogos de cama', sizes: ['Casal', 'Queen'] }).map(l => [l.size, l.title])).toEqual([['Casal', 'Jogo Box Casal'], ['Queen', 'Jogo Box Queen']]);
     expect(linesForProduct(lines, { category: 'Fronhas', sizes: ['Único'] }).map(l => l.size)).toEqual(['Par de fronhas']);
     // Sem a linha "Par de fronhas": só a medida da fronha, sem quantidade.
     const semPar = packageContents(columns, rows.slice(0, 4));
@@ -38,7 +38,7 @@ describe('esta embalagem contém', () => {
 
   it('lençol avulso mostra só o lençol, sem as fronhas do jogo', () => {
     const [queen] = linesForProduct(lines, { category: 'Lençóis', sizes: ['Queen'] });
-    expect(queen.size).toBe('Lençol Box Queen');
+    expect(queen.title).toBe('Lençol Box Queen');
     expect(packageLineText(queen)).toBe('01 Lençol (158 × 198 × 40 cm)');
     expect(queen.mattress).toBe('158 × 198 cm, até 40 cm de altura');
   });
