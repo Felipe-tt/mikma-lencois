@@ -96,6 +96,10 @@ export async function POST(
       if (target === 'shipped') {
         if (body.trackingCode) update['delivery.trackingCode'] = body.trackingCode;
         update['delivery.dispatchedAt'] = FieldValue.serverTimestamp();
+        // Custo do frete deste pedido, para o caixa de frete poder ser refeito
+        // a partir dos pedidos (ver recomputeShippingLedger).
+        const cost = (current.delivery as { realPriceCents?: number } | undefined)?.realPriceCents ?? 0;
+        if (isManualDispatch(current.delivery?.carrier ?? '') && cost > 0) update['delivery.shippingCostCents'] = cost;
       }
       if (target === 'delivered') {
         update['delivery.deliveredAt'] = FieldValue.serverTimestamp();
