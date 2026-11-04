@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@brazilian-utils/brazilian-utils": "2.5.0",
-    "@nfewizard/danfe": "^1.0.7",
+    "@nfewizard/danfe": "^1.0.8",
     "@nfewizard/shared": "^1.1.10",
     "@sentry/nextjs": "^11.10.0",
     "@simplewebauthn/browser": "14.0.0",
@@ -35,7 +35,7 @@
     "mailchecker": "6.0.21",
     "maplibre-gl": "6.16.0",
     "next": "~16.4.3",
-    "nfewizard-io": "^1.1.4",
+    "nfewizard-io": "^1.1.5",
     "node-forge": "^1.4.2",
     "papaparse": "^5.5.4",
     "photoswipe": "^5.4.4",
@@ -79,7 +79,11 @@
     "@google-cloud/pubsub": {
       "@opentelemetry/core": "^2.8.0"
     },
-    "@nfewizard/shared": "$@nfewizard/shared"
+    "@nfewizard/shared": "$@nfewizard/shared",
+    "glob": "^14.0.3",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.4"
+    }
   },
   "engines": {
     "node": "24"
