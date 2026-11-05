@@ -37,7 +37,9 @@ done < <(git rev-list --no-merges "$BASE".."$HEAD")
 
 # Setas Unicode (→ ← ↗...) quebram a exibição em alguns aparelhos: texto
 # novo do site usa palavras ou, no máximo, "->". Comentários não contam.
-if git diff -U0 "$BASE" "$HEAD" -- 'src/*.ts' 'src/*.tsx' ':!*.test.ts' ':!*.test.tsx' \
+# Três pontos: só o que a branch acrescentou desde que saiu da base (uma
+# branch atrás do main não "acrescenta" o que o main já tirou).
+if git diff -U0 "$BASE"..."$HEAD" -- 'src/*.ts' 'src/*.tsx' ':!*.test.ts' ':!*.test.tsx' \
   | python3 -c '
 import re, sys
 bad = []
