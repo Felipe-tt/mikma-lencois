@@ -96,7 +96,7 @@ export async function triggerHoneytoken(hit: HoneyHit): Promise<void> {
         emailParagraph(what),
         emailParagraph(`<strong>IP:</strong> ${escapeHtml(hit.ip)}${hit.country ? ` (${escapeHtml(hit.country)})` : ''}<br><strong>Detalhe:</strong> ${escapeHtml(hit.detail ?? '-')}<br><strong>Navegador:</strong> ${escapeHtml(hit.userAgent ?? '-')}`),
         emailParagraph(hit.kind === 'chave-api'
-          ? '<strong>O que fazer:</strong> troque as senhas da equipe, confira em Painel → Segurança os aparelhos e passkeys, e revise quem tem acesso ao Google Cloud.'
+          ? '<strong>O que fazer:</strong> troque as senhas da equipe, confira no Painel, em Segurança, os aparelhos e passkeys, e revise quem tem acesso ao Google Cloud.'
           : 'Na maioria das vezes é um robô chutando senhas. Se repetir muito, vale olhar o IP no Sentry.', { muted: true }),
       ].join(''),
     }), { replyHint: false, footerNote: 'E-mail automático de segurança.', preheader: 'Armadilha de segurança acionada' });

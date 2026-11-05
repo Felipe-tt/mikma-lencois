@@ -122,7 +122,7 @@ function Panel({ detail, error }: { detail: Detail | null; error: string }) {
         </>
       ) : (
         <p className="text-[12.5px] text-mid leading-relaxed">
-          Este produto ainda não tem o preço da loja salvo. Em Configurações → Produtos, salve o acréscimo, ou edite o produto.
+          Este produto ainda não tem o preço da loja salvo. Salve o acréscimo em Configurações, na aba Produtos, ou edite o produto.
         </p>
       )}
     </div>
