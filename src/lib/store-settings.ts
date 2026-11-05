@@ -156,7 +156,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   aboutTimelineTitle: 'Nossa trajetória',
   aboutTimeline: JSON.stringify([
     { year: '2018', label: 'Fundação', desc: 'A Mikma nasce em Blumenau com o objetivo de levar qualidade têxtil direto da fábrica para as casas.' },
-    { year: '2020', label: 'Entrega local', desc: 'Lançamos entrega em até 1h para toda Blumenau, sem custo adicional.' },
+    { year: '2020', label: 'Entrega local', desc: 'Lançamos entrega em até 1h para toda Blumenau.' },
     { year: '2022', label: 'Brasil todo', desc: 'Expandimos com frete nacional via PAC, SEDEX e transportadoras com rastreio em tempo real.' },
     { year: '2024', label: 'Loja online', desc: 'Inauguramos nossa loja virtual. Compra fácil, pagamento via PIX, confirmação automática.' },
   ]),
@@ -221,3 +221,21 @@ export const STORE_DEFAULTS: StoreSettings = {
   productTrust2: 'Frete para todo o Brasil com rastreio',
   productTrust3: 'Pagamento PIX com confirmação imediata',
 };
+
+// Textos padrão antigos que ficaram gravados no banco quando o painel
+// salvou as configurações: a entrega local é cobrada, então o "sem custo
+// adicional" da linha do tempo da página Sobre enganava o cliente.
+const LEGACY_COPY: Array<[string, string]> = [
+  ['entrega em até 1h para toda Blumenau, sem custo adicional.', 'entrega em até 1h para toda Blumenau.'],
+];
+
+/** Padrões + o que está salvo, com os textos antigos corrigidos. */
+export function withStoreDefaults(saved: Record<string, unknown> | undefined): StoreSettings {
+  const merged = { ...STORE_DEFAULTS, ...(saved ?? {}) } as StoreSettings;
+  if (typeof merged.aboutTimeline === 'string') {
+    let t = merged.aboutTimeline;
+    for (const [from, to] of LEGACY_COPY) t = t.split(from).join(to);
+    merged.aboutTimeline = t;
+  }
+  return merged;
+}

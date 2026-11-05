@@ -59,7 +59,10 @@ export default function CartPage() {
     if (loading) return;
     // replace: com push, voltar do login caía no carrinho, que mandava
     // pro login de novo, e o botão Voltar ficava preso.
-    if (!user) { setReturnTo('/carrinho'); router.replace('/entrar'); return; }
+    // Visitante ainda não tem carrinho (adicionar já pede login ou
+    // "continuar sem cadastro"): mostra o carrinho vazio em vez de jogar
+    // direto no login, que não oferecia comprar sem cadastro.
+    if (!user) { setCart(null); setCartLoading(false); return; }
     return onSnapshot(doc(db, 'carts', user.uid), snap => {
       setCart(snap.exists() ? snap.data() as Cart : null);
       setCartError(false);
@@ -274,6 +277,15 @@ export default function CartPage() {
       <h2 id="cart-empty-title" tabIndex={-1} className="font-display font-normal text-ink text-3xl mb-3 focus:outline-none">Carrinho vazio</h2>
       <p className="text-sm text-mid mb-8 max-w-[28ch] leading-relaxed">Explore nossos produtos e escolha os seus lençóis.</p>
       <Link href="/produtos" className="btn-primary px-8 py-3.5 text-sm font-semibold tracking-wide">Ver produtos</Link>
+      {!user && (
+        <p className="mt-6 text-[13px] text-mid">
+          Já tem conta?{' '}
+          <button type="button" onClick={() => { setReturnTo('/carrinho'); router.push('/entrar'); }}
+            className="font-semibold text-clay hover:text-clay-d underline-offset-4 hover:underline">
+            Entre para ver o carrinho salvo
+          </button>
+        </p>
+      )}
       {user && <MontarJunto cart={cart} user={user} />}
       {undoBar}
     </div>

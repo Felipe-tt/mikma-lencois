@@ -1,6 +1,6 @@
 import { cacheLife, cacheTag } from 'next/cache';
 import { adminDb } from '@/lib/firebase/admin';
-import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
+import { STORE_DEFAULTS, withStoreDefaults, type StoreSettings } from '@/lib/store-settings';
 import { serialize } from '@/lib/utils/serialize';
 
 let cached: StoreSettings | null = null;
@@ -16,7 +16,7 @@ export async function getSettings(): Promise<StoreSettings> {
   if (cached && Date.now() - cachedAt < TTL) return cached;
   try {
     const snap = await adminDb.collection('settings').doc('store').get();
-    cached = { ...STORE_DEFAULTS, ...(snap.exists ? snap.data() : {}) } as StoreSettings;
+    cached = withStoreDefaults(snap.exists ? snap.data() : undefined);
     cachedAt = Date.now();
     return cached;
   } catch {
@@ -37,7 +37,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   try {
     const snap = await adminDb.collection('settings').doc('store').get();
     cacheLife({ stale: 60, revalidate: 60, expire: 86_400 });
-    return serialize<StoreSettings>({ ...STORE_DEFAULTS, ...(snap.exists ? snap.data() : {}) });
+    return serialize<StoreSettings>(withStoreDefaults(snap.exists ? snap.data() : undefined));
   } catch {
     cacheLife({ stale: 30, revalidate: 60, expire: 300 });
     return STORE_DEFAULTS;

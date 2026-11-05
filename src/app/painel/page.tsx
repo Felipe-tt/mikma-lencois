@@ -9,6 +9,7 @@ import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProducts, IconArrowRight, IconTruck } from '@/components/ui/Icon';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { PainelPushOptIn } from '@/components/painel/PainelPushOptIn';
 
 const BADGE: Record<string, string> = {
   pending_payment: 'badge-pending', payment_expired: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
@@ -116,6 +117,9 @@ export default function PainelDashboard() {
           Um resumo do que está acontecendo na loja, em tempo real.
         </p>
       </div>
+
+      {/* Só aqui no Início: em todas as telas ele ocupava o topo do celular. */}
+      <PainelPushOptIn />
 
       {(waiting > 0 || needAction > 0 || readyToShip > 0 || refunds.length > 0) && (
         <div className="flex flex-col gap-2.5 mb-7">

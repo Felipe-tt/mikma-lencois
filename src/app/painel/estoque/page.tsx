@@ -66,6 +66,7 @@ export default function EstoquePage() {
 
   const [toast, setToast] = useState<{ msg: string; onUndo?: () => void } | null>(null);
   const nameCache = useRef<Record<string, string>>({});
+  const colorCache = useRef<Record<string, string>>({});
 
   function showToast(msg: string, onUndo?: () => void) {
     setToast({ msg, onUndo });
@@ -89,12 +90,20 @@ export default function EstoquePage() {
             await Promise.all(uncachedIds.map(async (pid) => {
               const pdoc = await getDoc(doc(db, 'products', pid));
               nameCache.current[pid] = pdoc.exists() ? (pdoc.data().name as string) : pid;
+              // Nome da cor como foi cadastrado no produto: o estoque só
+              // guardava o código e mostrava "Off-White" num lençol "Branco".
+              for (const v of (pdoc.exists() ? pdoc.data().variants ?? [] : []) as { id?: string; colorName?: string }[]) {
+                if (v.id && v.colorName) colorCache.current[`${pid}_${v.id}`] = v.colorName;
+              }
             }));
           }
         } catch (err) {
           console.error('[estoque] nomes de produto:', err);
         }
-        setItems(data.map((i) => ({ ...i, productName: nameCache.current[i.productId] ?? i.productId }))
+        setItems(data.map((i) => {
+          const colorName = colorCache.current[i.sku || i.id] || i.variant?.colorName;
+          return { ...i, productName: nameCache.current[i.productId] ?? i.productId, variant: colorName ? { ...i.variant, colorName } : i.variant };
+        })
           .sort((a, b) => (a.productName || '').localeCompare(b.productName || '')));
         setLoadError(false);
         setLoading(false);

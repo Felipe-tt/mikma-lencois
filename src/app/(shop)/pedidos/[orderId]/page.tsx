@@ -336,11 +336,21 @@ export default function OrderDetailPage() {
                 )}
               </div>
             )}
-            <TrackingTimeline
-              trackingCode={useCorreiosTracking ? trackCode : undefined}
-              orderId={useCorreiosTracking ? undefined : orderId}
-              carrierName={carrierName(carrier)}
-            />
+            {/* Antes do envio não há o que rastrear: buscava e mostrava
+                "Envio ainda sem código" com "Tentar novamente", como erro. */}
+            {trackCode || order.status === 'shipped' || order.status === 'delivered' ? (
+              <TrackingTimeline
+                trackingCode={useCorreiosTracking ? trackCode : undefined}
+                orderId={useCorreiosTracking ? undefined : orderId}
+                carrierName={carrierName(carrier)}
+              />
+            ) : (
+              <p className="text-[13px] text-mid leading-relaxed">
+                {order.status === 'cancelled' || order.status === 'payment_expired'
+                  ? 'Este pedido não foi enviado.'
+                  : 'Assim que o pedido sair, você recebe o código de rastreio por e-mail e acompanha tudo por aqui.'}
+              </p>
+            )}
           </div>
         </section>
       )}

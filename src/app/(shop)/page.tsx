@@ -28,7 +28,7 @@ export default async function HomePage() {
   const trustItems = [
     s.heroTrust1 || `Entrega em 1h em ${city}`,
     s.heroTrust2 || 'Frete para todo o Brasil',
-    s.heroTrust3 || 'Pague com PIX',
+    s.heroTrust3 || 'PIX ou cartão',
     s.heroTrust4 || 'Qualidade direto de fábrica',
   ].filter(Boolean);
   const ctaLine1 = s.ctaSloganLine1 || `Feito em ${city}.`;
