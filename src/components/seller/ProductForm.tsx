@@ -36,6 +36,7 @@ import { hexToColorName, sampleDominantColor, TEXTILE_COLORS } from '@/lib/color
 import { colorKey, formatColorName, matchColorName, sortBySimilarity } from '@/lib/colorNameMatch';
 import { ColorNameField, type ColorCheck } from './ColorNameField';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
+import { normalizeRule, sitePriceCents } from '@/lib/sitePrice';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, FABRIC_LABEL, DEFAULT_COMPOSITION, suggestProductName, suggestProductDescription, type Size } from '@/lib/productOptions';
 import { formatProductName } from '@/lib/textFormat';
 import { formatCurrency } from '@/lib/utils/format';
@@ -127,7 +128,15 @@ export default function ProductForm({ initial }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [nameEditedManually, setNameEditedManually] = useState(isEdit);
   const [description, setDescription] = useState(initial?.description ?? '');
-  const [price, setPrice] = useState(initial?.price ? centsToInput(initial.price) : '');
+  const [price, setPrice] = useState(initial?.price ? centsToInput(initial.storePrice ?? initial.price) : '');
+  // Acréscimo do site (Configurações): o campo é o preço da loja física.
+  const [priceRule, setPriceRule] = useState<{ pct: number; rounding: 'exato' | '90' }>({ pct: 0, rounding: 'exato' });
+  useEffect(() => {
+    getDoc(doc(db, 'settings', 'store')).then(snap => {
+      const d = snap.data();
+      if (d) setPriceRule(normalizeRule({ pct: d.sitePriceMarkupPct, rounding: d.sitePriceRounding }));
+    }).catch(() => {});
+  }, []);
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0]);
   const [tags, setTags] = useState(initial?.tags?.join(', ') ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
@@ -169,9 +178,10 @@ export default function ProductForm({ initial }: Props) {
         const anyPrices: number[] = [];
         snap.forEach(d => {
           const data = d.data();
-          if (typeof data.price !== 'number' || data.price <= 0) return;
-          anyPrices.push(data.price);
-          if (data.variants?.[0]?.size === size) sameSizePrices.push(data.price);
+          const base = typeof data.storePrice === 'number' ? data.storePrice : data.price;
+          if (typeof base !== 'number' || base <= 0) return;
+          anyPrices.push(base);
+          if (data.variants?.[0]?.size === size) sameSizePrices.push(base);
         });
         const pool = sameSizePrices.length > 0 ? sameSizePrices : anyPrices;
         if (pool.length === 0) { setPriceSuggestion(null); return; }
@@ -510,7 +520,7 @@ export default function ProductForm({ initial }: Props) {
   function applyDuplicateSource(p: Product) {
     setName(p.name + ' (cópia)'); setNameEditedManually(true);
     setDescription(p.description ?? '');
-    setPrice(p.price ? centsToInput(p.price) : '');
+    setPrice(p.price ? centsToInput(p.storePrice ?? p.price) : '');
     setCategory((p.category as typeof CATEGORIES[number]) ?? CATEGORIES[0]);
     if (p.variants?.[0]?.size) setSize(p.variants[0].size as Size);
     if (p.fronhaCount) setFronhaCount(p.fronhaCount);
@@ -733,7 +743,8 @@ export default function ProductForm({ initial }: Props) {
       const data = {
         name: formatProductName(name),
         description,
-        price: priceCents,
+        price: sitePriceCents(priceCents, priceRule),
+        storePrice: priceCents,
         weightKg: parseDecimal(weightKg),
         category,
         tags: tagArr,
@@ -1044,7 +1055,7 @@ export default function ProductForm({ initial }: Props) {
   const priceBlock = (
     <>
             <div>
-              <label htmlFor="prod-preco" className="label">Preço de venda</label>
+              <label htmlFor="prod-preco" className="label">{priceRule.pct > 0 ? 'Preço na loja' : 'Preço de venda'}</label>
               <div className="relative max-w-[14rem]">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[17px] text-mid pointer-events-none">R$</span>
                 <input
@@ -1062,6 +1073,12 @@ export default function ProductForm({ initial }: Props) {
                 <p className="text-[11.5px] text-red-600 mt-1">Digite o valor, por exemplo 8990 para R$ 89,90.</p>
               )}
               {fieldErr('preco')}
+              {priceRule.pct > 0 && priceValid && (
+                <p className="text-[12.5px] text-mid mt-2">
+                  No site: <strong className="font-semibold text-ink">{formatCurrency(sitePriceCents(Math.round(parseBRL(price) * 100), priceRule))}</strong>
+                  <span className="text-faint"> · loja + {String(priceRule.pct).replace('.', ',')}% (Configurações)</span>
+                </p>
+              )}
               {priceSuggestion !== null && !price && (
                 <button
                   type="button"

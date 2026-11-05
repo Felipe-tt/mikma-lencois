@@ -18,6 +18,8 @@ import { NFE_DEFAULTS } from '@/lib/nfe/config';
 import { NfeCertificate } from '@/components/painel/NfeCertificate';
 import { db } from '@/lib/firebase/db';
 import { STORE_DEFAULTS, withStoreDefaults, type StoreSettings } from '@/lib/store-settings';
+import { sitePriceCents } from '@/lib/sitePrice';
+import { formatCurrency } from '@/lib/utils/format';
 import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
 import { Select } from '@/components/ui/Select';
 import { HeroPreview, FeaturedPreview, CtaPreview } from '@/components/painel/preview/HomePreview';
@@ -106,6 +108,7 @@ export default function ConfiguracoesPage() {
     );
   }, [user]);
 
+  const [priceMsg, setPriceMsg] = useState('');
   const set = (field: keyof StoreSettings, value: string | number | boolean) =>
     setSettings(s => ({ ...s, [field]: value }));
 
@@ -152,6 +155,16 @@ export default function ConfiguracoesPage() {
       await setDoc(doc(db, 'settings', 'store'), changed, { merge: true });
       savedRef.current = settings;
       setSavedSnapshot(settings);
+      // Acréscimo mudou: refaz o preço do site de todos os produtos.
+      if ('sitePriceMarkupPct' in changed || 'sitePriceRounding' in changed) {
+        setPriceMsg('');
+        const token = await user?.getIdToken();
+        const res = await fetch('/api/painel/precos-site', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+        const out = await res.json().catch(() => ({}));
+        setPriceMsg(res.ok
+          ? `Preços do site atualizados em ${out.products ?? 0} ${out.products === 1 ? 'produto' : 'produtos'}.`
+          : 'O acréscimo foi salvo, mas os preços não foram atualizados. Salve de novo.');
+      }
     } catch (err) {
       console.error('[configuracoes] falha ao salvar', err);
       setSaving(false);
@@ -378,6 +391,33 @@ export default function ConfiguracoesPage() {
       {/* ── PRODUTOS ── */}
       {tab === 'produto' && (
         <div className="flex flex-col gap-5">
+          <Card icon="tag" title="Preço no site" desc="O site cobra o preço da loja física mais um acréscimo, para cobrir troca e frete das vendas online">
+            <Num label="Acréscimo no site (%)"
+              value={settings.sitePriceMarkupPct ?? 0}
+              onChange={v => set('sitePriceMarkupPct', Math.min(100, Math.max(0, v)))}
+              min={0}
+              max={100}
+              hint={(settings.sitePriceMarkupPct ?? 0) === 0 ? 'Sem acréscimo: o site cobra o mesmo preço da loja.' : 'Vale para todos os produtos. No cadastro você digita o preço da loja.'} />
+            <div className="mt-4">
+              <p className="text-[12px] font-semibold text-mid mb-2">Como fica o preço</p>
+              <div role="radiogroup" aria-label="Como fica o preço" className="grid grid-cols-2 gap-2">
+                {([['exato', 'Valor exato'], ['90', 'Terminar em ,90']] as const).map(([value, label]) => {
+                  const on = (settings.sitePriceRounding ?? 'exato') === value;
+                  const example = sitePriceCents(9900, { pct: settings.sitePriceMarkupPct ?? 0, rounding: value });
+                  return (
+                    <button key={value} type="button" role="radio" aria-checked={on}
+                      onClick={() => set('sitePriceRounding', value)}
+                      className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${on ? 'border-ink bg-warm' : 'border-mist hover:border-mist-d'}`}>
+                      <span className="block text-[13px] font-semibold text-ink">{label}</span>
+                      <span className="block text-[12px] text-mid mt-0.5 tabular-nums">R$ 99,00 na loja → {formatCurrency(example)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {priceMsg && <p role="status" className="text-[12px] text-emerald-700 dark:text-emerald-400 mt-3">{priceMsg}</p>}
+            </div>
+          </Card>
+
 
           <Card icon="shield" title="Garantias do produto" desc="3 frases que aparecem na página de cada produto abaixo do botão de comprar, reforça confiança" onPreview={() => setPreview('trust')}>
             <Info>Use frases curtas e diretas. Ex: entrega, pagamento, suporte.</Info>

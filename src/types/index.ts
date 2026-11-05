@@ -40,7 +40,9 @@ export interface Product {
   id: string
   name: string
   description: string
-  price: number // centavos
+  price: number // centavos (preço do site)
+  /** Preço da loja física, em centavos. O site cobra price (com o acréscimo das configurações). */
+  storePrice?: number
   weightKg: number          // peso por unidade (obrigatório para frete)
   images: string[]
   category: string
