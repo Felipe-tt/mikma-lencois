@@ -6,7 +6,6 @@ import { getStoreSettings } from '@/lib/settings';
 import { linesForProduct, packageContents, parseTable, type PackageLine } from '@/lib/packageContents';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import { ProductCard } from '@/components/product/ProductCard';
-import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
 import { SortSelect } from '@/components/product/SortSelect';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Product } from '@/types';
@@ -104,7 +103,6 @@ export default async function ProdutosPage({ searchParams }: Props) {
     const qs = params.toString();
     return qs ? `/produtos?${qs}` : '/produtos';
   };
-  const catNames = categories.map(c => c.name);
   const sizeLabel = tamanho ? SIZE_LABEL[tamanho] ?? tamanho : undefined;
   const heading = search ? `“${search}”` : [categoria ?? (sizeLabel ? 'Produtos' : 'Todos os produtos'), sizeLabel].filter(Boolean).join(' ');
 
@@ -126,10 +124,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
               </p>
             </div>
             <div className="flex items-center gap-2 pb-1 shrink-0">
-              {/* Mesma ordem do celular: Filtrar antes de Ordenar */}
-              <div className="hidden sm:block lg:hidden">
-                <MobileFilterSheet categories={catNames} active={categoria} />
-              </div>
+              {/* Ordenar; os filtros ficam à vista acima da lista */}
               <div className="hidden sm:block">
                 <SortSelect current={ordem} />
               </div>
@@ -174,29 +169,24 @@ export default async function ProdutosPage({ searchParams }: Props) {
             {/* Mobile sort */}
             {/* Celular: filtro e ordenação na mesma linha (o total já aparece
                 no título, não repete aqui). */}
-            <div className="flex items-center justify-between gap-3 mb-4 sm:hidden">
-              <MobileFilterSheet categories={catNames} active={categoria} />
+            <div className="flex items-center justify-end gap-3 mb-4 sm:hidden">
               <SortSelect current={ordem} />
             </div>
 
+            {/* Filtros à vista (antes a categoria ficava escondida no
+                "Filtrar"): categoria no celular e tablet (no computador fica
+                na lateral) e tamanho em todos. */}
+            {categories.length > 1 && (
+              <ChipRow label="Categoria" className="lg:hidden" items={[
+                { label: 'Todos', href: hrefWith({ categoria: undefined, pagina: undefined }), on: !categoria },
+                ...categories.map(c => ({ label: c.name, href: hrefWith({ categoria: c.name, pagina: undefined }), on: categoria === c.name })),
+              ]} />
+            )}
             {sizes.length > 1 && (
-              <nav aria-label="Tamanho" className="mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-none">
-                <ul className="flex items-center gap-2 w-max">
-                  <li className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-faint mr-1">Tamanho</li>
-                  {[{ key: undefined as string | undefined, label: 'Todos' }, ...sizes].map(sz => {
-                    const on = tamanho === sz.key;
-                    return (
-                      <li key={sz.key ?? 'todos'}>
-                        <Link href={hrefWith({ tamanho: sz.key, pagina: undefined })} scroll={false}
-                          aria-current={on ? 'page' : undefined}
-                          className={`inline-flex items-center h-10 px-4 rounded-full border text-[13px] transition-colors duration-150 ${on ? 'bg-ink text-paper border-ink font-semibold' : 'border-mist-d text-ink hover:border-ink'}`}>
-                          {sz.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </nav>
+              <ChipRow label="Tamanho" items={[
+                { label: 'Todos', href: hrefWith({ tamanho: undefined, pagina: undefined }), on: !tamanho },
+                ...sizes.map(sz => ({ label: sz.label, href: hrefWith({ tamanho: sz.key, pagina: undefined }), on: tamanho === sz.key })),
+              ]} />
             )}
             {approximate && products.length > 0 && (
               <p role="status" className="mb-6 rounded-2xl border border-mist bg-warm/50 px-4 py-3 text-[13px] text-mid leading-relaxed">
@@ -236,5 +226,23 @@ export default async function ProdutosPage({ searchParams }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+function ChipRow({ label, items, className = '' }: { label: string; items: { label: string; href: string; on: boolean }[]; className?: string }) {
+  return (
+    <nav aria-label={label} className={`mb-4 last-of-type:mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-none ${className}`}>
+      <ul className="flex items-center gap-2 w-max">
+        <li className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-faint mr-1 w-[5.5rem] shrink-0">{label}</li>
+        {items.map(it => (
+          <li key={it.label}>
+            <Link href={it.href} scroll={false} aria-current={it.on ? 'page' : undefined}
+              className={`inline-flex items-center h-10 px-4 rounded-full border text-[13px] whitespace-nowrap transition-colors duration-150 ${it.on ? 'bg-ink text-paper border-ink font-semibold' : 'border-mist-d text-ink hover:border-ink'}`}>
+              {it.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
