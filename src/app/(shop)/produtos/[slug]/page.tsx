@@ -143,6 +143,7 @@ export default async function ProductPage({ params }: Props) {
   const packageLines = linesForProduct(packageContents(sizeTable.columns, sizeTable.rows), {
     category: product.category,
     sizes: [...new Set(product.variants.map(v => SIZE_LABEL[v.size] ?? v.size))],
+    fronhaCount: product.fronhaCount,
   });
   const sizeGuideNote = s.sizeGuideNote || '';
   // Especificações: o tecido é sempre malha; o resto, quando cadastrado.
