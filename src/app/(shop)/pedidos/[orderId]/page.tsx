@@ -720,7 +720,7 @@ export default function OrderDetailPage() {
                       target="_blank" rel="noopener noreferrer"
                       className="mt-2 inline-flex items-center min-h-10 text-xs font-medium text-clay hover:text-clay-d transition-colors"
                     >
-                      Abrir no mapa →
+                      Abrir no mapa
                     </a>
                   </>
                 ) : (

@@ -265,7 +265,7 @@ export default function PedidosPage() {
                 {order.status !== 'pending_payment' && (
                   <div className="border-t border-mist px-5 sm:px-6 py-1">
                     <Link href={`/pedidos/${order.id}`} className="inline-flex items-center gap-1 min-h-10 text-xs font-medium text-mid hover:text-clay transition-colors">
-                      Ver detalhes <span aria-hidden="true">→</span>
+                      Ver detalhes
                     </Link>
                   </div>
                 )}

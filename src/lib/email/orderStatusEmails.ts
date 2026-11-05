@@ -78,7 +78,7 @@ export function buildShipped(order: OrderDoc, name: string, now = new Date()): E
   const trackingBlock = code ? emailCallout(`
       <p style="margin:0 0 4px;font-size:11px;color:#7A6656;text-transform:uppercase;letter-spacing:.08em;">Código de rastreio · ${escapeHtml(carrierLabel)}</p>
       <p style="margin:0;font-family:monospace;font-size:18px;font-weight:bold;color:#1E1208;letter-spacing:.12em;">${escapeHtml(code)}</p>
-      ${rastreioUrl ? `<p style="margin:8px 0 0;"><a href="${escapeHtml(rastreioUrl)}" style="font-size:13px;color:#9A4A28;text-decoration:none;font-weight:bold;">Rastrear envio →</a></p>` : ''}`) : '';
+      ${rastreioUrl ? `<p style="margin:8px 0 0;"><a href="${escapeHtml(rastreioUrl)}" style="font-size:13px;color:#9A4A28;text-decoration:none;font-weight:bold;">Rastrear envio</a></p>` : ''}`) : '';
   const html = emailLayout(`
     ${emailSection({
       eyebrow: `Pedido #${id}`,
@@ -183,15 +183,15 @@ export function buildPixPending(
           <tr><td align="center" style="padding:12px;background:#FFFFFF;border:1px solid #F0EBE1;border-radius:12px;">
             <img src="cid:${PIX_QR_CID}" width="200" height="200" alt="QR Code do PIX de ${formatCurrency(order.totalCents)}" style="display:block;width:200px;height:200px;border:0;">
           </td></tr>
-          <tr><td align="center" style="padding-top:8px;font-size:12px;color:#705A48;">Abra o app do banco, escolha Pix → Ler QR Code e aponte a câmera.</td></tr>
+          <tr><td align="center" style="padding-top:8px;font-size:12px;color:#705A48;">Abra o app do banco, escolha Pix, depois Ler QR Code, e aponte a câmera.</td></tr>
         </table>` : ''}
         ${emailCallout(`
           <p style="margin:0 0 6px;font-size:11px;color:#7A6656;text-transform:uppercase;letter-spacing:.08em;">${qr ? 'Ou use o PIX copia e cola' : 'PIX copia e cola'}</p>
           <p style="margin:0;font-family:monospace;font-size:12px;color:#1E1208;word-break:break-all;line-height:1.5;">${escapeHtml(pix.copyPaste)}</p>
           ${expLabel ? `<p style="margin:10px 0 0;font-size:12px;color:#705A48;">Válido até ${expLabel}. Depois disso, gere um novo código na página do pedido.</p>` : ''}`)}
         ${emailParagraph(qr
-          ? 'Para o copia e cola: no app do banco, escolha Pix → Pix copia e cola e cole o código. A confirmação é automática.'
-          : 'No app do seu banco, escolha Pix → Pix copia e cola, cole o código e confirme. A confirmação é automática.', { muted: true })}
+          ? 'Para o copia e cola: no app do banco, escolha Pix, depois Pix copia e cola, e cole o código. A confirmação é automática.'
+          : 'No app do seu banco, escolha Pix, depois Pix copia e cola, cole o código e confirme. A confirmação é automática.', { muted: true })}
         ${emailItemsTable(order)}
         ${emailCta(qr ? 'Ver pedido' : 'Ver pedido e QR Code', url)}`,
     })}
