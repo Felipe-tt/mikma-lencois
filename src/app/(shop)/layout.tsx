@@ -6,6 +6,8 @@ import { MaintenanceGate } from '@/components/layout/MaintenanceGate';
 import { getStoreSettings } from '@/lib/settings';
 import { storeIdentity } from '@/lib/legal';
 import { JsonLd } from '@/components/seo/JsonLd';
+import { WhatsAppProvider, WhatsAppFloat } from '@/components/contact/WhatsApp';
+import { storeWhatsapp } from '@/lib/whatsapp';
 
 // Prerender parcial (cacheComponents): o layout sai no HTML estático com as
 // configurações em cache (getStoreSettings). A checagem de manutenção "de
@@ -38,6 +40,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
     },
   };
   return (
+    <WhatsAppProvider href={storeWhatsapp(s)} hours={s.businessHours} timeZone={s.businessHoursTimezone}>
     <div className="flex min-h-screen flex-col">
       <JsonLd data={orgJsonLd} />
       <JsonLd data={websiteJsonLd} />
@@ -63,7 +66,9 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         businessHours={s.businessHours}
         businessHoursTimezone={s.businessHoursTimezone}
       />
+      <WhatsAppFloat />
       <CookieBanner />
     </div>
+    </WhatsAppProvider>
   );
 }

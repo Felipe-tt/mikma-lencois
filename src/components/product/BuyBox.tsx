@@ -1,5 +1,6 @@
 'use client';
 import { StaffPriceInsight } from './StaffPriceInsight';
+import { WhatsAppInline } from '@/components/contact/WhatsApp';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
@@ -477,6 +478,10 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
             );
           })}
         </ul>
+
+        {/* Dúvida antes de comprar: conversa já abre com o produto. */}
+        <WhatsAppInline className="-mt-2 self-start"
+          message={`Olá! Tenho uma dúvida sobre o ${product.name}: ${process.env.NEXT_PUBLIC_APP_URL ?? 'https://mikma.com.br'}/produtos/${product.id}`} />
 
         {/* Calculadora de frete, padrão Amazon/ML "Calcule o frete" */}
         <div className="border-t border-mist pt-5">

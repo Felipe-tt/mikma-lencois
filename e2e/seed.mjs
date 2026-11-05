@@ -38,7 +38,7 @@ export async function seed() {
   }
   await db.collection('maintenance').doc('status').set({ active: false });
   await db.collection('settings').doc('store').set({
-    storeName: 'Mikma Lençóis', storeCity: 'Blumenau', storeState: 'SC', storeCep: '89010100',
+    storeName: 'Mikma Lençóis', storeCity: 'Blumenau', storeState: 'SC', storeCep: '89010100', storePhone: '47999990000',
     abacatePaySandboxMode: false, pixDiscountThresholdCents: 0,
   }, { merge: true });
 

@@ -1,4 +1,5 @@
 'use client';
+import { WhatsAppInline } from '@/components/contact/WhatsApp';
 import { userMessage } from '@/lib/userMessage';
 import Link from 'next/link';
 import { Fragment, useEffect, useState, useCallback, useRef } from 'react';
@@ -1178,6 +1179,8 @@ export default function CheckoutPage() {
                   <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[11px] text-faint">
                     <span>PIX confirmado em segundos</span>
                     <span>Envio com rastreio</span>
+                    <WhatsAppInline label="Precisa de ajuda?" className="text-[11px] text-faint"
+                      message="Olá! Estou finalizando uma compra no site da Mikma e preciso de ajuda." />
                   </div>
 
                   <button
