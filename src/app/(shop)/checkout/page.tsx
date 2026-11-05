@@ -1177,7 +1177,7 @@ export default function CheckoutPage() {
                   {/* Trust inline, 18% higher completion rate (Baymard) */}
                   <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[11px] text-faint">
                     <span>PIX confirmado em segundos</span>
-                    <span>Troca em até 7 dias</span>
+                    <span>Envio com rastreio</span>
                   </div>
 
                   <button

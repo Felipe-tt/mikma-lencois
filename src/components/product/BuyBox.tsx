@@ -454,10 +454,10 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           {cartError && <p role="alert" className="text-[12px] text-red-600 leading-snug">{cartError}</p>}
         </div>
 
-        {/* Confiança logo abaixo da compra (antes ficava lá embaixo, em "Sobre o produto") */}
+        {/* Confiança logo abaixo da compra. A política de trocas fica no rodapé
+            e na página do pedido, sem selo de destaque aqui. */}
         <ul className="flex flex-wrap gap-x-4 gap-y-1.5 -mt-1 text-[12px] text-mid">
           {[
-            { href: '/trocas-e-devolucoes', label: 'Troca grátis em 7 dias', icon: <path d="M3 12a9 9 0 0115.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 01-15.5 6.2L3 16M3 21v-5h5" /> },
             { href: null, label: 'Envio com rastreio', icon: <><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></> },
             { href: null, label: 'Compra segura', icon: <><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></> },
           ].map(t => {
