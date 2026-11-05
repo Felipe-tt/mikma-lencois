@@ -2,19 +2,22 @@ import { describe, it, expect } from 'vitest';
 import { suggestProductName, suggestProductDescription } from './productOptions';
 
 describe('suggestProductName', () => {
+  it('casal sai como "Casal Padrão", igual aos anúncios da loja', () => {
+    expect(suggestProductName({ category: 'Jogos de cama', size: 'casal', fronhaCount: 2 })).toBe('Jogo Casal Padrão 3 Peças');
+  });
   it('Jogo de Cama: soma lençol + fronhas nas peças', () => {
     expect(suggestProductName({ category: 'Jogos de cama', size: 'queen', fronhaCount: 2 }))
-      .toBe('Jogo de Cama Queen 3 Peças');
+      .toBe('Jogo Queen 3 Peças');
   });
 
   it('Jogo de Cama solteiro (1 fronha): 2 peças, não 3', () => {
     expect(suggestProductName({ category: 'Jogos de cama', size: 'solteiro', fronhaCount: 1 }))
-      .toBe('Jogo de Cama Solteiro 2 Peças');
+      .toBe('Jogo Solteiro 2 Peças');
   });
 
   it('Jogo de Cama sem fronhaCount definido: assume 2 (padrão do form)', () => {
     expect(suggestProductName({ category: 'Jogos de cama', size: 'king' }))
-      .toBe('Jogo de Cama King 3 Peças');
+      .toBe('Jogo King 3 Peças');
   });
 
   it('Jogo de Cama sem tamanho ainda: string vazia (variação não adicionada)', () => {
@@ -22,7 +25,7 @@ describe('suggestProductName', () => {
   });
 
   it('Lençóis: prefixo + tamanho', () => {
-    expect(suggestProductName({ category: 'Lençóis', size: 'casal' })).toBe('Lençol Casal');
+    expect(suggestProductName({ category: 'Lençóis', size: 'casal' })).toBe('Lençol Casal Padrão');
   });
 
   it('Fronhas: prefixo + tamanho', () => {
@@ -35,7 +38,7 @@ describe('suggestProductName', () => {
 
   it('fronhaCount zero ou negativo (dado inválido) cai no padrão 2', () => {
     expect(suggestProductName({ category: 'Jogos de cama', size: 'queen', fronhaCount: 0 }))
-      .toBe('Jogo de Cama Queen 3 Peças');
+      .toBe('Jogo Queen 3 Peças');
   });
 });
 

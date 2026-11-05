@@ -45,26 +45,31 @@ const CATEGORY_PREFIX: Partial<Record<Category, string>> = {
  * no form) — sempre pode ser sobrescrito digitando por cima.
  *
  * Ex: category='Jogos de cama', size='queen', fronhaCount=2
- *  → "Jogo de Cama Queen 3 Peças" (1 lençol + 2 fronhas = 3 peças)
+ *  → "Jogo Queen 3 Peças" (1 lençol + 2 fronhas = 3 peças)
  * Ex: category='Lençóis', size='casal'
- *  → "Lençol Casal"
+ *  → "Lençol Casal Padrão"
  *
  * Retorna string vazia se não há informação suficiente ainda (nenhuma
  * variação com tamanho definido) ou se a categoria não é conhecida
  * (produto antigo com outra categoria).
  */
+// No nome do produto a loja chama o casal de "Casal Padrão" (138 × 188),
+// como no cartão da embalagem e no jeito de falar da vendedora.
+const NAME_SIZE_LABEL: Record<string, string> = { ...SIZE_LABEL, casal: 'Casal Padrão' };
+
 export function suggestProductName(params: {
   category: Category;
   size?: string;       // size da primeira variação (variants[0]?.size)
   fronhaCount?: number; // só relevante pra category === 'Jogos de cama'
 }): string {
   const { category, size, fronhaCount } = params;
-  const sizeLabel = size ? SIZE_LABEL[size] : undefined;
+  const sizeLabel = size ? NAME_SIZE_LABEL[size] : undefined;
 
   if (category === 'Jogos de cama') {
     if (!sizeLabel) return '';
     const pecas = 1 + (fronhaCount && fronhaCount > 0 ? fronhaCount : 2);
-    return `Jogo de Cama ${sizeLabel} ${pecas} Peças`;
+    // "Jogo Casal Padrão 3 Peças": o nome que a loja já usa nos anúncios.
+    return `Jogo ${sizeLabel} ${pecas} Peças`;
   }
 
   const prefix = CATEGORY_PREFIX[category];
