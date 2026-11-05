@@ -6,14 +6,13 @@ import { getStoreSettings } from '@/lib/settings';
 import { linesForProduct, packageContents, parseTable, type PackageLine } from '@/lib/packageContents';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import { ProductCard } from '@/components/product/ProductCard';
-import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
 import { SortSelect } from '@/components/product/SortSelect';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Product } from '@/types';
 import { getCatalog } from '@/lib/catalog';
 
 
-interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string; pagina?: string }> }
+interface Props { searchParams: Promise<{ categoria?: string; tamanho?: string; q?: string; ordem?: string; pagina?: string }> }
 
 const PAGE_SIZE = 48;
 
@@ -52,8 +51,19 @@ function measuresFor(lines: PackageLine[]) {
   }).flatMap(l => l.pieces.flatMap(piece => [piece.dims.l, piece.dims.c, piece.dims.a].filter((n): n is number => typeof n === 'number' && n > 0)));
 }
 
-function getProducts(all: Product[], cat?: string, ordem?: string, search?: string, page = 1, lines: PackageLine[] = []): { products: Product[]; hasMore: boolean; approximate: boolean } {
-  const inCat = cat ? all.filter(p => p.category === cat) : all;
+// Tamanhos que dá para filtrar, na ordem da cama menor para a maior.
+const SIZE_ORDER = ['berco', 'solteiro', 'casal', 'queen', 'king'];
+const hasSize = (p: Product, size: string) => (p.variants ?? []).some(v => v.size === size);
+
+function getSizes(all: Product[]): { key: string; label: string; count: number }[] {
+  return SIZE_ORDER
+    .map(key => ({ key, label: SIZE_LABEL[key] ?? key, count: all.filter(p => hasSize(p, key)).length }))
+    .filter(s => s.count > 0);
+}
+
+function getProducts(all: Product[], cat?: string, ordem?: string, search?: string, page = 1, lines: PackageLine[] = [], size?: string): { products: Product[]; hasMore: boolean; approximate: boolean; total: number } {
+  // Tamanho: tocar em "Casal" mostra só os produtos casal.
+  const inCat = all.filter(p => (!cat || p.category === cat) && (!size || hasSize(p, size)));
   // Busca e ordem por preço usam o catálogo inteiro; o resto pagina de 48 em 48.
   const wantsAll = !!search || ordem === 'preco_asc' || ordem === 'preco_desc';
   const max = wantsAll ? inCat.length : PAGE_SIZE * page;
@@ -63,106 +73,133 @@ function getProducts(all: Product[], cat?: string, ordem?: string, search?: stri
   const found = search ? searchCatalog(list, search, { measuresOf: measuresFor(lines) }) : { products: list, approximate: false };
   const products = found.products;
   const approximate = found.approximate;
-  if (ordem === 'preco_asc')  return { products: [...products].sort((a, b) => a.price - b.price), hasMore, approximate };
-  if (ordem === 'preco_desc') return { products: [...products].sort((a, b) => b.price - a.price), hasMore, approximate };
-  return { products, hasMore, approximate };
+  const total = inCat.length;
+  if (ordem === 'preco_asc')  return { products: [...products].sort((a, b) => a.price - b.price), hasMore, approximate, total };
+  if (ordem === 'preco_desc') return { products: [...products].sort((a, b) => b.price - a.price), hasMore, approximate, total };
+  return { products, hasMore, approximate, total };
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
-  const { categoria, q, ordem, pagina } = await searchParams;
+  const { categoria, tamanho: tamanhoParam, q, ordem, pagina } = await searchParams;
   const search = q?.trim() || undefined;
+
   const page = Math.min(10, Math.max(1, Number(pagina) || 1));
-  const [all, settings] = await Promise.all([getCatalog(), search ? getStoreSettings() : null]);
-  const lines = settings ? (() => { const t = parseTable(settings.sizeGuideColumns, settings.sizeGuideRows); return packageContents(t.columns, t.rows); })() : [];
-  const { products, hasMore, approximate } = getProducts(all, categoria, ordem, search, page, lines);
+  const [all, settings] = await Promise.all([getCatalog(), getStoreSettings()]);
+  const lines = (() => { const t = parseTable(settings.sizeGuideColumns, settings.sizeGuideRows); return packageContents(t.columns, t.rows); })();
+  // Tamanhos com produto na categoria escolhida. Trocar para uma categoria
+  // sem aquele tamanho (ex.: Fronhas) volta a mostrar tudo, sem lista vazia.
+  const sizes = getSizes(categoria ? all.filter(p => p.category === categoria) : all);
+  const tamanho = tamanhoParam && sizes.some(sz => sz.key === tamanhoParam) ? tamanhoParam : undefined;
+  const { products, hasMore, approximate, total } = getProducts(all, categoria, ordem, search, page, lines, tamanho);
   const categories = getCategories(all);
   // Total real da categoria (a lista pode estar paginada), não só o que veio.
-  const catalogTotal = categoria
-    ? categories.find(c => c.name === categoria)?.count ?? products.length
-    : categories.reduce((n, c) => n + c.count, 0);
+  const catalogTotal = total;
   const shownTotal = search ? products.length : Math.max(products.length, catalogTotal);
   // Links mantêm busca e ordem (antes a lateral do desktop perdia os dois).
   const hrefWith = (changes: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
-    const merged = { categoria, q: search, ordem, ...changes };
+    const merged = { categoria, tamanho, q: search, ordem, ...changes };
     for (const [k, v] of Object.entries(merged)) if (v) params.set(k, v);
     const qs = params.toString();
     return qs ? `/produtos?${qs}` : '/produtos';
   };
-  const catNames = categories.map(c => c.name);
-  const heading = search ? `“${search}”` : (categoria ?? 'Todos os produtos');
+  const sizeLabel = tamanho ? SIZE_LABEL[tamanho] ?? tamanho : undefined;
+  const heading = search ? `“${search}”` : [categoria ?? (sizeLabel ? 'Produtos' : 'Todos os produtos'), sizeLabel].filter(Boolean).join(' ');
+
+  // Categorias na ordem de quem compra: jogo, lençol, fronha, depois o resto.
+  const CAT_ORDER = ['Jogos de cama', 'Lençóis', 'Fronhas'];
+  const orderedCats = [...categories].sort((a, b) => {
+    const ia = CAT_ORDER.indexOf(a.name), ib = CAT_ORDER.indexOf(b.name);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.name.localeCompare(b.name);
+  });
+  const allCount = categories.reduce((n, c) => n + c.count, 0);
+  const hasFilter = !!(categoria || tamanho);
+  // "Todos" do tamanho conta a categoria inteira, não o que o filtro deixou.
+  const catCount = categoria ? categories.find(c => c.name === categoria)?.count ?? total : allCount;
 
   return (
     <div>
-      {/* ── Header ── */}
-      <div className="border-b border-mist">
-        <div className="container-shop py-6 sm:py-8">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="font-semibold text-[10px] tracking-[0.24em] uppercase text-faint mb-2">
-                {search ? 'Resultado da busca' : categoria ? `Catálogo / ${categoria}` : 'Catálogo'}
-              </p>
-              <h1 className="font-display font-normal text-ink text-3xl sm:text-4xl leading-tight">
-                {heading}
-              </h1>
-              <p className="text-[12px] text-faint mt-2 font-semibold">
-                {shownTotal} {search ? (shownTotal === 1 ? 'resultado' : 'resultados') : (shownTotal === 1 ? 'produto' : 'produtos')}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 pb-1 shrink-0">
-              {/* Mesma ordem do celular: Filtrar antes de Ordenar */}
-              <div className="hidden sm:block lg:hidden">
-                <MobileFilterSheet categories={catNames} active={categoria} />
-              </div>
-              <div className="hidden sm:block">
-                <SortSelect current={ordem} />
-              </div>
-            </div>
+      {/* ── Título ── */}
+      <div className="container-shop pt-6 sm:pt-9 pb-4 sm:pb-5">
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="font-semibold text-[10px] tracking-[0.24em] uppercase text-faint mb-2">
+              {search ? 'Resultado da busca' : 'Catálogo'}
+            </p>
+            <h1 className="font-display font-normal text-ink text-[1.9rem] sm:text-4xl leading-tight">
+              {heading}
+            </h1>
+            <p className="text-[12px] text-faint mt-1.5 font-semibold tabular-nums">
+              {shownTotal} {search ? (shownTotal === 1 ? 'resultado' : 'resultados') : (shownTotal === 1 ? 'produto' : 'produtos')}
+              {hasFilter && (
+                <Link href={hrefWith({ categoria: undefined, tamanho: undefined, pagina: undefined })} scroll={false}
+                  className="ml-2.5 font-medium text-clay hover:text-clay-d underline-offset-4 hover:underline">
+                  Limpar filtros
+                </Link>
+              )}
+            </p>
+          </div>
+          <div className="shrink-0 pb-0.5">
+            <SortSelect current={ordem} />
           </div>
         </div>
       </div>
 
-      <div className="container-shop py-6 sm:py-8 pb-20">
-        <div className="flex gap-12 items-start">
-
-          {/* Sidebar desktop */}
-          {categories.length > 0 && (
-            <aside className="hidden lg:flex flex-col gap-7 w-44 shrink-0 sticky top-24">
-              <div>
-                <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-faint mb-4">Categorias</p>
-                <div className="flex flex-col">
-                  <Link href={hrefWith({ categoria: undefined })}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${
-                      !categoria ? 'text-ink font-medium bg-warm' : 'text-mid hover:text-ink hover:bg-warm/60'
-                    }`}>
-                    <span>Todos</span>
-                    {!search && <span className="text-[11px] text-faint">{categories.reduce((s,c)=>s+c.count,0)}</span>}
-                  </Link>
-                  {categories.map(cat => (
-                    <Link key={cat.name} href={hrefWith({ categoria: cat.name })}
-                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${
-                        categoria === cat.name ? 'text-ink font-medium bg-warm' : 'text-mid hover:text-ink hover:bg-warm/60'
-                      }`}>
-                      <span>{cat.name}</span>
-                      {/* Na busca a contagem do catálogo não bate com o resultado */}
-                      {!search && <span className="text-[11px] text-faint">{cat.count}</span>}
+      {/* ── Categorias: abas fixas logo abaixo do cabeçalho do site ── */}
+      {orderedCats.length > 1 && (
+        <div className="sticky top-[60px] z-30 bg-paper/92 backdrop-blur-md border-y border-mist">
+          <nav aria-label="Categoria" className="container-shop overflow-x-auto scrollbar-none">
+            <ul className="flex items-stretch gap-6 sm:gap-8 w-max h-12">
+              {[{ name: 'Tudo', key: undefined as string | undefined, count: allCount }, ...orderedCats.map(c => ({ ...c, key: c.name }))].map(c => {
+                const on = categoria === c.key;
+                return (
+                  <li key={c.name} className="flex">
+                    <Link href={hrefWith({ categoria: c.key, pagina: undefined })} scroll={false}
+                      aria-current={on ? 'page' : undefined}
+                      className={`relative flex items-center gap-1.5 text-[13.5px] whitespace-nowrap transition-colors duration-200 ${on ? 'text-ink font-semibold' : 'text-mid hover:text-ink'}`}>
+                      {c.name}
+                      {!search && <span className={`text-[10.5px] tabular-nums ${on ? 'text-clay' : 'text-faint'}`}>{c.count}</span>}
+                      <span aria-hidden="true"
+                        className={`absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-ink origin-center transition-transform duration-300 ease-out ${on ? 'scale-x-100' : 'scale-x-0'}`} />
                     </Link>
-                  ))}
-                </div>
-              </div>
-            </aside>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </div>
+      )}
+
+      <div className="container-shop pt-5 sm:pt-7 pb-20">
+        <div>
+
+          {/* ── Tamanho: a cama desenhada na proporção de cada um ── */}
+          {sizes.length > 1 && (
+            <nav aria-label="Tamanho" className="mb-6 sm:mb-8 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-none">
+              <ul className="flex gap-2.5 w-max">
+                {[{ key: undefined as string | undefined, label: 'Todos', w: 0 }, ...sizes.map(sz => ({ key: sz.key as string | undefined, label: sz.label, w: sizeDims(sz.key, lines)[0] }))].map(sz => {
+                  const on = tamanho === sz.key;
+                  const dims = sz.key ? sizeDims(sz.key, lines) : null;
+                  return (
+                    <li key={sz.label}>
+                      <Link href={hrefWith({ tamanho: sz.key, pagina: undefined })} scroll={false}
+                        aria-current={on ? 'page' : undefined}
+                        className={`group flex flex-col items-center justify-end gap-1.5 w-[5.6rem] h-[5.4rem] rounded-2xl border px-2 pb-2.5 pt-3 transition-[border-color,background-color,box-shadow] duration-200 ${on ? 'border-ink bg-warm shadow-[0_6px_18px_-10px_rgba(40,24,12,0.45)]' : 'border-mist bg-paper hover:border-mist-d hover:bg-warm/50'}`}>
+                        <span className="h-7 flex items-end">
+                          {sz.key ? <BedGlyph widthCm={sz.w} pillows={sz.key === 'solteiro' || sz.key === 'berco' ? 1 : 2} on={on} /> : <AllBedsGlyph on={on} />}
+                        </span>
+                        <span className={`text-[12.5px] leading-none ${on ? 'font-semibold text-ink' : 'text-ink'}`}>{sz.label}</span>
+                        <span className="text-[10px] leading-none text-faint tabular-nums">{dims ? `${dims[0]} x ${dims[1]}` : `${catCount} ${catCount === 1 ? 'item' : 'itens'}`}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
           )}
 
           {/* Grid */}
-          <div className="flex-1 min-w-0">
-            {/* Mobile sort */}
-            {/* Celular: filtro e ordenação na mesma linha (o total já aparece
-                no título, não repete aqui). */}
-            <div className="flex items-center justify-between gap-3 mb-4 sm:hidden">
-              <MobileFilterSheet categories={catNames} active={categoria} />
-              <SortSelect current={ordem} />
-            </div>
-
+          <div className="min-w-0">
             {approximate && products.length > 0 && (
               <p role="status" className="mb-6 rounded-2xl border border-mist bg-warm/50 px-4 py-3 text-[13px] text-mid leading-relaxed">
                 Nada com todas as palavras de <strong className="font-semibold text-ink">“{search}”</strong>. Estes são os mais parecidos.
@@ -201,5 +238,44 @@ export default async function ProdutosPage({ searchParams }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Medida do lençol (largura x comprimento) de cada tamanho, da tabela da
+// embalagem nas Configurações; sem ela, a medida padrão do cartão.
+const DEFAULT_DIMS: Record<string, [number, number]> = { berco: [70, 130], solteiro: [88, 188], casal: [138, 188], queen: [158, 198], king: [193, 198] };
+function sizeDims(key: string, lines: PackageLine[]): [number, number] {
+  const label = (SIZE_LABEL[key] ?? key).toLowerCase();
+  const line = lines.find(l => l.size.toLowerCase() === label);
+  const sheet = line?.pieces.find(p => p.kind === 'lencol');
+  if (sheet?.dims.l && sheet.dims.c) return [sheet.dims.l, sheet.dims.c];
+  return DEFAULT_DIMS[key] ?? [138, 188];
+}
+
+/** Colchão visto de cima, largura proporcional à medida (King é a maior). */
+function BedGlyph({ widthCm, pillows, on }: { widthCm: number; pillows: 1 | 2; on: boolean }) {
+  // Berço ~14 px, King ~42 px: a diferença entre os tamanhos aparece.
+  const w = Math.round(14 + (Math.min(Math.max(widthCm, 70), 200) - 70) / 130 * 28);
+  const h = 26;
+  const pw = pillows === 1 ? w - 8 : (w - 10) / 2;
+  return (
+    <svg aria-hidden="true" width={w} height={h} viewBox={`0 0 ${w} ${h}`} className={`transition-colors duration-200 ${on ? 'text-clay' : 'text-mid group-hover:text-ink'}`}>
+      <rect x="0.75" y="0.75" width={w - 1.5} height={h - 1.5} rx="3" fill="currentColor" fillOpacity={on ? 0.12 : 0.06} stroke="currentColor" strokeWidth="1.5" />
+      {Array.from({ length: pillows }).map((_, i) => (
+        <rect key={i} x={4 + i * (pw + 2)} y="3.5" width={pw} height="5" rx="1.6" fill="currentColor" fillOpacity="0.55" />
+      ))}
+      <path d={`M3 12.5H${w - 3}`} stroke="currentColor" strokeWidth="1" strokeOpacity="0.45" />
+    </svg>
+  );
+}
+
+/** "Todos": três camas de tamanhos diferentes, lado a lado. */
+function AllBedsGlyph({ on }: { on: boolean }) {
+  return (
+    <svg aria-hidden="true" width="34" height="26" viewBox="0 0 34 26" className={`transition-colors duration-200 ${on ? 'text-clay' : 'text-mid group-hover:text-ink'}`}>
+      <rect x="0.75" y="10.75" width="8" height="14.5" rx="2" fill="currentColor" fillOpacity="0.06" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="11" y="6.75" width="10" height="18.5" rx="2" fill="currentColor" fillOpacity="0.06" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="23.25" y="0.75" width="10" height="24.5" rx="2" fill="currentColor" fillOpacity={on ? 0.14 : 0.06} stroke="currentColor" strokeWidth="1.3" />
+    </svg>
   );
 }
