@@ -9,7 +9,6 @@ import { auth } from '@/lib/firebase/client';
 import { db } from '@/lib/firebase/db';
 import { fetchMyPii, saveMyPii } from '@/lib/piiClient';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { setReturnTo } from '@/lib/auth/returnTo';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Cart, Address, Order } from '@/types';
@@ -282,7 +281,8 @@ export default function CheckoutPage() {
     // Volta pro checkout depois do login (antes caía na home).
     // replace: com push, Voltar no login reabria o checkout, que mandava
     // pro login de novo.
-    if (!user) { setReturnTo('/checkout'); router.replace('/entrar'); return; }
+    // Visitante sem sessão não tem carrinho: o carrinho explica e oferece entrar.
+    if (!user) { router.replace('/carrinho'); return; }
     const unsub = onSnapshot(doc(db, 'carts', user.uid), snap => {
       if (!snap.exists() || !snap.data()?.items?.length) {
         if (!pixShownRef.current) router.replace('/carrinho');

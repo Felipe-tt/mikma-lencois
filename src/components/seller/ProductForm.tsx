@@ -766,7 +766,7 @@ export default function ProductForm({ initial }: Props) {
             .filter(({ variantId }) => !existingSkus[`${productId}_${variantId}`])
             .map(({ variantId, r }) => setDoc(doc(db, 'inventory', `${productId}_${variantId}`), {
               productId, sku: `${productId}_${variantId}`,
-              variant: { id: variantId, size, fabric: r.fabric, color: r.color },
+              variant: { id: variantId, size, fabric: r.fabric, color: r.color, colorName: r.colorName.trim() },
               quantity: 0, reserved: 0, lowStockThreshold: 3, history: [],
               updatedAt: serverTimestamp(),
             })),
@@ -783,7 +783,7 @@ export default function ProductForm({ initial }: Props) {
           const sku = `${newRef.id}_${variantId}`;
           return setDoc(doc(db, 'inventory', sku), {
             productId: newRef.id, sku,
-            variant: { id: variantId, size, fabric: r.fabric, color: r.color },
+            variant: { id: variantId, size, fabric: r.fabric, color: r.color, colorName: r.colorName.trim() },
             quantity: r.qty, reserved: 0, lowStockThreshold: 3, history: [],
             updatedAt: serverTimestamp(),
           });

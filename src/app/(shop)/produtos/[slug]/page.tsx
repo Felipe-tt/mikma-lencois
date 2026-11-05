@@ -245,8 +245,9 @@ export default async function ProductPage({ params }: Props) {
                   <li aria-hidden="true" className="text-faint-l mx-1">/</li>
                   <li className="shrink-0">
                     <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
-                      className="hover:text-clay transition-colors capitalize">
-                      {product.category}
+                      className="hover:text-clay transition-colors">
+                      {/* Só a primeira letra: "capitalize" virava "Jogos De Cama". */}
+                      {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                     </Link>
                   </li>
                 </>

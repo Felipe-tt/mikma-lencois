@@ -17,7 +17,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { NFE_DEFAULTS } from '@/lib/nfe/config';
 import { NfeCertificate } from '@/components/painel/NfeCertificate';
 import { db } from '@/lib/firebase/db';
-import { STORE_DEFAULTS, type StoreSettings } from '@/lib/store-settings';
+import { STORE_DEFAULTS, withStoreDefaults, type StoreSettings } from '@/lib/store-settings';
 import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
 import { Select } from '@/components/ui/Select';
 import { HeroPreview, FeaturedPreview, CtaPreview } from '@/components/painel/preview/HomePreview';
@@ -74,7 +74,7 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => {
     getDoc(doc(db, 'settings', 'store')).then(snap => {
-      const merged = snap.exists() ? { ...STORE_DEFAULTS, ...snap.data() } as StoreSettings : STORE_DEFAULTS;
+      const merged = snap.exists() ? withStoreDefaults(snap.data()) : STORE_DEFAULTS;
       savedRef.current = merged;
       setSavedSnapshot(merged);
       setSettings(merged);
@@ -327,7 +327,7 @@ export default function ConfiguracoesPage() {
               <F key={n} label={`Selo ${n}`}
                 value={(settings as unknown as Record<string,string>)[`heroTrust${n}`] ?? ''}
                 onChange={v => set(`heroTrust${n}` as keyof StoreSettings, v)}
-                placeholder={['Entrega em 1h em Blumenau','Frete para todo o Brasil','Pague com PIX','Qualidade direto de fábrica'][n-1]} />
+                placeholder={['Entrega em 1h em Blumenau','Frete para todo o Brasil','PIX ou cartão','Qualidade direto de fábrica'][n-1]} />
             ))}
           </Card>
 

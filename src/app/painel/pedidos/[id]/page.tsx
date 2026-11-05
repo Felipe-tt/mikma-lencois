@@ -1,4 +1,5 @@
 'use client';
+import { SIZE_LABEL } from '@/lib/productOptions';
 
 import { plural } from '@/lib/plural';
 import { use, useEffect, useState } from 'react';
@@ -1092,7 +1093,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-medium text-ink leading-snug">{item.productName}</p>
                   <p className="text-[11px] text-faint mt-0.5">
-                    {item.variant.size}{(item.variant.colorName || item.variant.color) ? ` · ${item.variant.colorName || item.variant.color}` : ''}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}{' '}
+                    {SIZE_LABEL[item.variant.size] ?? item.variant.size}{(item.variant.colorName || item.variant.color) ? ` · ${item.variant.colorName || item.variant.color}` : ''}{item.variant.fabric ? ` · ${item.variant.fabric}` : ''}{' '}
                     · {item.quantity} {item.quantity === 1 ? 'unidade' : 'unidades'} · {formatCurrency(item.unitPrice)} cada
                   </p>
                   <p className="text-[10px] font-mono text-faint/60 mt-0.5">SKU: {item.sku}</p>
@@ -1105,15 +1106,36 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             ))}
           </div>
           <div className="px-5 py-3 border-t border-mist flex flex-col gap-1.5">
-            <div className="flex justify-between text-[12px] text-faint">
-              <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
-            </div>
-            {order.discountCents ? (
-              <div className="flex justify-between text-[12px] text-emerald-600">
-                <span>Desconto {order.couponCode ? `(cupom ${order.couponCode})` : ''}</span>
-                <span>- {formatCurrency(order.discountCents)}</span>
-              </div>
-            ) : null}
+            {/* Mesma conta da página do pedido do cliente: antes faltava o
+                frete e o subtotal não fechava com o total pago. */}
+            {(() => {
+              const o = order as typeof order & { productsCents?: number; shippingCents?: number; pixDiscountCents?: number; couponDiscountCents?: number };
+              const products = o.productsCents ?? subtotal;
+              const discount = order.discountCents ?? 0;
+              const shipping = o.shippingCents ?? Math.max(0, order.totalCents - products + discount);
+              const pix = o.pixDiscountCents ?? 0;
+              const coupon = o.couponDiscountCents ?? (discount - pix);
+              return (
+                <>
+                  <div className="flex justify-between text-[12px] text-faint">
+                    <span>Subtotal</span><span className="tabular-nums">{formatCurrency(products)}</span>
+                  </div>
+                  <div className="flex justify-between text-[12px] text-faint">
+                    <span>Frete cobrado</span><span className="tabular-nums">{shipping === 0 ? 'Grátis' : formatCurrency(shipping)}</span>
+                  </div>
+                  {pix > 0 && (
+                    <div className="flex justify-between text-[12px] text-emerald-600">
+                      <span>Desconto no PIX</span><span className="tabular-nums">- {formatCurrency(pix)}</span>
+                    </div>
+                  )}
+                  {coupon > 0 && (
+                    <div className="flex justify-between text-[12px] text-emerald-600">
+                      <span>Cupom{order.couponCode ? ` ${order.couponCode}` : ''}</span><span className="tabular-nums">- {formatCurrency(coupon)}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             <div className="flex justify-between pt-2 border-t border-mist">
               <span className="text-[13px] font-bold text-ink">{order.payment.paidAt ? 'Total pago' : 'Total'}</span>
               <span className="font-display text-xl text-ink">{formatCurrency(order.totalCents)}</span>
@@ -1208,11 +1230,17 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               <p className="text-[12px] font-bold text-ink tracking-wide uppercase">Rastreamento</p>
             </div>
             <div className="px-5 py-4">
-              <TrackingTimeline
-                trackingCode={isCorreios(order.delivery.carrier!) && order.delivery.trackingCode ? order.delivery.trackingCode : undefined}
-                orderId={isCorreios(order.delivery.carrier!) && order.delivery.trackingCode ? undefined : order.id}
-                carrierName={carrierNameVendor(order.delivery.carrier!)}
-              />
+              {/* Antes do envio não há o que rastrear: buscava e mostrava
+                  "Envio ainda sem código" com "Tentar novamente", como erro. */}
+              {order.delivery.trackingCode || order.status === 'shipped' || order.status === 'delivered' ? (
+                <TrackingTimeline
+                  trackingCode={isCorreios(order.delivery.carrier!) && order.delivery.trackingCode ? order.delivery.trackingCode : undefined}
+                  orderId={isCorreios(order.delivery.carrier!) && order.delivery.trackingCode ? undefined : order.id}
+                  carrierName={carrierNameVendor(order.delivery.carrier!)}
+                />
+              ) : (
+                <p className="text-[13px] text-faint py-1">Aparece aqui quando o pedido for despachado e tiver código de rastreio.</p>
+              )}
             </div>
           </div>
         )}
