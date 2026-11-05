@@ -35,3 +35,11 @@ test('páginas de máquina respondem (feed, llms.txt, catálogo, security.txt)',
   expect(sec).toMatch(/^Contact: /m);
   expect(Date.parse(sec.match(/^Expires: (.+)$/m)![1])).toBeGreaterThan(Date.now());
 });
+
+test('busca aceita erro de digitação e medida', async ({ page }) => {
+  await page.goto('/produtos?q=lencol%20kng');
+  await expect(page.getByText('Jogo de Cama King Malha Cinza').filter({ visible: true }).first()).toBeVisible();
+  await page.goto('/produtos?q=158x198');
+  await expect(page.getByText('Lençol Queen Malha Areia').filter({ visible: true }).first()).toBeVisible();
+  await expect(page.getByText('Lençol Casal Malha Branco')).toHaveCount(0);
+});
