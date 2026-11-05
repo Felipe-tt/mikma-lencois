@@ -43,3 +43,12 @@ test('busca aceita erro de digitação e medida', async ({ page }) => {
   await expect(page.getByText('Lençol Queen Malha Areia').filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText('Lençol Casal Malha Branco')).toHaveCount(0);
 });
+
+test('filtro de tamanho mostra só aquele tamanho', async ({ page }) => {
+  await page.goto('/produtos');
+  await page.getByRole('navigation', { name: 'Tamanho' }).getByRole('link', { name: 'Casal', exact: true }).click();
+  await expect(page).toHaveURL(/tamanho=casal/);
+  await expect(page.getByText('Lençol Casal Malha Branco').filter({ visible: true }).first()).toBeVisible();
+  await expect(page.getByText('Lençol Queen Malha Areia')).toHaveCount(0);
+  await expect(page.getByText('Jogo de Cama King Malha Cinza')).toHaveCount(0);
+});

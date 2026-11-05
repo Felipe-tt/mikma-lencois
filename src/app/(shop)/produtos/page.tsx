@@ -13,7 +13,7 @@ import type { Product } from '@/types';
 import { getCatalog } from '@/lib/catalog';
 
 
-interface Props { searchParams: Promise<{ categoria?: string; q?: string; ordem?: string; pagina?: string }> }
+interface Props { searchParams: Promise<{ categoria?: string; tamanho?: string; q?: string; ordem?: string; pagina?: string }> }
 
 const PAGE_SIZE = 48;
 
@@ -52,8 +52,19 @@ function measuresFor(lines: PackageLine[]) {
   }).flatMap(l => l.pieces.flatMap(piece => [piece.dims.l, piece.dims.c, piece.dims.a].filter((n): n is number => typeof n === 'number' && n > 0)));
 }
 
-function getProducts(all: Product[], cat?: string, ordem?: string, search?: string, page = 1, lines: PackageLine[] = []): { products: Product[]; hasMore: boolean; approximate: boolean } {
-  const inCat = cat ? all.filter(p => p.category === cat) : all;
+// Tamanhos que dá para filtrar, na ordem da cama menor para a maior.
+const SIZE_ORDER = ['berco', 'solteiro', 'casal', 'queen', 'king'];
+const hasSize = (p: Product, size: string) => (p.variants ?? []).some(v => v.size === size);
+
+function getSizes(all: Product[]): { key: string; label: string; count: number }[] {
+  return SIZE_ORDER
+    .map(key => ({ key, label: SIZE_LABEL[key] ?? key, count: all.filter(p => hasSize(p, key)).length }))
+    .filter(s => s.count > 0);
+}
+
+function getProducts(all: Product[], cat?: string, ordem?: string, search?: string, page = 1, lines: PackageLine[] = [], size?: string): { products: Product[]; hasMore: boolean; approximate: boolean; total: number } {
+  // Tamanho: tocar em "Casal" mostra só os produtos casal.
+  const inCat = all.filter(p => (!cat || p.category === cat) && (!size || hasSize(p, size)));
   // Busca e ordem por preço usam o catálogo inteiro; o resto pagina de 48 em 48.
   const wantsAll = !!search || ordem === 'preco_asc' || ordem === 'preco_desc';
   const max = wantsAll ? inCat.length : PAGE_SIZE * page;
@@ -63,34 +74,39 @@ function getProducts(all: Product[], cat?: string, ordem?: string, search?: stri
   const found = search ? searchCatalog(list, search, { measuresOf: measuresFor(lines) }) : { products: list, approximate: false };
   const products = found.products;
   const approximate = found.approximate;
-  if (ordem === 'preco_asc')  return { products: [...products].sort((a, b) => a.price - b.price), hasMore, approximate };
-  if (ordem === 'preco_desc') return { products: [...products].sort((a, b) => b.price - a.price), hasMore, approximate };
-  return { products, hasMore, approximate };
+  const total = inCat.length;
+  if (ordem === 'preco_asc')  return { products: [...products].sort((a, b) => a.price - b.price), hasMore, approximate, total };
+  if (ordem === 'preco_desc') return { products: [...products].sort((a, b) => b.price - a.price), hasMore, approximate, total };
+  return { products, hasMore, approximate, total };
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
-  const { categoria, q, ordem, pagina } = await searchParams;
+  const { categoria, tamanho: tamanhoParam, q, ordem, pagina } = await searchParams;
   const search = q?.trim() || undefined;
+
   const page = Math.min(10, Math.max(1, Number(pagina) || 1));
   const [all, settings] = await Promise.all([getCatalog(), search ? getStoreSettings() : null]);
   const lines = settings ? (() => { const t = parseTable(settings.sizeGuideColumns, settings.sizeGuideRows); return packageContents(t.columns, t.rows); })() : [];
-  const { products, hasMore, approximate } = getProducts(all, categoria, ordem, search, page, lines);
+  // Tamanhos com produto na categoria escolhida. Trocar para uma categoria
+  // sem aquele tamanho (ex.: Fronhas) volta a mostrar tudo, sem lista vazia.
+  const sizes = getSizes(categoria ? all.filter(p => p.category === categoria) : all);
+  const tamanho = tamanhoParam && sizes.some(sz => sz.key === tamanhoParam) ? tamanhoParam : undefined;
+  const { products, hasMore, approximate, total } = getProducts(all, categoria, ordem, search, page, lines, tamanho);
   const categories = getCategories(all);
   // Total real da categoria (a lista pode estar paginada), não só o que veio.
-  const catalogTotal = categoria
-    ? categories.find(c => c.name === categoria)?.count ?? products.length
-    : categories.reduce((n, c) => n + c.count, 0);
+  const catalogTotal = total;
   const shownTotal = search ? products.length : Math.max(products.length, catalogTotal);
   // Links mantêm busca e ordem (antes a lateral do desktop perdia os dois).
   const hrefWith = (changes: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
-    const merged = { categoria, q: search, ordem, ...changes };
+    const merged = { categoria, tamanho, q: search, ordem, ...changes };
     for (const [k, v] of Object.entries(merged)) if (v) params.set(k, v);
     const qs = params.toString();
     return qs ? `/produtos?${qs}` : '/produtos';
   };
   const catNames = categories.map(c => c.name);
-  const heading = search ? `“${search}”` : (categoria ?? 'Todos os produtos');
+  const sizeLabel = tamanho ? SIZE_LABEL[tamanho] ?? tamanho : undefined;
+  const heading = search ? `“${search}”` : [categoria ?? (sizeLabel ? 'Produtos' : 'Todos os produtos'), sizeLabel].filter(Boolean).join(' ');
 
   return (
     <div>
@@ -163,6 +179,25 @@ export default async function ProdutosPage({ searchParams }: Props) {
               <SortSelect current={ordem} />
             </div>
 
+            {sizes.length > 1 && (
+              <nav aria-label="Tamanho" className="mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-none">
+                <ul className="flex items-center gap-2 w-max">
+                  <li className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-faint mr-1">Tamanho</li>
+                  {[{ key: undefined as string | undefined, label: 'Todos' }, ...sizes].map(sz => {
+                    const on = tamanho === sz.key;
+                    return (
+                      <li key={sz.key ?? 'todos'}>
+                        <Link href={hrefWith({ tamanho: sz.key, pagina: undefined })} scroll={false}
+                          aria-current={on ? 'page' : undefined}
+                          className={`inline-flex items-center h-10 px-4 rounded-full border text-[13px] transition-colors duration-150 ${on ? 'bg-ink text-paper border-ink font-semibold' : 'border-mist-d text-ink hover:border-ink'}`}>
+                          {sz.label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            )}
             {approximate && products.length > 0 && (
               <p role="status" className="mb-6 rounded-2xl border border-mist bg-warm/50 px-4 py-3 text-[13px] text-mid leading-relaxed">
                 Nada com todas as palavras de <strong className="font-semibold text-ink">“{search}”</strong>. Estes são os mais parecidos.
