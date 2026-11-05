@@ -58,7 +58,7 @@ export async function noteStaffDevice(a: Access): Promise<boolean> {
     html: [
       emailParagraph(`A conta <strong>${escapeHtml(a.email ?? a.uid)}</strong> (${a.role === 'admin' ? 'admin' : 'vendedor'}) entrou no painel por um aparelho que ainda não tinha usado.`),
       emailParagraph(`<strong>Quando:</strong> ${escapeHtml(when)}<br><strong>Aparelho:</strong> ${escapeHtml(label)}<br><strong>De onde:</strong> ${escapeHtml(place)} (IP ${escapeHtml(a.ip)})<br><strong>Como:</strong> ${mfa}`),
-      emailParagraph('<strong>Não reconhece?</strong> Troque a senha dessa conta agora e confira em Painel → Segurança se o app autenticador e as passkeys são seus.', { muted: true }),
+      emailParagraph('<strong>Não reconhece?</strong> Troque a senha dessa conta agora e confira no Painel, em Segurança, se o app autenticador e as passkeys são seus.', { muted: true }),
     ].join(''),
   }), { replyHint: false, footerNote: 'E-mail automático de segurança da equipe.', preheader: `Novo acesso de ${a.email ?? 'uma conta da equipe'} ao painel` });
 

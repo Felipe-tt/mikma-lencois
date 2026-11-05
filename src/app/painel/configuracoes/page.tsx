@@ -409,7 +409,7 @@ export default function ConfiguracoesPage() {
                       onClick={() => set('sitePriceRounding', value)}
                       className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${on ? 'border-ink bg-warm' : 'border-mist hover:border-mist-d'}`}>
                       <span className="block text-[13px] font-semibold text-ink">{label}</span>
-                      <span className="block text-[12px] text-mid mt-0.5 tabular-nums">R$ 99,00 na loja → {formatCurrency(example)}</span>
+                      <span className="block text-[12px] text-mid mt-0.5 tabular-nums">R$ 99,00 na loja vira {formatCurrency(example)}</span>
                     </button>
                   );
                 })}
@@ -522,7 +522,7 @@ export default function ConfiguracoesPage() {
                 min={0} max={100} step={1} />
             </Row>
             <p className="text-[11px] text-faint mt-2">
-              Usa-se o que for MAIOR entre os dois. Ex: frete cobrado R$13, margem fixa R$5 e margem 20% (R$2,60) → tolera até R$18 sem pedir confirmação, porque R$5 é maior que R$2,60.
+              Usa-se o que for MAIOR entre os dois. Ex: frete cobrado R$13, margem fixa R$5 e margem 20% (R$2,60): tolera até R$18 sem pedir confirmação, porque R$5 é maior que R$2,60.
             </p>
           </Card>
 

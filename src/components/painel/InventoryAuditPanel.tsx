@@ -157,7 +157,7 @@ export function InventoryAuditPanel() {
                   <div key={m.sku} className="flex items-center justify-between gap-3 text-[12px] bg-warm px-3 py-2 rounded-lg">
                     <span className="font-mono text-faint truncate">{m.sku}</span>
                     <span className="shrink-0 tabular-nums text-mid">
-                      {m.currentReserved} → <strong className="text-ink">{m.expectedReserved}</strong>
+                      de {m.currentReserved} para <strong className="text-ink">{m.expectedReserved}</strong>
                       <span className={m.diff > 0 ? 'text-amber-700 ml-1.5' : 'text-blue-700 ml-1.5'}>
                         ({m.diff > 0 ? `libera ${m.diff}` : `reserva ${Math.abs(m.diff)}`})
                       </span>

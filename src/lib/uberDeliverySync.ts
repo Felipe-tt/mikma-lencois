@@ -225,7 +225,7 @@ export async function applyUberStatus(
   if (!before) return false;
 
   const { order, newStatus } = before;
-  console.log(`[uber] ${orderRef.id}: ${uberStatus} → ${newStatus}`);
+  console.log(`[uber] ${orderRef.id}: ${uberStatus} -> ${newStatus}`);
 
   if (uberStatus === 'pickup') {
     await ensureRoutePoints(orderRef, order, { vehicleType: extra.courier?.vehicle_type });
