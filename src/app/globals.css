@@ -1212,3 +1212,39 @@ html.dark .cookie-glass {
   .mfa-leave    { animation: mfa-leave .45s cubic-bezier(.4, 0, 1, 1) both; }
   .mfa-active   { animation: mfa-active 1.4s ease-out infinite; }
 }
+
+/* ── Raio-x do preço (só a equipe, StaffPriceInsight) ── */
+.staff-insight-trigger { transition: background-color 160ms ease; }
+.staff-insight-trigger:hover, .staff-insight-trigger[aria-expanded="true"] { background-color: color-mix(in srgb, rgb(var(--c-clay)) 9%, transparent); }
+.staff-insight-dot {
+  position: relative; width: 6px; height: 6px; border-radius: 999px; flex: none;
+  background: rgb(var(--c-clay)); align-self: flex-start; margin-top: 0.2em;
+}
+.staff-insight-dot::after {
+  content: ''; position: absolute; inset: -3px; border-radius: inherit;
+  border: 1.5px solid rgb(var(--c-clay)); opacity: 0; animation: staff-dot-ping 2.4s ease-out infinite;
+}
+@keyframes staff-dot-ping { 0% { transform: scale(0.6); opacity: 0.7; } 70%, 100% { transform: scale(1.9); opacity: 0; } }
+
+.staff-insight-panel { animation: staff-pop-in 320ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both; transform-origin: var(--arrow) top; }
+.staff-insight-panel.staff-insight-above { transform-origin: var(--arrow) bottom; animation-name: staff-pop-in-up; }
+.staff-insight-panel::before {
+  content: ''; position: absolute; left: calc(var(--arrow) - 6px); top: -6px; width: 12px; height: 12px;
+  background: inherit; border-left: 1px solid rgb(var(--c-mist)); border-top: 1px solid rgb(var(--c-mist));
+  transform: rotate(45deg); border-top-left-radius: 3px;
+}
+.staff-insight-panel.staff-insight-above::before { top: auto; bottom: -6px; transform: rotate(225deg); }
+@keyframes staff-pop-in { from { opacity: 0; transform: translateY(6px) scale(0.94); filter: blur(2px); } }
+@keyframes staff-pop-in-up { from { opacity: 0; transform: translateY(-6px) scale(0.94); filter: blur(2px); } }
+
+.staff-insight-seg { display: block; transform-origin: left center; animation: staff-seg-grow 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes staff-seg-grow { from { transform: scaleX(0); } }
+.staff-insight-row { animation: staff-row-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes staff-row-in { from { opacity: 0; transform: translateX(-6px); } }
+.staff-insight-chip { animation: staff-chip-in 520ms 420ms cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+@keyframes staff-chip-in { from { opacity: 0; transform: scale(0.6); } }
+.staff-insight-stripes { background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,0.45) 0 3px, transparent 3px 6px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .staff-insight-panel, .staff-insight-seg, .staff-insight-row, .staff-insight-chip, .staff-insight-dot::after { animation: none; }
+}

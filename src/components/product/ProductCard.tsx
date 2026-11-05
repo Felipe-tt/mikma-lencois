@@ -1,4 +1,5 @@
 'use client';
+import { StaffPriceInsight } from './StaffPriceInsight';
 import Image from 'next/image';
 import { BrandLogo } from '@/components/BrandLogo';
 import type { Product } from '@/types';
@@ -132,7 +133,7 @@ export function ProductCard({ product, priority = false, lowStock = false }: Pro
           </p>
           <div className="mt-2.5 flex items-center justify-between gap-2">
             <p className="font-display text-[1.15rem] text-ink font-normal leading-none tracking-[-0.01em] tabular-nums">
-              {formatCurrency(product.price)}
+              <StaffPriceInsight productId={product.id}>{formatCurrency(product.price)}</StaffPriceInsight>
             </p>
           </div>
         </div>

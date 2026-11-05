@@ -23,3 +23,13 @@ export function serialize<T>(data: unknown): T {
   }
   return result as unknown as T;
 }
+
+/**
+ * Produto como vai para a loja (HTML, cache, API pública): sem o preço da
+ * loja física, que só a equipe vê (ver /api/painel/preco/[id]).
+ */
+export function publicProduct<T>(data: Record<string, unknown>): T {
+  const { storePrice: _storePrice, ...rest } = data;
+  void _storePrice;
+  return serialize<T>(rest);
+}
