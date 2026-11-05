@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { shareMeta } from '@/lib/seo';
-import { searchProducts } from '@/lib/productSearch';
+import { searchCatalog } from '@/lib/productSearch';
+import { getStoreSettings } from '@/lib/settings';
+import { linesForProduct, packageContents, parseTable, type PackageLine } from '@/lib/packageContents';
+import { SIZE_LABEL } from '@/lib/productOptions';
 import { ProductCard } from '@/components/product/ProductCard';
 import { MobileFilterSheet } from '@/components/product/MobileFilterSheet';
 import { SortSelect } from '@/components/product/SortSelect';
@@ -41,27 +44,37 @@ function getCategories(all: Product[]): { name: string; count: number }[] {
   return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function getProducts(all: Product[], cat?: string, ordem?: string, search?: string, page = 1): { products: Product[]; hasMore: boolean } {
+/** Medidas em cm de cada peça do produto (tabela da embalagem), para a busca. */
+function measuresFor(lines: PackageLine[]) {
+  return (p: Product): number[] => linesForProduct(lines, {
+    category: p.category,
+    sizes: [...new Set((p.variants ?? []).map(v => SIZE_LABEL[v.size] ?? v.size))],
+  }).flatMap(l => l.pieces.flatMap(piece => [piece.dims.l, piece.dims.c, piece.dims.a].filter((n): n is number => typeof n === 'number' && n > 0)));
+}
+
+function getProducts(all: Product[], cat?: string, ordem?: string, search?: string, page = 1, lines: PackageLine[] = []): { products: Product[]; hasMore: boolean; approximate: boolean } {
   const inCat = cat ? all.filter(p => p.category === cat) : all;
   // Busca e ordem por preço usam o catálogo inteiro; o resto pagina de 48 em 48.
   const wantsAll = !!search || ordem === 'preco_asc' || ordem === 'preco_desc';
   const max = wantsAll ? inCat.length : PAGE_SIZE * page;
   const hasMore = !wantsAll && inCat.length > max;
   const list = inCat.slice(0, max);
-  // Antes o termo aparecia no título mas não filtrava nada: toda busca
-  // devolvia o catálogo inteiro.
-  const products = search ? searchProducts(list, search) : list;
-  if (ordem === 'preco_asc')  return { products: [...products].sort((a, b) => a.price - b.price), hasMore };
-  if (ordem === 'preco_desc') return { products: [...products].sort((a, b) => b.price - a.price), hasMore };
-  return { products, hasMore };
+  // Busca: sem acento, plural, erro de digitação e medida ("158x198").
+  const found = search ? searchCatalog(list, search, { measuresOf: measuresFor(lines) }) : { products: list, approximate: false };
+  const products = found.products;
+  const approximate = found.approximate;
+  if (ordem === 'preco_asc')  return { products: [...products].sort((a, b) => a.price - b.price), hasMore, approximate };
+  if (ordem === 'preco_desc') return { products: [...products].sort((a, b) => b.price - a.price), hasMore, approximate };
+  return { products, hasMore, approximate };
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
   const { categoria, q, ordem, pagina } = await searchParams;
   const search = q?.trim() || undefined;
   const page = Math.min(10, Math.max(1, Number(pagina) || 1));
-  const all = await getCatalog();
-  const { products, hasMore } = getProducts(all, categoria, ordem, search, page);
+  const [all, settings] = await Promise.all([getCatalog(), search ? getStoreSettings() : null]);
+  const lines = settings ? (() => { const t = parseTable(settings.sizeGuideColumns, settings.sizeGuideRows); return packageContents(t.columns, t.rows); })() : [];
+  const { products, hasMore, approximate } = getProducts(all, categoria, ordem, search, page, lines);
   const categories = getCategories(all);
   // Total real da categoria (a lista pode estar paginada), não só o que veio.
   const catalogTotal = categoria
@@ -150,6 +163,11 @@ export default async function ProdutosPage({ searchParams }: Props) {
               <SortSelect current={ordem} />
             </div>
 
+            {approximate && products.length > 0 && (
+              <p role="status" className="mb-6 rounded-2xl border border-mist bg-warm/50 px-4 py-3 text-[13px] text-mid leading-relaxed">
+                Nada com todas as palavras de <strong className="font-semibold text-ink">“{search}”</strong>. Estes são os mais parecidos.
+              </p>
+            )}
             {products.length === 0 ? (
               <EmptyState
                 icon={search
