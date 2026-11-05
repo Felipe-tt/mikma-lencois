@@ -48,6 +48,9 @@ function run(cmd, args, extra = {}) {
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 
+// Dados antes do build, como em produção: as páginas e as configurações
+// em cache ('use cache') saem do build já com a loja preenchida.
+await seed();
 if (process.env.E2E_SKIP_BUILD !== '1') run('npx', ['next', 'build']);
 
 // Porta ocupada = sobrou um servidor de outra rodada: testaria código velho.
@@ -57,7 +60,6 @@ if (await fetch(`http://localhost:${PORT}/`).then(() => true, () => false)) {
 }
 
 const mock = await startAbacatePayMock(4010);
-await seed();
 
 // Grupo de processos próprio: no fim, derruba o npx E o next-server filho.
 const server = spawn('npx', ['next', 'start', '-p', PORT], {

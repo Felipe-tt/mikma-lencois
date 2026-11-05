@@ -52,3 +52,14 @@ test('filtro de tamanho mostra só aquele tamanho', async ({ page }) => {
   await expect(page.getByText('Lençol Queen Malha Areia')).toHaveCount(0);
   await expect(page.getByText('Jogo de Cama King Malha Cinza')).toHaveCount(0);
 });
+
+test('WhatsApp discreto: produto abre a conversa com o nome do produto', async ({ page }) => {
+  await page.goto('/produtos/p1');
+  const link = page.getByRole('link', { name: 'Dúvida? Fale no WhatsApp' }).filter({ visible: true }).first();
+  await expect(link).toBeVisible();
+  const href = await link.getAttribute('href');
+  expect(href).toContain('https://wa.me/5547999990000');
+  expect(decodeURIComponent(href!.replace(/\+/g, ' '))).toContain('Lençol Casal Malha Branco');
+  // Na página do produto não tem botão flutuante (já tem o link e a barra de compra).
+  await expect(page.locator('.wa-float')).toHaveCount(0);
+});

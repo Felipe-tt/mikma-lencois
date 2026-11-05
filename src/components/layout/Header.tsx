@@ -1,4 +1,6 @@
 'use client';
+import { useWhatsApp, WhatsAppIcon } from '@/components/contact/WhatsApp';
+import { whatsappWithText } from '@/lib/whatsapp';
 import Image from 'next/image';
 import { WithPathname } from '@/components/ui/Pathname';
 import { useState, useEffect, useRef } from 'react';
@@ -28,6 +30,7 @@ export function Header(props: Props) {
 }
 
 function HeaderView({ topbarText, freeShippingThresholdCents = 0, pathname }: Props & { pathname: string }) {
+  const { href: waHref } = useWhatsApp();
   const { user, logout, loading: authLoading } = useAuth();
   const count      = useCartCount();
   const cartTotal  = useCartTotal();
@@ -362,6 +365,13 @@ function HeaderView({ topbarText, freeShippingThresholdCents = 0, pathname }: Pr
               </div>
             </nav>
 
+            {waHref && (
+              <a href={whatsappWithText(waHref, 'Olá! Vim pelo site da Mikma e tenho uma dúvida.')} target="_blank" rel="noopener noreferrer"
+                className="mx-5 mb-4 flex items-center gap-2.5 py-2 text-[14px] text-mid hover:text-ink transition-colors">
+                <WhatsAppIcon size={17} />
+                Falar no WhatsApp
+              </a>
+            )}
             <div className="px-5 py-4 border-t border-mist flex items-center justify-between">
               <p className="text-[10px] text-faint tracking-[0.18em] uppercase">Blumenau · SC · Brasil</p>
               <ThemeToggle />
