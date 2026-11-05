@@ -36,6 +36,13 @@ describe('esta embalagem contém', () => {
     expect(linesForProduct(lines, { category: 'Jogos de cama', sizes: ['Berço'] })).toHaveLength(4);
   });
 
+  it('jogo usa a quantidade de fronhas do cadastro do produto', () => {
+    const [solteiro] = linesForProduct(lines, { category: 'Jogos de cama', sizes: ['Solteiro'], fronhaCount: 2 });
+    expect(packageLineText(solteiro)).toBe('01 Lençol (88 × 188 × 40 cm) / 02 fronhas (50 × 70 cm)');
+    const [semCadastro] = linesForProduct(lines, { category: 'Jogos de cama', sizes: ['Solteiro'] });
+    expect(packageLineText(semCadastro)).toBe('01 Lençol (88 × 188 × 40 cm) / 01 fronha (50 × 70 cm)');
+  });
+
   it('lençol avulso mostra só o lençol, sem as fronhas do jogo', () => {
     const [queen] = linesForProduct(lines, { category: 'Lençóis', sizes: ['Queen'] });
     expect(queen.title).toBe('Lençol Queen');

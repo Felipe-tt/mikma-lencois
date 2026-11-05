@@ -90,7 +90,7 @@ export function packageLineText(line: PackageLine): string {
  * sem lençol (ex: "Par de fronhas: 02 fronhas (50 × 70 cm)"). Se o filtro
  * não achar nada (nome de tamanho diferente no painel), mostra tudo.
  */
-export function linesForProduct(lines: PackageLine[], product: { category?: string; sizes: string[] }): PackageLine[] {
+export function linesForProduct(lines: PackageLine[], product: { category?: string; sizes: string[]; fronhaCount?: number }): PackageLine[] {
   const isSheetPiece = (p: PackagePiece) => p.kind === 'lencol';
   const hasSheet = (l: PackageLine) => l.pieces.some(isSheetPiece);
   const category = norm(product.category ?? '');
@@ -110,7 +110,14 @@ export function linesForProduct(lines: PackageLine[], product: { category?: stri
 
   // Como no cartão: "Jogo Box Casal". Lençol avulso vem sem fronha.
   if (category.startsWith('jogo')) {
-    return chosen.map(l => ({ ...l, title: norm(l.size).includes('jogo') ? l.size : `Jogo Box ${l.size}` }));
+    // Quantas fronhas vêm: a do cadastro do produto ("Vem com 2 fronhas")
+    // vale mais que a da tabela, que segue o cartão (solteiro com 1).
+    const own = product.fronhaCount && product.fronhaCount > 0 ? product.fronhaCount : undefined;
+    return chosen.map(l => ({
+      ...l,
+      title: norm(l.size).includes('jogo') ? l.size : `Jogo Box ${l.size}`,
+      pieces: own ? l.pieces.map(p => p.kind === 'fronha' ? { ...p, qty: own, label: own === 1 ? 'fronha' : 'fronhas' } : p) : l.pieces,
+    }));
   }
   if (category.startsWith('lenc')) {
     return chosen
