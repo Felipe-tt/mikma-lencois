@@ -1,4 +1,5 @@
 'use client';
+import { StaffPriceInsight } from './StaffPriceInsight';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
@@ -269,7 +270,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
         {/* Preço */}
         <div>
           <p className="font-display text-[2rem] leading-none text-ink font-normal tracking-[-0.02em]">
-            {formatCurrency(product.price)}
+            <StaffPriceInsight productId={product.id}>{formatCurrency(product.price)}</StaffPriceInsight>
           </p>
           {maxInstall > 1 && (
             <p className="text-[12px] text-mid mt-1.5">
@@ -545,7 +546,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           </p>
         )}
         <div className="min-w-0">
-          <p className="font-display text-[1.2rem] text-ink leading-none tabular-nums">{formatCurrency(product.price)}</p>
+          <p className="font-display text-[1.2rem] text-ink leading-none tabular-nums"><StaffPriceInsight productId={product.id}>{formatCurrency(product.price)}</StaffPriceInsight></p>
           {maxInstall > 1 && <p className="text-[10px] text-faint mt-1">{maxInstall}x de {formatCurrency(installVal)}</p>}
         </div>
         {!outOfStock && (

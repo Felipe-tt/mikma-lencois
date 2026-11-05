@@ -1,6 +1,6 @@
 import { cacheLife, cacheTag } from 'next/cache';
 import { adminDb } from '@/lib/firebase/admin';
-import { serialize } from '@/lib/utils/serialize';
+import { publicProduct } from '@/lib/utils/serialize';
 import type { Product } from '@/types';
 
 /** Teto do catálogo lido de uma vez (10 páginas de 48 em /produtos). */
@@ -18,7 +18,7 @@ export async function getCatalog(): Promise<Product[]> {
     const snap = await adminDb.collection('products').where('active', '==', true)
       .orderBy('createdAt', 'desc').limit(MAX_CATALOG).get();
     cacheLife({ stale: 300, revalidate: 600, expire: 86_400 });
-    return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => publicProduct<Product>({ id: d.id, ...d.data() }));
   } catch (err) {
     // Falha de leitura (ou build sem acesso ao banco): lista vazia por
     // pouco tempo, para tentar de novo logo em vez de guardar por 10 min.

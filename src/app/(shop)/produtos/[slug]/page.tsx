@@ -12,7 +12,7 @@ import { linesForProduct, packageContents, parseTable } from '@/lib/packageConte
 import { getStoreSettings } from '@/lib/settings';
 import type { Metadata } from 'next';
 import { shareMeta } from '@/lib/seo';
-import { serialize } from '@/lib/utils/serialize';
+import { serialize, publicProduct } from '@/lib/utils/serialize';
 import { TrackViewItem } from '@/components/product/TrackViewItem';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { toPublicReview, type PublicReview } from '@/lib/reviews';
@@ -23,7 +23,7 @@ interface Props { params: Promise<{ slug: string }> }
 async function getProduct(id: string): Promise<Product | null> {
   const snap = await adminDb.collection('products').doc(id).get();
   if (!snap.exists || !snap.data()?.active) return null;
-  return serialize<Product>({ id: snap.id, ...snap.data() });
+  return publicProduct<Product>({ id: snap.id, ...snap.data() });
 }
 async function getInventory(id: string): Promise<InventoryItem[]> {
   // select() reduz o payload: só campos necessários para exibir disponibilidade
@@ -41,7 +41,7 @@ async function getRelated(product: Product): Promise<Product[]> {
       .where('category','==',product.category)
       .limit(13).get();
     const same = snap.docs
-      .map(d => serialize<Product>({ id: d.id, ...d.data() }))
+      .map(d => publicProduct<Product>({ id: d.id, ...d.data() }))
       .filter(p => p.id !== product.id)
       .slice(0, 12);
     if (same.length >= 4) return same;
@@ -50,7 +50,7 @@ async function getRelated(product: Product): Promise<Product[]> {
     const more = await adminDb.collection('products').where('active','==',true).limit(12).get();
     const seen = new Set([product.id, ...same.map(p => p.id)]);
     const extra = more.docs
-      .map(d => serialize<Product>({ id: d.id, ...d.data() }))
+      .map(d => publicProduct<Product>({ id: d.id, ...d.data() }))
       .filter(p => !seen.has(p.id));
     return [...same, ...extra].slice(0, 8);
   } catch { return []; }
@@ -78,7 +78,7 @@ async function getFronhaOptions(product: Product): Promise<Product[]> {
       .where('category', '==', 'Fronhas')
       .limit(30)
       .get();
-    return snap.docs.map(d => serialize<Product>({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => publicProduct<Product>({ id: d.id, ...d.data() }));
   } catch { return []; }
 }
 
