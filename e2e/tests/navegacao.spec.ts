@@ -46,7 +46,7 @@ test('busca aceita erro de digitação e medida', async ({ page }) => {
 
 test('filtro de tamanho mostra só aquele tamanho', async ({ page }) => {
   await page.goto('/produtos');
-  await page.getByRole('navigation', { name: 'Tamanho' }).getByRole('link', { name: 'Casal', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Tamanho' }).getByRole('link', { name: /^Casal/ }).click();
   await expect(page).toHaveURL(/tamanho=casal/);
   await expect(page.getByText('Lençol Casal Malha Branco').filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText('Lençol Queen Malha Areia')).toHaveCount(0);
