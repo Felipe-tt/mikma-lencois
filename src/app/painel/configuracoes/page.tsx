@@ -243,6 +243,26 @@ export default function ConfiguracoesPage() {
       {tab === 'loja' && (
         <div className="flex flex-col gap-5">
 
+          <Card icon="clock" title="Não estamos atendendo" desc="Para férias ou enquanto os pagamentos e as entregas ainda estão em teste. O site continua aberto e o cliente monta o carrinho, mas ninguém consegue finalizar a compra">
+            <Toggle
+              label="Pausar as compras"
+              checked={!!settings.salesPaused}
+              onChange={v => set('salesPaused', v)}
+              hint="Ligado: aparece um aviso no topo do site, o carrinho guarda tudo e o botão de pagar fica bloqueado. Desligado: a loja vende normalmente."
+              warn="COMPRAS PAUSADAS: ninguém consegue finalizar pedido até você desligar."
+            />
+            {settings.salesPaused && (
+              <div className="mt-4 flex flex-col gap-3">
+                <F label="Volta em (opcional)" type="date" value={settings.salesPausedUntil ?? ''}
+                  onChange={v => set('salesPausedUntil', v)} hint="Aparece no aviso: voltamos em 15/01." />
+                <F label="Aviso para o cliente (opcional)" value={settings.salesPausedMessage ?? ''}
+                  onChange={v => set('salesPausedMessage', v)} maxLength={180}
+                  placeholder="No momento não estamos atendendo. Seu carrinho fica salvo para quando voltarmos."
+                  hint="Em branco usa o texto acima, com a data de volta se tiver." />
+              </div>
+            )}
+          </Card>
+
           <Card
             icon="edit"
             title="Nome e slogan"

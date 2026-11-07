@@ -43,12 +43,15 @@ export default function CartPage() {
   const [lastRemoved, setLastRemoved] = useState<{ item: CartItem; index: number } | null>(null);
   // Linha que recebe o foco depois de remover (o botão some junto com o item).
   const focusAfterRemove = useRef<number | null>(null);
+  // Vendas pausadas no painel: o carrinho continua editável, só não finaliza.
+  const [pausedNotice, setPausedNotice] = useState<string | null>(null);
   const [pixRule, setPixRule] = useState<{ thresholdCents: number; pct: number } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
       setThreshold(Math.max(0, Number(d.freeShippingThresholdCents) || 0));
+      setPausedNotice(typeof d.salesPausedNotice === 'string' ? d.salesPausedNotice : null);
     }).catch(() => {});
     fetch('/api/checkout/pix-discount').then(r => r.ok ? r.json() : null).then(d => {
       if (d) setPixRule({ thresholdCents: Number(d.pixDiscountThresholdCents) || 0, pct: Number(d.pixDiscountPct) || 0 });
@@ -547,6 +550,11 @@ export default function CartPage() {
                     title="Remova os itens indisponíveis pra continuar"
                   >
                     Remova os itens indisponíveis
+                  </div>
+                ) : pausedNotice ? (
+                  <div role="status" className="rounded-2xl border border-mist bg-warm/60 px-4 py-3.5 text-center">
+                    <p className="text-[13px] font-semibold text-ink">Compras pausadas no momento</p>
+                    <p className="text-[12.5px] text-mid mt-1 leading-relaxed">{pausedNotice}</p>
                   </div>
                 ) : (
                   <Link

@@ -201,6 +201,14 @@ export default function CheckoutPage() {
   const [errors, setErrors]   = useState<Record<string, string>>({});
   const [apiError, setApiErr] = useState('');
   const [submitting, setSub]  = useState(false);
+  // Vendas pausadas no painel: mostra o aviso e não deixa pagar (o servidor
+  // também recusa). O carrinho e os dados continuam salvos.
+  const [pausedNotice, setPausedNotice] = useState<string | null>(null);
+  useEffect(() => {
+    fetch('/api/settings/public').then(r => r.json())
+      .then(d => setPausedNotice(typeof d.salesPausedNotice === 'string' ? d.salesPausedNotice : null))
+      .catch(() => {});
+  }, []);
   const [pixData, setPixData] = useState<{ txId: string; qrCode: string; copyPaste: string; orderId: string; expiresAt?: string; totalCents?: number } | null>(null);
   // Com o PIX na tela, o carrinho esvazia quando o pagamento confirma.
   // Sem essa trava o listener abaixo mandava pro /carrinho e o cliente
@@ -483,7 +491,7 @@ export default function CheckoutPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedShipping || !user || !cart) return;
+    if (pausedNotice || !selectedShipping || !user || !cart) return;
     // Revalida tudo antes de pagar: dá para reabrir uma etapa já concluída,
     // mexer nela e pular para o pagamento pelo cabeçalho de outra etapa.
     if (!validateStep1()) { setS1Done(false); goToStep(1); return; }
@@ -1183,9 +1191,15 @@ export default function CheckoutPage() {
                       message="Olá! Estou finalizando uma compra no site da Mikma e preciso de ajuda." />
                   </div>
 
+                  {pausedNotice && (
+                    <div role="status" className="rounded-2xl border border-mist bg-warm/60 px-4 py-3.5">
+                      <p className="text-[13px] font-semibold text-ink">Compras pausadas no momento</p>
+                      <p className="text-[12.5px] text-mid mt-1 leading-relaxed">{pausedNotice}</p>
+                    </div>
+                  )}
                   <button
                     type="submit"
-                    disabled={submitting || !selectedShipping || (payMethod === 'credit' && !!cardKey && !cardCanPay)}
+                    disabled={!!pausedNotice || submitting || !selectedShipping || (payMethod === 'credit' && !!cardKey && !cardCanPay)}
                     className="flex items-center justify-center gap-2.5 w-full h-14 rounded-full bg-ink text-paper text-[15px] font-bold tracking-[0.03em] hover:bg-mid disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 active:scale-[0.99]"
                   >
                     {submitting

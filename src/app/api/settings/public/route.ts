@@ -1,11 +1,11 @@
 import { NextResponse, connection } from 'next/server';
-import { getSettings } from '@/lib/settings';
+import { getSettings, getPauseNoticeNow } from '@/lib/settings';
 
 // Expõe apenas campos públicos (sem dados sensíveis de logística/admin)
 export async function GET() {
   await connection(); // na hora, não no build (o build não lê o banco)
   try {
-    const s = await getSettings();
+    const [s, pausedNotice] = await Promise.all([getSettings(), getPauseNoticeNow()]);
     return NextResponse.json({
       freeShippingThresholdCents: s.freeShippingThresholdCents ?? 0,
       creditMinOrderCents: s.creditMinOrderCents ?? 0,
@@ -24,6 +24,8 @@ export async function GET() {
       whatsappUrl: s.whatsappUrl,
       businessHours: s.businessHours,
       businessHoursTimezone: s.businessHoursTimezone,
+      // Vendas pausadas: o carrinho e o checkout mostram o aviso e não deixam pagar.
+      salesPausedNotice: pausedNotice,
     }, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
     });

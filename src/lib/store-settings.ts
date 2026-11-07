@@ -85,6 +85,10 @@ export type StoreSettings = {
   freeShippingMaxLossCents: number;
   // Preço do site = preço da loja física + acréscimo (troca e frete do
   // site custam mais). 'exato' (103,95) ou '90' (104,90).
+  // Pausa de vendas: navega e monta carrinho, mas não compra.
+  salesPaused: boolean;
+  salesPausedMessage: string;
+  salesPausedUntil: string; // AAAA-MM-DD, opcional
   sitePriceMarkupPct: number;
   sitePriceRounding: 'exato' | '90';
   // Margem de erro tolerada no despacho via Uber Direct: se o custo real
@@ -182,6 +186,9 @@ export const STORE_DEFAULTS: StoreSettings = {
   dispatchCutoffTime: '17:00',
   freeShippingThresholdCents: 0,
   freeShippingMaxLossCents: 50000, // R$500 de prejuízo acumulado tolerado por padrão
+  salesPaused: false,
+  salesPausedMessage: '',
+  salesPausedUntil: '',
   sitePriceMarkupPct: 0,
   sitePriceRounding: 'exato',
   uberOverspendMarginCents: 500, // R$5,00 fixo
