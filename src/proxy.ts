@@ -32,10 +32,38 @@ const EMULATOR_CONNECT_SRC =
 const MAINTENANCE_CACHE_TTL_MS = 2000;
 let maintenanceCache: { value: boolean; expiresAt: number } | null = null;
 
+// App Check nas leituras do proxy: sem o token, cada uma contava como acesso
+// "de origem desconhecida" ao Firestore (eram a maior parte), e ligar a
+// exigência do App Check derrubaria a manutenção e o fallback da Cloudflare.
+// O token é emitido pelo próprio servidor (como em /api/app-check), vale 1 h
+// e fica em memória; o firebase-admin só carrega na hora de emitir.
+let proxyAppCheck: { token: string; expiresAt: number } | null = null;
+let proxyAppCheckPending: Promise<void> | null = null;
+
+async function firestoreHeaders(): Promise<HeadersInit> {
+  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+  if (!appId || process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === '1') return {};
+  if (!proxyAppCheck || proxyAppCheck.expiresAt - 5 * 60_000 < Date.now()) {
+    proxyAppCheckPending ??= (async () => {
+      try {
+        const { getAdminAppCheck } = await import('@/lib/firebase/admin');
+        const r = await getAdminAppCheck().createToken(appId, { ttlMillis: 60 * 60_000 });
+        proxyAppCheck = { token: r.token, expiresAt: Date.now() + r.ttlMillis };
+      } catch {
+        // Sem token, a leitura vai sem ele (como antes), e tenta de novo na próxima.
+      } finally {
+        proxyAppCheckPending = null;
+      }
+    })();
+    await proxyAppCheckPending;
+  }
+  return proxyAppCheck ? { 'X-Firebase-AppCheck': proxyAppCheck.token } : {};
+}
+
 async function fetchMaintenanceDoc(projectId: string): Promise<Response> {
   return fetch(
     `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance/status`,
-    { signal: AbortSignal.timeout(3000), cache: 'no-store' }
+    { signal: AbortSignal.timeout(3000), cache: 'no-store', headers: await firestoreHeaders() }
   );
 }
 
@@ -64,7 +92,7 @@ async function isIpReleased(projectId: string, docId: string): Promise<boolean> 
   try {
     const res = await fetch(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/maintenance_queue/${docId}`,
-      { signal: AbortSignal.timeout(3000), cache: 'no-store' }
+      { signal: AbortSignal.timeout(3000), cache: 'no-store', headers: await firestoreHeaders() }
     );
     if (!res.ok) return false;
     const data = await res.json();
@@ -90,7 +118,7 @@ async function isEdgeBypassActive(projectId: string): Promise<boolean> {
   try {
     const res = await fetch(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/edge/status`,
-      { signal: AbortSignal.timeout(3000), cache: 'no-store' }
+      { signal: AbortSignal.timeout(3000), cache: 'no-store', headers: await firestoreHeaders() }
     );
     if (res.ok) value = (await res.json())?.fields?.bypass?.booleanValue === true;
     else if (res.status === 404) value = false;
