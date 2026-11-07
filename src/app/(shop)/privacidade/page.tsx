@@ -9,6 +9,9 @@ export const metadata = {
   description: 'Quais dados pedimos, para que usamos, com quem compartilhamos e como você controla tudo, conforme a LGPD.',
   ...shareMeta({ title: 'Política de Privacidade', description: 'Quais dados pedimos, para que usamos, com quem compartilhamos e como você controla tudo, conforme a LGPD.', path: '/privacidade' }),
   alternates: { canonical: '/privacidade' },
+  // Página jurídica: fica no site, mas fora da busca, para não aparecer no
+  // lugar da home quando procuram a loja no Google.
+  robots: { index: false, follow: true },
 };
 
 /*

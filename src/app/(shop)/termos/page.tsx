@@ -9,6 +9,9 @@ export const metadata = {
   description: 'As regras do site e da compra: conta, pagamento, entrega, trocas e os seus direitos.',
   ...shareMeta({ title: 'Termos de Uso', description: 'As regras do site e da compra: conta, pagamento, entrega, trocas e os seus direitos.', path: '/termos' }),
   alternates: { canonical: '/termos' },
+  // Página jurídica: fica no site, mas fora da busca, para não aparecer no
+  // lugar da home quando procuram a loja no Google.
+  robots: { index: false, follow: true },
 };
 
 export default async function TermosPage() {

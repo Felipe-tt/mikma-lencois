@@ -11,6 +11,9 @@ export const metadata = {
   description: 'O que são os cookies do site, para que servem, por quanto tempo ficam e como você escolhe.',
   ...shareMeta({ title: 'Política de Cookies', description: 'O que são os cookies do site, para que servem, por quanto tempo ficam e como você escolhe.', path: '/politica-de-cookies' }),
   alternates: { canonical: '/politica-de-cookies' },
+  // Página jurídica: fica no site, mas fora da busca, para não aparecer no
+  // lugar da home quando procuram a loja no Google.
+  robots: { index: false, follow: true },
 };
 
 export default async function PoliticaDeCookiesPage() {
