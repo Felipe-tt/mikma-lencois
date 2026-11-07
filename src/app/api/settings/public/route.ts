@@ -1,4 +1,5 @@
 import { NextResponse, connection } from 'next/server';
+import { googleUrl } from '@/lib/googleProfile';
 import { getSettings, getPauseNoticeNow } from '@/lib/settings';
 
 // Expõe apenas campos públicos (sem dados sensíveis de logística/admin)
@@ -22,6 +23,7 @@ export async function GET() {
       storeCnpj: s.storeCnpj ?? '',
       instagramUrl: s.instagramUrl,
       whatsappUrl: s.whatsappUrl,
+      googleReviewUrl: googleUrl(s.googleReviewUrl),
       businessHours: s.businessHours,
       businessHoursTimezone: s.businessHoursTimezone,
       // Vendas pausadas: o carrinho e o checkout mostram o aviso e não deixam pagar.

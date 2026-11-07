@@ -117,6 +117,27 @@ describe('lembrete de avaliação', () => {
     expect(data.orders.p1.reviewReminderResult).toBe('email recusado');
   });
 
+  it('com o link do Google: convidado recebe o convite e o cliente com conta também vê o link', async () => {
+    data.settings = { store: { googleReviewUrl: 'https://g.page/r/mikma/review' } };
+    data.orders = { conv: order('convidado', 6, [['a', 'A']]), ana: order('ana', 6, [['a', 'A']]) };
+    const r = await sendReviewReminders(NOW);
+    expect(r.sent).toBe(2);
+    const toGuest = sent.find(m => m.to === 'c@x.com')!;
+    expect(toGuest.text).toContain('https://g.page/r/mikma/review');
+    expect(toGuest.text).not.toContain('#avaliacoes');
+    const toAna = sent.find(m => m.to === 'ana@x.com')!;
+    expect(toAna.text).toContain('/produtos/a#avaliacoes');
+    expect(toAna.text).toContain('Avalie no Google: https://g.page/r/mikma/review');
+  });
+
+  it('link salvo que não é do Google é ignorado', async () => {
+    data.settings = { store: { googleReviewUrl: 'https://golpe.example.com' } };
+    data.orders = { conv: order('convidado', 6, [['a', 'A']]) };
+    await sendReviewReminders(NOW);
+    expect(sent).toHaveLength(0);
+    expect(data.orders.conv.reviewReminderResult).toBe('sem login');
+  });
+
   it('com vários produtos, lista cada um e escapa o nome', () => {
     const m = reviewReminderEmail('Bia', 'abcdef123456', [
       { productId: 'a', productName: 'Lençol <Rosa>' },

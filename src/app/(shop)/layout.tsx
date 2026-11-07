@@ -1,4 +1,5 @@
 import { Header } from '@/components/layout/Header';
+import { googleUrl } from '@/lib/googleProfile';
 import { Footer } from '@/components/layout/Footer';
 import { CookieBanner } from '@/components/layout/CookieBanner';
 import { PageTransition } from '@/components/ui/PageTransition';
@@ -39,7 +40,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       ...(s.storeCep && { postalCode: s.storeCep }),
       addressCountry: 'BR',
     },
-    ...(s.instagramUrl && { sameAs: [s.instagramUrl] }),
+    // Instagram e o perfil no Google Maps: o Google entende que são a mesma loja.
+    ...((s.instagramUrl || googleUrl(s.googleBusinessUrl)) && { sameAs: [s.instagramUrl, googleUrl(s.googleBusinessUrl)].filter(Boolean) }),
   };
   return (
     <WhatsAppProvider href={storeWhatsapp(s)} hours={s.businessHours} timeZone={s.businessHoursTimezone}>
