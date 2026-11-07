@@ -1,6 +1,7 @@
 'use client';
 import { formatMeasure, parseMeasure } from '@/lib/measures';
-import { cardMinCents } from '@/lib/orderPricing';
+import { cardMinCents, computeCardTotalCents } from '@/lib/orderPricing';
+import { cardFeeFor, normalizeFees } from '@/lib/gatewayFees';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
@@ -18,7 +19,7 @@ import { NFE_DEFAULTS } from '@/lib/nfe/config';
 import { NfeCertificate } from '@/components/painel/NfeCertificate';
 import { db } from '@/lib/firebase/db';
 import { STORE_DEFAULTS, withStoreDefaults, type StoreSettings } from '@/lib/store-settings';
-import { sitePriceCents } from '@/lib/sitePrice';
+import { sitePriceCents, siteRuleFrom } from '@/lib/sitePrice';
 import { formatCurrency } from '@/lib/utils/format';
 import { PreviewModal, PreviewButton } from '@/components/painel/PreviewModal';
 import { Select } from '@/components/ui/Select';
@@ -156,7 +157,7 @@ export default function ConfiguracoesPage() {
       savedRef.current = settings;
       setSavedSnapshot(settings);
       // Acréscimo mudou: refaz o preço do site de todos os produtos.
-      if ('sitePriceMarkupPct' in changed || 'sitePriceRounding' in changed) {
+      if (['sitePriceMarkupPct', 'sitePriceRounding', 'abacateFeePixCents', 'abacateFeePixInPrice'].some(k => k in changed)) {
         setPriceMsg('');
         const token = await user?.getIdToken();
         const res = await fetch('/api/painel/precos-site', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
@@ -423,7 +424,7 @@ export default function ConfiguracoesPage() {
               <div role="radiogroup" aria-label="Como fica o preço" className="grid grid-cols-2 gap-2">
                 {([['exato', 'Valor exato'], ['90', 'Terminar em ,90']] as const).map(([value, label]) => {
                   const on = (settings.sitePriceRounding ?? 'exato') === value;
-                  const example = sitePriceCents(9900, { pct: settings.sitePriceMarkupPct ?? 0, rounding: value });
+                  const example = sitePriceCents(9900, { ...siteRuleFrom(settings as unknown as Record<string, unknown>), rounding: value });
                   return (
                     <button key={value} type="button" role="radio" aria-checked={on}
                       onClick={() => set('sitePriceRounding', value)}
@@ -438,6 +439,15 @@ export default function ConfiguracoesPage() {
             </div>
           </Card>
 
+
+          <GatewayFeesCard settings={settings} set={set} isAdmin={isAdmin} onReprice={async () => {
+            const token = await user?.getIdToken();
+            const res = await fetch('/api/painel/precos-site', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+            const out = await res.json().catch(() => ({}));
+            return res.ok
+              ? `Preços do site atualizados em ${out.products ?? 0} ${out.products === 1 ? 'produto' : 'produtos'}.`
+              : (out.error as string | undefined) ?? 'Não deu para atualizar os preços agora. Tente de novo.';
+          }} />
 
           <Card icon="shield" title="Garantias do produto" desc="3 frases que aparecem na página de cada produto abaixo do botão de comprar, reforça confiança" onPreview={() => setPreview('trust')}>
             <Info>Use frases curtas e diretas. Ex: entrega, pagamento, suporte.</Info>
@@ -839,9 +849,11 @@ function Toggle({ label, checked, onChange, hint, warn, disabled }: {
     </div>
   );
 }
-function Num({ label, value, onChange, hint, min, max }: {
+function Num({ label, value, onChange, hint, min, max, money }: {
   label:string; value:number; onChange:(v:number)=>void;
   hint?:string; min?:number; max?:number; step?:number;
+  /** Valor em reais: mostra sempre com centavos (0,80, não 0,8). */
+  money?:boolean;
 }) {
   const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
@@ -852,7 +864,7 @@ function Num({ label, value, onChange, hint, min, max }: {
       {/* Texto livre enquanto edita: antes apagar o campo pra digitar outro
           número fazia ele voltar pra 0 na hora. Campo vazio ao sair volta
           pro último valor válido. */}
-      <input id={id} type="text" inputMode={min !== undefined && min >= 0 ? 'decimal' : undefined} value={draft ?? String(value).replace('.', ',')}
+      <input id={id} type="text" inputMode={min !== undefined && min >= 0 ? 'decimal' : undefined} value={draft ?? (money ? value.toFixed(2) : String(value)).replace('.', ',')}
         onFocus={() => setDraft(String(value).replace('.', ','))}
         onChange={e => {
           setDraft(e.target.value);
@@ -1195,5 +1207,75 @@ function TeamPanel() {
         )}
       </Card>
     </>
+  );
+}
+
+/* ── Taxas da AbacatePay ───────────────────────────────────────────────── */
+function GatewayFeesCard({ settings, set, isAdmin, onReprice }: {
+  settings: StoreSettings;
+  onReprice: () => Promise<string>;
+  set: (k: keyof StoreSettings, v: string | number | boolean) => void;
+  isAdmin: boolean;
+}) {
+  const f = normalizeFees(settings);
+  const [repricing, setRepricing] = useState(false);
+  const [repriceMsg, setRepriceMsg] = useState('');
+  const checked = settings.abacateFeeCheckedAt ? new Date(settings.abacateFeeCheckedAt) : null;
+  const example = 20000;
+  const exampleCard = computeCardTotalCents({ productsCents: example, couponDiscountCents: 0, shippingCents: 0, feeRate: 0, cardFee: cardFeeFor(f, 1) });
+  const pct = (n: number) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
+  const tiers: Array<[string, keyof StoreSettings, number]> = [
+    ['À vista', 'abacateFeeCardPct1x', f.abacateFeeCardPct1x],
+    ['2x a 6x', 'abacateFeeCardPct2a6', f.abacateFeeCardPct2a6],
+    ['7x a 12x', 'abacateFeeCardPct7a12', f.abacateFeeCardPct7a12],
+  ];
+  return (
+    <Card icon="card" title="Taxas da AbacatePay" desc="O que a AbacatePay desconta de cada venda. Repassando, a loja recebe o valor cheio">
+      {settings.abacateFeeNotice && (
+        <div role="status" className="flex items-start justify-between gap-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-3.5 py-3">
+          <p className="text-[12px] leading-relaxed text-amber-900 dark:text-amber-100">{settings.abacateFeeNotice}</p>
+          <button type="button" onClick={() => set('abacateFeeNotice', '')} className="shrink-0 text-[11.5px] font-semibold text-amber-900 dark:text-amber-100 underline underline-offset-2">Entendi</button>
+        </div>
+      )}
+
+      <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-faint -mb-1">PIX</p>
+      <Row>
+        <Num label="Taxa por PIX (R$)" money value={f.abacateFeePixCents / 100}
+          onChange={v => isAdmin && set('abacateFeePixCents', Math.round(Math.min(10, Math.max(0, v)) * 100))} min={0} max={10}
+          hint={checked ? `Conferida sozinha numa cobrança real em ${checked.toLocaleDateString('pt-BR')}.` : 'Conferida sozinha no próximo PIX pago no site.'} />
+      </Row>
+      <Toggle label="Incluir no preço de cada produto" checked={f.abacateFeePixInPrice} disabled={!isAdmin}
+        onChange={v => set('abacateFeePixInPrice', v)}
+        hint={f.abacateFeePixInPrice
+          ? `Cada produto custa ${formatCurrency(f.abacateFeePixCents)} a mais no site. Se a AbacatePay mudar a taxa, os preços se ajustam sozinhos.`
+          : 'A loja paga a taxa do PIX.'} />
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" disabled={repricing}
+          onClick={async () => { setRepricing(true); setRepriceMsg(''); try { setRepriceMsg(await onReprice()); } finally { setRepricing(false); } }}
+          className="rounded-full border border-mist px-4 py-2 text-[12.5px] font-semibold text-ink hover:bg-warm disabled:opacity-50">
+          {repricing ? 'Atualizando os preços…' : 'Aplicar nos preços agora'}
+        </button>
+        {repriceMsg && <p role="status" className="text-[12px] text-emerald-700 dark:text-emerald-400">{repriceMsg}</p>}
+      </div>
+      <p className="-mt-2 text-[11px] text-faint leading-relaxed">Refaz o preço de todos os produtos com o acréscimo e a taxa salvos. Mudando a taxa ou o interruptor, isso acontece sozinho ao salvar.</p>
+
+      <Divider label="Cartão" />
+      <div className="grid grid-cols-3 gap-2">
+        {tiers.map(([label, key, value]) => (
+          <Num key={key} label={label} value={value} min={0} max={20}
+            onChange={v => isAdmin && set(key, Math.min(20, Math.max(0, v)))} />
+        ))}
+      </div>
+      <Row>
+        <Num label="Mais, por cobrança (R$)" money value={f.abacateFeeCardFixedCents / 100}
+          onChange={v => isAdmin && set('abacateFeeCardFixedCents', Math.round(Math.min(10, Math.max(0, v)) * 100))} min={0} max={10} />
+      </Row>
+      <Toggle label="Cobrar do cliente no total do cartão" checked={f.abacateFeeCardToCustomer} disabled={!isAdmin}
+        onChange={v => set('abacateFeeCardToCustomer', v)}
+        hint={f.abacateFeeCardToCustomer
+          ? `Ex.: pedido de ${formatCurrency(example)} à vista no cartão sai ${formatCurrency(exampleCard)}, e a loja recebe ${formatCurrency(example)}. O checkout mostra a linha "Taxa do cartão".`
+          : `A loja paga a taxa do cartão (${pct(f.abacateFeeCardPct1x)} + ${formatCurrency(f.abacateFeeCardFixedCents)} à vista).`} />
+      {!isAdmin && <Info>Só o administrador muda as taxas.</Info>}
+    </Card>
   );
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { verifyAuth } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
-import { normalizeRule } from '@/lib/sitePrice';
+import { siteRuleFrom } from '@/lib/sitePrice';
 
 /**
  * GET /api/painel/preco/[id]: de onde vem o preço do site, só para a
@@ -25,13 +25,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!prod.exists) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
   const d = prod.data()!;
   const s = settings.data() ?? {};
-  const rule = normalizeRule({ pct: s.sitePriceMarkupPct, rounding: s.sitePriceRounding });
+  const rule = siteRuleFrom(s);
   return NextResponse.json(
     {
       price: Number(d.price) || 0,
       storePrice: typeof d.storePrice === 'number' && d.storePrice > 0 ? d.storePrice : null,
       pct: rule.pct,
       rounding: rule.rounding,
+      pixFeeCents: rule.feeCents ?? 0,
     },
     { headers: { 'Cache-Control': 'private, no-store' } },
   );

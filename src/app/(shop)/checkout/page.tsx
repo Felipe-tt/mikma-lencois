@@ -22,6 +22,7 @@ import type { ShippingOption } from '@/lib/shipping-pricing';
 import Image from 'next/image';
 import { SwapNote } from '@/components/cart/SwapNote';
 import { trackBeginCheckout } from '@/lib/analytics';
+import { cardFeeFor, publicCardFees, type PublicCardFees } from '@/lib/gatewayFees';
 import { computePixTotalCents, computePixDiscountCents, computeCardTotalCents, installmentFeeRate, cardMinCents, maxInstallments } from '@/lib/orderPricing';
 import { toAddress, streetLine, cityLine } from '@/lib/address';
 import { LEGAL_VERSION } from '@/lib/legal';
@@ -247,6 +248,7 @@ export default function CheckoutPage() {
   const [pixThresholdCents, setPixThreshold] = useState(180000);
   const [cardMin, setCardMin] = useState(cardMinCents());
   const [pixDiscountPct, setPixDiscountPct]  = useState(10);
+  const [cardFees, setCardFees] = useState<PublicCardFees>(() => publicCardFees(undefined));
 
 
   const quoteShipping = useCallback(async (cep: string) => {
@@ -352,6 +354,7 @@ export default function CheckoutPage() {
           setPixThreshold(d.pixDiscountThresholdCents);
           setPixDiscountPct(d.pixDiscountPct);
           if (typeof d.cardMinCents === 'number') setCardMin(d.cardMinCents);
+          if (d.cardFees) setCardFees(publicCardFees(d.cardFees));
         }
       })
       .catch(() => { /* mantém defaults */ });
@@ -594,10 +597,14 @@ export default function CheckoutPage() {
   const couponDiscount = couponApplied && couponApplied.code === (cart?.couponCode ?? null) ? couponApplied.discount : 0;
   const pixDiscount  = computePixDiscountCents(subtotal, { pixDiscountThresholdCents: pixThresholdCents, pixDiscountPct }, couponDiscount);
   const pixTotal     = computePixTotalCents({ productsCents: subtotal, pixDiscountCents: pixDiscount, couponDiscountCents: couponDiscount, shippingCents: shipCents });
-  const cardTotalFor = (n: number) => computeCardTotalCents({ productsCents: subtotal, couponDiscountCents: couponDiscount, shippingCents: shipCents, feeRate: installmentFeeRate(n) });
-  const creditBase   = cardTotalFor(1);
+  const cardArgs     = { productsCents: subtotal, couponDiscountCents: couponDiscount, shippingCents: shipCents };
+  // Com juros, sem a taxa da AbacatePay; e o total cobrado, com a taxa.
+  const interestFor  = (n: number) => computeCardTotalCents({ ...cardArgs, feeRate: installmentFeeRate(n) });
+  const cardTotalFor = (n: number) => computeCardTotalCents({ ...cardArgs, feeRate: installmentFeeRate(n), cardFee: cardFeeFor(cardFees, n) });
+  const creditBase   = computeCardTotalCents({ ...cardArgs, feeRate: 0 });
   const creditTotal  = cardTotalFor(installments);
-  const creditFees   = creditTotal - creditBase;
+  const creditFees   = interestFor(installments) - creditBase;
+  const cardFeeCents = creditTotal - interestFor(installments);
   const total        = payMethod === 'pix' ? pixTotal : creditTotal;
   const totalItems   = items.reduce((s, i) => s + i.quantity, 0);
   // Cartão e parcelamento: mesma regra do servidor (lib/orderPricing).
@@ -682,6 +689,11 @@ export default function CheckoutPage() {
       {payMethod === 'credit' && creditFees > 0 && (
         <div className="flex justify-between text-sm text-mid">
           <span>Juros ({installments}x)</span><span>+{formatCurrency(creditFees)}</span>
+        </div>
+      )}
+      {payMethod === 'credit' && cardFeeCents > 0 && (
+        <div className="flex justify-between text-sm text-mid">
+          <span>Taxa do cartão</span><span>+{formatCurrency(cardFeeCents)}</span>
         </div>
       )}
       <div className="flex justify-between text-sm">
@@ -1069,7 +1081,7 @@ export default function CheckoutPage() {
                             <p className="text-sm font-bold text-ink">Cartão de crédito</p>
                             <p className="text-xs text-faint mt-0.5">
                               {noFeeInstall >= 2
-                                ? `Até ${noFeeInstall}x de ${formatCurrency(Math.round(creditBase / noFeeInstall))} sem juros`
+                                ? `Até ${noFeeInstall}x de ${formatCurrency(Math.round(cardTotalFor(noFeeInstall) / noFeeInstall))} sem juros`
                                 : `Qualquer bandeira · até ${maxInstall}x`}
                             </p>
                           </div>
@@ -1086,7 +1098,7 @@ export default function CheckoutPage() {
                               {Array.from({ length: maxInstall }, (_, i) => i + 1).map(n => {
                                 const totalN = cardTotalFor(n);
                                 const val = Math.round(totalN / n);
-                                const fee = totalN - creditBase;
+                                const fee = interestFor(n) - creditBase;
                                 const selected = installments === n;
                                 return (
                                   <button key={n} type="button" role="radio" aria-checked={selected}
@@ -1109,6 +1121,9 @@ export default function CheckoutPage() {
                                 );
                               })}
                             </div>
+                            {cardFeeCents > 0 && (
+                              <p className="text-[11px] text-faint mt-2 leading-relaxed">No cartão o total inclui a taxa da operadora. No PIX não tem.</p>
+                            )}
                           </div>
                         )}
 
@@ -1165,6 +1180,11 @@ export default function CheckoutPage() {
                     {payMethod === 'credit' && creditFees > 0 && (
                       <div className="flex justify-between text-mid">
                         <span>Juros ({installments}x)</span><span>+{formatCurrency(creditFees)}</span>
+                      </div>
+                    )}
+                    {payMethod === 'credit' && cardFeeCents > 0 && (
+                      <div className="flex justify-between text-mid">
+                        <span>Taxa do cartão</span><span>+{formatCurrency(cardFeeCents)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-mid">

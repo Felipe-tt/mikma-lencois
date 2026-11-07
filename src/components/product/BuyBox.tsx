@@ -10,7 +10,8 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { loadFirestore } from '@/lib/firebase/lazyDb';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { installmentFeeRate, maxInstallments } from '@/lib/orderPricing';
+import { interestFreeHint } from '@/lib/orderPricing';
+import type { PublicCardFees } from '@/lib/gatewayFees';
 import { formatCurrency } from '@/lib/utils/format';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import type { Product, InventoryItem, ProductVariant, CartItem } from '@/types';
@@ -29,6 +30,7 @@ interface Props {
   inventory: InventoryItem[];
   pixDiscountThresholdCents: number;
   pixDiscountPct: number;
+  cardFees?: PublicCardFees; // taxa do cartão (Configurações), para a parcela bater com o checkout
   note?: string; // ex: "Fronha trocada: Floral Rosa", escolhida no JogoDeCamaFronhaPicker acima
   swapSku?: string; // SKU da fronha trocada, pra reservar estoque dela junto (ver JogoDeCamaBuyBox)
   maxQty?: number; // limite extra (ex: estoque da fronha trocada cobre só N jogos)
@@ -49,7 +51,7 @@ interface ShipOption {
 // Mesmos selos do checkout.
 const SHIP_TAG: Record<string, string> = { economico: 'Econômico', rapido: 'Mais rápido' };
 
-export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, note, swapSku, swapImage, swapQtyPerUnit, maxQty, packageLines = [], packageNote }: Props) {
+export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, cardFees, note, swapSku, swapImage, swapQtyPerUnit, maxQty, packageLines = [], packageNote }: Props) {
   // Carrinho e compra aceitam o convidado ("comprar sem cadastro").
   const { buyer: user, loading } = useAuth();
   const router = useRouter();
@@ -150,10 +152,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const lineTotal = product.price * qty;
   // Só anuncia "sem juros" até a última parcela que é de fato sem juros
   // (tabela em lib/orderPricing; a partir de 4x o cartão cobra juros).
-  const maxByValue = maxInstallments(lineTotal);
-  let maxInstall = 1;
-  for (let n = maxByValue; n >= 1; n--) { if (installmentFeeRate(n) === 0) { maxInstall = n; break; } }
-  const installVal = Math.round(lineTotal / maxInstall);
+  const { n: maxInstall, perCents: installVal } = interestFreeHint(lineTotal, cardFees);
   const pixEligible = pixDiscountThresholdCents > 0 && lineTotal >= pixDiscountThresholdCents;
   const pixDiscount = pixEligible ? Math.round(lineTotal * (pixDiscountPct / 100)) : 0;
   const pixTotal = lineTotal - pixDiscount;

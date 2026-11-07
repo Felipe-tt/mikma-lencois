@@ -1,9 +1,10 @@
 'use client';
 import { variantLabel } from '@/lib/variantLabel';
 import Image from 'next/image';
+import { interestFreeHint } from '@/lib/orderPricing';
+import { publicCardFees, type PublicCardFees } from '@/lib/gatewayFees';
 import { SwapNote } from '@/components/cart/SwapNote';
 import { SwipeToDismiss } from '@/components/ui/SwipeToDismiss';
-import { installmentFeeRate, maxInstallments } from '@/lib/orderPricing';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
@@ -48,6 +49,7 @@ export default function CartPage() {
   // Vendas pausadas no painel: o carrinho continua editável, só não finaliza.
   const [pausedNotice, setPausedNotice] = useState<string | null>(null);
   const [pixRule, setPixRule] = useState<{ thresholdCents: number; pct: number } | null>(null);
+  const [cardFees, setCardFees] = useState<PublicCardFees>(() => publicCardFees(undefined));
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function CartPage() {
     }).catch(() => {});
     fetch('/api/checkout/pix-discount').then(r => r.ok ? r.json() : null).then(d => {
       if (d) setPixRule({ thresholdCents: Number(d.pixDiscountThresholdCents) || 0, pct: Number(d.pixDiscountPct) || 0 });
+      if (d?.cardFees) setCardFees(publicCardFees(d.cardFees));
     }).catch(() => {});
   }, []);
 
@@ -134,7 +137,7 @@ export default function CartPage() {
   // antes passava daqui e o erro só aparecia no último passo do checkout.
   const hasUnavailableItem = (cart?.items ?? []).some(item =>
     activeMap[item.productId] === false ||
-    (stockMap[item.sku] !== undefined && stockMap[item.sku] < item.quantity) ||
+    (stockMap[item.sku] !== undefined && Math.floor(stockMap[item.sku]) < item.quantity) ||
     (!!item.swapSku && stockMap[item.swapSku] !== undefined && stockMap[item.swapSku] < item.quantity * (item.swapQtyPerUnit ?? 1))
   );
 
@@ -404,7 +407,9 @@ export default function CartPage() {
                       if (activeMap[item.productId] === false) {
                         return <p className="text-xs text-red-600 font-semibold">Produto não está mais disponível, remova do carrinho</p>;
                       }
-                      const avail = stockMap[item.sku];
+                      // Meio par de fronha (sobra da troca no solteiro) não se vende sozinho:
+                      // para o cliente conta só o que dá para levar inteiro.
+                      const avail = stockMap[item.sku] !== undefined ? Math.floor(stockMap[item.sku]) : undefined;
                       if (avail === 0) return <p className="text-xs text-red-600 font-semibold">Fora de estoque, remova do carrinho</p>;
                       if (avail !== undefined && avail < item.quantity) {
                         return <p className="text-xs text-red-600 font-semibold">Só {avail} disponíve{avail === 1 ? 'l' : 'is'}, diminua a quantidade</p>;
@@ -545,7 +550,7 @@ export default function CartPage() {
                 <span className="text-sm font-semibold text-ink">Total estimado</span>
                 <span className="font-display text-2xl text-ink">{formatCurrency(total)}</span>
               </div>
-              <PaymentHint total={total} subtotal={subtotal} pixRule={pixRule} />
+              <PaymentHint total={total} subtotal={subtotal} pixRule={pixRule} cardFees={cardFees} />
 
               <div className="px-5 pb-5">
                 {hasUnavailableItem ? (
@@ -594,12 +599,10 @@ export default function CartPage() {
 // quando o pedido chega no mínimo) e o parcelamento sem juros no cartão. Mesma
 // regra do checkout: cartão a partir de R$ 100, parcela mínima de R$ 100,
 // até 8x, sem juros enquanto a taxa da tabela for zero.
-function PaymentHint({ total, subtotal, pixRule }: { total: number; subtotal: number; pixRule: { thresholdCents: number; pct: number } | null }) {
+function PaymentHint({ total, subtotal, pixRule, cardFees }: { total: number; subtotal: number; pixRule: { thresholdCents: number; pct: number } | null; cardFees: PublicCardFees }) {
   const pixEligible = !!pixRule && pixRule.thresholdCents > 0 && pixRule.pct > 0 && subtotal >= pixRule.thresholdCents;
   const pixPrice = pixEligible ? total - Math.round(subtotal * (pixRule!.pct / 100)) : null;
-  const maxInstall = maxInstallments(total);
-  let noFee = 1;
-  for (let n = maxInstall; n >= 1; n--) { if (installmentFeeRate(n) === 0) { noFee = n; break; } }
+  const { n: noFee, perCents } = interestFreeHint(total, cardFees);
   if (!pixPrice && noFee < 2) return null;
   return (
     <ul className="px-5 pb-4 -mt-1 flex flex-col gap-1.5 text-[12.5px]">
@@ -612,7 +615,7 @@ function PaymentHint({ total, subtotal, pixRule }: { total: number; subtotal: nu
       {noFee >= 2 && (
         <li className="flex justify-between gap-3 text-mid">
           <span>No cartão</span>
-          <span className="tabular-nums">até {noFee}x de {formatCurrency(Math.round(total / noFee))} sem juros</span>
+          <span className="tabular-nums">até {noFee}x de {formatCurrency(perCents)} sem juros</span>
         </li>
       )}
     </ul>

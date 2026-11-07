@@ -2,6 +2,7 @@
 // Must NOT be 'use client'
 
 import { DEFAULT_BUSINESS_HOURS } from './business-hours';
+import { GATEWAY_FEE_DEFAULTS } from './gatewayFees';
 
 export type StoreSettings = {
   storeName: string;
@@ -91,6 +92,19 @@ export type StoreSettings = {
   salesPausedUntil: string; // AAAA-MM-DD, opcional
   sitePriceMarkupPct: number;
   sitePriceRounding: 'exato' | '90';
+  // Taxas da AbacatePay (ver src/lib/gatewayFees.ts). PIX vai no preço de
+  // cada produto; cartão vai no total do pedido no cartão.
+  abacateFeePixCents: number;
+  abacateFeePixInPrice: boolean;
+  abacateFeeCardFixedCents: number;
+  abacateFeeCardPct1x: number;
+  abacateFeeCardPct2a6: number;
+  abacateFeeCardPct7a12: number;
+  abacateFeeCardToCustomer: boolean;
+  // Última conferência da taxa do PIX numa cobrança real, e o aviso de
+  // quando ela mudou (o painel mostra até a equipe dispensar).
+  abacateFeeCheckedAt: string;
+  abacateFeeNotice: string;
   // Margem de erro tolerada no despacho via Uber Direct: se o custo real
   // recotado no momento do despacho for maior que o frete cobrado do
   // cliente por mais do que essa margem, o despacho é bloqueado e exige
@@ -191,6 +205,9 @@ export const STORE_DEFAULTS: StoreSettings = {
   salesPausedUntil: '',
   sitePriceMarkupPct: 0,
   sitePriceRounding: 'exato',
+  ...GATEWAY_FEE_DEFAULTS,
+  abacateFeeCheckedAt: '',
+  abacateFeeNotice: '',
   uberOverspendMarginCents: 500, // R$5,00 fixo
   uberOverspendMarginPct: 0,     // 0 = só usa a margem fixa por padrão
   lowStockThreshold: 3,

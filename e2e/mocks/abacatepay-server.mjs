@@ -41,6 +41,7 @@ export function startAbacatePayMock(port = 4010) {
           brCode: '00020126580014BR.GOV.BCB.PIX0136e2e-mikma-teste5204000053039865802BR5913MIKMA TESTE6008BLUMENAU62070503***6304E2E0',
           brCodeBase64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
           expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+          platformFee: 80, // taxa do PIX que a AbacatePay devolve (centavos)
         };
         charges.set(c.id, c);
         return ok(res, c);

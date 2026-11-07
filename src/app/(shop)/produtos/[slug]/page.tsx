@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
+import { publicCardFees } from '@/lib/gatewayFees';
 import { notFound } from 'next/navigation';
 import { cacheLife, cacheTag } from 'next/cache';
 import Link from 'next/link';
@@ -165,7 +166,8 @@ export default async function ProductPage({ params }: Props) {
   // sem isso o Google só tem o título/descrição normal da página.
   const siteUrl = 'https://mikma.com.br';
   const productUrl = `${siteUrl}/produtos/${product.id}`;
-  const totalStock = inventory.reduce((sum, i) => sum + Math.max(0, i.quantity - i.reserved), 0);
+  // Meio par de fronha não conta: só o que se vende inteiro.
+  const totalStock = inventory.reduce((sum, i) => sum + Math.max(0, Math.floor(i.quantity - i.reserved)), 0);
   const avgRating = reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
 
   const productJsonLd: Record<string, unknown> = {
@@ -301,6 +303,7 @@ export default async function ProductPage({ params }: Props) {
                 inventory={inventory}
                 pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
                 pixDiscountPct={s.pixDiscountPct ?? 0}
+                cardFees={publicCardFees(s)}
                 fronhaOptions={fronhaOptions}
                 fronhaInventory={fronhaInventory}
                 packageLines={packageLines}
@@ -312,6 +315,7 @@ export default async function ProductPage({ params }: Props) {
                 inventory={inventory}
                 pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
                 pixDiscountPct={s.pixDiscountPct ?? 0}
+                cardFees={publicCardFees(s)}
                 packageLines={packageLines}
                 packageNote={sizeGuideNote}
               />

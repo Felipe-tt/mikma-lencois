@@ -9,6 +9,7 @@
  * Tudo aqui é puro, sem Firestore, sem fetch, sem side-effect. Os valores já
  * chegam prontos (é a rota que busca no Firestore e chama essas funções).
  */
+import { cardFeeFor, type PublicCardFees } from '@/lib/gatewayFees';
 
 export interface CouponLike {
   active: boolean
@@ -85,15 +86,24 @@ export function computePixTotalCents(args: {
   return Math.max(0, productsCents - discount + shippingCents);
 }
 
-/** Total final de um pedido pago via cartão, sem desconto PIX, com taxa da adquirente embutida. */
+/**
+ * Total final de um pedido pago via cartão, sem desconto PIX, com os juros do
+ * parcelamento e, se a loja repassa, a taxa da AbacatePay por cima: o total
+ * é tal que, tirando a taxa (percentual sobre o total + fixo), sobra o valor
+ * com juros. Assim a loja recebe o mesmo que receberia sem a taxa.
+ */
 export function computeCardTotalCents(args: {
   productsCents: number
   couponDiscountCents: number
   shippingCents: number
-  feeRate: number // ex: 0.0399 para 3,99%
+  feeRate: number // juros, ex: 0.0399 para 3,99%
+  cardFee?: { fixedCents: number; rate: number }
 }): number {
-  const { productsCents, couponDiscountCents, shippingCents, feeRate } = args;
-  return Math.max(0, Math.round((productsCents - couponDiscountCents + shippingCents) * (1 + feeRate)));
+  const { productsCents, couponDiscountCents, shippingCents, feeRate, cardFee } = args;
+  const withInterest = Math.max(0, (productsCents - couponDiscountCents + shippingCents) * (1 + feeRate));
+  if (!cardFee || (cardFee.fixedCents <= 0 && cardFee.rate <= 0) || withInterest === 0) return Math.round(withInterest);
+  const rate = Math.min(0.5, Math.max(0, cardFee.rate));
+  return Math.ceil((withInterest + Math.max(0, cardFee.fixedCents)) / (1 - rate) - 1e-9);
 }
 
 /**
@@ -138,4 +148,17 @@ export function cardMinCents(settingCents?: number | null): number {
 /** Máximo de parcelas para um valor à vista: até 8x, parcela mínima de R$ 100. */
 export function maxInstallments(baseCents: number): number {
   return Math.max(1, Math.min(MAX_INSTALLMENTS, Math.floor(baseCents / MIN_INSTALLMENT_CENTS)));
+}
+
+/**
+ * "Até Nx de R$ X sem juros" para um valor à vista (produto, carrinho): a
+ * maior parcela sem juros e o valor de cada uma já com a taxa do cartão,
+ * igual ao que o checkout cobra. n = 1 quando não há parcelamento sem juros.
+ */
+export function interestFreeHint(baseCents: number, fees?: Partial<PublicCardFees>): { n: number; perCents: number } {
+  const max = maxInstallments(baseCents);
+  let n = 1;
+  for (let k = max; k >= 1; k--) { if (installmentFeeRate(k) === 0) { n = k; break; } }
+  const total = computeCardTotalCents({ productsCents: baseCents, couponDiscountCents: 0, shippingCents: 0, feeRate: 0, cardFee: cardFeeFor(fees, n) });
+  return { n, perCents: Math.round(total / n) };
 }

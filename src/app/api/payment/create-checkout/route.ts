@@ -25,6 +25,7 @@ import { createCheckoutSchema } from './schema';
 import { guardGuestPayment, guestUnitsBlock } from '@/lib/guestGuard';
 import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { createCardCharge } from '@/lib/abacatepayApi';
+import { cardFeeFor } from '@/lib/gatewayFees';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
@@ -244,7 +245,10 @@ export async function POST(req: NextRequest) {
 
     // ── Aplica juros de parcelamento (se houver) ──────────────────────────────
     const feeRate = installmentFeeRate(parsedInstallments);
-    const totalCents = computeCardTotalCents({ productsCents, couponDiscountCents, shippingCents, feeRate });
+    const cardFee = cardFeeFor(settings, parsedInstallments);
+    const totalCents = computeCardTotalCents({ productsCents, couponDiscountCents, shippingCents, feeRate, cardFee });
+    // Parte do total que cobre a taxa da AbacatePay (o resto é pedido + juros).
+    const cardFeeCents = totalCents - computeCardTotalCents({ productsCents, couponDiscountCents, shippingCents, feeRate });
     const installmentCents = Math.round(totalCents / parsedInstallments);
 
     // O token do cartão foi gerado para um valor exato: se o carrinho, o
@@ -402,6 +406,7 @@ export async function POST(req: NextRequest) {
         method: 'card',
         installments: parsedInstallments,
         installmentCents,
+        ...(cardFeeCents > 0 ? { cardFeeCents } : {}),
         abacateSandbox,
       },
       delivery: {

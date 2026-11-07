@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSettings } from '@/lib/settings';
-import { sitePriceCents } from '@/lib/sitePrice';
+import { sitePriceCents, siteRuleFrom } from '@/lib/sitePrice';
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { verifyAuth, tooManyRequests } from '@/lib/security';
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // O rascunho traz o preço da loja física; o site cobra com o acréscimo.
   const priceCents = Math.round((draft.priceBRL ?? 0) * 100);
   const s = await getSettings();
-  const sitePrice = sitePriceCents(priceCents, { pct: s.sitePriceMarkupPct, rounding: s.sitePriceRounding });
+  const sitePrice = sitePriceCents(priceCents, siteRuleFrom(s));
 
   const productRef = adminDb.collection('products').doc();
   const variantId = 'v1';

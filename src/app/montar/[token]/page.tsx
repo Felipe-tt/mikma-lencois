@@ -323,7 +323,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
               const product = byId.get(item.productId);
               const isJogo = product?.category === 'Jogos de cama';
               const by = share?.addedBy?.[item.sku];
-              const left = stock[item.sku];
+              const left = stock[item.sku] === undefined ? undefined : Math.floor(stock[item.sku]);
               const gone = (product === undefined && catalog.length > 0) || left === 0;
               return (
                 <li key={key} className="px-4 md:px-5 py-3.5 flex gap-3 animate-fade-up">

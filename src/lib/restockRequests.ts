@@ -84,7 +84,8 @@ export async function notifyRestockRequests(): Promise<{ checked: number; notifi
     try {
       const inv = await adminDb.collection('inventory').doc(sku).get();
       const available = inv.exists ? (inv.data()!.quantity ?? 0) - (inv.data()!.reserved ?? 0) : 0;
-      if (available <= 0) continue;
+      // Meio par de fronha (sobra da troca no solteiro) não dá para comprar: não avisa.
+      if (available < 1) continue;
       const product = await adminDb.collection('products').doc(productId).get();
       const p = product.data();
       // Mesmo critério da página do produto: só produto ativo aparece.
