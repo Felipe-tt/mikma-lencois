@@ -166,7 +166,8 @@ export default async function ProductPage({ params }: Props) {
   // sem isso o Google só tem o título/descrição normal da página.
   const siteUrl = 'https://mikma.com.br';
   const productUrl = `${siteUrl}/produtos/${product.id}`;
-  const totalStock = inventory.reduce((sum, i) => sum + Math.max(0, i.quantity - i.reserved), 0);
+  // Meio par de fronha não conta: só o que se vende inteiro.
+  const totalStock = inventory.reduce((sum, i) => sum + Math.max(0, Math.floor(i.quantity - i.reserved)), 0);
   const avgRating = reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
 
   const productJsonLd: Record<string, unknown> = {

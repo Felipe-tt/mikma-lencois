@@ -35,7 +35,7 @@ export function ProductSheet({ product, onAdd, onClose }: {
       .catch(() => setStock({}));
   }, [product]);
 
-  const left = (id: string) => stock?.[`${product.id}_${id}`];
+  const left = (id: string) => { const n = stock?.[`${product.id}_${id}`]; return n === undefined ? undefined : Math.floor(n); };
   const specs = [
     FABRIC_LABEL,
     product.yarnCount && /^\d+\/\d+$/.test(product.yarnCount) ? `Fio ${product.yarnCount}` : '',

@@ -135,7 +135,7 @@ export default function CartPage() {
   // antes passava daqui e o erro só aparecia no último passo do checkout.
   const hasUnavailableItem = (cart?.items ?? []).some(item =>
     activeMap[item.productId] === false ||
-    (stockMap[item.sku] !== undefined && stockMap[item.sku] < item.quantity) ||
+    (stockMap[item.sku] !== undefined && Math.floor(stockMap[item.sku]) < item.quantity) ||
     (!!item.swapSku && stockMap[item.swapSku] !== undefined && stockMap[item.swapSku] < item.quantity * (item.swapQtyPerUnit ?? 1))
   );
 
@@ -403,7 +403,9 @@ export default function CartPage() {
                       if (activeMap[item.productId] === false) {
                         return <p className="text-xs text-red-600 font-semibold">Produto não está mais disponível, remova do carrinho</p>;
                       }
-                      const avail = stockMap[item.sku];
+                      // Meio par de fronha (sobra da troca no solteiro) não se vende sozinho:
+                      // para o cliente conta só o que dá para levar inteiro.
+                      const avail = stockMap[item.sku] !== undefined ? Math.floor(stockMap[item.sku]) : undefined;
                       if (avail === 0) return <p className="text-xs text-red-600 font-semibold">Fora de estoque, remova do carrinho</p>;
                       if (avail !== undefined && avail < item.quantity) {
                         return <p className="text-xs text-red-600 font-semibold">Só {avail} disponíve{avail === 1 ? 'l' : 'is'}, diminua a quantidade</p>;
