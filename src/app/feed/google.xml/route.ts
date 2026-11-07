@@ -1,6 +1,9 @@
 import { connection } from 'next/server';
 import { getAgentCatalog, brl, SITE_URL } from '@/lib/agentCatalog';
 import { escapeXml } from '@/lib/html';
+import { getSettings, getPauseNoticeNow } from '@/lib/settings';
+import { linesForProduct, packageContents, packageLineText, parseTable, type PackageLine } from '@/lib/packageContents';
+import { feedDescription, feedTitle } from '@/lib/feedText';
 
 // Merchant Center aceita até 150 caracteres no título e 5000 na descrição.
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -11,22 +14,39 @@ const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…`
  * Shopping e os assistentes do Google. Cadastro: Merchant Center >
  * Produtos > Fontes de dados > adicionar por URL.
  */
+const plain = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/** A linha da tabela deste tamanho. Sem linha do tamanho certo, nada (melhor que medida errada). */
+function contentsLine(lines: PackageLine[], p: { category: string; fronhaCount?: number }, v: { size: string; sizeKey: string }): PackageLine | undefined {
+  const found = linesForProduct(lines, { category: p.category, sizes: [v.sizeKey, v.size].filter(Boolean), fronhaCount: p.fronhaCount });
+  if (plain(p.category).startsWith('fronha')) return found[0];
+  const wanted = new Set([plain(v.size), plain(v.sizeKey)].filter(Boolean));
+  return found.find(l => wanted.has(plain(l.size)));
+}
+
 export async function GET() {
   await connection(); // na hora, não no build (o build não lê o banco)
-  const products = await getAgentCatalog();
+  const [products, s, paused] = await Promise.all([getAgentCatalog(), getSettings(), getPauseNoticeNow()]);
+  // O que vem no pacote de cada tamanho (tabela das Configurações), para a descrição.
+  const { columns, rows } = parseTable(s.sizeGuideColumns, s.sizeGuideRows);
+  const lines = packageContents(columns, rows);
   const items = products.flatMap(p => {
-    const variants = p.variants.length > 0 ? p.variants : [{ sku: p.id, size: '', color: '', inStock: false }];
+    const variants = p.variants.length > 0 ? p.variants : [{ sku: p.id, size: '', sizeKey: '', color: '', inStock: false }];
     return variants.map(v => {
-      const title = clip([p.name, v.size, v.color].filter(Boolean).join(' - '), 150);
+      const title = feedTitle({ name: p.name, category: p.category, size: v.size, color: v.color, material: p.material, composition: p.composition });
+      const line = contentsLine(lines, p, v);
+      const description = feedDescription({ title, description: p.description, composition: p.composition, yarnCount: p.yarnCount, contents: line ? packageLineText(line) : undefined });
+      // Compras pausadas no painel: o Google não mostra o que não dá para comprar agora.
+      const inStock = v.inStock && !paused;
       const extra = p.images.slice(1, 11).map(u => `<g:additional_image_link>${escapeXml(u)}</g:additional_image_link>`).join('');
       return `<item>
 <g:id>${escapeXml(v.sku)}</g:id>
 <g:item_group_id>${escapeXml(p.id)}</g:item_group_id>
 <g:title>${escapeXml(title)}</g:title>
-<g:description>${escapeXml(clip(p.description || p.name, 5000))}</g:description>
+<g:description>${escapeXml(clip(description, 5000))}</g:description>
 <g:link>${escapeXml(p.url)}</g:link>
 ${p.images[0] ? `<g:image_link>${escapeXml(p.images[0])}</g:image_link>` : ''}${extra}
-<g:availability>${v.inStock ? 'in_stock' : 'out_of_stock'}</g:availability>
+<g:availability>${inStock ? 'in_stock' : 'out_of_stock'}</g:availability>
 <g:price>${brl(p.priceCents)} BRL</g:price>
 <g:condition>new</g:condition>
 <g:brand>Mikma Lençóis</g:brand>

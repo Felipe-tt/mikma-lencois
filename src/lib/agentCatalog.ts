@@ -8,6 +8,8 @@ export const SITE_URL = 'https://mikma.com.br';
 export interface CatalogVariant {
   sku: string;
   size: string;
+  /** Chave do tamanho (casal, queen...), para cruzar com a tabela de medidas. */
+  sizeKey: string;
   color: string;
   inStock: boolean;
 }
@@ -24,6 +26,8 @@ export interface CatalogEntry {
   composition: string;
   yarnCount?: string;
   weightGsm?: number;
+  /** Jogo de cama: quantas fronhas vêm (solteiro 1, os outros 2). */
+  fronhaCount?: number;
   variants: CatalogVariant[];
 }
 
@@ -53,13 +57,16 @@ export async function getAgentCatalog(): Promise<CatalogEntry[]> {
     composition: p.composition || DEFAULT_COMPOSITION,
     ...(p.yarnCount && /^\d+\/\d+$/.test(p.yarnCount) ? { yarnCount: p.yarnCount } : {}),
     ...(p.weightGsm ? { weightGsm: p.weightGsm } : {}),
+    ...(p.fronhaCount ? { fronhaCount: p.fronhaCount } : {}),
     variants: (p.variants ?? []).map(v => {
       const sku = `${p.id}_${v.id}`;
       return {
         sku,
         size: SIZE_LABEL[v.size] ?? v.size,
+        sizeKey: v.size,
         color: v.colorName || v.color,
-        inStock: (available.get(sku) ?? 0) > 0,
+        // Meio par de fronha (sobra da troca no solteiro) não se vende sozinho.
+        inStock: (available.get(sku) ?? 0) >= 1,
       };
     }),
   }));
