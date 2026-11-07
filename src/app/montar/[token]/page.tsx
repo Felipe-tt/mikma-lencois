@@ -344,7 +344,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                     {item.note && <p className="text-[11px] text-clay mt-0.5 truncate">{item.note}</p>}
                     {gone
                       ? <p className="text-[11px] font-semibold text-red-700 mt-0.5">Esgotado: tire ou troque por outro</p>
-                      : left !== undefined && left <= 3 && <p className="text-[11px] font-semibold text-amber-700 mt-0.5">Só restam {left}</p>}
+                      : left !== undefined && left <= 3 && <p className="text-[11px] font-semibold text-amber-700 mt-0.5">Só restam {Math.floor(left)}</p>}
                     <div className="mt-2 flex items-center gap-2">
                       <div className="flex items-center rounded-full border border-mist bg-paper">
                         <button type="button" disabled={busy === key || locked} onClick={async () => {

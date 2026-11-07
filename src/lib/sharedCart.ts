@@ -1,6 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import type { CartItem, Product } from '@/types';
-import { getFronhaCount } from '@/lib/fronhaSwap';
+import { swapPairsPerUnit } from '@/lib/fronhaSwap';
 
 /**
  * Carrinho compartilhado ("Montar junto"): o dono gera um link secreto e
@@ -81,7 +81,7 @@ export async function applySharedOp(db: Firestore, items: CartItem[], o: SharedO
     const [fid, vid] = o.swapSku.split('_');
     const fronha = await activeProduct(db, fid ?? '');
     if (fronha?.category !== 'Fronhas' || !fronha.variants?.some(v => v.id === vid)) return { error: 'Fronha indisponível.' };
-    const perUnit = getFronhaCount({ fronhaCount: main.fronhaCount, variantSize: main.variants?.[0]?.size });
+    const perUnit = swapPairsPerUnit({ fronhaCount: main.fronhaCount, variantSize: main.variants?.[0]?.size });
     if (current.quantity * perUnit > await available(db, o.swapSku)) return { error: 'Essa fronha está sem estoque.' };
     next = { ...base, note: `Fronha trocada: ${fronha.name}`, swapSku: o.swapSku, swapQtyPerUnit: perUnit };
     text = `trocou a fronha de ${current.productName}`;

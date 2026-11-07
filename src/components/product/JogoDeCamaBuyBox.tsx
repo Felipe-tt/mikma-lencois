@@ -3,7 +3,7 @@
 import { useId, useState } from 'react';
 import Image from 'next/image';
 import { BuyBox } from './BuyBox';
-import { getFronhaCount } from '@/lib/fronhaSwap';
+import { getFronhaCount, swapPairsPerUnit } from '@/lib/fronhaSwap';
 import type { PackageLine } from '@/lib/packageContents';
 import type { Product, InventoryItem } from '@/types';
 
@@ -36,6 +36,8 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
   const [chosenFronhaId, setChosenFronhaId] = useState<string>('default');
 
   const fronhaCount = getFronhaCount({ fronhaCount: product.fronhaCount, variantSize: product.variants[0]?.size });
+  // Estoque da fronha em pares: solteiro usa meio par, casal usa 1.
+  const pairsPerUnit = swapPairsPerUnit({ fronhaCount: product.fronhaCount, variantSize: product.variants[0]?.size });
 
   function availableStock(fronha: Product): number {
     const variant = fronha.variants[0];
@@ -54,7 +56,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
   const note = swapSku ? `Fronha trocada: ${chosenFronha!.name}` : undefined;
   // Quantos jogos a fronha escolhida cobre: com 2 fronhas por jogo e 3 em
   // estoque, dá pra levar 1 jogo com essa troca.
-  const swapMaxQty = chosenFronha ? Math.floor(availableStock(chosenFronha) / fronhaCount) : undefined;
+  const swapMaxQty = chosenFronha ? Math.floor(availableStock(chosenFronha) / pairsPerUnit) : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,6 +67,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
           chosenId={chosenFronhaId}
           onChoose={setChosenFronhaId}
           stockOf={availableStock}
+          pairsPerUnit={pairsPerUnit}
         />
       )}
 
@@ -75,7 +78,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
         pixDiscountPct={pixDiscountPct}
         note={note}
         swapSku={swapSku}
-        swapQtyPerUnit={swapSku ? fronhaCount : undefined}
+        swapQtyPerUnit={swapSku ? pairsPerUnit : undefined}
         maxQty={swapSku ? swapMaxQty : undefined}
         packageLines={packageLines}
         packageNote={packageNote}
@@ -110,8 +113,8 @@ function Swatch({ f, size = 48 }: { f?: Product; size?: number }) {
  * "Trocar", abre uma faixa de miniaturas. Antes era uma lista com um
  * rádio por fronha, todas com o mesmo nome, ocupando meia tela.
  */
-function FronhaPicker({ options, fronhaCount, chosenId, onChoose, stockOf }: {
-  options: Product[]; fronhaCount: number; chosenId: string;
+function FronhaPicker({ options, fronhaCount, pairsPerUnit, chosenId, onChoose, stockOf }: {
+  options: Product[]; fronhaCount: number; pairsPerUnit: number; chosenId: string;
   onChoose: (id: string) => void; stockOf: (f: Product) => number;
 }) {
   const [open, setOpen] = useState(false);
@@ -140,7 +143,7 @@ function FronhaPicker({ options, fronhaCount, chosenId, onChoose, stockOf }: {
               {[undefined, ...options].map(f => {
                 const id = f?.id ?? 'default';
                 const on = chosenId === id;
-                const out = !!f && stockOf(f) < fronhaCount;
+                const out = !!f && stockOf(f) < pairsPerUnit;
                 const label = f ? fronhaLabel(f, fronhaCount) : 'Padrão do jogo';
                 return (
                   <button key={id} type="button" role="radio" aria-checked={on} disabled={out}

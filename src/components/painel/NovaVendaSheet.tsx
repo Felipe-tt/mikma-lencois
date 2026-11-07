@@ -321,7 +321,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
                       <span className="block text-[11px] text-white/85 truncate leading-tight">{variantLabel(item)}</span>
                       <span className="block text-[13px] font-bold text-white leading-tight">
                         {/* Estoque baixo em destaque */}
-                        <span className={avail <= item.lowStockThreshold ? 'inline-block bg-amber-700 text-white px-1.5 rounded' : undefined}>{avail} em estoque</span>
+                        <span className={avail <= item.lowStockThreshold ? 'inline-block bg-amber-700 text-white px-1.5 rounded' : undefined}>{avail.toLocaleString('pt-BR')} em estoque</span>
                       </span>
                     </span>
                     {delta !== 0 && (

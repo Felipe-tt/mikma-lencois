@@ -88,7 +88,8 @@ describe('applySharedOp: swap', () => {
 
   it('troca a fronha de um jogo de cama', async () => {
     const r = await applySharedOp(fakeDb(base), [j], { op: 'swap', line: 'jogo_v1', swapSku: 'fronha_f1' });
-    expect(r).toEqual({ items: [expect.objectContaining({ swapSku: 'fronha_f1', swapQtyPerUnit: 2, note: 'Fronha trocada: Fronha Rosa' })], text: 'trocou a fronha de Jogo Queen' });
+    // Queen tem 2 fronhas: usa 1 par da fronha avulsa por jogo.
+    expect(r).toEqual({ items: [expect.objectContaining({ swapSku: 'fronha_f1', swapQtyPerUnit: 1, note: 'Fronha trocada: Fronha Rosa' })], text: 'trocou a fronha de Jogo Queen' });
     if ('items' in r) expect(lineKey(r.items[0])).toBe('jogo_v1::Fronha trocada: Fronha Rosa');
   });
 
@@ -102,7 +103,8 @@ describe('applySharedOp: swap', () => {
   it('recusa fora de jogo de cama, fronha inválida ou sem estoque', async () => {
     expect(await applySharedOp(fakeDb(base), [item()], { op: 'swap', line: 'lencol_v1', swapSku: 'fronha_f1' })).toEqual({ error: 'Esse item não tem troca de fronha.' });
     expect(await applySharedOp(fakeDb(base), [j], { op: 'swap', line: 'jogo_v1', swapSku: 'lencol_v1' })).toEqual({ error: 'Fronha indisponível.' });
-    const db = fakeDb({ ...base, inventory: { ...stock, fronha_f1: { quantity: 3 } } });
+    // 2 jogos precisam de 2 pares; só há 1.
+    const db = fakeDb({ ...base, inventory: { ...stock, fronha_f1: { quantity: 1 } } });
     expect(await applySharedOp(db, [j], { op: 'swap', line: 'jogo_v1', swapSku: 'fronha_f1' })).toEqual({ error: 'Essa fronha está sem estoque.' });
   });
 });

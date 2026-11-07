@@ -558,7 +558,7 @@ export default function EstoquePage() {
                   </div>
                   {low && <IconAlert size={16} className="text-amber-600 shrink-0" />}
                   <div className="text-right shrink-0 leading-none">
-                    <p className={`text-xl font-bold ${low ? 'text-amber-600' : 'text-ink'}`}>{avail}</p>
+                    <p className={`text-xl font-bold ${low ? 'text-amber-600' : 'text-ink'}`}>{avail.toLocaleString('pt-BR')}</p>
                     <p className="text-[9px] text-faint mt-0.5">disponível</p>
                   </div>
                   <svg aria-hidden="true" className={`shrink-0 text-faint transition-transform ${expanded ? 'rotate-180' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
