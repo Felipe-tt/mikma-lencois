@@ -2,6 +2,12 @@
 
 import { useEffect } from 'react';
 
+// Mesma lista do proxy (src/proxy.ts). O robô de busca executa o JavaScript:
+// redirecionado aqui, ele registrava o "noindex" de /manutencao como se fosse
+// da página pedida (a home saiu do Google assim). Para ele, o proxy já
+// responde 503 quando a página não vem do cache da CDN.
+const SEARCH_BOT = /googlebot|google-inspectiontool|bingbot|duckduckbot|yandex|baiduspider|applebot|slurp|petalbot/i;
+
 /**
  * Fallback client-side para o middleware.
  *
@@ -19,6 +25,7 @@ import { useEffect } from 'react';
  */
 export function MaintenanceGate() {
   useEffect(() => {
+    if (SEARCH_BOT.test(navigator.userAgent)) return;
     let cancelled = false;
 
     fetch('/api/maintenance/status', { cache: 'no-store' })

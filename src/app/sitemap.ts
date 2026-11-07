@@ -9,18 +9,22 @@ const BASE = 'https://mikma.com.br';
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   'use cache';
   cacheTag('products');
-  const now = new Date();
 
-  // Static pages
+  // Páginas fixas sem data: "agora" a cada geração é data falsa, e o Google
+  // passa a ignorar o lastmod do sitemap inteiro (inclusive o dos produtos,
+  // que é real). A home e o catálogo mudam junto com os produtos: usam a data
+  // do produto salvo mais recentemente.
+  const fixed = (path: string, priority: number, changeFrequency: 'daily' | 'monthly' | 'yearly') =>
+    ({ url: `${BASE}${path}`, changeFrequency, priority });
   const statics: MetadataRoute.Sitemap = [
-    { url: BASE, lastModified: now, changeFrequency: 'daily', priority: 1 },
-    { url: `${BASE}/produtos`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
-    { url: `${BASE}/sobre`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${BASE}/guia-de-tamanhos`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${BASE}/trocas-e-devolucoes`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
-    { url: `${BASE}/privacidade`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
-    { url: `${BASE}/termos`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
-    { url: `${BASE}/politica-de-cookies`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
+    fixed('', 1, 'daily'),
+    fixed('/produtos', 0.9, 'daily'),
+    fixed('/sobre', 0.5, 'monthly'),
+    fixed('/guia-de-tamanhos', 0.6, 'monthly'),
+    fixed('/trocas-e-devolucoes', 0.3, 'yearly'),
+    fixed('/privacidade', 0.2, 'yearly'),
+    fixed('/termos', 0.2, 'yearly'),
+    fixed('/politica-de-cookies', 0.2, 'yearly'),
   ];
 
   // Product pages
@@ -33,10 +37,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const products: MetadataRoute.Sitemap = snap.docs.map(d => ({
       url: `${BASE}/produtos/${d.id}`,
-      lastModified: d.data().updatedAt?.toDate?.() ?? now,
+      ...(d.data().updatedAt?.toDate ? { lastModified: d.data().updatedAt.toDate() as Date } : {}),
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));
+
+    // Home e catálogo: mudaram quando o último produto mudou.
+    const newest = products.reduce<Date | undefined>((max, p) => {
+      const d = p.lastModified instanceof Date ? p.lastModified : undefined;
+      return d && (!max || d > max) ? d : max;
+    }, undefined);
+    if (newest) for (const page of statics.slice(0, 2)) page.lastModified = newest;
 
     cacheLife('hours');
     return [...statics, ...products];
