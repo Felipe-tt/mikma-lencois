@@ -16,15 +16,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // do produto salvo mais recentemente.
   const fixed = (path: string, priority: number, changeFrequency: 'daily' | 'monthly' | 'yearly') =>
     ({ url: `${BASE}${path}`, changeFrequency, priority });
+  // Termos, Privacidade e Cookies ficam fora: são noindex (ver as páginas).
   const statics: MetadataRoute.Sitemap = [
     fixed('', 1, 'daily'),
     fixed('/produtos', 0.9, 'daily'),
     fixed('/sobre', 0.5, 'monthly'),
     fixed('/guia-de-tamanhos', 0.6, 'monthly'),
     fixed('/trocas-e-devolucoes', 0.3, 'yearly'),
-    fixed('/privacidade', 0.2, 'yearly'),
-    fixed('/termos', 0.2, 'yearly'),
-    fixed('/politica-de-cookies', 0.2, 'yearly'),
   ];
 
   // Product pages
