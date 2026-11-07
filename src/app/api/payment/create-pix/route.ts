@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     const productDocs = await Promise.all(
       productIds.map(id => adminDb.collection('products').doc(id).get())
     );
-    const productMap: Record<string, { price: number; name: string; weightKg?: number; active: boolean; category: string; fronhaCount?: number; variantSize?: string }> = {};
+    const productMap: Record<string, { price: number; name: string; weightKg?: number; active: boolean; category: string; fronhaCount?: number; variantSize?: string; colorName?: string }> = {};
     for (const snap of productDocs) {
       if (snap.exists) {
         productMap[snap.id] = {
@@ -136,6 +136,7 @@ export async function POST(req: NextRequest) {
           category: snap.data()!.category as string,
           fronhaCount: snap.data()!.fronhaCount as number | undefined,
           variantSize: (snap.data()!.variants as Array<{ size?: string }> | undefined)?.[0]?.size,
+          colorName: (snap.data()!.variants as Array<{ colorName?: string }> | undefined)?.[0]?.colorName,
         };
       }
     }
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest) {
     // ── Nunca confia no swapSku/swapQtyPerUnit/note vindo do carrinho
     // (escrito direto pelo client SDK, sem passar por API) ─────────────────
     const productLookup = new Map<string, ProductLookup>(
-      Object.entries(productMap).map(([id, p]) => [id, { id, name: p.name, active: p.active, category: p.category, fronhaCount: p.fronhaCount, variantSize: p.variantSize }])
+      Object.entries(productMap).map(([id, p]) => [id, { id, name: p.name, colorName: p.colorName, active: p.active, category: p.category, fronhaCount: p.fronhaCount, variantSize: p.variantSize }])
     );
     const sanitizedCartItems = sanitizeSwaps(cartItems, productLookup);
 

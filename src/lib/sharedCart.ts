@@ -1,6 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import type { CartItem, Product } from '@/types';
-import { swapPairsPerUnit } from '@/lib/fronhaSwap';
+import { fronhaDisplayName, getFronhaCount, swapPairsPerUnit } from '@/lib/fronhaSwap';
 
 /**
  * Carrinho compartilhado ("Montar junto"): o dono gera um link secreto e
@@ -74,7 +74,7 @@ export async function applySharedOp(db: Firestore, items: CartItem[], o: SharedO
   // de sanitizeSwaps, que o checkout ainda reaplica).
   const main = await activeProduct(db, current.productId);
   if (main?.category !== 'Jogos de cama') return { error: 'Esse item não tem troca de fronha.' };
-  const { swapSku: _s, swapQtyPerUnit: _q, note: _n, ...base } = current;
+  const { swapSku: _s, swapQtyPerUnit: _q, note: _n, swapImage: _i, ...base } = current;
   let next: CartItem = base;
   let text = `voltou a fronha padrão de ${current.productName}`;
   if (o.swapSku) {
@@ -83,7 +83,8 @@ export async function applySharedOp(db: Firestore, items: CartItem[], o: SharedO
     if (fronha?.category !== 'Fronhas' || !fronha.variants?.some(v => v.id === vid)) return { error: 'Fronha indisponível.' };
     const perUnit = swapPairsPerUnit({ fronhaCount: main.fronhaCount, variantSize: main.variants?.[0]?.size });
     if (current.quantity * perUnit > await available(db, o.swapSku)) return { error: 'Essa fronha está sem estoque.' };
-    next = { ...base, note: `Fronha trocada: ${fronha.name}`, swapSku: o.swapSku, swapQtyPerUnit: perUnit };
+    const count = getFronhaCount({ fronhaCount: main.fronhaCount, variantSize: main.variants?.[0]?.size });
+    next = { ...base, note: `Fronha trocada: ${fronhaDisplayName({ name: fronha.name, colorName: fronha.variants?.[0]?.colorName }, count)}`, swapSku: o.swapSku, swapQtyPerUnit: perUnit, ...(fronha.images?.[0] ? { swapImage: fronha.images[0] } : {}) };
     text = `trocou a fronha de ${current.productName}`;
   }
   // Se já existe uma linha igual, junta as quantidades.

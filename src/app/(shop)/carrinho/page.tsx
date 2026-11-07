@@ -1,6 +1,8 @@
 'use client';
 import { variantLabel } from '@/lib/variantLabel';
 import Image from 'next/image';
+import { SwapNote } from '@/components/cart/SwapNote';
+import { SwipeToDismiss } from '@/components/ui/SwipeToDismiss';
 import { installmentFeeRate, maxInstallments } from '@/lib/orderPricing';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
@@ -249,15 +251,19 @@ export default function CartPage() {
   if (loading || cartLoading || (items.length > 0 && !stockReady)) return <CartSkeleton />;
 
   const undoBar = lastRemoved && (
-    <div role="status" className="fixed z-40 left-1/2 -translate-x-1/2 top-[72px] sm:top-auto sm:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] w-[calc(100%-2rem)] max-w-sm flex items-center gap-3 rounded-full bg-ink text-paper pl-5 pr-1.5 py-1.5 shadow-lg animate-fade-up">
-      <span className="flex-1 min-w-0 text-[13px] truncate">
-        <span className="font-semibold">Item removido</span>
-        <span className="text-paper/60"> · {lastRemoved.item.productName}</span>
-      </span>
-      <button type="button" onClick={undoRemove}
-        className="shrink-0 h-10 px-4 rounded-full text-[13px] font-semibold text-paper bg-paper/10 hover:bg-paper/20 transition-colors">
-        Desfazer
-      </button>
+    <div role="status" className="fixed z-40 left-1/2 -translate-x-1/2 top-[72px] sm:top-auto sm:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] w-[calc(100%-2rem)] max-w-sm animate-fade-up">
+      {/* Arrastar para o lado dispensa o aviso (antes ele não saía). */}
+      <SwipeToDismiss onDismiss={() => setLastRemoved(null)}
+        className="flex items-center gap-3 rounded-full bg-ink text-paper pl-5 pr-1.5 py-1.5 shadow-lg">
+        <span className="flex-1 min-w-0 text-[13px] truncate">
+          <span className="font-semibold">Item removido</span>
+          <span className="text-paper/60"> · {lastRemoved.item.productName}</span>
+        </span>
+        <button type="button" onClick={undoRemove}
+          className="shrink-0 h-10 px-4 rounded-full text-[13px] font-semibold text-paper bg-paper/10 hover:bg-paper/20 transition-colors">
+          Desfazer
+        </button>
+      </SwipeToDismiss>
     </div>
   );
 
@@ -389,9 +395,7 @@ export default function CartPage() {
                         {variantLabel({ size: item.variant.size, color: item.variant.color, colorName: item.variant.colorName })}
                       </p>
                     )}
-                    {item.note && (
-                      <p className="text-xs text-clay font-medium">{item.note}</p>
-                    )}
+                    <SwapNote note={item.note} image={item.swapImage} />
                     {cart?.share && !cart.share.paidAt && cart.share.addedBy?.[item.sku] && (
                       <p className="text-xs text-mid">Colocado por {cart.share.addedBy[item.sku]}</p>
                     )}

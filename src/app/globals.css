@@ -1248,3 +1248,8 @@ html.dark .cookie-glass {
 @media (prefers-reduced-motion: reduce) {
   .staff-insight-panel, .staff-insight-seg, .staff-insight-row, .staff-insight-chip, .staff-insight-dot::after { animation: none; }
 }
+
+/* Painel: arrastar de lado abre e fecha o menu. Sem isto o Chrome do
+   celular usa o mesmo gesto para voltar a página e o menu não abria. O
+   "voltar" do sistema (puxar da beirada da tela) continua funcionando. */
+html:has(.painel-scope), html:has(.painel-scope) body { overscroll-behavior-x: none; }

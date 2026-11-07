@@ -84,7 +84,7 @@ describe('sanitizeSwaps', () => {
       swapSku: 'fronhaX_v1', swapQtyPerUnit: 2,
     }];
     const result = sanitizeSwaps(items, productMap(jogoQueen, fronhaAtiva));
-    expect(result[0].note).toBe('Fronha trocada: Fronha Floral Rosa');
+    expect(result[0].note).toBe('Fronha trocada: Fronhas Floral Rosa');
   });
 
   it('CRÍTICO: note enviado sem nenhum swapSku é removido', () => {

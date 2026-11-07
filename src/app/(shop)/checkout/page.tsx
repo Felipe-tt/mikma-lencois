@@ -20,6 +20,7 @@ import { maskCep, maskCpf, maskPhone, onlyDigits, isValidCpf, isValidPhone, isVa
 import { Select } from '@/components/ui/Select';
 import type { ShippingOption } from '@/lib/shipping-pricing';
 import Image from 'next/image';
+import { SwapNote } from '@/components/cart/SwapNote';
 import { trackBeginCheckout } from '@/lib/analytics';
 import { computePixTotalCents, computePixDiscountCents, computeCardTotalCents, installmentFeeRate, cardMinCents, maxInstallments } from '@/lib/orderPricing';
 import { toAddress, streetLine, cityLine } from '@/lib/address';
@@ -658,7 +659,7 @@ export default function CheckoutPage() {
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-medium text-ink leading-snug line-clamp-2 pr-2">{item.productName}</p>
         {item.variant?.size && <p className="text-[11.5px] text-faint mt-0.5">{[SIZE_LABEL[item.variant.size] ?? item.variant.size, item.variant.colorName].filter(Boolean).join(' · ')}</p>}
-        {item.note && <p className="text-[11px] text-clay font-medium mt-0.5">{item.note}</p>}
+        <SwapNote note={item.note} image={item.swapImage} small />
       </div>
       <span className="font-display text-[0.98rem] text-ink shrink-0 tabular-nums pt-0.5">{formatCurrency(item.unitPrice * item.quantity)}</span>
     </div>
