@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
+import { publicCardFees } from '@/lib/gatewayFees';
 import { notFound } from 'next/navigation';
 import { cacheLife, cacheTag } from 'next/cache';
 import Link from 'next/link';
@@ -301,6 +302,7 @@ export default async function ProductPage({ params }: Props) {
                 inventory={inventory}
                 pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
                 pixDiscountPct={s.pixDiscountPct ?? 0}
+                cardFees={publicCardFees(s)}
                 fronhaOptions={fronhaOptions}
                 fronhaInventory={fronhaInventory}
                 packageLines={packageLines}
@@ -312,6 +314,7 @@ export default async function ProductPage({ params }: Props) {
                 inventory={inventory}
                 pixDiscountThresholdCents={s.pixDiscountThresholdCents ?? 0}
                 pixDiscountPct={s.pixDiscountPct ?? 0}
+                cardFees={publicCardFees(s)}
                 packageLines={packageLines}
                 packageNote={sizeGuideNote}
               />

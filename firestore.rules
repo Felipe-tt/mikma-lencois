@@ -215,7 +215,10 @@ service cloud.firestore {
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
               'nfeAutoEmit', 'nfeAutoEmitSince', 'nfeEnvironment', 'nfeCertificado', 'nfeCnpj', 'nfeRazaoSocial', 'nfeIe',
               'nfeCrt', 'nfeSerie', 'nfeProximoNumero', 'nfeCodMunicipio', 'nfeUfEmitente', 'nfeNcm', 'nfeCsosn',
-              'nfePisCofinsCst', 'nfeCfopInterno', 'nfeCfopInterestadual', 'nfeNaturezaOperacao', 'nfeInfoAdicional']);
+              'nfePisCofinsCst', 'nfeCfopInterno', 'nfeCfopInterestadual', 'nfeNaturezaOperacao', 'nfeInfoAdicional',
+              // Taxas da AbacatePay: mexem no preço e no total do cartão.
+              'abacateFeePixCents', 'abacateFeePixInPrice', 'abacateFeeCardFixedCents', 'abacateFeeCardPct1x',
+              'abacateFeeCardPct2a6', 'abacateFeeCardPct7a12', 'abacateFeeCardToCustomer', 'abacateFeeCheckedAt']);
       }
       allow create, delete: if hasRole('admin');
       allow update: if hasRole('admin') || (hasRole('seller') && moneyAndSandboxUnchanged());

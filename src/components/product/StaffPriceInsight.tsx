@@ -13,7 +13,7 @@ import { sitePriceCents, type SitePriceRounding } from '@/lib/sitePrice';
  * de /api/painel/preco/[id] (não vai no HTML da loja).
  */
 
-interface Detail { price: number; storePrice: number | null; pct: number; rounding: SitePriceRounding }
+interface Detail { price: number; storePrice: number | null; pct: number; rounding: SitePriceRounding; pixFeeCents?: number }
 
 const cache = new Map<string, { at: number; data: Detail }>();
 const TTL = 60_000;
@@ -46,9 +46,11 @@ const pctText = (n: number) => `${n.toLocaleString('pt-BR', { maximumFractionDig
 function Panel({ detail, error }: { detail: Detail | null; error: string }) {
   const store = detail?.storePrice ?? null;
   const price = detail?.price ?? 0;
-  const exact = store ? sitePriceCents(store, { pct: detail!.pct, rounding: 'exato' }) : 0;
-  const computed = store ? sitePriceCents(store, { pct: detail!.pct, rounding: detail!.rounding }) : 0;
-  const markup = store ? exact - store : 0;
+  const pixFee = detail?.pixFeeCents ?? 0;
+  const withMarkup = store ? sitePriceCents(store, { pct: detail!.pct, rounding: 'exato' }) : 0;
+  const exact = store ? sitePriceCents(store, { pct: detail!.pct, rounding: 'exato', feeCents: pixFee }) : 0;
+  const computed = store ? sitePriceCents(store, { pct: detail!.pct, rounding: detail!.rounding, feeCents: pixFee }) : 0;
+  const markup = store ? withMarkup - store : 0;
   const roundUp = store ? computed - exact : 0;
   const diff = store ? price - store : 0;
   const shown = useCountUp(price, store ?? price, !!detail);
@@ -89,6 +91,7 @@ function Panel({ detail, error }: { detail: Detail | null; error: string }) {
           <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-mist/60" aria-hidden="true">
             <span className="staff-insight-seg h-full bg-ink/75" style={{ width: seg(store), animationDelay: '60ms' }} />
             {markup > 0 && <span className="staff-insight-seg h-full bg-clay" style={{ width: seg(markup), animationDelay: '220ms' }} />}
+            {pixFee > 0 && <span className="staff-insight-seg h-full bg-emerald-600/80" style={{ width: seg(pixFee), animationDelay: '290ms' }} />}
             {roundUp > 0 && <span className="staff-insight-seg staff-insight-stripes h-full bg-clay-l" style={{ width: seg(roundUp), animationDelay: '360ms' }} />}
           </div>
 
@@ -101,6 +104,12 @@ function Panel({ detail, error }: { detail: Detail | null; error: string }) {
               <dt className="flex items-center gap-2 text-mid"><span aria-hidden="true" className="w-2 h-2 rounded-full bg-clay" />Acréscimo de {pctText(detail.pct)}</dt>
               <dd className="tabular-nums text-ink">+ {formatCurrency(markup)}</dd>
             </div>
+            {pixFee > 0 && (
+              <div className="staff-insight-row flex items-center justify-between gap-4" style={{ animationDelay: '240ms' }}>
+                <dt className="flex items-center gap-2 text-mid"><span aria-hidden="true" className="w-2 h-2 rounded-full bg-emerald-600/80" />Taxa AbacatePay (PIX)</dt>
+                <dd className="tabular-nums text-ink">+ {formatCurrency(pixFee)}</dd>
+              </div>
+            )}
             {detail.rounding === '90' && (
               <div className="staff-insight-row flex items-center justify-between gap-4" style={{ animationDelay: '280ms' }}>
                 <dt className="flex items-center gap-2 text-mid"><span aria-hidden="true" className="staff-insight-stripes w-2 h-2 rounded-full bg-clay-l" />Para terminar em ,90</dt>
@@ -113,10 +122,11 @@ function Panel({ detail, error }: { detail: Detail | null; error: string }) {
             </div>
           </dl>
 
-          {detail.pct === 0 && <p className="text-[11.5px] text-faint">Sem acréscimo: o site cobra o mesmo preço da loja.</p>}
+          {detail.pct === 0 && pixFee === 0 && <p className="text-[11.5px] text-faint">Sem acréscimo: o site cobra o mesmo preço da loja.</p>}
+          <p className="text-[11.5px] text-faint leading-relaxed">No cartão, a taxa da AbacatePay entra no total do pedido.</p>
           {computed !== price && (
             <p className="text-[11.5px] leading-relaxed rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 px-2.5 py-2">
-              Pelo acréscimo atual seria {formatCurrency(computed)}. Salve as Configurações para atualizar.
+              Pelas Configurações atuais seria {formatCurrency(computed)}. Salve as Configurações para atualizar.
             </p>
           )}
         </>

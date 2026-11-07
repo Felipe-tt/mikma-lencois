@@ -24,6 +24,7 @@ import { MAX_PENDING_ORDERS_PER_USER } from '@/lib/orders/pendingLimit';
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 import { createPixSchema } from './schema';
+import { watchPixFee } from '@/lib/orders/gatewayFeeWatch';
 import { sendEmail, emailEnabled } from '@/lib/email';
 import { buildPixPending } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
@@ -511,8 +512,11 @@ export async function POST(req: NextRequest) {
       'payment.pixQrCode': pix.brCodeBase64,
       'payment.pixCopyPaste': pix.brCode,
       'payment.expiresAt': pix.expiresAt ? new Date(pix.expiresAt) : null,
+      ...(Number.isInteger(pix.platformFee) ? { 'payment.gatewayFeeCents': pix.platformFee } : {}),
       updatedAt: new Date().toISOString(),
     });
+    // Taxa de verdade desta cobrança: mantém a salva no painel em dia.
+    if (!abacateSandbox) await watchPixFee(pix.platformFee);
 
     // "Recebemos seu pedido, falta o PIX": só aqui, na criação do pedido (o
     // caminho de reaproveitar um PIX recente retorna antes e não reenvia).

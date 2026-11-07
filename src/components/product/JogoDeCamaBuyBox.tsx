@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
+import type { PublicCardFees } from '@/lib/gatewayFees';
 import Image from 'next/image';
 import { BuyBox } from './BuyBox';
 import { getFronhaCount, swapPairsPerUnit } from '@/lib/fronhaSwap';
@@ -12,6 +13,7 @@ interface Props {
   inventory: InventoryItem[];
   pixDiscountThresholdCents: number;
   pixDiscountPct: number;
+  cardFees?: PublicCardFees;
   fronhaOptions: Product[];          // Fronhas ativas do catálogo, pra trocar a fronha padrão
   fronhaInventory: InventoryItem[];  // estoque dessas fronhas, pra não deixar escolher uma esgotada
   packageLines?: PackageLine[];      // o que vem no pacote de cada tamanho (mostrado embaixo do tamanho)
@@ -32,7 +34,7 @@ interface Props {
 // que rejeita qualquer swapQtyPerUnit diferente do esperado pra ESSE
 // produto específico. O carrinho é escrito direto pelo client SDK,
 // então nada aqui é confiável sozinho.
-export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, fronhaOptions, fronhaInventory, packageLines, packageNote }: Props) {
+export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, cardFees, fronhaOptions, fronhaInventory, packageLines, packageNote }: Props) {
   const [chosenFronhaId, setChosenFronhaId] = useState<string>('default');
 
   const fronhaCount = getFronhaCount({ fronhaCount: product.fronhaCount, variantSize: product.variants[0]?.size });
@@ -76,6 +78,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
         inventory={inventory}
         pixDiscountThresholdCents={pixDiscountThresholdCents}
         pixDiscountPct={pixDiscountPct}
+        cardFees={cardFees}
         note={note}
         swapSku={swapSku}
         swapQtyPerUnit={swapSku ? pairsPerUnit : undefined}

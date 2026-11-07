@@ -36,7 +36,7 @@ import { hexToColorName, sampleDominantColor, TEXTILE_COLORS } from '@/lib/color
 import { colorKey, formatColorName, matchColorName, sortBySimilarity } from '@/lib/colorNameMatch';
 import { ColorNameField, type ColorCheck } from './ColorNameField';
 import { PhotoCaptureModal } from './PhotoCaptureModal';
-import { normalizeRule, sitePriceCents } from '@/lib/sitePrice';
+import { siteRuleFrom, sitePriceCents, type SitePriceRule } from '@/lib/sitePrice';
 import { CATEGORIES, SIZES, SIZE_LABEL, FABRICS, FABRIC_LABEL, DEFAULT_COMPOSITION, suggestProductName, suggestProductDescription, type Size } from '@/lib/productOptions';
 import { formatProductName } from '@/lib/textFormat';
 import { formatCurrency } from '@/lib/utils/format';
@@ -130,11 +130,11 @@ export default function ProductForm({ initial }: Props) {
   const [description, setDescription] = useState(initial?.description ?? '');
   const [price, setPrice] = useState(initial?.price ? centsToInput(initial.storePrice ?? initial.price) : '');
   // Acréscimo do site (Configurações): o campo é o preço da loja física.
-  const [priceRule, setPriceRule] = useState<{ pct: number; rounding: 'exato' | '90' }>({ pct: 0, rounding: 'exato' });
+  const [priceRule, setPriceRule] = useState<SitePriceRule>({ pct: 0, rounding: 'exato', feeCents: 0 });
   useEffect(() => {
     getDoc(doc(db, 'settings', 'store')).then(snap => {
       const d = snap.data();
-      if (d) setPriceRule(normalizeRule({ pct: d.sitePriceMarkupPct, rounding: d.sitePriceRounding }));
+      if (d) setPriceRule(siteRuleFrom(d));
     }).catch(() => {});
   }, []);
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0]);
@@ -1055,7 +1055,7 @@ export default function ProductForm({ initial }: Props) {
   const priceBlock = (
     <>
             <div>
-              <label htmlFor="prod-preco" className="label">{priceRule.pct > 0 ? 'Preço na loja' : 'Preço de venda'}</label>
+              <label htmlFor="prod-preco" className="label">{priceRule.pct > 0 || (priceRule.feeCents ?? 0) > 0 ? 'Preço na loja' : 'Preço de venda'}</label>
               <div className="relative max-w-[14rem]">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[17px] text-mid pointer-events-none">R$</span>
                 <input
@@ -1073,10 +1073,10 @@ export default function ProductForm({ initial }: Props) {
                 <p className="text-[11.5px] text-red-600 mt-1">Digite o valor, por exemplo 8990 para R$ 89,90.</p>
               )}
               {fieldErr('preco')}
-              {priceRule.pct > 0 && priceValid && (
+              {(priceRule.pct > 0 || (priceRule.feeCents ?? 0) > 0) && priceValid && (
                 <p className="text-[12.5px] text-mid mt-2">
                   No site: <strong className="font-semibold text-ink">{formatCurrency(sitePriceCents(Math.round(parseBRL(price) * 100), priceRule))}</strong>
-                  <span className="text-faint"> · loja + {String(priceRule.pct).replace('.', ',')}% (Configurações)</span>
+                  <span className="text-faint"> · loja{priceRule.pct > 0 ? ` + ${String(priceRule.pct).replace('.', ',')}%` : ''}{(priceRule.feeCents ?? 0) > 0 ? ` + ${formatCurrency(priceRule.feeCents ?? 0)} da taxa do PIX` : ''} (Configurações)</span>
                 </p>
               )}
               {priceSuggestion !== null && !price && (
