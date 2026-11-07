@@ -1,0 +1,73 @@
+name: Merchant Center · status dos produtos
+
+# Lê o Merchant Center do Google (conta da loja) pela Merchant API: avisos da
+# conta e status de cada produto do feed (aprovado, em análise, reprovado e
+# por quê). A conta de serviço do projeto foi adicionada como administradora
+# no Merchant Center (Configurações > Acesso e serviços). Sem chave guardada:
+# entra pela identidade federada, como os outros workflows.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 11 * * *' # todo dia, 8:43 em Brasília
+
+permissions:
+  contents: read
+  id-token: write # identidade federada no Google Cloud
+
+concurrency:
+  group: merchant-center
+  cancel-in-progress: false
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+            *.githubusercontent.com:443
+            *.blob.core.windows.net:443
+            nodejs.org:443
+            *.googleapis.com:443
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+
+      # Token de curta duração com o escopo do Merchant Center ("content").
+      - name: Entrar no Google
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: mikma-lencois
+          workload_identity_provider: projects/915579306587/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/content,https://www.googleapis.com/auth/cloud-platform
+
+      # A Merchant API precisa estar ligada no projeto. Já ligada, não faz nada.
+      - name: Ligar a Merchant API no projeto
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          code=$(curl -s -o enable.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+            https://serviceusage.googleapis.com/v1/projects/mikma-lencois/services/merchantapi.googleapis.com:enable)
+          echo "serviceusage: HTTP $code"
+          if [ "$code" != "200" ]; then jq -c '.error.message // .' enable.json || cat enable.json; fi
+
+      - name: Status no Merchant Center
+        env:
+          MERCHANT_ID: '5900898574'
+          MERCHANT_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: node scripts/merchant-center.mjs
