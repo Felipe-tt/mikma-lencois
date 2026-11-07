@@ -18,6 +18,10 @@ export type StoreSettings = {
   storeEmail: string;
   storeCnpj: string;
   instagramUrl: string;
+  // Perfil da empresa no Google: o link do perfil (Maps) liga o site a ele
+  // nos dados da loja, e o link de avaliação vai nos e-mails e no pedido.
+  googleBusinessUrl: string;
+  googleReviewUrl: string;
   whatsappUrl: string;
   topbarText: string;
   heroSubtitle: string;
@@ -160,6 +164,8 @@ export const STORE_DEFAULTS: StoreSettings = {
   storeEmail: '',
   storeCnpj: '',
   instagramUrl: '',
+  googleBusinessUrl: '',
+  googleReviewUrl: '',
   whatsappUrl: '',
   topbarText: '',
   heroSubtitle: '',

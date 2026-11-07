@@ -134,11 +134,13 @@ export default function OrderDetailPage() {
   const prevStatus = useRef<string | null>(null);
   const [justPaid, setJustPaid] = useState(false);
   const [storeWa, setStoreWa] = useState<string | null>(null);
+  const [googleReview, setGoogleReview] = useState('');
   const [store, setStore] = useState<{ address: string; city: string; hours: { label: string; text: string }[] } | null>(null);
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
       const url = d.whatsappUrl || (d.storePhone ? `https://wa.me/55${String(d.storePhone).replace(/\D/g, '').replace(/^55/, '')}` : null);
       setStoreWa(url);
+      if (typeof d.googleReviewUrl === 'string') setGoogleReview(d.googleReviewUrl);
       const street = [d.storeAddress, d.storeNumber].filter(Boolean).join(', ');
       const city = [d.storeNeighborhood, [d.storeCity, d.storeState].filter(Boolean).join(' · ')].filter(Boolean).join(', ');
       setStore({
@@ -636,6 +638,9 @@ export default function OrderDetailPage() {
                   <ul className="flex flex-col gap-0.5">
                     {order.status === 'delivered' && order.items[0] && (
                       <li><Link href={`/produtos/${order.items[0].productId}#avaliacoes`} className={row}>Avaliar produtos{arrow}</Link></li>
+                    )}
+                    {order.status === 'delivered' && googleReview && (
+                      <li><a href={googleReview} target="_blank" rel="noopener noreferrer" className={row}>Avaliar a loja no Google{arrow}</a></li>
                     )}
                     {order.status === 'delivered' && (
                       <li>

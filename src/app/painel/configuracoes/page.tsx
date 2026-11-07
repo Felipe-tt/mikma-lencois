@@ -30,6 +30,7 @@ import { ProductTrustPreview, SizeGuidePreview } from '@/components/painel/previ
 import { BusinessHoursEditor } from '@/components/painel/BusinessHoursEditor';
 import { parseBusinessHours, serializeBusinessHours } from '@/lib/business-hours';
 import { maskCnpj, isValidCnpj, maskPhone, isValidPhone, maskCep, isValidCep } from '@/lib/masks';
+import { isGoogleUrl } from '@/lib/googleProfile';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 type Tab = 'loja' | 'vitrine' | 'produto' | 'entrega' | 'fiscal' | 'equipe';
@@ -310,6 +311,17 @@ export default function ConfiguracoesPage() {
               hint={!settings.storeEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.storeEmail) ? undefined : 'E-mail incompleto'} />
             <F label="Instagram (opcional)" type="url" value={settings.instagramUrl ?? ''} onChange={v => set('instagramUrl', v)}
               placeholder="https://instagram.com/mikmalencois" hint="Aparece no rodapé" />
+            <Divider label="Perfil da empresa no Google" />
+            <F label="Link para avaliar no Google (opcional)" type="url" value={settings.googleReviewUrl ?? ''} onChange={v => set('googleReviewUrl', v.trim())}
+              placeholder="https://g.page/r/..."
+              hint={settings.googleReviewUrl && !isGoogleUrl(settings.googleReviewUrl)
+                ? 'Esse não parece um link do Google. Copie em "Solicitar avaliações", no seu perfil.'
+                : 'No Google, abra o seu perfil, toque em "Solicitar avaliações" e copie o link. Vai no e-mail depois da entrega e na página do pedido.'} />
+            <F label="Link do perfil no Google Maps (opcional)" type="url" value={settings.googleBusinessUrl ?? ''} onChange={v => set('googleBusinessUrl', v.trim())}
+              placeholder="https://maps.app.goo.gl/..."
+              hint={settings.googleBusinessUrl && !isGoogleUrl(settings.googleBusinessUrl)
+                ? 'Esse não parece um link do Google Maps.'
+                : 'No Google Maps, abra a Mikma e toque em "Compartilhar". Liga o site ao perfil, para o Google saber que os dois são a mesma loja.'} />
           </Card>
 
           <Card icon="clock" title="Horário de funcionamento" desc="Quando sua loja está aberta, aparece no site com indicador 'aberto agora'" onPreview={() => setPreview('sobre')}>

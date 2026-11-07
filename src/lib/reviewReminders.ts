@@ -2,6 +2,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { sendEmail, emailEnabled } from '@/lib/email';
 import { BASE_URL, CONTACT_EMAIL, emailCta, emailLayout, emailParagraph, emailSection, emailSignature, shortOrderId } from '@/lib/email/layout';
 import { escapeHtml } from '@/lib/html';
+import { googleUrl } from '@/lib/googleProfile';
 
 /**
  * Lembrete de avaliação: alguns dias depois da entrega, um e-mail só para
@@ -9,8 +10,10 @@ import { escapeHtml } from '@/lib/html';
  * convida a avaliar; este é o único lembrete (o pedido fica marcado com
  * `reviewReminderAt` e nunca recebe outro).
  *
- * Só vai para quem consegue avaliar: conta com login (convidado anônimo não
- * entra de novo para avaliar) e pedido com produto ainda sem avaliação.
+ * Avaliar o produto pede conta com login (convidado anônimo não entra de
+ * novo). Com o link de avaliação do Google nas Configurações, o e-mail também
+ * convida a avaliar a loja lá, e quem comprou sem cadastro recebe só esse
+ * convite.
  */
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -24,7 +27,30 @@ const RECIPIENT_ERRORS = new Set(['validation_error', 'missing_required_field', 
 
 interface PendingProduct { productId: string; productName: string }
 
-export function reviewReminderEmail(name: string, orderId: string, products: PendingProduct[]): { subject: string; html: string; text: string } {
+const googleBlock = (url: string) =>
+  emailParagraph('Gostou da loja? Uma avaliação no Google ajuda muito quem está conhecendo a gente.', { muted: true })
+  + emailCta('Avaliar a loja no Google', url, { secondary: true });
+
+/** Para quem comprou sem cadastro: só o convite para avaliar a loja no Google. */
+export function googleReviewEmail(name: string, orderId: string, url: string): { subject: string; html: string; text: string } {
+  const id = shortOrderId(orderId);
+  const html = emailLayout(
+    emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Como estão os seus lençóis?',
+      html: emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Já faz alguns dias que o seu pedido chegou. Se gostou, conta no Google?`)
+        + emailParagraph('Sua avaliação ajuda outras pessoas a conhecer a loja e leva menos de um minuto.', { muted: true })
+        + emailCta('Avaliar a loja no Google', url),
+    }) + emailSignature(),
+    { preheader: 'Leva menos de um minuto e ajuda outras pessoas a conhecer a loja.', footerNote: 'Este é o único lembrete de avaliação deste pedido.' },
+  );
+  const text = `Olá, ${name}! Já faz alguns dias que o seu pedido #${id} chegou. Se gostou, conta no Google: ${url}
+
+Este é o único lembrete de avaliação deste pedido.`;
+  return { subject: 'O que achou da sua compra?', html, text };
+}
+
+export function reviewReminderEmail(name: string, orderId: string, products: PendingProduct[], googleReviewUrl = ''): { subject: string; html: string; text: string } {
   const id = shortOrderId(orderId);
   const one = products.length === 1;
   const links = products.map(p => ({ ...p, url: `${BASE_URL}/produtos/${encodeURIComponent(p.productId)}#avaliacoes` }));
@@ -38,12 +64,14 @@ export function reviewReminderEmail(name: string, orderId: string, products: Pen
       html: emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Já faz alguns dias que o seu pedido chegou. Conta pra gente o que achou${one ? ` do <strong>${escapeHtml(links[0].productName)}</strong>` : ''}?`)
         + emailParagraph('Sua avaliação ajuda outras pessoas a escolher e leva menos de um minuto.', { muted: true })
         + list
-        + (one ? emailCta('Avaliar minha compra', links[0].url) : emailCta('Ver meus pedidos', `${BASE_URL}/conta/pedidos`)),
+        + (one ? emailCta('Avaliar minha compra', links[0].url) : emailCta('Ver meus pedidos', `${BASE_URL}/conta/pedidos`))
+        + (googleReviewUrl ? googleBlock(googleReviewUrl) : ''),
     }) + emailSignature(),
     { preheader: 'Leva menos de um minuto e ajuda outras pessoas a escolher.', footerNote: 'Este é o único lembrete de avaliação deste pedido.' },
   );
   const text = `Olá, ${name}! Já faz alguns dias que o seu pedido #${id} chegou. Conta pra gente o que achou:\n\n`
     + links.map(p => `${p.productName}: ${p.url}`).join('\n')
+    + (googleReviewUrl ? `\n\nGostou da loja? Avalie no Google: ${googleReviewUrl}` : '')
     + '\n\nEste é o único lembrete de avaliação deste pedido.';
   return { subject: one ? `O que achou do ${links[0].productName}?` : 'O que achou da sua compra?', html, text };
 }
@@ -62,6 +90,8 @@ export async function sendReviewReminders(now = new Date()): Promise<{ checked: 
 
   const newest = new Date(now.getTime() - REMINDER_AFTER_DAYS * DAY);
   const oldest = new Date(now.getTime() - REMINDER_WINDOW_DAYS * DAY);
+  const store = (await adminDb.collection('settings').doc('store').get()).data() as { googleReviewUrl?: string } | undefined;
+  const googleReview = googleUrl(store?.googleReviewUrl);
   const snap = await adminDb.collection('orders')
     .where('status', '==', 'delivered')
     .where('delivery.deliveredAt', '>=', oldest)
@@ -89,14 +119,18 @@ export async function sendReviewReminders(now = new Date()): Promise<{ checked: 
       for (const r of reviewed.docs) products.delete(String(r.data().productId));
       if (!products.size || !order.userId) { result.skipped++; await mark(products.size ? 'sem conta' : 'ja avaliado'); continue; }
 
-      // Convidado (conta anônima) não consegue entrar de novo para avaliar.
       const user = await adminAuth.getUser(order.userId).catch(() => null);
       const profile = (await adminDb.collection('users').doc(order.userId).get()).data() as { email?: string; name?: string } | undefined;
       const email = profile?.email || user?.email;
-      if (!user || !user.providerData.length || !email) { result.skipped++; await mark('sem login'); continue; }
+      // Convidado (conta anônima) não consegue entrar de novo para avaliar o
+      // produto, mas pode avaliar a loja no Google.
+      const guest = !!user && !user.providerData.length;
+      if (!user || !email || (guest && !googleReview)) { result.skipped++; await mark('sem login'); continue; }
 
       const name = (profile?.name ?? user.displayName ?? '').split(' ')[0] || 'cliente';
-      const payload = reviewReminderEmail(name, doc.id, [...products].map(([productId, productName]) => ({ productId, productName })));
+      const payload = guest
+        ? googleReviewEmail(name, doc.id, googleReview)
+        : reviewReminderEmail(name, doc.id, [...products].map(([productId, productName]) => ({ productId, productName })), googleReview);
       try {
         await sendEmail({ to: email, ...payload, from: 'noreply', replyTo: CONTACT_EMAIL });
       } catch (err) {
