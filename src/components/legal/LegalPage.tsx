@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { LEGAL_PAGES, LEGAL_UPDATED_LABEL, type StoreIdentity } from '@/lib/legal';
 
-/** Uma cláusula numerada (1.1, 1.2...), com subitens opcionais a), b)... */
+/** Um parágrafo da seção, com uma lista opcional de tópicos logo abaixo. */
 export type Clause = { text: ReactNode; items?: ReactNode[] };
 
 export type LegalSection = {
@@ -15,19 +15,21 @@ export type LegalSection = {
 
 export const clause = (text: ReactNode, items?: ReactNode[]): Clause => ({ text, items });
 
-const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 const linkCls = 'text-clay underline underline-offset-2 hover:text-clay-d transition-colors';
 
 export function LegalPage({
   title,
   current,
   intro,
+  summary,
   sections,
 }: {
   title: string;
   /** Rota desta página, para destacar no menu lateral. */
   current: string;
   intro: ReactNode;
+  /** "Em poucas palavras": o essencial, antes do texto completo. */
+  summary?: ReactNode[];
   sections: LegalSection[];
 }) {
   return (
@@ -108,10 +110,10 @@ export function LegalPage({
               <nav aria-label="Nesta página">
                 <p className="eyebrow mb-3">Nesta página</p>
                 <ol className="flex flex-col gap-1.5 text-[13px] leading-snug">
-                  {sections.map((s, i) => (
+                  {sections.map(s => (
                     <li key={s.id}>
                       <a href={`#${s.id}`} className="text-mid hover:text-ink transition-colors">
-                        {i + 1}. {s.title}
+                        {s.title}
                       </a>
                     </li>
                   ))}
@@ -121,39 +123,45 @@ export function LegalPage({
           </aside>
 
           <article className="max-w-3xl min-w-0 flex flex-col gap-10">
-            <p className="text-[15px] leading-[1.75] text-mid">{intro}</p>
+            <p className="text-[16px] leading-[1.75] text-mid">{intro}</p>
 
-            {sections.map((s, i) => (
-              <section key={s.id} id={s.id} className="scroll-mt-24">
-                <h2 className="font-display font-normal text-ink text-[22px] leading-snug mb-4">
-                  {i + 1}. {s.title}
-                </h2>
-                <ol className="flex flex-col gap-3">
-                  {s.clauses.map((c, j) => (
-                    <li
-                      key={j}
-                      className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-1 text-[15px] leading-[1.75] text-mid"
-                    >
-                      <span className="tabular-nums text-faint">
-                        {i + 1}.{j + 1}
-                      </span>
-                      <div className="flex flex-col gap-2">
-                        <p>{c.text}</p>
-                        {c.items && c.items.length > 0 && (
-                          <ol className="flex flex-col gap-1.5">
-                            {c.items.map((it, k) => (
-                              <li key={k} className="grid grid-cols-[1.5rem_minmax(0,1fr)]">
-                                <span className="text-faint">{LETTERS[k]})</span>
-                                <span>{it}</span>
-                              </li>
-                            ))}
-                          </ol>
-                        )}
-                      </div>
+            {summary && summary.length > 0 && (
+              <aside aria-label="Em poucas palavras" className="rounded-3xl border border-mist bg-warm/50 p-5 sm:p-7">
+                <p className="eyebrow mb-4">Em poucas palavras</p>
+                <ul className="flex flex-col gap-3">
+                  {summary.map((it, k) => (
+                    <li key={k} className="flex gap-3 text-[15px] leading-relaxed text-ink/85">
+                      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-[3px] shrink-0 text-clay"><path d="M5 12l5 5 9-10" /></svg>
+                      <span>{it}</span>
                     </li>
                   ))}
-                </ol>
-                {s.after && <div className="mt-4 sm:pl-[2.75rem]">{s.after}</div>}
+                </ul>
+              </aside>
+            )}
+
+            {sections.map(s => (
+              <section key={s.id} id={s.id} className="scroll-mt-24">
+                <h2 className="font-display font-normal text-ink text-[24px] leading-snug mb-4">
+                  {s.title}
+                </h2>
+                <div className="flex flex-col gap-4">
+                  {s.clauses.map((c, j) => (
+                    <div key={j} className="flex flex-col gap-2.5 text-[15.5px] leading-[1.75] text-mid">
+                      <p>{c.text}</p>
+                      {c.items && c.items.length > 0 && (
+                        <ul className="flex flex-col gap-2">
+                          {c.items.map((it, k) => (
+                            <li key={k} className="flex gap-3">
+                              <span aria-hidden="true" className="mt-[0.7em] h-1.5 w-1.5 shrink-0 rounded-full bg-clay/70" />
+                              <span>{it}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {s.after && <div className="mt-5">{s.after}</div>}
               </section>
             ))}
           </article>
@@ -227,7 +235,7 @@ export function contactItems(id: StoreIdentity): ReactNode[] {
   if (id.whatsappUrl) {
     items.push(
       <>
-        WhatsApp: <A href={id.whatsappUrl}>falar com a Loja</A>
+        WhatsApp: <A href={id.whatsappUrl}>falar com a gente</A>
       </>,
     );
   }
@@ -239,5 +247,5 @@ export function contactClause(id: StoreIdentity, lead: string): Clause {
   const items = contactItems(id);
   return items.length
     ? clause(lead, items)
-    : clause('Os canais de atendimento estão disponíveis no rodapé do Site.');
+    : clause('Os nossos contatos estão no rodapé do site.');
 }

@@ -6,8 +6,8 @@ import { LegalPage, A, B, clause, contactClause, type LegalSection } from '@/com
 
 export const metadata = {
   title: 'Trocas e Devoluções',
-  description: 'Direito de arrependimento, troca por defeito, reembolso e como solicitar.',
-  ...shareMeta({ title: 'Trocas e Devoluções', description: 'Direito de arrependimento, troca por defeito, reembolso e como solicitar.', path: '/trocas-e-devolucoes' }),
+  description: 'Como desistir da compra, trocar um produto com defeito e receber o seu dinheiro de volta.',
+  ...shareMeta({ title: 'Trocas e Devoluções', description: 'Como desistir da compra, trocar um produto com defeito e receber o seu dinheiro de volta.', path: '/trocas-e-devolucoes' }),
   alternates: { canonical: '/trocas-e-devolucoes' },
 };
 
@@ -18,85 +18,84 @@ export default async function TrocasEDevolucoesPage() {
   const sections: LegalSection[] = [
     {
       id: 'arrependimento',
-      title: 'Direito de arrependimento',
+      title: 'Desistiu da compra?',
       clauses: [
         clause(
           <>
-            Por se tratar de compra realizada a distância, o Cliente pode desistir do Pedido em até{' '}
-            <B>7 (sete) dias corridos</B>, contados do recebimento do Produto, sem necessidade de
-            justificativa, nos termos do art. 49 do Código de Defesa do Consumidor (Lei nº
-            8.078/1990).
+            Você tem <B>7 dias corridos</B>, a contar do dia em que recebeu o pedido, para desistir,
+            sem precisar explicar o motivo. É o direito de arrependimento das compras pela internet
+            (art. 49 do Código de Defesa do Consumidor).
           </>,
         ),
         clause(
-          'Exercido o direito de arrependimento, a Loja devolverá integralmente os valores pagos, inclusive o frete, e orientará a devolução do Produto sem custo para o Cliente.',
+          'Nesse caso, devolvemos todo o valor pago, inclusive o frete, e você não paga nada para nos mandar o produto de volta.',
         ),
         clause(
-          'O Produto deve ser devolvido sem sinais de uso, em condições de ser reaproveitado e, sempre que possível, com etiquetas e embalagem original.',
+          'Só pedimos que o produto volte sem sinais de uso e, se possível, com a etiqueta e a embalagem.',
         ),
       ],
     },
     {
       id: 'defeito',
-      title: 'Produto com defeito',
+      title: 'Veio com defeito?',
       clauses: [
         clause(
-          'Constatado vício de qualidade no Produto, o Cliente deve comunicá-lo à Loja nos prazos do art. 26 do Código de Defesa do Consumidor: 30 (trinta) dias para produtos não duráveis e 90 (noventa) dias para produtos duráveis, contados da entrega, em caso de vício aparente, ou da constatação, em caso de vício oculto.',
+          <>
+            Avise a gente em até <B>90 dias</B>. O prazo conta do dia em que você recebeu o pedido
+            ou, se o defeito só aparecer com o uso, do dia em que você o percebeu (art. 26 do Código
+            de Defesa do Consumidor).
+          </>,
         ),
         clause(
-          'A Loja dispõe de até 30 (trinta) dias para sanar o vício. Não sendo ele resolvido nesse prazo, o Cliente pode optar entre a substituição do Produto, a restituição do valor pago ou o abatimento proporcional do preço (art. 18, § 1º, do Código de Defesa do Consumidor).',
+          'Temos até 30 dias para resolver. Se não resolvermos, você escolhe: trocar por um produto novo, receber o dinheiro de volta ou ficar com o produto pagando menos.',
         ),
       ],
     },
     {
       id: 'avaria',
-      title: 'Produto avariado ou diferente do pedido',
+      title: 'Chegou danificado ou errado?',
       clauses: [
         clause(
-          <>
-            Ao receber o Pedido, o Cliente deve conferir a embalagem e o Produto. Havendo avaria ou
-            divergência em relação ao Pedido, deverá recusar a entrega ou comunicar a Loja o quanto
-            antes, com fotos da embalagem e do Produto e o número do Pedido.
-          </>,
+          'Confira o pacote quando receber. Se a embalagem estiver danificada ou o produto for diferente do que você pediu, recuse a entrega ou avise a gente assim que puder, com fotos e o número do pedido.',
         ),
         clause(
-          'Confirmada a avaria ou a divergência, a Loja providenciará a troca do Produto ou o reembolso, conforme a escolha do Cliente e a disponibilidade em estoque.',
+          'Confirmado o problema, mandamos o produto certo ou devolvemos o dinheiro, como você preferir (e se tivermos o produto em estoque).',
         ),
       ],
     },
     {
-      id: 'como-solicitar',
-      title: 'Como solicitar',
+      id: 'como-pedir',
+      title: 'Como pedir',
       clauses: [
-        clause('Para solicitar arrependimento, troca ou devolução, o Cliente deve:', [
-          'entrar em contato com a Loja por um dos canais de atendimento indicados abaixo;',
-          'informar o número do Pedido e o motivo da solicitação;',
-          'em caso de defeito, avaria ou divergência, enviar fotos que mostrem o problema;',
-          'aguardar as orientações da Loja e enviar o Produto conforme indicado.',
+        clause('É rápido:', [
+          'fale com a gente por um dos contatos abaixo;',
+          'diga o número do pedido e o que aconteceu;',
+          'se for defeito, dano ou produto errado, mande fotos;',
+          'nós explicamos como enviar o produto de volta.',
         ]),
-        contactClause(id, 'Canais de atendimento da Loja:'),
+        contactClause(id, 'Nossos contatos:'),
       ],
     },
     {
       id: 'reembolso',
-      title: 'Reembolso',
+      title: 'Como você recebe o dinheiro',
       clauses: [
         clause(
-          'O reembolso é realizado pelo mesmo meio utilizado no pagamento (PIX ou cartão), assim que o Produto for recebido e conferido pela Loja, em prazo compatível com a operação financeira.',
+          'Devolvemos pelo mesmo meio usado no pagamento, assim que o produto chegar e for conferido. No PIX, o dinheiro volta para a sua conta.',
         ),
         clause(
-          'Nos pagamentos por cartão, o estorno ocorre conforme o ciclo de faturamento da administradora do cartão, podendo aparecer em fatura posterior.',
+          'No cartão, o estorno segue o calendário do seu cartão e pode aparecer só na fatura seguinte.',
         ),
       ],
     },
     {
-      id: 'disposicoes',
-      title: 'Disposições gerais',
+      id: 'importante',
+      title: 'Importante',
       clauses: [
         clause(
           <>
-            Esta Política integra os <A href="/termos">Termos e Condições de Uso</A> e não limita os
-            direitos assegurados ao consumidor por lei.
+            Esta política faz parte dos nossos <A href="/termos">Termos de Uso</A> e não diminui
+            nenhum dos seus direitos de consumidor.
           </>,
         ),
       ],
@@ -109,10 +108,18 @@ export default async function TrocasEDevolucoesPage() {
       current="/trocas-e-devolucoes"
       intro={
         <>
-          Esta Política de Trocas e Devoluções descreve o direito de arrependimento, as hipóteses de
-          troca e reembolso e o procedimento para solicitá-los em compras realizadas em {id.name}.
+          Queremos que você fique feliz com a sua compra. Se não ficou, aqui está como resolver.
         </>
       }
+      summary={[
+        <>
+          <B>7 dias</B> para desistir depois de receber, sem precisar explicar o motivo.
+        </>,
+        'Desistiu? Devolvemos tudo, inclusive o frete.',
+        <>
+          Defeito? Avise em até <B>90 dias</B> e nós resolvemos.
+        </>,
+      ]}
       sections={sections}
     />
   );
