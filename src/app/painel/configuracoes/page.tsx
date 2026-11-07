@@ -440,7 +440,14 @@ export default function ConfiguracoesPage() {
           </Card>
 
 
-          <GatewayFeesCard settings={settings} set={set} isAdmin={isAdmin} />
+          <GatewayFeesCard settings={settings} set={set} isAdmin={isAdmin} onReprice={async () => {
+            const token = await user?.getIdToken();
+            const res = await fetch('/api/painel/precos-site', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+            const out = await res.json().catch(() => ({}));
+            return res.ok
+              ? `Preços do site atualizados em ${out.products ?? 0} ${out.products === 1 ? 'produto' : 'produtos'}.`
+              : (out.error as string | undefined) ?? 'Não deu para atualizar os preços agora. Tente de novo.';
+          }} />
 
           <Card icon="shield" title="Garantias do produto" desc="3 frases que aparecem na página de cada produto abaixo do botão de comprar, reforça confiança" onPreview={() => setPreview('trust')}>
             <Info>Use frases curtas e diretas. Ex: entrega, pagamento, suporte.</Info>
@@ -1204,12 +1211,15 @@ function TeamPanel() {
 }
 
 /* ── Taxas da AbacatePay ───────────────────────────────────────────────── */
-function GatewayFeesCard({ settings, set, isAdmin }: {
+function GatewayFeesCard({ settings, set, isAdmin, onReprice }: {
   settings: StoreSettings;
+  onReprice: () => Promise<string>;
   set: (k: keyof StoreSettings, v: string | number | boolean) => void;
   isAdmin: boolean;
 }) {
   const f = normalizeFees(settings);
+  const [repricing, setRepricing] = useState(false);
+  const [repriceMsg, setRepriceMsg] = useState('');
   const checked = settings.abacateFeeCheckedAt ? new Date(settings.abacateFeeCheckedAt) : null;
   const example = 20000;
   const exampleCard = computeCardTotalCents({ productsCents: example, couponDiscountCents: 0, shippingCents: 0, feeRate: 0, cardFee: cardFeeFor(f, 1) });
@@ -1239,6 +1249,15 @@ function GatewayFeesCard({ settings, set, isAdmin }: {
         hint={f.abacateFeePixInPrice
           ? `Cada produto custa ${formatCurrency(f.abacateFeePixCents)} a mais no site. Se a AbacatePay mudar a taxa, os preços se ajustam sozinhos.`
           : 'A loja paga a taxa do PIX.'} />
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" disabled={repricing}
+          onClick={async () => { setRepricing(true); setRepriceMsg(''); try { setRepriceMsg(await onReprice()); } finally { setRepricing(false); } }}
+          className="rounded-full border border-mist px-4 py-2 text-[12.5px] font-semibold text-ink hover:bg-warm disabled:opacity-50">
+          {repricing ? 'Atualizando os preços…' : 'Aplicar nos preços agora'}
+        </button>
+        {repriceMsg && <p role="status" className="text-[12px] text-emerald-700 dark:text-emerald-400">{repriceMsg}</p>}
+      </div>
+      <p className="-mt-2 text-[11px] text-faint leading-relaxed">Refaz o preço de todos os produtos com o acréscimo e a taxa salvos. Mudando a taxa ou o interruptor, isso acontece sozinho ao salvar.</p>
 
       <Divider label="Cartão" />
       <div className="grid grid-cols-3 gap-2">
