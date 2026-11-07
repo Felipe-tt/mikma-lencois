@@ -45,29 +45,19 @@ describe('getFronhaCount', () => {
 });
 
 describe('sanitizeSwaps', () => {
-  it('CRÍTICO: jogo solteiro com fronhaCount=1 só aceita swapQtyPerUnit=1, não 2', () => {
-    const items = [{
-      productId: 'jogoS', sku: 'jogoS_v1', quantity: 1,
-      swapSku: 'fronhaX_v1', swapQtyPerUnit: 2, // errado: solteiro é 1
-    }];
-    const result = sanitizeSwaps(items, productMap(jogoSolteiro, fronhaAtiva));
-    expect(result[0].swapSku).toBeUndefined(); // rejeitado
-
-    const itemsCerto = [{
-      productId: 'jogoS', sku: 'jogoS_v1', quantity: 1,
-      swapSku: 'fronhaX_v1', swapQtyPerUnit: 1, // certo
-    }];
-    const resultCerto = sanitizeSwaps(itemsCerto, productMap(jogoSolteiro, fronhaAtiva));
-    expect(resultCerto[0].swapSku).toBe('fronhaX_v1');
+  it('CRÍTICO: a quantidade da troca é sempre a do servidor, em pares (solteiro meio par)', () => {
+    // O cliente pode mandar qualquer número: o servidor ignora e põe o certo.
+    for (const enviado of [2, 1, 99, undefined]) {
+      const result = sanitizeSwaps([{ productId: 'jogoS', sku: 'jogoS_v1', quantity: 1, swapSku: 'fronhaX_v1', swapQtyPerUnit: enviado }], productMap(jogoSolteiro, fronhaAtiva));
+      expect(result[0].swapSku).toBe('fronhaX_v1');
+      expect(result[0].swapQtyPerUnit).toBe(0.5);
+    }
   });
 
-  it('jogo queen com fronhaCount=2 só aceita swapQtyPerUnit=2', () => {
-    const items = [{
-      productId: 'jogoQ', sku: 'jogoQ_v1', quantity: 1,
-      swapSku: 'fronhaX_v1', swapQtyPerUnit: 2,
-    }];
-    const result = sanitizeSwaps(items, productMap(jogoQueen, fronhaAtiva));
+  it('jogo queen (2 fronhas) usa 1 par da fronha avulsa', () => {
+    const result = sanitizeSwaps([{ productId: 'jogoQ', sku: 'jogoQ_v1', quantity: 1, swapSku: 'fronhaX_v1', swapQtyPerUnit: 2 }], productMap(jogoQueen, fronhaAtiva));
     expect(result[0].swapSku).toBe('fronhaX_v1');
+    expect(result[0].swapQtyPerUnit).toBe(1);
   });
 
   it('produto legado (sem fronhaCount) solteiro: infere 1 pela variante', () => {

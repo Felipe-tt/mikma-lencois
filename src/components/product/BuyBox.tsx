@@ -57,7 +57,8 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(() => {
     const inStock = product.variants.find(v => {
       const inv = inventory.find(i => i.sku === `${product.id}_${v.id}`);
-      return !!inv && inv.quantity - inv.reserved > 0;
+      // Meio par de fronha (sobra de troca no solteiro) não dá para vender sozinho.
+      return !!inv && inv.quantity - inv.reserved >= 1;
     });
     return (inStock ?? product.variants[0])?.id ?? null;
   });
@@ -97,7 +98,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     const sku = `${product.id}_${variant.id}`;
     const inv = inventory.find(i => i.sku === sku);
     if (!inv) return 0;
-    return Math.max(0, inv.quantity - inv.reserved);
+    return Math.max(0, Math.floor(inv.quantity - inv.reserved));
   }
 
   const availableStock = Math.min(selectedVariant ? getStock(selectedVariant) : 0, maxQty ?? Infinity);

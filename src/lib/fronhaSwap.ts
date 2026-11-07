@@ -30,6 +30,16 @@ export function getFronhaCount(product: Pick<ProductLookup, 'fronhaCount' | 'var
   return 2;
 }
 
+/**
+ * Quanto do estoque da fronha a troca usa, por jogo. A fronha avulsa é
+ * cadastrada e contada em PARES: o casal (2 fronhas) usa 1 par e o
+ * solteiro (1 fronha) usa meio par, por isso o estoque pode ficar em 9,5.
+ * Antes era o número de fronhas, e o casal descontava 2 pares.
+ */
+export function swapPairsPerUnit(product: Pick<ProductLookup, 'fronhaCount' | 'variantSize'>): number {
+  return getFronhaCount(product) / 2;
+}
+
 interface CartItemLike {
   productId: string;
   sku: string;
@@ -80,17 +90,16 @@ export function sanitizeSwaps<T extends CartItemLike>(
 
     const valid =
       !!item.swapSku &&
-      !!item.swapQtyPerUnit &&
       mainProduct?.category === 'Jogos de cama' &&
       swapProduct?.active === true &&
-      swapProduct?.category === 'Fronhas' &&
-      item.swapQtyPerUnit === getFronhaCount(mainProduct);
+      swapProduct?.category === 'Fronhas';
 
     if (valid) {
-      // Nota sempre construída aqui a partir do nome real do produto —
-      // nunca aceita o texto livre que o cliente mandou.
+      // Nota e quantidade sempre calculadas aqui, a partir do produto real:
+      // nunca aceita o texto nem o número que vieram do cliente (carrinho
+      // antigo, com a contagem em fronhas, também passa a usar pares).
       const { note: _clientNote, ...rest } = item;
-      return { ...rest, note: `Fronha trocada: ${swapProduct!.name}` } as T;
+      return { ...rest, swapQtyPerUnit: swapPairsPerUnit(mainProduct!), note: `Fronha trocada: ${swapProduct!.name}` } as T;
     }
 
     // Sem swap válido (ausente, forjado ou desatualizado): remove
