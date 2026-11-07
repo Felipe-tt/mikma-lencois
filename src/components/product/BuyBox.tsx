@@ -34,6 +34,7 @@ interface Props {
   note?: string; // ex: "Fronha trocada: Floral Rosa", escolhida no JogoDeCamaFronhaPicker acima
   swapSku?: string; // SKU da fronha trocada, pra reservar estoque dela junto (ver JogoDeCamaBuyBox)
   maxQty?: number; // limite extra (ex: estoque da fronha trocada cobre só N jogos)
+  swapImage?: string; // miniatura da fronha trocada, para o carrinho mostrar
   swapQtyPerUnit?: number; // quantas fronhas por unidade deste item (não multiplicado aqui — expandStockLines faz isso na hora de reservar/liberar)
   packageLines?: PackageLine[]; // o que vem no pacote de cada tamanho (cartão da embalagem), ver src/lib/packageContents.ts
   packageNote?: string; // observação das medidas (ex.: ±2 cm após lavagem)
@@ -50,7 +51,7 @@ interface ShipOption {
 // Mesmos selos do checkout.
 const SHIP_TAG: Record<string, string> = { economico: 'Econômico', rapido: 'Mais rápido' };
 
-export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, cardFees, note, swapSku, swapQtyPerUnit, maxQty, packageLines = [], packageNote }: Props) {
+export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, cardFees, note, swapSku, swapImage, swapQtyPerUnit, maxQty, packageLines = [], packageNote }: Props) {
   // Carrinho e compra aceitam o convidado ("comprar sem cadastro").
   const { buyer: user, loading } = useAuth();
   const router = useRouter();
@@ -183,7 +184,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       unitPrice: product.price,
       image: product.images[0] ?? '',
       ...(note ? { note } : {}),
-      ...(swapSku && swapQtyPerUnit ? { swapSku, swapQtyPerUnit } : {}),
+      ...(swapSku && swapQtyPerUnit ? { swapSku, swapQtyPerUnit, ...(swapImage ? { swapImage } : {}) } : {}),
     };
 
     const updatedItems = existing

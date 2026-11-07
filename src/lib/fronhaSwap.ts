@@ -1,6 +1,7 @@
 export interface ProductLookup {
   id: string;
   name: string;
+  colorName?: string;     // cor da primeira variação (a fronha avulsa é conhecida pela cor)
   active: boolean;
   category: string;
   fronhaCount?: number;   // definido pelo vendedor no cadastro (ver ProductForm), específico de cada Jogo de Cama
@@ -38,6 +39,18 @@ export function getFronhaCount(product: Pick<ProductLookup, 'fronhaCount' | 'var
  */
 export function swapPairsPerUnit(product: Pick<ProductLookup, 'fronhaCount' | 'variantSize'>): number {
   return getFronhaCount(product) / 2;
+}
+
+/**
+ * Nome que o cliente e a loja leem para a fronha trocada. Todas se chamam
+ * "Par de Fronhas": a cor é o que diferencia. No solteiro (1 fronha) fica
+ * no singular: "Fronha Verde"; nos outros, "Fronhas Verde".
+ */
+export function fronhaDisplayName(f: { name: string; colorName?: string }, fronhaCount: number): string {
+  const color = f.colorName?.trim();
+  const rest = f.name.replace(/^\s*(par\s+de\s+)?fronhas?\s*/i, '').trim();
+  const base = rest || color || f.name;
+  return `${fronhaCount === 1 ? 'Fronha' : 'Fronhas'} ${base}`.trim();
 }
 
 interface CartItemLike {
@@ -99,7 +112,7 @@ export function sanitizeSwaps<T extends CartItemLike>(
       // nunca aceita o texto nem o número que vieram do cliente (carrinho
       // antigo, com a contagem em fronhas, também passa a usar pares).
       const { note: _clientNote, ...rest } = item;
-      return { ...rest, swapQtyPerUnit: swapPairsPerUnit(mainProduct!), note: `Fronha trocada: ${swapProduct!.name}` } as T;
+      return { ...rest, swapQtyPerUnit: swapPairsPerUnit(mainProduct!), note: `Fronha trocada: ${fronhaDisplayName(swapProduct!, getFronhaCount(mainProduct!))}` } as T;
     }
 
     // Sem swap válido (ausente, forjado ou desatualizado): remove

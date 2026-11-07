@@ -256,6 +256,7 @@ export interface CartItem {
   note?: string // ex: troca de fronha escolhida num Jogo de Cama
   swapSku?: string  // SKU da Fronha escolhida no lugar da padrão, pra reservar estoque dela também
   swapQtyPerUnit?: number  // fronhas por UNIDADE deste item — escala com quantity, não é um total fixo
+  swapImage?: string  // só para mostrar: miniatura da fronha escolhida
 }
 
 export interface SharedCartEdit { by: string; text: string; at: number }

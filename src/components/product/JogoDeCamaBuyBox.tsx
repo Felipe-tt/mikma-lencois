@@ -4,7 +4,7 @@ import { useId, useState } from 'react';
 import type { PublicCardFees } from '@/lib/gatewayFees';
 import Image from 'next/image';
 import { BuyBox } from './BuyBox';
-import { getFronhaCount, swapPairsPerUnit } from '@/lib/fronhaSwap';
+import { fronhaDisplayName, getFronhaCount, swapPairsPerUnit } from '@/lib/fronhaSwap';
 import type { PackageLine } from '@/lib/packageContents';
 import type { Product, InventoryItem } from '@/types';
 
@@ -55,7 +55,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
   // nenhuma variante cadastrada (dado incompleto) não pode gerar um aviso
   // de troca sem reserva de estoque correspondente por trás dele.
   const swapSku = chosenFronha && chosenVariant ? `${chosenFronha.id}_${chosenVariant.id}` : undefined;
-  const note = swapSku ? `Fronha trocada: ${chosenFronha!.name}` : undefined;
+  const note = swapSku ? `Fronha trocada: ${fronhaLabel(chosenFronha!, fronhaCount)}` : undefined;
   // Quantos jogos a fronha escolhida cobre: com 2 fronhas por jogo e 3 em
   // estoque, dá pra levar 1 jogo com essa troca.
   const swapMaxQty = chosenFronha ? Math.floor(availableStock(chosenFronha) / pairsPerUnit) : undefined;
@@ -81,6 +81,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
         cardFees={cardFees}
         note={note}
         swapSku={swapSku}
+        swapImage={swapSku ? chosenFronha!.images[0] : undefined}
         swapQtyPerUnit={swapSku ? pairsPerUnit : undefined}
         maxQty={swapSku ? swapMaxQty : undefined}
         packageLines={packageLines}
@@ -92,11 +93,7 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
 
 /** "Par de Fronhas Azul" no solteiro (1 fronha) vira "Fronha Azul". */
 export function fronhaLabel(f: Product, fronhaCount: number): string {
-  const color = f.variants[0]?.colorName?.trim();
-  const generic = /^\s*(par\s+de\s+)?fronhas?\b/i.test(f.name) && !f.name.replace(/^\s*(par\s+de\s+)?fronhas?\b/i, '').trim();
-  // Todas se chamam "Par de Fronhas": a cor é o que diferencia uma da outra.
-  const base = generic && color ? color : f.name.replace(/^\s*(par\s+de\s+)?fronhas?\s*/i, '').trim() || color || f.name;
-  return `${fronhaCount === 1 ? 'Fronha' : 'Fronhas'} ${base}`.trim();
+  return fronhaDisplayName({ name: f.name, colorName: f.variants[0]?.colorName }, fronhaCount);
 }
 
 function Swatch({ f, size = 48 }: { f?: Product; size?: number }) {
