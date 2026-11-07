@@ -6,190 +6,241 @@ import { LegalPage, A, B, clause, contactClause, type LegalSection } from '@/com
 
 export const metadata = {
   title: 'Política de Privacidade',
-  description: 'Como a loja coleta, usa, compartilha e protege seus dados pessoais, conforme a LGPD.',
-  ...shareMeta({ title: 'Política de Privacidade', description: 'Como a loja coleta, usa, compartilha e protege seus dados pessoais, conforme a LGPD.', path: '/privacidade' }),
+  description: 'Quais dados pedimos, para que usamos, com quem compartilhamos e como você controla tudo, conforme a LGPD.',
+  ...shareMeta({ title: 'Política de Privacidade', description: 'Quais dados pedimos, para que usamos, com quem compartilhamos e como você controla tudo, conforme a LGPD.', path: '/privacidade' }),
   alternates: { canonical: '/privacidade' },
 };
 
+/*
+ * Texto em linguagem simples, com tudo o que o art. 9º da LGPD pede: quem
+ * trata os dados, para quê, por quanto tempo, com quem compartilha (por tipo
+ * de empresa, não por marca: a lista de empresas é dada a quem pedir, como
+ * garante o art. 18, VII), os direitos e o contato. Os prazos batem com a
+ * rotina de retenção (lib/retention.ts).
+ */
 export default async function PrivacidadePage() {
   const s = await getStoreSettings();
   const id = storeIdentity(s);
 
-  // Só descrevemos ferramentas que estão realmente ativas neste deploy.
-  const hasGA = Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID);
-  const hasMeta = Boolean(process.env.NEXT_PUBLIC_META_PIXEL_ID);
-  const hasAnalytics = hasGA || hasMeta;
+  // Só fala de medição de audiência se ela estiver ligada neste site.
+  const hasAnalytics = Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID);
 
   const sections: LegalSection[] = [
     {
-      id: 'controlador',
-      title: 'Controlador e definições',
+      id: 'quem-somos',
+      title: 'Quem cuida dos seus dados',
       clauses: [
         clause(
           <>
-            <B>{id.name}</B>
-            {id.cnpj && <>, inscrita no CNPJ sob o nº {id.cnpj}</>}, com sede em{' '}
-            {id.address || id.cityState} (“<B>Loja</B>”), é a controladora dos dados pessoais
-            tratados por meio deste Site, nos termos da Lei Geral de Proteção de Dados (LGPD, Lei
-            nº 13.709/2018).
+            Quem decide como os seus dados são usados neste site é a <B>{id.name}</B>
+            {id.cnpj && <> (CNPJ {id.cnpj})</>}, de {id.address || id.cityState}. Na Lei Geral de
+            Proteção de Dados (LGPD, Lei nº 13.709/2018), isso nos torna a “controladora” dos dados.
           </>,
         ),
-        clause('Para os fins desta Política, consideram-se:', [
-          <>
-            <B>Titular:</B> a pessoa natural a quem se referem os dados pessoais;
-          </>,
-          <>
-            <B>Dados pessoais:</B> informações relacionadas a pessoa natural identificada ou
-            identificável;
-          </>,
-          <>
-            <B>Tratamento:</B> toda operação realizada com dados pessoais, como coleta, uso,
-            armazenamento, compartilhamento e eliminação.
-          </>,
-        ]),
-      ],
-    },
-    {
-      id: 'dados-coletados',
-      title: 'Dados pessoais coletados',
-      clauses: [
-        clause('A Loja trata os seguintes dados fornecidos diretamente pelo Titular:', [
-          <>
-            <B>Conta:</B> nome, e-mail e senha. A senha é armazenada somente de forma criptografada
-            e irreversível (hash), sem possibilidade de leitura pela Loja. No acesso por conta
-            Google, são recebidos nome, e-mail e o identificador da conta Google, nunca a senha;
-          </>,
-          <>
-            <B>Telefone e CPF:</B> necessários para finalizar compras (pagamento, documento fiscal
-            e envio);
-          </>,
-          <>
-            <B>Endereço de entrega:</B> CEP, rua, número, complemento, bairro, cidade e estado;
-          </>,
-          <>
-            <B>Avaliações e mensagens:</B> o conteúdo enviado em avaliações de Produtos e em
-            contatos com o atendimento.
-          </>,
-        ]),
-        clause('São também tratados os seguintes dados gerados pelo uso do Site:', [
-          <>
-            <B>Pedidos:</B> itens, valores, frete, situação de pagamento e entrega, histórico e
-            notificações da conta;
-          </>,
-          <>
-            <B>Pagamento:</B> a Loja não armazena número de cartão, mantendo apenas valor,
-            identificador e situação da cobrança;
-          </>,
-          <>
-            <B>Registro de aceite:</B> data do aceite, versão destes documentos aceita e endereço IP
-            de origem, coletados no cadastro;
-          </>,
-          <>
-            <B>Dados técnicos de acesso:</B> endereço IP, data e hora, navegador e dispositivo,
-            páginas acessadas e erros, utilizados para segurança, prevenção a fraudes e
-            funcionamento do Site;
-          </>,
-          <>
-            <B>Localização aproximada por IP</B> (cidade, região e provedor de internet): somente
-            durante períodos de manutenção do Site, para que a equipe identifique visitantes
-            aguardando e possa liberar acessos.
-          </>,
-        ]),
         clause(
-          'A Loja não coleta dados pessoais sensíveis (como saúde, religião ou biometria) nem a localização precisa do dispositivo do Titular.',
+          <>
+            Qualquer dúvida ou pedido sobre os seus dados é com a gente mesmo, pelos contatos no fim
+            desta página.
+          </>,
         ),
       ],
     },
     {
-      id: 'finalidades',
-      title: 'Finalidades e bases legais',
+      id: 'dados',
+      title: 'Quais dados pedimos',
       clauses: [
-        clause('Os dados pessoais são tratados para as seguintes finalidades, com as respectivas bases legais do art. 7º da LGPD:', [
-          'criação e manutenção da conta, autenticação e proteção do acesso (execução de contrato, inciso V);',
-          'processamento de Pedidos: pagamento, separação, envio, rastreamento, trocas, devoluções e atendimento (execução de contrato, inciso V);',
-          'comunicações sobre a conta e os Pedidos, como verificação de e-mail, redefinição de senha, confirmações e avisos de entrega (execução de contrato, inciso V);',
-          'emissão de documento fiscal e cumprimento de obrigações fiscais, tributárias e de defesa do consumidor (obrigação legal, inciso II);',
-          'segurança e prevenção a fraudes e abusos, por meio de verificação contra robôs (Cloudflare Turnstile), limitação de requisições e registros de acesso (legítimo interesse, inciso IX, e obrigação legal prevista no Marco Civil da Internet, Lei nº 12.965/2014);',
-          ...(hasAnalytics
-            ? [
-                <>
-                  medição de audiência e melhoria do Site{hasGA && <> (Google Analytics)</>}{' '}
-                  (consentimento, inciso I), manifestado no aviso de cookies e revogável a qualquer
-                  momento;
-                </>,
-              ]
-            : []),
-          'registro do aceite destes documentos no cadastro (consentimento, inciso I);',
-          'exercício regular de direitos em processos judiciais, administrativos ou arbitrais (inciso VI).',
+        clause('Pedimos só o necessário para você comprar e receber em casa:', [
+          <>
+            <B>Para a conta:</B> nome, e-mail e senha. A senha fica guardada de forma embaralhada
+            (criptografada) e nem nós conseguimos vê-la. Se entrar com o Google, recebemos só o seu
+            nome e e-mail.
+          </>,
+          <>
+            <B>Para a compra:</B> CPF e telefone, usados no pagamento, na nota fiscal e na entrega.
+            Eles ficam guardados de forma criptografada.
+          </>,
+          <>
+            <B>Para a entrega:</B> o seu endereço.
+          </>,
+          <>
+            <B>O que você nos manda:</B> avaliações de produtos e mensagens para o atendimento.
+          </>,
         ]),
-        clause('A Loja não vende nem aluga dados pessoais e não os utiliza para finalidades diversas das descritas nesta Política.'),
+        clause('E alguns dados surgem do uso do site:', [
+          <>
+            <B>Seus pedidos:</B> o que você comprou, valores, frete e andamento do pagamento e da
+            entrega.
+          </>,
+          <>
+            <B>Pagamento:</B> guardamos só o valor e a situação da cobrança. O número do cartão
+            nunca fica com a gente.
+          </>,
+          <>
+            <B>Dados de acesso:</B> endereço IP, data e hora, navegador e páginas visitadas. Servem
+            para manter o site seguro e evitar fraudes.
+          </>,
+          <>
+            <B>Seu aceite:</B> quando você concorda com estas políticas, registramos a data e a
+            versão do texto.
+          </>,
+        ]),
+        clause(
+          'Não pedimos dados sensíveis (como saúde, religião ou biometria) e não usamos a localização do seu celular.',
+        ),
+      ],
+    },
+    {
+      id: 'para-que',
+      title: 'Para que usamos',
+      clauses: [
+        clause('Usamos os seus dados para:', [
+          'criar e proteger a sua conta;',
+          'processar o seu pedido: pagamento, separação, envio, trocas e atendimento;',
+          'avisar sobre a sua compra, como confirmação do pagamento e saída para entrega;',
+          'emitir a nota fiscal e cumprir as leis fiscais e do consumidor;',
+          'proteger o site e você contra fraudes, robôs e acessos indevidos;',
+          ...(hasAnalytics ? ['entender como o site é usado, para melhorá-lo, só se você aceitar os cookies de medição;'] : []),
+          'nos defender, se um dia for preciso, em processos judiciais ou administrativos.',
+        ]),
+        clause(
+          <>
+            Cada uso tem uma justificativa prevista na LGPD (art. 7º): a maioria é para cumprir a
+            compra que você fez com a gente, uma parte é para cumprir a lei (como a nota fiscal), e a
+            proteção contra fraudes é um interesse legítimo nosso e seu.
+            {hasAnalytics && ' A medição de audiência só acontece com o seu consentimento.'}
+          </>,
+        ),
+        clause(
+          <>
+            <B>Não vendemos e não alugamos os seus dados.</B> E não mandamos promoções sem você
+            pedir.
+          </>,
+        ),
       ],
     },
     {
       id: 'compartilhamento',
-      title: 'Compartilhamento de dados',
+      title: 'Com quem compartilhamos',
       clauses: [
         clause(
-          'A Loja compartilha apenas os dados necessários com empresas que auxiliam na operação do Site, as quais tratam os dados conforme os contratos firmados e suas próprias políticas de privacidade:',
+          'Para o site funcionar, contamos com empresas parceiras. Cada uma recebe só o que precisa para fazer a sua parte e é obrigada a proteger esses dados:',
           [
             <>
-              <B>Google</B> (Firebase, Google Cloud, Google Sign-In, reCAPTCHA
-              {hasGA && <> e Google Analytics</>}): hospedagem do Site e do banco de dados,
-              autenticação, proteção contra robôs{hasGA && <> e medição de audiência</>}. Dados:
-              conta, Pedidos e dados técnicos de acesso;
+              <B>Pagamento:</B> a empresa que processa o PIX e o cartão recebe nome, e-mail,
+              telefone, CPF e o valor da compra.
             </>,
             <>
-              <B>Cloudflare:</B> rede de entrega e proteção do Site (firewall, bloqueio de robôs com
-              Turnstile e checagem de senhas que já apareceram em vazamentos públicos). Dados: dados
-              técnicos de acesso e, no login, uma comparação da senha feita sem armazená-la;
+              <B>Entrega:</B> transportadoras e entregadores recebem nome, telefone, endereço e os
+              dados do pacote.
             </>,
             <>
-              <B>AbacatePay:</B> cobrança por PIX e cartão. Dados: nome, e-mail, telefone, CPF e
-              valor do Pedido;
+              <B>Hospedagem e segurança:</B> as empresas que mantêm o site no ar, guardam os dados e
+              barram robôs e ataques.
             </>,
             <>
-              <B>Melhor Envio:</B> cálculo do valor e prazo do frete. Dados: CEP de origem e de
-              destino e características da encomenda (peso, dimensões e valor);
+              <B>E-mail:</B> o serviço que envia as mensagens sobre a sua conta e os seus pedidos.
             </>,
             <>
-              <B>Correios e Jadlog:</B> envios para fora da região de entrega local. Dados: nome,
-              telefone, endereço e características da encomenda (peso, dimensões e valor);
+              <B>Endereço e frete:</B> serviços que completam o endereço pelo CEP e calculam o
+              frete.
             </>,
-            <>
-              <B>Uber Direct:</B> entregas locais. Dados: nome, telefone, endereço e descrição dos
-              itens;
-            </>,
-            <>
-              <B>Resend:</B> envio de e-mails. Dados: nome, e-mail e conteúdo da mensagem;
-            </>,
-            <>
-              <B>Sentry:</B> monitoramento de erros e desempenho, configurado para não enviar dados
-              pessoais identificáveis por padrão;
-            </>,
-            <>
-              <B>Upstash:</B> limitação de requisições, como medida de segurança. Dados:
-              identificadores técnicos, como o endereço IP;
-            </>,
-            <>
-              <B>ViaCEP e OpenStreetMap (Nominatim):</B> preenchimento de endereço pelo CEP, cálculo
-              de entrega e mapa de acompanhamento. Dados: CEP, endereço e, nas consultas feitas
-              pelo navegador, o endereço IP;
-            </>,
-            <>
-              <B>Serviços de geolocalização por IP:</B> utilizados apenas durante manutenções do
-              Site. Dado: endereço IP{hasMeta ? ';' : '.'}
-            </>,
-            ...(hasMeta
+            ...(hasAnalytics
               ? [
                   <>
-                    <B>Meta Platforms</B> (Pixel): medição de eventos de navegação e compra no Site.
+                    <B>Medição de audiência:</B> se você aceitar os cookies de medição, ferramentas
+                    que mostram como o site é usado.
                   </>,
                 ]
               : []),
           ],
         ),
         clause(
-          'Os dados poderão ainda ser compartilhados com autoridades públicas, quando exigido por lei ou ordem judicial, e com prestadores de serviços contábeis e jurídicos, sob dever de sigilo, quando necessário.',
+          'Também podemos compartilhar dados com autoridades, quando a lei ou um juiz exigir, e com o nosso contador ou advogado, sob sigilo, quando necessário.',
+        ),
+        clause(
+          'Quer saber exatamente quais são essas empresas? É só pedir pelos nossos contatos: a lei garante esse direito e mandamos a lista.',
+        ),
+      ],
+    },
+    {
+      id: 'fora-do-brasil',
+      title: 'Dados fora do Brasil',
+      clauses: [
+        clause(
+          'Alguns dos nossos parceiros, como os serviços de nuvem, guardam dados em servidores fora do Brasil, por exemplo nos Estados Unidos. Isso é permitido pela LGPD (art. 33), desde que eles ofereçam proteção adequada, o que exigimos.',
+        ),
+      ],
+    },
+    {
+      id: 'quanto-tempo',
+      title: 'Por quanto tempo guardamos',
+      clauses: [
+        clause('Guardamos cada dado só pelo tempo necessário:', [
+          <>
+            <B>Conta:</B> enquanto ela existir. Se você excluir a conta, apagamos o seu perfil, o
+            carrinho e as notificações.
+          </>,
+          <>
+            <B>Pedidos e notas fiscais:</B> por 5 anos, porque a lei fiscal e a do consumidor
+            exigem. Depois disso, os dados pessoais dos pedidos são apagados.
+          </>,
+          <>
+            <B>Endereço IP dos pedidos:</B> por 1 ano.
+          </>,
+          <>
+            <B>Compra sem cadastro:</B> se você não fizer nenhum pedido, os dados são apagados em
+            90 dias.
+          </>,
+          <>
+            <B>Pedidos de “Avise-me quando chegar”:</B> por até 1 ano.
+          </>,
+        ]),
+      ],
+    },
+    {
+      id: 'seus-direitos',
+      title: 'Seus direitos',
+      clauses: [
+        clause('Os dados são seus. A qualquer momento você pode:', [
+          'saber se temos dados seus e ver quais são;',
+          'corrigir o que estiver errado ou desatualizado;',
+          'pedir uma cópia dos seus dados;',
+          'pedir que apaguemos dados desnecessários;',
+          'saber com quais empresas compartilhamos;',
+          'retirar um consentimento que tenha dado;',
+          'discordar de um uso que se baseie no nosso interesse legítimo.',
+        ]),
+        clause(
+          <>
+            Muita coisa você mesmo faz na página <B>Perfil</B>: mudar os seus dados, baixar uma
+            cópia de tudo (<B>Exportar meus dados</B>) e <B>Excluir conta</B>. Para o resto, fale com
+            a gente: respondemos na hora ou em até 15 dias.
+          </>,
+        ),
+        clause(
+          'Ao excluir a conta, os pedidos que ainda não foram pagos são cancelados. Os pedidos já feitos ficam guardados pelo prazo da lei, como explicado acima.',
+        ),
+        clause(
+          <>
+            Se achar que não respeitamos os seus direitos, você também pode reclamar na Autoridade
+            Nacional de Proteção de Dados (ANPD), em <A href="https://www.gov.br/anpd">gov.br/anpd</A>.
+          </>,
+        ),
+      ],
+    },
+    {
+      id: 'seguranca',
+      title: 'Como protegemos',
+      clauses: [
+        clause('Levamos a segurança a sério:', [
+          'todo o site usa conexão protegida (o cadeado do navegador);',
+          'senha, CPF e telefone ficam criptografados;',
+          'cada cliente só tem acesso aos próprios dados, e só a nossa equipe acessa o painel da loja, com verificação em duas etapas;',
+          'o site tem proteção contra robôs, ataques e tentativas repetidas de login;',
+          'os dados do cartão vão direto para a empresa de pagamento e não passam por nós.',
+        ]),
+        clause(
+          'Nenhum sistema é 100% imune. Se acontecer algum incidente que possa trazer risco para você, avisamos você e a ANPD, como manda a lei.',
         ),
       ],
     },
@@ -199,101 +250,9 @@ export default async function PrivacidadePage() {
       clauses: [
         clause(
           <>
-            O Site utiliza cookies e tecnologias semelhantes. As categorias, finalidades, prazos e
-            as formas de gerenciar suas preferências estão descritos na{' '}
-            <A href="/politica-de-cookies">Política de Cookies</A>.
+            O site usa cookies, pequenos arquivos que ajudam a manter você conectado e o carrinho
+            salvo. Explicamos tudo na <A href="/politica-de-cookies">Política de Cookies</A>.
           </>,
-        ),
-      ],
-    },
-    {
-      id: 'transferencia-internacional',
-      title: 'Transferência internacional de dados',
-      clauses: [
-        clause(
-          'Alguns fornecedores da Loja, incluindo a infraestrutura em nuvem do Google, tratam dados fora do Brasil, inclusive nos Estados Unidos. Essas transferências ocorrem com fundamento no art. 33 da LGPD, observadas as garantias contratuais e de segurança oferecidas pelos respectivos provedores.',
-        ),
-      ],
-    },
-    {
-      id: 'retencao',
-      title: 'Prazo de armazenamento',
-      clauses: [
-        clause('Os dados pessoais são armazenados pelos seguintes períodos:', [
-          <>
-            <B>conta e perfil:</B> enquanto a conta estiver ativa. Com a exclusão da conta, são
-            removidos o perfil, o carrinho e as notificações, e o acesso é encerrado;
-          </>,
-          <>
-            <B>Pedidos, pagamentos e documentos fiscais:</B> mantidos mesmo após a exclusão da
-            conta, pelo prazo exigido pela legislação fiscal, tributária e de defesa do consumidor
-            (em regra, 5 anos) e para defesa em eventuais disputas (art. 16, I, e art. 7º, VI, da
-            LGPD);
-          </>,
-          <>
-            <B>registros de acesso:</B> pelo prazo previsto na legislação aplicável, em especial o
-            Marco Civil da Internet.
-          </>,
-        ]),
-        clause(
-          'Encerrados esses prazos, os dados serão eliminados ou anonimizados, salvo se a lei autorizar ou exigir sua conservação.',
-        ),
-      ],
-    },
-    {
-      id: 'direitos',
-      title: 'Direitos do Titular',
-      clauses: [
-        clause('Nos termos do art. 18 da LGPD, o Titular pode, a qualquer momento, solicitar:', [
-          'a confirmação da existência de tratamento e o acesso aos dados;',
-          'a correção de dados incompletos, inexatos ou desatualizados;',
-          'a anonimização, o bloqueio ou a eliminação de dados desnecessários, excessivos ou tratados em desconformidade com a lei;',
-          'a portabilidade dos dados;',
-          'a eliminação dos dados tratados com base no consentimento;',
-          'informações sobre as entidades com as quais os dados são compartilhados;',
-          'informação sobre a possibilidade de não fornecer consentimento e sobre as consequências da recusa, bem como a revogação do consentimento;',
-          'a oposição a tratamentos realizados com base em legítimo interesse.',
-        ]),
-        clause(
-          <>
-            Na área <B>Perfil</B>, o Titular pode atualizar seu nome, obter uma cópia de seus dados
-            em arquivo JSON (<B>Exportar meus dados</B>) e <B>Excluir conta</B>. Telefone, CPF e
-            endereço podem ser revisados na finalização de um Pedido. As demais solicitações podem
-            ser feitas pelos canais indicados na seção “Contato”.
-          </>,
-        ),
-        clause(
-          'As solicitações serão respondidas de imediato, em formato simplificado, ou, quando necessário, por declaração completa em até 15 dias (art. 19 da LGPD).',
-        ),
-        clause(
-          <>
-            A exclusão da conta é definitiva: Pedidos aguardando pagamento são cancelados, e o
-            perfil, o carrinho, as notificações e o acesso são removidos. Os dados de Pedidos
-            concluídos permanecem conforme a seção <A href="#retencao">Prazo de armazenamento</A>.
-          </>,
-        ),
-        clause(
-          <>
-            Caso entenda que seus direitos não foram atendidos, o Titular pode apresentar
-            reclamação à Autoridade Nacional de Proteção de Dados (ANPD), em{' '}
-            <A href="https://www.gov.br/anpd">gov.br/anpd</A>.
-          </>,
-        ),
-      ],
-    },
-    {
-      id: 'seguranca',
-      title: 'Segurança da informação',
-      clauses: [
-        clause('A Loja adota medidas técnicas e administrativas para proteger os dados pessoais, entre elas:', [
-          'comunicação protegida por criptografia (HTTPS/TLS) em todo o Site;',
-          'senhas protegidas por hash irreversível, gerenciado pelo Firebase Authentication, sem cópia no banco de dados da Loja;',
-          'autenticação gerenciada pelo Firebase Authentication, com proteção contra robôs (Cloudflare Turnstile) e limitação de tentativas nos formulários sensíveis;',
-          'regras de acesso ao banco de dados, de modo que cada Cliente acesse apenas os próprios dados, e restrição das áreas administrativas a perfis autorizados;',
-          'infraestrutura em nuvem do Google, com criptografia dos dados em repouso, e compartilhamento com terceiros limitado ao necessário.',
-        ]),
-        clause(
-          'Nenhum sistema é totalmente imune a falhas. Em caso de incidente de segurança que possa acarretar risco ou dano relevante aos Titulares, a Loja comunicará os afetados e a ANPD, conforme o art. 48 da LGPD.',
         ),
       ],
     },
@@ -302,37 +261,32 @@ export default async function PrivacidadePage() {
       title: 'Crianças e adolescentes',
       clauses: [
         clause(
-          'O Site é destinado a maiores de 18 anos, e a Loja não coleta intencionalmente dados de crianças e adolescentes. Identificado cadastro nessa condição, os dados serão excluídos. O responsável legal que entender que isso ocorreu pode entrar em contato pelos canais indicados nesta Política.',
+          'As compras no site são para maiores de 18 anos, e não coletamos de propósito dados de menores. Se descobrirmos um cadastro assim, apagamos. Se você é responsável por um menor e acha que isso aconteceu, fale com a gente.',
         ),
       ],
     },
     {
-      id: 'terceiros',
-      title: 'Links e serviços de terceiros',
+      id: 'outros-sites',
+      title: 'Links para outros sites',
       clauses: [
         clause(
-          'O Site poderá direcionar o Usuário a ambientes de terceiros, como Instagram, WhatsApp e a página de pagamento da AbacatePay, que possuem regras próprias de privacidade, pelas quais a Loja não responde. Recomenda-se a leitura dessas regras antes do fornecimento de dados.',
+          'Alguns botões levam para fora do site, como o WhatsApp e o Instagram. Lá valem as regras de privacidade de cada um.',
         ),
       ],
     },
     {
-      id: 'alteracoes',
-      title: 'Alterações desta Política',
+      id: 'mudancas',
+      title: 'Mudanças nesta política',
       clauses: [
         clause(
-          'A Loja poderá atualizar esta Política para refletir mudanças no Site, em seus fornecedores ou na legislação. A versão vigente é a publicada nesta página, com o ano da última atualização indicado no topo. Alterações relevantes serão destacadas no Site ou comunicadas por e-mail.',
+          'Se mudarmos algo importante, avisamos no site ou por e-mail. A data da última atualização fica no topo desta página.',
         ),
       ],
     },
     {
       id: 'contato',
-      title: 'Contato',
-      clauses: [
-        contactClause(
-          id,
-          `Para exercer direitos, esclarecer dúvidas ou comunicar problemas de privacidade, o Titular pode contatar ${id.name} pelos seguintes canais:`,
-        ),
-      ],
+      title: 'Fale com a gente',
+      clauses: [contactClause(id, 'Para qualquer dúvida ou pedido sobre os seus dados:')],
     },
   ];
 
@@ -342,12 +296,19 @@ export default async function PrivacidadePage() {
       current="/privacidade"
       intro={
         <>
-          Esta Política de Privacidade descreve como {id.name} coleta, utiliza, compartilha e
-          protege os dados pessoais tratados neste Site, em conformidade com a LGPD, o Marco Civil
-          da Internet e o Código de Defesa do Consumidor. Ela complementa os{' '}
-          <A href="/termos">Termos e Condições de Uso</A>.
+          Aqui explicamos, sem juridiquês, quais dados pedimos, para que usamos e como você controla
+          tudo. Esta política segue a LGPD e faz parte dos nossos{' '}
+          <A href="/termos">Termos de Uso</A>.
         </>
       }
+      summary={[
+        'Pedimos só o necessário para você comprar e receber em casa.',
+        'Não vendemos os seus dados e não mandamos promoções sem você pedir.',
+        'O número do seu cartão nunca fica com a gente.',
+        <>
+          Você pode ver, baixar ou apagar os seus dados quando quiser, na página <B>Perfil</B>.
+        </>,
+      ]}
       sections={sections}
     />
   );

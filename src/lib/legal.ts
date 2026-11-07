@@ -8,7 +8,7 @@ import type { StoreSettings } from '@/lib/store-settings';
  * users/{uid}.lgpdConsent.version no cadastro, para provar a qual texto cada
  * cliente deu o aceite. Atualizar sempre que houver mudança relevante.
  */
-export const LEGAL_UPDATED_AT = '2026-10-07';
+export const LEGAL_UPDATED_AT = '2026-11-07';
 export const LEGAL_VERSION = LEGAL_UPDATED_AT;
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 // Montado à mão a partir da string: new Date('2026-10-07') é meia-noite UTC
@@ -20,7 +20,7 @@ export const LEGAL_UPDATED_LABEL = (() => {
 
 /** Documentos que aparecem no menu lateral das páginas legais. */
 export const LEGAL_PAGES = [
-  { href: '/termos', label: 'Termos e Condições de Uso' },
+  { href: '/termos', label: 'Termos de Uso' },
   { href: '/privacidade', label: 'Política de Privacidade' },
   { href: '/politica-de-cookies', label: 'Política de Cookies' },
   { href: '/trocas-e-devolucoes', label: 'Trocas e Devoluções' },

@@ -8,8 +8,8 @@ import { LegalPage, A, B, Table, clause, contactClause, type LegalSection } from
 
 export const metadata = {
   title: 'Política de Cookies',
-  description: 'Quais cookies o site utiliza, para que servem, por quanto tempo e como gerenciá-los.',
-  ...shareMeta({ title: 'Política de Cookies', description: 'Quais cookies o site utiliza, para que servem, por quanto tempo e como gerenciá-los.', path: '/politica-de-cookies' }),
+  description: 'O que são os cookies do site, para que servem, por quanto tempo ficam e como você escolhe.',
+  ...shareMeta({ title: 'Política de Cookies', description: 'O que são os cookies do site, para que servem, por quanto tempo ficam e como você escolhe.', path: '/politica-de-cookies' }),
   alternates: { canonical: '/politica-de-cookies' },
 };
 
@@ -17,21 +17,19 @@ export default async function PoliticaDeCookiesPage() {
   const s = await getStoreSettings();
   const id = storeIdentity(s);
 
-  // Só listamos ferramentas que estão realmente ativas neste deploy.
+  // Só lista a medição de audiência se ela estiver ligada neste site.
   const hasGA = Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID);
   const hasMeta = Boolean(process.env.NEXT_PUBLIC_META_PIXEL_ID);
   const hasAnalytics = hasGA || hasMeta;
 
+  // Pelo que cada um faz, sem nome técnico: é o que importa para quem lê.
   const rows: ReactNode[][] = [
-    ['Sessão do Firebase Authentication (armazenamento local do navegador)', 'Manter o Cliente conectado à conta.', 'Necessário', 'Até o encerramento da sessão ou a limpeza dos dados do navegador'],
-    ['mikma-cookie-consent (armazenamento local)', 'Registrar a escolha do Usuário sobre cookies.', 'Necessário', '12 meses'],
-    ['reCAPTCHA (Google)', 'Proteger os formulários de login, cadastro e recuperação de senha contra robôs e abusos.', 'Necessário', 'Definido pelo Google'],
-    ['mikma-theme (armazenamento local)', 'Lembrar a preferência de tema claro ou escuro.', 'Funcional', 'Até a limpeza dos dados do navegador'],
-    ...(hasGA
-      ? [['_ga e _ga_ seguido do identificador da propriedade (Google Analytics 4)', 'Distinguir visitantes e sessões e medir a audiência do Site.', 'Medição de audiência', 'Até 2 anos']]
-      : []),
-    ...(hasMeta
-      ? [['_fbp (Meta Pixel)', 'Medir eventos de navegação e compra no Site.', 'Medição de audiência', 'Até 90 dias']]
+    ['Manter você conectado', 'Lembra que você entrou na sua conta, para não pedir a senha a cada página.', 'Essencial', 'Até você sair da conta'],
+    ['Segurança dos formulários', 'Confere se quem está entrando ou se cadastrando é uma pessoa, e não um robô.', 'Essencial', 'Até 6 meses'],
+    ['Sua escolha sobre cookies', 'Guarda o que você respondeu no aviso de cookies.', 'Essencial', '12 meses'],
+    ['Tema claro ou escuro', 'Lembra o visual que você escolheu para o site.', 'Preferência', 'Até você limpar o navegador'],
+    ...(hasAnalytics
+      ? [['Medição de audiência', 'Mostra, de forma agregada, quais páginas são mais visitadas, para melhorarmos o site.', 'Medição (só com o seu aceite)', hasGA ? 'Até 2 anos' : 'Até 90 dias']]
       : []),
   ];
 
@@ -41,93 +39,83 @@ export default async function PoliticaDeCookiesPage() {
       title: 'O que são cookies',
       clauses: [
         clause(
-          'Cookies são pequenos arquivos de texto gravados no navegador do Usuário quando ele acessa um site. O Site também utiliza o armazenamento local do navegador (como localStorage e IndexedDB), que cumpre funções semelhantes, e ambos são tratados nesta Política como “cookies”.',
-        ),
-        clause(
-          'Cookies podem ser próprios (definidos pelo Site) ou de terceiros (definidos por outras empresas, como o Google), e podem ser de sessão (apagados ao fechar o navegador) ou persistentes (mantidos por um período).',
+          'Cookies são pequenos arquivos que o site guarda no seu navegador. Eles servem para lembrar coisas entre uma página e outra, como a sua conta e o seu carrinho. Aqui chamamos de “cookies” também outras formas parecidas de guardar informação no navegador.',
         ),
       ],
     },
     {
-      id: 'categorias',
-      title: 'Categorias e finalidades',
+      id: 'quais-usamos',
+      title: 'Quais usamos',
       clauses: [
-        clause('O Site utiliza as seguintes categorias:', [
+        clause(`Usamos poucos cookies, de ${hasAnalytics ? 'três' : 'dois'} tipos:`, [
           <>
-            <B>Necessários:</B> indispensáveis ao funcionamento e à segurança do Site, como manter o
-            login e proteger os formulários. Não dependem de consentimento e não podem ser
-            desativados pelo Site;
+            <B>Essenciais:</B> sem eles o site não funciona, por exemplo para manter você conectado
+            e proteger o login. Por isso não precisam de aceite.
           </>,
           <>
-            <B>Funcionais:</B> lembram escolhas do Usuário, como o tema do Site;
+            <B>De preferência:</B> lembram escolhas suas, como o tema do site.
           </>,
           ...(hasAnalytics
             ? [
                 <>
-                  <B>Medição de audiência:</B> permitem entender como o Site é utilizado, para
-                  melhorá-lo. Somente são ativados mediante consentimento do Usuário.
+                  <B>De medição:</B> ajudam a entender como o site é usado. Só funcionam se você
+                  aceitar.
                 </>,
               ]
             : []),
         ]),
         clause(
           hasAnalytics
-            ? 'A tabela abaixo relaciona os cookies utilizados atualmente:'
-            : 'A tabela abaixo relaciona os cookies utilizados atualmente. No momento, o Site não utiliza cookies de medição de audiência nem de publicidade.',
+            ? 'Esta é a lista completa:'
+            : 'Não usamos cookies de propaganda nem de medição de audiência. Esta é a lista completa:',
         ),
       ],
-      after: (
-        <Table head={['Cookie', 'Finalidade', 'Categoria', 'Duração']} rows={rows} />
-      ),
+      after: <Table head={['Cookie', 'Para que serve', 'Tipo', 'Quanto tempo fica']} rows={rows} />,
     },
     {
-      id: 'terceiros',
-      title: 'Cookies de terceiros',
+      id: 'parceiros',
+      title: 'Cookies de parceiros',
       clauses: [
         clause(
           <>
-            Alguns cookies são definidos por terceiros que prestam serviços ao Site, como o Google
-            (reCAPTCHA{hasGA && <> e Google Analytics</>}){hasMeta && <> e a Meta (Pixel)</>}. Esses
-            terceiros tratam os dados conforme suas próprias políticas de privacidade. Mais
-            informações sobre o compartilhamento de dados estão na{' '}
-            <A href="/privacidade">Política de Privacidade</A>.
+            Alguns desses cookies são colocados por empresas que nos ajudam a manter o site seguro
+            {hasAnalytics && ' e a medir a audiência'}. Elas seguem as próprias regras de
+            privacidade. Contamos mais na <A href="/privacidade">Política de Privacidade</A>.
           </>,
         ),
       ],
     },
     {
-      id: 'gerenciar',
-      title: 'Como gerenciar suas preferências',
+      id: 'sua-escolha',
+      title: 'Como escolher',
       clauses: [
         ...(hasAnalytics
           ? [
               clause(
-                'Na primeira visita, o Site exibe um aviso para que o Usuário aceite ou recuse os cookies de medição de audiência. A recusa tem o mesmo peso da aceitação, e o Site funciona normalmente nos dois casos. A escolha fica salva no navegador por 12 meses.',
+                'Na primeira visita, mostramos um aviso para você aceitar ou recusar os cookies de medição. Recusar é tão fácil quanto aceitar, e o site funciona igual nos dois casos.',
               ),
               clause(
                 <>
-                  O Usuário pode rever ou alterar sua escolha a qualquer momento por meio de{' '}
+                  Mudou de ideia? É só abrir as{' '}
                   <CookiePreferencesButton className="text-clay underline underline-offset-2 hover:text-clay-d font-medium">
                     Preferências de cookies
                   </CookiePreferencesButton>
-                  , também disponível no rodapé do Site. Ao recusar após ter aceitado, os cookies de
-                  medição já gravados são apagados.
+                  , que também ficam no rodapé do site. Se recusar depois de ter aceitado, apagamos
+                  os cookies de medição.
                 </>,
               ),
             ]
           : []),
         clause(
-          'O Usuário também pode apagar ou bloquear cookies nas configurações do navegador. O bloqueio dos cookies necessários pode impedir o login e a finalização de compras.',
+          'Você também pode apagar ou bloquear cookies nas configurações do seu navegador. Só lembre que, sem os essenciais, não dá para entrar na conta nem finalizar a compra.',
         ),
         ...(hasGA
           ? [
               clause(
                 <>
-                  Para o Google Analytics, também é possível instalar o{' '}
-                  <A href="https://tools.google.com/dlpage/gaoptout">
-                    complemento de desativação oferecido pelo Google
-                  </A>
-                  .
+                  Se preferir, o Google oferece um{' '}
+                  <A href="https://tools.google.com/dlpage/gaoptout">complemento para desligar a medição</A>{' '}
+                  em todos os sites.
                 </>,
               ),
             ]
@@ -135,13 +123,13 @@ export default async function PoliticaDeCookiesPage() {
       ],
     },
     {
-      id: 'alteracoes',
-      title: 'Alterações e contato',
+      id: 'contato',
+      title: 'Mudanças e contato',
       clauses: [
         clause(
-          'Esta Política poderá ser atualizada para refletir mudanças nos cookies utilizados ou na legislação. A versão vigente é a publicada nesta página, com o ano da última atualização indicado no topo.',
+          'Se passarmos a usar outros cookies, atualizamos esta página. A data da última atualização fica no topo.',
         ),
-        contactClause(id, 'Dúvidas sobre cookies podem ser enviadas pelos seguintes canais:'),
+        contactClause(id, 'Dúvidas sobre cookies? Fale com a gente:'),
       ],
     },
   ];
@@ -152,11 +140,15 @@ export default async function PoliticaDeCookiesPage() {
       current="/politica-de-cookies"
       intro={
         <>
-          Esta Política de Cookies explica quais cookies e tecnologias semelhantes {id.name} utiliza
-          neste Site, para que servem, por quanto tempo permanecem e como o Usuário pode gerenciá-los.
-          Ela complementa a <A href="/privacidade">Política de Privacidade</A>.
+          Explicamos aqui quais cookies o site usa, para que servem e como você escolhe. Esta
+          página completa a nossa <A href="/privacidade">Política de Privacidade</A>.
         </>
       }
+      summary={[
+        'Usamos poucos cookies, quase todos só para o site funcionar.',
+        hasAnalytics ? 'Cookies de medição só com o seu aceite, e você pode mudar de ideia quando quiser.' : 'Não usamos cookies de propaganda nem de medição de audiência.',
+        'Nenhum cookie é usado para vender os seus dados.',
+      ]}
       sections={sections}
     />
   );
