@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/Select';
+import { startNavigation } from '@/components/ui/NavigationProgress';
 
 interface Props { current?: string; }
 
@@ -21,6 +22,7 @@ export function SortSelect({ current }: Props) {
     if (value) url.searchParams.set('ordem', value);
     else url.searchParams.delete('ordem');
     url.searchParams.delete('pagina');
+    startNavigation(`${url.pathname}${url.search}`);
     router.push(`${url.pathname}${url.search}`, { scroll: false });
   }
 

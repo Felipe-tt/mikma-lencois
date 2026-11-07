@@ -20,31 +20,31 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const s = await getStoreSettings();
   const identity = storeIdentity(s);
   const siteUrl = 'https://mikma.com.br';
-  const orgJsonLd = {
+  // Endereço, telefone e perfis da loja, do painel. Completa a loja do layout
+  // raiz (mesmo @id) e liga o site ao perfil da empresa no Google, para ele
+  // saber que a página oficial é a home e não, por exemplo, os Termos.
+  const storeJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
+    '@type': 'Store',
+    '@id': `${siteUrl}/#loja`,
     name: s.storeName || 'Mikma Lençóis',
-    url: siteUrl,
-    ...(s.storeCity && { address: { '@type': 'PostalAddress', addressLocality: s.storeCity, addressCountry: 'BR' } }),
+    url: `${siteUrl}/`,
     ...(s.storePhone && { telephone: s.storePhone }),
-    ...(s.instagramUrl && { sameAs: [s.instagramUrl] }),
-  };
-  const websiteJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: s.storeName || 'Mikma Lençóis',
-    url: siteUrl,
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${siteUrl}/produtos?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
+    ...(s.storeEmail && { email: s.storeEmail }),
+    address: {
+      '@type': 'PostalAddress',
+      ...(s.storeAddress && { streetAddress: [s.storeAddress, s.storeNumber].filter(Boolean).join(', ') }),
+      addressLocality: s.storeCity?.split(',')[0].trim() || 'Blumenau',
+      addressRegion: s.storeState || 'SC',
+      ...(s.storeCep && { postalCode: s.storeCep }),
+      addressCountry: 'BR',
     },
+    ...(s.instagramUrl && { sameAs: [s.instagramUrl] }),
   };
   return (
     <WhatsAppProvider href={storeWhatsapp(s)} hours={s.businessHours} timeZone={s.businessHoursTimezone}>
     <div className="flex min-h-screen flex-col">
-      <JsonLd data={orgJsonLd} />
-      <JsonLd data={websiteJsonLd} />
+      <JsonLd data={storeJsonLd} />
       <MaintenanceGate />
       {/* Atalho de teclado: primeiro Tab da página pula o menu */}
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-paper focus:px-5 focus:py-2.5 focus:text-[13px] focus:font-medium">
@@ -66,6 +66,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         address={identity.address}
         businessHours={s.businessHours}
         businessHoursTimezone={s.businessHoursTimezone}
+        salesPaused={!!pauseNotice(s)}
       />
       <WhatsAppFloat />
       <CookieBanner />

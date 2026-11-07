@@ -1,5 +1,6 @@
 'use client';
 import { useWhatsApp, WhatsAppIcon } from '@/components/contact/WhatsApp';
+import { startNavigation } from '@/components/ui/NavigationProgress';
 import { whatsappWithText } from '@/lib/whatsapp';
 import Image from 'next/image';
 import { WithPathname } from '@/components/ui/Pathname';
@@ -77,7 +78,7 @@ function HeaderView({ topbarText, freeShippingThresholdCents = 0, pathname }: Pr
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (query.trim()) { router.push(`/produtos?q=${encodeURIComponent(query.trim())}`); setSearchOpen(false); setMenuOpen(false); setQuery(''); }
+    if (query.trim()) { startNavigation(`/produtos?q=${encodeURIComponent(query.trim())}`); router.push(`/produtos?q=${encodeURIComponent(query.trim())}`); setSearchOpen(false); setMenuOpen(false); setQuery(''); }
   }
 
   // Free shipping progress
