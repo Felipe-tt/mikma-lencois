@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { withPii } from '@/lib/piiCrypto';
 import { FieldValue } from 'firebase-admin/firestore';
-import { getSettings } from '@/lib/settings';
+import { getSettings, getPauseNoticeNow } from '@/lib/settings';
 import { computeShippingOptions } from '@/lib/shipping-pricing';
 import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
@@ -75,6 +75,9 @@ export async function POST(req: NextRequest) {
     }
 
     const settings = await getSettings();
+    // Vendas pausadas no painel: nenhum pedido novo é criado.
+    const paused = await getPauseNoticeNow();
+    if (paused) return NextResponse.json({ error: paused, code: 'sales_paused' }, { status: 503 });
     const abacateSandbox = !!settings.abacatePaySandboxMode;
     const ABACATEPAY_KEY = abacatePayKey(abacateSandbox);
 

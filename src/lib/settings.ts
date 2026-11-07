@@ -2,6 +2,7 @@ import { cacheLife, cacheTag } from 'next/cache';
 import { adminDb } from '@/lib/firebase/admin';
 import { STORE_DEFAULTS, withStoreDefaults, type StoreSettings } from '@/lib/store-settings';
 import { serialize } from '@/lib/utils/serialize';
+import { pauseNotice, type PauseSettings } from '@/lib/salesPause';
 
 let cached: StoreSettings | null = null;
 let cachedAt = 0;
@@ -41,5 +42,18 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   } catch {
     cacheLife({ stale: 30, revalidate: 60, expire: 300 });
     return STORE_DEFAULTS;
+  }
+}
+
+/**
+ * Aviso de vendas pausadas lido direto do banco (sem o cache de 1 min):
+ * ligar a pausa no painel bloqueia a próxima compra na hora.
+ */
+export async function getPauseNoticeNow(): Promise<string | null> {
+  try {
+    const snap = await adminDb.collection('settings').doc('store').get();
+    return pauseNotice((snap.data() ?? {}) as PauseSettings);
+  } catch {
+    return null;
   }
 }
