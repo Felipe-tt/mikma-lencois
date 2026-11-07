@@ -1,0 +1,67 @@
+name: App Check · diagnóstico
+
+# Conta, nos registros do App Hosting, como foram as trocas de token do App
+# Check (POST /api/app-check) nos últimos dias: quantas deram certo (200),
+# falharam na verificação (403), bateram no limite (429) ou deram erro (5xx),
+# por dia. O repositório é público: só totais saem no log, nunca IP,
+# navegador ou qualquer dado de quem acessou.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: 'Quantos dias para trás'
+        default: '7'
+
+permissions:
+  contents: read
+  id-token: write # identidade federada no Google Cloud
+
+jobs:
+  contar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+            *.githubusercontent.com:443
+            *.blob.core.windows.net:443
+            *.googleapis.com:443
+
+      - name: Entrar no Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: mikma-lencois
+          workload_identity_provider: projects/915579306587/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
+
+      - name: Trocas de token por dia e resultado
+        env:
+          DIAS: ${{ inputs.dias || '7' }}
+        run: |
+          set -uo pipefail
+          desde=$(date -u -d "$DIAS days ago" +%Y-%m-%dT%H:%M:%SZ)
+          filtro="resource.type=\"cloud_run_revision\" AND httpRequest.requestMethod=\"POST\" AND httpRequest.requestUrl:\"/api/app-check\" AND timestamp>=\"$desde\""
+          if ! gcloud logging read "$filtro" --project mikma-lencois --limit=20000 \
+               --format='json(timestamp,httpRequest.status)' > req.json; then
+            echo "::error::não consegui ler os registros"; exit 1
+          fi
+          echo "## Trocas de token do App Check desde $desde" >> "$GITHUB_STEP_SUMMARY"
+          { echo '```'; echo "dia         status  total"
+            jq -r 'map({d: .timestamp[0:10], s: (.httpRequest.status // 0)}) | group_by([.d,.s]) | .[] | "\(.[0].d)  \(.[0].s)     \(length)"' req.json
+            echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "total: $(jq length req.json)" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Erros do servidor ao emitir o token
+        env:
+          DIAS: ${{ inputs.dias || '7' }}
+        run: |
+          set -uo pipefail
+          desde=$(date -u -d "$DIAS days ago" +%Y-%m-%dT%H:%M:%SZ)
+          filtro="resource.type=\"cloud_run_revision\" AND textPayload:\"[app-check]\" AND timestamp>=\"$desde\""
+          gcloud logging read "$filtro" --project mikma-lencois --limit=200 --format='value(timestamp)' > err.txt || true
+          echo "erros '[app-check] falha ao emitir token': $(wc -l < err.txt)" | tee -a "$GITHUB_STEP_SUMMARY"
