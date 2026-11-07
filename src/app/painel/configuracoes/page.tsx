@@ -842,9 +842,11 @@ function Toggle({ label, checked, onChange, hint, warn, disabled }: {
     </div>
   );
 }
-function Num({ label, value, onChange, hint, min, max }: {
+function Num({ label, value, onChange, hint, min, max, money }: {
   label:string; value:number; onChange:(v:number)=>void;
   hint?:string; min?:number; max?:number; step?:number;
+  /** Valor em reais: mostra sempre com centavos (0,80, não 0,8). */
+  money?:boolean;
 }) {
   const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
@@ -855,7 +857,7 @@ function Num({ label, value, onChange, hint, min, max }: {
       {/* Texto livre enquanto edita: antes apagar o campo pra digitar outro
           número fazia ele voltar pra 0 na hora. Campo vazio ao sair volta
           pro último valor válido. */}
-      <input id={id} type="text" inputMode={min !== undefined && min >= 0 ? 'decimal' : undefined} value={draft ?? String(value).replace('.', ',')}
+      <input id={id} type="text" inputMode={min !== undefined && min >= 0 ? 'decimal' : undefined} value={draft ?? (money ? value.toFixed(2) : String(value)).replace('.', ',')}
         onFocus={() => setDraft(String(value).replace('.', ','))}
         onChange={e => {
           setDraft(e.target.value);
@@ -1226,9 +1228,9 @@ function GatewayFeesCard({ settings, set, isAdmin }: {
         </div>
       )}
 
-      <Divider label="PIX" />
+      <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-faint -mb-1">PIX</p>
       <Row>
-        <Num label="Taxa por PIX (R$)" value={f.abacateFeePixCents / 100}
+        <Num label="Taxa por PIX (R$)" money value={f.abacateFeePixCents / 100}
           onChange={v => isAdmin && set('abacateFeePixCents', Math.round(Math.min(10, Math.max(0, v)) * 100))} min={0} max={10}
           hint={checked ? `Conferida sozinha numa cobrança real em ${checked.toLocaleDateString('pt-BR')}.` : 'Conferida sozinha no próximo PIX pago no site.'} />
       </Row>
@@ -1246,7 +1248,7 @@ function GatewayFeesCard({ settings, set, isAdmin }: {
         ))}
       </div>
       <Row>
-        <Num label="Mais, por cobrança (R$)" value={f.abacateFeeCardFixedCents / 100}
+        <Num label="Mais, por cobrança (R$)" money value={f.abacateFeeCardFixedCents / 100}
           onChange={v => isAdmin && set('abacateFeeCardFixedCents', Math.round(Math.min(10, Math.max(0, v)) * 100))} min={0} max={10} />
       </Row>
       <Toggle label="Cobrar do cliente no total do cartão" checked={f.abacateFeeCardToCustomer} disabled={!isAdmin}

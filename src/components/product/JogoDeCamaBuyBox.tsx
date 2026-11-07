@@ -140,9 +140,9 @@ function FronhaPicker({ options, fronhaCount, pairsPerUnit, chosenId, onChoose, 
       </div>
 
       {open && (
-        <div id={listId} className="border-t border-mist px-3.5 pt-3 pb-3.5 animate-measure-in">
+        <div id={listId} className="border-t border-mist px-3.5 pt-1.5 pb-3.5 animate-measure-in">
           <div role="radiogroup" aria-label="Estampa da fronha" className="-mx-3.5 px-3.5 overflow-x-auto scrollbar-none sm:mx-0 sm:px-0 sm:overflow-visible">
-            <div className="flex gap-2.5 w-max pb-1 sm:w-auto sm:flex-wrap">
+            <div className="flex gap-2.5 w-max pt-2 pb-1 pr-1 sm:w-auto sm:flex-wrap">
               {[undefined, ...options].map(f => {
                 const id = f?.id ?? 'default';
                 const on = chosenId === id;

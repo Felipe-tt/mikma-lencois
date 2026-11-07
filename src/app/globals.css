@@ -161,6 +161,13 @@ html.dark {
 /* Transição só do que muda (cor, borda, escala do clique): transition-all
    animava também padding/largura quando o texto do botão trocava
    ("Salvar" -> "Salvando…") e o botão "escorregava" de tamanho. */
+/* Faixas que rolam de lado (fronhas, abas, filtros): sem a barra cinza.
+   A classe era usada em vários lugares, mas nunca tinha sido definida. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
 @utility btn {
   @apply inline-flex items-center justify-center gap-2 rounded-full
          font-sans text-[13px] font-medium
@@ -721,7 +728,9 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
    piso confortável; no desktop volta ao natural, onde o cursor é
    preciso e a altura extra só faria a lista esticar. */
 @media (max-width: 1023px) {
-  .painel-scope button:not(.panel-tabbar-item),
+  /* Interruptores ficam de fora: esticados viravam um círculo (a área de
+     toque deles já vem do rótulo inteiro, que também liga e desliga). */
+  .painel-scope button:not(.panel-tabbar-item):not([role="switch"]),
   .painel-scope a[role="button"] {
     min-height: 40px;
   }
