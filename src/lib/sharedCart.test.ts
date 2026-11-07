@@ -89,8 +89,8 @@ describe('applySharedOp: swap', () => {
   it('troca a fronha de um jogo de cama', async () => {
     const r = await applySharedOp(fakeDb(base), [j], { op: 'swap', line: 'jogo_v1', swapSku: 'fronha_f1' });
     // Queen tem 2 fronhas: usa 1 par da fronha avulsa por jogo.
-    expect(r).toEqual({ items: [expect.objectContaining({ swapSku: 'fronha_f1', swapQtyPerUnit: 1, note: 'Fronha trocada: Fronha Rosa' })], text: 'trocou a fronha de Jogo Queen' });
-    if ('items' in r) expect(lineKey(r.items[0])).toBe('jogo_v1::Fronha trocada: Fronha Rosa');
+    expect(r).toEqual({ items: [expect.objectContaining({ swapSku: 'fronha_f1', swapQtyPerUnit: 1, note: 'Fronha trocada: Fronhas Rosa' })], text: 'trocou a fronha de Jogo Queen' });
+    if ('items' in r) expect(lineKey(r.items[0])).toBe('jogo_v1::Fronha trocada: Fronhas Rosa');
   });
 
   it('volta para a fronha padrão e junta com a linha igual', async () => {
