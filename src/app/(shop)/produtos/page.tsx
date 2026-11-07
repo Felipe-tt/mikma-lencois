@@ -7,6 +7,7 @@ import { linesForProduct, packageContents, parseTable, type PackageLine } from '
 import { SIZE_LABEL } from '@/lib/productOptions';
 import { ProductCard } from '@/components/product/ProductCard';
 import { SortSelect } from '@/components/product/SortSelect';
+import { CatalogResults } from '@/components/product/CatalogResults';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Product } from '@/types';
 import { getCatalog } from '@/lib/catalog';
@@ -148,7 +149,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
       {/* ── Categorias: abas fixas logo abaixo do cabeçalho do site ── */}
       {orderedCats.length > 1 && (
         <div className="sticky top-[60px] z-30 bg-paper/92 backdrop-blur-md border-y border-mist">
-          <nav aria-label="Categoria" className="container-shop overflow-x-auto scrollbar-none">
+          <nav aria-label="Categoria" className="container-shop overflow-x-auto overflow-y-hidden scrollbar-none">
             <ul className="flex items-stretch gap-6 sm:gap-8 w-max h-12">
               {[{ name: 'Tudo', key: undefined as string | undefined, count: allCount }, ...orderedCats.map(c => ({ ...c, key: c.name }))].map(c => {
                 const on = categoria === c.key;
@@ -175,7 +176,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
 
           {/* ── Tamanho: a cama desenhada na proporção de cada um ── */}
           {sizes.length > 1 && (
-            <nav aria-label="Tamanho" className="mb-6 sm:mb-8 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-none">
+            <nav aria-label="Tamanho" className="mb-6 sm:mb-8 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto overflow-y-hidden scrollbar-none">
               <ul className="flex gap-2.5 w-max">
                 {[{ key: undefined as string | undefined, label: 'Todos', w: 0 }, ...sizes.map(sz => ({ key: sz.key as string | undefined, label: sz.label, w: sizeDims(sz.key, lines)[0] }))].map(sz => {
                   const on = tamanho === sz.key;
@@ -200,6 +201,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
 
           {/* Grid */}
           <div className="min-w-0">
+            <CatalogResults>
             {approximate && products.length > 0 && (
               <p role="status" className="mb-6 rounded-2xl border border-mist bg-warm/50 px-4 py-3 text-[13px] text-mid leading-relaxed">
                 Nada com todas as palavras de <strong className="font-semibold text-ink">“{search}”</strong>. Estes são os mais parecidos.
@@ -234,6 +236,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                 </Link>
               </div>
             )}
+            </CatalogResults>
           </div>
         </div>
       </div>

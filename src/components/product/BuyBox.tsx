@@ -1,5 +1,6 @@
 'use client';
 import { StaffPriceInsight } from './StaffPriceInsight';
+import { startNavigation } from '@/components/ui/NavigationProgress';
 import { WhatsAppInline } from '@/components/contact/WhatsApp';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -227,6 +228,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     setCartError(null);
     try {
       await addItemToCart(variant, amount);
+      startNavigation('/checkout');
       router.push('/checkout');
     } catch (err) {
       console.error('buyNow error:', err);
@@ -646,7 +648,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
               <button
                 type="button"
                 autoFocus
-                onClick={() => router.push('/carrinho')}
+                onClick={() => { startNavigation('/carrinho'); router.push('/carrinho'); }}
                 className="w-full h-12 rounded-full text-[14px] font-semibold bg-ink text-paper border border-ink hover:bg-clay hover:border-clay active:scale-[0.98] transition-[background-color,border-color,transform] duration-150"
               >
                 Ver carrinho{cartCount > 0 ? ` (${cartCount} ${cartCount === 1 ? 'item' : 'itens'})` : ''}

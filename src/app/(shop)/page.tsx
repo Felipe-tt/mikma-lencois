@@ -1,19 +1,31 @@
 import { getCatalog } from '@/lib/catalog';
+import { pickFeatured } from '@/lib/featuredPicks';
+import { cacheLife, cacheTag } from 'next/cache';
 import { getStoreSettings } from '@/lib/settings';
 import { ProductCard } from '@/components/product/ProductCard';
 import type { Product } from '@/types';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import Image from 'next/image';
 
 // Prerender parcial: a página sai pronta do cache; o catálogo e as
 // configurações vêm de funções 'use cache' que o painel limpa ao salvar.
 async function getHomeData(): Promise<{ products: Product[]; categories: string[] }> {
+  'use cache';
+  // A escolha da semana depende da data: em cache por hora (e limpa quando um
+  // produto é salvo), a virada da semana aparece sozinha.
+  cacheTag('products');
+  cacheLife({ stale: 300, revalidate: 3600, expire: 86_400 });
   try {
     const all = await getCatalog();
     const categories = Array.from(new Set(all.map(p => p.category).filter(Boolean))).sort();
-    return { products: all.slice(0, 8), categories };
+    // Variadas (categorias, tamanhos) e trocadas a cada semana, ver lib/featuredPicks.
+    return { products: pickFeatured(all, 8), categories };
   } catch { return { products: [], categories: [] }; }
 }
+
+// Endereço oficial do site: a home é a página principal da loja no Google.
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 export default async function HomePage() {
   const [{ products, categories }, s] = await Promise.all([getHomeData(), getStoreSettings()]);

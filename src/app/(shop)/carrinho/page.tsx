@@ -1,5 +1,6 @@
 'use client';
 import { variantLabel } from '@/lib/variantLabel';
+import { startNavigation } from '@/components/ui/NavigationProgress';
 import Image from 'next/image';
 import { interestFreeHint } from '@/lib/orderPricing';
 import { publicCardFees, type PublicCardFees } from '@/lib/gatewayFees';
@@ -292,7 +293,7 @@ export default function CartPage() {
       {!user && (
         <p className="mt-6 text-[13px] text-mid">
           Já tem conta?{' '}
-          <button type="button" onClick={() => { setReturnTo('/carrinho'); router.push('/entrar'); }}
+          <button type="button" onClick={() => { setReturnTo('/carrinho'); startNavigation('/entrar'); router.push('/entrar'); }}
             className="font-semibold text-clay hover:text-clay-d underline-offset-4 hover:underline">
             Entre para ver o carrinho salvo
           </button>

@@ -1262,3 +1262,25 @@ html.dark .cookie-glass {
    celular usa o mesmo gesto para voltar a página e o menu não abria. O
    "voltar" do sistema (puxar da beirada da tela) continua funcionando. */
 html:has(.painel-scope), html:has(.painel-scope) body { overscroll-behavior-x: none; }
+
+/* Barra de carregamento da navegação (components/ui/NavigationProgress). */
+.nav-progress {
+  position: fixed; inset: 0 0 auto 0; height: 2px; z-index: 120;
+  pointer-events: none; opacity: 0; transition: opacity 200ms ease 120ms;
+}
+.nav-progress > span {
+  display: block; height: 100%; width: 100%;
+  background: rgb(var(--c-clay));
+  box-shadow: 0 0 8px rgb(var(--c-clay) / 0.5);
+  transform-origin: left; transform: scaleX(0);
+}
+.nav-progress.is-on { opacity: 1; transition-delay: 0ms; }
+.nav-progress.is-on > span { animation: nav-progress-grow 8s cubic-bezier(0.1, 0.6, 0.2, 1) forwards; }
+@keyframes nav-progress-grow {
+  0% { transform: scaleX(0); }
+  10% { transform: scaleX(0.35); }
+  100% { transform: scaleX(0.92); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress.is-on > span { animation: none; transform: scaleX(0.6); }
+}

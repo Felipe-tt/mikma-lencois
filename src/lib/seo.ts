@@ -13,17 +13,27 @@ export const SITE_DESCRIPTION = 'Lençóis, fronhas e jogos de lençol em malha 
 export const WEBSITE_JSON_LD = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
+  '@id': 'https://mikma.com.br/#website',
   name: SITE_NAME,
   alternateName: ['Mikma', 'Mikma Lençóis Blumenau'],
   url: 'https://mikma.com.br/',
+  publisher: { '@id': 'https://mikma.com.br/#loja' },
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: 'https://mikma.com.br/produtos?q={search_term_string}',
+    'query-input': 'required name=search_term_string',
+  },
 };
 
 /** Dados da loja (schema.org) presentes em todas as páginas. */
 export const STORE_JSON_LD = {
   '@context': 'https://schema.org',
   '@type': 'Store',
+  // Mesmo @id do bloco com endereço e telefone do layout da loja: o Google
+  // junta os dois numa entidade só (antes eram dois sites e duas lojas).
+  '@id': 'https://mikma.com.br/#loja',
   name: SITE_NAME,
-  url: 'https://mikma.com.br',
+  url: 'https://mikma.com.br/',
   logo: 'https://mikma.com.br/favicon-192-google.png',
   image: 'https://mikma.com.br/og-mikma.jpg',
   description: STORE_SUMMARY,

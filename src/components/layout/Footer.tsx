@@ -22,6 +22,8 @@ interface Props {
   address?: string;
   businessHours?: string;
   businessHoursTimezone?: string;
+  /** Vendas pausadas no painel: não promete "pedidos 24h". */
+  salesPaused?: boolean;
 }
 
 export function Footer(props: Props) {
@@ -42,6 +44,7 @@ function FooterView({
   address,
   businessHours,
   businessHoursTimezone,
+  salesPaused = false,
 }: Props & { pathname: string }) {
   // Ano e "aberto agora" dependem da hora: calculados só no navegador.
   // Ler a hora durante o prerender abre um trecho dinâmico no HTML estático
@@ -100,7 +103,14 @@ function FooterView({
 
             {/* Contato: antes a coluna "Contato" só tinha status e links legais. */}
             <ul className="flex flex-col gap-2.5 mt-1">
-              {status && (
+              {salesPaused ? (
+                <li>
+                  <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] bg-amber-400/10 text-amber-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-300" aria-hidden="true" />
+                    Compras pausadas no momento
+                  </span>
+                </li>
+              ) : status && (
                 <li>
                   <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] ${status.isOpen ? 'bg-green-400/10 text-green-300' : 'bg-paper/[0.06] text-paper/60'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${status.isOpen ? 'bg-green-400' : 'bg-paper/35'}`} aria-hidden="true" />

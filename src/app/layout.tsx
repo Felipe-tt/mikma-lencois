@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { NavigationProgress } from '@/components/ui/NavigationProgress';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { ThemeScript } from '@/components/ThemeScript';
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={WEBSITE_JSON_LD} />
         <JsonLd data={STORE_JSON_LD} />
         <Analytics />
+        <NavigationProgress />
         <Providers>{children}</Providers>
       </body>
     </html>
