@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import Image from 'next/image';
 import { BuyBox } from './BuyBox';
 import { getFronhaCount } from '@/lib/fronhaSwap';
@@ -59,58 +59,13 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
   return (
     <div className="flex flex-col gap-4">
       {fronhaOptions.length > 0 && (
-        <div className="border border-mist rounded-2xl p-5 flex flex-col gap-3">
-          <div>
-            <p className="eyebrow text-clay mb-1">Fronha</p>
-            <p className="text-[13px] text-faint">
-              Esse jogo vem com {fronhaCount === 1 ? 'fronha inclusa' : `${fronhaCount} fronhas inclusas`}. Quer trocar por outra estampa?
-            </p>
-          </div>
-
-          <label className="flex items-center gap-2.5 cursor-pointer">
-            <input
-              type="radio"
-              name="fronha"
-              checked={chosenFronhaId === 'default'}
-              onChange={() => setChosenFronhaId('default')}
-              className="w-4 h-4 accent-clay shrink-0"
-            />
-            <span className="text-[13px] text-ink">Fronha padrão (a que já vem no jogo)</span>
-          </label>
-
-          {fronhaOptions.map(f => {
-            const stock = availableStock(f);
-            const outOfStock = stock < fronhaCount;
-            return (
-              <label
-                key={f.id}
-                className={`flex items-center gap-2.5 ${outOfStock ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <input
-                  type="radio"
-                  name="fronha"
-                  checked={chosenFronhaId === f.id}
-                  disabled={outOfStock}
-                  onChange={() => setChosenFronhaId(f.id)}
-                  className="w-4 h-4 accent-clay shrink-0"
-                />
-                {f.images[0] && (
-                  <div className="relative w-9 h-9 shrink-0 rounded-lg overflow-hidden bg-warm/60">
-                    <Image src={f.images[0]} alt={f.name} fill className="object-cover" sizes="36px" />
-                  </div>
-                )}
-                <span className="text-[13px] text-ink">{f.name}</span>
-                {outOfStock && <span className="text-[11px] text-faint">esgotada</span>}
-              </label>
-            );
-          })}
-
-          {note && (
-            <p className="text-[11px] text-faint">
-              A fronha escolhida fica reservada junto com sua compra.
-            </p>
-          )}
-        </div>
+        <FronhaPicker
+          options={fronhaOptions}
+          fronhaCount={fronhaCount}
+          chosenId={chosenFronhaId}
+          onChoose={setChosenFronhaId}
+          stockOf={availableStock}
+        />
       )}
 
       <BuyBox
@@ -125,6 +80,96 @@ export function JogoDeCamaBuyBox({ product, inventory, pixDiscountThresholdCents
         packageLines={packageLines}
         packageNote={packageNote}
       />
+    </div>
+  );
+}
+
+/** "Par de Fronhas Azul" no solteiro (1 fronha) vira "Fronha Azul". */
+export function fronhaLabel(f: Product, fronhaCount: number): string {
+  const color = f.variants[0]?.colorName?.trim();
+  const generic = /^\s*(par\s+de\s+)?fronhas?\b/i.test(f.name) && !f.name.replace(/^\s*(par\s+de\s+)?fronhas?\b/i, '').trim();
+  // Todas se chamam "Par de Fronhas": a cor é o que diferencia uma da outra.
+  const base = generic && color ? color : f.name.replace(/^\s*(par\s+de\s+)?fronhas?\s*/i, '').trim() || color || f.name;
+  return `${fronhaCount === 1 ? 'Fronha' : 'Fronhas'} ${base}`.trim();
+}
+
+function Swatch({ f, size = 48 }: { f?: Product; size?: number }) {
+  const img = f?.images[0];
+  const hex = f?.variants[0]?.color;
+  return (
+    <span className="relative block shrink-0 overflow-hidden rounded-xl bg-warm" style={{ width: size, height: size }}>
+      {img ? <Image src={img} alt="" fill className="object-cover" sizes={`${size}px`} />
+        : hex ? <span className="absolute inset-0" style={{ background: hex }} />
+        : <svg aria-hidden="true" viewBox="0 0 24 24" className="absolute inset-0 m-auto w-1/2 h-1/2 text-mid" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="7" width="18" height="10" rx="3" /><path d="M7 7v10M17 7v10" strokeOpacity=".4" /></svg>}
+    </span>
+  );
+}
+
+/**
+ * Troca da fronha em uma linha: mostra a escolhida e, ao tocar em
+ * "Trocar", abre uma faixa de miniaturas. Antes era uma lista com um
+ * rádio por fronha, todas com o mesmo nome, ocupando meia tela.
+ */
+function FronhaPicker({ options, fronhaCount, chosenId, onChoose, stockOf }: {
+  options: Product[]; fronhaCount: number; chosenId: string;
+  onChoose: (id: string) => void; stockOf: (f: Product) => number;
+}) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  const chosen = options.find(o => o.id === chosenId);
+  const included = fronhaCount === 1 ? '1 fronha' : `${fronhaCount} fronhas`;
+
+  return (
+    <div className="rounded-2xl border border-mist bg-paper">
+      <div className="flex items-center gap-3 px-3.5 py-3">
+        <Swatch f={chosen} size={40} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-faint">{fronhaCount === 1 ? 'Fronha do jogo' : `${included} do jogo`}</p>
+          <p className="text-[13.5px] text-ink truncate">{chosen ? fronhaLabel(chosen, fronhaCount) : 'Padrão do jogo'}</p>
+        </div>
+        <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={listId}
+          className="shrink-0 h-9 px-3.5 rounded-full border border-mist-d text-[12.5px] font-medium text-ink hover:border-ink transition-colors">
+          {open ? 'Fechar' : 'Trocar estampa'}
+        </button>
+      </div>
+
+      {open && (
+        <div id={listId} className="border-t border-mist px-3.5 pt-3 pb-3.5 animate-measure-in">
+          <div role="radiogroup" aria-label="Estampa da fronha" className="-mx-3.5 px-3.5 overflow-x-auto scrollbar-none sm:mx-0 sm:px-0 sm:overflow-visible">
+            <div className="flex gap-2.5 w-max pb-1 sm:w-auto sm:flex-wrap">
+              {[undefined, ...options].map(f => {
+                const id = f?.id ?? 'default';
+                const on = chosenId === id;
+                const out = !!f && stockOf(f) < fronhaCount;
+                const label = f ? fronhaLabel(f, fronhaCount) : 'Padrão do jogo';
+                return (
+                  <button key={id} type="button" role="radio" aria-checked={on} disabled={out}
+                    aria-label={out ? `${label}, esgotada` : label}
+                    onClick={() => { onChoose(id); }}
+                    className={`group flex w-[4.25rem] flex-col items-center gap-1.5 text-center ${out ? 'opacity-35 cursor-not-allowed' : ''}`}>
+                    <span className={`relative rounded-[0.9rem] p-[3px] ring-2 transition-[box-shadow,transform] duration-200 ${on ? 'ring-clay' : 'ring-transparent group-hover:ring-mist-d'}`}>
+                      {f ? <Swatch f={f} size={52} /> : (
+                        <span className="flex items-center justify-center w-[52px] h-[52px] rounded-xl bg-warm text-[10.5px] font-semibold text-mid">Padrão</span>
+                      )}
+                      {on && (
+                        <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-clay text-paper shadow">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+                        </span>
+                      )}
+                    </span>
+                    <span className={`line-clamp-2 text-[10.5px] leading-tight ${on ? 'text-ink font-medium' : 'text-mid'}`}>
+                      {f ? (f.variants[0]?.colorName || label.replace(/^Fronhas?\s*/, '')) : 'do jogo'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-faint">
+            {chosen ? 'A fronha escolhida fica reservada junto com sua compra.' : `Escolha uma estampa para vir no lugar ${fronhaCount === 1 ? 'da fronha' : 'das fronhas'} do jogo, sem custo.`}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
