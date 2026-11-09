@@ -23,7 +23,7 @@ export const CHECKOUT_LOCK_MS = 20 * 60_000;
 export const TOKEN_RE = /^[A-Za-z0-9_-]{22}$/;
 
 export type SharedOp =
-  | { op: 'add'; productId: string; variantId: string }
+  | { op: 'add'; productId: string; variantId: string; swapSku?: string | null; quantity?: number }
   | { op: 'qty'; line: string; quantity: number }
   | { op: 'swap'; line: string; swapSku: string | null };
 
@@ -42,21 +42,46 @@ async function activeProduct(db: Firestore, id: string): Promise<Product | null>
   return p && p.active !== false ? p : null;
 }
 
+/**
+ * Campos da troca de fronha de um jogo de cama: só por uma Fronha ativa
+ * (mesma regra de sanitizeSwaps, que o checkout ainda reaplica).
+ */
+async function swapFields(db: Firestore, main: Product, swapSku: string): Promise<{ note: string; swapSku: string; swapQtyPerUnit: number; swapImage?: string } | { error: string }> {
+  if (main.category !== 'Jogos de cama') return { error: 'Esse item não tem troca de fronha.' };
+  const [fid, vid] = swapSku.split('_');
+  const fronha = await activeProduct(db, fid ?? '');
+  if (fronha?.category !== 'Fronhas' || !fronha.variants?.some(v => v.id === vid)) return { error: 'Fronha indisponível.' };
+  const size = { fronhaCount: main.fronhaCount, variantSize: main.variants?.[0]?.size };
+  return {
+    note: `Fronha trocada: ${fronhaDisplayName({ name: fronha.name, colorName: fronha.variants?.[0]?.colorName }, getFronhaCount(size))}`,
+    swapSku,
+    swapQtyPerUnit: swapPairsPerUnit(size),
+    ...(fronha.images?.[0] ? { swapImage: fronha.images[0] } : {}),
+  };
+}
+
 /** Aplica uma alteração e devolve os itens novos e o texto do aviso. */
 export async function applySharedOp(db: Firestore, items: CartItem[], o: SharedOp): Promise<{ items: CartItem[]; text: string } | { error: string }> {
   if (o.op === 'add') {
     const p = await activeProduct(db, o.productId);
     const variant = p?.variants?.find(v => v.id === o.variantId);
     if (!p || !variant) return { error: 'Produto indisponível.' };
+    const add = o.quantity ?? 1;
+    if (!Number.isInteger(add) || add < 1 || add > MAX_SHARED_QTY) return { error: 'Quantidade inválida.' };
     const sku = `${p.id}_${variant.id}`;
-    const existing = items.find(i => lineKey(i) === sku);
+    // Jogo de cama já com a fronha trocada (escolhida antes de adicionar).
+    const swap = o.swapSku ? await swapFields(db, p, o.swapSku) : null;
+    if (swap && 'error' in swap) return swap;
+    const key = swap ? lineKey({ sku, note: swap.note }) : sku;
+    const existing = items.find(i => lineKey(i) === key);
     if (!existing && items.length >= MAX_SHARED_LINES) return { error: 'O carrinho já está cheio.' };
-    const qty = (existing?.quantity ?? 0) + 1;
+    const qty = (existing?.quantity ?? 0) + add;
     if (qty > Math.min(MAX_SHARED_QTY, await available(db, sku))) return { error: 'Sem mais unidades em estoque.' };
-    const item: CartItem = { productId: p.id, productName: p.name, sku, variant, quantity: qty, unitPrice: p.price, image: p.images?.[0] ?? '' };
+    if (swap && qty * swap.swapQtyPerUnit > await available(db, swap.swapSku)) return { error: 'Essa fronha está sem estoque.' };
+    const item: CartItem = { productId: p.id, productName: p.name, sku, variant, quantity: qty, unitPrice: p.price, image: p.images?.[0] ?? '', ...(swap ?? {}) };
     return {
-      items: existing ? items.map(i => (lineKey(i) === sku ? { ...i, quantity: qty } : i)) : [...items, item],
-      text: `adicionou ${p.name}`,
+      items: existing ? items.map(i => (lineKey(i) === key ? { ...i, quantity: qty } : i)) : [...items, item],
+      text: `adicionou ${p.name}${swap ? ' com outra fronha' : ''}`,
     };
   }
 
@@ -73,19 +98,18 @@ export async function applySharedOp(db: Firestore, items: CartItem[], o: SharedO
   // Troca de fronha: só em Jogo de Cama, por uma Fronha ativa (mesma regra
   // de sanitizeSwaps, que o checkout ainda reaplica).
   const main = await activeProduct(db, current.productId);
-  if (main?.category !== 'Jogos de cama') return { error: 'Esse item não tem troca de fronha.' };
+  if (!main) return { error: 'Esse item não tem troca de fronha.' };
   const { swapSku: _s, swapQtyPerUnit: _q, note: _n, swapImage: _i, ...base } = current;
   let next: CartItem = base;
   let text = `voltou a fronha padrão de ${current.productName}`;
   if (o.swapSku) {
-    const [fid, vid] = o.swapSku.split('_');
-    const fronha = await activeProduct(db, fid ?? '');
-    if (fronha?.category !== 'Fronhas' || !fronha.variants?.some(v => v.id === vid)) return { error: 'Fronha indisponível.' };
-    const perUnit = swapPairsPerUnit({ fronhaCount: main.fronhaCount, variantSize: main.variants?.[0]?.size });
-    if (current.quantity * perUnit > await available(db, o.swapSku)) return { error: 'Essa fronha está sem estoque.' };
-    const count = getFronhaCount({ fronhaCount: main.fronhaCount, variantSize: main.variants?.[0]?.size });
-    next = { ...base, note: `Fronha trocada: ${fronhaDisplayName({ name: fronha.name, colorName: fronha.variants?.[0]?.colorName }, count)}`, swapSku: o.swapSku, swapQtyPerUnit: perUnit, ...(fronha.images?.[0] ? { swapImage: fronha.images[0] } : {}) };
+    const swap = await swapFields(db, main, o.swapSku);
+    if ('error' in swap) return swap;
+    if (current.quantity * swap.swapQtyPerUnit > await available(db, o.swapSku)) return { error: 'Essa fronha está sem estoque.' };
+    next = { ...base, ...swap };
     text = `trocou a fronha de ${current.productName}`;
+  } else if (main.category !== 'Jogos de cama') {
+    return { error: 'Esse item não tem troca de fronha.' };
   }
   // Se já existe uma linha igual, junta as quantidades.
   const twin = items.find(i => i !== current && lineKey(i) === lineKey(next));
