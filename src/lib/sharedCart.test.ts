@@ -109,6 +109,29 @@ describe('applySharedOp: swap', () => {
   });
 });
 
+describe('applySharedOp: add já com fronha e quantidade', () => {
+  it('jogo entra com a fronha trocada e a quantidade escolhida', async () => {
+    const r = await applySharedOp(fakeDb(base), [], { op: 'add', productId: 'jogo', variantId: 'v1', swapSku: 'fronha_f1', quantity: 2 });
+    expect(r).toEqual({
+      items: [expect.objectContaining({ sku: 'jogo_v1', quantity: 2, swapSku: 'fronha_f1', swapQtyPerUnit: 1, note: 'Fronha trocada: Fronhas Rosa' })],
+      text: 'adicionou Jogo Queen com outra fronha',
+    });
+  });
+
+  it('não mistura com a linha do mesmo jogo com a fronha padrão', async () => {
+    const padrao = item({ productId: 'jogo', productName: 'Jogo Queen', sku: 'jogo_v1', quantity: 1 });
+    const r = await applySharedOp(fakeDb(base), [padrao], { op: 'add', productId: 'jogo', variantId: 'v1', swapSku: 'fronha_f1' });
+    expect('items' in r && r.items.map(i => [lineKey(i), i.quantity])).toEqual([['jogo_v1', 1], ['jogo_v1::Fronha trocada: Fronhas Rosa', 1]]);
+  });
+
+  it('confere o estoque da fronha e recusa troca fora de jogo', async () => {
+    const db = fakeDb({ ...base, inventory: { ...stock, fronha_f1: { quantity: 1 } } });
+    expect(await applySharedOp(db, [], { op: 'add', productId: 'jogo', variantId: 'v1', swapSku: 'fronha_f1', quantity: 2 })).toEqual({ error: 'Essa fronha está sem estoque.' });
+    expect(await applySharedOp(fakeDb(base), [], { op: 'add', productId: 'lencol', variantId: 'v1', swapSku: 'fronha_f1' })).toEqual({ error: 'Esse item não tem troca de fronha.' });
+    expect(await applySharedOp(fakeDb(base), [], { op: 'add', productId: 'lencol', variantId: 'v1', quantity: 0 })).toEqual({ error: 'Quantidade inválida.' });
+  });
+});
+
 describe('TOKEN_RE', () => {
   it('aceita só tokens de 22 caracteres url-safe', () => {
     expect(TOKEN_RE.test('abcdefghij_-KLMNOPQRST')).toBe(true);

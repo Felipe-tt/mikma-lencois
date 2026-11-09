@@ -9,6 +9,11 @@ import { variantLabel } from '@/lib/variantLabel';
 import { lineKey, VIEWER_TTL_MS } from '@/lib/sharedCart';
 import type { Cart, CartItem, Product } from '@/types';
 import { ProductSheet } from '@/components/cart/ProductSheet';
+import { FronhaChooser, fronhaOptionsFrom } from '@/components/product/FronhaChooser';
+import { SwapNote } from '@/components/cart/SwapNote';
+import { getFronhaCount, swapPairsPerUnit } from '@/lib/fronhaSwap';
+import { linesForProduct, packageContents, parseTable, type PackageLine } from '@/lib/packageContents';
+import { withStoreDefaults } from '@/lib/store-settings';
 import { Avatar, ChatBox, LikeButton, OnlineStack, useTabBadge } from '@/components/cart/montarUi';
 
 type Status = 'loading' | 'ok' | 'off';
@@ -44,6 +49,8 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [threshold, setThreshold] = useState(0);
+  // Tabela de medidas das Configurações (o que vem no pacote de cada tamanho).
+  const [sizeTable, setSizeTable] = useState<{ lines: PackageLine[]; note: string }>({ lines: [], note: '' });
   // Produto que acabou de entrar pelo + do card (mostra o ✓ por um instante).
   const [tab, setTab] = useState<Tab>('carrinho');
   const [justAdded, setJustAdded] = useState<string | null>(null);
@@ -75,6 +82,12 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
       .catch(() => {});
     fetch('/api/settings/public').then(r => r.json())
       .then(d => setThreshold(Math.max(0, Number(d.freeShippingThresholdCents) || 0))).catch(() => {});
+    getDoc(doc(db, 'settings', 'store')).then(snap => {
+      // Com os padrões, como na página do produto (tabela nunca editada = a padrão).
+      const d = withStoreDefaults(snap.data());
+      const t = parseTable(d.sizeGuideColumns, d.sizeGuideRows);
+      setSizeTable({ lines: packageContents(t.columns, t.rows), note: d.sizeGuideNote ?? '' });
+    }).catch(() => {});
     const t = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(t);
   }, []);
@@ -160,6 +173,13 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
 
   const byId = useMemo(() => new Map(catalog.map(p => [p.id, p])), [catalog]);
   const fronhas = useMemo(() => catalog.filter(p => p.category === 'Fronhas'), [catalog]);
+  // Estoque das fronhas avulsas, para a troca no item do carrinho.
+  const [fronhaStock, setFronhaStock] = useState<Record<string, number>>({});
+  const fronhaKey = fronhas.flatMap(f => f.variants.slice(0, 1).map(v => `${f.id}_${v.id}`)).slice(0, 30).join(',');
+  useEffect(() => {
+    if (!fronhaKey) return;
+    fetch(`/api/stock?skus=${encodeURIComponent(fronhaKey)}`).then(r => (r.ok ? r.json() : {})).then(setFronhaStock).catch(() => {});
+  }, [fronhaKey, skuKey]);
   const categories = useMemo(() => [...new Set(catalog.map(p => p.category))], [catalog]);
   const shown = useMemo(() => catalog.filter(p =>
     (!category || p.category === category) && (!search.trim() || fold(p.name).includes(fold(search.trim())))), [catalog, category, search]);
@@ -341,7 +361,7 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                       </div>
                       <span className="shrink-0 text-[13px] font-semibold text-ink tabular-nums">{formatCurrency(item.unitPrice * item.quantity)}</span>
                     </div>
-                    {item.note && <p className="text-[11px] text-clay mt-0.5 truncate">{item.note}</p>}
+                    {item.note && !(isJogo && fronhas.length > 0) && <SwapNote note={item.note} image={item.swapImage} small />}
                     {gone
                       ? <p className="text-[11px] font-semibold text-red-700 mt-0.5">Esgotado: tire ou troque por outro</p>
                       : left !== undefined && left <= 3 && <p className="text-[11px] font-semibold text-amber-700 mt-0.5">Só restam {Math.floor(left)}</p>}
@@ -360,19 +380,20 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
                       </div>
                       <LikeButton names={share?.likes?.[item.sku] ?? []} me={name} onToggle={() => send(`like:${item.sku}`, { op: 'like', sku: item.sku })} />
                     </div>
-                    {isJogo && fronhas.length > 0 && (
-                      <label className="mt-2 flex items-center gap-2 text-[11px] text-mid">
-                        <span className="shrink-0">Fronha</span>
-                        <select value={item.swapSku ?? ''} disabled={busy === key || locked}
-                          onChange={e => send(key, { op: 'swap', line: key, swapSku: e.target.value || null })}
-                          className="min-w-0 flex-1 h-9 rounded-full border border-mist bg-paper px-3 text-[12px] text-ink">
-                          <option value="">A que vem no jogo</option>
-                          {fronhas.flatMap(f => f.variants.map(v => (
-                            <option key={`${f.id}_${v.id}`} value={`${f.id}_${v.id}`}>{f.name} · {variantLabel({ color: v.color, colorName: v.colorName })}</option>
-                          )))}
-                        </select>
-                      </label>
-                    )}
+                    {isJogo && fronhas.length > 0 && product && (() => {
+                      const size = { fronhaCount: product.fronhaCount, variantSize: product.variants[0]?.size };
+                      // A fronha precisa cobrir todos os jogos da linha (mesma conta do servidor).
+                      const perUnit = swapPairsPerUnit(size);
+                      const options = fronhaOptionsFrom(fronhas, sku => (fronhaStock[sku] ?? 99) - (item.quantity - 1) * perUnit, perUnit);
+                      return (
+                        <div className="mt-2.5">
+                          <FronhaChooser compact options={options} value={item.swapSku ?? null}
+                            fronhaCount={getFronhaCount(size)} defaultImage={product.images?.[0]}
+                            disabled={busy === key || locked}
+                            onChange={async sku => { await send(key, { op: 'swap', line: key, swapSku: sku }); }} />
+                        </div>
+                      );
+                    })()}
                   </div>
                 </li>
               );
@@ -525,7 +546,10 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
 
       {picking && (
         <ProductSheet product={picking} onClose={() => setPicking(null)}
-          onAdd={variantId => post({ op: 'add', productId: picking.id, variantId })} />
+          fronhas={fronhas}
+          packageLines={linesForProduct(sizeTable.lines, { category: picking.category, sizes: picking.variants.map(v => v.size), fronhaCount: picking.fronhaCount })}
+          packageNote={sizeTable.note}
+          onAdd={(variantId, opts) => post({ op: 'add', productId: picking.id, variantId, ...(opts.swapSku ? { swapSku: opts.swapSku } : {}), ...(opts.quantity > 1 ? { quantity: opts.quantity } : {}) })} />
       )}
     </div>
   );

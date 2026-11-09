@@ -15,7 +15,7 @@ const schema = z.object({
     z.object({ op: z.literal('ping') }),
     z.object({ op: z.literal('like'), sku: id }),
     z.object({ op: z.literal('msg'), text: z.string().trim().min(1).max(CHAT_TEXT_MAX) }),
-    z.object({ op: z.literal('add'), productId: id, variantId: id }),
+    z.object({ op: z.literal('add'), productId: id, variantId: id, swapSku: id.nullable().optional(), quantity: z.number().int().min(1).max(20).optional() }),
     z.object({ op: z.literal('qty'), line: z.string().min(1).max(300), quantity: z.number().int() }),
     z.object({ op: z.literal('swap'), line: z.string().min(1).max(300), swapSku: id.nullable() }),
   ]),
