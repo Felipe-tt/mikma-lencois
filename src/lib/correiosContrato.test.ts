@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { parseReais, quoteCorreiosContrato, resetCorreiosToken } from './correiosContrato';
+import { checkCorreiosContrato, parseReais, quoteCorreiosContrato, resetCorreiosToken } from './correiosContrato';
 
 const pkg = { weightKg: 1.5, heightCm: 20, widthCm: 40, lengthCm: 50 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -65,5 +65,60 @@ describe('quoteCorreiosContrato', () => {
     }));
     const out = await quoteCorreiosContrato('89042300', '69005000', pkg);
     expect(out.map(o => o.carrier)).toEqual(['correios_pac']);
+  });
+});
+
+describe('checkCorreiosContrato (monitor do site publicado)', () => {
+  const tokenOk = () => json({ token: 't', expiraEm: '2099-01-01T10:00:00', cartaoPostagem: { contrato: '9912490489', dr: 68 } }, 201);
+  const quotes = (url: string) => (url.includes('/preco/') ? json({ pcFinal: url.includes('03298') ? '24,07' : '37,69' }) : json({ prazoEntrega: 5 }));
+
+  beforeEach(() => {
+    resetCorreiosToken();
+    vi.stubEnv('CORREIOS_CWS', 'loja:codigo');
+    vi.stubEnv('CORREIOS_CARTAO', '0075520150');
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  it('sem o secret ou o cartão, avisa que não está configurado', async () => {
+    vi.stubEnv('CORREIOS_CARTAO', '');
+    const f = vi.fn();
+    vi.stubGlobal('fetch', f);
+    expect(await checkCorreiosContrato('89042300', '01310100', pkg)).toEqual({ configured: false, token: false, pacCents: 0, sedexCents: 0 });
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it('com tudo certo, devolve o preço de PAC e SEDEX', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => (url.includes('/token/') ? tokenOk() : quotes(url))));
+    expect(await checkCorreiosContrato('89042300', '01310100', pkg)).toEqual({ configured: true, token: true, pacCents: 2407, sedexCents: 3769 });
+  });
+
+  it('gera um token novo a cada conferência, mesmo com um guardado', async () => {
+    const f = vi.fn(async (url: string) => (url.includes('/token/') ? tokenOk() : quotes(url)));
+    vi.stubGlobal('fetch', f);
+    await quoteCorreiosContrato('89042300', '01310100', pkg);
+    await checkCorreiosContrato('89042300', '01310100', pkg);
+    expect(f.mock.calls.filter(c => String(c[0]).includes('/token/'))).toHaveLength(2);
+  });
+
+  it('código recusado: avisa, e o token que já estava em uso continua valendo', async () => {
+    let refuse = false;
+    const f = vi.fn(async (url: string) => {
+      if (url.includes('/token/')) return refuse ? json({}, 401) : tokenOk();
+      return quotes(url);
+    });
+    vi.stubGlobal('fetch', f);
+    await quoteCorreiosContrato('89042300', '01310100', pkg);
+    refuse = true;
+    expect(await checkCorreiosContrato('89042300', '01310100', pkg)).toEqual({ configured: true, token: false, pacCents: 0, sedexCents: 0 });
+    // Cotação de cliente logo depois: sai com o token guardado, sem pedir outro.
+    const before = f.mock.calls.length;
+    expect((await quoteCorreiosContrato('89042300', '01310100', pkg)).map(o => o.priceCents)).toEqual([2407, 3769]);
+    expect(f.mock.calls.slice(before).some(c => String(c[0]).includes('/token/'))).toBe(false);
+  });
+
+  it('token certo mas cotação recusada: preço zerado', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => (url.includes('/token/') ? tokenOk() : json({ msgs: ['erro'] }, 400))));
+    expect(await checkCorreiosContrato('89042300', '01310100', pkg)).toEqual({ configured: true, token: true, pacCents: 0, sedexCents: 0 });
   });
 });

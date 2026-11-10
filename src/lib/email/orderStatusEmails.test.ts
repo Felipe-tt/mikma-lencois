@@ -56,6 +56,19 @@ describe('conteúdo', () => {
     expect(html).toContain('Rastrear envio');
     expect(html).not.toContain('Rastrear na');
   });
+  it.each([['correios_pac', 'Correios PAC'], ['correios_sedex', 'Correios SEDEX']])('despacho por %s leva o código e o link de rastreio dos Correios', (carrier, label) => {
+    const order = {
+      ...base, userId: 'u', status: 'shipped',
+      payment: { method: 'pix', txId: 't' },
+      delivery: { carrier, trackingCode: 'AB123456789BR', estimatedDays: 5 },
+    } as unknown as Order;
+    const { subject, html, text } = buildShipped(order, 'Ana', new Date('2026-10-16T12:00:00'));
+    expect(subject).toContain('despachado');
+    expect(html).toContain(`Código de rastreio · ${label}`);
+    expect(html).toContain('AB123456789BR');
+    expect(html).toContain('https://rastreamento.correios.com.br/app/index.php?objetos=AB123456789BR');
+    expect(text).toContain('Rastreio: AB123456789BR');
+  });
 });
 
 describe('addBusinessDays', () => {

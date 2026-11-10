@@ -1,26 +1,50 @@
-name: Correios · acesso à API do contrato
+name: Correios · contrato e frete do site
 
-# Dá ao site (App Hosting) acesso ao secret CORREIOS_CWS ("login:codigo" da
-# API dos Correios, criado à mão no Secret Manager) e testa o acesso: token
-# pelo cartão de postagem e cotação de PAC e SEDEX do contrato. Só resultado
-# sai no log (repositório público), nunca o login ou o código.
+# Garante que o frete pelo contrato dos Correios continua funcionando. Roda
+# sozinho depois de cada deploy e todo dia de manhã, e confere duas coisas:
+#
+# 1. O contrato na API dos Correios: token pelo cartão de postagem e cotação
+#    de PAC e SEDEX, com o secret CORREIOS_CWS ("login:codigo", criado à mão
+#    no Secret Manager).
+# 2. O site publicado: o servidor no ar consegue gerar o token e cotar pelo
+#    contrato (/api/cron/health?correios=1). Depois de um deploy, espera o
+#    App Hosting terminar de trocar a versão antes de conferir.
+#
+# Se o código de acesso for regerado ou o contrato vencer, o site cai no
+# preço do Melhor Envio sem aviso nenhum. Aqui a rotina fica vermelha e abre
+# um aviso nas Issues (chega por e-mail); quando volta ao normal, fecha.
+# Só resultado sai no log (repositório público), nunca o login ou o código.
 
 on:
+  workflow_run:
+    workflows: ['Deploy · Mikma Lençóis']
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: '17 11 * * *' # 08:17 em Brasília
   workflow_dispatch:
     inputs:
       permissao:
-        description: 'Dar ao site acesso ao secret CORREIOS_CWS'
+        description: 'Dar ao site acesso ao secret CORREIOS_CWS (só se o secret for recriado)'
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
+  issues: write
   id-token: write # identidade federada no Google Cloud
+
+concurrency:
+  group: correios-contrato
+  cancel-in-progress: false
 
 jobs:
   correios:
+    name: Correios
+    # Deploy que falhou não troca a versão do site: nada novo para conferir.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 45
     env:
       PROJECT_ID: mikma-lencois
     steps:
@@ -35,6 +59,7 @@ jobs:
             nodejs.org:443
             *.googleapis.com:443
             api.correios.com.br:443
+            mikma.com.br:443
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -55,16 +80,73 @@ jobs:
       # Mesmas permissões de um secret que o site já lê (viewer e
       # secretVersionManager da conta do App Hosting).
       - name: Acesso do site ao secret
-        if: inputs.permissao
+        if: github.event_name == 'workflow_dispatch' && inputs.permissao
         run: |
           gcloud secrets get-iam-policy ABACATEPAY_API_KEY --format=json | jq 'del(.etag)' > /tmp/policy.json
           gcloud secrets set-iam-policy CORREIOS_CWS /tmp/policy.json >/dev/null && echo "permissões copiadas"
 
-      - name: Testar o acesso à API
+      - name: Conferir o contrato na API dos Correios
+        id: contrato
         run: |
-          set -o pipefail
-          valor=$(gcloud secrets versions access latest --secret=CORREIOS_CWS)
+          if ! valor=$(gcloud secrets versions access latest --secret=CORREIOS_CWS 2>/dev/null) || [ -z "$valor" ]; then
+            echo "Não deu para ler o secret CORREIOS_CWS."
+            echo "verdict=fail" >> "$GITHUB_OUTPUT"
+            echo "detail=não deu para ler o secret CORREIOS_CWS no Secret Manager" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           echo "::add-mask::$valor"
           echo "::add-mask::${valor#*:}"
           echo "::add-mask::${valor%%:*}"
-          CORREIOS_CWS="$valor" CARTAO=0075520150 CONTRATO=9912490489 node scripts/correios-cws-teste.mjs
+          CORREIOS_CWS="$valor" CARTAO=0075520150 CONTRATO=9912490489 node scripts/correios-cws-teste.mjs || true
+
+      # O workflow de deploy termina antes de o App Hosting trocar a versão.
+      - name: Esperar a versão nova ficar no ar
+        if: github.event_name == 'workflow_run'
+        env:
+          SINCE: ${{ github.event.workflow_run.created_at }}
+        run: |
+          export ACCESS_TOKEN="$(gcloud auth print-access-token)"
+          node scripts/apphosting-wait-rollout.mjs
+
+      - name: Conferir o frete no site publicado
+        id: site
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scripts/correios-site-check.mjs || true
+
+      - name: Avisar nas Issues
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONTRATO: ${{ steps.contrato.outputs.verdict }}
+          CONTRATO_DETALHE: ${{ steps.contrato.outputs.detail }}
+          SITE: ${{ steps.site.outputs.verdict }}
+          SITE_DETALHE: ${{ steps.site.outputs.detail }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          label=correios-contrato
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label "$label" --state open --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ "$CONTRATO" = "fail" ] || [ "$SITE" = "fail" ]; then
+            body="O frete pelo contrato dos Correios **não está funcionando**. O site continua vendendo, com o preço do Melhor Envio no lugar."
+            if [ "$CONTRATO" = "fail" ]; then body="$body"$'\n\n'"- Contrato na API dos Correios: $CONTRATO_DETALHE."; fi
+            if [ "$SITE" = "fail" ]; then body="$body"$'\n\n'"- Site publicado: $SITE_DETALHE."; fi
+            body="$body"$'\n\n'"Se o código de acesso foi regerado no CWS, crie uma versão nova do secret \`CORREIOS_CWS\` no Secret Manager, no formato \`login:codigo\`."
+            body="$body"$'\n\n'"Detalhes: $RUN_URL"
+            if [ -n "$open" ]; then
+              gh issue comment "$open" --repo "$GITHUB_REPOSITORY" --body "$body"
+            else
+              gh label create "$label" --repo "$GITHUB_REPOSITORY" --color D93F0B --description "Frete pelo contrato dos Correios falhando (monitor automático)" 2>/dev/null || true
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "Frete pelo contrato dos Correios com falha" --label "$label" --body "$body"
+            fi
+          elif [ "$CONTRATO" = "ok" ] && [ "$SITE" = "ok" ] && [ -n "$open" ]; then
+            gh issue close "$open" --repo "$GITHUB_REPOSITORY" --comment "Voltou ao normal: $SITE_DETALHE. Detalhes: $RUN_URL"
+          fi
+
+      - name: Resultado
+        if: ${{ !cancelled() }}
+        env:
+          CONTRATO: ${{ steps.contrato.outputs.verdict }}
+          SITE: ${{ steps.site.outputs.verdict }}
+        run: |
+          echo "contrato: ${CONTRATO:-sem resultado} · site: ${SITE:-sem resultado}"
+          if [ "$CONTRATO" != "ok" ] || [ "$SITE" = "fail" ]; then exit 1; fi

@@ -1,9 +1,12 @@
 /**
  * Carregado no servidor Next dos testes (NODE_OPTIONS=--import): desvia as
  * chamadas externas para simuladores locais. A AbacatePay vai para o
- * simulador (e2e/mocks/abacatepay-server.mjs); Uber e roteamento respondem
- * vazio, para o teste não depender de serviço de terceiros.
+ * simulador (e2e/mocks/abacatepay-server.mjs); os Correios e o Melhor Envio
+ * respondem daqui mesmo; Uber, roteamento e rastreio respondem vazio, para
+ * o teste não depender de serviço de terceiros.
  */
+import { correiosMock } from './correios.mjs';
+import { melhorEnvioMock } from './melhorenvio.mjs';
 const original = globalThis.fetch;
 const ABACATE = process.env.E2E_ABACATEPAY_URL || 'http://127.0.0.1:4010';
 
@@ -12,7 +15,9 @@ globalThis.fetch = async (input, init) => {
   if (url.startsWith('https://api.abacatepay.com/')) {
     return original(url.replace('https://api.abacatepay.com', ABACATE), init);
   }
-  if (/^https:\/\/(auth\.uber\.com|sandbox-api\.uber\.com|api\.uber\.com|routing\.openstreetmap\.de)\//.test(url)) {
+  if (url.startsWith('https://api.correios.com.br/')) return correiosMock(url, init);
+  if (url.startsWith('https://melhorenvio.com.br/')) return melhorEnvioMock(url, init);
+  if (/^https:\/\/(api\.linketrack\.com|auth\.uber\.com|sandbox-api\.uber\.com|api\.uber\.com|routing\.openstreetmap\.de)\//.test(url)) {
     return new Response(JSON.stringify({ error: 'indisponível nos testes' }), { status: 503, headers: { 'content-type': 'application/json' } });
   }
   return original(input, init);

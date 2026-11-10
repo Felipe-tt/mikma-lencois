@@ -904,8 +904,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                 </p>
               ) : isCorreiosCarrier ? (
                 <p className="text-[11px] text-faint">
-                  Poste na agência dos Correios e cole aqui o código de rastreio (formato AA123456789BR)
-                  pra confirmar o despacho.
+                  Gere a etiqueta no Portal Postal, peça a coleta e cole aqui o código de rastreio
+                  (formato AA123456789BR) pra confirmar o despacho.
                 </p>
               ) : isManualCarrier ? (
                 <p className="text-[11px] text-faint">

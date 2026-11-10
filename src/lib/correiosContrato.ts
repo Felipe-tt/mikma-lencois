@@ -119,3 +119,18 @@ export async function quoteCorreiosContrato(fromCep: string, toCep: string, pkg:
   }));
   return results.filter(o => o !== null);
 }
+
+/**
+ * Para o monitor (/api/cron/health?correios=1): o servidor publicado consegue
+ * gerar token e cotar PAC e SEDEX pelo contrato? Gera um token novo (prova
+ * que a credencial vale agora) sem descartar o que está em uso se falhar.
+ */
+export async function checkCorreiosContrato(fromCep: string, toCep: string, pkg: PackageDimensions): Promise<{ configured: boolean; token: boolean; pacCents: number; sedexCents: number }> {
+  if (!correiosContratoConfigured()) return { configured: false, token: false, pacCents: 0, sedexCents: 0 };
+  const fresh = await fetchToken();
+  if (!fresh) return { configured: true, token: false, pacCents: 0, sedexCents: 0 };
+  cached = fresh;
+  const options = await quoteCorreiosContrato(fromCep, toCep, pkg);
+  const cents = (carrier: string) => options.find(o => o.carrier === carrier)?.priceCents ?? 0;
+  return { configured: true, token: true, pacCents: cents('correios_pac'), sedexCents: cents('correios_sedex') };
+}

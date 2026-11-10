@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { adminDb, getAdminAppCheck } from '@/lib/firebase/admin';
 import { envPrivateKey, signRsaSha256Hex } from '@/lib/firebase/signer';
+import { checkCorreiosContrato } from '@/lib/correiosContrato';
+import { packageFor } from '@/lib/shipping-pricing';
 
 /**
  * GET /api/cron/health (com x-cron-secret): saúde do servidor para o
@@ -15,6 +17,11 @@ import { envPrivateKey, signRsaSha256Hex } from '@/lib/firebase/signer';
  *
  * `appCheck`: o servidor consegue emitir token do App Check (provedor
  * próprio, src/app/api/app-check). Só informa, não conta para o `ok`.
+ *
+ * `correios`: só com ?correios=1 (monitor correios-cws.yml). O servidor gera
+ * um token e cota PAC e SEDEX pelo contrato, da loja até São Paulo, com um
+ * pacote de 1,5 kg. Só informa, não conta para o `ok`: Correios fora do ar
+ * não é motivo para voltar o deploy (o Melhor Envio cobre o frete).
  */
 const REQUIRED_ENV = ['ABACATEPAY_API_KEY', 'ABACATEPAY_WEBHOOK_SECRET', 'CRON_SECRET', 'STAFF_SESSION_SECRET'];
 
@@ -26,12 +33,14 @@ export async function GET(req: NextRequest) {
   }
   const started = Date.now();
   let firestore = false;
+  let originCep = '';
   try {
-    await Promise.race([
+    const store = await Promise.race([
       adminDb.collection('settings').doc('store').get(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8_000)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8_000)),
     ]);
     firestore = true;
+    originCep = String(store.data()?.originCep ?? '');
   } catch { /* firestore = false */ }
   let signing: boolean | null = null;
   if (process.env.K_SERVICE) {
@@ -52,10 +61,19 @@ export async function GET(req: NextRequest) {
       appCheck = false;
     }
   }
+  let correios: Awaited<ReturnType<typeof checkCorreiosContrato>> | null = null;
+  if (req.nextUrl.searchParams.get('correios') === '1') {
+    try {
+      correios = await checkCorreiosContrato(originCep, '01310100', packageFor(1.5));
+    } catch (err) {
+      console.error('[health] cotação pelo contrato dos Correios falhou', err);
+      correios = { configured: true, token: false, pacCents: 0, sedexCents: 0 };
+    }
+  }
   const env = Object.fromEntries(REQUIRED_ENV.map(k => [k, !!process.env[k]]));
   const ok = firestore && Object.values(env).every(Boolean) && (signing !== false || !!envPrivateKey());
   return NextResponse.json(
-    { ok, firestore, signing, appCheck, env, version: process.env.NEXT_PUBLIC_BUILD_VERSION ?? '', ms: Date.now() - started },
+    { ok, firestore, signing, appCheck, env, ...(correios ? { correios } : {}), version: process.env.NEXT_PUBLIC_BUILD_VERSION ?? '', ms: Date.now() - started },
     { status: ok ? 200 : 503, headers: { 'Cache-Control': 'no-store' } },
   );
 }
