@@ -113,6 +113,15 @@ env:
   - variable: MELHOR_ENVIO_TOKEN
     secret: MELHOR_ENVIO_TOKEN
     availability: [RUNTIME]
+  # Contrato com os Correios: "login:codigo" do CWS (código de 40
+  # caracteres) e o cartão de postagem. Acesso do backend dado pelo
+  # workflow "Correios · acesso à API do contrato".
+  - variable: CORREIOS_CWS
+    secret: CORREIOS_CWS
+    availability: [RUNTIME]
+  - variable: CORREIOS_CARTAO
+    value: "0075520150"
+    availability: [RUNTIME]
   - variable: RESEND_API_KEY
     secret: RESEND_API_KEY
     availability: [RUNTIME]
