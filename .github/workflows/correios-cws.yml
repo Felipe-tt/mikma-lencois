@@ -1,0 +1,70 @@
+name: Correios · acesso à API do contrato
+
+# Dá ao site (App Hosting) acesso ao secret CORREIOS_CWS ("login:codigo" da
+# API dos Correios, criado à mão no Secret Manager) e testa o acesso: token
+# pelo cartão de postagem e cotação de PAC e SEDEX do contrato. Só resultado
+# sai no log (repositório público), nunca o login ou o código.
+
+on:
+  workflow_dispatch:
+    inputs:
+      permissao:
+        description: 'Dar ao site acesso ao secret CORREIOS_CWS'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # identidade federada no Google Cloud
+
+jobs:
+  correios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PROJECT_ID: mikma-lencois
+    steps:
+      - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+            *.githubusercontent.com:443
+            *.blob.core.windows.net:443
+            nodejs.org:443
+            *.googleapis.com:443
+            api.correios.com.br:443
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+
+      - name: Entrar no Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: mikma-lencois
+          workload_identity_provider: projects/915579306587/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: firebase-adminsdk-fbsvc@mikma-lencois.iam.gserviceaccount.com
+
+      # Mesmas permissões de um secret que o site já lê (viewer e
+      # secretVersionManager da conta do App Hosting).
+      - name: Acesso do site ao secret
+        if: inputs.permissao
+        run: |
+          gcloud secrets get-iam-policy ABACATEPAY_API_KEY --format=json | jq 'del(.etag)' > /tmp/policy.json
+          gcloud secrets set-iam-policy CORREIOS_CWS /tmp/policy.json >/dev/null && echo "permissões copiadas"
+
+      - name: Testar o acesso à API
+        run: |
+          set -o pipefail
+          valor=$(gcloud secrets versions access latest --secret=CORREIOS_CWS)
+          echo "::add-mask::$valor"
+          echo "::add-mask::${valor#*:}"
+          echo "::add-mask::${valor%%:*}"
+          CORREIOS_CWS="$valor" CARTAO=0075520150 CONTRATO=9912490489 node scripts/correios-cws-teste.mjs
