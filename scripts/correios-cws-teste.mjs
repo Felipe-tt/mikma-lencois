@@ -37,7 +37,10 @@ if (!auth.ok || !authBody.token) {
   });
   const plainBody = await plain.json().catch(() => ({}));
   say(`Token só com login e código (sem cartão): HTTP ${plain.status}${plain.ok ? '' : ` ${safe(plainBody.msgs ?? plainBody.message ?? plainBody)}`}`);
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, out.join('\n') + '\n');
+  say('');
+say(falhas.length ? `## Falhou: ${falhas.join(', ')}` : '## Tudo certo: token, preço e prazo do contrato');
+if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, out.join('\n') + '\n');
+if (falhas.length) process.exit(1);
   process.exit(1);
 }
 const token = authBody.token;
@@ -52,6 +55,7 @@ const destinos = { 'São Paulo': '01310100', Manaus: '69005000' };
 const servicos = { 'PAC contrato': '03298', 'SEDEX contrato': '03220' };
 const pacote = { psObjeto: '1500', tpObjeto: '2', comprimento: '30', largura: '25', altura: '10' };
 
+const falhas = [];
 const pacotes = {
   'jogo king, 1,5 kg, 30x25x10 cm': pacote,
   'caixa padrão do site, 1,5 kg, 50x40x20 cm': { ...pacote, comprimento: '50', largura: '40', altura: '20' },
@@ -66,9 +70,14 @@ for (const [cidade, cep] of Object.entries(destinos)) {
     const pb = await p.json().catch(() => ({}));
     const t = await fetch(`${API}/prazo/v1/nacional/${co}?${new URLSearchParams({ cepOrigem: origem, cepDestino: cep })}`, { headers: bearer });
     const tb = await t.json().catch(() => ({}));
+    const reais = Number(String(pb.pcFinal ?? '').replace(/\./g, '').replace(',', '.'));
+    if (!p.ok || !(reais > 0) || !t.ok || !(Number(tb.prazoEntrega) > 0)) falhas.push(`${cidade} · ${nome}`);
     say(`- ${cidade} · ${nome} (${co}): preço HTTP ${p.status} ${pb.pcFinal ?? safe(pb.msgs ?? pb.txErro ?? pb)} · prazo HTTP ${t.status} ${tb.prazoEntrega ?? safe(tb.msgs ?? tb.txErro ?? tb)} dias`);
     if (p.ok && !process.env.MOSTROU) { say(`  campos da resposta de preço: ${Object.keys(pb).join(', ')}`); process.env.MOSTROU = '1'; }
   }
 }
 }
+say('');
+say(falhas.length ? `## Falhou: ${falhas.join(', ')}` : '## Tudo certo: token, preço e prazo do contrato');
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, out.join('\n') + '\n');
+if (falhas.length) process.exit(1);

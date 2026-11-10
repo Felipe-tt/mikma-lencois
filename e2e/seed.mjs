@@ -8,6 +8,9 @@ import { getAuth } from 'firebase-admin/auth';
 export const USERS = {
   cliente: { email: 'cliente@e2e.mikma', password: 'senha-e2e-123', name: 'Maria Souza', role: 'customer' },
   admin: { email: 'admin@e2e.mikma', password: 'senha-e2e-123', name: 'Felipe Admin', role: 'admin' },
+  // Clientes de longe (São Paulo): sem retirada, o frete sai dos Correios.
+  pac: { email: 'pac@e2e.mikma', password: 'senha-e2e-123', name: 'Ana PAC', role: 'customer', address: { cep: '01310100', street: 'Avenida Paulista', number: '1000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
+  sedex: { email: 'sedex@e2e.mikma', password: 'senha-e2e-123', name: 'Bruno SEDEX', role: 'customer', address: { cep: '01310100', street: 'Avenida Paulista', number: '2000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
 };
 
 export async function seed() {
@@ -38,7 +41,7 @@ export async function seed() {
   }
   await db.collection('maintenance').doc('status').set({ active: false });
   await db.collection('settings').doc('store').set({
-    storeName: 'Mikma Lençóis', storeCity: 'Blumenau', storeState: 'SC', storeCep: '89010100', storePhone: '47999990000',
+    storeName: 'Mikma Lençóis', storeCity: 'Blumenau', storeState: 'SC', storeCep: '89010100', storePhone: '47999990000', originCep: '89042300',
     abacatePaySandboxMode: false, pixDiscountThresholdCents: 0,
   }, { merge: true });
 
@@ -50,7 +53,7 @@ export async function seed() {
     await db.collection('users').doc(user.uid).set({
       uid: user.uid, name: u.name, email: u.email, role: u.role, cpf: '52998224725', phone: '47999990000',
       lgpdConsent: { date: new Date().toISOString(), version: '1' }, createdAt: new Date(Date.now() - 30 * 86_400_000).toISOString(),
-      address: { cep: '89010000', street: 'Rua XV de Novembro', number: '100', neighborhood: 'Centro', city: 'Blumenau', state: 'SC' },
+      address: u.address ?? { cep: '89010000', street: 'Rua XV de Novembro', number: '100', neighborhood: 'Centro', city: 'Blumenau', state: 'SC' },
     }, { merge: true });
     await db.collection('carts').doc(user.uid).set({ items: [], couponCode: null, updatedAt: new Date().toISOString() });
     uids[key] = user.uid;

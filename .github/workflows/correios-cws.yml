@@ -4,8 +4,18 @@ name: Correios · acesso à API do contrato
 # API dos Correios, criado à mão no Secret Manager) e testa o acesso: token
 # pelo cartão de postagem e cotação de PAC e SEDEX do contrato. Só resultado
 # sai no log (repositório público), nunca o login ou o código.
+#
+# Roda sozinho depois de cada deploy e todo dia: se o código de acesso for
+# regerado ou o contrato vencer, o site cai no preço do Melhor Envio sem
+# aviso nenhum. Aqui a rotina fica vermelha e o GitHub manda e-mail.
 
 on:
+  workflow_run:
+    workflows: ['Deploy · Mikma Lençóis']
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: '17 11 * * *'
   workflow_dispatch:
     inputs:
       permissao:
@@ -19,6 +29,7 @@ permissions:
 
 jobs:
   correios:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
