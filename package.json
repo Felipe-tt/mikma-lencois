@@ -44,7 +44,7 @@
     "react-dom": "^19.1.0",
     "resend": "^6.37.0",
     "sanitize-html": "^2.17.6",
-    "svix": "^1.98.0",
+    "svix": "^2.9.1",
     "validator": "13.15.35",
     "xsd-schema-validator": "file:vendor/xsd-schema-validator",
     "zod": "^4.6.7"
