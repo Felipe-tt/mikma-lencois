@@ -108,10 +108,14 @@ jobs:
           export ACCESS_TOKEN="$(gcloud auth print-access-token)"
           node scripts/apphosting-wait-rollout.mjs
 
+      # Depois de um deploy, a versão nova pode levar uns minutos para entrar
+      # no ar: tenta por até ~15 min (versão antiga só dá "sem conclusão").
       - name: Conferir o frete no site publicado
         id: site
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TENTATIVAS: ${{ github.event_name == 'workflow_run' && '20' || '3' }}
+          PAUSA_S: ${{ github.event_name == 'workflow_run' && '45' || '30' }}
         run: node scripts/correios-site-check.mjs || true
 
       - name: Avisar nas Issues
