@@ -1,20 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import { login, prepare, staffLogin } from './helpers';
-
-const app = () => getApps()[0] ?? initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-mikma' });
-
-/** Outro teste já criou a passkey do admin em outro navegador: começa do zero. */
-async function forgetPasskeys(email: string) {
-  // firebase-admin/auth não carrega dentro do Playwright: o uid vem do cadastro.
-  const db = getFirestore(app());
-  const user = await db.collection('users').where('email', '==', email).limit(1).get();
-  const uid = user.docs[0]?.id;
-  if (!uid) return;
-  const snap = await db.collection('passkeys').where('uid', '==', uid).get();
-  await Promise.all(snap.docs.map(d => d.ref.delete()));
-}
+import { forgetPasskeys } from './db';
 
 test.beforeEach(async ({ context }) => { await prepare(context); });
 

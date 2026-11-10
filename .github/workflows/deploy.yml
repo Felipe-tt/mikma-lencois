@@ -118,9 +118,11 @@ jobs:
         run: npx vitest run src/lib/nfe
 
   # ── 1b) Ponta a ponta: compra completa num navegador de verdade ──────────
-  # Sobe a loja contra os emuladores do Firebase e um simulador local da
-  # AbacatePay (e2e/), sem nenhum segredo. Cliente entra, compra com PIX, o
-  # webhook assinado confirma e o pedido aparece pago no painel.
+  # Sobe a loja contra os emuladores do Firebase e simuladores locais da
+  # AbacatePay, dos Correios e do Melhor Envio (e2e/), sem nenhum segredo.
+  # Cliente entra, compra com PIX, o webhook assinado confirma e o pedido
+  # aparece pago no painel. A venda pelos Correios (PAC e SEDEX) vai do frete
+  # do contrato ao despacho com rastreio e à entrega (e2e/tests/correios.spec.ts).
   e2e:
     name: e2e
     # Fixo no 24.04: o ubuntu-latest passou para o 26.04, onde o Playwright

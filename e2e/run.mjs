@@ -13,6 +13,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import { startAbacatePayMock } from './mocks/abacatepay-server.mjs';
 import { CORREIOS_E2E } from './mocks/correios.mjs';
+import { MELHOR_ENVIO_E2E } from './mocks/melhorenvio.mjs';
 import { seed } from './seed.mjs';
 
 const PORT = process.env.E2E_PORT || '3200';
@@ -39,9 +40,11 @@ const env = {
   // Chave de teste (32 bytes) para a criptografia de CPF e telefone.
   PII_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
   NEXT_TELEMETRY_DISABLED: '1',
-  // Contrato dos Correios (API simulada em e2e/mocks/correios.mjs).
+  // Frete como em produção: contrato dos Correios e Melhor Envio, os dois
+  // simulados (e2e/mocks/correios.mjs e e2e/mocks/melhorenvio.mjs).
   CORREIOS_CWS: CORREIOS_E2E.cws,
   CORREIOS_CARTAO: CORREIOS_E2E.cartao,
+  MELHOR_ENVIO_TOKEN: MELHOR_ENVIO_E2E.token,
   E2E_BASE_URL: `http://localhost:${PORT}`,
   // Passkeys: o domínio aceito vem daqui (localhost nos testes).
   NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,

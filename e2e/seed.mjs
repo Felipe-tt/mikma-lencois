@@ -8,9 +8,14 @@ import { getAuth } from 'firebase-admin/auth';
 export const USERS = {
   cliente: { email: 'cliente@e2e.mikma', password: 'senha-e2e-123', name: 'Maria Souza', role: 'customer' },
   admin: { email: 'admin@e2e.mikma', password: 'senha-e2e-123', name: 'Felipe Admin', role: 'admin' },
-  // Clientes de longe (São Paulo): sem retirada, o frete sai dos Correios.
-  pac: { email: 'pac@e2e.mikma', password: 'senha-e2e-123', name: 'Ana PAC', role: 'customer', address: { cep: '01310100', street: 'Avenida Paulista', number: '1000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
-  sedex: { email: 'sedex@e2e.mikma', password: 'senha-e2e-123', name: 'Bruno SEDEX', role: 'customer', address: { cep: '01310100', street: 'Avenida Paulista', number: '2000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
+  // Clientes de São Paulo, um por teste dos Correios (sem retirada na loja,
+  // o frete sai do contrato). CPF próprio: o detector de golpe soma pontos
+  // quando o mesmo CPF aparece em várias contas.
+  pac: { email: 'pac@e2e.mikma', password: 'senha-e2e-123', name: 'Ana Prado', role: 'customer', cpf: '11144477735', address: { cep: '01310100', street: 'Avenida Paulista', number: '1000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
+  sedex: { email: 'sedex@e2e.mikma', password: 'senha-e2e-123', name: 'Bruno Lima', role: 'customer', cpf: '39053344705', address: { cep: '01310100', street: 'Avenida Paulista', number: '2000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
+  cartao: { email: 'cartao@e2e.mikma', password: 'senha-e2e-123', name: 'Davi Nunes', role: 'customer', cpf: '12345678909', address: { cep: '01310100', street: 'Avenida Paulista', number: '3000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
+  // Para este CEP a API dos Correios simulada responde "fora do ar".
+  semCorreios: { email: 'sem-correios@e2e.mikma', password: 'senha-e2e-123', name: 'Carla Reis', role: 'customer', cpf: '93541134780', address: { cep: '04538133', street: 'Avenida Brigadeiro Faria Lima', number: '3477', neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP' } },
 };
 
 export async function seed() {
@@ -45,13 +50,20 @@ export async function seed() {
     abacatePaySandboxMode: false, pixDiscountThresholdCents: 0,
   }, { merge: true });
 
+  // Coordenadas dos CEPs dos testes já no cache: a distância até a loja sai
+  // daqui, sem consultar ViaCEP e Nominatim de verdade.
+  const coords = { '89042300': [-26.8778, -49.0889], '89010000': [-26.9194, -49.0661], '01310100': [-23.5647, -46.6527], '04538133': [-23.5868, -46.6822] };
+  for (const [cep, [lat, lng]] of Object.entries(coords)) {
+    await db.collection('geocache').doc(cep).set({ cep, lat, lng, cachedAt: new Date().toISOString(), expireAt: new Date(Date.now() + 30 * 86_400_000) });
+  }
+
   const uids = {};
   for (const [key, u] of Object.entries(USERS)) {
     let user;
     try { user = await auth.getUserByEmail(u.email); } catch { user = await auth.createUser({ email: u.email, password: u.password, displayName: u.name, emailVerified: true }); }
     await auth.setCustomUserClaims(user.uid, { role: u.role });
     await db.collection('users').doc(user.uid).set({
-      uid: user.uid, name: u.name, email: u.email, role: u.role, cpf: '52998224725', phone: '47999990000',
+      uid: user.uid, name: u.name, email: u.email, role: u.role, cpf: u.cpf ?? '52998224725', phone: '47999990000',
       lgpdConsent: { date: new Date().toISOString(), version: '1' }, createdAt: new Date(Date.now() - 30 * 86_400_000).toISOString(),
       address: u.address ?? { cep: '89010000', street: 'Rua XV de Novembro', number: '100', neighborhood: 'Centro', city: 'Blumenau', state: 'SC' },
     }, { merge: true });

@@ -2,8 +2,8 @@
  * API dos Correios (contrato) simulada para os testes ponta a ponta. Confere
  * o que a loja manda como a API de verdade confere: login e código no Basic,
  * número do cartão no corpo, token no Bearer e contrato e DR na cotação.
- * Se algum faltar, responde erro e o teste pega (o site cairia no preço de
- * reserva sem ninguém ver).
+ * Se algum faltar, responde erro e o teste pega (em produção o site cairia
+ * no preço do Melhor Envio sem ninguém ver).
  */
 export const CORREIOS_E2E = {
   cws: 'e2e-login:e2e-codigo-de-acesso',
@@ -12,6 +12,8 @@ export const CORREIOS_E2E = {
   dr: 68,
   // Preço e prazo de cada serviço do contrato.
   servicos: { '03298': { preco: '21,90', prazo: 5 }, '03220': { preco: '31,27', prazo: 1 } },
+  // Para este CEP de destino a API responde "fora do ar" (preço e prazo).
+  cepFora: '04538133',
 };
 
 const TOKEN = 'e2e-token-correios';
@@ -26,6 +28,7 @@ export async function correiosMock(url, init = {}) {
     if (auth !== expected) return json({ msgs: ['Usuário ou código de acesso inválido'] }, 401);
     const body = JSON.parse(init.body ?? '{}');
     if (body.numero !== CORREIOS_E2E.cartao) return json({ msgs: ['Cartão de postagem inválido'] }, 400);
+    // Horário de Brasília sem fuso, como a API devolve.
     const exp = new Date(Date.now() + 24 * 3_600_000 - 3 * 3_600_000).toISOString().slice(0, 19);
     return json({ token: TOKEN, expiraEm: exp, cartaoPostagem: { numero: body.numero, contrato: CORREIOS_E2E.contrato, dr: CORREIOS_E2E.dr } }, 201);
   }
@@ -36,6 +39,7 @@ export async function correiosMock(url, init = {}) {
   if (!servico) return json({ msgs: ['Rota ou serviço não simulado'] }, 404);
   const q = u.searchParams;
   if (!/^\d{8}$/.test(q.get('cepOrigem') ?? '') || !/^\d{8}$/.test(q.get('cepDestino') ?? '')) return json({ msgs: ['CEP inválido'] }, 400);
+  if (q.get('cepDestino') === CORREIOS_E2E.cepFora) return json({ msgs: ['Serviço indisponível'] }, 503);
 
   if (m[1] === 'prazo') return json({ coProduto: m[2], prazoEntrega: servico.prazo });
   if (q.get('nuContrato') !== CORREIOS_E2E.contrato || q.get('nuDR') !== String(CORREIOS_E2E.dr)) return json({ msgs: ['Contrato ou DR não informado'] }, 400);
