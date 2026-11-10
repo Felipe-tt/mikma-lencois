@@ -9,6 +9,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { getUberToken, uberQuote, buildUberAddress, uberDirectConfigured } from '@/lib/uber-direct';
 import type { StoreSettings } from '@/lib/store-settings';
+import { quoteCorreiosContrato } from '@/lib/correiosContrato';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -273,82 +274,15 @@ async function quoteJadlog(
   return results;
 }
 
-// ── Correios API REST v2 (fallback sem Melhor Envio) ─────────────────────────
-
-async function quoteCorreiosDireto(
-  fromCep: string,
-  toCep: string,
-  pkg: PackageDimensions,
-  productValueCents: number
-): Promise<ShippingOption[]> {
-  const cartao = process.env.CORREIOS_CARTAO_POSTAGEM;
-  const codigo = process.env.CORREIOS_CODIGO_ACESSO;
-  if (!cartao || !codigo) return [];
-
-  let token: string;
-  try {
-    const authRes = await fetch('https://cws.correios.com.br/token', {
-      method: 'POST',
-      // Sem timeout, transportadora lenta segurava a requisição (e a vaga no servidor).
-      signal: AbortSignal.timeout(8000),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${Buffer.from(`${cartao}:${codigo}`).toString('base64')}`,
-      },
-      body: JSON.stringify({ numero: cartao }),
-    });
-    if (!authRes.ok) return [];
-    const authData = await authRes.json();
-    token = authData.token ?? authData.data?.token;
-    if (!token) return [];
-  } catch { return []; }
-
-  const servicos = [
-    { codigo: '03298', label: 'Correios PAC',   tag: 'economico' as const },
-    { codigo: '03220', label: 'Correios SEDEX',  tag: 'rapido'   as const },
-  ];
-
-  const results: ShippingOption[] = [];
-  for (const svc of servicos) {
-    try {
-      const res = await fetch('https://cws.correios.com.br/calculo/preco/nacional', {
-        method: 'POST',
-        // Sem timeout, transportadora lenta segurava a requisição (e a vaga no servidor).
-        signal: AbortSignal.timeout(8000),
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          idLote: '1',
-          parametrosProduto: [{
-            coProduto: svc.codigo,
-            cepOrigem: fromCep.replace(/\D/g, ''),
-            cepDestino: toCep.replace(/\D/g, ''),
-            peso: Math.max(300, Math.round(pkg.weightKg * 1000)),
-            comprimento: pkg.lengthCm,
-            largura: pkg.widthCm,
-            altura: pkg.heightCm,
-            servicosAdicionais: productValueCents >= 50000 ? ['019'] : [],
-            vlDeclarado: (productValueCents / 100).toFixed(2),
-          }],
-        }),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const item = data?.parametrosProduto?.[0];
-      if (!item || item.txErro) continue;
-      const price = parseFloat(item.pcFinal ?? '0');
-      const days  = parseInt(item.prazoEntrega ?? '10', 10);
-      if (price <= 0) continue;
-      results.push({
-        carrier: svc.codigo === '03298' ? 'correios_pac' : 'correios_sedex',
-        label: svc.label,
-        priceCents: Math.round(price * 100),
-        estimatedDays: days,
-        available: true,
-        tag: svc.tag,
-      });
-    } catch { /* serviço indisponível, tenta o próximo */ }
-  }
-  return results;
+/**
+ * Caixa pelo peso do pedido. Antes era sempre 50x40x20 cm, que pelos
+ * Correios pesa 6,7 kg (peso cúbico) e quase dobrava o frete de um jogo de
+ * 1,5 kg. Cada faixa tem peso cúbico (C x L x A / 6000) perto do limite de
+ * peso dela, então o frete sai pelo peso real.
+ */
+export function packageFor(weightKg: number): PackageDimensions {
+  const box = weightKg <= 2 ? [30, 25, 10] : weightKg <= 4 ? [40, 30, 15] : [50, 40, 20];
+  return { weightKg, lengthCm: box[0], widthCm: box[1], heightCm: box[2] };
 }
 
 // ── Função principal, fonte única de verdade de preço de frete ─────────────
@@ -367,7 +301,7 @@ export async function computeShippingOptions(
   // das transportadoras e continua sendo o valor cheio dos produtos.
   freeShippingBaseCents: number = productValueCents,
 ): Promise<ShippingQuoteResult> {
-  const pkg: PackageDimensions = { weightKg: totalWeightKg, heightCm: 20, widthCm: 40, lengthCm: 50 };
+  const pkg = packageFor(totalWeightKg);
 
   const freeThreshold = settings.freeShippingThresholdCents ?? 0;
   const thresholdMet  = freeThreshold > 0 && freeShippingBaseCents >= freeThreshold;
@@ -448,15 +382,17 @@ export async function computeShippingOptions(
   const meToken = process.env.MELHOR_ENVIO_TOKEN;
   const sandbox = process.env.MELHOR_ENVIO_SANDBOX === 'true';
 
-  if (fromCep && meToken) {
-    const meOptions = await quoteMelhorEnvio(fromCep, destCep, pkg, productValueCents, meToken, sandbox);
-    options.push(...meOptions);
-  } else if (fromCep) {
-    const [correiosOptions, jadlogOptions] = await Promise.all([
-      quoteCorreiosDireto(fromCep, destCep, pkg, productValueCents),
-      quoteJadlog(fromCep, destCep, pkg, productValueCents),
+  // PAC e SEDEX vêm do contrato da loja (é o que ela paga na agência). O
+  // Melhor Envio cota a Jadlog e cobre os Correios se o contrato falhar.
+  if (fromCep) {
+    const [contrato, others] = await Promise.all([
+      quoteCorreiosContrato(fromCep, destCep, pkg),
+      meToken
+        ? quoteMelhorEnvio(fromCep, destCep, pkg, productValueCents, meToken, sandbox)
+        : quoteJadlog(fromCep, destCep, pkg, productValueCents),
     ]);
-    options.push(...correiosOptions, ...jadlogOptions);
+    const fromContract = new Set(contrato.map(o => o.carrier));
+    options.push(...contrato, ...others.filter(o => !fromContract.has(o.carrier)));
   }
 
   // Remove duplicatas (mesmo carrier), mantém o mais barato

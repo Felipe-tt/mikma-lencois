@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('@/lib/firebase/admin', () => ({ adminDb: {} }));
 vi.mock('@/lib/uber-direct', () => ({}));
 
-import { assignRelativeTags, type ShippingOption } from './shipping-pricing';
+import { assignRelativeTags, packageFor, type ShippingOption } from './shipping-pricing';
 
 const opt = (carrier: string, priceCents: number, estimatedDays: number, tag?: ShippingOption['tag']): ShippingOption =>
   ({ carrier, label: carrier, priceCents, realPriceCents: priceCents, estimatedDays, available: true, tag } as ShippingOption);
@@ -33,5 +33,13 @@ describe('assignRelativeTags', () => {
     const a = { ...opt('a', 0, 10), realPriceCents: 2500 };
     const b = { ...opt('b', 0, 3), realPriceCents: 4500 };
     expect(assignRelativeTags([b, a]).map(o => o.tag)).toEqual(['rapido', 'economico']);
+  });
+});
+
+describe('packageFor', () => {
+  it('escolhe a caixa pelo peso', () => {
+    expect(packageFor(1.5)).toEqual({ weightKg: 1.5, lengthCm: 30, widthCm: 25, heightCm: 10 });
+    expect(packageFor(3)).toMatchObject({ lengthCm: 40, widthCm: 30, heightCm: 15 });
+    expect(packageFor(8)).toMatchObject({ lengthCm: 50, widthCm: 40, heightCm: 20 });
   });
 });
