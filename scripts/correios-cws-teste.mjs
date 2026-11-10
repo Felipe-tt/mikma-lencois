@@ -29,6 +29,14 @@ const authBody = await auth.json().catch(() => ({}));
 say(`## Token pelo cartão de postagem: HTTP ${auth.status}`);
 if (!auth.ok || !authBody.token) {
   say(`Erro: ${safe(authBody.msgs ?? authBody.message ?? authBody)}`);
+  // Diagnóstico sem expor nada: formato do secret e se o login vale sem o cartão.
+  say(`Secret: login com ${user.length} caracteres, código com ${code.length}, espaço ou quebra de linha: ${/\s/.test(user + code) ? 'sim' : 'não'}`);
+  const plain = await fetch(`${API}/token/v1/autentica`, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${Buffer.from(`${user.trim()}:${code.trim()}`).toString('base64')}` },
+  });
+  const plainBody = await plain.json().catch(() => ({}));
+  say(`Token só com login e código (sem cartão): HTTP ${plain.status}${plain.ok ? '' : ` ${safe(plainBody.msgs ?? plainBody.message ?? plainBody)}`}`);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, out.join('\n') + '\n');
   process.exit(1);
 }
