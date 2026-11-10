@@ -52,11 +52,16 @@ const destinos = { 'São Paulo': '01310100', Manaus: '69005000' };
 const servicos = { 'PAC contrato': '03298', 'SEDEX contrato': '03220' };
 const pacote = { psObjeto: '1500', tpObjeto: '2', comprimento: '30', largura: '25', altura: '10' };
 
+const pacotes = {
+  'jogo king, 1,5 kg, 30x25x10 cm': pacote,
+  'caixa padrão do site, 1,5 kg, 50x40x20 cm': { ...pacote, comprimento: '50', largura: '40', altura: '20' },
+};
+for (const [nomePacote, dims] of Object.entries(pacotes)) {
 say('');
-say('## Cotações (jogo king, 1,5 kg, 30x25x10 cm)');
+say(`## Cotações (${nomePacote})`);
 for (const [cidade, cep] of Object.entries(destinos)) {
   for (const [nome, co] of Object.entries(servicos)) {
-    const q = new URLSearchParams({ cepOrigem: origem, cepDestino: cep, ...pacote, ...(nuContrato ? { nuContrato: String(nuContrato) } : {}), ...(dr ? { nuDR: String(dr) } : {}) });
+    const q = new URLSearchParams({ cepOrigem: origem, cepDestino: cep, ...dims, ...(nuContrato ? { nuContrato: String(nuContrato) } : {}), ...(dr ? { nuDR: String(dr) } : {}) });
     const p = await fetch(`${API}/preco/v1/nacional/${co}?${q}`, { headers: bearer });
     const pb = await p.json().catch(() => ({}));
     const t = await fetch(`${API}/prazo/v1/nacional/${co}?${new URLSearchParams({ cepOrigem: origem, cepDestino: cep })}`, { headers: bearer });
@@ -64,5 +69,6 @@ for (const [cidade, cep] of Object.entries(destinos)) {
     say(`- ${cidade} · ${nome} (${co}): preço HTTP ${p.status} ${pb.pcFinal ?? safe(pb.msgs ?? pb.txErro ?? pb)} · prazo HTTP ${t.status} ${tb.prazoEntrega ?? safe(tb.msgs ?? tb.txErro ?? tb)} dias`);
     if (p.ok && !process.env.MOSTROU) { say(`  campos da resposta de preço: ${Object.keys(pb).join(', ')}`); process.env.MOSTROU = '1'; }
   }
+}
 }
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, out.join('\n') + '\n');
