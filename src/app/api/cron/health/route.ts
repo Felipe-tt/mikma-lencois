@@ -65,12 +65,15 @@ export async function GET(req: NextRequest) {
       appCheck = false;
     }
   }
-  let correios: (Awaited<ReturnType<typeof checkCorreiosContrato>> & { etiqueta?: string[] }) | null = null;
+  let correios: (Awaited<ReturnType<typeof checkCorreiosContrato>> & { etiqueta?: string[]; rastreioAt?: string | null }) | null = null;
   if (req.nextUrl.searchParams.get('correios') === '1') {
     try {
       correios = await checkCorreiosContrato(originCep, '01310100', packageFor(1.5));
       // Dados da loja que a etiqueta precisa (só o que falta, sem valores).
       if (storeData) correios.etiqueta = remetenteProblems(remetenteFrom(withStoreDefaults(storeData)));
+      // Última rodada da rotina que acompanha o rastreio (a cada 30 min).
+      const run = await adminDb.collection('ops').doc('correios-rastreio').get().catch(() => null);
+      correios.rastreioAt = (run?.get('lastRunAt') as string | undefined) ?? null;
     } catch (err) {
       console.error('[health] cotação pelo contrato dos Correios falhou', err);
       correios = { configured: true, token: false, pacCents: 0, sedexCents: 0 };
