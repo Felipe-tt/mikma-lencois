@@ -78,6 +78,18 @@ export function startAbacatePayMock(port = 4010) {
         c.status = 'REFUNDED';
         return ok(res, { id: id('ref_'), status: 'REFUNDED', amount: c.amount, reason: body.reason ?? null, originalId: c.id });
       }
+      if (p === '/pix/send') {
+        if (!body.pix?.key || !(body.amount >= 100)) return fail(res, 400, 'invalid transfer');
+        const prev = [...charges.values()].find(c => c.externalId === body.externalId && c.id.startsWith('tran_'));
+        if (prev) return ok(res, prev);
+        const t = { id: id('tran_'), status: 'COMPLETE', amount: body.amount, platformFee: 80, externalId: body.externalId, pixKey: body.pix.key, receiptUrl: 'https://app.abacatepay.example/receipt/x' };
+        charges.set(t.id, t);
+        return ok(res, t);
+      }
+      if (p === '/pix/get') {
+        const t = charges.get(url.searchParams.get('id'));
+        return t ? ok(res, t) : fail(res, 404, 'not found');
+      }
       if (p === '/customers/create') return ok(res, { id: id('cust_') });
       return fail(res, 404, `rota simulada inexistente: ${p}`);
     });

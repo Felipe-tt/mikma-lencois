@@ -540,6 +540,36 @@ test('devolução: a equipe confere as peças e o dinheiro volta pela AbacatePay
   await staff.close();
 });
 
+test('devolução de parte do pedido: a AbacatePay manda PIX no CPF do cliente', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
+  const charge = (await (await fetch(`${ABACATE}/__e2e/charge`, { method: 'POST', body: JSON.stringify({ amount: 82170 }) })).json()).data;
+  const item = (sku: string, unitPrice: number) => ({ productId: 'p3', productName: `Jogo ${sku}`, sku, variant: { id: sku.split('_')[1], size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice });
+  const orderRef = await db().collection('orders').add({
+    userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
+    items: [item('p3_v1', 39990), item('p3_v2', 39990)], address: user.get('address'), totalCents: 82170,
+    delivery: { carrier: 'correios_pac', priceCents: 2190, deliveredAt: new Date().toISOString() },
+    payment: { method: 'pix', txId: charge.id, paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(), timeline: [],
+  });
+  const retRef = await db().collection('returns').add({
+    orderId: orderRef.id, userId: user.id, customerName: 'Gabriela Torres', type: 'devolucao', reason: 'Desisti da compra', items: [item('p3_v1', 39990)],
+    devolverPor: 'loja', status: 'aprovada', restocked: false, createdAt: new Date().toISOString(), createdBy: 'cliente',
+  });
+
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto('/painel/trocas');
+  const card = panel.locator('div.border', { hasText: `Pedido #${orderRef.id.slice(-8).toUpperCase()}` }).first();
+  await card.getByRole('button', { name: 'Concluir e repor estoque' }).click();
+  await expect(card.getByText(/R\$\s?399,90 devolvidos por PIX no CPF do cliente/)).toBeVisible();
+  const estorno = (await retRef.get()).get('estorno');
+  expect(estorno).toMatchObject({ status: 'feito', cents: 39990, via: 'pix' });
+  const pix = (await charges() as unknown as { id: string; pixKey?: string; amount: number }[]).find(c => c.id === estorno.transferId);
+  expect(pix).toMatchObject({ pixKey: '93541134780', amount: 39990 });
+  // O pagamento original não foi estornado inteiro.
+  expect((await charges()).find(c => c.id === charge.id)?.status).toBe('PAID');
+  await staff.close();
+});
+
 test('troca recusada depois de 7 dias: o cliente ainda pede por defeito', async ({ page }) => {
   test.setTimeout(120_000);
   const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
