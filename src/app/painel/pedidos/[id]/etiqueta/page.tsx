@@ -70,6 +70,8 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
   }
 
   const totalItems = order.items.reduce((s, it) => s + it.quantity, 0);
+  // Etiqueta oficial dos Correios gerada no pedido (contrato), se houver.
+  const prePostagem = (order.delivery as { prePostagem?: { codigoObjeto: string; coleta: boolean } } | undefined)?.prePostagem;
 
   return (
     <div className="max-w-2xl">
@@ -160,7 +162,10 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
 
       {order.delivery.carrier && isCorreios(order.delivery.carrier) && (
         <>
-          {/* ── Etiqueta de remetente/destinatário, pra recortar e colar no pacote ── */}
+          {/* ── Etiqueta de remetente/destinatário, pra recortar e colar no pacote ──
+              Só sem a etiqueta oficial do contrato (gerada no pedido): com ela,
+              esta seria uma segunda etiqueta no mesmo pacote. */}
+          {!prePostagem && (
           <div className="border border-mist bg-white text-black p-8 mt-8 print:border-0 print:p-0 print:break-before-page">
             <p data-no-print className="text-[11px] font-semibold text-mid mb-3">
               Etiqueta — recorte a caixa abaixo e cole na embalagem
@@ -186,6 +191,8 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
               </div>
             </div>
           </div>
+
+          )}
 
           {/* ── Declaração de Conteúdo, exigida pelos Correios pra postar mercadoria ── */}
           <div className="border border-mist bg-white text-black p-8 mt-8 print:border-0 print:p-0 print:break-before-page">
@@ -253,14 +260,23 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
             </p>
           </div>
 
-          {/* ── Checklist antes de ir na agência ── */}
+          {/* ── Checklist antes de despachar ── */}
           <div data-no-print className="bg-clay-l/10 border border-clay-l/30 rounded-xl p-5 mt-6">
-            <p className="text-[12px] font-bold text-ink mb-2">Antes de ir na agência dos Correios</p>
+            <p className="text-[12px] font-bold text-ink mb-2">Antes de despachar</p>
             <ul className="text-[12px] text-mid space-y-1 list-disc list-inside">
-              <li>Pacote já embalado e pesado, se tiver balança em casa (ajuda a não ser surpreendido no valor).</li>
-              <li>Leve esta folha impressa (etiqueta + declaração de conteúdo).</li>
-              <li>Leve um documento de identidade seu.</li>
-              <li>Depois de postar, anota o código de rastreio que a atendente te dá e cola no botão &quot;Confirmar despacho&quot; do pedido.</li>
+              {prePostagem ? (
+                <>
+                  <li>Cole no pacote a etiqueta dos Correios ({prePostagem.codigoObjeto}), do botão &quot;Imprimir etiqueta&quot; no pedido.</li>
+                  <li>A declaração de conteúdo desta folha vai dentro do pacote.</li>
+                  <li>{prePostagem.coleta ? 'Os Correios passam na loja para buscar.' : 'Leve o pacote a uma agência dos Correios.'} Quando pegarem o pacote, o pedido muda para Enviado sozinho e o cliente recebe o rastreio.</li>
+                </>
+              ) : (
+                <>
+                  <li>Gere a etiqueta dos Correios no pedido (botão &quot;Gerar etiqueta e pedir coleta&quot;): sai o código de rastreio e os Correios passam na loja.</li>
+                  <li>Sem etiqueta do contrato, leve esta folha à agência e confirme o despacho no pedido com o código que a atendente te der.</li>
+                  <li>A declaração de conteúdo vai dentro do pacote.</li>
+                </>
+              )}
             </ul>
           </div>
         </>

@@ -291,6 +291,15 @@ test('pedido cancelado com etiqueta: a etiqueta é cancelada nos Correios', asyn
   await expect(panel.getByText('Coleta pedida: os Correios passam na loja para buscar.')).toBeVisible();
   const pre = (await readOrder(orderId)).delivery!.prePostagem!;
 
+  // Nota de separação: com a etiqueta oficial, não imprime uma segunda
+  // etiqueta caseira e explica o próximo passo.
+  await panel.goto(`/painel/pedidos/${orderId}/etiqueta`);
+  await expect(panel.getByText('Antes de despachar')).toBeVisible();
+  await expect(panel.getByText(new RegExp(`etiqueta dos Correios \\(${pre.codigoObjeto}\\)`))).toBeVisible();
+  await expect(panel.getByText(/recorte a caixa abaixo/)).toHaveCount(0);
+  await expect(panel.getByText('Declaração de Conteúdo', { exact: true }).first()).toBeVisible();
+  await panel.goto(`/painel/pedidos/${orderId}`);
+
   await panel.getByRole('button', { name: 'Cancelar este pedido' }).click();
   await panel.getByRole('button', { name: 'Cancelar pedido' }).click();
   await expect.poll(async () => (await readOrder(orderId)).status).toBe('cancelled');
