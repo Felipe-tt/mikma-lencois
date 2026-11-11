@@ -104,47 +104,42 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
     );
   }
 
-  if (!janela.ok) {
-    if (order.status !== 'delivered') return null;
-    return (
-      <p className="rounded-2xl border border-mist p-4 text-[12.5px] text-mid leading-relaxed">
-        {janela.reason.replace(/ Fale com a gente pelo WhatsApp\.$/, '')}{' '}
-        {whatsappHref
-          ? <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="font-semibold text-clay underline underline-offset-2">Fale com a gente pelo WhatsApp</a>
-          : 'Fale com a gente pelo WhatsApp.'}
-      </p>
-    );
-  }
+  // Fora de qualquer prazo: nada aparece (dúvidas seguem pelo WhatsApp do pedido).
+  if (!janela.ok) return null;
 
   if (!open) {
+    // Depois dos 7 dias só sobra defeito (CDC art. 26): fica disponível, mas discreto.
+    if (!trocaOk) {
+      return (
+        <button type="button" onClick={() => setOpen(true)}
+          className="self-start text-[12px] text-faint underline underline-offset-2 hover:text-mid transition-colors">
+          Problema com o produto?
+        </button>
+      );
+    }
     return (
       <button type="button" onClick={() => setOpen(true)}
         className="w-full rounded-2xl border border-mist p-4 text-left hover:border-ink transition-colors">
-        <span className="block text-[14px] font-semibold text-ink">{trocaOk ? 'Pedir troca ou devolução' : 'Veio com defeito?'}</span>
-        <span className="block text-[12.5px] text-mid mt-0.5">
-          {trocaOk
-            ? `Até ${ddmm(janela.trocaAte)}, com as peças sem lavar e sem usar.`
-            : `Avise até ${ddmm(janela.defeitoAte)} e a gente resolve.`}
-        </span>
+        <span className="block text-[14px] font-semibold text-ink">Pedir troca ou devolução</span>
+        <span className="block text-[12.5px] text-mid mt-0.5">Até {ddmm(janela.trocaAte)}, com as peças sem lavar e sem usar.</span>
       </button>
     );
   }
 
   return (
     <section className="rounded-2xl border border-ink/30 p-5 flex flex-col gap-4" aria-label="Pedir troca ou devolução">
-      <h2 className="font-display font-normal text-ink text-[1.15rem] leading-tight">{trocaOk ? 'Pedir troca ou devolução' : 'Troca por defeito'}</h2>
-      {trocaOk ? (
-        <div role="radiogroup" aria-label="O que você prefere" className="grid grid-cols-3 gap-2">
-          {([['troca', 'Trocar'], ['devolucao', 'Devolver'], ['defeito', 'Defeito']] as const).map(([v, label]) => (
+      <h2 className="font-display font-normal text-ink text-[1.15rem] leading-tight">{tipo === 'defeito' ? 'Problema com o produto' : 'Pedir troca ou devolução'}</h2>
+      {trocaOk && tipo !== 'defeito' && (
+        <div role="radiogroup" aria-label="O que você prefere" className="grid grid-cols-2 gap-2">
+          {([['troca', 'Trocar'], ['devolucao', 'Devolver']] as const).map(([v, label]) => (
             <button key={v} type="button" role="radio" aria-checked={tipo === v} onClick={() => setType(v)}
               className={`h-11 rounded-xl border text-[13px] font-semibold transition-colors ${tipo === v ? 'border-ink bg-ink text-paper' : 'border-mist text-ink hover:border-ink'}`}>
               {label}
             </button>
           ))}
         </div>
-      ) : (
-        <p className="text-[12.5px] text-mid leading-relaxed">Troca e devolução valem até 7 dias depois da entrega. Agora, só por defeito: conte o que aconteceu e mande fotos pelo WhatsApp.</p>
       )}
+      {tipo === 'defeito' && <p className="text-[12.5px] text-mid leading-relaxed">Conte o que aconteceu. Se puder, mande fotos pelo WhatsApp da loja.</p>}
       <fieldset className="flex flex-col gap-2">
         <legend className="text-[12px] font-semibold text-mid mb-1">Quais peças?</legend>
         {order.items.map(i => (
@@ -180,6 +175,12 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
         </button>
       </div>
       <p className="text-[11.5px] text-faint">Aprovado, você recebe um código para postar nos Correios sem pagar nada.</p>
+      {trocaOk && (
+        <button type="button" onClick={() => { setType(tipo === 'defeito' ? 'troca' : 'defeito'); setError(''); }}
+          className="self-start text-[11.5px] text-faint underline underline-offset-2 hover:text-mid">
+          {tipo === 'defeito' ? 'Voltar para troca ou devolução' : 'O produto veio com defeito?'}
+        </button>
+      )}
     </section>
   );
 }

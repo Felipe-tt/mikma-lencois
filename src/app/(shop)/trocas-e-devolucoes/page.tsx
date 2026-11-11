@@ -122,9 +122,6 @@ export default async function TrocasEDevolucoesPage() {
           <B>7 dias</B> para trocar ou devolver, com as peças sem lavar e sem usar.
         </>,
         'Devolveu? Devolvemos tudo, inclusive o frete.',
-        <>
-          Defeito? Avise em até <B>90 dias</B> e nós resolvemos.
-        </>,
       ]}
       sections={sections}
     />

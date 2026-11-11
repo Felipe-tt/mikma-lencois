@@ -451,7 +451,7 @@ test('troca recusada depois de 7 dias: o cliente ainda pede por defeito', async 
   // Entregue há 20 dias: troca e devolução só até 7, então só sobra defeito.
   await expect(form.getByRole('radio', { name: 'Devolver' })).toHaveCount(0);
   await expect(form.getByRole('checkbox')).toHaveCount(0);
-  await expect(form.getByText(/Troca e devolução valem até 7 dias depois da entrega/)).toBeVisible();
+  await expect(form.getByRole('heading', { name: 'Problema com o produto' })).toBeVisible();
   await form.getByRole('textbox').fill('Mando foto da costura aberta pelo WhatsApp.');
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
