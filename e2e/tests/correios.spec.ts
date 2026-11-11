@@ -160,7 +160,8 @@ test('monitor: o servidor informa se consegue cotar pelo contrato', async ({ req
   // É o que a rotina correios-cws.yml confere no site publicado depois de cada deploy.
   const headers = { 'x-cron-secret': 'e2e_cron_secret_0123456789' };
   const checked = await (await request.get('/api/cron/health?correios=1', { headers })).json();
-  expect(checked.correios).toEqual({ configured: true, token: true, pacCents: 2190, sedexCents: 3127, etiqueta: [] });
+  expect(checked.correios).toMatchObject({ configured: true, token: true, pacCents: 2190, sedexCents: 3127, etiqueta: [] });
+  expect(checked.correios).toHaveProperty('rastreioAt');
   // O monitor de saúde (de 10 em 10 minutos) não passa o parâmetro e não consulta os Correios.
   const plain = await (await request.get('/api/cron/health', { headers })).json();
   expect(plain.ok).toBe(true);
@@ -246,6 +247,9 @@ for (const c of CASOS) {
         expect((await readOrder(orderId)).status).toBe('delivered');
         // Rodar de novo não mexe em nada.
         expect(await runRastreio(request)).toMatchObject({ shipped: 0, delivered: 0, errors: 0 });
+        // A rodada fica registrada para a checagem diária ver que a rotina está viva.
+        const health = await (await request.get('/api/cron/health?correios=1', { headers: { 'x-cron-secret': 'e2e_cron_secret_0123456789' } })).json();
+        expect(Date.now() - Date.parse(health.correios.rastreioAt)).toBeLessThan(60_000);
       });
       return;
     }
@@ -290,7 +294,8 @@ test('pedido cancelado com etiqueta: a etiqueta é cancelada nos Correios', asyn
   await panel.getByRole('button', { name: 'Cancelar este pedido' }).click();
   await panel.getByRole('button', { name: 'Cancelar pedido' }).click();
   await expect.poll(async () => (await readOrder(orderId)).status).toBe('cancelled');
-  expect(correiosLog().some(e => e.cancelada === pre.id)).toBe(true);
+  // A etiqueta é cancelada logo depois de o pedido virar cancelado.
+  await expect.poll(() => correiosLog().some(e => e.cancelada === pre.id)).toBe(true);
   await expect(panel.getByText(/os Correios não cancelaram a etiqueta/)).toHaveCount(0);
   await staff.close();
 });

@@ -58,7 +58,14 @@ async function rodada() {
   if (!c.token) return ['fail', 'o site não conseguiu gerar o token dos Correios com o código de acesso'];
   if (!(c.pacCents > 0) || !(c.sedexCents > 0)) return ['fail', `o site gerou o token, mas ficou sem preço do contrato (PAC ${reais(c.pacCents || 0)}, SEDEX ${reais(c.sedexCents || 0)}); confira o CEP de origem nas Configurações`];
   if (c.etiqueta?.length) return ['fail', `o frete funciona, mas a etiqueta não vai sair: ${c.etiqueta.join(' ')}`];
-  return ['ok', `PAC ${reais(c.pacCents)} e SEDEX ${reais(c.sedexCents)} pelo contrato (1,5 kg até São Paulo); dados da loja para a etiqueta completos`];
+  // A rotina roda a cada 30 min; 3 h sem rodar é sinal de que parou.
+  // Sem registro nenhum (versão recém-publicada) ainda não dá para dizer.
+  if (c.rastreioAt === null) return ['inconclusive', 'a rotina do rastreio ainda não registrou nenhuma rodada'];
+  if (c.rastreioAt) {
+    const horas = (Date.now() - Date.parse(c.rastreioAt)) / 3_600_000;
+    if (!(horas <= 3)) return ['fail', `a rotina que muda o pedido para Enviado e Entregue não roda há ${Math.floor(horas)} h (Worker de rotinas da Cloudflare)`];
+  }
+  return ['ok', `PAC ${reais(c.pacCents)} e SEDEX ${reais(c.sedexCents)} pelo contrato (1,5 kg até São Paulo); dados da loja para a etiqueta completos${c.rastreioAt ? '; rotina do rastreio rodando' : ''}`];
 }
 
 if (!SECRET) finish('inconclusive', 'CRON_SECRET ausente');
