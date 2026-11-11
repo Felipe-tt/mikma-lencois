@@ -6,8 +6,8 @@ import { LegalPage, A, B, clause, contactClause, type LegalSection } from '@/com
 
 export const metadata = {
   title: 'Trocas e Devoluções',
-  description: 'Como desistir da compra, trocar um produto com defeito e receber o seu dinheiro de volta.',
-  ...shareMeta({ title: 'Trocas e Devoluções', description: 'Como desistir da compra, trocar um produto com defeito e receber o seu dinheiro de volta.', path: '/trocas-e-devolucoes' }),
+  description: 'Troca e devolução em até 7 dias, defeito em até 90 e como receber o seu dinheiro de volta.',
+  ...shareMeta({ title: 'Trocas e Devoluções', description: 'Troca e devolução em até 7 dias, defeito em até 90 e como receber o seu dinheiro de volta.', path: '/trocas-e-devolucoes' }),
   alternates: { canonical: '/trocas-e-devolucoes' },
 };
 
@@ -18,20 +18,27 @@ export default async function TrocasEDevolucoesPage() {
   const sections: LegalSection[] = [
     {
       id: 'arrependimento',
-      title: 'Desistiu da compra?',
+      title: 'Quer trocar ou devolver?',
       clauses: [
         clause(
           <>
-            Você tem <B>7 dias corridos</B>, a contar do dia em que recebeu o pedido, para desistir,
-            sem precisar explicar o motivo. É o direito de arrependimento das compras pela internet
-            (art. 49 do Código de Defesa do Consumidor).
+            Você tem <B>7 dias corridos</B>, a contar do dia em que recebeu o pedido, para trocar
+            (outro tamanho ou cor) ou devolver. Para devolver, não precisa explicar o motivo: é o
+            direito de arrependimento das compras pela internet (art. 49 do Código de Defesa do
+            Consumidor).
           </>,
         ),
         clause(
-          'Nesse caso, devolvemos todo o valor pago, inclusive o frete, e você não paga nada para nos mandar o produto de volta.',
+          <>
+            As peças precisam voltar <B>sem lavar e sem usar</B>, de preferência com a etiqueta e a
+            embalagem.
+          </>,
         ),
         clause(
-          'Só pedimos que o produto volte sem sinais de uso e, se possível, com a etiqueta e a embalagem.',
+          'Na devolução, devolvemos todo o valor pago, inclusive o frete. Nos dois casos, você não paga nada para nos mandar o produto de volta.',
+        ),
+        clause(
+          'Passados os 7 dias, a troca e a devolução não valem mais. Se o produto tiver defeito, veja abaixo.',
         ),
       ],
     },
@@ -69,7 +76,7 @@ export default async function TrocasEDevolucoesPage() {
       clauses: [
         clause('É rápido:', [
           'abra o pedido em Minha conta, Pedidos, e toque em "Pedir troca ou devolução" (ou fale com a gente por um dos contatos abaixo);',
-          'escolha as peças e conte o que aconteceu; se for defeito, dano ou produto errado, mande fotos pelo WhatsApp;',
+          'escolha Trocar, Devolver ou Defeito, as peças e conte o que aconteceu; se for defeito, dano ou produto errado, mande fotos pelo WhatsApp;',
           'aprovado, você recebe um código dos Correios para postar em qualquer agência, sem pagar nada.',
         ]),
         contactClause(id, 'Nossos contatos:'),
@@ -112,9 +119,9 @@ export default async function TrocasEDevolucoesPage() {
       }
       summary={[
         <>
-          <B>7 dias</B> para desistir depois de receber, sem precisar explicar o motivo.
+          <B>7 dias</B> para trocar ou devolver, com as peças sem lavar e sem usar.
         </>,
-        'Desistiu? Devolvemos tudo, inclusive o frete.',
+        'Devolveu? Devolvemos tudo, inclusive o frete.',
         <>
           Defeito? Avise em até <B>90 dias</B> e nós resolvemos.
         </>,

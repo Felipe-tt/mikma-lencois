@@ -625,11 +625,10 @@ export default function OrderDetailPage() {
           {/* ── Sidebar ───────────────────────────────────────────── */}
           <aside aria-label="Resumo do pedido" className="flex flex-col gap-4">
             {/* Troca ou devolução pelo próprio pedido (prazo da política) */}
-            {order.status === 'delivered' && user && (() => {
-              const entregue = order.delivery?.deliveredAt ? new Date(order.delivery.deliveredAt) : null;
-              const ate = entregue ? new Date(entregue.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
-              return <ReturnRequestCard order={order} user={user} arrependimentoAte={ate && ate.getTime() > Date.now() ? ate : null} />;
-            })()}
+            {order.status === 'delivered' && user && (
+              <ReturnRequestCard order={order} user={user}
+                whatsappHref={storeWa ? `${storeWa}${storeWa.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Preciso de ajuda com o pedido #${order.id.slice(-8).toUpperCase()}.`)}` : null} />
+            )}
 
             {/* Ajuda com o pedido: avaliar, trocar, falar com a loja */}
             {['paid', 'preparing', 'shipped', 'delivered'].includes(order.status) && (() => {
