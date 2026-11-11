@@ -1,0 +1,57 @@
+name: Release semanal assinada
+
+# Uma vez por semana publica uma release com o código da main empacotado e
+# assinado pelo Sigstore (sem chave guardada: a assinatura vem da identidade
+# deste workflow). Não participa do deploy nem roda em PR, então não deixa
+# nada mais lento. Conta no item Signed-Releases do OpenSSF Scorecard.
+
+on:
+  schedule:
+    - cron: '23 4 * * 1' # segunda, 1:23 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # criar a release
+      id-token: write # assinatura sem chave do Sigstore
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Empacotar, assinar e publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v$(date -u +%Y.%m.%d)"
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "A release $tag já existe."
+            exit 0
+          fi
+          pacote="mikma-lencois-$tag.tar.gz"
+          git archive --format=tar.gz --prefix=mikma-lencois/ -o "$pacote" HEAD
+          sha256sum "$pacote" > SHA256SUMS
+          cosign sign-blob --yes --bundle "$pacote.sigstore.json" "$pacote"
+          cosign verify-blob "$pacote" --bundle "$pacote.sigstore.json" \
+            --certificate-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@$GITHUB_REF" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
+          gh release create "$tag" "$pacote" "$pacote.sigstore.json" SHA256SUMS \
+            -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Versão $(date -u +%d/%m/%Y)" \
+            --notes "Código da main em $(date -u +%d/%m/%Y), commit ${GITHUB_SHA:0:7}. Assinado pelo Sigstore: confira com cosign verify-blob e o arquivo .sigstore.json."
