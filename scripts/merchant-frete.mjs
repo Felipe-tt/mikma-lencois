@@ -60,18 +60,11 @@ say('|---|---|---|---|');
 for (const r of REGIOES) say(`| ${r.nome} | ${PRECOS[r.id].map(v => `R$ ${v}`).join(' | ')} |`);
 if (!APLICAR) { say(''); say('Só leitura. Rode com aplicar = true para gravar.'); finish(0); }
 
-// 2. Regiões por CEP (cria ou atualiza).
+// 2. Regiões soltas de uma tentativa anterior: o frete usa grupos de CEP
+// dentro do próprio serviço (a tabela só aceita ID numérico de local).
 for (const r of REGIOES) {
-  const region = {
-    displayName: r.nome,
-    postalCodeArea: { regionCode: 'BR', postalCodes: r.faixas.map(([begin, end]) => ({ begin, end })) },
-  };
-  const existe = await call('GET', `/regions/${r.id}`);
-  const res = existe.ok
-    ? await call('PATCH', `/regions/${r.id}?updateMask=displayName,postalCodeArea`, region)
-    : await call('POST', `/regions?regionId=${r.id}`, region);
-  if (!res.ok) { say(`Região ${r.nome}: ${erro(res)}`); finish(1); }
-  say(`Região ${r.nome}: ok.`);
+  const del = await call('DELETE', `/regions/${r.id}`);
+  if (del.ok) say(`Região avulsa ${r.nome} removida.`);
 }
 
 // 3. Serviço de frete com a tabela região x peso.
@@ -81,11 +74,12 @@ const service = {
   deliveryCountries: ['BR'],
   currencyCode: 'BRL',
   shipmentType: 'DELIVERY',
+  postalCodeGroups: REGIOES.map(r => ({ name: r.id, regionCode: 'BR', postalCodeRanges: r.faixas.map(([begin, end]) => ({ begin, end })) })),
   deliveryTime: { minHandlingDays: 0, maxHandlingDays: 2, minTransitDays: 2, maxTransitDays: 12 },
   rateGroups: [{
     name: 'Por região e peso',
     mainTable: {
-      rowHeaders: { locations: REGIOES.map(r => ({ locationIds: [r.id] })) },
+      rowHeaders: { postalCodeGroupNames: REGIOES.map(r => r.id) },
       // -1 é "acima disso, sem limite".
       columnHeaders: { weights: [{ amountMicros: micros(2), unit: 'KILOGRAM' }, { amountMicros: micros(5), unit: 'KILOGRAM' }, { amountMicros: '-1', unit: 'KILOGRAM' }] },
       rows: REGIOES.map(r => ({ cells: PRECOS[r.id].map(v => ({ flatRate: { amountMicros: micros(v), currencyCode: 'BRL' } })) })),
