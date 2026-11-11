@@ -9,6 +9,7 @@ import { formatCurrency, formatTsDateTime } from '@/lib/utils/format';
 import type { Order } from '@/types';
 import { PainelSkeleton } from '@/components/painel/PainelSkeleton';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
+import { CorreiosBatchBar } from '@/components/painel/CorreiosBatchBar';
 import Link from 'next/link';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import {
@@ -311,6 +312,8 @@ export default function PainelPedidos() {
         </div>
       )}
 
+      <CorreiosBatchBar orders={active} />
+
       {/* Filtros + Busca */}
       <div className="flex flex-col gap-3 mb-5">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -423,12 +426,19 @@ export default function PainelPedidos() {
             )}
 
             {/* CTA separando */}
-            {order.status === 'preparing' && (
+            {order.status === 'preparing' && (() => {
+              const correios = order.delivery?.carrier === 'correios_pac' || order.delivery?.carrier === 'correios_sedex';
+              const etiqueta = (order.delivery as { prePostagem?: { codigoObjeto: string; coleta: boolean } } | undefined)?.prePostagem;
+              return (
               <div className="mt-3 flex items-center gap-3 p-3 bg-ink/5 border border-ink/10 rounded-xl">
                 <IconBox size={16} className="shrink-0" />
                 <div className="flex-1">
                   <p className="text-[12px] font-semibold text-ink">Separando o pedido</p>
-                  <p className="text-[11px] text-faint">Quando embalado e pronto para sair, clique em Despachar.</p>
+                  <p className="text-[11px] text-faint">
+                    {etiqueta
+                      ? <>Etiqueta <span className="font-mono">{etiqueta.codigoObjeto}</span>. {etiqueta.coleta ? 'Quando os Correios coletarem, o pedido muda sozinho.' : 'Quando postar na agência, o pedido muda sozinho.'}</>
+                      : correios ? 'Gere a etiqueta e peça a coleta (aqui em cima ou no pedido).' : 'Quando embalado e pronto para sair, clique em Despachar.'}
+                  </p>
                 </div>
                 {order.delivery?.carrier === 'uber_direct' || order.delivery?.carrier === 'pickup' ? (
                   <button onClick={() => dispatch(order.id)} disabled={dispatching === order.id}
@@ -438,11 +448,12 @@ export default function PainelPedidos() {
                 ) : (
                   <Link href={`/painel/pedidos/${order.id}`}
                     className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-4 py-2 bg-ink text-paper hover:bg-ink/80 active:scale-[0.97] transition-[background-color,transform] rounded-full">
-                    Informar rastreio
+                    {etiqueta ? 'Ver pedido' : correios ? 'Gerar etiqueta' : 'Informar rastreio'}
                   </Link>
                 )}
               </div>
-            )}
+              );
+            })()}
           </div>
         ))}
       </div>

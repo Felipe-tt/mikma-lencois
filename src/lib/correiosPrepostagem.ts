@@ -173,11 +173,13 @@ export async function createPrePostagem(body: ReturnType<typeof buildPrePostagem
 }
 
 /**
- * PDF da etiqueta: pede o rótulo e baixa pelo recibo. A geração é assíncrona;
+ * PDF das etiquetas (uma ou várias, num arquivo só): pede o rótulo e baixa pelo recibo. A geração é assíncrona;
  * enquanto não fica pronta, o download responde com aviso (PPN-291) e tenta
  * de novo. Pré-postagem ainda pendente (PPN-288) pede um recibo novo.
  */
-export async function labelPdf(id: string, opts: { tries?: number; waitMs?: number } = {}): Promise<Buffer> {
+export async function labelPdf(ids: string | string[], opts: { tries?: number; waitMs?: number } = {}): Promise<Buffer> {
+  const idsPrePostagem = (Array.isArray(ids) ? ids : [ids]).filter(Boolean);
+  if (!idsPrePostagem.length) throw new CorreiosError('Nenhuma etiqueta para imprimir.', 400);
   const tries = opts.tries ?? 10;
   const waitMs = opts.waitMs ?? 2000;
   const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -186,7 +188,7 @@ export async function labelPdf(id: string, opts: { tries?: number; waitMs?: numb
     if (!recibo) {
       const req = await call('/rotulo/assincrono/pdf', {
         method: 'POST',
-        body: JSON.stringify({ idsPrePostagem: [id], tipoRotulo: 'P', formatoRotulo: 'ET', imprimeRemetente: 'S', layoutImpressao: 'PADRAO' }),
+        body: JSON.stringify({ idsPrePostagem, tipoRotulo: 'P', formatoRotulo: 'ET', imprimeRemetente: 'S', layoutImpressao: 'PADRAO' }),
       });
       if (!req.ok) throw new CorreiosError(await correiosMessage(req), req.status >= 500 ? 502 : 400);
       recibo = String((await req.json() as { idRecibo?: string }).idRecibo ?? '');
