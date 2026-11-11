@@ -494,12 +494,18 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
     if (!order || order.status === 'cancelled' || order.status === 'delivered') return;
     // Só pedido já pago teve o estoque debitado (pending_payment/payment_expired não).
     const willReturnStock = order.status !== 'pending_payment' && order.status !== 'payment_expired';
+    // Pago pela AbacatePay: confirmar o cancelamento já devolve o dinheiro.
+    const pago = !!order.payment.paidAt;
+    const estornaAqui = pago && !order.payment.confirmedManuallyBy;
+    const total = formatCurrency(order.totalCents);
     const { confirmed, value: reason } = await confirmDialog({
-      message: 'Cancelar este pedido?',
-      detail: `${willReturnStock ? 'O estoque será devolvido. ' : ''}${order.payment.paidAt ? `O cliente já pagou ${formatCurrency(order.totalCents)}: depois de cancelar, devolva o valor pelo mesmo meio de pagamento. O cliente recebe um e-mail avisando do cancelamento. ` : ''}Esta ação não tem como desfazer.`,
+      message: estornaAqui ? `Cancelar e estornar ${total}?` : 'Cancelar este pedido?',
+      detail: `${willReturnStock ? 'O estoque será devolvido. ' : ''}${estornaAqui
+        ? `Os ${total} voltam para o cliente pela AbacatePay, no mesmo meio do pagamento. `
+        : pago ? `O cliente pagou ${total} por fora: devolva pelo mesmo meio e marque como devolvido. ` : ''}${pago ? 'O cliente recebe um e-mail avisando. ' : ''}Esta ação não tem como desfazer.`,
       withInput: true,
       inputPlaceholder: 'Motivo, o cliente vai ver (opcional)',
-      confirmLabel: 'Cancelar pedido',
+      confirmLabel: estornaAqui ? 'Cancelar e estornar' : 'Cancelar pedido',
       variant: 'danger',
     });
     if (!confirmed) return;
@@ -515,6 +521,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setCancelOrderError(data.error ?? 'Erro ao cancelar pedido'); return; }
       setOrder(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+      if (estornaAqui) await estornar(token);
       if (data.uberCancelFailed) {
         setCancelOrderError('Pedido cancelado, mas a corrida na Uber não pôde ser cancelada automaticamente. Cancele pelo app da Uber.');
       }
@@ -539,10 +546,14 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       variant: 'danger',
     });
     if (!confirmed) return;
+    await estornar(await user!.getIdToken());
+  }
+
+  async function estornar(token: string) {
+    if (!order) return;
     setRefunding(true);
     setRefundError(null);
     try {
-      const token = await user!.getIdToken();
       const res = await fetch(`/api/orders/${order.id}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
