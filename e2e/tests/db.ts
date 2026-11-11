@@ -35,6 +35,8 @@ export interface StoredOrder {
   selectedShipping?: { carrier?: string; label?: string; priceCents?: number; estimatedDays?: number };
   delivery?: { carrier?: string; priceCents?: number; realPriceCents?: number; trackingCode?: string; shippingCostCents?: number; prePostagem?: { id?: string; codigoObjeto?: string; coleta?: boolean } };
   timeline?: Array<{ status: string; note?: string }>;
+  troca?: { returnId?: string; origemOrderId?: string; aguardandoPecas?: boolean };
+  payment?: { refundStatus?: string };
 }
 
 export async function readOrder(id: string): Promise<StoredOrder> {
