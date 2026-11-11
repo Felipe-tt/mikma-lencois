@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Browser, type Locator, type Page } from '@playwright/test';
-import { addToCart, charges, goToPayment, login, payPix, prepare, staffLogin } from './helpers';
+import { ABACATE, addToCart, charges, goToPayment, login, payPix, prepare, staffLogin } from './helpers';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { db, emptyCart, forgetPasskeys, readOrder } from './db';
 
@@ -484,6 +484,35 @@ test('troca de pedido da Uber: o cliente escolhe entregar na loja e a equipe mar
   await card.getByRole('button', { name: 'Recebi as peças na loja' }).click();
   await expect(card.getByText(/Peças recebidas em/)).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Chegou na loja' })).toBeVisible();
+  await staff.close();
+});
+
+test('devolução: a equipe confere as peças e o dinheiro volta pela AbacatePay', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
+  const charge = (await (await fetch(`${ABACATE}/__e2e/charge`, { method: 'POST', body: JSON.stringify({ amount: 42180 }) })).json()).data;
+  const item = { productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 };
+  const orderRef = await db().collection('orders').add({
+    userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
+    items: [item], address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190, deliveredAt: new Date().toISOString() },
+    payment: { method: 'pix', txId: charge.id, paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(), timeline: [],
+  });
+  const retRef = await db().collection('returns').add({
+    orderId: orderRef.id, userId: user.id, customerName: 'Gabriela Torres', type: 'devolucao', reason: 'Desisti da compra', items: [item],
+    devolverPor: 'loja', status: 'aprovada', restocked: false, createdAt: new Date().toISOString(), createdBy: 'cliente',
+  });
+
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto('/painel/trocas');
+  const card = panel.locator('div.border', { hasText: `Pedido #${orderRef.id.slice(-8).toUpperCase()}` }).first();
+  await expect(card.getByText('ao concluir, o dinheiro volta para o cliente')).toBeVisible();
+  // Sem conferir, não há estorno.
+  expect((await orderRef.get()).get('payment.refundStatus')).toBeUndefined();
+  await card.getByRole('button', { name: 'Concluir e repor estoque' }).click();
+  await expect(card.getByText(/R\$\s?421,80 devolvidos pela AbacatePay/)).toBeVisible();
+  expect((await orderRef.get()).get('payment.refundStatus')).toBe('done');
+  expect((await retRef.get()).get('estorno')).toMatchObject({ status: 'feito', cents: 42180, via: 'abacatepay' });
+  expect((await charges() as { id: string; status: string }[]).find(c => c.id === charge.id)?.status).toBe('REFUNDED');
   await staff.close();
 });
 

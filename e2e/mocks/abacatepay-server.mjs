@@ -21,6 +21,11 @@ export function startAbacatePayMock(port = 4010) {
       const p = url.pathname.replace(/^\/v2/, '');
 
       if (p === '/__e2e/charges') return ok(res, [...charges.values()]);
+      if (p === '/__e2e/charge') {
+        const c = { id: id('pix_char_'), status: 'PAID', amount: body.amount ?? 0 };
+        charges.set(c.id, c);
+        return ok(res, c);
+      }
       if (p === '/__e2e/pay') {
         const c = charges.get(url.searchParams.get('id'));
         if (!c) return fail(res, 404, 'not found');
@@ -65,6 +70,13 @@ export function startAbacatePayMock(port = 4010) {
       if (p === '/checkouts/get') {
         const c = charges.get(url.searchParams.get('id'));
         return c ? ok(res, c) : fail(res, 404, 'not found');
+      }
+      if (p === '/transparents/refund' || p === '/checkouts/refund') {
+        const c = charges.get(body.id);
+        if (!c) return fail(res, 404, 'not found');
+        if (c.status === 'REFUNDED') return fail(res, 400, 'already refunded');
+        c.status = 'REFUNDED';
+        return ok(res, { id: id('ref_'), status: 'REFUNDED', amount: c.amount, reason: body.reason ?? null, originalId: c.id });
       }
       if (p === '/customers/create') return ok(res, { id: id('cust_') });
       return fail(res, 404, `rota simulada inexistente: ${p}`);
