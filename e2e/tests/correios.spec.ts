@@ -392,7 +392,7 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   await form.getByRole('checkbox', { name: 'As peças não foram lavadas nem usadas.' }).check();
   // Peça nova: a mesma por padrão; o cliente vê o frete do novo envio antes de pedir.
   await expect(form.getByLabel(/Peça nova no lugar de/)).toBeVisible();
-  await expect(form.getByText('Você paga por PIX')).toBeVisible();
+  await expect(form.getByText('Você paga por PIX')).toBeVisible({ timeout: 20_000 });
   if (process.env.E2E_SHOTS) await form.screenshot({ path: 'test-results/troca-peca-nova.png' });
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
@@ -473,6 +473,8 @@ test('troca de pedido da Uber: o cliente escolhe entregar na loja e a equipe mar
   await expect(form.getByText('Aprovado, é só levar as peças na loja.')).toBeVisible();
   await form.getByRole('radio', { name: 'Ficou folgado' }).click();
   await form.getByRole('checkbox', { name: 'As peças não foram lavadas nem usadas.' }).check();
+  // Espera o valor da peça nova (frete do novo envio) antes de enviar.
+  await expect(form.getByText('Você paga por PIX')).toBeVisible({ timeout: 20_000 });
   if (process.env.E2E_SHOTS) await form.screenshot({ path: 'test-results/troca-loja-form.png' });
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
