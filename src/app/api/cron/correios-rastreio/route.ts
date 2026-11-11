@@ -5,7 +5,8 @@ import { deliveredAt, postedAt, trackObjects } from '@/lib/correiosRastro';
 import { advanceOrderStatus, StatusError } from '@/lib/orders/advanceStatus';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { notifySeller } from '@/lib/push/notifySeller';
-import type { Order } from '@/types';
+import type { Order, ReturnRequest } from '@/types';
+import type { ReversaInfo } from '@/lib/correiosReversa';
 
 /**
  * Acompanha os pedidos dos Correios pelo rastreio do contrato, sem ninguém
@@ -38,18 +39,23 @@ export async function GET(req: NextRequest) {
   // informado no despacho (enviado).
   const codeOf = (o: CorreiosOrder) => (o.status === 'preparing' ? o.delivery.prePostagem?.codigoObjeto : o.delivery.trackingCode)?.trim().toUpperCase() ?? '';
   const tracked = orders.filter(o => codeOf(o));
-  const result = { checked: tracked.length, shipped: 0, delivered: 0, errors: 0 };
+  // Devoluções com código dos Correios ainda a caminho da loja.
+  const retSnap = await adminDb.collection('returns').where('status', '==', 'aprovada').limit(200).get();
+  const devolucoes = retSnap.docs
+    .map(d => ({ id: d.id, ...d.data() }) as ReturnRequest & { reversa?: ReversaInfo })
+    .filter(r => r.reversa?.codigoObjeto && !r.reversa.entregueEm);
+  const result = { checked: tracked.length + devolucoes.length, shipped: 0, delivered: 0, returned: 0, errors: 0 };
   // Registro da última rodada: a checagem diária (correios-cws.yml) avisa
   // se a rotina parar de rodar (Worker fora do ar, segredo trocado...).
   const done = async (body: typeof result & { error?: string }, status = 200) => {
     await adminDb.collection('ops').doc('correios-rastreio').set({ lastRunAt: new Date().toISOString(), ...body }).catch(() => {});
     return NextResponse.json(body, { status });
   };
-  if (!tracked.length) return done(result);
+  if (!result.checked) return done(result);
 
   let objects;
   try {
-    objects = await trackObjects(tracked.map(codeOf));
+    objects = await trackObjects([...tracked.map(codeOf), ...devolucoes.map(r => r.reversa!.codigoObjeto)]);
   } catch (err) {
     console.error('[correios-rastreio]', err);
     return done({ ...result, error: 'rastreio dos Correios indisponível' }, 502);
@@ -76,6 +82,20 @@ export async function GET(req: NextRequest) {
         result.errors++;
         console.error(`[correios-rastreio] pedido ${o.id}:`, err);
       }
+    }
+  }
+  for (const r of devolucoes) {
+    const chegou = deliveredAt(objects.get(r.reversa!.codigoObjeto.toUpperCase()));
+    if (!chegou) continue;
+    try {
+      await adminDb.collection('returns').doc(r.id).update({ 'reversa.entregueEm': chegou, updatedAt: new Date().toISOString() });
+      result.returned++;
+      const short = r.orderId.slice(-8).toUpperCase();
+      await notifyInApp({ type: 'correios_pickup', message: `A devolução do pedido ${short} chegou na loja pelos Correios. Confira as peças e conclua a troca.`, orderId: r.orderId });
+      await notifySeller({ title: 'Devolução chegou', body: `#${short} · confira as peças e conclua a troca`, url: '/painel/trocas', data: { orderId: r.orderId, event: 'correios_return' } });
+    } catch (err) {
+      result.errors++;
+      console.error(`[correios-rastreio] devolução ${r.id}:`, err);
     }
   }
   return done(result);

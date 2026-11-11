@@ -12,6 +12,7 @@ import { formatDateTime } from '@/lib/utils/format';
 import { IconExchange, IconCheck, IconX, IconBox } from '@/components/ui/Icon';
 import { staffActor } from '@/lib/staffActor';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
+import { ReversaCard, type ReversaView } from '@/components/painel/ReversaCard';
 
 const STATUS_LABEL: Record<ReturnStatus, string> = {
   solicitada: 'Solicitada', aprovada: 'Aprovada', recusada: 'Recusada', concluida: 'Concluída',
@@ -243,6 +244,12 @@ export default function TrocasPage() {
                     className="flex items-center gap-1.5 border border-mist text-mid text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
                     <IconX size={12} /> Recusar
                   </button>
+                </div>
+              )}
+
+              {(r.status === 'aprovada' || (r as { reversa?: ReversaView }).reversa) && (
+                <div className="mb-3 -mt-1">
+                  <ReversaCard returnId={r.id} reversa={(r as { reversa?: ReversaView }).reversa} />
                 </div>
               )}
 
