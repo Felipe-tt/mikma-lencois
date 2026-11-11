@@ -76,7 +76,7 @@ say('');
 say('| Região | até 2 kg | 2 a 5 kg | mais de 5 kg |');
 say('|---|---|---|---|');
 for (const r of REGIOES) say(`| ${r.nome} | ${PRECOS[r.id].map(v => `R$ ${v}`).join(' | ')} |`);
-if (!APLICAR) { say(''); say('Só leitura. Rode com aplicar = true para gravar.'); finish(0); }
+if (!APLICAR) { say(''); say('Só leitura. Para gravar, rode o workflow com frete = gravar.'); finish(0); }
 
 // 2. Estados de cada região.
 let estados;
