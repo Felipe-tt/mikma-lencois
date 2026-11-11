@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { SwapNote } from '@/components/cart/SwapNote';
 import { ReturnRequestCard } from '@/components/order/ReturnRequestCard';
 import { useAuth } from '@/lib/auth/AuthContext';
 
@@ -541,7 +542,7 @@ export default function OrderDetailPage() {
                       <p className="text-xs text-faint mt-0.5">
                         {[variantLabel({ size: item.variant.size, color: item.variant.color, colorName: item.variant.colorName }), `${item.quantity}x`].filter(Boolean).join(' · ')}
                       </p>
-                      {item.note && <p className="text-xs text-clay font-medium mt-0.5">{item.note}</p>}
+                      <SwapNote note={item.note} image={(item as { swapImage?: string }).swapImage} />
                     </div>
                     <span className="text-sm font-semibold text-ink shrink-0">
                       {formatCurrency(item.unitPrice * item.quantity)}

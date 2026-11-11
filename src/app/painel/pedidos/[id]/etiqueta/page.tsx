@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase/db';
 import { auth } from '@/lib/firebase/client';
 import { fetchCustomerPii } from '@/lib/piiClient';
 import type { Order, User } from '@/types';
+import { FronhaTrocada } from '@/components/painel/FronhaTrocada';
 import type { StoreSettings } from '@/lib/store-settings';
 import { STORE_DEFAULTS } from '@/lib/store-settings';
 import { formatCurrency } from '@/lib/utils/format';
@@ -142,6 +143,7 @@ export default function EtiquetaPage({ params }: { params: Promise<{ id: string 
                 <td className="py-2 pr-2">{it.productName}</td>
                 <td className="py-2 pr-2 text-neutral-600">
                   {itemDesc(it.variant)}
+                  {(it.note || it.swapSku) && <FronhaTrocada item={it} compacta />}
                 </td>
                 <td className="py-2 text-right font-semibold">{it.quantity}×</td>
               </tr>
