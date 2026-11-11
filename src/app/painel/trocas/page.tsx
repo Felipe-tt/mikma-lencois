@@ -264,7 +264,7 @@ export default function TrocasPage() {
 
               {(r.status === 'aprovada' || (r as { reversa?: ReversaView }).reversa) && (
                 <div className="mb-3 -mt-1">
-                  <ReversaCard returnId={r.id} reversa={(r as { reversa?: ReversaView }).reversa} />
+                  <ReversaCard returnId={r.id} reversa={(r as { reversa?: ReversaView }).reversa} saving={busyId === r.id} />
                 </div>
               )}
 

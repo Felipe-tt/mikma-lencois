@@ -17,7 +17,12 @@ const dia = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDa
  * pacote a qualquer agência com o código, sem pagar. Os Correios mandam o
  * código por e-mail; aqui dá para copiar e mandar pelo WhatsApp também.
  */
-export function ReversaCard({ returnId, reversa }: { returnId: string; reversa?: ReversaView }) {
+export function ReversaCard({ returnId, reversa, saving = false }: {
+  returnId: string;
+  reversa?: ReversaView;
+  /** A aprovação ainda está sendo gravada: a tela já mostra "Aprovada", mas o servidor ainda não sabe. */
+  saving?: boolean;
+}) {
   const [busy, setBusy] = useState<'' | 'gerar' | 'cancelar'>('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -57,7 +62,7 @@ export function ReversaCard({ returnId, reversa }: { returnId: string; reversa?:
   if (!reversa) {
     return (
       <div className="mt-3 flex flex-col gap-2">
-        <button type="button" onClick={generate} disabled={!!busy}
+        <button type="button" onClick={generate} disabled={!!busy || saving}
           className="self-start border border-ink text-ink text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-ink hover:text-paper transition-colors disabled:opacity-50 rounded-full">
           {busy === 'gerar' ? 'Falando com os Correios…' : 'Gerar código de devolução (Correios)'}
         </button>

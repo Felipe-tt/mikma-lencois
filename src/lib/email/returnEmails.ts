@@ -5,7 +5,7 @@ import {
 } from './layout';
 
 /** O que mudou na troca e vale um e-mail para o cliente. */
-export type AvisoTroca = 'aprovada' | 'codigo' | 'recusada' | 'concluida';
+export type AvisoTroca = 'aprovada' | 'codigo' | 'chegou' | 'recusada' | 'concluida';
 
 export interface TrocaEmailInput {
   kind: AvisoTroca;
@@ -48,6 +48,12 @@ export function buildTrocaEmail({ kind, type, orderId, name, reversa }: TrocaEma
       title: 'Seu código dos Correios',
       body: `${emailParagraph(`${ola} Aqui está o código para devolver as peças.`)}${codigo}${emailParagraph(postar)}`,
       text: `Olá, ${name}! Código dos Correios para a ${what} do pedido #${id}: ${reversa?.codigoObjeto ?? ''}. Leve o pacote a qualquer agência até ${reversa ? diaMes(reversa.validade) : ''}; o envio é por nossa conta.`,
+    },
+    chegou: {
+      subject: `Recebemos as peças da sua ${what}, pedido #${id}`,
+      title: 'As peças chegaram',
+      body: `${emailParagraph(`${ola} O pacote da sua ${what} chegou na loja.`)}${emailParagraph(`Vamos conferir as peças e te avisamos quando a ${what} estiver concluída.`, { muted: true })}`,
+      text: `Olá, ${name}! O pacote da ${what} do pedido #${id} chegou na loja. Vamos conferir e te avisamos quando estiver concluída.`,
     },
     recusada: {
       subject: `Sobre a sua ${what}, pedido #${id}`,
