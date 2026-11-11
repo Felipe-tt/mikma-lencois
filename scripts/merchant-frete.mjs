@@ -34,11 +34,12 @@ async function call(method, path, body) {
 }
 const erro = r => `HTTP ${r.status} ${String(r.json.error?.message ?? JSON.stringify(r.json)).slice(0, 400)}`;
 
-// Faixas de CEP: Sul (PR, SC, RS), Sudeste (SP, RJ, ES, MG) e o resto.
+// Faixas de CEP por prefixo (o Google recusa o CEP com hífen): Sul (PR, SC,
+// RS: 80 a 99), Sudeste (SP, RJ, ES, MG: 01 a 39) e o resto (40 a 79).
 const REGIOES = [
-  { id: 'mikma-sul', nome: 'Sul', faixas: [['80000-000', '99999-999']] },
-  { id: 'mikma-sudeste', nome: 'SP, RJ, MG e ES', faixas: [['01000-000', '39999-999']] },
-  { id: 'mikma-demais', nome: 'Demais estados', faixas: [['40000-000', '79999-999']] },
+  { id: 'mikma-sul', nome: 'Sul', faixas: [['80*', '99*']] },
+  { id: 'mikma-sudeste', nome: 'SP, RJ, MG e ES', faixas: [['01*', '39*']] },
+  { id: 'mikma-demais', nome: 'Demais estados', faixas: [['40*', '79*']] },
 ];
 // Reais por faixa de peso: até 2 kg, de 2 a 5 kg, acima de 5 kg.
 const PRECOS = { 'mikma-sul': [21, 29, 36], 'mikma-sudeste': [27, 41, 50], 'mikma-demais': [37, 56, 70] };
@@ -49,7 +50,7 @@ const atual = await call('GET', '/shippingSettings');
 say('## Frete no Merchant Center');
 if (atual.ok) {
   const servicos = atual.json.services ?? [];
-  say(servicos.length ? `Hoje: ${servicos.map(s => `${s.serviceName} (${s.active ? 'ativo' : 'inativo'})`).join(', ')}.` : 'Hoje: nenhum serviço de frete.');
+  say(servicos.length ? `Hoje: ${servicos.map(s => `${s.serviceName || 'sem nome'} (${s.active ? 'ativo' : 'inativo'})`).join(', ')}.` : 'Hoje: nenhum serviço de frete.');
 } else if (atual.status === 404) say('Hoje: nenhum frete configurado.');
 else { say(`Não deu para ler o frete: ${erro(atual)}`); finish(1); }
 
