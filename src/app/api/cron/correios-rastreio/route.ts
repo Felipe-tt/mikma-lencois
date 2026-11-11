@@ -38,14 +38,20 @@ export async function GET(req: NextRequest) {
   const codeOf = (o: CorreiosOrder) => (o.status === 'preparing' ? o.delivery.prePostagem?.codigoObjeto : o.delivery.trackingCode)?.trim().toUpperCase() ?? '';
   const tracked = orders.filter(o => codeOf(o));
   const result = { checked: tracked.length, shipped: 0, delivered: 0, errors: 0 };
-  if (!tracked.length) return NextResponse.json(result);
+  // Registro da última rodada: a checagem diária (correios-cws.yml) avisa
+  // se a rotina parar de rodar (Worker fora do ar, segredo trocado...).
+  const done = async (body: typeof result & { error?: string }, status = 200) => {
+    await adminDb.collection('ops').doc('correios-rastreio').set({ lastRunAt: new Date().toISOString(), ...body }).catch(() => {});
+    return NextResponse.json(body, { status });
+  };
+  if (!tracked.length) return done(result);
 
   let objects;
   try {
     objects = await trackObjects(tracked.map(codeOf));
   } catch (err) {
     console.error('[correios-rastreio]', err);
-    return NextResponse.json({ ...result, error: 'rastreio dos Correios indisponível' }, { status: 502 });
+    return done({ ...result, error: 'rastreio dos Correios indisponível' }, 502);
   }
 
   for (const o of tracked) {
@@ -69,5 +75,5 @@ export async function GET(req: NextRequest) {
       }
     }
   }
-  return NextResponse.json(result);
+  return done(result);
 }
