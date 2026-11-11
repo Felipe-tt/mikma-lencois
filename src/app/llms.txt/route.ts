@@ -29,7 +29,7 @@ export async function GET() {
 
 - Pagamento: PIX (com desconto a partir de um valor mínimo) ou cartão de crédito parcelado, direto no site.
 - Entrega: motoboy em Blumenau e frete com rastreio para todo o Brasil; o valor aparece no carrinho pelo CEP.
-- Trocas: 7 dias para arrependimento; detalhes em [Trocas e devoluções](${SITE_URL}/trocas-e-devolucoes).
+- Trocas e devoluções: 7 dias, peças sem lavar e sem usar; defeito: 90 dias; detalhes em [Trocas e devoluções](${SITE_URL}/trocas-e-devolucoes).
 - Medidas: confira a altura do colchão no [Guia de tamanhos](${SITE_URL}/guia-de-tamanhos) antes de escolher.
 - Catálogo completo em JSON: [catalogo.json](${SITE_URL}/catalogo.json)
 

@@ -1,12 +1,14 @@
 /**
  * Pedido de troca ou devolução feito pelo próprio cliente, no pedido.
- * Prazos da política (/trocas-e-devolucoes), contados da entrega: devolução
- * (desistir, CDC art. 49) só até 7 dias; troca por defeito até 90 (art. 26).
+ * Política da loja (/trocas-e-devolucoes), contada da entrega:
+ *  - troca ou devolução (tamanho, cor, desistência): até 7 dias, com as
+ *    peças sem lavar e sem usar;
+ *  - defeito: até 90 dias (CDC art. 26).
  */
 import type { Order } from '@/types';
 
-export const DIAS_TROCA = 90;
-export const DIAS_ARREPENDIMENTO = 7;
+export const DIAS_TROCA = 7;
+export const DIAS_DEFEITO = 90;
 
 /** Data da entrega (ou, sem ela, do despacho ou da compra). */
 export function deliveredDate(order: Pick<Order, 'delivery' | 'createdAt'>): Date | null {
@@ -19,13 +21,20 @@ export function deliveredDate(order: Pick<Order, 'delivery' | 'createdAt'>): Dat
   return d && !Number.isNaN(d.getTime()) ? d : null;
 }
 
-/** Ainda dá para pedir troca? Devolve o motivo quando não dá. */
-export function returnWindow(order: Pick<Order, 'status' | 'delivery' | 'createdAt'>, now = new Date()): { ok: true; arrependimento: boolean } | { ok: false; reason: string } {
-  if (order.status !== 'delivered') return { ok: false, reason: 'A troca é pedida depois que o pedido é entregue.' };
-  const d = deliveredDate(order);
-  const dias = d ? (now.getTime() - d.getTime()) / 86_400_000 : 0;
-  if (dias > DIAS_TROCA) return { ok: false, reason: `O prazo para pedir troca (${DIAS_TROCA} dias depois da entrega) já passou. Fale com a gente pelo WhatsApp.` };
-  return { ok: true, arrependimento: dias <= DIAS_ARREPENDIMENTO };
-}
+const plus = (d: Date, dias: number) => new Date(d.getTime() + dias * 86_400_000);
 
-export const DEVOLUCAO_FORA_DO_PRAZO = `A devolução vale até ${DIAS_ARREPENDIMENTO} dias depois da entrega. Depois disso, peça a troca: se for defeito, a gente resolve.`;
+export const TROCA_FORA_DO_PRAZO = `Troca e devolução valem até ${DIAS_TROCA} dias depois da entrega. Se veio com defeito, escolha "Defeito".`;
+
+export type ReturnWindow =
+  | { ok: true; /** Ainda dá troca ou devolução (7 dias). */ troca: boolean; trocaAte: Date; defeitoAte: Date }
+  | { ok: false; reason: string };
+
+/** O que ainda dá para pedir. Devolve o motivo quando não dá nada. */
+export function returnWindow(order: Pick<Order, 'status' | 'delivery' | 'createdAt'>, now = new Date()): ReturnWindow {
+  if (order.status !== 'delivered') return { ok: false, reason: 'A troca é pedida depois que o pedido é entregue.' };
+  const d = deliveredDate(order) ?? now;
+  const trocaAte = plus(d, DIAS_TROCA);
+  const defeitoAte = plus(d, DIAS_DEFEITO);
+  if (now.getTime() > defeitoAte.getTime()) return { ok: false, reason: `O prazo para defeito (${DIAS_DEFEITO} dias depois da entrega) já passou. Fale com a gente pelo WhatsApp.` };
+  return { ok: true, troca: now.getTime() <= trocaAte.getTime(), trocaAte, defeitoAte };
+}
