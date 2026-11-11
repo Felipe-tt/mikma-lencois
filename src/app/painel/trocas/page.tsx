@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { auth } from '@/lib/firebase/client';
 import type { ReturnRequest, ReturnStatus } from '@/types';
 import { expandStockLines } from '@/lib/orderStockLines';
-import { formatDateTime } from '@/lib/utils/format';
+import { formatCurrency, formatDateTime } from '@/lib/utils/format';
 import { IconExchange, IconCheck, IconX, IconBox } from '@/components/ui/Icon';
 import { staffActor } from '@/lib/staffActor';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
@@ -35,7 +35,11 @@ const FILTERS: { key: ReturnStatus | 'todas'; label: string }[] = [
   { key: 'recusada', label: 'Recusadas' },
 ];
 
-type Extras = { devolverPor?: 'correios' | 'uber' | 'loja'; reversa?: ReversaView; coletaUber?: ColetaUberView; recebidaEm?: string; estorno?: EstornoView };
+type Extras = {
+  devolverPor?: 'correios' | 'uber' | 'loja'; reversa?: ReversaView; coletaUber?: ColetaUberView; recebidaEm?: string; estorno?: EstornoView;
+  novos?: { productName: string; quantity: number; variant: { size: string; colorName?: string; color?: string } }[];
+  saldoCents?: number; freteCents?: number; reenvioOrderId?: string;
+};
 const extras = (r: ReturnRequest) => r as ReturnRequest & Extras;
 const DEVOLVE: Record<string, string> = { correios: 'volta pelos Correios', uber: 'Uber busca no cliente', loja: 'cliente entrega na loja' };
 
@@ -116,6 +120,11 @@ export default function TrocasPage() {
     try {
       await updateDoc(doc(db, 'returns', r.id), { status, updatedAt: serverTimestamp() });
       showToast(status === 'aprovada' ? 'Aprovada. O cliente recebe um e-mail.' : status === 'recusada' ? 'Recusada. O cliente recebe um e-mail.' : 'Atualizado.');
+      // Troca com peça nova: cria o pedido dela (com o PIX da diferença, se houver).
+      if (status === 'aprovada' && extras(r).novos?.length) {
+        const err = await reenvio(r.id, 'POST');
+        if (err) showToast(`Aprovada, mas o pedido da peça nova não foi criado: ${err}`);
+      }
       void avisar(r);
     } catch (err) {
       console.error('[trocas] falha ao atualizar status', err);
@@ -123,6 +132,16 @@ export default function TrocasPage() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  async function reenvio(id: string, method: 'POST' | 'PATCH'): Promise<string | null> {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return 'Sua sessão expirou.';
+      const res = await fetch(`/api/painel/trocas/${id}/reenvio`, { method, headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) return null;
+      return (await res.json().catch(() => ({}))).error ?? 'Tente de novo.';
+    } catch { return 'Sem conexão.'; }
   }
 
   async function receberNaLoja(r: ReturnRequest) {
@@ -177,6 +196,12 @@ export default function TrocasPage() {
         return notFound;
       });
       void avisar(r);
+      // Troca conferida: libera o envio da peça nova.
+      if (extras(r).reenvioOrderId) {
+        const err = await reenvio(r.id, 'PATCH');
+        showToast(err ? `Concluída, mas o envio da peça nova não foi liberado: ${err}` : 'Concluída. A peça nova já pode ser enviada.');
+        return;
+      }
       // Devolução conferida: o dinheiro volta pela AbacatePay na hora. Se não
       // der (parte do pedido, pago por fora), o cartão mostra o que fazer.
       if (r.type === 'devolucao') {
@@ -304,8 +329,24 @@ export default function TrocasPage() {
                 </div>
               )}
 
-              {r.type === 'devolucao' && r.status === 'concluida' && (
-                <EstornoCard returnId={r.id} orderId={r.orderId} items={r.items} estorno={extras(r).estorno} />
+              {extras(r).novos?.length ? (
+                <div className="mb-3 rounded-xl border border-mist px-4 py-3 text-[12.5px] text-mid flex flex-col gap-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-faint">Peça nova</p>
+                  {extras(r).novos!.map((n, i) => (
+                    <p key={i} className="text-ink">{n.quantity}× {n.productName}, {n.variant.size}{n.variant.colorName ? ` · ${n.variant.colorName}` : ''}</p>
+                  ))}
+                  <p>
+                    {(extras(r).saldoCents ?? 0) > 0 ? `Cliente paga ${formatCurrency(extras(r).saldoCents!)} (diferença e frete)`
+                      : (extras(r).saldoCents ?? 0) < 0 ? `Loja devolve ${formatCurrency(-extras(r).saldoCents!)} ao concluir`
+                      : 'Nada a pagar'}
+                    {extras(r).reenvioOrderId && <> · <Link href={`/painel/pedidos/${extras(r).reenvioOrderId}`} className="text-clay underline underline-offset-2">pedido da peça nova</Link></>}
+                  </p>
+                </div>
+              ) : null}
+
+              {r.status === 'concluida' && (r.type === 'devolucao' || (extras(r).saldoCents ?? 0) < 0) && (
+                <EstornoCard returnId={r.id} orderId={r.orderId} items={r.items} estorno={extras(r).estorno}
+                  diferencaCents={r.type === 'troca' ? -(extras(r).saldoCents ?? 0) : undefined} />
               )}
 
               {r.status === 'aprovada' && r.type === 'devolucao' && (

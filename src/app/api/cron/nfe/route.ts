@@ -44,7 +44,8 @@ export async function GET(req: NextRequest) {
     const field = nfeField(config.environment);
     for (const doc of paid.docs) {
       const order = doc.data();
-      if (!PAID.has(order.status as string) || order[field] || order.risk?.hold) continue;
+      // Peça nova de troca: a nota da troca sai junto com a de devolução, pelo painel.
+      if (!PAID.has(order.status as string) || order[field] || order.risk?.hold || order.troca) continue;
       await run(async () => { await issueNfe(doc.id, config.environment, { by: 'cron' }); results.issued++; });
     }
   }

@@ -779,6 +779,21 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
       <div className="flex flex-col gap-4">
 
+        {/* ── Peça nova de troca: só envia depois de conferir as peças antigas ── */}
+        {(() => {
+          const troca = (order as { troca?: { origemOrderId: string; aguardandoPecas?: boolean } }).troca;
+          if (!troca) return null;
+          return (
+            <div className={`px-5 py-4 rounded-2xl ${troca.aguardandoPecas ? 'border-2 border-amber-300 bg-amber-50' : 'border border-mist bg-warm'}`}>
+              <p className="text-[13px] font-semibold text-ink">Peça nova de troca</p>
+              <p className="text-[12.5px] text-mid mt-0.5">
+                Troca do <Link href={`/painel/pedidos/${troca.origemOrderId}`} className="text-clay underline underline-offset-2">pedido #{troca.origemOrderId.slice(-8).toUpperCase()}</Link>.{' '}
+                {troca.aguardandoPecas ? 'Não envie ainda: espere as peças antigas chegarem e conclua a troca em Trocas.' : 'Peças antigas conferidas: pode enviar.'}
+              </p>
+            </div>
+          );
+        })()}
+
         {/* ── Detector de golpe (ver src/lib/orders/risk.ts) ── */}
         <RiskCard order={order} user={user} />
 

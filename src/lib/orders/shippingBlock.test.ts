@@ -11,4 +11,8 @@ describe('shippingBlockReason', () => {
     expect(shippingBlockReason({ payment: { dispute: { state: 'open' } } })).toMatch(/contestação/);
     expect(shippingBlockReason({ payment: { refundStatus: 'done' } })).toMatch(/estornado/);
   });
+  it('peça nova de troca espera as peças antigas', () => {
+    expect(shippingBlockReason({ troca: { aguardandoPecas: true } })).toMatch(/troca/);
+    expect(shippingBlockReason({ troca: { aguardandoPecas: false } })).toBeNull();
+  });
 });
