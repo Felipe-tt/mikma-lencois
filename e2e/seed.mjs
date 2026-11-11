@@ -8,6 +8,9 @@ import { getAuth } from 'firebase-admin/auth';
 export const USERS = {
   cliente: { email: 'cliente@e2e.mikma', password: 'senha-e2e-123', name: 'Maria Souza', role: 'customer' },
   admin: { email: 'admin@e2e.mikma', password: 'senha-e2e-123', name: 'Felipe Admin', role: 'admin' },
+  // Equipe dos testes dos Correios: cada login no painel cria uma passkey, e o
+  // limite é 10 por conta a cada 10 minutos. Uma conta por teste.
+  ...Object.fromEntries([1, 2, 3, 4, 5, 6].map(n => [`equipe${n}`, { email: `equipe${n}@e2e.mikma`, password: 'senha-e2e-123', name: `Equipe ${n}`, role: 'admin' }])),
   // Clientes de São Paulo, um por teste dos Correios (sem retirada na loja,
   // o frete sai do contrato). CPF próprio: o detector de golpe soma pontos
   // quando o mesmo CPF aparece em várias contas.
@@ -15,6 +18,7 @@ export const USERS = {
   sedex: { email: 'sedex@e2e.mikma', password: 'senha-e2e-123', name: 'Bruno Lima', role: 'customer', cpf: '39053344705', address: { cep: '01310100', street: 'Avenida Paulista', number: '2000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
   cartao: { email: 'cartao@e2e.mikma', password: 'senha-e2e-123', name: 'Davi Nunes', role: 'customer', cpf: '12345678909', address: { cep: '01310100', street: 'Avenida Paulista', number: '3000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
   cancela: { email: 'cancela@e2e.mikma', password: 'senha-e2e-123', name: 'Elisa Moura', role: 'customer', cpf: '98765432100', address: { cep: '01310100', street: 'Avenida Paulista', number: '4000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
+  lote: { email: 'lote@e2e.mikma', password: 'senha-e2e-123', name: 'Fabio Lote', role: 'customer', cpf: '24681357928', address: { cep: '01310100', street: 'Avenida Paulista', number: '5000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
   // Para este CEP a API dos Correios simulada responde "fora do ar".
   semCorreios: { email: 'sem-correios@e2e.mikma', password: 'senha-e2e-123', name: 'Carla Reis', role: 'customer', cpf: '93541134780', address: { cep: '04538133', street: 'Avenida Brigadeiro Faria Lima', number: '3477', neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP' } },
 };

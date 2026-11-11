@@ -14,6 +14,19 @@ import { emptyCart, forgetPasskeys, readOrder } from './db';
  * (1 dia); Melhor Envio PAC R$ 27,50, SEDEX R$ 41,80 e Jadlog R$ 29,90.
  */
 const SENHA = 'senha-e2e-123';
+
+// Cada teste entra no painel com uma conta de equipe própria (e2e/seed.mjs):
+// o login cria uma passkey, e o limite é 10 por conta a cada 10 minutos.
+let equipe = 0;
+async function staffPanel(browser: Browser) {
+  const email = `equipe${(equipe++ % 6) + 1}@e2e.mikma`;
+  await forgetPasskeys(email);
+  const staff = await browser.newContext();
+  await prepare(staff);
+  const panel = await staff.newPage();
+  await staffLogin(panel, email, SENHA);
+  return { staff, panel };
+}
 const JOGO_KING = { id: 'p3', cents: 39990 };
 const reais = (cents: number) => new RegExp(`R\\$\\s?${(cents / 100).toFixed(2).replace('.', ',')}`);
 
@@ -60,11 +73,7 @@ function correiosLog(): Array<{ id?: string; codigoObjeto?: string; body?: Recor
  * etiqueta trouxe. Devolve o código de rastreio.
  */
 async function dispatch(browser: Browser, orderId: string, servico: string, opts: { cancelarAntes: boolean; confirmar: boolean }) {
-  await forgetPasskeys('admin@e2e.mikma');
-  const staff = await browser.newContext();
-  await prepare(staff);
-  const panel = await staff.newPage();
-  await staffLogin(panel, 'admin@e2e.mikma', SENHA);
+  const { staff, panel } = await staffPanel(browser);
   await panel.goto(`/painel/pedidos/${orderId}`);
   await panel.getByRole('button', { name: 'Comecei a separar o pedido' }).click();
   await expect(panel.getByText('Pedido sendo separado')).toBeVisible();
@@ -274,11 +283,7 @@ test('pedido cancelado com etiqueta: a etiqueta é cancelada nos Correios', asyn
   const { orderId, charge } = await payWithPix(page, payPixButton);
   expect((await payPix(baseURL!, charge.id, orderId, charge.amount)).status).toBe(200);
 
-  await forgetPasskeys('admin@e2e.mikma');
-  const staff = await browser.newContext();
-  await prepare(staff);
-  const panel = await staff.newPage();
-  await staffLogin(panel, 'admin@e2e.mikma', SENHA);
+  const { staff, panel } = await staffPanel(browser);
   await panel.goto(`/painel/pedidos/${orderId}`);
   await panel.getByRole('button', { name: 'Comecei a separar o pedido' }).click();
   await panel.getByRole('button', { name: 'Gerar etiqueta e pedir coleta' }).click();
@@ -291,6 +296,52 @@ test('pedido cancelado com etiqueta: a etiqueta é cancelada nos Correios', asyn
   // A etiqueta é cancelada logo depois de o pedido virar cancelado.
   await expect.poll(() => correiosLog().some(e => e.cancelada === pre.id)).toBe(true);
   await expect(panel.getByText(/os Correios não cancelaram a etiqueta/)).toHaveCount(0);
+  await staff.close();
+});
+
+test('lote: etiquetas do dia geradas de uma vez e impressas num PDF só', async ({ page, browser, baseURL }) => {
+  test.setTimeout(300_000);
+  const email = 'lote@e2e.mikma';
+  await login(page, email, SENHA);
+  const orderIds: string[] = [];
+  for (const servico of ['PAC', 'SEDEX']) {
+    await emptyCart(email);
+    await addToCart(page, JOGO_KING.id);
+    const payPixButton = await goToPayment(page);
+    await page.getByRole('radiogroup', { name: 'Opção de entrega' }).getByRole('radio', { name: new RegExp(`Correios ${servico}`) }).click();
+    const { orderId, charge } = await payWithPix(page, payPixButton);
+    expect((await payPix(baseURL!, charge.id, orderId, charge.amount)).status).toBe(200);
+    orderIds.push(orderId);
+  }
+
+  const { staff, panel } = await staffPanel(browser);
+  for (const id of orderIds) {
+    await panel.goto(`/painel/pedidos/${id}`);
+    await panel.getByRole('button', { name: 'Comecei a separar o pedido' }).click();
+    await expect(panel.getByText('Pedido sendo separado')).toBeVisible();
+  }
+
+  await panel.goto('/painel/pedidos');
+  const bar = panel.getByRole('region', { name: 'Etiquetas dos Correios' });
+  await expect(bar).toContainText('sem etiqueta');
+  await bar.getByRole('button', { name: /^Gerar \d+ etiquetas? e pedir coleta$/ }).click();
+  await expect(bar.getByRole('status')).toContainText('e coleta pedida aos Correios');
+  const pres = await Promise.all(orderIds.map(async id => (await readOrder(id)).delivery?.prePostagem));
+  expect(pres.every(p => p?.codigoObjeto && p.coleta)).toBe(true);
+  const sent = correiosLog().filter(e => pres.some(p => p?.id === e.id));
+  expect(sent.map(e => e.body?.codigoServico).sort()).toEqual(['03220', '03298']);
+
+  let label = { status: 0, type: '' };
+  await panel.route('**/api/painel/etiquetas?pedidos=*', async route => {
+    const response = await route.fetch();
+    label = { status: response.status(), type: response.headers()['content-type'] ?? '' };
+    expect(new URL(route.request().url()).searchParams.get('pedidos')?.split(',')).toEqual(expect.arrayContaining(orderIds));
+    await route.fulfill({ response });
+  });
+  await expect(bar).toContainText('todos com etiqueta');
+  await bar.getByRole('button', { name: /^Imprimir \d+ etiquetas?$/ }).click();
+  await expect.poll(() => label.status).toBe(200);
+  expect(label.type).toBe('application/pdf');
   await staff.close();
 });
 

@@ -53,8 +53,8 @@ export function CorreiosLabelCard({ orderId, user, prePostagem, onCode }: {
         return;
       }
       const blob = URL.createObjectURL(await res.blob());
-      if (tab) tab.location.href = blob;
-      else window.location.href = blob;
+      if (tab) tab.location.replace(blob);
+      else window.location.assign(blob);
     } catch {
       tab?.close();
       setError('Sem conexão. Tente de novo.');

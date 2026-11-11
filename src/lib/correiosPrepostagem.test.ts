@@ -159,6 +159,18 @@ describe('chamadas à API de pré-postagem', () => {
     expect(downloads).toBe(2);
   });
 
+  it('várias etiquetas num PDF só; lista vazia nem chama os Correios', async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/token/')) return tokenOk();
+      if (url.endsWith('/rotulo/assincrono/pdf')) { bodies.push(JSON.parse(String(init?.body))); return json({ idRecibo: 'r2' }); }
+      return json({ nome: 'r2.pdf', dados: Buffer.from('%PDF-lote').toString('base64') });
+    }));
+    expect((await labelPdf(['pp1', 'pp2', ''], { waitMs: 1 })).toString()).toBe('%PDF-lote');
+    expect(bodies).toEqual([expect.objectContaining({ idsPrePostagem: ['pp1', 'pp2'] })]);
+    await expect(labelPdf([], { waitMs: 1 })).rejects.toThrow('Nenhuma etiqueta para imprimir.');
+  });
+
   it('etiqueta que não fica pronta: erro claro', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       if (url.includes('/token/')) return tokenOk();
