@@ -6,6 +6,7 @@ import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { DinheiroDevolvido } from '@/components/painel/DinheiroDevolvido';
+import { NotasDevolucao } from '@/components/painel/NotasDevolucao';
 import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -782,6 +783,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
         {/* ── Todo dinheiro que voltou ao cliente (cancelamento, devolução, troca) ── */}
         <DinheiroDevolvido order={order as unknown as Parameters<typeof DinheiroDevolvido>[0]['order']} />
+        <NotasDevolucao orderId={order.id} />
 
         {/* ── Peça nova de troca: só envia depois de conferir as peças antigas ── */}
         {(() => {

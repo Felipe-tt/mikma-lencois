@@ -698,6 +698,15 @@ export default function ConfiguracoesPage() {
               <F label="CFOP para outros estados" value={settings.nfeCfopInterestadual ?? NFE_DEFAULTS.cfopInterestadual} onChange={v => set('nfeCfopInterestadual', v)} inputMode="numeric" maxLength={4} />
             </Row>
             <TA label="Informações adicionais" value={settings.nfeInfoAdicional ?? NFE_DEFAULTS.infoAdicional} onChange={v => set('nfeInfoAdicional', v)} rows={2} />
+            <Divider label="Nota de devolução (confirme com a contabilidade)" />
+            <Row>
+              <F label="CFOP da devolução, dentro do estado" value={settings.nfeDevCfopInterno ?? NFE_DEFAULTS.devCfopInterno} onChange={v => set('nfeDevCfopInterno', v)} inputMode="numeric" maxLength={4} hint="1202 = devolução de venda" />
+              <F label="CFOP da devolução, outros estados" value={settings.nfeDevCfopInterestadual ?? NFE_DEFAULTS.devCfopInterestadual} onChange={v => set('nfeDevCfopInterestadual', v)} inputMode="numeric" maxLength={4} hint="2202 = devolução de venda" />
+            </Row>
+            <Row>
+              <F label="CSOSN da devolução" value={settings.nfeDevCsosn ?? NFE_DEFAULTS.devCsosn} onChange={v => set('nfeDevCsosn', v)} inputMode="numeric" maxLength={3} hint="900 = outros (o mais comum na devolução)" />
+              <F label="Natureza da devolução" value={settings.nfeDevNaturezaOperacao ?? NFE_DEFAULTS.devNaturezaOperacao} onChange={v => set('nfeDevNaturezaOperacao', v)} maxLength={60} />
+            </Row>
           </Card>
         </div>
       )}

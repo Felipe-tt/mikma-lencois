@@ -155,3 +155,36 @@ describe('brasiliaIso / nfeConfigFrom', () => {
     expect(c.codMunicipio).toBe('4202404');
   });
 });
+
+import { buildNfeDevolucao } from './payload';
+
+describe('nota de devolução', () => {
+  const refChave = '42261005338341000195550010000001231123456781';
+  const dev = (items: NfeOrder['items'], valorCents: number, inteira = false) => {
+    const { nfe } = buildNfeDevolucao(base, { items, valorCents, inteira, refChave, returnId: 'r1' }, customer, config, ident);
+    return (nfe.NFe as { infNFe: Record<string, any> }).infNFe;
+  };
+  it('é de entrada, finalidade devolução, referencia a venda e não tem pagamento', () => {
+    const n = dev([base.items[0]], 37980);
+    expect(n.ide).toMatchObject({ tpNF: 0, finNFe: 4, natOp: 'Devolução de venda', NFref: { refNFe: refChave } });
+    expect(n.pag.detPag).toMatchObject({ tPag: '90' });
+    expect(n.infAdic.infCpl).toContain(refChave);
+  });
+  it('CFOP de devolução e CSOSN 900 por padrão', () => {
+    const n = dev([base.items[0]], 37980);
+    expect(n.det[0].prod.CFOP).toBe(1202);
+    expect(n.det[0].imposto.ICMS).toEqual({ ICMSSN900: { orig: 0, CSOSN: 900 } });
+  });
+  it('parte do pedido: só as peças, sem frete, total = valor devolvido', () => {
+    const n = dev([base.items[1]], 3000);
+    expect(n.det).toHaveLength(1);
+    expect(cents(n.total.ICMSTot.vFrete)).toBe(0);
+    expect(cents(n.total.ICMSTot.vDesc)).toBe(333);
+    expect(cents(n.total.ICMSTot.vNF)).toBe(3000);
+  });
+  it('pedido inteiro: frete junto', () => {
+    const n = dev(base.items, 43813, true);
+    expect(cents(n.total.ICMSTot.vFrete)).toBe(2500);
+    expect(cents(n.total.ICMSTot.vNF)).toBe(43813);
+  });
+});

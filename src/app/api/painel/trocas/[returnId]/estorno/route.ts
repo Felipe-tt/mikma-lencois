@@ -120,7 +120,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ret
       return NextResponse.json({ error: 'O cliente não tem CPF cadastrado para receber o PIX. Devolva por fora e registre.' }, { status: 400 });
     }
     // A taxa do PIX sai do valor enviado: soma a taxa para o cliente receber o valor cheio.
-    const taxa = Number((await storeRef().get()).get('abacatePixFeeCents') ?? 0) || 0;
+    // Tabela da AbacatePay: PIX de saída R$ 0,80 (corrigida sozinha se a cobrança vier diferente).
+    const salva = Number((await storeRef().get()).get('abacatePixFeeCents'));
+    const taxa = Number.isFinite(salva) && salva >= 0 ? salva : 80;
     const sandbox = !!(order.payment as { abacateSandbox?: boolean } | undefined)?.abacateSandbox;
     const result = await sendPixTransfer({
       amount: Math.max(100, valor.cents + taxa),

@@ -573,7 +573,8 @@ test('devolução de parte do pedido: a AbacatePay manda PIX no CPF do cliente',
   const estorno = (await retRef.get()).get('estorno');
   expect(estorno).toMatchObject({ status: 'feito', cents: 39990, via: 'pix' });
   const pix = (await charges() as unknown as { id: string; pixKey?: string; amount: number }[]).find(c => c.id === estorno.transferId);
-  expect(pix).toMatchObject({ pixKey: '93541134780', amount: 39990 });
+  // R$ 0,80 da taxa do PIX de saída somados: o cliente recebe os R$ 399,90 cheios.
+  expect(pix).toMatchObject({ pixKey: '93541134780', amount: 40070 });
   // O pagamento original não foi estornado inteiro.
   expect((await charges()).find(c => c.id === charge.id)?.status).toBe('PAID');
   await staff.close();

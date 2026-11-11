@@ -34,6 +34,11 @@ export interface NfeConfig {
   cfopInterestadual: string;
   naturezaOperacao: string;
   infoAdicional: string;
+  /** Nota de devolução (entrada das peças que o cliente devolveu). */
+  devCfopInterno: string;
+  devCfopInterestadual: string;
+  devCsosn: string;
+  devNaturezaOperacao: string;
 }
 
 export const NFE_DEFAULTS = {
@@ -55,6 +60,11 @@ export const NFE_DEFAULTS = {
   cfopInterno: '5102',
   cfopInterestadual: '6102',
   naturezaOperacao: 'Venda de mercadoria',
+  // Devolução de venda: entrada das peças, referenciando a nota da venda.
+  devCfopInterno: '1202',
+  devCfopInterestadual: '2202',
+  devCsosn: '900',
+  devNaturezaOperacao: 'Devolução de venda',
   infoAdicional: 'Documento emitido por ME ou EPP optante pelo Simples Nacional. Não gera direito a crédito fiscal de IPI.',
 };
 
@@ -97,5 +107,9 @@ export function nfeConfigFrom(s: SettingsLike): NfeConfig {
     cfopInterestadual: str(s.nfeCfopInterestadual, d.cfopInterestadual),
     naturezaOperacao: str(s.nfeNaturezaOperacao, d.naturezaOperacao),
     infoAdicional: str(s.nfeInfoAdicional, d.infoAdicional),
+    devCfopInterno: str(s.nfeDevCfopInterno, d.devCfopInterno).replace(/\D/g, ''),
+    devCfopInterestadual: str(s.nfeDevCfopInterestadual, d.devCfopInterestadual).replace(/\D/g, ''),
+    devCsosn: str(s.nfeDevCsosn, d.devCsosn).replace(/\D/g, ''),
+    devNaturezaOperacao: str(s.nfeDevNaturezaOperacao, d.devNaturezaOperacao),
   };
 }
