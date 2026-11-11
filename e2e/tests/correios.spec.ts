@@ -303,8 +303,12 @@ test('pedido cancelado com etiqueta: a etiqueta é cancelada nos Correios', asyn
   await panel.goto(`/painel/pedidos/${orderId}`);
 
   await panel.getByRole('button', { name: 'Cancelar este pedido' }).click();
-  await panel.getByRole('button', { name: 'Cancelar pedido' }).click();
+  // Pago pela AbacatePay: a confirmação já diz que o dinheiro volta.
+  await expect(panel.getByText(/Cancelar e estornar R\$/)).toBeVisible();
+  await panel.getByRole('button', { name: 'Cancelar e estornar' }).click();
   await expect.poll(async () => (await readOrder(orderId)).status).toBe('cancelled');
+  await expect.poll(async () => (await readOrder(orderId)).payment.refundStatus).toBe('done');
+  expect((await charges()).find(c => c.id === charge.id)?.status).toBe('REFUNDED');
   // A etiqueta é cancelada logo depois de o pedido virar cancelado.
   await expect.poll(() => correiosLog().some(e => e.cancelada === pre.id)).toBe(true);
   await expect(panel.getByText(/os Correios não cancelaram a etiqueta/)).toHaveCount(0);
