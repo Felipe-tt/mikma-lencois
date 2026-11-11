@@ -248,7 +248,8 @@ async function markOrderRefunded(orderId: string, chargeId: string, reason?: str
   // Estorno chegou primeiro aqui (feito na AbacatePay): avisa o cliente. Pelo
   // painel o pedido já fica "done" antes, então não sai e-mail em dobro.
   await notifyOrderRefunded(orderId, order, true);
-  if (order.status === 'cancelled') return;
+  // Cancelado, ou estorno de devolução pedido pelo painel: nada de estranho.
+  if (order.status === 'cancelled' || (order.payment as { refundForReturn?: string } | undefined)?.refundForReturn) return;
   const code = orderId.slice(-8).toUpperCase();
   await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
     type: 'refund',

@@ -15,6 +15,7 @@ import { staffActor } from '@/lib/staffActor';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { ReversaCard, type ReversaView } from '@/components/painel/ReversaCard';
 import { ColetaUberCard, LojaCard, type ColetaUberView } from '@/components/painel/ColetaCards';
+import { EstornoCard, pedirEstorno, type EstornoView } from '@/components/painel/EstornoCard';
 import { ReturnPhotos } from '@/components/order/ReturnPhotos';
 
 const STATUS_LABEL: Record<ReturnStatus, string> = {
@@ -34,7 +35,7 @@ const FILTERS: { key: ReturnStatus | 'todas'; label: string }[] = [
   { key: 'recusada', label: 'Recusadas' },
 ];
 
-type Extras = { devolverPor?: 'correios' | 'uber' | 'loja'; reversa?: ReversaView; coletaUber?: ColetaUberView; recebidaEm?: string };
+type Extras = { devolverPor?: 'correios' | 'uber' | 'loja'; reversa?: ReversaView; coletaUber?: ColetaUberView; recebidaEm?: string; estorno?: EstornoView };
 const extras = (r: ReturnRequest) => r as ReturnRequest & Extras;
 const DEVOLVE: Record<string, string> = { correios: 'volta pelos Correios', uber: 'Uber busca no cliente', loja: 'cliente entrega na loja' };
 
@@ -176,6 +177,12 @@ export default function TrocasPage() {
         return notFound;
       });
       void avisar(r);
+      // Devolução conferida: o dinheiro volta pela AbacatePay na hora. Se não
+      // der (parte do pedido, pago por fora), o cartão mostra o que fazer.
+      if (r.type === 'devolucao') {
+        const err = await pedirEstorno(r.id, 'abacatepay');
+        if (!err) { showToast('Concluída. O dinheiro está voltando para o cliente.'); return; }
+      }
       showToast(
         restock
           ? (missing > 0 ? `Concluído. ${plural(missing, 'item não achado', 'itens não achados')} no estoque pra repor.` : 'Concluído e devolvido ao estoque.')
@@ -297,6 +304,13 @@ export default function TrocasPage() {
                 </div>
               )}
 
+              {r.type === 'devolucao' && r.status === 'concluida' && (
+                <EstornoCard returnId={r.id} orderId={r.orderId} items={r.items} estorno={extras(r).estorno} />
+              )}
+
+              {r.status === 'aprovada' && r.type === 'devolucao' && (
+                <p className="text-[11.5px] text-faint mb-2">Só conclua depois de conferir as peças: ao concluir, o dinheiro volta para o cliente.</p>
+              )}
               {r.status === 'aprovada' && (
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => concludeAndRestock(r, true)} disabled={busyId === r.id}
