@@ -3,21 +3,26 @@ import { adminDb } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email';
 import { buildTrocaEmail, type AvisoTroca } from '@/lib/email/returnEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
+import { getSettings } from '@/lib/settings';
 import type { ReturnRequest } from '@/types';
 
 type Devolucao = ReturnRequest & {
   reversa?: { codigoObjeto: string; validade: string };
+  devolverPor?: 'correios' | 'uber' | 'loja';
+  coletaUber?: { trackingUrl?: string };
   avisos?: Partial<Record<AvisoTroca, string>>;
 };
 
 /** Qual aviso o status atual da troca pede (null = nenhum). */
-export function avisoDoStatus(d: Pick<Devolucao, 'status'>): AvisoTroca | null {
+export function avisoDoStatus(d: Pick<Devolucao, 'status'> & { recebidaEm?: string }): AvisoTroca | null {
+  // Entregue no balcão: a equipe marca no painel e o cliente recebe o "chegou".
+  if (d.status === 'aprovada' && d.recebidaEm) return 'chegou';
   return d.status === 'aprovada' || d.status === 'recusada' || d.status === 'concluida' ? d.status : null;
 }
 
 /**
  * Manda ao cliente o e-mail da troca (aprovada, código dos Correios,
- * recusada, concluída). Uma vez por tipo: marca `avisos.<tipo>` numa
+ * entregador da Uber a caminho, chegou, recusada, concluída). Uma vez por tipo: marca `avisos.<tipo>` numa
  * transação antes de enviar, então clique duplo ou duas abas não mandam
  * dois e-mails. Nunca lança; devolve o que aconteceu.
  */
@@ -40,7 +45,15 @@ export async function avisarCliente(returnId: string, kind: AvisoTroca): Promise
     const to = user?.email || order?.customerEmail;
     if (!to) return 'sem-email';
     const name = (user?.name || order?.customerName || d.customerName || '').split(' ')[0] || 'cliente';
-    const mail = buildTrocaEmail({ kind, type: d.type, orderId: d.orderId, name, reversa: d.reversa });
+    let enderecoLoja: string | undefined;
+    if (d.devolverPor === 'loja') {
+      const s = await getSettings().catch(() => null);
+      enderecoLoja = s ? [`${s.storeAddress ?? ''}${s.storeNumber ? `, ${s.storeNumber}` : ''}`, s.storeNeighborhood, s.storeCity].filter(Boolean).join(', ') : undefined;
+    }
+    const mail = buildTrocaEmail({
+      kind, type: d.type, orderId: d.orderId, name, reversa: d.reversa,
+      devolverPor: d.devolverPor, enderecoLoja, coletaUrl: d.coletaUber?.trackingUrl,
+    });
     await sendEmail({ to, ...mail, from: 'noreply', replyTo: CONTACT_EMAIL });
     return 'enviado';
   } catch (err) {

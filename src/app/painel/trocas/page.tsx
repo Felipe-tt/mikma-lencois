@@ -14,6 +14,7 @@ import { IconExchange, IconCheck, IconX, IconBox } from '@/components/ui/Icon';
 import { staffActor } from '@/lib/staffActor';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { ReversaCard, type ReversaView } from '@/components/painel/ReversaCard';
+import { ColetaUberCard, LojaCard, type ColetaUberView } from '@/components/painel/ColetaCards';
 import { ReturnPhotos } from '@/components/order/ReturnPhotos';
 
 const STATUS_LABEL: Record<ReturnStatus, string> = {
@@ -32,6 +33,10 @@ const FILTERS: { key: ReturnStatus | 'todas'; label: string }[] = [
   { key: 'concluida', label: 'Concluídas' },
   { key: 'recusada', label: 'Recusadas' },
 ];
+
+type Extras = { devolverPor?: 'correios' | 'uber' | 'loja'; reversa?: ReversaView; coletaUber?: ColetaUberView; recebidaEm?: string };
+const extras = (r: ReturnRequest) => r as ReturnRequest & Extras;
+const DEVOLVE: Record<string, string> = { correios: 'volta pelos Correios', uber: 'Uber busca no cliente', loja: 'cliente entrega na loja' };
 
 const PAGE = 30;
 const OPEN_STATUSES: ReturnStatus[] = ['solicitada', 'aprovada'];
@@ -113,6 +118,20 @@ export default function TrocasPage() {
       void avisar(r);
     } catch (err) {
       console.error('[trocas] falha ao atualizar status', err);
+      showToast('Não deu pra atualizar agora.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function receberNaLoja(r: ReturnRequest) {
+    setBusyId(r.id);
+    try {
+      await updateDoc(doc(db, 'returns', r.id), { recebidaEm: new Date().toISOString(), updatedAt: serverTimestamp() });
+      showToast('Recebida. O cliente recebe um e-mail.');
+      void avisar(r);
+    } catch (err) {
+      console.error('[trocas] falha ao marcar recebida', err);
       showToast('Não deu pra atualizar agora.');
     } finally {
       setBusyId(null);
@@ -226,6 +245,7 @@ export default function TrocasPage() {
                     </span>
                     <span className="text-[11px] font-semibold text-mid uppercase">{r.type === 'troca' ? 'Troca' : 'Devolução'}</span>
                     {r.createdBy === 'cliente' && <span className="text-[11px] text-faint">pedida pelo site</span>}
+                    {extras(r).devolverPor && <span className="text-[11px] text-faint">· {DEVOLVE[extras(r).devolverPor!]}</span>}
                     {r.restocked && (
                       <span className="flex items-center gap-1 text-[11px] text-emerald-700">
                         <IconBox size={11} /> repôs estoque
@@ -267,9 +287,13 @@ export default function TrocasPage() {
                 </div>
               )}
 
-              {(r.status === 'aprovada' || (r as { reversa?: ReversaView }).reversa) && (
+              {(r.status === 'aprovada' || extras(r).reversa || extras(r).coletaUber) && (
                 <div className="mb-3 -mt-1">
-                  <ReversaCard returnId={r.id} reversa={(r as { reversa?: ReversaView }).reversa} saving={busyId === r.id} />
+                  {extras(r).devolverPor === 'uber'
+                    ? <ColetaUberCard returnId={r.id} coleta={extras(r).coletaUber} saving={busyId === r.id} />
+                    : extras(r).devolverPor === 'loja'
+                      ? (r.status === 'aprovada' || extras(r).recebidaEm) && <LojaCard recebidaEm={extras(r).recebidaEm} onReceber={() => receberNaLoja(r)} busy={busyId === r.id} />
+                      : <ReversaCard returnId={r.id} reversa={extras(r).reversa} saving={busyId === r.id} />}
                 </div>
               )}
 

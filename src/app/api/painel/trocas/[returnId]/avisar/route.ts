@@ -7,7 +7,7 @@ import { avisarCliente, avisoDoStatus } from '@/lib/returns/avisarCliente';
 
 /**
  * POST /api/painel/trocas/[returnId]/avisar (equipe): depois de aprovar,
- * recusar ou concluir a troca no painel, manda o e-mail do status atual
+ * recusar, receber no balcão ou concluir a troca no painel, manda o e-mail do status atual
  * para o cliente. Uma vez por status (ver avisarCliente).
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ returnId: string }> }) {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ret
 
   const snap = await adminDb.collection('returns').doc(returnId).get();
   if (!snap.exists) return NextResponse.json({ error: 'Troca não encontrada' }, { status: 404 });
-  const kind = avisoDoStatus({ status: snap.get('status') });
+  const kind = avisoDoStatus({ status: snap.get('status'), recebidaEm: snap.get('recebidaEm') });
   if (!kind) return NextResponse.json({ result: 'nada-a-avisar' });
   const result = await avisarCliente(returnId, kind);
   return NextResponse.json({ result }, { status: result === 'erro' ? 502 : 200 });

@@ -394,7 +394,7 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
   const ret = (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs[0];
   expect(ret.get('fotos')).toEqual([expect.stringMatching(new RegExp(`^returns/${user.id}/\\d+_0\\.jpg$`))]);
-  expect(ret.data()).toMatchObject({ status: 'solicitada', type: 'troca', semUsoConfirmado: true, createdBy: 'cliente', userId: user.id, items: [{ sku: 'p3_v1', quantity: 1 }] });
+  expect(ret.data()).toMatchObject({ status: 'solicitada', type: 'troca', devolverPor: 'correios', semUsoConfirmado: true, createdBy: 'cliente', userId: user.id, items: [{ sku: 'p3_v1', quantity: 1 }] });
 
   // Loja aprova e gera o código de devolução.
   const { staff, panel } = await staffPanel(browser);
@@ -436,7 +436,54 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   await expect(page.getByRole('heading', { name: 'Rastreio da devolução' })).toBeVisible();
   if (process.env.E2E_SHOTS) await page.screenshot({ path: 'test-results/troca-chegou.png', fullPage: true });
   await page.getByRole('link', { name: /Pedido #/ }).click();
-  await expect(page.getByText('O pacote chegou na loja. Estamos conferindo e já te avisamos.')).toBeVisible();
+  await expect(page.getByText('As peças chegaram na loja. Estamos conferindo e já te avisamos.')).toBeVisible();
+  await staff.close();
+});
+
+test('troca de pedido da Uber: o cliente escolhe entregar na loja e a equipe marca o recebimento', async ({ page, browser }) => {
+  test.setTimeout(180_000);
+  const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
+  const orderRef = await db().collection('orders').add({
+    userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
+    items: [{ productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 }],
+    address: user.get('address'), totalCents: 41490, delivery: { carrier: 'uber_direct', priceCents: 1500, deliveredAt: new Date().toISOString() },
+    payment: { method: 'pix', txId: 't', paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(),
+  });
+
+  await login(page, 'devolve@e2e.mikma', SENHA);
+  await page.goto(`/pedidos/${orderRef.id}`);
+  await page.getByRole('button', { name: /Pedir troca ou devolução/ }).click();
+  const form = page.getByRole('region', { name: 'Pedir troca ou devolução' });
+  // Chegou pela Uber: volta pela Uber, ou o cliente entrega na loja. Correios não aparece.
+  await expect(form.getByRole('radio', { name: /Buscamos na sua casa/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(form.getByRole('radio', { name: /Pelos Correios/ })).toHaveCount(0);
+  await form.getByRole('radio', { name: /Entrego na loja/ }).click();
+  await expect(form.getByText('Aprovado, é só levar as peças na loja.')).toBeVisible();
+  await form.getByRole('radio', { name: 'Ficou folgado' }).click();
+  await form.getByRole('checkbox', { name: 'As peças não foram lavadas nem usadas.' }).check();
+  if (process.env.E2E_SHOTS) await form.screenshot({ path: 'test-results/troca-loja-form.png' });
+  await form.getByRole('button', { name: 'Enviar pedido' }).click();
+  await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
+  const ret = (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs[0];
+  expect(ret.get('devolverPor')).toBe('loja');
+
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto('/painel/trocas');
+  const card = panel.locator('div.border', { hasText: `Pedido #${orderRef.id.slice(-8).toUpperCase()}` }).first();
+  await expect(card.getByText('cliente entrega na loja')).toBeVisible();
+  await card.getByRole('button', { name: 'Aprovar' }).click();
+  await expect(card.getByRole('button', { name: 'Gerar código de devolução (Correios)' })).toHaveCount(0);
+
+  // O cliente vê onde entregar.
+  await page.getByRole('link', { name: 'Acompanhar troca' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Leve as peças na loja' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Onde entregar' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Etapas da troca' }).getByRole('listitem')).toHaveCount(4);
+  if (process.env.E2E_SHOTS) await page.screenshot({ path: 'test-results/troca-loja.png', fullPage: true });
+
+  await card.getByRole('button', { name: 'Recebi as peças na loja' }).click();
+  await expect(card.getByText(/Peças recebidas em/)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Chegou na loja' })).toBeVisible();
   await staff.close();
 });
 

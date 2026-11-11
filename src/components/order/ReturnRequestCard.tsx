@@ -4,19 +4,31 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
-import { MOTIVOS, motivoFinal, motivoPedeTexto, returnWindow } from '@/lib/returnRequest';
+import { MOTIVOS, devolucaoPadrao, motivoFinal, motivoPedeTexto, opcoesDevolucao, returnWindow, type DevolverPor } from '@/lib/returnRequest';
 import type { Order, ReturnRequest } from '@/types';
 
-type Devolucao = ReturnRequest & { defeito?: boolean; reversa?: { codigoObjeto: string; validade: string; entregueEm?: string } };
+type Devolucao = ReturnRequest & {
+  defeito?: boolean;
+  devolverPor?: DevolverPor;
+  reversa?: { codigoObjeto: string; validade: string; entregueEm?: string };
+  coletaUber?: { coletadoEm?: string; entregueEm?: string };
+  recebidaEm?: string;
+};
 type Tipo = 'troca' | 'devolucao' | 'defeito';
 const ddmm = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+const COMO: Record<DevolverPor, { titulo: string; texto: string; depois: string }> = {
+  correios: { titulo: 'Pelos Correios', texto: 'Em qualquer agência, sem pagar.', depois: 'Aprovado, você recebe um código para postar nos Correios sem pagar nada.' },
+  uber: { titulo: 'Buscamos na sua casa', texto: 'Um entregador da Uber vai até você, sem custo.', depois: 'Aprovado, a loja combina o horário com você e manda um entregador buscar, sem custo.' },
+  loja: { titulo: 'Entrego na loja', texto: 'No balcão, quando puder.', depois: 'Aprovado, é só levar as peças na loja.' },
+};
 
 const dia = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
 /**
  * Troca ou devolução pelo próprio pedido: o cliente escolhe as peças e conta
- * o que houve; a loja aprova no painel e gera o código dos Correios, que
- * aparece aqui (e chega por e-mail) para postar sem custo.
+ * o que houve; a loja aprova no painel. As peças voltam como o pedido
+ * chegou (código dos Correios ou entregador da Uber) ou na loja, sem custo.
  */
 export function ReturnRequestCard({ order, user, whatsappHref }: {
   order: Order;
@@ -35,6 +47,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
   const [semUso, setSemUso] = useState(false);
   const [fotos, setFotos] = useState<{ blob: Blob; url: string }[]>([]);
   const [lendoFoto, setLendoFoto] = useState(false);
+  const [por, setPor] = useState<DevolverPor>(() => devolucaoPadrao(order));
 
   async function addFotos(files: File[]) {
     if (!files.length) return;
@@ -93,7 +106,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
       const res = await fetch(`/api/orders/${order.id}/troca`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
-        body: JSON.stringify({ type: tipo === 'devolucao' ? 'devolucao' : 'troca', defeito: tipo === 'defeito', semUso: tipo !== 'defeito' && semUso, motivo, reason: reason.trim(), items, ...(caminhos.length ? { fotos: caminhos } : {}) }),
+        body: JSON.stringify({ type: tipo === 'devolucao' ? 'devolucao' : 'troca', defeito: tipo === 'defeito', semUso: tipo !== 'defeito' && semUso, motivo, reason: reason.trim(), devolverPor: por, items, ...(caminhos.length ? { fotos: caminhos } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) setError(data.error ?? 'Não foi possível enviar agora. Tente de novo.');
@@ -105,14 +118,22 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
 
   if (current && (ativa || current.status === 'concluida' || (current.status === 'recusada' && !open))) {
     const r = current.reversa;
+    const porAtual = current.devolverPor ?? 'correios';
+    const chegou = !!(r?.entregueEm || current.coletaUber?.entregueEm || current.recebidaEm);
     const texto = current.status === 'solicitada'
       ? 'Recebemos seu pedido. A loja responde em até 1 dia útil.'
       : current.status === 'aprovada'
-        ? r?.entregueEm
-          ? 'O pacote chegou na loja. Estamos conferindo e já te avisamos.'
-          : r
-            ? `Leve o pacote a qualquer agência dos Correios até ${dia(r.validade)} e informe o código abaixo. O envio é por nossa conta.`
-            : 'Aprovado! A loja vai gerar o código para você enviar pelos Correios sem custo.'
+        ? chegou
+          ? 'As peças chegaram na loja. Estamos conferindo e já te avisamos.'
+          : porAtual === 'uber'
+            ? current.coletaUber
+              ? current.coletaUber.coletadoEm ? 'O entregador já pegou o pacote e está levando para a loja.' : 'Um entregador da Uber está indo buscar as peças. Deixe o pacote pronto.'
+              : 'Aprovado! A loja vai combinar o horário com você e mandar um entregador da Uber buscar as peças, sem custo.'
+            : porAtual === 'loja'
+              ? 'Aprovado! Leve as peças na loja quando puder, no horário de funcionamento.'
+              : r
+                ? `Leve o pacote a qualquer agência dos Correios até ${dia(r.validade)} e informe o código abaixo. O envio é por nossa conta.`
+                : 'Aprovado! A loja vai gerar o código para você enviar pelos Correios sem custo.'
         : current.status === 'concluida' ? 'Concluído. Obrigado pela paciência.'
           : 'Não foi aprovado. Se tiver dúvida, fale com a loja.';
     return (
@@ -239,6 +260,20 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
           <span>As peças não foram lavadas nem usadas.</span>
         </label>
       )}
+      {opcoesDevolucao(order).length > 1 && (
+        <div className="flex flex-col gap-2">
+          <span id="devolver-label" className="text-[12px] font-semibold text-mid">Como devolver as peças?</span>
+          <div role="radiogroup" aria-labelledby="devolver-label" className="grid grid-cols-2 gap-2">
+            {opcoesDevolucao(order).map(v => (
+              <button key={v} type="button" role="radio" aria-checked={por === v} onClick={() => setPor(v)}
+                className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${por === v ? 'border-ink bg-warm/60' : 'border-mist hover:border-ink'}`}>
+                <span className="block text-[13px] font-semibold text-ink">{COMO[v].titulo}</span>
+                <span className="block text-[11.5px] text-mid leading-snug mt-0.5">{COMO[v].texto}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {error && <p role="alert" className="text-[12.5px] text-red-700">{error}</p>}
       <div className="flex gap-2">
         <button type="button" onClick={() => { setOpen(false); setError(''); }}
@@ -248,7 +283,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
           {sending ? 'Enviando…' : 'Enviar pedido'}
         </button>
       </div>
-      <p className="text-[11.5px] text-faint">Aprovado, você recebe um código para postar nos Correios sem pagar nada.</p>
+      <p className="text-[11.5px] text-faint">{COMO[por].depois}</p>
       {trocaOk && (
         <button type="button" onClick={() => { setType(tipo === 'defeito' ? 'troca' : 'defeito'); setMotivo(''); setError(''); }}
           className="self-start text-[11.5px] text-faint underline underline-offset-2 hover:text-mid">

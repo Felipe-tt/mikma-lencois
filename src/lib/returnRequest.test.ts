@@ -32,7 +32,7 @@ describe('returnWindow', () => {
   });
 });
 
-import { motivoFinal } from './returnRequest';
+import { devolucaoPadrao, motivoFinal, opcoesDevolucao } from './returnRequest';
 
 describe('motivoFinal', () => {
   it('motivo pronto basta, texto é opcional', () => {
@@ -46,5 +46,18 @@ describe('motivoFinal', () => {
   it('sem motivo ou motivo de outro tipo é recusado', () => {
     expect(motivoFinal('devolucao', undefined, 'qualquer coisa')).toMatchObject({ ok: false });
     expect(motivoFinal('troca', 'Mancha ou sujeira', '')).toEqual({ ok: false, error: 'Motivo inválido.' });
+  });
+});
+
+describe('por onde as peças voltam', () => {
+  it('segue a entrega do pedido, com a loja como alternativa', () => {
+    expect(opcoesDevolucao({ delivery: { carrier: 'correios_pac' } })).toEqual(['correios', 'loja']);
+    expect(opcoesDevolucao({ delivery: { carrier: 'correios_sedex' } })).toEqual(['correios', 'loja']);
+    expect(opcoesDevolucao({ delivery: { carrier: 'uber_direct' } })).toEqual(['uber', 'loja']);
+    expect(opcoesDevolucao({ delivery: { carrier: 'pickup' } })).toEqual(['loja']);
+  });
+  it('sem transportadora gravada, usa a escolha do checkout', () => {
+    expect(devolucaoPadrao({ delivery: { carrier: null }, selectedShipping: { carrier: 'uber_direct' } })).toBe('uber');
+    expect(devolucaoPadrao({})).toBe('correios');
   });
 });

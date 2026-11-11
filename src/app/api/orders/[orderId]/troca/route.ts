@@ -5,14 +5,15 @@ import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { notifySeller } from '@/lib/push/notifySeller';
-import { TROCA_FORA_DO_PRAZO, motivoFinal, returnWindow } from '@/lib/returnRequest';
+import { TROCA_FORA_DO_PRAZO, devolucaoPadrao, motivoFinal, opcoesDevolucao, returnWindow } from '@/lib/returnRequest';
 import type { Order, ReturnItem } from '@/types';
 
 /**
  * POST /api/orders/[orderId]/troca: o próprio cliente pede troca ou
  * devolução de um pedido entregue (dentro do prazo da política). Cria a
- * solicitação em `returns` para a loja aprovar no painel; aprovada, a loja
- * gera o código de devolução dos Correios.
+ * solicitação em `returns` para a loja aprovar no painel. As peças voltam
+ * do jeito que o pedido chegou (código dos Correios ou entregador da Uber)
+ * ou o cliente entrega na loja.
  */
 const schema = z.object({
   type: z.enum(['troca', 'devolucao']),
@@ -26,6 +27,8 @@ const schema = z.object({
   semUso: z.boolean().optional(),
   /** Fotos já enviadas pelo navegador para returns/{uid}/ (Storage). */
   fotos: z.array(z.string().max(200)).max(4).optional(),
+  /** Por onde as peças voltam: o jeito da entrega (Correios ou Uber) ou a loja. */
+  devolverPor: z.enum(['correios', 'uber', 'loja']).optional(),
   items: z.array(z.object({ sku: z.string().min(1).max(120), quantity: z.number().int().min(1).max(50) })).min(1).max(30),
 });
 
@@ -56,6 +59,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const motivo = motivoFinal(defeito ? 'defeito' : body.type, body.motivo, body.reason);
   if (!motivo.ok) return NextResponse.json({ error: motivo.error }, { status: 400 });
 
+  const devolverPor = body.devolverPor ?? devolucaoPadrao(order);
+  if (!opcoesDevolucao(order).includes(devolverPor)) return NextResponse.json({ error: 'Escolha como devolver as peças.' }, { status: 400 });
+
   const fotos = body.fotos ?? [];
   const pastaOk = new RegExp(`^returns/${uid.replace(/[^A-Za-z0-9_-]/g, '')}/[A-Za-z0-9_-]+\\.jpg$`);
   if (fotos.some(f => !pastaOk.test(f))) return NextResponse.json({ error: 'Foto inválida. Envie de novo.' }, { status: 400 });
@@ -80,7 +86,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const now = new Date().toISOString();
   const ref = await adminDb.collection('returns').add({
     orderId, userId: uid, customerName: order.customerName ?? '', type: body.type,
-    reason: motivo.reason, ...(body.motivo ? { motivo: body.motivo } : {}), ...(defeito ? { defeito: true } : { semUsoConfirmado: true }), ...(fotos.length ? { fotos } : {}), items, status: 'solicitada', restocked: false,
+    reason: motivo.reason, ...(body.motivo ? { motivo: body.motivo } : {}), ...(defeito ? { defeito: true } : { semUsoConfirmado: true }), ...(fotos.length ? { fotos } : {}), devolverPor, items, status: 'solicitada', restocked: false,
     createdAt: now, updatedAt: now, createdBy: 'cliente',
   });
   const short = orderId.slice(-8).toUpperCase();
