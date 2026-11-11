@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { FieldValue } from 'firebase-admin/firestore';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminAuth } from '@/lib/firebase/admin';
 import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { effectiveRole } from '@/lib/staffMfa';
-import { getSettings } from '@/lib/settings';
-import { shippingBlockReason } from '@/lib/orders/shippingBlock';
-import {
-  buildPrePostagem, cancelPrePostagem, createPrePostagem, CorreiosError, labelPdf, prePostagemProblems,
-  remetenteFrom, type PrePostagemInfo,
-} from '@/lib/correiosPrepostagem';
-import type { Order } from '@/types';
+import { cancelPrePostagem, CorreiosError, labelPdf } from '@/lib/correiosPrepostagem';
+import { generateLabel, loadOrder } from '@/lib/correiosEtiqueta';
 
 /**
  * Etiqueta dos Correios pelo contrato, direto do painel (equipe).
@@ -39,12 +34,6 @@ const fail = (err: unknown) => {
   return NextResponse.json({ error: 'Não foi possível falar com os Correios agora. Tente de novo.' }, { status: 502 });
 };
 
-async function loadOrder(orderId: string) {
-  const ref = adminDb.collection('orders').doc(orderId);
-  const snap = await ref.get();
-  return { ref, order: snap.exists ? ({ id: snap.id, ...snap.data() } as Order & { delivery: Order['delivery'] & { prePostagem?: PrePostagemInfo } }) : null };
-}
-
 const postSchema = z.object({ coleta: z.boolean().default(true) });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
@@ -54,46 +43,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   if (!await rateLimit(`etiqueta:${who.uid}`, 20, 60_000)) return NextResponse.json({ error: 'Muitas tentativas. Aguarde um pouco.' }, { status: 429 });
   const parsed = await validateBody(req, postSchema);
   if (!parsed.ok) return parsed.response;
-
-  const { ref, order } = await loadOrder(orderId);
-  if (!order) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
-  if (order.delivery?.prePostagem) return NextResponse.json({ prePostagem: order.delivery.prePostagem });
-  if (order.status !== 'preparing') {
-    return NextResponse.json({ error: 'Gere a etiqueta com o pedido em separação (clique em "Comecei a separar o pedido").' }, { status: 409 });
-  }
-  const blocked = shippingBlockReason(order);
-  if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
-
-  const settings = await getSettings();
-  const remetente = remetenteFrom(settings);
-  const problems = prePostagemProblems(order, remetente);
-  if (problems.length) return NextResponse.json({ error: problems.join(' ') }, { status: 400 });
-
-  // Peso pelo cadastro atual dos produtos (o mesmo usado no frete).
-  const ids = [...new Set(order.items.map(i => i.productId))];
-  const snaps = await Promise.all(ids.map(id => adminDb.collection('products').doc(id).get()));
-  const weight = new Map(snaps.map(s => [s.id, (s.get('weightKg') as number | undefined) ?? settings.defaultItemWeightKg ?? 0.8]));
-  const weightKg = order.items.reduce((sum, i) => sum + (weight.get(i.productId) ?? 0.8) * i.quantity, 0);
-
-  // Trava o pedido enquanto fala com os Correios: dois cliques (ou duas
-  // pessoas) não geram duas etiquetas. A trava vence em 1 minuto.
-  const locked = await adminDb.runTransaction(async tx => {
-    const cur = (await tx.get(ref)).data() as Order & { delivery?: { prePostagem?: unknown; prePostagemLock?: number } };
-    if (cur.delivery?.prePostagem) return 'existe';
-    if ((cur.delivery?.prePostagemLock ?? 0) > Date.now() - 60_000) return 'gerando';
-    tx.update(ref, { 'delivery.prePostagemLock': Date.now() });
-    return 'ok';
-  });
-  if (locked === 'existe') return NextResponse.json({ prePostagem: (await loadOrder(orderId)).order?.delivery?.prePostagem });
-  if (locked === 'gerando') return NextResponse.json({ error: 'A etiqueta deste pedido já está sendo gerada. Aguarde alguns segundos.' }, { status: 409 });
-
   try {
-    const created = await createPrePostagem(buildPrePostagem(order, remetente, { weightKg, coleta: parsed.data.coleta }));
-    const prePostagem: PrePostagemInfo = { ...created, coleta: parsed.data.coleta, createdAt: new Date().toISOString() };
-    await ref.update({ 'delivery.prePostagem': prePostagem, 'delivery.prePostagemLock': FieldValue.delete(), updatedAt: new Date().toISOString() });
-    return NextResponse.json({ prePostagem });
+    return NextResponse.json({ prePostagem: await generateLabel(orderId, parsed.data.coleta) });
   } catch (err) {
-    await ref.update({ 'delivery.prePostagemLock': FieldValue.delete() }).catch(() => {});
     return fail(err);
   }
 }
