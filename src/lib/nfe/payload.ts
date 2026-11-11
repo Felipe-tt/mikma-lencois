@@ -219,7 +219,10 @@ export function buildNfe(order: NfeOrder, customer: NfeCustomer, config: NfeConf
         indTot: 1,
       },
       imposto: {
-        ICMS: { ICMSSN102: { orig: Number(config.origem), CSOSN: Number(config.csosn) as 102 } },
+        // CSOSN 900 (outros) tem grupo próprio; 102/103/300/400 usam o do 102.
+        ICMS: config.csosn === '900'
+          ? { ICMSSN900: { orig: Number(config.origem), CSOSN: 900 } }
+          : { ICMSSN102: { orig: Number(config.origem), CSOSN: Number(config.csosn) as 102 } },
         PIS: pis === 'NT' ? { PISNT: { CST: config.pisCofinsCst } } : { PISOutr: { CST: config.pisCofinsCst, vBC: 0, pPIS: 0, vPIS: 0 } },
         COFINS: pis === 'NT' ? { COFINSNT: { CST: config.pisCofinsCst } } : { COFINSOutr: { CST: config.pisCofinsCst, vBC: 0, pCOFINS: 0, vCOFINS: 0 } },
       },
@@ -324,4 +327,55 @@ export function buildNfe(order: NfeOrder, customer: NfeCustomer, config: NfeConf
   };
 
   return { chave, nfe: { indSinc: 1, idLote: id.numero, NFe: { infNFe } } };
+}
+
+export interface NfeDevolucaoInput {
+  /** Peças que voltaram, com o preço da venda. */
+  items: NfeOrderItem[];
+  /** Valor devolvido ao cliente (centavos). */
+  valorCents: number;
+  /** Voltou o pedido inteiro: o frete da venda entra na devolução. */
+  inteira: boolean;
+  /** Chave da nota da venda. */
+  refChave: string;
+  /** Referência para as informações complementares. */
+  returnId: string;
+}
+
+/**
+ * Nota de devolução de venda (entrada das peças devolvidas pelo cliente),
+ * referenciando a nota da venda. Mesmo emitente e mesmo cliente; CFOP,
+ * CSOSN e natureza da devolução vêm das configurações (confirme com a
+ * contabilidade). Sem pagamento (tPag 90).
+ */
+export function buildNfeDevolucao(order: NfeOrder, dev: NfeDevolucaoInput, customer: NfeCustomer, config: NfeConfig, id: NfeIdentity) {
+  const productsCents = dev.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const shippingCents = dev.inteira ? Math.max(0, order.shippingCents ?? 0) : 0;
+  const bruto = productsCents + shippingCents;
+  const pseudo: NfeOrder = {
+    ...order,
+    items: dev.items,
+    productsCents,
+    shippingCents,
+    // O que não voltou (desconto da venda) entra como desconto; o que voltou a
+    // mais (juros do cartão) como outras despesas, igual à nota da venda.
+    discountCents: Math.max(0, bruto - dev.valorCents),
+    pixDiscountCents: 0,
+    couponDiscountCents: 0,
+    totalCents: dev.valorCents,
+  };
+  const devConfig: NfeConfig = {
+    ...config,
+    cfopInterno: config.devCfopInterno,
+    cfopInterestadual: config.devCfopInterestadual,
+    csosn: config.devCsosn,
+    naturezaOperacao: config.devNaturezaOperacao,
+    infoAdicional: `${config.infoAdicional} Devolução de venda referente à NF-e ${dev.refChave}.`,
+  };
+  const built = buildNfe(pseudo, customer, devConfig, id);
+  const inf = built.nfe.NFe.infNFe as Record<string, unknown> & { ide: Record<string, unknown>; transp: unknown; pag: unknown };
+  inf.ide = { ...inf.ide, tpNF: 0, finNFe: 4, indPres: 9, NFref: { refNFe: dev.refChave } };
+  inf.transp = { modFrete: 9 };
+  inf.pag = { detPag: { tPag: '90', vPag: '0.00' } };
+  return built;
 }

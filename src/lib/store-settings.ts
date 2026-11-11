@@ -76,6 +76,10 @@ export type StoreSettings = {
   nfeCfopInterno?: string;
   nfeCfopInterestadual?: string;
   nfeNaturezaOperacao?: string;
+  nfeDevCfopInterno?: string;
+  nfeDevCfopInterestadual?: string;
+  nfeDevCsosn?: string;
+  nfeDevNaturezaOperacao?: string;
   nfeInfoAdicional?: string;
   defaultItemWeightKg: number;
   // Peso padrão (kg) sugerido no cadastro de produto conforme o tamanho da

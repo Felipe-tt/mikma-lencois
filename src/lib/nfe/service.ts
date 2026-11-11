@@ -5,7 +5,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { withPii } from '@/lib/piiCrypto';
 import { getSettings } from '@/lib/settings';
 import { nfeConfigFrom, type NfeConfig, type NfeEnvironment } from './config';
-import { brasiliaIso, buildNfe, chaveAcesso, nfeProblems, randomCNF, UF_CODE, type NfeOrder } from './payload';
+import { brasiliaIso, buildNfe, buildNfeDevolucao, chaveAcesso, nfeProblems, randomCNF, UF_CODE, type NfeOrder, type NfeOrderItem } from './payload';
 import { loadCertificate } from './certificate';
 import { ibgeFromCep } from './ibge';
 import { authorize, cancel, consult, inutilizar, type SefazCert } from './sefaz';
@@ -56,8 +56,8 @@ export function checkDocToken(orderId: string, env: NfeEnvironment, token: strin
   return expected.length === got.length && timingSafeEqual(expected, got);
 }
 
-async function writeRecord(orderId: string, env: NfeEnvironment, patch: Partial<NfeRecord>) {
-  const field = nfeField(env);
+async function writeRecord(orderId: string, env: NfeEnvironment, patch: Partial<NfeRecord>, slot = nfeField(env)) {
+  const field = slot;
   const update: Record<string, unknown> = { [`${field}.updatedAt`]: new Date().toISOString() };
   for (const [k, v] of Object.entries(patch)) update[`${field}.${k}`] = v === undefined ? FieldValue.delete() : v;
   await orderRef(orderId).update(update);
@@ -96,7 +96,7 @@ function sameCityCode(addr: { city?: string; state?: string } | undefined, confi
 }
 
 /** Grava a nota autorizada (registro + XML) a partir do envio ou da consulta. */
-async function markAuthorized(orderId: string, env: NfeEnvironment, rec: NfeRecord, data: { nProt: string; xml?: string; protNFe?: unknown }) {
+async function markAuthorized(orderId: string, env: NfeEnvironment, rec: NfeRecord, data: { nProt: string; xml?: string; protNFe?: unknown }, slot = nfeField(env)) {
   const now = new Date().toISOString();
   if (rec.chave) {
     await docsRef(orderId, rec.chave).set({
@@ -108,31 +108,31 @@ async function markAuthorized(orderId: string, env: NfeEnvironment, rec: NfeReco
   await writeRecord(orderId, env, {
     status: 'autorizada', nProt: data.nProt, authorizedAt: rec.authorizedAt ?? now, mensagem: null,
     docToken: nfeDocToken(orderId, env), xmlPendente: data.xml ? undefined : true,
-  });
+  }, slot);
 }
 
 /** Envia (ou reenvia) a nota já identificada no registro e aplica o resultado. */
-async function transmit(orderId: string, env: NfeEnvironment, rec: NfeRecord, cert: SefazCert, config: NfeConfig): Promise<NfeStatus> {
+async function transmit(orderId: string, env: NfeEnvironment, rec: NfeRecord, cert: SefazCert, config: NfeConfig, slot = nfeField(env)): Promise<NfeStatus> {
   const doc = (await docsRef(orderId, rec.chave!).get()).data();
   if (!doc?.nfe) throw new Error('nota sem conteúdo salvo');
   const nfe = JSON.parse(doc.nfe as string);
   const result = await authorize(env, cert, config.ufEmitente, config.cnpj, nfe, rec.chave!);
   switch (result.kind) {
     case 'autorizada':
-      await markAuthorized(orderId, env, rec, { nProt: result.nProt, xml: result.xml });
+      await markAuthorized(orderId, env, rec, { nProt: result.nProt, xml: result.xml }, slot);
       return 'autorizada';
     case 'duplicada':
-      return reconcile(orderId, env, rec, cert, config, false);
+      return reconcile(orderId, env, rec, cert, config, false, slot);
     case 'incerta':
-      await writeRecord(orderId, env, { status: 'processando', mensagem: `SEFAZ sem resposta (${result.motivo}); conferindo de novo em instantes` });
+      await writeRecord(orderId, env, { status: 'processando', mensagem: `SEFAZ sem resposta (${result.motivo}); conferindo de novo em instantes` }, slot);
       return 'processando';
     case 'denegada':
-      await writeRecord(orderId, env, { status: 'denegada', mensagem: `Uso denegado pela SEFAZ (${result.cStat}): ${result.motivo}` });
+      await writeRecord(orderId, env, { status: 'denegada', mensagem: `Uso denegado pela SEFAZ (${result.cStat}): ${result.motivo}` }, slot);
       await notify(orderId, env, `uso denegado pela SEFAZ (${result.motivo.slice(0, 200)})`);
       return 'denegada';
     case 'rejeitada': {
       const mensagem = `Rejeitada pela SEFAZ (${result.cStat}): ${result.motivo}`;
-      await writeRecord(orderId, env, { status: 'erro', mensagem });
+      await writeRecord(orderId, env, { status: 'erro', mensagem }, slot);
       await notify(orderId, env, mensagem);
       return 'erro';
     }
@@ -140,23 +140,23 @@ async function transmit(orderId: string, env: NfeEnvironment, rec: NfeRecord, ce
 }
 
 /** Consulta a chave na SEFAZ e alinha o pedido. `resend`: reenviar se não constar. */
-async function reconcile(orderId: string, env: NfeEnvironment, rec: NfeRecord, cert: SefazCert, config: NfeConfig, resend: boolean): Promise<NfeStatus> {
+async function reconcile(orderId: string, env: NfeEnvironment, rec: NfeRecord, cert: SefazCert, config: NfeConfig, resend: boolean, slot = nfeField(env)): Promise<NfeStatus> {
   const res = await consult(env, cert, config.ufEmitente, config.cnpj, rec.chave!);
   switch (res.kind) {
     case 'autorizada':
-      await markAuthorized(orderId, env, rec, { nProt: res.nProt, protNFe: res.protNFe });
+      await markAuthorized(orderId, env, rec, { nProt: res.nProt, protNFe: res.protNFe }, slot);
       return 'autorizada';
     case 'cancelada':
-      await writeRecord(orderId, env, { status: 'cancelada', cancelledAt: rec.cancelledAt ?? new Date().toISOString(), mensagem: null });
+      await writeRecord(orderId, env, { status: 'cancelada', cancelledAt: rec.cancelledAt ?? new Date().toISOString(), mensagem: null }, slot);
       return 'cancelada';
     case 'denegada':
-      await writeRecord(orderId, env, { status: 'denegada', mensagem: `Uso denegado: ${res.motivo}` });
+      await writeRecord(orderId, env, { status: 'denegada', mensagem: `Uso denegado: ${res.motivo}` }, slot);
       return 'denegada';
     case 'inexistente':
-      if (resend && Date.now() - Date.parse(rec.requestedAt) > RESEND_AFTER_MS) return transmit(orderId, env, rec, cert, config);
+      if (resend && Date.now() - Date.parse(rec.requestedAt) > RESEND_AFTER_MS) return transmit(orderId, env, rec, cert, config, slot);
       return 'processando';
     case 'erro':
-      await writeRecord(orderId, env, { mensagem: `Consulta à SEFAZ falhou: ${res.motivo}` });
+      await writeRecord(orderId, env, { mensagem: `Consulta à SEFAZ falhou: ${res.motivo}` }, slot);
       return rec.status;
   }
 }
@@ -257,7 +257,7 @@ export async function cancelNfe(orderId: string, env: NfeEnvironment, justificat
   const rec = (await orderRef(orderId).get()).get(nfeField(env)) as NfeRecord | undefined;
   if (!rec || rec.status !== 'autorizada' || !rec.chave || !rec.nProt) throw new NfeError('Não há nota autorizada para cancelar.');
   if (rec.authorizedAt && Date.now() - Date.parse(rec.authorizedAt) > CANCEL_WINDOW_MS) {
-    throw new NfeError('Passou o prazo de 24h para cancelar a nota. Emita uma nota de devolução.');
+    throw new NfeError('Passou o prazo de 24h para cancelar a nota. Emita a nota de devolução no painel do pedido.');
   }
   const { cert, config } = await loadContext();
   if (!cert) throw new NfeError(NO_CERT);
@@ -323,7 +323,7 @@ export async function handleNfeOnOrderCancel(orderId: string): Promise<void> {
         console.warn(`[nfe] cancelamento automático falhou (${orderId}):`, err);
       }
     }
-    await notify(orderId, 'producao', `pedido cancelado com a nota nº ${rec.numero} ainda válida. ${withinWindow ? 'Cancele a nota no painel do pedido.' : 'Passou o prazo de cancelamento: emita uma nota de devolução.'}`);
+    await notify(orderId, 'producao', `pedido cancelado com a nota nº ${rec.numero} ainda válida. ${withinWindow ? 'Cancele a nota no painel do pedido.' : 'Passou o prazo de cancelamento: emita a nota de devolução no painel do pedido.'}`);
   } catch (err) {
     console.error(`[nfe] handleNfeOnOrderCancel falhou (${orderId}):`, err);
   }
@@ -342,4 +342,93 @@ export async function autoIssueNfe(orderId: string): Promise<void> {
     console.error(`[nfe] emissão automática falhou (${orderId}):`, err);
     Sentry.captureException(err, { tags: { area: 'nfe' }, extra: { orderId } });
   }
+}
+
+/** Onde fica a nota de devolução de uma troca/devolução, dentro do pedido. */
+export const nfeDevSlot = (env: NfeEnvironment, returnId: string) => `${env === 'producao' ? 'nfeDev' : 'nfeDevTeste'}.${returnId}`;
+
+/**
+ * Nota de devolução (entrada) das peças que o cliente devolveu, referenciando
+ * a nota da venda do mesmo ambiente. Uma por troca/devolução, com a mesma
+ * numeração e as mesmas garantias da nota de venda.
+ */
+export async function issueNfeDevolucao(orderId: string, key: string, env: NfeEnvironment, opts: { by?: string } = {}): Promise<NfeStatus> {
+  const { cert, config } = await loadContext();
+  if (!cert) throw new NfeError(NO_CERT);
+  const homologacao = env === 'homologacao';
+  const slot = nfeDevSlot(env, key);
+  const snap = await orderRef(orderId).get();
+  if (!snap.exists) throw new NfeError('Pedido não encontrado', 404);
+  const order = snap.data()!;
+  const vendidos = (order.items ?? []) as NfeOrderItem[];
+
+  // key = id da troca/devolução, ou "cancelamento" (pedido cancelado depois
+  // do prazo de 24h para cancelar a nota: devolve tudo).
+  let items: NfeOrderItem[];
+  let valorCents: number;
+  if (key === 'cancelamento') {
+    if (order.status !== 'cancelled') throw new NfeError('Só pedido cancelado tem nota de devolução do pedido inteiro.');
+    items = vendidos;
+    valorCents = order.totalCents as number;
+  } else {
+    const devSnap = await adminDb.collection('returns').doc(key).get();
+    const dev = devSnap.data() as { orderId: string; status: string; items: NfeOrderItem[]; estorno?: { cents?: number }; refundCents?: number; type: string } | undefined;
+    if (!dev || dev.orderId !== orderId) throw new NfeError('Troca não encontrada', 404);
+    if (dev.status !== 'concluida') throw new NfeError('Conclua a troca ou devolução (peças conferidas) antes da nota de devolução.');
+    items = dev.items.map(i => ({ ...i, unitPrice: vendidos.find(v => v.sku === i.sku)?.unitPrice ?? i.unitPrice }));
+    const pecasCents = items.reduce((t, i) => t + i.unitPrice * i.quantity, 0);
+    valorCents = dev.type === 'devolucao' && (dev.refundCents ?? dev.estorno?.cents) ? (dev.refundCents ?? dev.estorno!.cents!) : pecasCents;
+  }
+  const inteira = vendidos.every(v => (items.find(i => i.sku === v.sku)?.quantity ?? 0) >= v.quantity);
+
+  const venda = order[nfeField(env)] as NfeRecord | undefined;
+  if (venda?.status !== 'autorizada' || !venda.chave) throw new NfeError('A venda não tem nota autorizada neste ambiente: não há nota a devolver.');
+  const current = snap.get(slot) as NfeRecord | undefined;
+  if (current?.status === 'autorizada' || current?.status === 'denegada' || current?.status === 'inutilizada') return current.status;
+  if (current?.status === 'processando' && current.chave) return reconcile(orderId, env, current, cert, config, true, slot);
+
+  const customer = await loadCustomer(order);
+  const nfeOrder = { id: orderId, ...order } as NfeOrder;
+  const cMunDest = current?.cMunDest ?? sameCityCode(order.address, config) ?? await ibgeFromCep(order.address?.cep ?? '', order.address?.state ?? '');
+  if (!cMunDest) throw new NfeError('Não foi possível achar o município do CEP do cliente. Tente de novo em instantes.');
+
+  const rec = await adminDb.runTransaction(async (tx): Promise<NfeRecord | NfeStatus> => {
+    const [fresh, counter] = await Promise.all([tx.get(orderRef(orderId)), tx.get(counterRef())]);
+    const prev = fresh.get(slot) as NfeRecord | undefined;
+    if (prev?.status === 'autorizada' || prev?.status === 'processando' || prev?.status === 'denegada' || prev?.status === 'inutilizada') return prev.status;
+    let numero = prev?.status === 'erro' ? prev.numero : undefined;
+    let serie = prev?.status === 'erro' ? prev.serie : undefined;
+    if (!numero || !serie) {
+      const c = (counter.get(env) as { serie?: number; proximo?: number } | undefined) ?? {};
+      serie = config.serie;
+      const floor = homologacao ? 1 : config.proximoNumero;
+      numero = c.serie === serie ? Math.max(c.proximo ?? 1, floor) : floor;
+      tx.set(counterRef(), { [env]: { serie, proximo: numero + 1 } }, { merge: true });
+    }
+    const dhEmi = brasiliaIso(new Date());
+    const cNF = randomCNF(numero);
+    const now = new Date().toISOString();
+    const next: NfeRecord = {
+      environment: env, status: 'processando', attempt: (prev?.attempt ?? 0) + 1,
+      numero, serie, cNF, dhEmi, cMunDest,
+      chave: chaveAcesso(config.ufEmitente, dhEmi, config.cnpj, serie, numero, cNF),
+      requestedAt: now, updatedAt: now, mensagem: null,
+      ...(opts.by ? { by: opts.by } : {}),
+    };
+    tx.update(orderRef(orderId), { [slot]: next });
+    return next;
+  });
+  if (typeof rec === 'string') return rec;
+
+  let nfe: unknown;
+  try {
+    nfe = buildNfeDevolucao(nfeOrder, { items, valorCents, inteira, refChave: venda.chave, returnId: key }, customer, config, {
+      numero: rec.numero!, serie: rec.serie!, cNF: rec.cNF!, dhEmi: rec.dhEmi!, homologacao, cMunDest: rec.cMunDest!,
+    }).nfe;
+  } catch (err) {
+    await writeRecord(orderId, env, { status: 'erro', mensagem: `Faltam dados: ${(err as Error).message}` }, slot);
+    throw new NfeError(`Faltam dados para a nota de devolução: ${(err as Error).message}`);
+  }
+  await docsRef(orderId, rec.chave!).set({ environment: env, nfe: JSON.stringify(nfe), createdAt: rec.requestedAt, devolucao: key });
+  return transmit(orderId, env, rec, cert, config, slot);
 }
