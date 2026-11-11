@@ -8,6 +8,7 @@ import { getSettings } from '@/lib/settings';
 import { readPii } from '@/lib/piiCrypto';
 import { cancelPrePostagem, createPrePostagem, CorreiosError, remetenteFrom } from '@/lib/correiosPrepostagem';
 import { buildReversa, reversaProblems, type ReversaInfo } from '@/lib/correiosReversa';
+import { avisarCliente } from '@/lib/returns/avisarCliente';
 import type { Order, ReturnRequest } from '@/types';
 
 /**
@@ -89,6 +90,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ret
     const created = await createPrePostagem(body);
     const reversa: ReversaInfo = { ...created, validade, createdAt: new Date().toISOString() };
     await ref.update({ reversa, reversaLock: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
+    // Os Correios também mandam o código, mas sem dizer de qual loja nem
+    // até quando; o nosso e-mail explica o passo a passo.
+    await avisarCliente(returnId, 'codigo');
     return NextResponse.json({ reversa });
   } catch (err) {
     await ref.update({ reversaLock: FieldValue.delete() }).catch(() => {});
@@ -107,7 +111,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ r
   if (reversa.entregueEm) return NextResponse.json({ error: 'O pacote já voltou para a loja.' }, { status: 409 });
   try {
     await cancelPrePostagem(reversa.id);
-    await ref.update({ reversa: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
+    // Código novo depois: o cliente precisa receber o e-mail de novo.
+    await ref.update({ reversa: FieldValue.delete(), 'avisos.codigo': FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return fail(err);
