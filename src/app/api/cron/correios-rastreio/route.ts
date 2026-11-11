@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { deliveredAt, postedAt, trackObjects } from '@/lib/correiosRastro';
 import { advanceOrderStatus, StatusError } from '@/lib/orders/advanceStatus';
 import { notifyInApp } from '@/lib/push/notifyInApp';
+import { avisarCliente } from '@/lib/returns/avisarCliente';
 import { notifySeller } from '@/lib/push/notifySeller';
 import type { Order, ReturnRequest } from '@/types';
 import type { ReversaInfo } from '@/lib/correiosReversa';
@@ -93,6 +94,7 @@ export async function GET(req: NextRequest) {
       const short = r.orderId.slice(-8).toUpperCase();
       await notifyInApp({ type: 'correios_pickup', message: `A devolução do pedido ${short} chegou na loja pelos Correios. Confira as peças e conclua a troca.`, orderId: r.orderId });
       await notifySeller({ title: 'Devolução chegou', body: `#${short} · confira as peças e conclua a troca`, url: '/painel/trocas', data: { orderId: r.orderId, event: 'correios_return' } });
+      await avisarCliente(r.id, 'chegou');
     } catch (err) {
       result.errors++;
       console.error(`[correios-rastreio] devolução ${r.id}:`, err);

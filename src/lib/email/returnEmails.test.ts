@@ -23,6 +23,12 @@ describe('buildTrocaEmail', () => {
     expect(buildTrocaEmail({ ...base, type: 'devolucao', kind: 'concluida' }).html).toMatch(/mesmo meio de pagamento/);
   });
 
+  it('chegou: avisa que a loja vai conferir', () => {
+    const m = buildTrocaEmail({ ...base, kind: 'chegou' });
+    expect(m.subject).toMatch(/^Recebemos as peças da sua troca/);
+    expect(m.text).toMatch(/conferir/);
+  });
+
   it('escapa o nome do cliente', () => {
     expect(buildTrocaEmail({ ...base, name: '<b>x', kind: 'concluida' }).html).not.toContain('<b>x');
   });
