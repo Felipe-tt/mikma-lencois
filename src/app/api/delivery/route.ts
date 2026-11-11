@@ -34,6 +34,15 @@ import {
 } from '@/lib/uber-direct';
 import { effectiveRole } from '@/lib/staffMfa';
 
+/** Motivo legível da recusa da Uber (sem dados do cliente). */
+function uberMotivo(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const m = msg.match(/"message"\s*:\s*"([^"]{1,160})"/) ?? msg.match(/"code"\s*:\s*"([^"]{1,80})"/);
+  if (m) return m[1];
+  const status = msg.match(/falhou: (\d{3})/)?.[1];
+  return status ? `erro ${status} da Uber` : 'sem resposta da Uber';
+}
+
 async function getStoreSettings(): Promise<StoreSettings> {
   const snap = await adminDb.collection('settings').doc('store').get();
   return { ...STORE_DEFAULTS, ...(snap.exists ? snap.data() : {}) } as StoreSettings;
@@ -225,11 +234,13 @@ export async function POST(req: NextRequest) {
       const locked = await adminDb.runTransaction(async tx => {
         const fresh = await tx.get(orderRef);
         const data = fresh.data() ?? {};
-        if (!['paid', 'preparing'].includes(data.status)) return false;
-        const lockAt = (data.delivery as { dispatchLockAt?: number } | undefined)?.dispatchLockAt ?? 0;
-        if (Date.now() - lockAt < LOCK_MS) return false;
-        tx.update(orderRef, { 'delivery.dispatchLockAt': Date.now() });
-        return true;
+        if (!['paid', 'preparing'].includes(data.status)) return 0;
+        const d = (data.delivery ?? {}) as { dispatchLockAt?: number; uberAttempts?: number };
+        if (Date.now() - (d.dispatchLockAt ?? 0) < LOCK_MS) return 0;
+        // Cada despacho é uma tentativa nova (depois de cancelar a corrida).
+        const attempt = (d.uberAttempts ?? 0) + 1;
+        tx.update(orderRef, { 'delivery.dispatchLockAt': Date.now(), 'delivery.uberAttempts': attempt });
+        return attempt;
       });
       if (!locked) {
         return NextResponse.json({ error: 'Este pedido já está sendo despachado. Atualize a página em instantes.' }, { status: 409 });
@@ -239,6 +250,7 @@ export async function POST(req: NextRequest) {
       try {
       uberDelivery = await uberCreateDelivery({
         orderId:             orderId,
+        attempt:             locked,
         pickupName:          settings.storeName || 'Mikma Lençóis',
         pickupAddress,
         pickupPhoneNumber:   formatPhone(settings.storePhone || '47000000000'),
@@ -254,7 +266,11 @@ export async function POST(req: NextRequest) {
       }, uberSandbox);
       } catch (err) {
         await orderRef.update({ 'delivery.dispatchLockAt': FieldValue.delete() }).catch(() => {});
-        throw err;
+        console.error('[delivery] Uber recusou a corrida:', err);
+        return NextResponse.json(
+          { error: `A Uber não aceitou a corrida agora: ${uberMotivo(err)}. Tente de novo em instantes.` },
+          { status: 502 },
+        );
       }
 
       // Transação: o pedido pode ter sido cancelado durante a chamada à Uber

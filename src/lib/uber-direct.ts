@@ -210,6 +210,12 @@ export interface UberManifestItem {
 
 export interface UberCreateParams {
   orderId:              string;
+  /**
+   * Tentativa de despacho do pedido (1, 2, ...). A Uber guarda a chave de
+   * idempotência: depois de cancelar uma corrida, chamar de novo com a mesma
+   * chave falhava. Cada tentativa nova usa uma chave própria.
+   */
+  attempt?:             number;
   quoteId?:             string;
   pickupName:           string;
   pickupAddress:        string;  // JSON string (buildUberAddress)
@@ -238,6 +244,8 @@ export interface UberCreateResult {
  *                      dropoff_name, dropoff_address, dropoff_phone_number,
  *                      manifest_items (array)
  */
+const attemptKey = (p: Pick<UberCreateParams, 'orderId' | 'attempt'>) => (p.attempt && p.attempt > 1 ? `${p.orderId}-${p.attempt}` : p.orderId);
+
 export async function uberCreateDelivery(params: UberCreateParams, sandbox: boolean): Promise<UberCreateResult> {
   const { customerId } = credentials(sandbox);
   if (!customerId) {
@@ -259,11 +267,11 @@ export async function uberCreateDelivery(params: UberCreateParams, sandbox: bool
     manifest_items:       params.manifestItems,
     // Referência do pedido (visível para o entregador no app)
     manifest_reference:   params.orderId,
-    // external_id: mesma referência, torna o pedido pesquisável no dashboard Uber
-    external_id:          params.orderId,
-    // Chave de idempotência, previne entregas duplicadas se o request for repetido
-    // Combinado com manifest_reference, external_id deve ser único (per spec)
-    idempotency_key:      params.orderId,
+    // external_id e idempotency_key: únicos por tentativa (o mesmo pedido pode
+    // ser redespachado depois de cancelar a corrida). A primeira continua só
+    // com o id do pedido, como antes.
+    external_id:          attemptKey(params),
+    idempotency_key:      attemptKey(params),
   };
 
   if (params.quoteId)             body.quote_id            = params.quoteId;
