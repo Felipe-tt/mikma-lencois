@@ -10,7 +10,7 @@ import type { Order } from '@/types';
 
 type Period = '7d' | '30d' | '90d';
 type Stats = {
-  revenue: number; orders: number; avgTicket: number;
+  revenue: number; orders: number; avgTicket: number; refundedCents: number;
   // Faturamento separado: frete é repassado à transportadora, então
   // "Faturamento" sozinho fazia a loja parecer vender mais do que vende.
   productsCents: number; shippingCents: number; discountCents: number;
@@ -136,6 +136,7 @@ export default function RelatoriosPage() {
       if (requestId !== requestRef.current) return;
       setStats({
         revenue,
+        refundedCents: orders.reduce((s, o) => s + refundedOf(o), 0),
         orders: orders.length,
         avgTicket: orders.length ? revenue / orders.length : 0,
         productsCents: orders.reduce((s, o) => s + o.items.reduce((t, i) => t + i.unitPrice * i.quantity, 0), 0),
@@ -221,6 +222,7 @@ export default function RelatoriosPage() {
               { Icon: IconMoney,   label: 'Faturamento', value: fmt(stats.revenue),   desc: 'pedidos pagos, menos devoluções' },
               { Icon: IconBox,     label: 'Pedidos',     value: String(stats.orders), desc: 'pedidos no período' },
               { Icon: IconReceipt, label: 'Ticket médio', value: fmt(stats.avgTicket), desc: 'valor médio por pedido' },
+              ...(stats.refundedCents > 0 ? [{ Icon: IconMoney, label: 'Devolvido', value: fmt(stats.refundedCents), desc: 'estornos e devoluções aos clientes' }] : []),
             ].map((k, i) => (
               <div key={k.label} className={`panel-stat min-w-0 ${i === 0 ? 'col-span-2 sm:col-span-1' : ''}`}>
                 <span className="panel-stat-icon mb-3"><k.Icon size={17} /></span>

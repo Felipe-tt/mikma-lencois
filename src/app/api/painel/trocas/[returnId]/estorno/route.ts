@@ -8,6 +8,8 @@ import { effectiveRole } from '@/lib/staffMfa';
 import { readPii } from '@/lib/piiCrypto';
 import { getPixTransfer, refundCharge, sendPixTransfer } from '@/lib/abacatepayApi';
 import { notifyOrderRefunded } from '@/lib/email/cancelledEmail';
+import { notifyInApp } from '@/lib/push/notifyInApp';
+import { notifySeller } from '@/lib/push/notifySeller';
 import { cobrancaAbacate, valorDaDevolucao, type PedidoParaEstorno } from '@/lib/returns/estorno';
 import type { ReturnRequest } from '@/types';
 
@@ -165,6 +167,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ret
     return !(total && jaFeito);
   });
   if (avisar) await notifyOrderRefunded(d.orderId, { ...order, totalCents: valor.cents }, via !== 'fora');
+  // A equipe vê no sino e no celular quanto voltou para o cliente.
+  const como = via === 'abacatepay' ? 'estorno pela AbacatePay' : via === 'pix' ? 'PIX no CPF do cliente' : 'registrado como devolvido por fora';
+  const msg = `${brl(valor.cents)} devolvidos ao cliente do pedido #${short} (${como})`;
+  await notifyInApp({ type: 'refund_done', message: msg, orderId: d.orderId, url: `/painel/pedidos/${d.orderId}` }).catch(() => {});
+  await notifySeller({ title: `${brl(valor.cents)} devolvidos`, body: `Pedido #${short} · ${como}`, url: `/painel/pedidos/${d.orderId}`, data: { orderId: d.orderId, event: 'refund_done' } });
   return NextResponse.json({ ok: true, cents: valor.cents, via });
 }
 

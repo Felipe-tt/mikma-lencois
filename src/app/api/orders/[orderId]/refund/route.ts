@@ -7,6 +7,8 @@ import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { refundCharge } from '@/lib/abacatepayApi';
 import { effectiveRole } from '@/lib/staffMfa';
+import { notifyInApp } from '@/lib/push/notifyInApp';
+import { notifySeller } from '@/lib/push/notifySeller';
 
 const bodySchema = z.object({ reason: z.string().trim().max(300).optional() });
 
@@ -116,5 +118,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     return already ? null : o ?? null;
   });
   if (closedHere) await notifyOrderRefunded(orderId, closedHere, true);
+  const short = orderId.slice(-8).toUpperCase();
+  await notifyInApp({ type: 'refund_done', message: `${brl} estornados ao cliente do pedido #${short} (cancelamento)`, orderId, url: `/painel/pedidos/${orderId}` }).catch(() => {});
+  await notifySeller({ title: `${brl} estornados`, body: `Pedido #${short} cancelado · estorno pela AbacatePay`, url: `/painel/pedidos/${orderId}`, data: { orderId, event: 'refund_done' } });
   return NextResponse.json({ ok: true, refundId: result.data.id });
 }

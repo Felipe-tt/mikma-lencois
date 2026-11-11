@@ -71,11 +71,13 @@ export function EstornoCard({ returnId, orderId, items, estorno, diferencaCents 
   const atual = conferido ?? estorno;
 
   if (atual?.status === 'feito') {
-    const como = atual.via === 'abacatepay' ? 'pela AbacatePay (estorno)' : atual.via === 'pix' ? 'por PIX no CPF do cliente, pela AbacatePay' : 'por fora';
+    const como = atual.via === 'abacatepay' ? 'Estorno pela AbacatePay, no mesmo meio do pagamento' : atual.via === 'pix' ? 'PIX no CPF do cliente, pela AbacatePay' : 'Devolvido por fora (registrado pela equipe)';
     return (
-      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex flex-col gap-1">
-        <p className="text-[13px] text-emerald-800">{formatCurrency(atual.cents)} devolvidos {como}. O cliente recebeu um e-mail.</p>
-        {atual.receiptUrl && <a href={atual.receiptUrl} target="_blank" rel="noopener noreferrer" className="self-start text-[12px] font-semibold text-emerald-800 underline underline-offset-2">Ver comprovante</a>}
+      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex flex-col gap-0.5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-800">Dinheiro devolvido ao cliente</p>
+        <p className="text-[20px] font-bold text-emerald-900 tabular-nums leading-tight">{formatCurrency(atual.cents)}</p>
+        <p className="text-[12px] text-emerald-800">{como}{atual.at ? ` · ${new Date(atual.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}</p>
+        {atual.receiptUrl && <a href={atual.receiptUrl} target="_blank" rel="noopener noreferrer" className="self-start mt-1 text-[12px] font-semibold text-emerald-800 underline underline-offset-2">Ver comprovante</a>}
       </div>
     );
   }

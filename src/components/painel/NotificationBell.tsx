@@ -28,6 +28,7 @@ const NOTIF_STYLE: Record<string, { Icon: React.FC<{ size?: number; className?: 
   uber_pickup:       { Icon: IconTruck, tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' },
   uber_delivered:    { Icon: IconCheck, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
   correios_pickup:   { Icon: IconTruck, tone: 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300' },
+  refund_done:       { Icon: IconMoney, tone: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300' },
   uber_problem:      { Icon: IconAlert, tone: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300' },
 };
 const NOTIF_STYLE_DEFAULT = { Icon: IconBell, tone: 'bg-warm text-faint' };

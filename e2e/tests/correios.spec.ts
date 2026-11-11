@@ -533,7 +533,9 @@ test('devolução: a equipe confere as peças e o dinheiro volta pela AbacatePay
   // Sem conferir, não há estorno.
   expect((await orderRef.get()).get('payment.refundStatus')).toBeUndefined();
   await card.getByRole('button', { name: 'Concluir e repor estoque' }).click();
-  await expect(card.getByText(/R\$\s?421,80 devolvidos pela AbacatePay/)).toBeVisible();
+  await expect(card.getByText('Dinheiro devolvido ao cliente')).toBeVisible();
+  await expect(card.getByText(/Estorno pela AbacatePay/)).toBeVisible();
+  await expect(card.getByText(/R\$\s?421,80/)).toBeVisible();
   expect((await orderRef.get()).get('payment.refundStatus')).toBe('done');
   expect((await retRef.get()).get('estorno')).toMatchObject({ status: 'feito', cents: 42180, via: 'abacatepay' });
   expect((await charges() as { id: string; status: string }[]).find(c => c.id === charge.id)?.status).toBe('REFUNDED');
@@ -560,7 +562,14 @@ test('devolução de parte do pedido: a AbacatePay manda PIX no CPF do cliente',
   await panel.goto('/painel/trocas');
   const card = panel.locator('div.border', { hasText: `Pedido #${orderRef.id.slice(-8).toUpperCase()}` }).first();
   await card.getByRole('button', { name: 'Concluir e repor estoque' }).click();
-  await expect(card.getByText(/R\$\s?399,90 devolvidos por PIX no CPF do cliente/)).toBeVisible();
+  await expect(card.getByText(/PIX no CPF do cliente, pela AbacatePay/)).toBeVisible();
+  await expect(card.getByText(/R\$\s?399,90/).first()).toBeVisible();
+  // O pedido mostra quanto voltou, como e quando.
+  await panel.goto(`/painel/pedidos/${orderRef.id}`);
+  const dinheiro = panel.getByRole('region', { name: 'Dinheiro devolvido ao cliente' });
+  await expect(dinheiro.getByText('PIX no CPF do cliente', { exact: false })).toBeVisible();
+  await expect(dinheiro.getByText(/Total devolvido/)).toBeVisible();
+  if (process.env.E2E_SHOTS) await dinheiro.screenshot({ path: 'test-results/dinheiro-devolvido.png' });
   const estorno = (await retRef.get()).get('estorno');
   expect(estorno).toMatchObject({ status: 'feito', cents: 39990, via: 'pix' });
   const pix = (await charges() as unknown as { id: string; pixKey?: string; amount: number }[]).find(c => c.id === estorno.transferId);
