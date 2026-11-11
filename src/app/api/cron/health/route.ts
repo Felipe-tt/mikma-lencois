@@ -4,6 +4,8 @@ import { adminDb, getAdminAppCheck } from '@/lib/firebase/admin';
 import { envPrivateKey, signRsaSha256Hex } from '@/lib/firebase/signer';
 import { checkCorreiosContrato } from '@/lib/correiosContrato';
 import { packageFor } from '@/lib/shipping-pricing';
+import { remetenteFrom, remetenteProblems } from '@/lib/correiosPrepostagem';
+import { withStoreDefaults } from '@/lib/store-settings';
 
 /**
  * GET /api/cron/health (com x-cron-secret): saúde do servidor para o
@@ -34,13 +36,15 @@ export async function GET(req: NextRequest) {
   const started = Date.now();
   let firestore = false;
   let originCep = '';
+  let storeData: Record<string, unknown> | undefined;
   try {
     const store = await Promise.race([
       adminDb.collection('settings').doc('store').get(),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8_000)),
     ]);
     firestore = true;
-    originCep = String(store.data()?.originCep ?? '');
+    storeData = store.data();
+    originCep = String(storeData?.originCep ?? '');
   } catch { /* firestore = false */ }
   let signing: boolean | null = null;
   if (process.env.K_SERVICE) {
@@ -61,10 +65,12 @@ export async function GET(req: NextRequest) {
       appCheck = false;
     }
   }
-  let correios: Awaited<ReturnType<typeof checkCorreiosContrato>> | null = null;
+  let correios: (Awaited<ReturnType<typeof checkCorreiosContrato>> & { etiqueta?: string[] }) | null = null;
   if (req.nextUrl.searchParams.get('correios') === '1') {
     try {
       correios = await checkCorreiosContrato(originCep, '01310100', packageFor(1.5));
+      // Dados da loja que a etiqueta precisa (só o que falta, sem valores).
+      if (storeData) correios.etiqueta = remetenteProblems(remetenteFrom(withStoreDefaults(storeData)));
     } catch (err) {
       console.error('[health] cotação pelo contrato dos Correios falhou', err);
       correios = { configured: true, token: false, pacCents: 0, sedexCents: 0 };
