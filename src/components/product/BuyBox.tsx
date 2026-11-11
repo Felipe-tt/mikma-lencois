@@ -1,4 +1,5 @@
 'use client';
+import { estimatedDate } from '@/lib/deliveryDate';
 import { StaffPriceInsight } from './StaffPriceInsight';
 import { startNavigation } from '@/components/ui/NavigationProgress';
 import { WhatsAppInline } from '@/components/contact/WhatsApp';
@@ -530,7 +531,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                       )}
                     </p>
                     <p className="text-[11px] text-faint">
-                      {o.estimatedDays === 0 ? 'Hoje' : `${o.estimatedDays} ${o.estimatedDays === 1 ? 'dia útil' : 'dias úteis'}`}
+                      {o.estimatedDays === 0 ? 'Hoje' : `${o.estimatedDays} ${o.estimatedDays === 1 ? 'dia útil' : 'dias úteis'} · chega até ${estimatedDate(o.estimatedDays)}`}
                     </p>
                   </div>
                   <span className="text-[13px] font-semibold text-ink">
