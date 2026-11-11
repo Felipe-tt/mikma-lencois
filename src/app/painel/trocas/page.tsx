@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, increment, serverTimestamp, runTransaction, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { auth } from '@/lib/firebase/client';
 import type { ReturnRequest, ReturnStatus } from '@/types';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { formatDateTime } from '@/lib/utils/format';
@@ -91,11 +92,24 @@ export default function TrocasPage() {
     setTimeout(() => setToast(t => (t === msg ? '' : t)), 3000);
   }
 
+  /** E-mail do novo status para o cliente (aprovada, recusada, concluída). */
+  async function avisar(r: ReturnRequest) {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+      const res = await fetch(`/api/painel/trocas/${r.id}/avisar`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({}));
+      if (data.result === 'sem-email') showToast('Atualizado. O cliente não tem e-mail cadastrado para receber o aviso.');
+      else if (!res.ok) showToast('Atualizado, mas o e-mail para o cliente não saiu agora.');
+    } catch { /* sem conexão: o status já mudou, o aviso fica para depois */ }
+  }
+
   async function setStatus(r: ReturnRequest, status: ReturnStatus) {
     setBusyId(r.id);
     try {
       await updateDoc(doc(db, 'returns', r.id), { status, updatedAt: serverTimestamp() });
-      showToast(status === 'aprovada' ? 'Aprovada.' : status === 'recusada' ? 'Recusada.' : 'Atualizado.');
+      showToast(status === 'aprovada' ? 'Aprovada. O cliente recebe um e-mail.' : status === 'recusada' ? 'Recusada. O cliente recebe um e-mail.' : 'Atualizado.');
+      void avisar(r);
     } catch (err) {
       console.error('[trocas] falha ao atualizar status', err);
       showToast('Não deu pra atualizar agora.');
@@ -141,6 +155,7 @@ export default function TrocasPage() {
         tx.update(returnRef, { status: 'concluida', restocked: restock, updatedAt: serverTimestamp() });
         return notFound;
       });
+      void avisar(r);
       showToast(
         restock
           ? (missing > 0 ? `Concluído. ${plural(missing, 'item não achado', 'itens não achados')} no estoque pra repor.` : 'Concluído e devolvido ao estoque.')

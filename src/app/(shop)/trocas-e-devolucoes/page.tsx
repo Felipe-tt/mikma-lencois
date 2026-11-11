@@ -68,10 +68,9 @@ export default async function TrocasEDevolucoesPage() {
       title: 'Como pedir',
       clauses: [
         clause('É rápido:', [
-          'fale com a gente por um dos contatos abaixo;',
-          'diga o número do pedido e o que aconteceu;',
-          'se for defeito, dano ou produto errado, mande fotos;',
-          'nós explicamos como enviar o produto de volta.',
+          'abra o pedido em Minha conta, Pedidos, e toque em "Pedir troca ou devolução" (ou fale com a gente por um dos contatos abaixo);',
+          'escolha as peças e conte o que aconteceu; se for defeito, dano ou produto errado, mande fotos pelo WhatsApp;',
+          'aprovado, você recebe um código dos Correios para postar em qualquer agência, sem pagar nada.',
         ]),
         contactClause(id, 'Nossos contatos:'),
       ],

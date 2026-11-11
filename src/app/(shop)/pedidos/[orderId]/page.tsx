@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { ReturnRequestCard } from '@/components/order/ReturnRequestCard';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 import { db } from '@/lib/firebase/db';
@@ -623,13 +624,17 @@ export default function OrderDetailPage() {
 
           {/* ── Sidebar ───────────────────────────────────────────── */}
           <aside aria-label="Resumo do pedido" className="flex flex-col gap-4">
+            {/* Troca ou devolução pelo próprio pedido (prazo da política) */}
+            {order.status === 'delivered' && user && (() => {
+              const entregue = order.delivery?.deliveredAt ? new Date(order.delivery.deliveredAt) : null;
+              const ate = entregue ? new Date(entregue.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
+              return <ReturnRequestCard order={order} user={user} arrependimentoAte={ate && ate.getTime() > Date.now() ? ate : null} />;
+            })()}
+
             {/* Ajuda com o pedido: avaliar, trocar, falar com a loja */}
             {['paid', 'preparing', 'shipped', 'delivered'].includes(order.status) && (() => {
               const shortId = order.id.slice(-8).toUpperCase();
-              const deliveredAt = order.delivery?.deliveredAt ? new Date(order.delivery.deliveredAt) : null;
-              const returnBy = deliveredAt ? new Date(deliveredAt.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
               const waHref = storeWa ? `${storeWa}${storeWa.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Preciso de ajuda com o pedido #${shortId}.`)}` : null;
-              const waTroca = storeWa ? `${storeWa}${storeWa.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Quero solicitar troca ou devolução do pedido #${shortId}.`)}` : null;
               const row = 'group flex items-center justify-between rounded-xl px-3 py-2.5 -mx-3 text-[13.5px] text-ink hover:bg-warm transition-colors';
               const arrow = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" className="text-faint transition-transform duration-200 group-hover:translate-x-0.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>;
               return (
@@ -642,23 +647,11 @@ export default function OrderDetailPage() {
                     {order.status === 'delivered' && googleReview && (
                       <li><a href={googleReview} target="_blank" rel="noopener noreferrer" className={row}>Avaliar a loja no Google{arrow}</a></li>
                     )}
-                    {order.status === 'delivered' && (
-                      <li>
-                        {waTroca
-                          ? <a href={waTroca} target="_blank" rel="noopener noreferrer" className={row}>Solicitar troca ou devolução{arrow}</a>
-                          : <Link href="/trocas-e-devolucoes" className={row}>Solicitar troca ou devolução{arrow}</Link>}
-                      </li>
-                    )}
                     {waHref && (
                       <li><a href={waHref} target="_blank" rel="noopener noreferrer" className={row}>Falar com a loja no WhatsApp{arrow}</a></li>
                     )}
                     <li><Link href="/trocas-e-devolucoes" className={row}>Política de trocas{arrow}</Link></li>
                   </ul>
-                  {returnBy && returnBy.getTime() > Date.now() && (
-                    <p className="text-[12px] text-mid mt-3 leading-relaxed">
-                      Você pode desistir da compra sem custo até {returnBy.toLocaleDateString('pt-BR')}.
-                    </p>
-                  )}
                 </section>
               );
             })()}

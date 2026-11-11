@@ -357,29 +357,40 @@ test('lote: etiquetas do dia geradas de uma vez e impressas num PDF só', async 
   await staff.close();
 });
 
-test('troca: código de devolução dos Correios e aviso quando o pacote chega na loja', async ({ browser, request }) => {
-  test.setTimeout(180_000);
-  // Pedido entregue e troca aprovada, direto no banco (a compra já é testada acima).
+test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Correios, o pacote volta', async ({ page, browser, request }) => {
+  test.setTimeout(240_000);
+  // Pedido entregue, direto no banco (a compra já é testada acima).
   const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
   const orderRef = await db().collection('orders').add({
     userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
     items: [{ productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 }],
-    address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190 },
+    address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190, deliveredAt: new Date().toISOString() },
     payment: { method: 'pix', txId: 't', paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(),
   });
-  const retRef = await db().collection('returns').add({
-    orderId: orderRef.id, userId: user.id, customerName: 'Gabriela Torres', type: 'troca', reason: 'Tamanho errado',
-    items: [{ productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1 }],
-    status: 'aprovada', restocked: false, createdAt: new Date().toISOString(),
-  });
 
+  // Cliente pede a troca no próprio pedido.
+  await login(page, 'devolve@e2e.mikma', SENHA);
+  await page.goto(`/pedidos/${orderRef.id}`);
+  const pedir = page.getByRole('button', { name: /Pedir troca ou devolução/ });
+  await expect(pedir).toContainText('Desistiu? Sem custo até');
+  await pedir.click();
+  const form = page.getByRole('region', { name: 'Pedir troca ou devolução' });
+  await form.getByRole('button', { name: 'Enviar pedido' }).click();
+  await expect(form.getByRole('alert')).toContainText('Conte em poucas palavras');
+  await form.getByRole('textbox').fill('O tamanho king ficou grande, quero o queen.');
+  await form.getByRole('button', { name: 'Enviar pedido' }).click();
+  await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
+  const ret = (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs[0];
+  expect(ret.data()).toMatchObject({ status: 'solicitada', type: 'troca', createdBy: 'cliente', userId: user.id, items: [{ sku: 'p3_v1', quantity: 1 }] });
+
+  // Loja aprova e gera o código de devolução.
   const { staff, panel } = await staffPanel(browser);
   await panel.goto('/painel/trocas');
+  await panel.getByRole('button', { name: 'Aprovar' }).first().click();
   await panel.getByRole('button', { name: 'Gerar código de devolução (Correios)' }).click();
   await expect(panel.getByText('Código de devolução dos Correios')).toBeVisible();
-  const reversa = (await retRef.get()).get('reversa') as { id: string; codigoObjeto: string; validade: string };
+  const reversa = (await ret.ref.get()).get('reversa') as { id: string; codigoObjeto: string; validade: string };
   expect(reversa.codigoObjeto).toMatch(/^LR\d{9}BR$/);
-  await expect(panel.getByText(reversa.codigoObjeto)).toBeVisible();
   const sent = correiosLog().find(e => e.id === reversa.id)?.body;
   expect(sent).toMatchObject({
     codigoServico: '03301', logisticaReversa: 'S',
@@ -388,10 +399,15 @@ test('troca: código de devolução dos Correios e aviso quando o pacote chega n
     itensDeclaracaoConteudo: [{ conteudo: 'Jogo de Cama King Malha Cinza', quantidade: '1', valor: '399.90' }],
   });
 
+  // O cliente vê o código no pedido, na hora.
+  await expect(page.getByText(reversa.codigoObjeto)).toBeVisible();
+  await expect(page.getByText(/Leve o pacote a qualquer agência dos Correios até/)).toBeVisible();
+
   // O cliente posta e o pacote chega na loja: a rotina do rastreio avisa.
   setRastreio(reversa.codigoObjeto, 'entregue');
   expect(await runRastreio(request)).toMatchObject({ returned: 1, errors: 0 });
   await expect(panel.getByText(/O pacote chegou na loja em/)).toBeVisible();
+  await expect(page.getByText('O pacote chegou na loja. Estamos conferindo e já te avisamos.')).toBeVisible();
   await staff.close();
 });
 

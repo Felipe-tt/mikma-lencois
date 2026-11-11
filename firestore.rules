@@ -189,9 +189,8 @@ service cloud.firestore {
       allow read: if isAuth() && (
         resource.data.userId == request.auth.uid || isSellerOrAdmin()
       );
-      // Registrado sempre pelo vendedor no painel (telefone/WhatsApp com o
-      // cliente ainda é por fora), sem autoatendimento do cliente por
-      // enquanto, então só seller/admin escreve.
+      // O cliente pede pelo servidor (/api/orders/[id]/troca, que confere
+      // dono, prazo e peças); pelo SDK só seller/admin escreve.
       allow write: if isSellerOrAdmin();
     }
 
