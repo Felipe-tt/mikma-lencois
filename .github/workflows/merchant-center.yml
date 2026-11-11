@@ -8,6 +8,12 @@ name: Merchant Center · status dos produtos
 
 on:
   workflow_dispatch:
+    inputs:
+      frete:
+        description: 'Frete: ler ou gravar a tabela de scripts/merchant-frete.mjs'
+        type: choice
+        options: [ler, gravar]
+        default: ler
   schedule:
     - cron: '43 11 * * *' # todo dia, 8:43 em Brasília
 
@@ -34,6 +40,7 @@ jobs:
             *.blob.core.windows.net:443
             nodejs.org:443
             *.googleapis.com:443
+            developers.google.com:443
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -71,3 +78,10 @@ jobs:
           MERCHANT_ID: '5900898574'
           MERCHANT_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: node scripts/merchant-center.mjs
+
+      - name: Frete no Merchant Center
+        env:
+          MERCHANT_ID: '5900898574'
+          MERCHANT_TOKEN: ${{ steps.auth.outputs.access_token }}
+          APLICAR: ${{ github.event_name == 'workflow_dispatch' && inputs.frete == 'gravar' && '1' || '0' }}
+        run: node scripts/merchant-frete.mjs
