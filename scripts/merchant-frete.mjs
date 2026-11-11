@@ -37,12 +37,12 @@ const erro = r => `HTTP ${r.status} ${String(r.json.error?.message ?? JSON.strin
 // Faixas de CEP por prefixo (o Google recusa o CEP com hífen): Sul (PR, SC,
 // RS: 80 a 99), Sudeste (SP, RJ, ES, MG: 01 a 39) e o resto (40 a 79).
 const REGIOES = [
-  { id: 'mikma-sul', nome: 'Sul', faixas: [['80*', '99*']] },
-  { id: 'mikma-sudeste', nome: 'SP, RJ, MG e ES', faixas: [['01*', '39*']] },
-  { id: 'mikma-demais', nome: 'Demais estados', faixas: [['40*', '79*']] },
+  { id: '8001', nome: 'Sul', faixas: [['80*', '99*']] },
+  { id: '8002', nome: 'SP, RJ, MG e ES', faixas: [['01*', '39*']] },
+  { id: '8003', nome: 'Demais estados', faixas: [['40*', '79*']] },
 ];
 // Reais por faixa de peso: até 2 kg, de 2 a 5 kg, acima de 5 kg.
-const PRECOS = { 'mikma-sul': [21, 29, 36], 'mikma-sudeste': [27, 41, 50], 'mikma-demais': [37, 56, 70] };
+const PRECOS = { 8001: [21, 29, 36], 8002: [27, 41, 50], 8003: [37, 56, 70] };
 const micros = n => String(Math.round(n * 1_000_000));
 
 // 1. Como está hoje.
@@ -60,11 +60,19 @@ say('|---|---|---|---|');
 for (const r of REGIOES) say(`| ${r.nome} | ${PRECOS[r.id].map(v => `R$ ${v}`).join(' | ')} |`);
 if (!APLICAR) { say(''); say('Só leitura. Rode com aplicar = true para gravar.'); finish(0); }
 
-// 2. Regiões soltas de uma tentativa anterior: o frete usa grupos de CEP
-// dentro do próprio serviço (a tabela só aceita ID numérico de local).
+// 2. Regiões por CEP (cria ou atualiza). A tabela de frete só aceita ID
+// numérico de local, então as regiões têm ID numérico.
 for (const r of REGIOES) {
-  const del = await call('DELETE', `/regions/${r.id}`);
-  if (del.ok) say(`Região avulsa ${r.nome} removida.`);
+  const region = {
+    displayName: r.nome,
+    postalCodeArea: { regionCode: 'BR', postalCodes: r.faixas.map(([begin, end]) => ({ begin, end })) },
+  };
+  const existe = await call('GET', `/regions/${r.id}`);
+  const res = existe.ok
+    ? await call('PATCH', `/regions/${r.id}?updateMask=displayName,postalCodeArea`, region)
+    : await call('POST', `/regions?regionId=${r.id}`, region);
+  if (!res.ok) { say(`Região ${r.nome}: ${erro(res)}`); finish(1); }
+  say(`Região ${r.nome}: ok.`);
 }
 
 // 3. Serviço de frete com a tabela região x peso.
@@ -74,12 +82,11 @@ const service = {
   deliveryCountries: ['BR'],
   currencyCode: 'BRL',
   shipmentType: 'DELIVERY',
-  postalCodeGroups: REGIOES.map(r => ({ name: r.id, regionCode: 'BR', postalCodeRanges: r.faixas.map(([begin, end]) => ({ begin, end })) })),
   deliveryTime: { minHandlingDays: 0, maxHandlingDays: 2, minTransitDays: 2, maxTransitDays: 12 },
   rateGroups: [{
     name: 'Por região e peso',
     mainTable: {
-      rowHeaders: { postalCodeGroupNames: REGIOES.map(r => r.id) },
+      rowHeaders: { locations: REGIOES.map(r => ({ locationIds: [r.id] })) },
       // -1 é "acima disso, sem limite".
       columnHeaders: { weights: [{ amountMicros: micros(2), unit: 'KILOGRAM' }, { amountMicros: micros(5), unit: 'KILOGRAM' }, { amountMicros: '-1', unit: 'KILOGRAM' }] },
       rows: REGIOES.map(r => ({ cells: PRECOS[r.id].map(v => ({ flatRate: { amountMicros: micros(v), currencyCode: 'BRL' } })) })),
