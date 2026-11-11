@@ -24,6 +24,8 @@ export interface SroEvento {
 export interface SroObjeto {
   codObjeto: string;
   mensagem?: string;
+  /** Previsão de entrega dos Correios (horário de Brasília, sem fuso). */
+  dtPrevista?: string;
   eventos?: SroEvento[];
 }
 
@@ -52,6 +54,12 @@ export function postedAt(o: SroObjeto | undefined): string | null {
 export function deliveredAt(o: SroObjeto | undefined): string | null {
   const e = (o?.eventos ?? []).find(ev => ENTREGUE.has(ev.codigo) && ev.tipo === '01');
   return e ? (sroDate(e.dtHrCriado) ?? new Date()).toISOString() : null;
+}
+
+/** Previsão de entrega para mostrar ao cliente: só enquanto não foi entregue. */
+export function expectedDelivery(o: SroObjeto | undefined): string | null {
+  if (!o?.dtPrevista || deliveredAt(o)) return null;
+  return sroDate(o.dtPrevista)?.toISOString() ?? null;
 }
 
 /** Até 50 códigos por chamada. Objetos não encontrados vêm com `mensagem`. */

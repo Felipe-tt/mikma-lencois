@@ -126,6 +126,12 @@ export function TrackingTimeline({ trackingCode, orderId, carrierName }: Props) 
 
   return (
     <div>
+      {result.expectedDate && (
+        <p className="mb-3 text-[13px] text-ink">
+          <span className="font-semibold">Previsão de entrega:</span>{' '}
+          {new Date(result.expectedDate).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })}
+        </p>
+      )}
       <div className="flex items-center justify-between mb-4">
         {result.service && <p className="text-[11px] text-faint">{result.service}</p>}
         <div className="ml-auto flex items-center gap-3">
