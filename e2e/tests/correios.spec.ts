@@ -151,7 +151,7 @@ test('monitor: o servidor informa se consegue cotar pelo contrato', async ({ req
   // É o que a rotina correios-cws.yml confere no site publicado depois de cada deploy.
   const headers = { 'x-cron-secret': 'e2e_cron_secret_0123456789' };
   const checked = await (await request.get('/api/cron/health?correios=1', { headers })).json();
-  expect(checked.correios).toEqual({ configured: true, token: true, pacCents: 2190, sedexCents: 3127 });
+  expect(checked.correios).toEqual({ configured: true, token: true, pacCents: 2190, sedexCents: 3127, etiqueta: [] });
   // O monitor de saúde (de 10 em 10 minutos) não passa o parâmetro e não consulta os Correios.
   const plain = await (await request.get('/api/cron/health', { headers })).json();
   expect(plain.ok).toBe(true);

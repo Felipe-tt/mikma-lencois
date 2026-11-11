@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('@/lib/firebase/admin', () => ({ adminDb: {} }));
 vi.mock('@/lib/uber-direct', () => ({}));
 
-import { buildPrePostagem, cancelPrePostagem, createPrePostagem, labelPdf, prePostagemProblems, type Remetente } from './correiosPrepostagem';
+import { buildPrePostagem, cancelPrePostagem, createPrePostagem, labelPdf, prePostagemProblems, remetenteFrom, remetenteProblems, type Remetente } from './correiosPrepostagem';
+import { withStoreDefaults } from './store-settings';
 import { resetCorreiosToken } from './correiosContrato';
 import type { Order } from '@/types';
 
@@ -84,6 +85,22 @@ describe('prePostagemProblems', () => {
       'Falta o endereço completo da loja (Configurações > Loja): é dele que os Correios coletam.',
       'Falta o nome do cliente no pedido.',
     ]);
+  });
+});
+
+describe('remetente das Configurações', () => {
+  it('usa razão social e CNPJ da NF-e quando tem, e o endereço da loja', () => {
+    const r = remetenteFrom(withStoreDefaults({
+      storeName: 'Mikma Lençóis', storeCnpj: '11.111.111/0001-11', nfeRazaoSocial: 'GPM Textil Ltda', nfeCnpj: '05338341000195',
+      storeCep: '89042-300', storeAddress: 'Rua A', storeNumber: '10', storeNeighborhood: 'Velha', storeCity: 'Blumenau', storeState: 'SC',
+    }));
+    expect(r).toMatchObject({ nome: 'GPM Textil Ltda', cnpj: '05338341000195', endereco: { cep: '89042-300', street: 'Rua A', city: 'Blumenau' } });
+    expect(remetenteProblems(r)).toEqual([]);
+  });
+  it('sem CEP da loja, usa o CEP de origem do frete; loja vazia aponta tudo', () => {
+    const r = remetenteFrom(withStoreDefaults({ originCep: '89042300' }));
+    expect(r.endereco.cep).toBe('89042300');
+    expect(remetenteProblems(r)).toHaveLength(3);
   });
 });
 

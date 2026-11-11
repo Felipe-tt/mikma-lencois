@@ -9,9 +9,8 @@ import { getSettings } from '@/lib/settings';
 import { shippingBlockReason } from '@/lib/orders/shippingBlock';
 import {
   buildPrePostagem, cancelPrePostagem, createPrePostagem, CorreiosError, labelPdf, prePostagemProblems,
-  type PrePostagemInfo, type Remetente,
+  remetenteFrom, type PrePostagemInfo,
 } from '@/lib/correiosPrepostagem';
-import type { StoreSettings } from '@/lib/store-settings';
 import type { Order } from '@/types';
 
 /**
@@ -32,19 +31,6 @@ async function staff(req: NextRequest): Promise<{ uid: string } | NextResponse> 
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
-}
-
-function remetenteFrom(s: StoreSettings): Remetente {
-  return {
-    nome: s.nfeRazaoSocial || s.storeName,
-    cnpj: s.nfeCnpj || s.storeCnpj,
-    telefone: s.storePhone,
-    email: s.storeEmail,
-    endereco: {
-      cep: s.storeCep || s.originCep, street: s.storeAddress, number: s.storeNumber, complement: s.storeComplement,
-      neighborhood: s.storeNeighborhood, city: s.storeCity, state: s.storeState,
-    },
-  };
 }
 
 const fail = (err: unknown) => {

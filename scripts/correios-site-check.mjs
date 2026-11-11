@@ -7,7 +7,8 @@
  * site).
  *
  * Veredito no GITHUB_OUTPUT (`verdict` e `detail`):
- *   ok           o site gerou o token e cotou PAC e SEDEX
+ *   ok           o site gerou o token, cotou PAC e SEDEX e tem os dados da
+ *                loja que a etiqueta precisa (CNPJ e endereço da coleta)
  *   fail         o site respondeu, mas sem token ou sem preço
  *   inconclusive bloqueio da Cloudflare, segredo fora de sincronia, site fora
  *                do ar (o monitor de saúde cuida) ou versão no ar ainda sem
@@ -56,7 +57,8 @@ async function rodada() {
   if (!c.configured) return ['fail', 'o site está sem o secret CORREIOS_CWS ou sem o cartão de postagem (CORREIOS_CARTAO)'];
   if (!c.token) return ['fail', 'o site não conseguiu gerar o token dos Correios com o código de acesso'];
   if (!(c.pacCents > 0) || !(c.sedexCents > 0)) return ['fail', `o site gerou o token, mas ficou sem preço do contrato (PAC ${reais(c.pacCents || 0)}, SEDEX ${reais(c.sedexCents || 0)}); confira o CEP de origem nas Configurações`];
-  return ['ok', `PAC ${reais(c.pacCents)} e SEDEX ${reais(c.sedexCents)} pelo contrato (1,5 kg até São Paulo)`];
+  if (c.etiqueta?.length) return ['fail', `o frete funciona, mas a etiqueta não vai sair: ${c.etiqueta.join(' ')}`];
+  return ['ok', `PAC ${reais(c.pacCents)} e SEDEX ${reais(c.sedexCents)} pelo contrato (1,5 kg até São Paulo); dados da loja para a etiqueta completos`];
 }
 
 if (!SECRET) finish('inconclusive', 'CRON_SECRET ausente');

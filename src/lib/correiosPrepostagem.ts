@@ -12,6 +12,7 @@
 import { correiosBearer, dropCorreiosToken } from '@/lib/correiosContrato';
 import { packageFor } from '@/lib/shipping-pricing';
 import type { Address, Order } from '@/types';
+import type { StoreSettings } from '@/lib/store-settings';
 
 const API = 'https://api.correios.com.br/prepostagem/v1/prepostagens';
 
@@ -60,13 +61,34 @@ function endereco(a: Address) {
 }
 
 /** O que falta para gerar a etiqueta (vazio = pode gerar). */
-export function prePostagemProblems(order: Pick<Order, 'delivery' | 'address' | 'customerName' | 'items'>, remetente: Remetente): string[] {
+/** Dados da loja (remetente e endereço da coleta) a partir das Configurações. */
+export function remetenteFrom(s: StoreSettings): Remetente {
+  return {
+    nome: s.nfeRazaoSocial || s.storeName,
+    cnpj: s.nfeCnpj || s.storeCnpj,
+    telefone: s.storePhone,
+    email: s.storeEmail,
+    endereco: {
+      cep: s.storeCep || s.originCep, street: s.storeAddress, number: s.storeNumber, complement: s.storeComplement,
+      neighborhood: s.storeNeighborhood, city: s.storeCity, state: s.storeState,
+    },
+  };
+}
+
+/** O que falta nas Configurações para gerar etiqueta (vazio = tudo certo). */
+export function remetenteProblems(remetente: Remetente): string[] {
   const problems: string[] = [];
-  if (!SERVICO_CORREIOS[order.delivery?.carrier ?? '']) problems.push('Este pedido não é por PAC ou SEDEX.');
   const r = remetente.endereco;
   if (cut(remetente.nome, 50).length < 3) problems.push('Falta o nome da loja (Configurações > Loja).');
   if (digits(remetente.cnpj).length !== 14) problems.push('Falta o CNPJ da loja (Configurações > Loja).');
   if (digits(r.cep).length !== 8 || !r.street || !r.neighborhood || !r.city || !r.state) problems.push('Falta o endereço completo da loja (Configurações > Loja): é dele que os Correios coletam.');
+  return problems;
+}
+
+export function prePostagemProblems(order: Pick<Order, 'delivery' | 'address' | 'customerName' | 'items'>, remetente: Remetente): string[] {
+  const problems: string[] = [];
+  if (!SERVICO_CORREIOS[order.delivery?.carrier ?? '']) problems.push('Este pedido não é por PAC ou SEDEX.');
+  problems.push(...remetenteProblems(remetente));
   const a = order.address;
   if (!a || digits(a.cep).length !== 8 || !a.street || !a.neighborhood || !a.city || !a.state) problems.push('O endereço de entrega do pedido está incompleto.');
   if (cut(order.customerName, 50).length < 3) problems.push('Falta o nome do cliente no pedido.');

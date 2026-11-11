@@ -131,7 +131,7 @@ jobs:
           label=correios-contrato
           open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label "$label" --state open --json number --jq '.[0].number' 2>/dev/null || true)
           if [ "$CONTRATO" = "fail" ] || [ "$SITE" = "fail" ]; then
-            body="O frete pelo contrato dos Correios **não está funcionando**. O site continua vendendo, com o preço do Melhor Envio no lugar."
+            body="O envio pelos Correios **precisa de atenção**. O site continua vendendo; se o contrato falhar, o frete sai pelo preço do Melhor Envio."
             if [ "$CONTRATO" = "fail" ]; then body="$body"$'\n\n'"- Contrato na API dos Correios: $CONTRATO_DETALHE."; fi
             if [ "$SITE" = "fail" ]; then body="$body"$'\n\n'"- Site publicado: $SITE_DETALHE."; fi
             body="$body"$'\n\n'"Se o código de acesso foi regerado no CWS, crie uma versão nova do secret \`CORREIOS_CWS\` no Secret Manager, no formato \`login:codigo\`."
@@ -140,7 +140,7 @@ jobs:
               gh issue comment "$open" --repo "$GITHUB_REPOSITORY" --body "$body"
             else
               gh label create "$label" --repo "$GITHUB_REPOSITORY" --color D93F0B --description "Frete pelo contrato dos Correios falhando (monitor automático)" 2>/dev/null || true
-              gh issue create --repo "$GITHUB_REPOSITORY" --title "Frete pelo contrato dos Correios com falha" --label "$label" --body "$body"
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "Envio pelos Correios com falha" --label "$label" --body "$body"
             fi
           elif [ "$CONTRATO" = "ok" ] && [ "$SITE" = "ok" ] && [ -n "$open" ]; then
             gh issue close "$open" --repo "$GITHUB_REPOSITORY" --comment "Voltou ao normal: $SITE_DETALHE. Detalhes: $RUN_URL"
