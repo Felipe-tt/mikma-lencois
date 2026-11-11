@@ -199,11 +199,14 @@ export default function TrocasPage() {
       // Troca conferida: libera o envio da peça nova.
       if (extras(r).reenvioOrderId) {
         const err = await reenvio(r.id, 'PATCH');
-        showToast(err ? `Concluída, mas o envio da peça nova não foi liberado: ${err}` : 'Concluída. A peça nova já pode ser enviada.');
+        // Peça nova mais barata: a sobra volta por PIX na hora.
+        const sobra = (extras(r).saldoCents ?? 0) < 0 ? await pedirEstorno(r.id, 'abacatepay') : null;
+        showToast(err ? `Concluída, mas o envio da peça nova não foi liberado: ${err}`
+          : sobra ? `Peça nova liberada, mas a diferença não voltou: ${sobra}` : 'Concluída. A peça nova já pode ser enviada.');
         return;
       }
-      // Devolução conferida: o dinheiro volta pela AbacatePay na hora. Se não
-      // der (parte do pedido, pago por fora), o cartão mostra o que fazer.
+      // Devolução conferida: o dinheiro volta pela AbacatePay na hora (estorno
+      // do total, ou PIX no CPF do cliente quando é só uma parte).
       if (r.type === 'devolucao') {
         const err = await pedirEstorno(r.id, 'abacatepay');
         if (!err) { showToast('Concluída. O dinheiro está voltando para o cliente.'); return; }

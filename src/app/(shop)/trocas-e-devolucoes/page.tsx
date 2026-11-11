@@ -88,7 +88,7 @@ export default async function TrocasEDevolucoesPage() {
       title: 'Como você recebe o dinheiro',
       clauses: [
         clause(
-          'Devolvemos pelo mesmo meio usado no pagamento, assim que o produto chegar e for conferido. No PIX, o dinheiro volta para a sua conta.',
+          'Assim que o produto chega e é conferido, o dinheiro volta na hora: devolvendo o pedido inteiro, pelo mesmo meio do pagamento (no PIX, para a sua conta); devolvendo só parte, ou na diferença de uma troca, por PIX na chave CPF de quem fez a compra.',
         ),
         clause(
           'No cartão, o estorno segue o calendário do seu cartão e pode aparecer só na fatura seguinte.',

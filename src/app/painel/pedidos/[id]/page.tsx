@@ -5,6 +5,7 @@ import { plural } from '@/lib/plural';
 import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { DinheiroDevolvido } from '@/components/painel/DinheiroDevolvido';
 import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -779,6 +780,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
 
       <div className="flex flex-col gap-4">
 
+        {/* ── Todo dinheiro que voltou ao cliente (cancelamento, devolução, troca) ── */}
+        <DinheiroDevolvido order={order as unknown as Parameters<typeof DinheiroDevolvido>[0]['order']} />
+
         {/* ── Peça nova de troca: só envia depois de conferir as peças antigas ── */}
         {(() => {
           const troca = (order as { troca?: { origemOrderId: string; aguardandoPecas?: boolean } }).troca;
@@ -843,7 +847,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
         {order.status === 'cancelled' && order.payment.paidAt && (
           order.payment.refundStatus === 'done' ? (
             <div className="border border-mist bg-warm px-5 py-3.5 rounded-2xl text-[13px] text-mid">
-              <span className="font-semibold text-ink">Estorno registrado</span>
+              <span className="font-semibold text-ink">{formatCurrency(order.totalCents)} devolvidos ao cliente</span>
               {order.payment.refundedAt ? ` em ${formatDateTime(order.payment.refundedAt)}` : ''}.
             </div>
           ) : (

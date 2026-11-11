@@ -67,6 +67,26 @@ export function refundCharge(kind: 'transparent' | 'checkout', id: string, reaso
   return request<AbacateRefund>(path, sandbox, { method: 'POST', body: { id, reason: reason.slice(0, 500) }, timeoutMs: 30_000 });
 }
 
+// ── PIX para o cliente (devolução parcial, diferença de troca) ─────────────
+// O estorno da AbacatePay é sempre do valor total. Para devolver só uma
+// parte, a loja manda um PIX para a chave CPF do cliente (/pix/send). A
+// taxa sai do próprio valor; quem chama soma a taxa para o cliente receber
+// o valor cheio. Uma transferência por loja a cada 30 s; o externalId é a
+// chave de idempotência (repetir devolve a mesma transferência).
+export interface AbacateTransfer { id: string; status: string; amount: number; platformFee: number; receiptUrl?: string; externalId?: string }
+
+export function sendPixTransfer(body: { amount: number; externalId: string; description?: string; cpf: string }, sandbox: boolean) {
+  return request<AbacateTransfer>('/pix/send', sandbox, {
+    method: 'POST',
+    body: { amount: body.amount, externalId: body.externalId, ...(body.description ? { description: body.description.slice(0, 140) } : {}), pix: { key: body.cpf, type: 'CPF' } },
+    timeoutMs: 30_000,
+  });
+}
+
+export function getPixTransfer(id: string, sandbox: boolean) {
+  return request<AbacateTransfer>(`/pix/get?id=${encodeURIComponent(id)}`, sandbox);
+}
+
 // ── Cartão no próprio site (checkout transparente) ──────────────────────────
 
 export interface CardCharge {

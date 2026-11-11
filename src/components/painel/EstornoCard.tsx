@@ -8,60 +8,83 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { cobrancaAbacate, valorDaDevolucao, type PedidoParaEstorno } from '@/lib/returns/estorno';
 import { formatCurrency } from '@/lib/utils/format';
 
-export interface EstornoView { status: 'processando' | 'feito'; cents: number; via?: 'abacatepay' | 'fora'; at?: string }
+export interface EstornoView {
+  status: 'processando' | 'feito' | 'falhou';
+  cents: number;
+  via?: 'abacatepay' | 'pix' | 'fora';
+  at?: string;
+  receiptUrl?: string;
+  motivo?: string;
+}
 
-/** Pede o estorno de uma devolução já conferida. Devolve a mensagem de erro, se houver. */
-export async function pedirEstorno(returnId: string, modo: 'abacatepay' | 'fora'): Promise<string | null> {
+async function chamar(returnId: string, method: 'POST' | 'GET', modo?: 'abacatepay' | 'fora'): Promise<{ error: string | null; estorno?: EstornoView | null }> {
   const token = await auth.currentUser?.getIdToken();
-  if (!token) return 'Sua sessão expirou. Entre de novo.';
+  if (!token) return { error: 'Sua sessão expirou. Entre de novo.' };
   try {
     const res = await fetch(`/api/painel/trocas/${returnId}/estorno`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ modo }),
+      method,
+      headers: { Authorization: `Bearer ${token}`, ...(modo ? { 'Content-Type': 'application/json' } : {}) },
+      ...(modo ? { body: JSON.stringify({ modo }) } : {}),
     });
-    if (res.ok) return null;
     const data = await res.json().catch(() => ({}));
-    return data.error ?? 'Não foi possível devolver o dinheiro agora.';
+    return res.ok ? { error: null, estorno: data.estorno } : { error: data.error ?? 'Não foi possível devolver o dinheiro agora.' };
   } catch {
-    return 'Sem conexão. Tente de novo.';
+    return { error: 'Sem conexão. Tente de novo.' };
   }
 }
 
+/** Pede a devolução do dinheiro de uma troca ou devolução já conferida. Devolve a mensagem de erro, se houver. */
+export async function pedirEstorno(returnId: string, modo: 'abacatepay' | 'fora'): Promise<string | null> {
+  return (await chamar(returnId, 'POST', modo)).error;
+}
+
 /**
- * Dinheiro de uma devolução concluída: estornado pela AbacatePay (pedido
- * todo), ou devolvido por PIX pela equipe (parte do pedido ou pago por fora).
+ * Dinheiro de uma devolução (ou da sobra de uma troca) depois de conferir as
+ * peças. A AbacatePay devolve sozinha: estorno do pedido inteiro, ou PIX
+ * para o CPF do cliente quando é só uma parte. "Já devolvi" fica para
+ * quando o PIX não puder sair (cliente sem chave no CPF).
  */
 export function EstornoCard({ returnId, orderId, items, estorno, diferencaCents }: {
   returnId: string;
   orderId: string;
   items: { sku: string; quantity: number }[];
   estorno?: EstornoView;
-  /** Troca por peça mais barata: valor que sobra para devolver por PIX. */
+  /** Troca por peça mais barata: valor que sobra para devolver. */
   diferencaCents?: number;
 }) {
   const [order, setOrder] = useState<PedidoParaEstorno | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [conferido, setConferido] = useState<EstornoView | null>(null);
 
   useEffect(() => {
     if (estorno?.status === 'feito') return;
     getDoc(doc(db, 'orders', orderId)).then(s => setOrder((s.data() as PedidoParaEstorno | undefined) ?? null)).catch(() => {});
   }, [orderId, estorno?.status]);
 
-  if (estorno?.status === 'feito') {
+  // PIX enviado pode ser recusado depois pelo banco: confere uma vez.
+  useEffect(() => {
+    if (estorno?.status !== 'feito' || estorno.via !== 'pix') return;
+    chamar(returnId, 'GET').then(r => { if (r.estorno) setConferido(r.estorno); }).catch(() => {});
+  }, [returnId, estorno?.status, estorno?.via]);
+
+  const atual = conferido ?? estorno;
+
+  if (atual?.status === 'feito') {
+    const como = atual.via === 'abacatepay' ? 'Estorno pela AbacatePay, no mesmo meio do pagamento' : atual.via === 'pix' ? 'PIX no CPF do cliente, pela AbacatePay' : 'Devolvido por fora (registrado pela equipe)';
     return (
-      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-        <p className="text-[13px] text-emerald-800">
-          {formatCurrency(estorno.cents)} devolvidos {estorno.via === 'abacatepay' ? 'pela AbacatePay' : 'por fora'}. O cliente recebeu um e-mail.
-        </p>
+      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex flex-col gap-0.5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-800">Dinheiro devolvido ao cliente</p>
+        <p className="text-[20px] font-bold text-emerald-900 tabular-nums leading-tight">{formatCurrency(atual.cents)}</p>
+        <p className="text-[12px] text-emerald-800">{como}{atual.at ? ` · ${new Date(atual.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}</p>
+        {atual.receiptUrl && <a href={atual.receiptUrl} target="_blank" rel="noopener noreferrer" className="self-start mt-1 text-[12px] font-semibold text-emerald-800 underline underline-offset-2">Ver comprovante</a>}
       </div>
     );
   }
   if (!order) return null;
 
   const valor = diferencaCents ? { cents: diferencaCents, inteira: false } : valorDaDevolucao(order, items);
-  const pelaAbacate = !diferencaCents && valor.inteira && cobrancaAbacate(order.payment).ok;
+  const estornoTotal = !diferencaCents && valor.inteira && cobrancaAbacate(order.payment).ok;
 
   async function devolver(modo: 'abacatepay' | 'fora') {
     if (modo === 'fora') {
@@ -82,27 +105,25 @@ export function EstornoCard({ returnId, orderId, items, estorno, diferencaCents 
     <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-2">
       <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-800">Dinheiro a devolver</p>
       <p className="text-[13px] text-ink">
-        {estorno?.status === 'processando'
-          ? `Estorno de ${formatCurrency(valor.cents)} em andamento na AbacatePay.`
-          : pelaAbacate
-            ? `${formatCurrency(valor.cents)} voltam para o cliente pela AbacatePay, no mesmo meio do pagamento.`
-            : diferencaCents
-              ? `A peça nova é mais barata: faça um PIX de ${formatCurrency(valor.cents)} para o cliente (diferença já descontado o frete) e registre aqui.`
-              : `Faça um PIX de ${formatCurrency(valor.cents)} para o cliente${valor.inteira ? '' : ' (só as peças devolvidas: a AbacatePay estorna apenas o pedido inteiro)'} e registre aqui.`}
+        {atual?.status === 'processando'
+          ? `Devolução de ${formatCurrency(valor.cents)} em andamento na AbacatePay.`
+          : atual?.status === 'falhou'
+            ? atual.motivo ?? 'O PIX não chegou ao cliente. Devolva por fora e registre.'
+            : estornoTotal
+              ? `${formatCurrency(valor.cents)} voltam para o cliente pela AbacatePay, no mesmo meio do pagamento.`
+              : `${formatCurrency(valor.cents)} voltam para o cliente por PIX, no CPF dele, pela AbacatePay.`}
       </p>
-      <div className="flex flex-wrap gap-2">
-        {pelaAbacate && estorno?.status !== 'processando' && (
+      <div className="flex flex-wrap items-center gap-3">
+        {atual?.status !== 'processando' && atual?.status !== 'falhou' && (
           <button type="button" onClick={() => devolver('abacatepay')} disabled={busy}
             className="bg-ink text-paper text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-ink/80 transition-colors disabled:opacity-50 rounded-full">
-            {busy ? 'Estornando…' : `Devolver ${formatCurrency(valor.cents)}`}
+            {busy ? 'Devolvendo…' : `Devolver ${formatCurrency(valor.cents)}`}
           </button>
         )}
-        {!pelaAbacate && (
-          <button type="button" onClick={() => devolver('fora')} disabled={busy}
-            className="border border-ink text-ink text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-ink hover:text-paper transition-colors disabled:opacity-50 rounded-full">
-            Já devolvi
-          </button>
-        )}
+        <button type="button" onClick={() => devolver('fora')} disabled={busy}
+          className="text-[12px] text-mid underline underline-offset-2 hover:text-ink disabled:opacity-50">
+          Já devolvi por fora
+        </button>
       </div>
       {error && <p role="alert" className="text-[12px] text-red-600">{error}</p>}
     </div>
