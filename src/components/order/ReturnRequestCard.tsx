@@ -57,7 +57,7 @@ export function ReturnRequestCard({ order, user, arrependimentoAte }: {
     } finally { setSending(false); }
   }
 
-  if (current && (ativa || current.status === 'concluida' || current.status === 'recusada')) {
+  if (current && (ativa || current.status === 'concluida' || (current.status === 'recusada' && !open))) {
     const r = current.reversa;
     const texto = current.status === 'solicitada'
       ? 'Recebemos seu pedido. A loja responde em até 1 dia útil.'
@@ -78,6 +78,12 @@ export function ReturnRequestCard({ order, user, arrependimentoAte }: {
             <span className="block text-[11px] text-faint">Código de postagem dos Correios</span>
             <span className="font-mono text-[16px] font-bold text-ink tracking-wide">{r.codigoObjeto}</span>
           </p>
+        )}
+        {current.status === 'recusada' && (
+          <button type="button" onClick={() => setOpen(true)}
+            className="mt-3 text-[13px] font-semibold text-clay hover:text-clay-d underline underline-offset-2">
+            Fazer um novo pedido
+          </button>
         )}
       </section>
     );
