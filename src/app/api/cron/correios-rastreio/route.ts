@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { deliveredAt, postedAt, trackObjects } from '@/lib/correiosRastro';
 import { advanceOrderStatus, StatusError } from '@/lib/orders/advanceStatus';
 import { notifyInApp } from '@/lib/push/notifyInApp';
+import { notifySeller } from '@/lib/push/notifySeller';
 import type { Order } from '@/types';
 
 /**
@@ -61,7 +62,9 @@ export async function GET(req: NextRequest) {
       if (o.status === 'preparing' && postedAt(sro)) {
         await advanceOrderStatus(o.id, { fromStatus: 'preparing', trackingCode: code, note: 'Recebido pelos Correios' });
         result.shipped++;
-        await notifyInApp({ type: 'correios_pickup', message: `Os Correios pegaram o pedido ${o.id.slice(-8).toUpperCase()} (${code}). O cliente recebeu o rastreio.`, orderId: o.id });
+        const short = o.id.slice(-8).toUpperCase();
+        await notifyInApp({ type: 'correios_pickup', message: `Os Correios pegaram o pedido ${short} (${code}). O cliente recebeu o rastreio.`, orderId: o.id });
+        await notifySeller({ title: 'Pedido com os Correios', body: `#${short} · ${code} · o cliente recebeu o rastreio`, url: `/painel/pedidos/${o.id}`, data: { orderId: o.id, event: 'correios_pickup' } });
       } else if (o.status === 'shipped' && deliveredAt(sro)) {
         await advanceOrderStatus(o.id, { fromStatus: 'shipped', note: 'Entregue pelos Correios' });
         result.delivered++;
