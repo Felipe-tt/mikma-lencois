@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { DinheiroDevolvido } from '@/components/painel/DinheiroDevolvido';
 import { NotasDevolucao } from '@/components/painel/NotasDevolucao';
+import { FronhaTrocada } from '@/components/painel/FronhaTrocada';
 import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -1140,9 +1141,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                     · {item.quantity} {item.quantity === 1 ? 'unidade' : 'unidades'} · {formatCurrency(item.unitPrice)} cada
                   </p>
                   <p className="text-[10px] font-mono text-faint/60 mt-0.5">SKU: {item.sku}</p>
-                  {item.note && (
-                    <p className="text-[11px] text-clay font-medium mt-1">⚠ {item.note}</p>
-                  )}
+                  {(item.note || item.swapSku) && <FronhaTrocada item={item} />}
                 </div>
                 <span className="text-[13px] font-semibold text-ink shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
               </div>

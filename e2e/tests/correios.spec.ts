@@ -580,6 +580,28 @@ test('devolução de parte do pedido: a AbacatePay manda PIX no CPF do cliente',
   await staff.close();
 });
 
+test('fronha trocada: o painel e a nota de separação mostram qual fronha embalar', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
+  const orderRef = await db().collection('orders').add({
+    userId: user.id, status: 'paid', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
+    items: [{ productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990,
+      swapSku: 'p4_v1', swapQtyPerUnit: 1, note: 'Fronha trocada: Fronhas Azul' }],
+    address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190 },
+    payment: { method: 'pix', txId: 't', paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(), timeline: [],
+  });
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto(`/painel/pedidos/${orderRef.id}`);
+  const troca = panel.getByText('Trocar a fronha do jogo por').first().locator('..');
+  await expect(troca).toContainText('2 fronhas · Fronha Avulsa Malha Azul');
+  await expect(troca).toContainText('SKU: p4_v1');
+  if (process.env.E2E_SHOTS) await troca.locator('..').screenshot({ path: 'test-results/fronha-trocada.png' });
+  await panel.goto(`/painel/pedidos/${orderRef.id}/etiqueta`);
+  await expect(panel.getByText('Trocar a fronha do jogo por').first()).toBeVisible();
+  await expect(panel.getByText('SKU: p4_v1').first()).toBeVisible();
+  await staff.close();
+});
+
 test('troca recusada depois de 7 dias: o cliente ainda pede por defeito', async ({ page }) => {
   test.setTimeout(120_000);
   const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
