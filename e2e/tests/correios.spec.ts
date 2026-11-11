@@ -307,7 +307,7 @@ test('pedido cancelado com etiqueta: a etiqueta é cancelada nos Correios', asyn
   await expect(panel.getByText(/Cancelar e estornar R\$/)).toBeVisible();
   await panel.getByRole('button', { name: 'Cancelar e estornar' }).click();
   await expect.poll(async () => (await readOrder(orderId)).status).toBe('cancelled');
-  await expect.poll(async () => (await readOrder(orderId)).payment.refundStatus).toBe('done');
+  await expect.poll(async () => (await readOrder(orderId)).payment?.refundStatus).toBe('done');
   expect((await charges()).find(c => c.id === charge.id)?.status).toBe('REFUNDED');
   // A etiqueta é cancelada logo depois de o pedido virar cancelado.
   await expect.poll(() => correiosLog().some(e => e.cancelada === pre.id)).toBe(true);
