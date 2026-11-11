@@ -76,7 +76,8 @@ export default async function TrocasEDevolucoesPage() {
       clauses: [
         clause('É rápido:', [
           'abra o pedido em Minha conta, Pedidos, e toque em "Pedir troca ou devolução" (ou fale com a gente por um dos contatos abaixo);',
-          'escolha Trocar ou Devolver, as peças e o motivo; se for defeito, dano ou produto errado, mande fotos pelo próprio pedido;',
+          'escolha Trocar ou Devolver, as peças e o motivo (na troca, escolha também a peça nova); se for defeito, dano ou produto errado, mande fotos pelo próprio pedido;',
+          'na troca sem defeito, o frete do novo envio é por sua conta, e se a peça nova custar mais você paga a diferença no mesmo PIX; se custar menos, a diferença abate o frete e o que sobrar devolvemos por PIX. No defeito, tudo é por nossa conta;',
           'aprovado, as peças voltam do jeito que o pedido chegou: pelos Correios, com um código para postar em qualquer agência, ou com um entregador da Uber que busca na sua casa. Se preferir, entregue direto na loja. Você não paga nada.',
         ]),
         contactClause(id, 'Nossos contatos:'),

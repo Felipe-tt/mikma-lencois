@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
 import { MOTIVOS, devolucaoPadrao, motivoFinal, motivoPedeTexto, opcoesDevolucao, returnWindow, type DevolverPor } from '@/lib/returnRequest';
+import { formatCurrency } from '@/lib/utils/format';
+import { NovasPecas, type Cotacao, type NovaEscolhida } from './NovasPecas';
 import type { Order, ReturnRequest } from '@/types';
 
 type Devolucao = ReturnRequest & {
@@ -13,6 +15,8 @@ type Devolucao = ReturnRequest & {
   reversa?: { codigoObjeto: string; validade: string; entregueEm?: string };
   coletaUber?: { coletadoEm?: string; entregueEm?: string };
   recebidaEm?: string;
+  saldoCents?: number;
+  reenvioOrderId?: string;
 };
 type Tipo = 'troca' | 'devolucao' | 'defeito';
 const ddmm = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -48,6 +52,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
   const [fotos, setFotos] = useState<{ blob: Blob; url: string }[]>([]);
   const [lendoFoto, setLendoFoto] = useState(false);
   const [por, setPor] = useState<DevolverPor>(() => devolucaoPadrao(order));
+  const [troca, setTroca] = useState<{ novos: NovaEscolhida[]; cotacao: Cotacao | null; pronto: boolean }>({ novos: [], cotacao: null, pronto: false });
 
   async function addFotos(files: File[]) {
     if (!files.length) return;
@@ -99,6 +104,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
     const conferido = motivoFinal(tipo, motivo || undefined, reason);
     if (!conferido.ok) { setError(conferido.error); return; }
     if (tipo !== 'defeito' && !semUso) { setError('Confirme que as peças não foram lavadas nem usadas.'); return; }
+    if (tipo !== 'devolucao' && !troca.pronto) { setError('Escolha a peça nova e espere o valor ser calculado.'); return; }
     setSending(true); setError('');
     try {
       let caminhos: string[];
@@ -106,7 +112,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
       const res = await fetch(`/api/orders/${order.id}/troca`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
-        body: JSON.stringify({ type: tipo === 'devolucao' ? 'devolucao' : 'troca', defeito: tipo === 'defeito', semUso: tipo !== 'defeito' && semUso, motivo, reason: reason.trim(), devolverPor: por, items, ...(caminhos.length ? { fotos: caminhos } : {}) }),
+        body: JSON.stringify({ type: tipo === 'devolucao' ? 'devolucao' : 'troca', defeito: tipo === 'defeito', semUso: tipo !== 'defeito' && semUso, motivo, reason: reason.trim(), devolverPor: por, items, ...(tipo !== 'devolucao' ? { novos: troca.novos } : {}), ...(caminhos.length ? { fotos: caminhos } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) setError(data.error ?? 'Não foi possível enviar agora. Tente de novo.');
@@ -145,6 +151,13 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
             <span className="block text-[11px] text-faint">Código de postagem dos Correios</span>
             <span className="font-mono text-[16px] font-bold text-ink tracking-wide">{r.codigoObjeto}</span>
           </p>
+        )}
+        {current.status === 'aprovada' && current.reenvioOrderId && (current.saldoCents ?? 0) > 0 && (
+          <Link href={`/pedidos/${current.reenvioOrderId}`}
+            className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-warm px-3 py-2.5 text-[13px] text-ink hover:bg-warm/70">
+            <span>Pague {formatCurrency(current.saldoCents!)} (diferença e frete) para receber a peça nova</span>
+            <span className="font-semibold text-clay shrink-0">Pagar</span>
+          </Link>
         )}
         <Link href={`/pedidos/${order.id}/troca`}
           className="mt-4 inline-flex items-center gap-1.5 h-10 px-4 rounded-full border border-ink text-[13px] font-semibold text-ink hover:bg-ink hover:text-paper transition-colors">
@@ -209,6 +222,9 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
           </label>
         ))}
       </fieldset>
+      {tipo !== 'devolucao' && (
+        <NovasPecas order={order} qty={qty} defeito={tipo === 'defeito'} getToken={() => user.getIdToken()} onChange={setTroca} />
+      )}
       <div className="flex flex-col gap-2">
         <span id="motivo-label" className="text-[12px] font-semibold text-mid">{tipo === 'defeito' ? 'Qual é o problema?' : 'Qual o motivo?'}</span>
         <div role="radiogroup" aria-labelledby="motivo-label" className="flex flex-wrap gap-2">

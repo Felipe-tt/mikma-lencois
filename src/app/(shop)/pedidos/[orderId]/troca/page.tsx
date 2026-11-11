@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase/db';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { variantLabel } from '@/lib/variantLabel';
+import { formatCurrency } from '@/lib/utils/format';
 import { returnWindow } from '@/lib/returnRequest';
 import { diasParaPostar, etapasDaTroca, type EtapaId } from '@/lib/returns/returnSteps';
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
@@ -25,6 +26,10 @@ type Troca = ReturnRequest & {
   devolverPor?: DevolverPor;
   coletaUber?: ColetaUber;
   recebidaEm?: string;
+  novos?: { sku: string; productName: string; quantity: number; image?: string; variant: { size: string; fabric: string; color: string; colorName?: string } }[];
+  saldoCents?: number;
+  freteCents?: number;
+  reenvioOrderId?: string;
 };
 
 interface Loja { endereco: string; mapa: string; horario?: string; fuso?: string }
@@ -234,8 +239,36 @@ export default function TrocaPage() {
         </section>
       )}
 
+      {t.novos?.length ? (
+        <section aria-labelledby="peca-nova" className="flex flex-col gap-3">
+          <h2 id="peca-nova" className="text-xs font-bold tracking-[0.15em] uppercase text-faint">Peça nova</h2>
+          <ul className="rounded-2xl border border-mist divide-y divide-mist">
+            {t.novos.map(n => (
+              <li key={n.sku} className="flex items-center gap-3 p-4">
+                {n.image
+                  ? <img src={n.image} alt="" width={48} height={48} className="w-12 h-12 rounded-lg object-cover bg-warm shrink-0" />
+                  : <span aria-hidden="true" className="w-12 h-12 rounded-lg bg-warm shrink-0" />}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] text-ink leading-snug">{n.productName}</p>
+                  <p className="text-[12.5px] text-faint">{variantLabel(n.variant)}</p>
+                </div>
+                <span className="text-[13px] text-mid tabular-nums shrink-0">{n.quantity}×</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[13.5px] text-mid leading-relaxed">
+            {(t.saldoCents ?? 0) > 0
+              ? <>Diferença e frete do novo envio: <strong className="text-ink">{formatCurrency(t.saldoCents!)}</strong>. {t.reenvioOrderId ? <Link href={`/pedidos/${t.reenvioOrderId}`} className="text-clay font-semibold underline underline-offset-2">Pagar por PIX</Link> : 'O PIX aparece aqui quando a troca for aprovada.'}</>
+              : (t.saldoCents ?? 0) < 0
+                ? <>A peça nova sai mais barata: devolvemos <strong className="text-ink">{formatCurrency(-t.saldoCents!)}</strong> por PIX quando as peças chegarem.</>
+                : 'Sem custo para você.'}
+            {' '}Ela é enviada assim que as peças antigas chegarem e forem conferidas.
+          </p>
+        </section>
+      ) : null}
+
       <section aria-labelledby="pecas" className="flex flex-col gap-3">
-        <h2 id="pecas" className="text-xs font-bold tracking-[0.15em] uppercase text-faint">{t.type === 'troca' ? 'Peças para trocar' : 'Peças devolvidas'}</h2>
+        <h2 id="pecas" className="text-xs font-bold tracking-[0.15em] uppercase text-faint">{t.type === 'troca' ? 'Peças que voltam' : 'Peças devolvidas'}</h2>
         <ul className="rounded-2xl border border-mist divide-y divide-mist">
           {t.items.map(i => {
             const foto = fotos.get(i.sku);

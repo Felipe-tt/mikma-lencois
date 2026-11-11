@@ -21,7 +21,7 @@ import type { ReturnRequest } from '@/types';
 const schema = z.object({ modo: z.enum(['abacatepay', 'fora']) });
 
 type Estorno = { status: 'processando' | 'feito'; cents: number; via?: 'abacatepay' | 'fora'; at?: string; claimAt?: number; by?: string };
-type Devolucao = ReturnRequest & { estorno?: Estorno };
+type Devolucao = ReturnRequest & { estorno?: Estorno; saldoCents?: number };
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ returnId: string }> }) {
   const { returnId } = await params;
@@ -47,7 +47,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ret
     const snap = await tx.get(retRef);
     if (!snap.exists) return { error: 'Devolução não encontrada', status: 404 } as const;
     const d = { id: snap.id, ...snap.data() } as Devolucao;
-    if (d.type !== 'devolucao') return { error: 'Só devolução tem dinheiro a devolver.', status: 400 } as const;
+    // Troca por peça mais barata: a diferença que sobra volta por PIX.
+    const trocaComSobra = d.type === 'troca' && (d.saldoCents ?? 0) < 0;
+    if (d.type !== 'devolucao' && !trocaComSobra) return { error: 'Esta troca não tem dinheiro a devolver.', status: 400 } as const;
+    if (trocaComSobra && modo !== 'fora') return { error: 'Devolva a diferença da troca por PIX e registre como devolvido.', status: 400 } as const;
     if (d.status !== 'concluida') return { error: 'Confirme que as peças chegaram (concluir a devolução) antes de devolver o dinheiro.', status: 409 } as const;
     if (d.estorno?.status === 'feito') return { error: 'O dinheiro desta devolução já foi devolvido.', status: 409 } as const;
     if (d.estorno?.status === 'processando' && Date.now() - (d.estorno.claimAt ?? 0) < 5 * 60_000) {
@@ -56,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ret
     const orderRef = adminDb.collection('orders').doc(d.orderId);
     const order = (await tx.get(orderRef)).data() as PedidoParaEstorno & { userId?: string } | undefined;
     if (!order) return { error: 'Pedido não encontrado', status: 404 } as const;
-    const valor = valorDaDevolucao(order, d.items);
+    const valor = trocaComSobra ? { cents: -(d.saldoCents ?? 0), inteira: false } : valorDaDevolucao(order, d.items);
     if (modo === 'abacatepay') {
       if (!valor.inteira) return { error: 'A AbacatePay só estorna o pedido inteiro. Devolva o valor das peças por PIX e registre como devolvido.', status: 400 } as const;
       if (order.payment?.refundStatus === 'done') return { error: 'O pagamento deste pedido já foi estornado.', status: 409 } as const;

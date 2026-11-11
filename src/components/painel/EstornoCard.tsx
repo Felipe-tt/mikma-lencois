@@ -32,11 +32,13 @@ export async function pedirEstorno(returnId: string, modo: 'abacatepay' | 'fora'
  * Dinheiro de uma devolução concluída: estornado pela AbacatePay (pedido
  * todo), ou devolvido por PIX pela equipe (parte do pedido ou pago por fora).
  */
-export function EstornoCard({ returnId, orderId, items, estorno }: {
+export function EstornoCard({ returnId, orderId, items, estorno, diferencaCents }: {
   returnId: string;
   orderId: string;
   items: { sku: string; quantity: number }[];
   estorno?: EstornoView;
+  /** Troca por peça mais barata: valor que sobra para devolver por PIX. */
+  diferencaCents?: number;
 }) {
   const [order, setOrder] = useState<PedidoParaEstorno | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,8 +60,8 @@ export function EstornoCard({ returnId, orderId, items, estorno }: {
   }
   if (!order) return null;
 
-  const valor = valorDaDevolucao(order, items);
-  const pelaAbacate = valor.inteira && cobrancaAbacate(order.payment).ok;
+  const valor = diferencaCents ? { cents: diferencaCents, inteira: false } : valorDaDevolucao(order, items);
+  const pelaAbacate = !diferencaCents && valor.inteira && cobrancaAbacate(order.payment).ok;
 
   async function devolver(modo: 'abacatepay' | 'fora') {
     if (modo === 'fora') {
@@ -84,7 +86,9 @@ export function EstornoCard({ returnId, orderId, items, estorno }: {
           ? `Estorno de ${formatCurrency(valor.cents)} em andamento na AbacatePay.`
           : pelaAbacate
             ? `${formatCurrency(valor.cents)} voltam para o cliente pela AbacatePay, no mesmo meio do pagamento.`
-            : `Faça um PIX de ${formatCurrency(valor.cents)} para o cliente${valor.inteira ? '' : ' (só as peças devolvidas: a AbacatePay estorna apenas o pedido inteiro)'} e registre aqui.`}
+            : diferencaCents
+              ? `A peça nova é mais barata: faça um PIX de ${formatCurrency(valor.cents)} para o cliente (diferença já descontado o frete) e registre aqui.`
+              : `Faça um PIX de ${formatCurrency(valor.cents)} para o cliente${valor.inteira ? '' : ' (só as peças devolvidas: a AbacatePay estorna apenas o pedido inteiro)'} e registre aqui.`}
       </p>
       <div className="flex flex-wrap gap-2">
         {pelaAbacate && estorno?.status !== 'processando' && (

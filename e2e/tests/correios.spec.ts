@@ -390,9 +390,16 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   });
   await expect(form.getByRole('img', { name: 'Foto 1' })).toBeVisible();
   await form.getByRole('checkbox', { name: 'As peças não foram lavadas nem usadas.' }).check();
+  // Peça nova: a mesma por padrão; o cliente vê o frete do novo envio antes de pedir.
+  await expect(form.getByLabel(/Peça nova no lugar de/)).toBeVisible();
+  await expect(form.getByText('Você paga por PIX')).toBeVisible();
+  if (process.env.E2E_SHOTS) await form.screenshot({ path: 'test-results/troca-peca-nova.png' });
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
   const ret = (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs[0];
+  expect(ret.get('novos')).toEqual([expect.objectContaining({ sku: 'p3_v1', no: 'p3_v1', quantity: 1 })]);
+  expect(ret.get('saldoCents')).toBeGreaterThan(0);
+  expect(ret.get('saldoCents')).toBe(ret.get('freteCents'));
   expect(ret.get('fotos')).toEqual([expect.stringMatching(new RegExp(`^returns/${user.id}/\\d+_0\\.jpg$`))]);
   expect(ret.data()).toMatchObject({ status: 'solicitada', type: 'troca', devolverPor: 'correios', semUsoConfirmado: true, createdBy: 'cliente', userId: user.id, items: [{ sku: 'p3_v1', quantity: 1 }] });
 
@@ -401,6 +408,11 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   await panel.goto('/painel/trocas');
   await expect(panel.getByRole('list', { name: 'Fotos enviadas pelo cliente' }).getByRole('img')).toHaveCount(1);
   await panel.getByRole('button', { name: 'Aprovar' }).first().click();
+  // Aprovada: nasce o pedido da peça nova, esperando o PIX do frete e travado até as peças voltarem.
+  await expect.poll(async () => (await ret.ref.get()).get('reenvioOrderId')).toBeTruthy();
+  const novoId = (await ret.ref.get()).get('reenvioOrderId') as string;
+  const novo = await readOrder(novoId);
+  expect(novo).toMatchObject({ status: 'pending_payment', totalCents: ret.get('saldoCents'), userId: user.id, troca: { returnId: ret.id, aguardandoPecas: true } });
   await panel.getByRole('button', { name: 'Gerar código de devolução (Correios)' }).click();
   await expect(panel.getByText('Código de devolução dos Correios')).toBeVisible();
   const reversa = (await ret.ref.get()).get('reversa') as { id: string; codigoObjeto: string; validade: string };
@@ -484,6 +496,12 @@ test('troca de pedido da Uber: o cliente escolhe entregar na loja e a equipe mar
   await card.getByRole('button', { name: 'Recebi as peças na loja' }).click();
   await expect(card.getByText(/Peças recebidas em/)).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Chegou na loja' })).toBeVisible();
+
+  // Conferiu e concluiu: o pedido da peça nova é liberado para envio.
+  const novoId = (await ret.ref.get()).get('reenvioOrderId') as string;
+  expect((await readOrder(novoId)).troca).toMatchObject({ aguardandoPecas: true });
+  await card.getByRole('button', { name: 'Concluir e repor estoque' }).click();
+  await expect.poll(async () => (await readOrder(novoId)).troca?.aguardandoPecas).toBe(false);
   await staff.close();
 });
 
