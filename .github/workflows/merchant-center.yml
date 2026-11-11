@@ -40,6 +40,7 @@ jobs:
             *.blob.core.windows.net:443
             nodejs.org:443
             *.googleapis.com:443
+            developers.google.com:443
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
