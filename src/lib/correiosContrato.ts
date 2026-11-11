@@ -62,6 +62,15 @@ async function getToken(): Promise<Token | null> {
   return pending;
 }
 
+/** Token do contrato para as outras APIs dos Correios (pré-postagem). */
+export async function correiosBearer(): Promise<string | null> {
+  if (!correiosContratoConfigured()) return null;
+  return (await getToken())?.token ?? null;
+}
+
+/** Descarta o token guardado (os Correios recusaram com 401). */
+export function dropCorreiosToken() { cached = null; }
+
 /** "24,07" ou "1.024,07" para centavos. */
 export function parseReais(v: unknown): number {
   if (typeof v === 'number') return Math.round(v * 100);

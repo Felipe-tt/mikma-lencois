@@ -2,7 +2,7 @@
 import { SIZE_LABEL } from '@/lib/productOptions';
 
 import { plural } from '@/lib/plural';
-import { use, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { doc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
@@ -27,6 +27,7 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { RegisterReturnModal } from '@/components/painel/RegisterReturnModal';
 import { NfeCard } from '@/components/painel/NfeCard';
 import { RiskCard } from '@/components/painel/RiskCard';
+import { CorreiosLabelCard, type PrePostagemView } from '@/components/painel/CorreiosLabelCard';
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending_payment: 'Aguardando Pagamento',
@@ -176,6 +177,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
+  // Código da etiqueta gerada aqui: já entra no campo do despacho (e sai se a
+  // etiqueta for cancelada). Estável, para o efeito do cartão não repetir.
+  const setTrackingFromLabel = useCallback((code: string) => setTrackingCode(code), []);
   const [pasteFailed, setPasteFailed] = useState(false);
   const [refunding, setRefunding] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
@@ -903,10 +907,14 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   Um motoboy Uber será solicitado assim que você clicar. Acompanhe o status em tempo real aqui no painel.
                 </p>
               ) : isCorreiosCarrier ? (
-                <p className="text-[11px] text-faint">
-                  Gere a etiqueta no Portal Postal, peça a coleta e cole aqui o código de rastreio
-                  (formato AA123456789BR) pra confirmar o despacho.
-                </p>
+                <>
+                  <CorreiosLabelCard orderId={order.id} user={user!} onCode={setTrackingFromLabel}
+                    prePostagem={(order.delivery as { prePostagem?: PrePostagemView } | undefined)?.prePostagem} />
+                  <p className="text-[11px] text-faint">
+                    Cole a etiqueta no pacote. Quando os Correios buscarem (ou você postar), confirme o despacho:
+                    o cliente recebe o e-mail com o rastreio.
+                  </p>
+                </>
               ) : isManualCarrier ? (
                 <p className="text-[11px] text-faint">
                   Poste numa unidade da Jadlog e cole aqui o código de rastreio do comprovante

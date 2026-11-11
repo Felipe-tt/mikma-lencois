@@ -16,7 +16,14 @@ export const CORREIOS_E2E = {
   cepFora: '04538133',
 };
 
+import { appendFileSync } from 'node:fs';
+
 const TOKEN = 'e2e-token-correios';
+let prePostagens = 0;
+// PDF mínimo, só para o teste ver que chegou um PDF.
+const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n').toString('base64');
+/** Cada pré-postagem recebida vai para este arquivo, para o teste conferir. */
+const record = entry => { if (process.env.E2E_CORREIOS_LOG) appendFileSync(process.env.E2E_CORREIOS_LOG, JSON.stringify(entry) + '\n'); };
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 export async function correiosMock(url, init = {}) {
@@ -34,6 +41,7 @@ export async function correiosMock(url, init = {}) {
   }
 
   if (auth !== `Bearer ${TOKEN}`) return json({ msgs: ['Token inválido'] }, 401);
+  if (u.pathname.startsWith('/prepostagem/')) return prePostagemMock(u, init);
   const m = u.pathname.match(/^\/(preco|prazo)\/v1\/nacional\/(\d{5})$/);
   const servico = m && CORREIOS_E2E.servicos[m[2]];
   if (!servico) return json({ msgs: ['Rota ou serviço não simulado'] }, 404);
@@ -45,4 +53,47 @@ export async function correiosMock(url, init = {}) {
   if (q.get('nuContrato') !== CORREIOS_E2E.contrato || q.get('nuDR') !== String(CORREIOS_E2E.dr)) return json({ msgs: ['Contrato ou DR não informado'] }, 400);
   if (!(Number(q.get('psObjeto')) > 0) || !q.get('comprimento') || !q.get('largura') || !q.get('altura')) return json({ msgs: ['Peso ou medidas faltando'] }, 400);
   return json({ coProduto: m[2], pcFinal: servico.preco });
+}
+
+/** Pré-postagem (etiqueta e coleta): confere o que a API real exige. */
+function prePostagemMock(u, init) {
+  const method = (init.method ?? 'GET').toUpperCase();
+  const base = '/prepostagem/v1/prepostagens';
+  if (method === 'POST' && u.pathname === base) {
+    const b = JSON.parse(init.body ?? '{}');
+    const end = e => e && /^\d{8}$/.test(e.cep ?? '') && e.logradouro && e.numero && e.bairro && e.cidade && /^[A-Z]{2}$/.test(e.uf ?? '');
+    const faltando = [
+      !(b.remetente?.nome?.length >= 3) && 'remetente.nome',
+      !/^\d{14}$/.test(b.remetente?.cpfCnpj ?? '') && 'remetente.cpfCnpj',
+      !end(b.remetente?.endereco) && 'remetente.endereco',
+      !(b.destinatario?.nome?.length >= 3) && 'destinatario.nome',
+      !end(b.destinatario?.endereco) && 'destinatario.endereco',
+      !(b.codigoServico in CORREIOS_E2E.servicos) && 'codigoServico',
+      !(Number(b.pesoInformado) > 0) && 'pesoInformado',
+      b.codigoFormatoObjetoInformado !== '2' && 'codigoFormatoObjetoInformado',
+      !(b.alturaInformada && b.larguraInformada && b.comprimentoInformado) && 'dimensões',
+      b.cienteObjetoNaoProibido !== '1' && 'cienteObjetoNaoProibido',
+      !['S', 'N'].includes(b.solicitarColeta) && 'solicitarColeta',
+      !(b.itensDeclaracaoConteudo?.length && b.itensDeclaracaoConteudo.every(i => i.conteudo?.length >= 2 && Number(i.quantidade) > 0 && /^\d+\.\d{2}$/.test(i.valor))) && 'itensDeclaracaoConteudo',
+    ].filter(Boolean);
+    if (faltando.length) return json({ msgs: [`PPN-000: campos inválidos: ${faltando.join(', ')}`] }, 400);
+    prePostagens++;
+    const id = `pp_e2e_${prePostagens}`;
+    const codigoObjeto = `${b.codigoServico === '03220' ? 'SX' : 'PX'}${String(1000000000 + prePostagens).slice(1)}BR`;
+    record({ id, codigoObjeto, body: b });
+    return json({ id, codigoObjeto, statusAtual: 7, descStatusAtual: 'PENDENTE' });
+  }
+  if (method === 'POST' && u.pathname === `${base}/rotulo/assincrono/pdf`) {
+    const b = JSON.parse(init.body ?? '{}');
+    if (!b.idsPrePostagem?.length || !b.tipoRotulo) return json({ msgs: ['PPN-000: informe idsPrePostagem e tipoRotulo'] }, 400);
+    return json({ idRecibo: `rec_${b.idsPrePostagem[0]}` });
+  }
+  if (method === 'GET' && u.pathname.startsWith(`${base}/rotulo/download/assincrono/rec_`)) {
+    return json({ nome: 'rotulo.pdf', dados: PDF });
+  }
+  if (method === 'DELETE' && u.pathname.startsWith(`${base}/pp_e2e_`)) {
+    record({ cancelada: u.pathname.split('/').pop() });
+    return json({ resultadoCancelamento: 'Pré-postagem cancelada' });
+  }
+  return json({ msgs: ['Rota de pré-postagem não simulada'] }, 404);
 }

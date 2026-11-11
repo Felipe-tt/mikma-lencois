@@ -47,6 +47,7 @@ export async function seed() {
   await db.collection('maintenance').doc('status').set({ active: false });
   await db.collection('settings').doc('store').set({
     storeName: 'Mikma Lençóis', storeCity: 'Blumenau', storeState: 'SC', storeCep: '89010100', storePhone: '47999990000', originCep: '89042300',
+    storeCnpj: '05.338.341/0001-95', storeAddress: 'Rua da Fábrica', storeNumber: '100', storeNeighborhood: 'Itoupava Central', storeEmail: 'contato@e2e.mikma',
     abacatePaySandboxMode: false, pixDiscountThresholdCents: 0,
   }, { merge: true });
 
