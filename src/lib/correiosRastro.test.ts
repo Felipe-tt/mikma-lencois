@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { deliveredAt, postedAt, sroDate, timelineEvents, trackObjects, type SroObjeto } from './correiosRastro';
+import { deliveredAt, expectedDelivery, postedAt, sroDate, timelineEvents, trackObjects, type SroObjeto } from './correiosRastro';
 import { resetCorreiosToken } from './correiosContrato';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -37,6 +37,14 @@ describe('situação do objeto', () => {
     expect(sroDate('2026-11-11T09:00:00')?.toISOString()).toBe('2026-11-11T12:00:00.000Z');
     expect(sroDate('2026-11-11T09:00:00Z')?.toISOString()).toBe('2026-11-11T09:00:00.000Z');
     expect(sroDate('lixo')).toBeNull();
+  });
+});
+
+describe('expectedDelivery', () => {
+  it('mostra a previsão dos Correios enquanto não foi entregue', () => {
+    expect(expectedDelivery({ ...obj(['PO', '01']), dtPrevista: '2026-11-14T23:59:59' })).toBe('2026-11-15T02:59:59.000Z');
+    expect(expectedDelivery({ ...obj(['PO', '01'], ['BDE', '01']), dtPrevista: '2026-11-14T23:59:59' })).toBeNull();
+    expect(expectedDelivery(obj(['PO', '01']))).toBeNull();
   });
 });
 

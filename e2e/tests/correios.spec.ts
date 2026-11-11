@@ -231,6 +231,7 @@ for (const c of CASOS) {
         await expect(page.getByText(codigo).first()).toBeVisible();
         await expect(page.getByText('Objeto em transferência - por favor aguarde').first()).toBeVisible();
         await expect(page.getByText('Etiqueta emitida')).toHaveCount(0);
+        await expect(page.getByText(/Previsão de entrega:/).first()).toBeVisible();
         setRastreio(codigo, 'entregue');
         expect(await runRastreio(request)).toMatchObject({ delivered: 1, errors: 0 });
         expect((await readOrder(orderId)).status).toBe('delivered');

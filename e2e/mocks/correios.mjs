@@ -121,7 +121,11 @@ function rastroMock(u, init) {
     if (emitidas.has(codObjeto) || state[codObjeto]) eventos.push(ev('FC', '82', 'Etiqueta emitida', 30));
     if (state[codObjeto] === 'postado' || state[codObjeto] === 'entregue') eventos.push(ev('CO', '01', 'Objeto coletado', 20), ev('RO', '01', 'Objeto em transferência - por favor aguarde', 10, 'Indaial'));
     if (state[codObjeto] === 'entregue') eventos.push(ev('BDE', '01', 'Objeto entregue ao destinatário', 1, 'São Paulo', 'SP'));
-    return eventos.length ? { codObjeto, tipoPostal: {}, eventos: eventos.reverse() } : { codObjeto, mensagem: 'SRO-020: Objeto não encontrado na base de dados dos Correios.' };
+    // Previsão: daqui a 3 dias, no fim do dia (como a API real manda).
+    const prevista = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10) + 'T23:59:59';
+    return eventos.length
+      ? { codObjeto, tipoPostal: {}, ...(state[codObjeto] ? { dtPrevista: prevista } : {}), eventos: eventos.reverse() }
+      : { codObjeto, mensagem: 'SRO-020: Objeto não encontrado na base de dados dos Correios.' };
   });
   return json({ versao: '3.9.0', quantidade: objetos.length, objetos, tipoResultado: 'Lista de Objetos' });
 }

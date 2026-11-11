@@ -4,7 +4,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, extractBearer } from '@/lib/security';
 import { normalizeTrackingCode, isCorreiosTrackingCode, carrierName, trackingUrl } from '@/lib/carriers';
 import { effectiveRole } from '@/lib/staffMfa';
-import { timelineEvents, trackObjects } from '@/lib/correiosRastro';
+import { expectedDelivery, timelineEvents, trackObjects } from '@/lib/correiosRastro';
 
 export interface TrackingEvent {
   date: string;
@@ -19,6 +19,7 @@ export interface TrackingResult {
   service?: string;
   events: TrackingEvent[];
   trackingUrl?: string | null;  // URL externa para rastrear (Jadlog, Correios, etc)
+  expectedDate?: string | null; // previsão de entrega dos Correios (ISO), enquanto não entregue
   updatedAt: string;
   source: 'cache' | 'live';
 }
@@ -38,7 +39,7 @@ async function fetchCorreios(code: string): Promise<TrackingResult | null> {
     const o = (await trackObjects([code])).get(code);
     const events = timelineEvents(o);
     if (o && !o.mensagem && events.length) {
-      return { code, events, updatedAt: new Date().toISOString(), source: 'live' };
+      return { code, events, expectedDate: expectedDelivery(o), updatedAt: new Date().toISOString(), source: 'live' };
     }
   } catch (err) {
     console.warn('[tracking] rastreio do contrato falhou:', err instanceof Error ? err.message : err);
@@ -145,6 +146,7 @@ export async function GET(
         if (correiosResult) {
           result.events = correiosResult.events;
           result.service = correiosResult.service;
+          result.expectedDate = correiosResult.expectedDate;
         }
       }
 
