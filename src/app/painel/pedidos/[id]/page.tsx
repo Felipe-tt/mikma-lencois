@@ -518,6 +518,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       if (data.uberCancelFailed) {
         setCancelOrderError('Pedido cancelado, mas a corrida na Uber não pôde ser cancelada automaticamente. Cancele pelo app da Uber.');
       }
+      if (data.prePostagemCancelFailed) {
+        setCancelOrderError('Pedido cancelado, mas os Correios não cancelaram a etiqueta agora. Se a coleta passar, não entregue o pacote.');
+      }
     } catch {
       setCancelOrderError('Erro de conexão. Tente novamente.');
     } finally {
@@ -911,8 +914,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
                   <CorreiosLabelCard orderId={order.id} user={user!} onCode={setTrackingFromLabel}
                     prePostagem={(order.delivery as { prePostagem?: PrePostagemView } | undefined)?.prePostagem} />
                   <p className="text-[11px] text-faint">
-                    Cole a etiqueta no pacote. Quando os Correios buscarem (ou você postar), confirme o despacho:
-                    o cliente recebe o e-mail com o rastreio.
+                    Cole a etiqueta no pacote. Quando os Correios pegarem o pacote, o pedido passa para Enviado
+                    sozinho e o cliente recebe o e-mail com o rastreio. Se quiser adiantar, confirme abaixo.
                   </p>
                 </>
               ) : isManualCarrier ? (

@@ -28,7 +28,14 @@ describe('agenda do Worker de rotinas', () => {
       [JOBS.avisoReposicao]: 24,
       [JOBS.estoqueBaixo]: 4,
       [JOBS.retencao]: 1,
+      [JOBS.rastreioCorreios]: 48,
     });
+  });
+
+  it('rastreio dos Correios a cada 30 min, nos minutos 25 e 55', () => {
+    expect(dueJobs(at(13, 25))).toContain(JOBS.rastreioCorreios);
+    expect(dueJobs(at(13, 55))).toContain(JOBS.rastreioCorreios);
+    expect(dueJobs(at(13, 30))).not.toContain(JOBS.rastreioCorreios);
   });
 
   it('retenção (LGPD) uma vez por dia, depois do backup', () => {

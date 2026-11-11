@@ -1,6 +1,6 @@
-import { test, expect, type Browser, type Locator, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Browser, type Locator, type Page } from '@playwright/test';
 import { addToCart, charges, goToPayment, login, payPix, prepare, staffLogin } from './helpers';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { emptyCart, forgetPasskeys, readOrder } from './db';
 
 /**
@@ -33,6 +33,20 @@ async function payWithPix(page: Page, payPixButton: Locator) {
   return { orderId, charge: (await charges()).find(c => c.externalId === orderId)! };
 }
 
+/** Muda o objeto no rastreio simulado dos Correios. */
+function setRastreio(code: string, situacao: 'postado' | 'entregue') {
+  const file = process.env.E2E_CORREIOS_STATE!;
+  const state = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8') || '{}') : {};
+  writeFileSync(file, JSON.stringify({ ...state, [code]: situacao }));
+}
+
+/** Roda a rotina que acompanha o rastreio (o Worker chama a cada 30 min). */
+async function runRastreio(request: APIRequestContext) {
+  const res = await request.get('/api/cron/correios-rastreio', { headers: { 'x-cron-secret': 'e2e_cron_secret_0123456789' } });
+  expect(res.status()).toBe(200);
+  return res.json() as Promise<{ checked: number; shipped: number; delivered: number; errors: number }>;
+}
+
 /** Pré-postagens que a loja mandou aos Correios simulados (e2e/mocks/correios.mjs). */
 function correiosLog(): Array<{ id?: string; codigoObjeto?: string; body?: Record<string, unknown>; cancelada?: string }> {
   const file = process.env.E2E_CORREIOS_LOG;
@@ -45,7 +59,7 @@ function correiosLog(): Array<{ id?: string; codigoObjeto?: string; body?: Recor
  * depois de cancelar uma), imprime e confirma o despacho com o código que a
  * etiqueta trouxe. Devolve o código de rastreio.
  */
-async function dispatch(browser: Browser, orderId: string, servico: string, opts: { cancelarAntes: boolean }) {
+async function dispatch(browser: Browser, orderId: string, servico: string, opts: { cancelarAntes: boolean; confirmar: boolean }) {
   await forgetPasskeys('admin@e2e.mikma');
   const staff = await browser.newContext();
   await prepare(staff);
@@ -107,9 +121,11 @@ async function dispatch(browser: Browser, orderId: string, servico: string, opts
   for (const p of staff.pages()) if (p !== panel) await p.close();
 
   await expect(confirm).toBeEnabled();
-  await confirm.click();
-  await panel.getByRole('button', { name: 'Já postei, confirmar' }).click();
-  await expect.poll(async () => (await readOrder(orderId)).status).toBe('shipped');
+  if (opts.confirmar) {
+    await confirm.click();
+    await panel.getByRole('button', { name: 'Já postei, confirmar' }).click();
+    await expect.poll(async () => (await readOrder(orderId)).status).toBe('shipped');
+  }
   await staff.close();
   return pre!.codigoObjeto!;
 }
@@ -125,6 +141,10 @@ test('página do produto: frete e prazo do contrato dos Correios', async ({ page
   await expect(row('Correios PAC')).toContainText('5 dias úteis');
   await expect(row('Correios SEDEX')).toContainText(reais(3127));
   await expect(row('Correios SEDEX')).toContainText('1 dia útil');
+});
+
+test('rotina do rastreio só roda com o segredo', async ({ request }) => {
+  expect((await request.get('/api/cron/correios-rastreio')).status()).toBe(401);
 });
 
 test('monitor: o servidor informa se consegue cotar pelo contrato', async ({ request }) => {
@@ -145,7 +165,7 @@ const CASOS = [
 ] as const;
 
 for (const c of CASOS) {
-  test(`compra por ${c.nome}: frete do contrato, pagamento, despacho com rastreio e entrega`, async ({ page, browser, baseURL }) => {
+  test(`compra por ${c.nome}: frete do contrato, pagamento, despacho com rastreio e entrega`, async ({ page, browser, baseURL, request }) => {
     test.setTimeout(240_000);
     await emptyCart(c.email);
     await login(page, c.email, SENHA);
@@ -191,9 +211,37 @@ for (const c of CASOS) {
     });
 
     let codigo = '';
-    await test.step('loja gera a etiqueta, pede a coleta e confirma o despacho', async () => {
-      // No SEDEX a loja cancela a primeira etiqueta e gera outra sem coleta.
-      codigo = await dispatch(browser, orderId, `Correios ${c.nome}`, { cancelarAntes: c.adulterar });
+    if (!c.adulterar) {
+      await test.step('loja gera a etiqueta com coleta; os Correios coletam e o pedido vira Enviado sozinho', async () => {
+        codigo = await dispatch(browser, orderId, `Correios ${c.nome}`, { cancelarAntes: false, confirmar: false });
+        // Etiqueta só emitida: a rotina não mexe no pedido.
+        expect(await runRastreio(request)).toMatchObject({ shipped: 0, errors: 0 });
+        expect((await readOrder(orderId)).status).toBe('preparing');
+        setRastreio(codigo, 'postado');
+        expect(await runRastreio(request)).toMatchObject({ shipped: 1, errors: 0 });
+        const order = await readOrder(orderId);
+        expect(order.status).toBe('shipped');
+        expect(order.delivery?.trackingCode).toBe(codigo);
+        expect(order.delivery?.shippingCostCents).toBe(c.cents);
+        expect(order.timeline?.some(t => t.status === 'shipped' && t.note === 'Recebido pelos Correios')).toBe(true);
+      });
+
+      await test.step('cliente acompanha o rastreio dos Correios; entregue, o pedido fecha sozinho', async () => {
+        await page.goto(`/pedidos/${orderId}`);
+        await expect(page.getByText(codigo).first()).toBeVisible();
+        await expect(page.getByText('Objeto em transferência - por favor aguarde').first()).toBeVisible();
+        await expect(page.getByText('Etiqueta emitida')).toHaveCount(0);
+        setRastreio(codigo, 'entregue');
+        expect(await runRastreio(request)).toMatchObject({ delivered: 1, errors: 0 });
+        expect((await readOrder(orderId)).status).toBe('delivered');
+        // Rodar de novo não mexe em nada.
+        expect(await runRastreio(request)).toMatchObject({ shipped: 0, delivered: 0, errors: 0 });
+      });
+      return;
+    }
+
+    await test.step('loja troca a etiqueta, leva à agência e confirma o despacho no painel', async () => {
+      codigo = await dispatch(browser, orderId, `Correios ${c.nome}`, { cancelarAntes: true, confirmar: true });
       const order = await readOrder(orderId);
       expect(order.delivery?.trackingCode).toBe(codigo);
       // O custo do envio entra no caixa de frete pelo valor do contrato.
@@ -210,6 +258,36 @@ for (const c of CASOS) {
     });
   });
 }
+
+test('pedido cancelado com etiqueta: a etiqueta é cancelada nos Correios', async ({ page, browser, baseURL }) => {
+  test.setTimeout(240_000);
+  const email = 'cancela@e2e.mikma';
+  await emptyCart(email);
+  await login(page, email, SENHA);
+  await addToCart(page, JOGO_KING.id);
+  const payPixButton = await goToPayment(page);
+  await page.getByRole('radiogroup', { name: 'Opção de entrega' }).getByRole('radio', { name: /Correios PAC/ }).click();
+  const { orderId, charge } = await payWithPix(page, payPixButton);
+  expect((await payPix(baseURL!, charge.id, orderId, charge.amount)).status).toBe(200);
+
+  await forgetPasskeys('admin@e2e.mikma');
+  const staff = await browser.newContext();
+  await prepare(staff);
+  const panel = await staff.newPage();
+  await staffLogin(panel, 'admin@e2e.mikma', SENHA);
+  await panel.goto(`/painel/pedidos/${orderId}`);
+  await panel.getByRole('button', { name: 'Comecei a separar o pedido' }).click();
+  await panel.getByRole('button', { name: 'Gerar etiqueta e pedir coleta' }).click();
+  await expect(panel.getByText('Coleta pedida: os Correios passam na loja para buscar.')).toBeVisible();
+  const pre = (await readOrder(orderId)).delivery!.prePostagem!;
+
+  await panel.getByRole('button', { name: 'Cancelar este pedido' }).click();
+  await panel.getByRole('button', { name: 'Cancelar pedido' }).click();
+  await expect.poll(async () => (await readOrder(orderId)).status).toBe('cancelled');
+  expect(correiosLog().some(e => e.cancelada === pre.id)).toBe(true);
+  await expect(panel.getByText(/os Correios não cancelaram a etiqueta/)).toHaveCount(0);
+  await staff.close();
+});
 
 test('Correios fora do ar: o Melhor Envio cobre PAC e SEDEX e a venda acontece', async ({ page, baseURL }) => {
   test.setTimeout(180_000);

@@ -72,8 +72,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const { ref, order } = await loadOrder(orderId);
   if (!order) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
   if (order.delivery?.prePostagem) return NextResponse.json({ prePostagem: order.delivery.prePostagem });
-  if (order.status !== 'paid' && order.status !== 'preparing') {
-    return NextResponse.json({ error: 'A etiqueta é gerada com o pedido pago, antes do despacho.' }, { status: 409 });
+  if (order.status !== 'preparing') {
+    return NextResponse.json({ error: 'Gere a etiqueta com o pedido em separação (clique em "Comecei a separar o pedido").' }, { status: 409 });
   }
   const blocked = shippingBlockReason(order);
   if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });

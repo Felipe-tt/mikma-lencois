@@ -49,6 +49,8 @@ const env = {
   MELHOR_ENVIO_TOKEN: MELHOR_ENVIO_E2E.token,
   // Pré-postagens que a loja mandou aos Correios simulados (o teste confere).
   E2E_CORREIOS_LOG: join(tmpdir(), `mikma-e2e-correios-${process.pid}.jsonl`),
+  // Em que pé está cada objeto no rastreio simulado (o teste escreve).
+  E2E_CORREIOS_STATE: join(tmpdir(), `mikma-e2e-correios-${process.pid}-rastreio.json`),
   E2E_BASE_URL: `http://localhost:${PORT}`,
   // Passkeys: o domínio aceito vem daqui (localhost nos testes).
   NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,

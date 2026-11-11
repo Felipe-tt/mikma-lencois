@@ -9,6 +9,7 @@ export const JOBS = {
   avisoReposicao: '/api/cron/restock-requests', // de hora em hora
   estoqueBaixo: '/api/cron/low-stock',       // a cada 6 h
   retencao: '/api/cron/retention',           // 1 vez por dia (LGPD)
+  rastreioCorreios: '/api/cron/correios-rastreio', // a cada 30 min
 };
 
 export function dueJobs(date) {
@@ -18,6 +19,7 @@ export function dueJobs(date) {
   if (m % 15 === 0) due.push(JOBS.expirarPedidos);
   if (m % 10 === 0) due.push(JOBS.notasFiscais);
   if (m === 20) due.push(JOBS.avisoReposicao);
+  if (m % 30 === 25) due.push(JOBS.rastreioCorreios);
   if (m === 0 && h % 6 === 0) due.push(JOBS.estoqueBaixo);
   // 06:35 UTC (03:35 em Brasília), depois do backup das 06:00.
   if (m === 35 && h === 6) due.push(JOBS.retencao);

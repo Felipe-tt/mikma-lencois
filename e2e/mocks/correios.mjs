@@ -16,7 +16,7 @@ export const CORREIOS_E2E = {
   cepFora: '04538133',
 };
 
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 
 const TOKEN = 'e2e-token-correios';
 let prePostagens = 0;
@@ -42,6 +42,7 @@ export async function correiosMock(url, init = {}) {
 
   if (auth !== `Bearer ${TOKEN}`) return json({ msgs: ['Token inválido'] }, 401);
   if (u.pathname.startsWith('/prepostagem/')) return prePostagemMock(u, init);
+  if (u.pathname.startsWith('/srorastro/')) return rastroMock(u, init);
   const m = u.pathname.match(/^\/(preco|prazo)\/v1\/nacional\/(\d{5})$/);
   const servico = m && CORREIOS_E2E.servicos[m[2]];
   if (!servico) return json({ msgs: ['Rota ou serviço não simulado'] }, 404);
@@ -81,6 +82,7 @@ function prePostagemMock(u, init) {
     const id = `pp_e2e_${prePostagens}`;
     const codigoObjeto = `${b.codigoServico === '03220' ? 'SX' : 'PX'}${String(1000000000 + prePostagens).slice(1)}BR`;
     record({ id, codigoObjeto, body: b });
+    emitidas.add(codigoObjeto);
     return json({ id, codigoObjeto, statusAtual: 7, descStatusAtual: 'PENDENTE' });
   }
   if (method === 'POST' && u.pathname === `${base}/rotulo/assincrono/pdf`) {
@@ -96,4 +98,30 @@ function prePostagemMock(u, init) {
     return json({ resultadoCancelamento: 'Pré-postagem cancelada' });
   }
   return json({ msgs: ['Rota de pré-postagem não simulada'] }, 404);
+}
+
+/**
+ * Rastreio: o teste diz em que pé está cada objeto escrevendo no arquivo
+ * E2E_CORREIOS_STATE ({ "PX000000001BR": "postado" | "entregue" }). Etiqueta
+ * gerada aqui e ainda não postada aparece como "Etiqueta emitida", igual à
+ * API real.
+ */
+const emitidas = new Set();
+function rastroMock(u, init) {
+  if (new Headers(init.headers).get('accept-language') !== 'pt-BR') {
+    return json({ msgs: ['SRO-018: Permitido apenas os valores pt-BR(Português), en(Inglês) e es-ES(Espanhol) para o idioma'] }, 400);
+  }
+  const file = process.env.E2E_CORREIOS_STATE;
+  const state = file && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8') || '{}') : {};
+  const ev = (codigo, tipo, descricao, horas, cidade = 'Blumenau', uf = 'SC') => ({
+    codigo, tipo, descricao, dtHrCriado: new Date(Date.now() - horas * 3_600_000 - 3 * 3_600_000).toISOString().slice(0, 19), unidade: { endereco: { cidade, uf } },
+  });
+  const objetos = u.searchParams.getAll('codigosObjetos').map(codObjeto => {
+    const eventos = [];
+    if (emitidas.has(codObjeto) || state[codObjeto]) eventos.push(ev('FC', '82', 'Etiqueta emitida', 30));
+    if (state[codObjeto] === 'postado' || state[codObjeto] === 'entregue') eventos.push(ev('CO', '01', 'Objeto coletado', 20), ev('RO', '01', 'Objeto em transferência - por favor aguarde', 10, 'Indaial'));
+    if (state[codObjeto] === 'entregue') eventos.push(ev('BDE', '01', 'Objeto entregue ao destinatário', 1, 'São Paulo', 'SP'));
+    return eventos.length ? { codObjeto, tipoPostal: {}, eventos: eventos.reverse() } : { codObjeto, mensagem: 'SRO-020: Objeto não encontrado na base de dados dos Correios.' };
+  });
+  return json({ versao: '3.9.0', quantidade: objetos.length, objetos, tipoResultado: 'Lista de Objetos' });
 }

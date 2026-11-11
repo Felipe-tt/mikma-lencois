@@ -7,7 +7,8 @@ export type InAppNotificationType =
   | 'uber_pickup'
   | 'uber_delivered'
   | 'uber_problem'
-  | 'low_stock';
+  | 'low_stock'
+  | 'correios_pickup';
 
 interface InAppNotificationInput {
   type: InAppNotificationType;

@@ -11,6 +11,7 @@ import { expandStockLines } from '@/lib/orderStockLines';
 import { orderStockLog } from '@/lib/stockHistory';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { uberCancelDelivery } from '@/lib/uber-direct';
+import { cancelPrePostagem } from '@/lib/correiosPrepostagem';
 import { notifyOrderCancelled } from '@/lib/email/cancelledEmail';
 import { effectiveRole } from '@/lib/staffMfa';
 
@@ -70,6 +71,9 @@ export async function POST(
   // Frete já creditado na caixa de frete quando o pedido foi pago.
   let shippingToReverse = 0;
   let uberToCancel: { id: string; sandbox: boolean } | null = null;
+  // Etiqueta dos Correios ainda não postada: cancela depois do commit, para
+  // a coleta não vir buscar um pedido cancelado.
+  let prePostagemToCancel: { id: string; codigoObjeto: string } | null = null;
   // Dados pro e-mail ao cliente, enviado só depois do commit.
   let cancelled: { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean } | null = null;
   try {
@@ -99,6 +103,9 @@ export async function POST(
       uberToCancel = order.status === 'shipped' && uberId
         ? { id: uberId, sandbox: !!order.delivery?.uberSandbox }
         : null;
+
+      const pre = (order.delivery as { prePostagem?: { id: string; codigoObjeto: string } } | undefined)?.prePostagem;
+      prePostagemToCancel = pre && order.status !== 'shipped' ? { id: pre.id, codigoObjeto: pre.codigoObjeto } : null;
 
       cancelled = { userId: order.userId as string | undefined, items: order.items, totalCents: order.totalCents as number | undefined, wasPaid: mode === 'restock' };
 
@@ -173,10 +180,29 @@ export async function POST(
     }
   }
 
+  // Melhor esforço, como a Uber: se os Correios recusarem, fica na timeline.
+  const pre = prePostagemToCancel as { id: string; codigoObjeto: string } | null;
+  let prePostagemCancelFailed = false;
+  if (pre) {
+    try {
+      await cancelPrePostagem(pre.id);
+    } catch (err) {
+      prePostagemCancelFailed = true;
+      console.error('[admin-cancel] cancelPrePostagem falhou:', err);
+      await ref.update({
+        timeline: FieldValue.arrayUnion({
+          status: 'cancelled',
+          at: new Date().toISOString(),
+          note: `Não foi possível cancelar a etiqueta ${pre.codigoObjeto} nos Correios. Se a coleta passar, recuse o pacote.`,
+        }),
+      }).catch(() => {});
+    }
+  }
+
   const c = cancelled as { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean } | null;
   if (c) await notifyOrderCancelled(orderId, c, { refund: c.wasPaid });
   // Nota fiscal já autorizada: cancela (até 24h) ou avisa da devolução.
   if (c?.wasPaid) await handleNfeOnOrderCancel(orderId);
 
-  return NextResponse.json({ ok: true, ...(uberCancelFailed ? { uberCancelFailed: true } : {}) });
+  return NextResponse.json({ ok: true, ...(uberCancelFailed ? { uberCancelFailed: true } : {}), ...(prePostagemCancelFailed ? { prePostagemCancelFailed: true } : {}) });
 }
