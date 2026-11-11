@@ -35,6 +35,12 @@ function shippingOf(o: Order): { carrier?: string; cents: number } {
   return { carrier: x.selectedShipping?.carrier, cents: Math.max(0, o.totalCents - products + (o.discountCents ?? 0)) };
 }
 
+// Dinheiro que voltou ao cliente (devolução): estorno total ou parcial.
+function refundedOf(o: Order): number {
+  const p = o.payment as { refundStatus?: string; partialRefundCents?: number } | undefined;
+  return p?.refundStatus === 'done' ? o.totalCents : Math.min(o.totalCents, p?.partialRefundCents ?? 0);
+}
+
 const STATUS_PT: Record<string, string> = {
   paid: 'Pago', preparing: 'Separando', shipped: 'Enviado', delivered: 'Entregue',
 };
@@ -105,7 +111,8 @@ export default function RelatoriosPage() {
       ));
 
       const orders = snap.docs.map(d => ({ id: d.id, ...d.data() } as Order));
-      const revenue = orders.reduce((s, o) => s + o.totalCents, 0);
+      // Devoluções estornadas não contam como venda.
+      const revenue = orders.reduce((s, o) => s + o.totalCents - refundedOf(o), 0);
 
       const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
       for (const order of orders) {
@@ -211,7 +218,7 @@ export default function RelatoriosPage() {
               lado (antes eram três cartões de 150px empilhados). */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
-              { Icon: IconMoney,   label: 'Faturamento', value: fmt(stats.revenue),   desc: 'soma dos pedidos pagos' },
+              { Icon: IconMoney,   label: 'Faturamento', value: fmt(stats.revenue),   desc: 'pedidos pagos, menos devoluções' },
               { Icon: IconBox,     label: 'Pedidos',     value: String(stats.orders), desc: 'pedidos no período' },
               { Icon: IconReceipt, label: 'Ticket médio', value: fmt(stats.avgTicket), desc: 'valor médio por pedido' },
             ].map((k, i) => (
