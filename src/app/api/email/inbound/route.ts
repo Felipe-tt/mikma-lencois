@@ -140,9 +140,10 @@ export async function POST(req: NextRequest) {
 
   let event: ResendInboundEvent;
   try {
-    const wh = new Webhook(secret);
-    const verified = wh.verify(rawBody, svixHeaders);
-    event = resendEventSchema.parse(verified) as ResendInboundEvent;
+    // verify lança se a assinatura não bate. No svix 2 ele não devolve mais
+    // o corpo, então o evento é lido do texto original já conferido.
+    new Webhook(secret).verify(rawBody, svixHeaders);
+    event = resendEventSchema.parse(JSON.parse(rawBody)) as ResendInboundEvent;
   } catch {
     return NextResponse.json({ error: 'Assinatura ou payload inválido' }, { status: 400 });
   }
