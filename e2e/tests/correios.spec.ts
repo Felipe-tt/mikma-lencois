@@ -411,6 +411,32 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   await staff.close();
 });
 
+test('troca recusada: o cliente pode pedir de novo pelo pedido', async ({ page }) => {
+  test.setTimeout(120_000);
+  const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
+  const item = { productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 };
+  const orderRef = await db().collection('orders').add({
+    userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
+    items: [item], address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190, deliveredAt: new Date().toISOString() },
+    payment: { method: 'pix', txId: 't', paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(),
+  });
+  await db().collection('returns').add({
+    orderId: orderRef.id, userId: user.id, type: 'troca', reason: 'Primeiro pedido, sem foto.', items: [item],
+    status: 'recusada', restocked: false, createdAt: new Date(Date.now() - 86_400_000).toISOString(), createdBy: 'cliente',
+  });
+
+  await login(page, 'devolve@e2e.mikma', SENHA);
+  await page.goto(`/pedidos/${orderRef.id}`);
+  await expect(page.getByText('Não foi aprovado. Se tiver dúvida, fale com a loja.')).toBeVisible();
+  await page.getByRole('button', { name: 'Fazer um novo pedido' }).click();
+  const form = page.getByRole('region', { name: 'Pedir troca ou devolução' });
+  await form.getByRole('textbox').fill('Mando foto da costura aberta pelo WhatsApp.');
+  await form.getByRole('button', { name: 'Enviar pedido' }).click();
+  await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
+  const status = (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs.map(d => d.get('status')).sort();
+  expect(status).toEqual(['recusada', 'solicitada']);
+});
+
 test('Correios fora do ar: o Melhor Envio cobre PAC e SEDEX e a venda acontece', async ({ page, baseURL }) => {
   test.setTimeout(180_000);
   const email = 'sem-correios@e2e.mikma';
