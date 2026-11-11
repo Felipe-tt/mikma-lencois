@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext, type Browser, type Locator, type Page } from '@playwright/test';
 import { addToCart, charges, goToPayment, login, payPix, prepare, staffLogin } from './helpers';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { emptyCart, forgetPasskeys, readOrder } from './db';
+import { db, emptyCart, forgetPasskeys, readOrder } from './db';
 
 /**
  * Venda pelos Correios do começo ao fim, com o contrato e o Melhor Envio
@@ -354,6 +354,44 @@ test('lote: etiquetas do dia geradas de uma vez e impressas num PDF só', async 
   await bar.getByRole('button', { name: /^Imprimir \d+ etiquetas?$/ }).click();
   await expect.poll(() => label.status).toBe(200);
   expect(label.type).toBe('application/pdf');
+  await staff.close();
+});
+
+test('troca: código de devolução dos Correios e aviso quando o pacote chega na loja', async ({ browser, request }) => {
+  test.setTimeout(180_000);
+  // Pedido entregue e troca aprovada, direto no banco (a compra já é testada acima).
+  const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
+  const orderRef = await db().collection('orders').add({
+    userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
+    items: [{ productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 }],
+    address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190 },
+    payment: { method: 'pix', txId: 't', paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(),
+  });
+  const retRef = await db().collection('returns').add({
+    orderId: orderRef.id, userId: user.id, customerName: 'Gabriela Torres', type: 'troca', reason: 'Tamanho errado',
+    items: [{ productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1 }],
+    status: 'aprovada', restocked: false, createdAt: new Date().toISOString(),
+  });
+
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto('/painel/trocas');
+  await panel.getByRole('button', { name: 'Gerar código de devolução (Correios)' }).click();
+  await expect(panel.getByText('Código de devolução dos Correios')).toBeVisible();
+  const reversa = (await retRef.get()).get('reversa') as { id: string; codigoObjeto: string; validade: string };
+  expect(reversa.codigoObjeto).toMatch(/^LR\d{9}BR$/);
+  await expect(panel.getByText(reversa.codigoObjeto)).toBeVisible();
+  const sent = correiosLog().find(e => e.id === reversa.id)?.body;
+  expect(sent).toMatchObject({
+    codigoServico: '03301', logisticaReversa: 'S',
+    remetente: { cpfCnpj: '93541134780', email: 'devolve@e2e.mikma', endereco: { cep: '01310100' } },
+    destinatario: { cpfCnpj: '05338341000195', endereco: { cep: '89010100' } },
+    itensDeclaracaoConteudo: [{ conteudo: 'Jogo de Cama King Malha Cinza', quantidade: '1', valor: '399.90' }],
+  });
+
+  // O cliente posta e o pacote chega na loja: a rotina do rastreio avisa.
+  setRastreio(reversa.codigoObjeto, 'entregue');
+  expect(await runRastreio(request)).toMatchObject({ returned: 1, errors: 0 });
+  await expect(panel.getByText(/O pacote chegou na loja em/)).toBeVisible();
   await staff.close();
 });
 
