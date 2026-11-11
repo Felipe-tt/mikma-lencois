@@ -28,6 +28,7 @@ import { nfeDocUrl } from '@/lib/nfe/links';
 import { setReturnTo } from '@/lib/auth/returnTo';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PIXModal } from '@/components/checkout/PIXModal';
+import { GoogleReviewsOptIn } from '@/components/order/GoogleReviewsOptIn';
 
 // ─── Status steps ─────────────────────────────────────────────────────────────
 
@@ -500,6 +501,7 @@ export default function OrderDetailPage() {
           </div>
         )}
 
+        {justPaid && <GoogleReviewsOptIn orderId={order.id} email={order.customerEmail || user?.email} estimatedDays={order.delivery?.estimatedDays} />}
         {justPaid && (
           <div role="status" className="mb-8 rounded-3xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-500/[0.07] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
             <PaidCheck size={72} />
