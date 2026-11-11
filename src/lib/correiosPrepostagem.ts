@@ -37,18 +37,18 @@ export class CorreiosError extends Error {
   constructor(message: string, public status = 502) { super(message); }
 }
 
-const digits = (v: unknown) => String(v ?? '').replace(/\D/g, '');
-const cut = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n);
+export const digits = (v: unknown) => String(v ?? '').replace(/\D/g, '');
+export const cut = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n);
 
 /** Celular (11 dígitos) ou telefone fixo (10) no formato da API: DDD separado. */
-function phoneFields(raw: string | undefined) {
+export function phoneFields(raw: string | undefined) {
   const d = digits(raw).replace(/^55(?=\d{10,11}$)/, '');
   if (d.length === 11) return { dddCelular: d.slice(0, 2), celular: d.slice(2) };
   if (d.length === 10) return { dddTelefone: d.slice(0, 2), telefone: d.slice(2) };
   return {};
 }
 
-function endereco(a: Address) {
+export function endereco(a: Address) {
   return {
     cep: digits(a.cep),
     logradouro: cut(a.street, 50),
@@ -159,12 +159,13 @@ async function call(path: string, init: RequestInit = {}): Promise<Response> {
 
 /** Mensagem dos Correios (`msgs`) para mostrar no painel. */
 async function correiosMessage(res: Response): Promise<string> {
-  const body = await res.json().catch(() => ({})) as { msgs?: string[]; mensagem?: string };
-  const msg = (body.msgs ?? []).join(' ') || body.mensagem || `HTTP ${res.status}`;
+  // Os Correios mandam o motivo em `msgs`, `msg` ou `mensagem`, conforme a rota.
+  const body = await res.json().catch(() => ({})) as { msgs?: string[]; msg?: string; mensagem?: string };
+  const msg = (body.msgs ?? []).join(' ') || body.msg || body.mensagem || `HTTP ${res.status}`;
   return `Os Correios recusaram: ${msg}`.slice(0, 400);
 }
 
-export async function createPrePostagem(body: ReturnType<typeof buildPrePostagem>): Promise<{ id: string; codigoObjeto: string }> {
+export async function createPrePostagem(body: ReturnType<typeof buildPrePostagem> | Record<string, unknown>): Promise<{ id: string; codigoObjeto: string }> {
   const res = await call('', { method: 'POST', body: JSON.stringify(body) });
   if (!res.ok) throw new CorreiosError(await correiosMessage(res), res.status >= 500 ? 502 : 400);
   const d = await res.json() as { id?: string; codigoObjeto?: string };

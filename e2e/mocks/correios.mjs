@@ -65,22 +65,25 @@ function prePostagemMock(u, init) {
     const end = e => e && /^\d{8}$/.test(e.cep ?? '') && e.logradouro && e.numero && e.bairro && e.cidade && /^[A-Z]{2}$/.test(e.uf ?? '');
     const faltando = [
       !(b.remetente?.nome?.length >= 3) && 'remetente.nome',
-      !/^\d{14}$/.test(b.remetente?.cpfCnpj ?? '') && 'remetente.cpfCnpj',
+      !/^(\d{11}|\d{14})$/.test(b.remetente?.cpfCnpj ?? '') && 'remetente.cpfCnpj',
       !end(b.remetente?.endereco) && 'remetente.endereco',
       !(b.destinatario?.nome?.length >= 3) && 'destinatario.nome',
       !end(b.destinatario?.endereco) && 'destinatario.endereco',
-      !(b.codigoServico in CORREIOS_E2E.servicos) && 'codigoServico',
+      !(b.codigoServico in CORREIOS_E2E.servicos || (b.logisticaReversa === 'S' && b.codigoServico === '03301')) && 'codigoServico',
+      // Logística reversa: data em dd/MM/yyyy (formato que a API real exige) e e-mail do cliente.
+      b.logisticaReversa === 'S' && !/^\d{2}\/\d{2}\/\d{4}$/.test(b.dataValidadeLogReversa ?? '') && 'dataValidadeLogReversa',
+      b.logisticaReversa === 'S' && !/@/.test(b.remetente?.email ?? '') && 'remetente.email',
       !(Number(b.pesoInformado) > 0) && 'pesoInformado',
       b.codigoFormatoObjetoInformado !== '2' && 'codigoFormatoObjetoInformado',
       !(b.alturaInformada && b.larguraInformada && b.comprimentoInformado) && 'dimensões',
       b.cienteObjetoNaoProibido !== '1' && 'cienteObjetoNaoProibido',
-      !['S', 'N'].includes(b.solicitarColeta) && 'solicitarColeta',
+      b.solicitarColeta !== undefined && !['S', 'N'].includes(b.solicitarColeta) && 'solicitarColeta',
       !(b.itensDeclaracaoConteudo?.length && b.itensDeclaracaoConteudo.every(i => i.conteudo?.length >= 2 && Number(i.quantidade) > 0 && /^\d+\.\d{2}$/.test(i.valor))) && 'itensDeclaracaoConteudo',
     ].filter(Boolean);
     if (faltando.length) return json({ msgs: [`PPN-000: campos inválidos: ${faltando.join(', ')}`] }, 400);
     prePostagens++;
     const id = `pp_e2e_${prePostagens}`;
-    const codigoObjeto = `${b.codigoServico === '03220' ? 'SX' : 'PX'}${String(1000000000 + prePostagens).slice(1)}BR`;
+    const codigoObjeto = `${b.logisticaReversa === 'S' ? 'LR' : b.codigoServico === '03220' ? 'SX' : 'PX'}${String(1000000000 + prePostagens).slice(1)}BR`;
     record({ id, codigoObjeto, body: b });
     emitidas.add(codigoObjeto);
     return json({ id, codigoObjeto, statusAtual: 7, descStatusAtual: 'PENDENTE' });
