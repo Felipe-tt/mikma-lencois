@@ -90,11 +90,21 @@ async function dispatch(browser: Browser, orderId: string, servico: string, opts
     itensDeclaracaoConteudo: [{ conteudo: 'Jogo de Cama King Malha Cinza', quantidade: '1', valor: '399.90' }],
   });
 
-  // Imprimir abre o PDF da etiqueta numa aba nova.
-  const [tab] = await Promise.all([staff.waitForEvent('page'), panel.getByRole('button', { name: 'Imprimir etiqueta' }).click()]);
-  await expect.poll(() => tab.url()).toMatch(/^blob:/);
+  // Imprimir baixa o PDF da etiqueta (e abre numa aba nova; o navegador
+  // sem tela do CI não mostra PDF, então confere a resposta no caminho).
+  let label = { status: 0, type: '', start: '' };
+  await panel.route(`**/api/painel/pedidos/${orderId}/etiqueta`, async route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const response = await route.fetch();
+    const body = await response.body();
+    label = { status: response.status(), type: response.headers()['content-type'] ?? '', start: body.subarray(0, 5).toString() };
+    await route.fulfill({ response, body });
+  });
+  await panel.getByRole('button', { name: 'Imprimir etiqueta' }).click();
+  await expect.poll(() => label.status).toBe(200);
+  expect(label).toEqual({ status: 200, type: 'application/pdf', start: '%PDF-' });
   await expect(panel.getByText(/Não foi possível|Sem conexão|Os Correios recusaram/)).toHaveCount(0);
-  await tab.close();
+  for (const p of staff.pages()) if (p !== panel) await p.close();
 
   await expect(confirm).toBeEnabled();
   await confirm.click();
