@@ -178,7 +178,7 @@ export default function TrocasPage() {
       <div className="mb-6">
         <h1 className="font-display font-normal text-ink text-2xl">Trocas e devoluções</h1>
         <p className="text-[13px] text-faint mt-1">
-          Registradas a partir de um pedido, acompanhe e conclua por aqui.
+          Pedidas pelo cliente no site ou registradas por aqui a partir de um pedido.
         </p>
       </div>
 
@@ -224,6 +224,7 @@ export default function TrocasPage() {
                       {STATUS_LABEL[r.status]}
                     </span>
                     <span className="text-[11px] font-semibold text-mid uppercase">{r.type === 'troca' ? 'Troca' : 'Devolução'}</span>
+                    {r.createdBy === 'cliente' && <span className="text-[11px] text-faint">pedida pelo site</span>}
                     {r.restocked && (
                       <span className="flex items-center gap-1 text-[11px] text-emerald-700">
                         <IconBox size={11} /> repôs estoque
