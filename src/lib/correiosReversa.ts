@@ -23,6 +23,8 @@ export interface ReversaInfo {
   /** Último dia para postar (ISO, data). */
   validade: string;
   createdAt: string;
+  /** Quando o cliente postou na agência (rastreio). */
+  postadoEm?: string;
   /** Quando chegou de volta à loja (rastreio). */
   entregueEm?: string;
 }

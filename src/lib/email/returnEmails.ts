@@ -20,7 +20,7 @@ const diaMes = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocal
 
 export function buildTrocaEmail({ kind, type, orderId, name, reversa }: TrocaEmailInput) {
   const id = shortOrderId(orderId);
-  const url = `${BASE_URL}/pedidos/${orderId}`;
+  const url = `${BASE_URL}/pedidos/${orderId}/troca`;
   const what = type === 'troca' ? 'troca' : 'devolução';
   const What = type === 'troca' ? 'Troca' : 'Devolução';
   const ola = `Olá, <strong>${escapeHtml(name)}</strong>!`;
@@ -70,7 +70,7 @@ export function buildTrocaEmail({ kind, type, orderId, name, reversa }: TrocaEma
   }[kind];
 
   const html = emailLayout(`
-    ${emailSection({ eyebrow: `Pedido #${id}`, title: c.title, html: `${c.body}${emailCta('Ver no pedido', url)}` })}
+    ${emailSection({ eyebrow: `Pedido #${id}`, title: c.title, html: `${c.body}${emailCta(kind === 'aprovada' || kind === 'codigo' ? 'Ver código e como enviar' : 'Acompanhar troca', url)}` })}
     ${emailSignature()}`, { preheader: c.text.slice(0, 110) });
   return { subject: `${c.subject} | ${STORE_NAME}`, html, text: `${c.text} Acompanhe em: ${url}` };
 }

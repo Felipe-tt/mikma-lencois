@@ -86,10 +86,14 @@ export async function GET(req: NextRequest) {
     }
   }
   for (const r of devolucoes) {
-    const chegou = deliveredAt(objects.get(r.reversa!.codigoObjeto.toUpperCase()));
+    const sro = objects.get(r.reversa!.codigoObjeto.toUpperCase());
+    // Postou na agência: a página da troca mostra a etapa "Postada".
+    const postou = !r.reversa!.postadoEm && postedAt(sro);
+    if (postou) await adminDb.collection('returns').doc(r.id).update({ 'reversa.postadoEm': postou }).catch(err => console.error(`[correios-rastreio] devolução ${r.id}:`, err));
+    const chegou = deliveredAt(sro);
     if (!chegou) continue;
     try {
-      await adminDb.collection('returns').doc(r.id).update({ 'reversa.entregueEm': chegou, updatedAt: new Date().toISOString() });
+      await adminDb.collection('returns').doc(r.id).update({ 'reversa.entregueEm': chegou, ...(r.reversa!.postadoEm || postou ? {} : { 'reversa.postadoEm': chegou }), updatedAt: new Date().toISOString() });
       result.returned++;
       const short = r.orderId.slice(-8).toUpperCase();
       await notifyInApp({ type: 'correios_pickup', message: `A devolução do pedido ${short} chegou na loja pelos Correios. Confira as peças e conclua a troca.`, orderId: r.orderId });

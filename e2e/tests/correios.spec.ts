@@ -406,10 +406,25 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   await expect(page.getByText(reversa.codigoObjeto)).toBeVisible();
   await expect(page.getByText(/Leve o pacote a qualquer agência dos Correios até/)).toBeVisible();
 
+  // Página da troca: código em destaque, prazo e como enviar.
+  await page.getByRole('link', { name: 'Ver código e como enviar' }).click();
+  await expect(page).toHaveURL(new RegExp(`/pedidos/${orderRef.id}/troca$`));
+  await expect(page.getByRole('heading', { level: 1, name: 'Leve o pacote aos Correios' })).toBeVisible();
+  const codigo = page.getByRole('region', { name: 'Código de postagem' });
+  await expect(codigo.getByText(reversa.codigoObjeto)).toBeVisible();
+  await expect(codigo.getByRole('button', { name: 'Copiar código' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Como enviar' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Etapas da troca' })).toContainText('Aprovada');
+  if (process.env.E2E_SHOTS) await page.screenshot({ path: 'test-results/troca-codigo.png', fullPage: true });
+
   // O cliente posta e o pacote chega na loja: a rotina do rastreio avisa.
   setRastreio(reversa.codigoObjeto, 'entregue');
   expect(await runRastreio(request)).toMatchObject({ returned: 1, errors: 0 });
   await expect(panel.getByText(/O pacote chegou na loja em/)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Chegou na loja' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Rastreio da devolução' })).toBeVisible();
+  if (process.env.E2E_SHOTS) await page.screenshot({ path: 'test-results/troca-chegou.png', fullPage: true });
+  await page.getByRole('link', { name: /Pedido #/ }).click();
   await expect(page.getByText('O pacote chegou na loja. Estamos conferindo e já te avisamos.')).toBeVisible();
   await staff.close();
 });

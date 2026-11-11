@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
 import { returnWindow } from '@/lib/returnRequest';
@@ -89,6 +90,10 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
             <span className="font-mono text-[16px] font-bold text-ink tracking-wide">{r.codigoObjeto}</span>
           </p>
         )}
+        <Link href={`/pedidos/${order.id}/troca`}
+          className="mt-4 inline-flex items-center gap-1.5 h-10 px-4 rounded-full border border-ink text-[13px] font-semibold text-ink hover:bg-ink hover:text-paper transition-colors">
+          {current.status === 'aprovada' && r && !r.entregueEm ? 'Ver código e como enviar' : 'Acompanhar troca'}
+        </Link>
         {current.status === 'recusada' && noPrazo && (
           <button type="button" onClick={() => setOpen(true)}
             className="mt-3 text-[13px] font-semibold text-clay hover:text-clay-d underline underline-offset-2">
