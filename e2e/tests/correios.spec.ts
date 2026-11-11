@@ -150,6 +150,8 @@ test('página do produto: frete e prazo do contrato dos Correios', async ({ page
   await expect(row('Correios PAC')).toContainText('5 dias úteis');
   await expect(row('Correios SEDEX')).toContainText(reais(3127));
   await expect(row('Correios SEDEX')).toContainText('1 dia útil');
+  // Com a data: "chega até sex., 14/11".
+  await expect(row('Correios PAC')).toContainText(/chega até \S+ \d{2}\/\d{2}/);
 });
 
 test('rotina do rastreio só roda com o segredo', async ({ request }) => {

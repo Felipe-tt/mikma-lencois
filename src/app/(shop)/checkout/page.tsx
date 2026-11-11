@@ -1,4 +1,5 @@
 'use client';
+import { estimatedDate } from '@/lib/deliveryDate';
 import { WhatsAppInline } from '@/components/contact/WhatsApp';
 import { userMessage } from '@/lib/userMessage';
 import Link from 'next/link';
@@ -32,17 +33,6 @@ interface CustomerData { name: string; cpf: string; phone: string; email: string
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ── Carrier delivery date estimate ───────────────────────────────────────────
-function estimatedDate(days: number): string {
-  const d = new Date();
-  if (days === 0) return 'Hoje';
-  let added = 0;
-  while (added < days) {
-    d.setDate(d.getDate() + 1);
-    const day = d.getDay();
-    if (day !== 0 && day !== 6) added++; // skip weekends
-  }
-  return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-}
 
 // ── Carrier icon ─────────────────────────────────────────────────────────────
 function CarrierIcon({ carrier }: { carrier: string }) {

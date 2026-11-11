@@ -1,3 +1,4 @@
+import { addBusinessDays } from '@/lib/deliveryDate';
 import { carrierName, trackingUrl as getTrackingUrl } from '@/lib/carriers';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Order } from '@/types';
@@ -23,16 +24,7 @@ function pixQrAttachment(dataUrl?: string | null): EmailAttachment | null {
 }
 
 /** Mesma conta de dias úteis do checkout ("Recebe sex., 30/10"). */
-export function addBusinessDays(from: Date, days: number): Date {
-  const d = new Date(from);
-  let added = 0;
-  while (added < days) {
-    d.setDate(d.getDate() + 1);
-    const wd = d.getDay();
-    if (wd !== 0 && wd !== 6) added++;
-  }
-  return d;
-}
+export { addBusinessDays };
 
 // Pedido como vem do Firestore: além do tipo Order, carrega os valores
 // separados (frete, descontos) que fecham a conta do e-mail.
