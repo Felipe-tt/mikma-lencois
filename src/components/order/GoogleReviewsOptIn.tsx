@@ -24,6 +24,7 @@ export function GoogleReviewsOptIn({ orderId, email, estimatedDays }: { orderId:
     if (!email) return;
     const key = `gcr-optin:${orderId}`;
     try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch { /* sem storage: mostra mesmo assim */ }
+    // Prazo do frete mais 2 dias úteis de folga para separar e postar.
     const entrega = addBusinessDays(new Date(), Math.max(1, Math.min(estimatedDays ?? 10, 30)) + 2);
     window.renderOptIn = () => {
       window.gapi?.load('surveyoptin', () => {

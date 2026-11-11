@@ -372,16 +372,19 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   await login(page, 'devolve@e2e.mikma', SENHA);
   await page.goto(`/pedidos/${orderRef.id}`);
   const pedir = page.getByRole('button', { name: /Pedir troca ou devolução/ });
-  await expect(pedir).toContainText('Desistiu? Sem custo até');
+  await expect(pedir).toContainText('com as peças sem lavar e sem usar');
   await pedir.click();
   const form = page.getByRole('region', { name: 'Pedir troca ou devolução' });
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(form.getByRole('alert')).toContainText('Conte em poucas palavras');
   await form.getByRole('textbox').fill('O tamanho king ficou grande, quero o queen.');
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
+  await expect(form.getByRole('alert')).toContainText('não foram lavadas nem usadas');
+  await form.getByRole('checkbox', { name: 'As peças não foram lavadas nem usadas.' }).check();
+  await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
   const ret = (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs[0];
-  expect(ret.data()).toMatchObject({ status: 'solicitada', type: 'troca', createdBy: 'cliente', userId: user.id, items: [{ sku: 'p3_v1', quantity: 1 }] });
+  expect(ret.data()).toMatchObject({ status: 'solicitada', type: 'troca', semUsoConfirmado: true, createdBy: 'cliente', userId: user.id, items: [{ sku: 'p3_v1', quantity: 1 }] });
 
   // Loja aprova e gera o código de devolução.
   const { staff, panel } = await staffPanel(browser);
@@ -411,13 +414,13 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   await staff.close();
 });
 
-test('troca recusada: o cliente pode pedir de novo pelo pedido', async ({ page }) => {
+test('troca recusada depois de 7 dias: o cliente ainda pede por defeito', async ({ page }) => {
   test.setTimeout(120_000);
   const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
   const item = { productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 };
   const orderRef = await db().collection('orders').add({
     userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
-    items: [item], address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190, deliveredAt: new Date().toISOString() },
+    items: [item], address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190, deliveredAt: new Date(Date.now() - 20 * 86_400_000).toISOString() },
     payment: { method: 'pix', txId: 't', paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(),
   });
   await db().collection('returns').add({
@@ -430,11 +433,17 @@ test('troca recusada: o cliente pode pedir de novo pelo pedido', async ({ page }
   await expect(page.getByText('Não foi aprovado. Se tiver dúvida, fale com a loja.')).toBeVisible();
   await page.getByRole('button', { name: 'Fazer um novo pedido' }).click();
   const form = page.getByRole('region', { name: 'Pedir troca ou devolução' });
+  // Entregue há 20 dias: troca e devolução só até 7, então só sobra defeito.
+  await expect(form.getByRole('radio', { name: 'Devolver' })).toHaveCount(0);
+  await expect(form.getByRole('checkbox')).toHaveCount(0);
+  await expect(form.getByText(/Troca e devolução valem até 7 dias depois da entrega/)).toBeVisible();
   await form.getByRole('textbox').fill('Mando foto da costura aberta pelo WhatsApp.');
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
-  const status = (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs.map(d => d.get('status')).sort();
-  expect(status).toEqual(['recusada', 'solicitada']);
+  const docs = (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs;
+  expect(docs.map(d => d.get('status')).sort()).toEqual(['recusada', 'solicitada']);
+  expect(docs.find(d => d.get('status') === 'solicitada')?.get('defeito')).toBe(true);
+  await expect(page.getByText('Troca por defeito', { exact: true })).toBeVisible();
 });
 
 test('Correios fora do ar: o Melhor Envio cobre PAC e SEDEX e a venda acontece', async ({ page, baseURL }) => {
