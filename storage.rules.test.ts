@@ -82,3 +82,25 @@ describe('fora de products/', () => {
     await assertFails(uploadBytes(ref(anon(), 'a.png'), png, { contentType: 'image/png' }));
   });
 });
+
+describe('returns/ (fotos da troca)', () => {
+  const jpg = { contentType: 'image/jpeg' };
+  it('o cliente envia e lê na própria pasta', async () => {
+    await assertSucceeds(uploadBytes(ref(customer(), 'returns/cliente/1.jpg'), png, jpg));
+    await assertSucceeds(getBytes(ref(customer(), 'returns/cliente/1.jpg')));
+  });
+  it('não envia nem lê na pasta de outro cliente', async () => {
+    await assertFails(uploadBytes(ref(customer(), 'returns/outro/1.jpg'), png, jpg));
+    await assertSucceeds(uploadBytes(ref(testEnv.authenticatedContext('outro', { role: 'customer' }).storage(), 'returns/outro/2.jpg'), png, jpg));
+    await assertFails(getBytes(ref(customer(), 'returns/outro/2.jpg')));
+  });
+  it('a equipe lê; visitante não', async () => {
+    await assertSucceeds(getBytes(ref(seller(), 'returns/cliente/1.jpg')));
+    await assertFails(getBytes(ref(anon(), 'returns/cliente/1.jpg')));
+    await assertFails(uploadBytes(ref(anon(), 'returns/x/1.jpg'), png, jpg));
+  });
+  it('só JPEG, sem sobrescrever', async () => {
+    await assertFails(uploadBytes(ref(customer(), 'returns/cliente/2.png'), png, { contentType: 'image/png' }));
+    await assertFails(uploadBytes(ref(customer(), 'returns/cliente/1.jpg'), png, jpg));
+  });
+});

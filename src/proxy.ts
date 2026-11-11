@@ -11,7 +11,7 @@ import { cspReportUrl } from '@/lib/cspReport';
 // A variável só existe nesses ambientes, nunca no deploy.
 const EMULATOR_CONNECT_SRC =
   process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === '1'
-    ? ' http://127.0.0.1:9099 http://127.0.0.1:8080 ws://127.0.0.1:8080'
+    ? ' http://127.0.0.1:9099 http://127.0.0.1:8080 ws://127.0.0.1:8080 http://127.0.0.1:9199'
     : '';
 
 // ── Firestore REST (Edge Runtime não suporta Firebase Admin SDK) ──────────────
@@ -166,7 +166,7 @@ function applySecurityHeaders(res: NextResponse, pathname = ''): void {
     `script-src 'self' 'unsafe-inline' ${SCRIPT_ORIGINS.join(' ')}` + pay,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://www.google.com https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://d1w2poirtb3as9.cloudfront.net https://*.tile.openstreetmap.org https://www.facebook.com",
+    "img-src 'self' data: blob: https://www.google.com https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://d1w2poirtb3as9.cloudfront.net https://*.tile.openstreetmap.org https://www.facebook.com" + (process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === '1' ? ' http://127.0.0.1:9199' : ''),
     // www.google.com também em connect-src (não só script-src): o próprio
     // script do reCAPTCHA faz uma chamada de rede pra /recaptcha/api2/clr,
     // sem isso ela quebrava silenciosamente por CSP (bug preexistente,
