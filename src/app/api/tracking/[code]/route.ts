@@ -4,6 +4,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, extractBearer } from '@/lib/security';
 import { normalizeTrackingCode, isCorreiosTrackingCode, carrierName, trackingUrl } from '@/lib/carriers';
 import { effectiveRole } from '@/lib/staffMfa';
+import { timelineEvents, trackObjects } from '@/lib/correiosRastro';
 
 export interface TrackingEvent {
   date: string;
@@ -27,11 +28,26 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
 const LT_USER  = process.env.LINKETRACK_USER;
 const LT_TOKEN = process.env.LINKETRACK_TOKEN;
 
+/**
+ * Eventos dos Correios: primeiro pelo próprio contrato (SRO), que só vê os
+ * objetos postados pela loja; se não achar e houver Link&Track configurado,
+ * tenta por ele.
+ */
 async function fetchCorreios(code: string): Promise<TrackingResult | null> {
-  if (!LT_USER || !LT_TOKEN) {
-    console.error('[tracking] LINKETRACK_USER/LINKETRACK_TOKEN não configurados');
-    return null;
+  try {
+    const o = (await trackObjects([code])).get(code);
+    const events = timelineEvents(o);
+    if (o && !o.mensagem && events.length) {
+      return { code, events, updatedAt: new Date().toISOString(), source: 'live' };
+    }
+  } catch (err) {
+    console.warn('[tracking] rastreio do contrato falhou:', err instanceof Error ? err.message : err);
   }
+  return fetchLinketrack(code);
+}
+
+async function fetchLinketrack(code: string): Promise<TrackingResult | null> {
+  if (!LT_USER || !LT_TOKEN) return null;
   try {
     const url = `https://api.linketrack.com/track/json?user=${LT_USER}&token=${LT_TOKEN}&codigo=${encodeURIComponent(code)}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
@@ -139,7 +155,7 @@ export async function GET(
     }
   }
 
-  // Modo 1: Correios via Link&Track
+  // Modo 1: Correios (contrato da loja; Link&Track como reserva)
   if (clean.length < 10 || clean.length > 13) {
     return NextResponse.json({ error: 'Código inválido' }, { status: 400 });
   }

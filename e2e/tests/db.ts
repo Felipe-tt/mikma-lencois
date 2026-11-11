@@ -33,7 +33,7 @@ export interface StoredOrder {
   totalCents?: number;
   shippingCents?: number;
   selectedShipping?: { carrier?: string; label?: string; priceCents?: number; estimatedDays?: number };
-  delivery?: { carrier?: string; priceCents?: number; realPriceCents?: number; trackingCode?: string; shippingCostCents?: number };
+  delivery?: { carrier?: string; priceCents?: number; realPriceCents?: number; trackingCode?: string; shippingCostCents?: number; prePostagem?: { id?: string; codigoObjeto?: string; coleta?: boolean } };
   timeline?: Array<{ status: string; note?: string }>;
 }
 
