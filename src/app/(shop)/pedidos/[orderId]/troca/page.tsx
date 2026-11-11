@@ -14,21 +14,28 @@ import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import { ReturnPhotos } from '@/components/order/ReturnPhotos';
+import { BusinessHoursCard } from '@/components/storefront/BusinessHoursCard';
+import type { ColetaUber, DevolverPor } from '@/lib/returns/returnSteps';
 import type { Order, ReturnRequest } from '@/types';
 
 type Troca = ReturnRequest & {
   defeito?: boolean;
   fotos?: string[];
   reversa?: { codigoObjeto: string; validade: string; createdAt?: string; postadoEm?: string; entregueEm?: string };
+  devolverPor?: DevolverPor;
+  coletaUber?: ColetaUber;
+  recebidaEm?: string;
 };
+
+interface Loja { endereco: string; mapa: string; horario?: string; fuso?: string }
 
 const dataLonga = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 const dataCurta = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '');
 
 /**
- * Página da troca ou devolução: em que pé está, o código dos Correios em
- * destaque (com prazo e botão de copiar), como enviar e o rastreio do
- * pacote de volta. O pedido mostra um resumo com o link para cá, e os
+ * Página da troca ou devolução: em que pé está e como as peças voltam.
+ * Correios: o código em destaque (com prazo e botão de copiar), como enviar
+ * e o rastreio. Uber: o entregador que vai buscar. Loja: endereço e horário. O pedido mostra um resumo com o link para cá, e os
  * e-mails da troca trazem o cliente direto para esta página.
  */
 export default function TrocaPage() {
@@ -38,6 +45,7 @@ export default function TrocaPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [trocas, setTrocas] = useState<Troca[] | null>(null);
   const [whats, setWhats] = useState<string | null>(null);
+  const [loja, setLoja] = useState<Loja | null>(null);
 
   useEffect(() => {
     if (!loading && !user) { setReturnTo(window.location.pathname); router.replace('/entrar'); }
@@ -57,6 +65,8 @@ export default function TrocaPage() {
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
       const url = d.whatsappUrl || (d.storePhone ? `https://wa.me/55${String(d.storePhone).replace(/\D/g, '').replace(/^55/, '')}` : null);
+      const rua = [`${d.storeAddress ?? ''}${d.storeNumber ? `, ${d.storeNumber}` : ''}`, d.storeNeighborhood, d.storeCity].filter(Boolean).join(', ');
+      if (d.storeAddress) setLoja({ endereco: rua, mapa: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${rua} ${d.storeState ?? ''}`)}`, horario: d.businessHours, fuso: d.businessHoursTimezone });
       if (url) setWhats(`${url}${url.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Tenho uma dúvida sobre a troca do pedido #${orderId.slice(-8).toUpperCase()}.`)}`);
     }).catch(() => {});
   }, [orderId]);
@@ -86,6 +96,8 @@ export default function TrocaPage() {
 
   const { etapas, atual } = etapasDaTroca(t);
   const r = t.reversa;
+  const por = t.devolverPor ?? 'correios';
+  const u = t.coletaUber;
   const tipo = t.defeito ? 'Troca por defeito' : t.type === 'troca' ? 'Troca' : 'Devolução';
   const dias = r ? diasParaPostar(r.validade) : 0;
   const podeNovo = t.status === 'recusada' && !!order && returnWindow(order).ok;
@@ -93,16 +105,26 @@ export default function TrocaPage() {
 
   const titulo: Record<EtapaId | 'recusada', [string, string]> = {
     solicitada: ['Recebemos seu pedido', 'A loja responde em até 1 dia útil. Você recebe a resposta por e-mail e aqui.'],
-    aprovada: r
-      ? ['Leve o pacote aos Correios', `Até ${dataLonga(r.validade)}${dias > 0 ? ` (faltam ${dias} ${dias === 1 ? 'dia' : 'dias'})` : ', hoje é o último dia'}. O envio é por nossa conta.`]
-      : ['Aprovada', 'A loja está gerando o seu código dos Correios. Ele aparece aqui e no seu e-mail.'],
-    postada: ['A caminho da loja', 'Os Correios já estão com o seu pacote. Acompanhe o trajeto aqui embaixo.'],
+    aprovada: por === 'uber'
+      ? u
+        ? ['O entregador está indo buscar', 'Deixe o pacote pronto e entregue ao entregador da Uber quando ele chegar. É por nossa conta.']
+        : ['Vamos buscar na sua casa', 'A loja vai combinar o horário com você e mandar um entregador da Uber. Deixe as peças embaladas.']
+      : por === 'loja'
+        ? ['Leve as peças na loja', 'Quando puder, no horário de funcionamento. Não precisa agendar.']
+        : r
+          ? ['Leve o pacote aos Correios', `Até ${dataLonga(r.validade)}${dias > 0 ? ` (faltam ${dias} ${dias === 1 ? 'dia' : 'dias'})` : ', hoje é o último dia'}. O envio é por nossa conta.`]
+          : ['Aprovada', 'A loja está gerando o seu código dos Correios. Ele aparece aqui e no seu e-mail.'],
+    postada: por === 'uber'
+      ? ['A caminho da loja', 'O entregador já pegou o pacote e está levando para a loja.']
+      : ['A caminho da loja', 'Os Correios já estão com o seu pacote. Acompanhe o trajeto aqui embaixo.'],
     chegou: ['Chegou na loja', 'Estamos conferindo as peças e já te avisamos.'],
     concluida: ['Concluída', t.type === 'troca' ? 'Se a troca gerou um envio novo, o rastreio chega por e-mail e aparece no pedido.' : 'O valor volta pelo mesmo meio de pagamento da compra.'],
     recusada: ['Não foi aprovada', 'Se tiver dúvida sobre o motivo, fale com a gente pelo WhatsApp.'],
   };
   const [h1, sub] = titulo[atual];
-  const mostraCodigo = !!r && t.status === 'aprovada' && !r.postadoEm && !r.entregueEm;
+  const mostraCodigo = por === 'correios' && !!r && t.status === 'aprovada' && !r.postadoEm && !r.entregueEm;
+  const mostraEntregador = por === 'uber' && !!u?.trackingUrl && !u.entregueEm && t.status === 'aprovada';
+  const mostraLoja = por === 'loja' && t.status === 'aprovada' && !t.recebidaEm && !!loja;
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-8">
@@ -118,7 +140,7 @@ export default function TrocaPage() {
       </header>
 
       {atual !== 'recusada' && (
-        <ol aria-label="Etapas da troca" className="grid grid-cols-5 gap-1">
+        <ol aria-label="Etapas da troca" className={`grid gap-1 ${etapas.length === 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
           {etapas.map((e, i) => {
             const isAtual = e.id === atual;
             return (
@@ -140,6 +162,31 @@ export default function TrocaPage() {
             );
           })}
         </ol>
+      )}
+
+      {mostraEntregador && u && (
+        <section aria-label="Entregador da Uber" className="rounded-3xl border border-mist bg-warm/60 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-faint">Coleta pela Uber</p>
+            <p className="text-[15px] text-ink mt-1 leading-snug">{u.coletadoEm ? 'O pacote está a caminho da loja.' : 'Veja no mapa quando o entregador vai chegar.'}</p>
+          </div>
+          <a href={u.trackingUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center justify-center h-11 px-5 rounded-full bg-ink text-paper text-[13px] font-semibold hover:bg-clay transition-colors">
+            Acompanhar o entregador
+          </a>
+        </section>
+      )}
+
+      {mostraLoja && loja && (
+        <section aria-labelledby="onde-entregar" className="flex flex-col gap-3">
+          <h2 id="onde-entregar" className="text-xs font-bold tracking-[0.15em] uppercase text-faint">Onde entregar</h2>
+          <div className="rounded-2xl border border-mist p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+            <p className="flex-1 text-[15px] text-ink leading-snug">{loja.endereco}</p>
+            <a href={loja.mapa} target="_blank" rel="noopener noreferrer" className="btn-outline self-start sm:self-auto">Ver no mapa</a>
+          </div>
+          {loja.horario && <BusinessHoursCard businessHours={loja.horario} timezone={loja.fuso} />}
+          <p className="text-[12.5px] text-faint leading-relaxed">Leve as peças embaladas e diga o número do pedido (#{short}) no balcão.</p>
+        </section>
       )}
 
       {mostraCodigo && r && (
@@ -177,7 +224,7 @@ export default function TrocaPage() {
         </section>
       )}
 
-      {r && (r.postadoEm || r.entregueEm || atual === 'concluida') && (
+      {por === 'correios' && r && (r.postadoEm || r.entregueEm || atual === 'concluida') && (
         <section aria-labelledby="rastreio-volta" className="flex flex-col gap-3">
           <h2 id="rastreio-volta" className="text-xs font-bold tracking-[0.15em] uppercase text-faint">Rastreio da devolução</h2>
           <div className="rounded-2xl border border-mist p-5">

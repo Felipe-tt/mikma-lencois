@@ -21,6 +21,7 @@ import { rateLimit }                    from '@/lib/rateLimit';
 import { uberDirectWebhookSecret }      from '@/lib/uber-direct';
 import { applyUberStatus, courierUpdate, ensureRoutePoints, type CourierInfo } from '@/lib/uberDeliverySync';
 import { uberWebhookSchema } from './schema';
+import { aplicarStatusColeta } from '@/lib/returns/coletaUber';
 
 function verifySignature(rawBody: Buffer, header: string): boolean {
   // Testa contra os dois secrets configurados (produção e sandbox), o
@@ -108,7 +109,13 @@ export async function POST(req: NextRequest) {
     .get();
 
   if (snap.empty) {
-    console.warn('[uber-webhook] pedido não encontrado para deliveryId:', deliveryId);
+    // Corrida de coleta de troca (o entregador busca na casa do cliente).
+    const uberStatus = (data?.status ?? payload.status) as string | undefined;
+    if (eventType === 'event.delivery_status' && uberStatus
+      && await aplicarStatusColeta(deliveryId, uberStatus, data?.tracking_url as string | undefined)) {
+      return NextResponse.json({ ok: true });
+    }
+    if (eventType !== 'event.courier_update') console.warn('[uber-webhook] pedido não encontrado para deliveryId:', deliveryId);
     return NextResponse.json({ ok: true });
   }
 

@@ -5,7 +5,7 @@ import {
 } from './layout';
 
 /** O que mudou na troca e vale um e-mail para o cliente. */
-export type AvisoTroca = 'aprovada' | 'codigo' | 'chegou' | 'recusada' | 'concluida';
+export type AvisoTroca = 'aprovada' | 'codigo' | 'coleta' | 'chegou' | 'recusada' | 'concluida';
 
 export interface TrocaEmailInput {
   kind: AvisoTroca;
@@ -14,11 +14,17 @@ export interface TrocaEmailInput {
   name: string;
   /** Código de postagem dos Correios e último dia para postar (ISO). */
   reversa?: { codigoObjeto: string; validade: string };
+  /** Por onde as peças voltam (sem o campo: Correios). */
+  devolverPor?: 'correios' | 'uber' | 'loja';
+  /** Endereço da loja numa linha, para quem entrega no balcão. */
+  enderecoLoja?: string;
+  /** Link da Uber para acompanhar o entregador que vai buscar. */
+  coletaUrl?: string;
 }
 
 const diaMes = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' });
 
-export function buildTrocaEmail({ kind, type, orderId, name, reversa }: TrocaEmailInput) {
+export function buildTrocaEmail({ kind, type, orderId, name, reversa, devolverPor = 'correios', enderecoLoja, coletaUrl }: TrocaEmailInput) {
   const id = shortOrderId(orderId);
   const url = `${BASE_URL}/pedidos/${orderId}/troca`;
   const what = type === 'troca' ? 'troca' : 'devolução';
@@ -33,7 +39,17 @@ export function buildTrocaEmail({ kind, type, orderId, name, reversa }: TrocaEma
     : '';
 
   const c = {
-    aprovada: {
+    aprovada: devolverPor === 'uber' ? {
+      subject: `${What} aprovada, pedido #${id}`,
+      title: `${What} aprovada`,
+      body: `${emailParagraph(`${ola} Aprovamos a sua ${what}.`)}${emailParagraph('Vamos combinar um horário com você e mandar um entregador da Uber buscar as peças no seu endereço. Deixe tudo embalado. Você não paga nada.')}`,
+      text: `Olá, ${name}! Aprovamos a sua ${what} do pedido #${id}. Vamos combinar um horário e mandar um entregador da Uber buscar as peças, sem custo.`,
+    } : devolverPor === 'loja' ? {
+      subject: `${What} aprovada, pedido #${id}`,
+      title: `${What} aprovada`,
+      body: `${emailParagraph(`${ola} Aprovamos a sua ${what}.`)}${emailParagraph(`Leve as peças na loja quando puder, no horário de funcionamento${enderecoLoja ? `: <strong>${escapeHtml(enderecoLoja)}</strong>` : ''}. Não precisa agendar.`)}`,
+      text: `Olá, ${name}! Aprovamos a sua ${what} do pedido #${id}. Leve as peças na loja quando puder${enderecoLoja ? `: ${enderecoLoja}` : ''}.`,
+    } : {
       subject: `${What} aprovada, pedido #${id}`,
       title: `${What} aprovada`,
       body: reversa
@@ -48,6 +64,12 @@ export function buildTrocaEmail({ kind, type, orderId, name, reversa }: TrocaEma
       title: 'Seu código dos Correios',
       body: `${emailParagraph(`${ola} Aqui está o código para devolver as peças.`)}${codigo}${emailParagraph(postar)}`,
       text: `Olá, ${name}! Código dos Correios para a ${what} do pedido #${id}: ${reversa?.codigoObjeto ?? ''}. Leve o pacote a qualquer agência até ${reversa ? diaMes(reversa.validade) : ''}; o envio é por nossa conta.`,
+    },
+    coleta: {
+      subject: `Entregador a caminho para buscar sua ${what}, pedido #${id}`,
+      title: 'O entregador está indo buscar',
+      body: `${emailParagraph(`${ola} Chamamos um entregador da Uber para buscar as peças da sua ${what}.`)}${emailParagraph('Deixe o pacote pronto e entregue a ele quando chegar. O envio é por nossa conta.')}`,
+      text: `Olá, ${name}! Um entregador da Uber está indo buscar as peças da ${what} do pedido #${id}. Deixe o pacote pronto; o envio é por nossa conta.`,
     },
     chegou: {
       subject: `Recebemos as peças da sua ${what}, pedido #${id}`,
@@ -70,7 +92,7 @@ export function buildTrocaEmail({ kind, type, orderId, name, reversa }: TrocaEma
   }[kind];
 
   const html = emailLayout(`
-    ${emailSection({ eyebrow: `Pedido #${id}`, title: c.title, html: `${c.body}${emailCta(kind === 'aprovada' || kind === 'codigo' ? 'Ver código e como enviar' : 'Acompanhar troca', url)}` })}
+    ${emailSection({ eyebrow: `Pedido #${id}`, title: c.title, html: `${c.body}${kind === 'coleta' && coletaUrl ? emailCta('Acompanhar o entregador', coletaUrl) : emailCta(kind === 'codigo' || (kind === 'aprovada' && devolverPor === 'correios') ? 'Ver código e como enviar' : 'Acompanhar troca', url)}` })}
     ${emailSignature()}`, { preheader: c.text.slice(0, 110) });
   return { subject: `${c.subject} | ${STORE_NAME}`, html, text: `${c.text} Acompanhe em: ${url}` };
 }

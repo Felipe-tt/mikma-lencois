@@ -36,3 +36,19 @@ describe('diasParaPostar', () => {
     expect(diasParaPostar('2026-11-25', new Date('2026-11-27T10:00:00-03:00'))).toBe(0);
   });
 });
+
+describe('etapas pela Uber e na loja', () => {
+  it('Uber: coletada e chegou vêm da corrida', () => {
+    const t = { ...base, status: 'aprovada' as const, devolverPor: 'uber' as const, coletaUber: { deliveryId: 'd', createdAt: '2026-11-12T10:00:00Z', coletadoEm: '2026-11-12T10:20:00Z' } };
+    const { etapas, atual } = etapasDaTroca(t);
+    expect(etapas.map(e => e.label)).toEqual(['Pedido enviado', 'Aprovada', 'Coletada', 'Chegou na loja', 'Concluída']);
+    expect(atual).toBe('postada');
+    expect(etapasDaTroca({ ...t, coletaUber: { ...t.coletaUber, entregueEm: '2026-11-12T10:40:00Z' } }).atual).toBe('chegou');
+  });
+  it('loja: sem etapa de envio, chega quando a equipe recebe', () => {
+    const t = { ...base, status: 'aprovada' as const, devolverPor: 'loja' as const };
+    expect(etapasDaTroca(t).etapas.map(e => e.id)).toEqual(['solicitada', 'aprovada', 'chegou', 'concluida']);
+    expect(etapasDaTroca(t).atual).toBe('aprovada');
+    expect(etapasDaTroca({ ...t, recebidaEm: '2026-11-13T15:00:00Z' }).atual).toBe('chegou');
+  });
+});

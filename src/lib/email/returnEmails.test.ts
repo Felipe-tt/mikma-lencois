@@ -32,4 +32,22 @@ describe('buildTrocaEmail', () => {
   it('escapa o nome do cliente', () => {
     expect(buildTrocaEmail({ ...base, name: '<b>x', kind: 'concluida' }).html).not.toContain('<b>x');
   });
+
+  it('Uber: aprovada fala do entregador, sem código dos Correios', () => {
+    const m = buildTrocaEmail({ ...base, kind: 'aprovada', devolverPor: 'uber' });
+    expect(m.text).toMatch(/entregador da Uber/);
+    expect(m.html).not.toContain('Correios');
+  });
+
+  it('coleta: leva ao rastreio da Uber', () => {
+    const m = buildTrocaEmail({ ...base, kind: 'coleta', devolverPor: 'uber', coletaUrl: 'https://track.uber.com/x' });
+    expect(m.subject).toMatch(/^Entregador a caminho/);
+    expect(m.html).toContain('https://track.uber.com/x');
+  });
+
+  it('loja: aprovada traz o endereço da loja', () => {
+    const m = buildTrocaEmail({ ...base, kind: 'aprovada', devolverPor: 'loja', enderecoLoja: 'Rua Johann Ohf, 1, Blumenau' });
+    expect(m.html).toContain('Rua Johann Ohf, 1, Blumenau');
+    expect(m.html).not.toContain('Correios');
+  });
 });

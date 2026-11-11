@@ -61,3 +61,22 @@ export function motivoFinal(tipo: TipoPedido, motivo: string | undefined, texto:
   if (motivoPedeTexto(motivo) && t.length < 10) return { ok: false, error: tipo === 'defeito' ? 'Conte qual é o defeito.' : 'Conte em poucas palavras o que aconteceu.' };
   return { ok: true, reason: motivoPedeTexto(motivo) ? t : t ? `${motivo}: ${t}` : motivo };
 }
+
+/**
+ * Por onde as peças voltam: do mesmo jeito que o pedido chegou (Correios ou
+ * Uber), ou o cliente entrega na loja. Retirada na loja volta na loja.
+ */
+export type DevolverPor = 'correios' | 'uber' | 'loja';
+
+type ComEntrega = { delivery?: { carrier?: string | null } | null; selectedShipping?: { carrier?: string } };
+
+export function devolucaoPadrao(order: ComEntrega): DevolverPor {
+  const carrier = order.delivery?.carrier ?? order.selectedShipping?.carrier;
+  return carrier === 'uber_direct' ? 'uber' : carrier === 'pickup' ? 'loja' : 'correios';
+}
+
+/** Opções que o cliente vê no pedido: o jeito da entrega e a loja. */
+export function opcoesDevolucao(order: ComEntrega): DevolverPor[] {
+  const padrao = devolucaoPadrao(order);
+  return padrao === 'loja' ? ['loja'] : [padrao, 'loja'];
+}
