@@ -31,3 +31,20 @@ describe('returnWindow', () => {
     expect(TROCA_FORA_DO_PRAZO).toMatch(/Defeito/);
   });
 });
+
+import { motivoFinal } from './returnRequest';
+
+describe('motivoFinal', () => {
+  it('motivo pronto basta, texto é opcional', () => {
+    expect(motivoFinal('troca', 'Não coube no colchão', '')).toEqual({ ok: true, reason: 'Não coube no colchão' });
+    expect(motivoFinal('troca', 'Não coube no colchão', 'era king, quero queen')).toEqual({ ok: true, reason: 'Não coube no colchão: era king, quero queen' });
+  });
+  it('"Outro" exige texto', () => {
+    expect(motivoFinal('defeito', 'Outro defeito', 'curto')).toEqual({ ok: false, error: 'Conte qual é o defeito.' });
+    expect(motivoFinal('defeito', 'Outro defeito', 'o lençol desfiou na barra')).toEqual({ ok: true, reason: 'o lençol desfiou na barra' });
+  });
+  it('sem motivo ou motivo de outro tipo é recusado', () => {
+    expect(motivoFinal('devolucao', undefined, 'qualquer coisa')).toMatchObject({ ok: false });
+    expect(motivoFinal('troca', 'Mancha ou sujeira', '')).toEqual({ ok: false, error: 'Motivo inválido.' });
+  });
+});

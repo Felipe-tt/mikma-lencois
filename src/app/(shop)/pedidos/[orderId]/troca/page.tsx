@@ -13,10 +13,12 @@ import { diasParaPostar, etapasDaTroca, type EtapaId } from '@/lib/returns/retur
 import { TrackingTimeline } from '@/components/tracking/TrackingTimeline';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
+import { ReturnPhotos } from '@/components/order/ReturnPhotos';
 import type { Order, ReturnRequest } from '@/types';
 
 type Troca = ReturnRequest & {
   defeito?: boolean;
+  fotos?: string[];
   reversa?: { codigoObjeto: string; validade: string; createdAt?: string; postadoEm?: string; entregueEm?: string };
 };
 
@@ -205,6 +207,7 @@ export default function TrocaPage() {
             );
           })}
         </ul>
+        <ReturnPhotos paths={t.fotos} />
         {t.reason && t.reason !== 'Desistiu da compra.' && (
           <p className="text-[13.5px] text-mid leading-relaxed"><span className="text-faint">Motivo:</span> {t.reason}</p>
         )}

@@ -14,6 +14,7 @@ import { IconExchange, IconCheck, IconX, IconBox } from '@/components/ui/Icon';
 import { staffActor } from '@/lib/staffActor';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { ReversaCard, type ReversaView } from '@/components/painel/ReversaCard';
+import { ReturnPhotos } from '@/components/order/ReturnPhotos';
 
 const STATUS_LABEL: Record<ReturnStatus, string> = {
   solicitada: 'Solicitada', aprovada: 'Aprovada', recusada: 'Recusada', concluida: 'Concluída',
@@ -240,6 +241,9 @@ export default function TrocasPage() {
               </div>
 
               <p className="text-[13px] text-ink mb-2">{r.reason}</p>
+              {(r as { fotos?: string[] }).fotos?.length ? (
+                <div className="mb-3"><ReturnPhotos paths={(r as { fotos?: string[] }).fotos} size={72} /></div>
+              ) : null}
 
               <ul className="text-[12px] text-mid mb-3">
                 {r.items.map((it, i) => (

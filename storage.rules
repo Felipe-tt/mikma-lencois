@@ -25,6 +25,17 @@ service firebase.storage {
         && request.resource.contentType.matches('image/(webp|jpeg)');
     }
 
+    // Fotos que o cliente manda ao pedir troca (defeito, peça errada): cada
+    // um só envia e lê na própria pasta; a equipe lê todas. O navegador
+    // regrava a foto em JPEG (sem EXIF) antes de enviar. Ninguém sobrescreve.
+    match /returns/{uid}/{file} {
+      allow read: if (request.auth != null && request.auth.uid == uid) || isStaff();
+      allow create: if request.auth != null && request.auth.uid == uid && resource == null
+        && request.resource.size < 3 * 1024 * 1024  // 3 MB
+        && request.resource.contentType == 'image/jpeg';
+      allow delete: if isStaff();
+    }
+
     // Bloquear tudo mais
     match /{allPaths=**} {
       allow read, write: if false;

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
-import { returnWindow } from '@/lib/returnRequest';
+import { MOTIVOS, motivoFinal, motivoPedeTexto, returnWindow } from '@/lib/returnRequest';
 import type { Order, ReturnRequest } from '@/types';
 
 type Devolucao = ReturnRequest & { defeito?: boolean; reversa?: { codigoObjeto: string; validade: string; entregueEm?: string } };
@@ -28,10 +28,42 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<Tipo>('troca');
   const [reason, setReason] = useState('');
+  const [motivo, setMotivo] = useState('');
   const [qty, setQty] = useState<Record<string, number>>(() => Object.fromEntries(order.items.map(i => [i.sku, order.items.length === 1 ? i.quantity : 0])));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [semUso, setSemUso] = useState(false);
+  const [fotos, setFotos] = useState<{ blob: Blob; url: string }[]>([]);
+  const [lendoFoto, setLendoFoto] = useState(false);
+
+  async function addFotos(files: File[]) {
+    if (!files.length) return;
+    setLendoFoto(true); setError('');
+    try {
+      const { compressPhoto } = await import('@/lib/images/compressPhoto');
+      const novas: { blob: Blob; url: string }[] = [];
+      for (const f of files.slice(0, 4 - fotos.length)) {
+        if (!f.type.startsWith('image/')) continue;
+        const blob = await compressPhoto(f);
+        novas.push({ blob, url: URL.createObjectURL(blob) });
+      }
+      setFotos(prev => [...prev, ...novas].slice(0, 4));
+    } catch {
+      setError('Não deu para ler uma das fotos. Tente outra.');
+    } finally { setLendoFoto(false); }
+  }
+
+  /** Sobe as fotos para a pasta do cliente no Storage e devolve os caminhos. */
+  async function enviarFotos(): Promise<string[]> {
+    if (!fotos.length) return [];
+    const [{ storage }, { ref, uploadBytes }] = await Promise.all([import('@/lib/firebase/storage'), import('firebase/storage')]);
+    const base = `returns/${user.uid}/${Date.now()}`;
+    return Promise.all(fotos.map(async (f, i) => {
+      const path = `${base}_${i}.jpg`;
+      await uploadBytes(ref(storage, path), f.blob, { contentType: 'image/jpeg' });
+      return path;
+    }));
+  }
 
   useEffect(() => onSnapshot(
     query(collection(db, 'returns'), where('orderId', '==', order.id), where('userId', '==', user.uid)),
@@ -51,14 +83,17 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
   async function send() {
     const items = Object.entries(qty).filter(([, q]) => q > 0).map(([sku, quantity]) => ({ sku, quantity }));
     if (!items.length) { setError('Escolha pelo menos uma peça.'); return; }
-    if (tipo !== 'devolucao' && reason.trim().length < 10) { setError(tipo === 'defeito' ? 'Conte qual é o defeito.' : 'Conte em poucas palavras o que aconteceu.'); return; }
+    const conferido = motivoFinal(tipo, motivo || undefined, reason);
+    if (!conferido.ok) { setError(conferido.error); return; }
     if (tipo !== 'defeito' && !semUso) { setError('Confirme que as peças não foram lavadas nem usadas.'); return; }
     setSending(true); setError('');
     try {
+      let caminhos: string[];
+      try { caminhos = await enviarFotos(); } catch { setError('Não deu para enviar as fotos. Confira a conexão e tente de novo.'); return; }
       const res = await fetch(`/api/orders/${order.id}/troca`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
-        body: JSON.stringify({ type: tipo === 'devolucao' ? 'devolucao' : 'troca', defeito: tipo === 'defeito', semUso: tipo !== 'defeito' && semUso, reason: reason.trim(), items }),
+        body: JSON.stringify({ type: tipo === 'devolucao' ? 'devolucao' : 'troca', defeito: tipo === 'defeito', semUso: tipo !== 'defeito' && semUso, motivo, reason: reason.trim(), items, ...(caminhos.length ? { fotos: caminhos } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) setError(data.error ?? 'Não foi possível enviar agora. Tente de novo.');
@@ -132,14 +167,14 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
       {trocaOk && tipo !== 'defeito' && (
         <div role="radiogroup" aria-label="O que você prefere" className="grid grid-cols-2 gap-2">
           {([['troca', 'Trocar'], ['devolucao', 'Devolver']] as const).map(([v, label]) => (
-            <button key={v} type="button" role="radio" aria-checked={tipo === v} onClick={() => setType(v)}
+            <button key={v} type="button" role="radio" aria-checked={tipo === v} onClick={() => { setType(v); setMotivo(''); }}
               className={`h-11 rounded-xl border text-[13px] font-semibold transition-colors ${tipo === v ? 'border-ink bg-ink text-paper' : 'border-mist text-ink hover:border-ink'}`}>
               {label}
             </button>
           ))}
         </div>
       )}
-      {tipo === 'defeito' && <p className="text-[12.5px] text-mid leading-relaxed">Conte o que aconteceu. Se puder, mande fotos pelo WhatsApp da loja.</p>}
+      {tipo === 'defeito' && <p className="text-[12.5px] text-mid leading-relaxed">Conte o que aconteceu e, se puder, mande fotos do problema.</p>}
       <fieldset className="flex flex-col gap-2">
         <legend className="text-[12px] font-semibold text-mid mb-1">Quais peças?</legend>
         {order.items.map(i => (
@@ -153,12 +188,51 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
           </label>
         ))}
       </fieldset>
+      <div className="flex flex-col gap-2">
+        <span id="motivo-label" className="text-[12px] font-semibold text-mid">{tipo === 'defeito' ? 'Qual é o problema?' : 'Qual o motivo?'}</span>
+        <div role="radiogroup" aria-labelledby="motivo-label" className="flex flex-wrap gap-2">
+          {MOTIVOS[tipo].map(m => (
+            <button key={m} type="button" role="radio" aria-checked={motivo === m} onClick={() => { setMotivo(m); setError(''); }}
+              className={`h-9 px-3.5 rounded-full border text-[12.5px] transition-colors ${motivo === m ? 'border-ink bg-ink text-paper font-semibold' : 'border-mist text-ink hover:border-ink'}`}>
+              {m}
+            </button>
+          ))}
+        </div>
+        {motivo === 'Não coube no colchão' && (
+          <p className="text-[12px] text-mid leading-relaxed">
+            Dica: meça a altura do colchão e confira no <Link href="/guia-de-tamanhos" className="text-clay underline underline-offset-2">guia de tamanhos</Link> antes de escolher o novo.
+          </p>
+        )}
+      </div>
       <label className="flex flex-col gap-1.5">
-        <span className="text-[12px] font-semibold text-mid">{tipo === 'defeito' ? 'Qual é o defeito?' : tipo === 'devolucao' ? 'Quer contar o motivo? (opcional)' : 'O que aconteceu?'}</span>
+        <span className="text-[12px] font-semibold text-mid">{motivo && motivoPedeTexto(motivo) ? (tipo === 'defeito' ? 'Conte qual é o defeito' : 'Conte o que aconteceu') : 'Quer contar mais? (opcional)'}</span>
         <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} maxLength={600}
-          placeholder={tipo === 'defeito' ? 'Ex.: veio com um furo na costura' : 'Ex.: o tamanho ficou pequeno'}
+          placeholder={tipo === 'defeito' ? 'Ex.: o furo fica perto da barra' : motivo === 'Não coube no colchão' ? 'Ex.: o colchão tem 30 cm de altura, quero o de elástico maior' : 'Ex.: quero trocar pelo tamanho queen'}
           className="rounded-xl border border-mist bg-paper px-3 py-2.5 text-[14px] text-ink focus:outline-none focus:border-ink" />
       </label>
+      {tipo !== 'devolucao' && (
+        <div className="flex flex-col gap-2">
+          <span className="text-[12px] font-semibold text-mid">Fotos {tipo === 'defeito' ? '(ajudam a resolver mais rápido)' : '(opcional)'}</span>
+          <div className="flex flex-wrap gap-2">
+            {fotos.map((f, i) => (
+              <div key={f.url} className="relative w-16 h-16">
+                <img src={f.url} alt={`Foto ${i + 1}`} className="w-16 h-16 rounded-lg object-cover border border-mist" />
+                <button type="button" aria-label={`Tirar a foto ${i + 1}`}
+                  onClick={() => { URL.revokeObjectURL(f.url); setFotos(prev => prev.filter(x => x !== f)); }}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-ink text-paper text-[11px] leading-none grid place-items-center">×</button>
+              </div>
+            ))}
+            {fotos.length < 4 && (
+              <label className="w-16 h-16 rounded-lg border border-dashed border-mist-d grid place-items-center text-faint hover:border-ink hover:text-ink cursor-pointer transition-colors">
+                <input type="file" accept="image/*" multiple className="sr-only" disabled={lendoFoto}
+                  onChange={e => { const lista = [...(e.target.files ?? [])]; e.target.value = ''; void addFotos(lista); }} aria-label="Adicionar fotos" />
+                {lendoFoto ? <span className="spinner w-4 h-4" /> : <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+              </label>
+            )}
+          </div>
+          <span className="text-[11px] text-faint">Até 4 fotos.</span>
+        </div>
+      )}
       {tipo !== 'defeito' && (
         <label className="flex items-start gap-2.5 text-[13px] text-ink leading-snug">
           <input type="checkbox" checked={semUso} onChange={e => setSemUso(e.target.checked)} className="mt-0.5 h-4 w-4 accent-ink" />
@@ -176,7 +250,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
       </div>
       <p className="text-[11.5px] text-faint">Aprovado, você recebe um código para postar nos Correios sem pagar nada.</p>
       {trocaOk && (
-        <button type="button" onClick={() => { setType(tipo === 'defeito' ? 'troca' : 'defeito'); setError(''); }}
+        <button type="button" onClick={() => { setType(tipo === 'defeito' ? 'troca' : 'defeito'); setMotivo(''); setError(''); }}
           className="self-start text-[11.5px] text-faint underline underline-offset-2 hover:text-mid">
           {tipo === 'defeito' ? 'Voltar para troca ou devolução' : 'O produto veio com defeito?'}
         </button>

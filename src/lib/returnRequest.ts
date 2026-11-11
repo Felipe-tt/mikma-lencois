@@ -38,3 +38,26 @@ export function returnWindow(order: Pick<Order, 'status' | 'delivery' | 'created
   if (now.getTime() > defeitoAte.getTime()) return { ok: false, reason: `O prazo para defeito (${DIAS_DEFEITO} dias depois da entrega) já passou. Fale com a gente pelo WhatsApp.` };
   return { ok: true, troca: now.getTime() <= trocaAte.getTime(), trocaAte, defeitoAte };
 }
+
+/** Motivos prontos que o cliente toca no pedido; "Outro..." pede texto. */
+export const MOTIVOS = {
+  troca: ['Não coube no colchão', 'Ficou folgado', 'Quero outro tamanho', 'Quero outra cor', 'Outro motivo'],
+  devolucao: ['Não coube no colchão', 'Cor diferente da foto', 'Não gostei do tecido', 'Desisti da compra', 'Outro motivo'],
+  defeito: ['Costura aberta ou furo', 'Mancha ou sujeira', 'Elástico com problema', 'Peça errada ou faltando', 'Outro defeito'],
+} as const;
+export type TipoPedido = keyof typeof MOTIVOS;
+
+/** "Outro motivo" e "Outro defeito" pedem que o cliente escreva. */
+export const motivoPedeTexto = (motivo: string) => motivo.startsWith('Outro');
+
+/**
+ * Confere motivo e texto do pedido. Devolve o erro para o cliente, ou o
+ * texto final gravado na troca ("Não coube no colchão: era king, quero queen").
+ */
+export function motivoFinal(tipo: TipoPedido, motivo: string | undefined, texto: string): { ok: true; reason: string } | { ok: false; error: string } {
+  const t = texto.trim();
+  if (!motivo) return { ok: false, error: 'Escolha o motivo.' };
+  if (!(MOTIVOS[tipo] as readonly string[]).includes(motivo)) return { ok: false, error: 'Motivo inválido.' };
+  if (motivoPedeTexto(motivo) && t.length < 10) return { ok: false, error: tipo === 'defeito' ? 'Conte qual é o defeito.' : 'Conte em poucas palavras o que aconteceu.' };
+  return { ok: true, reason: motivoPedeTexto(motivo) ? t : t ? `${motivo}: ${t}` : motivo };
+}

@@ -376,19 +376,30 @@ test('troca: o cliente pede pelo pedido, a loja aprova e gera o código dos Corr
   await pedir.click();
   const form = page.getByRole('region', { name: 'Pedir troca ou devolução' });
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
-  await expect(form.getByRole('alert')).toContainText('Conte em poucas palavras');
+  await expect(form.getByRole('alert')).toContainText('Escolha o motivo');
+  await form.getByRole('radio', { name: 'Não coube no colchão' }).click();
+  await expect(form.getByRole('link', { name: 'guia de tamanhos' })).toBeVisible();
+  if (process.env.E2E_SHOTS) await form.screenshot({ path: 'test-results/troca-form.png' });
   await form.getByRole('textbox').fill('O tamanho king ficou grande, quero o queen.');
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(form.getByRole('alert')).toContainText('não foram lavadas nem usadas');
+  // Uma foto anexada (PNG 2x2): o navegador regrava em JPEG e sobe para a pasta do cliente.
+  await form.getByLabel('Adicionar fotos').setInputFiles({
+    name: 'costura.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==', 'base64'),
+  });
+  await expect(form.getByRole('img', { name: 'Foto 1' })).toBeVisible();
   await form.getByRole('checkbox', { name: 'As peças não foram lavadas nem usadas.' }).check();
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
   const ret = (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs[0];
+  expect(ret.get('fotos')).toEqual([expect.stringMatching(new RegExp(`^returns/${user.id}/\\d+_0\\.jpg$`))]);
   expect(ret.data()).toMatchObject({ status: 'solicitada', type: 'troca', semUsoConfirmado: true, createdBy: 'cliente', userId: user.id, items: [{ sku: 'p3_v1', quantity: 1 }] });
 
   // Loja aprova e gera o código de devolução.
   const { staff, panel } = await staffPanel(browser);
   await panel.goto('/painel/trocas');
+  await expect(panel.getByRole('list', { name: 'Fotos enviadas pelo cliente' }).getByRole('img')).toHaveCount(1);
   await panel.getByRole('button', { name: 'Aprovar' }).first().click();
   await panel.getByRole('button', { name: 'Gerar código de devolução (Correios)' }).click();
   await expect(panel.getByText('Código de devolução dos Correios')).toBeVisible();
@@ -452,6 +463,7 @@ test('troca recusada depois de 7 dias: o cliente ainda pede por defeito', async 
   await expect(form.getByRole('radio', { name: 'Devolver' })).toHaveCount(0);
   await expect(form.getByRole('checkbox')).toHaveCount(0);
   await expect(form.getByRole('heading', { name: 'Problema com o produto' })).toBeVisible();
+  await form.getByRole('radio', { name: 'Costura aberta ou furo' }).click();
   await form.getByRole('textbox').fill('Mando foto da costura aberta pelo WhatsApp.');
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();
