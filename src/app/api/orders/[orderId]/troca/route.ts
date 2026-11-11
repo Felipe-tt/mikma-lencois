@@ -5,7 +5,7 @@ import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { notifySeller } from '@/lib/push/notifySeller';
-import { returnWindow } from '@/lib/returnRequest';
+import { DEVOLUCAO_FORA_DO_PRAZO, returnWindow } from '@/lib/returnRequest';
 import type { Order, ReturnItem } from '@/types';
 
 /**
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   if (order.userId !== uid) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
   const window = returnWindow(order);
   if (!window.ok) return NextResponse.json({ error: window.reason }, { status: 409 });
+  if (body.type === 'devolucao' && !window.arrependimento) return NextResponse.json({ error: DEVOLUCAO_FORA_DO_PRAZO }, { status: 409 });
 
   // Itens: só os do pedido, até a quantidade comprada.
   const items: ReturnItem[] = [];

@@ -1,7 +1,7 @@
 /**
  * Pedido de troca ou devolução feito pelo próprio cliente, no pedido.
- * Prazos da política (/trocas-e-devolucoes): 7 dias para desistir (CDC art.
- * 49) e 90 dias para defeito (art. 26), contados da entrega.
+ * Prazos da política (/trocas-e-devolucoes), contados da entrega: devolução
+ * (desistir, CDC art. 49) só até 7 dias; troca por defeito até 90 (art. 26).
  */
 import type { Order } from '@/types';
 
@@ -27,3 +27,5 @@ export function returnWindow(order: Pick<Order, 'status' | 'delivery' | 'created
   if (dias > DIAS_TROCA) return { ok: false, reason: `O prazo para pedir troca (${DIAS_TROCA} dias depois da entrega) já passou. Fale com a gente pelo WhatsApp.` };
   return { ok: true, arrependimento: dias <= DIAS_ARREPENDIMENTO };
 }
+
+export const DEVOLUCAO_FORA_DO_PRAZO = `A devolução vale até ${DIAS_ARREPENDIMENTO} dias depois da entrega. Depois disso, peça a troca: se for defeito, a gente resolve.`;

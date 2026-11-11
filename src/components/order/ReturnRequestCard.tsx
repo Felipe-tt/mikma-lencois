@@ -47,7 +47,7 @@ export function ReturnRequestCard({ order, user, arrependimentoAte }: {
       const res = await fetch(`/api/orders/${order.id}/troca`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
-        body: JSON.stringify({ type, reason: reason.trim(), items }),
+        body: JSON.stringify({ type: arrependimentoAte ? type : 'troca', reason: reason.trim(), items }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) setError(data.error ?? 'Não foi possível enviar agora. Tente de novo.');
@@ -95,7 +95,7 @@ export function ReturnRequestCard({ order, user, arrependimentoAte }: {
         className="w-full rounded-2xl border border-mist p-4 text-left hover:border-ink transition-colors">
         <span className="block text-[14px] font-semibold text-ink">Pedir troca ou devolução</span>
         <span className="block text-[12.5px] text-mid mt-0.5">
-          {arrependimentoAte ? `Desistiu? Sem custo até ${arrependimentoAte.toLocaleDateString('pt-BR')}.` : 'Defeito ou tamanho errado? Resolvemos por aqui.'}
+          {arrependimentoAte ? `Desistiu? Sem custo até ${arrependimentoAte.toLocaleDateString('pt-BR')}.` : 'Veio com defeito? Resolvemos por aqui.'}
         </span>
       </button>
     );
@@ -104,14 +104,18 @@ export function ReturnRequestCard({ order, user, arrependimentoAte }: {
   return (
     <section className="rounded-2xl border border-ink/30 p-5 flex flex-col gap-4" aria-label="Pedir troca ou devolução">
       <h2 className="font-display font-normal text-ink text-[1.15rem] leading-tight">Pedir troca ou devolução</h2>
-      <div role="radiogroup" aria-label="O que você prefere" className="grid grid-cols-2 gap-2">
-        {([['troca', 'Trocar'], ['devolucao', 'Devolver']] as const).map(([v, label]) => (
-          <button key={v} type="button" role="radio" aria-checked={type === v} onClick={() => setType(v)}
-            className={`h-11 rounded-xl border text-[13px] font-semibold transition-colors ${type === v ? 'border-ink bg-ink text-paper' : 'border-mist text-ink hover:border-ink'}`}>
-            {label}
-          </button>
-        ))}
-      </div>
+      {arrependimentoAte ? (
+        <div role="radiogroup" aria-label="O que você prefere" className="grid grid-cols-2 gap-2">
+          {([['troca', 'Trocar'], ['devolucao', 'Devolver']] as const).map(([v, label]) => (
+            <button key={v} type="button" role="radio" aria-checked={type === v} onClick={() => setType(v)}
+              className={`h-11 rounded-xl border text-[13px] font-semibold transition-colors ${type === v ? 'border-ink bg-ink text-paper' : 'border-mist text-ink hover:border-ink'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[12.5px] text-mid leading-relaxed">A devolução vale até 7 dias depois da entrega. Agora é troca: conte o defeito e a gente resolve.</p>
+      )}
       <fieldset className="flex flex-col gap-2">
         <legend className="text-[12px] font-semibold text-mid mb-1">Quais peças?</legend>
         {order.items.map(i => (

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { returnWindow } from './returnRequest';
+import { DEVOLUCAO_FORA_DO_PRAZO, returnWindow } from './returnRequest';
 import type { Order } from '@/types';
 
 const order = (status: string, deliveredAt?: string) => ({ status, createdAt: '2026-10-01T12:00:00Z', delivery: { carrier: 'correios_pac', ...(deliveredAt ? { deliveredAt } : {}) } }) as unknown as Order;
@@ -21,5 +21,8 @@ describe('returnWindow', () => {
   });
   it('sem data de entrega, conta da compra', () => {
     expect(returnWindow(order('delivered'), now)).toEqual({ ok: true, arrependimento: false });
+  });
+  it('a mensagem da devolução fora do prazo cita os 7 dias', () => {
+    expect(DEVOLUCAO_FORA_DO_PRAZO).toMatch(/7 dias/);
   });
 });

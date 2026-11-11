@@ -417,7 +417,7 @@ test('troca recusada: o cliente pode pedir de novo pelo pedido', async ({ page }
   const item = { productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 };
   const orderRef = await db().collection('orders').add({
     userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
-    items: [item], address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190, deliveredAt: new Date().toISOString() },
+    items: [item], address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190, deliveredAt: new Date(Date.now() - 20 * 86_400_000).toISOString() },
     payment: { method: 'pix', txId: 't', paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(),
   });
   await db().collection('returns').add({
@@ -430,6 +430,9 @@ test('troca recusada: o cliente pode pedir de novo pelo pedido', async ({ page }
   await expect(page.getByText('Não foi aprovado. Se tiver dúvida, fale com a loja.')).toBeVisible();
   await page.getByRole('button', { name: 'Fazer um novo pedido' }).click();
   const form = page.getByRole('region', { name: 'Pedir troca ou devolução' });
+  // Entregue há 20 dias: devolução só até 7, então só sobra a troca.
+  await expect(form.getByRole('radio', { name: 'Devolver' })).toHaveCount(0);
+  await expect(form.getByText(/A devolução vale até 7 dias depois da entrega/)).toBeVisible();
   await form.getByRole('textbox').fill('Mando foto da costura aberta pelo WhatsApp.');
   await form.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Recebemos seu pedido. A loja responde em até 1 dia útil.')).toBeVisible();

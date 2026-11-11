@@ -33,6 +33,9 @@ export default async function TrocasEDevolucoesPage() {
         clause(
           'Só pedimos que o produto volte sem sinais de uso e, se possível, com a etiqueta e a embalagem.',
         ),
+        clause(
+          'Passados os 7 dias, a devolução por desistência não vale mais. Se o produto tiver defeito, veja abaixo: aí resolvemos pela troca.',
+        ),
       ],
     },
     {
