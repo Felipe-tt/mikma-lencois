@@ -13,6 +13,8 @@ export const SCRIPT_ORIGINS = [
   'https://connect.facebook.net',
   'https://abacatepay.com',
   'https://challenges.cloudflare.com',
+  // Web Analytics da Cloudflare: a própria Cloudflare injeta o beacon nas páginas.
+  'https://static.cloudflareinsights.com',
 ] as const;
 
 /** Checkout: o cartão da AbacatePay carrega scripts de domínios que ela não publica. */

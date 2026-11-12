@@ -36,7 +36,10 @@ if (dsn && typeof window !== 'undefined') {
       // unhandledrejection. Não é um bug do nosso código, não afeta o login
       // (initializeAuth já tem fallback pra browserLocalPersistence/
       // inMemoryPersistence em client.ts) — só ruído não-acionável no Sentry.
-      ignoreErrors: [/Database is closing\/hidden/],
+      // "Transition was aborted ... Viewport size changed": o navegador cancela
+      // a transição de tela quando a barra do celular some/aparece no meio
+      // dela; a navegação acontece normalmente, sem a animação.
+      ignoreErrors: [/Database is closing\/hidden/, /Transition was aborted because of invalid state/],
     });
     window.removeEventListener('error', onError);
     window.removeEventListener('unhandledrejection', onRejection);
