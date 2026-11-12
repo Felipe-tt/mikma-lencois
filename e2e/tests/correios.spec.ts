@@ -488,7 +488,7 @@ test('troca de pedido da Uber: o cliente escolhe entregar na loja e a equipe mar
   const { staff, panel } = await staffPanel(browser);
   await panel.goto('/painel/trocas');
   const card = panel.locator('div.border', { hasText: `Pedido #${orderRef.id.slice(-8).toUpperCase()}` }).first();
-  await expect(card.getByText('cliente entrega na loja')).toBeVisible();
+  await expect(card.getByRole('radio', { name: 'Cliente entrega na loja' })).toHaveAttribute('aria-checked', 'true');
   await card.getByRole('button', { name: 'Aprovar' }).click();
   await expect(card.getByRole('button', { name: 'Gerar código de devolução (Correios)' })).toHaveCount(0);
 
