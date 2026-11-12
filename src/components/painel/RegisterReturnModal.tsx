@@ -6,6 +6,11 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import type { Order, ReturnItem, ReturnType } from '@/types';
 import { IconX } from '@/components/ui/Icon';
 import { Overlay } from '@/components/ui/Overlay';
+import { devolucaoPadrao, opcoesDevolucao, type DevolverPor } from '@/lib/returnRequest';
+
+export const CAMINHO_LABEL: Record<DevolverPor, string> = { correios: 'Correios', uber: 'Uber busca no cliente', loja: 'Cliente entrega na loja' };
+/** Caminhos que a equipe pode escolher: os do pedido e sempre Correios. */
+export const caminhosDaEquipe = (order: Parameters<typeof opcoesDevolucao>[0]): DevolverPor[] => [...new Set<DevolverPor>([...opcoesDevolucao(order), 'correios'])];
 
 interface Props {
   order: Order;
@@ -19,6 +24,9 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
   const [type, setType] = useState<ReturnType>('troca');
   const [selected, setSelected] = useState<Record<number, number>>({}); // índice do item -> quantidade
   const [reason, setReason] = useState('');
+  // Por onde as peças voltam: o mesmo jeito da entrega por padrão (antes
+  // ficava sempre Correios, mesmo em pedido entregue pela Uber).
+  const [por, setPor] = useState<DevolverPor>(() => devolucaoPadrao(order));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -57,6 +65,7 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
         customerName: customerName || '',
         type,
         reason: reason.trim(),
+        devolverPor: por,
         items,
         status: 'solicitada',
         restocked: false,
@@ -118,6 +127,18 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
                     />
                   )}
                 </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-bold text-faint uppercase tracking-wide mb-2">Como as peças voltam</p>
+            <div role="radiogroup" aria-label="Como as peças voltam" className="flex flex-wrap gap-2">
+              {caminhosDaEquipe(order).map(v => (
+                <button key={v} type="button" role="radio" aria-checked={por === v} onClick={() => setPor(v)}
+                  className={`h-9 px-3.5 rounded-full border text-[12px] transition-colors ${por === v ? 'border-ink bg-ink text-paper font-semibold' : 'border-mist text-ink hover:border-ink'}`}>
+                  {CAMINHO_LABEL[v]}
+                </button>
               ))}
             </div>
           </div>

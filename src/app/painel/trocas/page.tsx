@@ -15,6 +15,7 @@ import { staffActor } from '@/lib/staffActor';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { ReversaCard, type ReversaView } from '@/components/painel/ReversaCard';
 import { ColetaUberCard, LojaCard, type ColetaUberView } from '@/components/painel/ColetaCards';
+import { CAMINHO_LABEL } from '@/components/painel/RegisterReturnModal';
 import { EstornoCard, pedirEstorno, type EstornoView } from '@/components/painel/EstornoCard';
 import { ReturnPhotos } from '@/components/order/ReturnPhotos';
 
@@ -319,6 +320,22 @@ export default function TrocasPage() {
                     className="flex items-center gap-1.5 border border-mist text-mid text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
                     <IconX size={12} /> Recusar
                   </button>
+                </div>
+              )}
+
+              {(r.status === 'solicitada' || r.status === 'aprovada') && !extras(r).reversa && !extras(r).coletaUber && !extras(r).recebidaEm && (
+                <div role="radiogroup" aria-label="Como as peças voltam" className="mb-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11.5px] text-faint mr-1">Peças voltam:</span>
+                  {(['correios', 'uber', 'loja'] as const).map(v => {
+                    const atual = (extras(r).devolverPor ?? 'correios') === v;
+                    return (
+                      <button key={v} type="button" role="radio" aria-checked={atual} disabled={busyId === r.id}
+                        onClick={() => { if (!atual) void updateDoc(doc(db, 'returns', r.id), { devolverPor: v, updatedAt: serverTimestamp() }).catch(() => showToast('Não deu pra mudar agora.')); }}
+                        className={`h-7 px-2.5 rounded-full border text-[11.5px] transition-colors ${atual ? 'border-ink bg-ink text-paper font-semibold' : 'border-mist text-mid hover:border-ink'}`}>
+                        {CAMINHO_LABEL[v]}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
