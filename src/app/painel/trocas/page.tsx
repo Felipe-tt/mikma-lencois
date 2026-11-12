@@ -45,6 +45,10 @@ type Extras = {
 const extras = (r: ReturnRequest) => r as ReturnRequest & Extras;
 const DEVOLVE: Record<string, string> = { correios: 'volta pelos Correios', uber: 'Uber busca no cliente', loja: 'cliente entrega na loja' };
 
+/** Antes de a devolução começar (sem código, sem corrida, sem recebimento), o caminho ainda pode mudar. */
+const podeMudarCaminho = (r: ReturnRequest) =>
+  (r.status === 'solicitada' || r.status === 'aprovada') && !extras(r).reversa && !extras(r).coletaUber && !extras(r).recebidaEm;
+
 const PAGE = 30;
 const OPEN_STATUSES: ReturnStatus[] = ['solicitada', 'aprovada'];
 
@@ -287,7 +291,8 @@ export default function TrocasPage() {
                     </span>
                     <span className="text-[11px] font-semibold text-mid uppercase">{r.type === 'troca' ? 'Troca' : 'Devolução'}</span>
                     {r.createdBy === 'cliente' && <span className="text-[11px] text-faint">pedida pelo site</span>}
-                    {extras(r).devolverPor && <span className="text-[11px] text-faint">· {DEVOLVE[extras(r).devolverPor!]}</span>}
+                    {/* Enquanto dá para mudar o caminho, os botões abaixo já mostram qual é. */}
+                    {extras(r).devolverPor && !podeMudarCaminho(r) && <span className="text-[11px] text-faint">· {DEVOLVE[extras(r).devolverPor!]}</span>}
                     {r.restocked && (
                       <span className="flex items-center gap-1 text-[11px] text-emerald-700">
                         <IconBox size={11} /> repôs estoque
@@ -336,7 +341,7 @@ export default function TrocasPage() {
                 <p className="mt-1 text-[12.5px] text-mid"><span className="font-semibold text-ink">Motivo da recusa:</span> {(r as { motivoRecusa?: string }).motivoRecusa}</p>
               )}
 
-              {(r.status === 'solicitada' || r.status === 'aprovada') && !extras(r).reversa && !extras(r).coletaUber && !extras(r).recebidaEm && (
+              {podeMudarCaminho(r) && (
                 <div role="radiogroup" aria-label="Como as peças voltam" className="mb-2 flex flex-wrap items-center gap-1.5">
                   <span className="text-[11.5px] text-faint mr-1">Peças voltam:</span>
                   {(['correios', 'uber', 'loja'] as const).map(v => {
