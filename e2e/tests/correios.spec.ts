@@ -488,7 +488,7 @@ test('troca de pedido da Uber: o cliente escolhe entregar na loja e a equipe mar
   const { staff, panel } = await staffPanel(browser);
   await panel.goto('/painel/trocas');
   const card = panel.locator('div.border', { hasText: `Pedido #${orderRef.id.slice(-8).toUpperCase()}` }).first();
-  await expect(card.getByText('cliente entrega na loja')).toBeVisible();
+  await expect(card.getByRole('radio', { name: 'Cliente entrega na loja' })).toHaveAttribute('aria-checked', 'true');
   await card.getByRole('button', { name: 'Aprovar' }).click();
   await expect(card.getByRole('button', { name: 'Gerar código de devolução (Correios)' })).toHaveCount(0);
 
@@ -599,6 +599,34 @@ test('fronha trocada: o painel e a nota de separação mostram qual fronha embal
   await panel.goto(`/painel/pedidos/${orderRef.id}/etiqueta`);
   await expect(panel.getByText('Trocar a fronha do jogo por').first()).toBeVisible();
   await expect(panel.getByText('SKU: p4_v1').first()).toBeVisible();
+  await staff.close();
+});
+
+test('troca registrada pelo painel em pedido da Uber volta pela Uber, e dá para mudar o caminho', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
+  const orderRef = await db().collection('orders').add({
+    userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
+    items: [{ productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 }],
+    address: user.get('address'), totalCents: 41490, delivery: { carrier: 'uber_direct', priceCents: 1500, deliveredAt: new Date().toISOString() },
+    selectedShipping: { carrier: 'uber_direct' },
+    payment: { method: 'pix', txId: 't', paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(), timeline: [],
+  });
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto(`/painel/pedidos/${orderRef.id}`);
+  await panel.getByRole('button', { name: /Registrar troca ou devolução/ }).click();
+  const modal = panel.getByRole('dialog');
+  await modal.getByRole('button', { name: 'Devolução' }).click();
+  await modal.getByRole('checkbox').first().check();
+  await expect(modal.getByRole('radio', { name: 'Uber busca no cliente' })).toHaveAttribute('aria-checked', 'true');
+  await modal.getByRole('textbox').fill('Cliente desistiu, combinado por telefone.');
+  await modal.getByRole('button', { name: 'Registrar' }).click();
+  await expect.poll(async () => (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs[0]?.get('devolverPor')).toBe('uber');
+
+  await panel.goto('/painel/trocas');
+  const card = panel.locator('div.border', { hasText: `Pedido #${orderRef.id.slice(-8).toUpperCase()}` }).first();
+  await card.getByRole('radio', { name: 'Cliente entrega na loja' }).click();
+  await expect.poll(async () => (await db().collection('returns').where('orderId', '==', orderRef.id).get()).docs[0]?.get('devolverPor')).toBe('loja');
   await staff.close();
 });
 

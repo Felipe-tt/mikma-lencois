@@ -15,6 +15,7 @@ import { staffActor } from '@/lib/staffActor';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { ReversaCard, type ReversaView } from '@/components/painel/ReversaCard';
 import { ColetaUberCard, LojaCard, type ColetaUberView } from '@/components/painel/ColetaCards';
+import { CAMINHO_LABEL } from '@/components/painel/RegisterReturnModal';
 import { EstornoCard, pedirEstorno, type EstornoView } from '@/components/painel/EstornoCard';
 import { RecusaForm } from '@/components/painel/RecusaForm';
 import { ReturnPhotos } from '@/components/order/ReturnPhotos';
@@ -333,6 +334,22 @@ export default function TrocasPage() {
               )}
               {r.status === 'recusada' && (r as { motivoRecusa?: string }).motivoRecusa && (
                 <p className="mt-1 text-[12.5px] text-mid"><span className="font-semibold text-ink">Motivo da recusa:</span> {(r as { motivoRecusa?: string }).motivoRecusa}</p>
+              )}
+
+              {(r.status === 'solicitada' || r.status === 'aprovada') && !extras(r).reversa && !extras(r).coletaUber && !extras(r).recebidaEm && (
+                <div role="radiogroup" aria-label="Como as peças voltam" className="mb-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11.5px] text-faint mr-1">Peças voltam:</span>
+                  {(['correios', 'uber', 'loja'] as const).map(v => {
+                    const atual = (extras(r).devolverPor ?? 'correios') === v;
+                    return (
+                      <button key={v} type="button" role="radio" aria-checked={atual} disabled={busyId === r.id}
+                        onClick={() => { if (!atual) void updateDoc(doc(db, 'returns', r.id), { devolverPor: v, updatedAt: serverTimestamp() }).catch(() => showToast('Não deu pra mudar agora.')); }}
+                        className={`h-7 px-2.5 rounded-full border text-[11.5px] transition-colors ${atual ? 'border-ink bg-ink text-paper font-semibold' : 'border-mist text-mid hover:border-ink'}`}>
+                        {CAMINHO_LABEL[v]}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
 
               {(r.status === 'aprovada' || extras(r).reversa || extras(r).coletaUber) && (
