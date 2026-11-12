@@ -17,6 +17,7 @@ type Devolucao = ReturnRequest & {
   recebidaEm?: string;
   saldoCents?: number;
   reenvioOrderId?: string;
+  motivoRecusa?: string;
 };
 type Tipo = 'troca' | 'devolucao' | 'defeito';
 const ddmm = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -141,7 +142,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
                 ? `Leve o pacote a qualquer agência dos Correios até ${dia(r.validade)} e informe o código abaixo. O envio é por nossa conta.`
                 : 'Aprovado! A loja vai gerar o código para você enviar pelos Correios sem custo.'
         : current.status === 'concluida' ? 'Concluído. Obrigado pela paciência.'
-          : 'Não foi aprovado. Se tiver dúvida, fale com a loja.';
+          : current.motivoRecusa ? `Não foi aprovado. Motivo: ${current.motivoRecusa}` : 'Não foi aprovado. Se tiver dúvida, fale com a loja.';
     return (
       <section className="rounded-2xl border border-mist p-5" aria-label="Troca ou devolução">
         <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-faint">{current.defeito ? 'Troca por defeito' : current.type === 'troca' ? 'Troca' : 'Devolução'}</p>

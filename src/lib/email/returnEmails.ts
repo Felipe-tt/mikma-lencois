@@ -20,11 +20,13 @@ export interface TrocaEmailInput {
   enderecoLoja?: string;
   /** Link da Uber para acompanhar o entregador que vai buscar. */
   coletaUrl?: string;
+  /** Recusa: o motivo que a loja escreveu. */
+  motivoRecusa?: string;
 }
 
 const diaMes = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' });
 
-export function buildTrocaEmail({ kind, type, orderId, name, reversa, devolverPor = 'correios', enderecoLoja, coletaUrl }: TrocaEmailInput) {
+export function buildTrocaEmail({ kind, type, orderId, name, reversa, devolverPor = 'correios', enderecoLoja, coletaUrl, motivoRecusa }: TrocaEmailInput) {
   const id = shortOrderId(orderId);
   const url = `${BASE_URL}/pedidos/${orderId}/troca`;
   const what = type === 'troca' ? 'troca' : 'devolução';
@@ -80,8 +82,8 @@ export function buildTrocaEmail({ kind, type, orderId, name, reversa, devolverPo
     recusada: {
       subject: `Sobre a sua ${what}, pedido #${id}`,
       title: `${What} não aprovada`,
-      body: `${emailParagraph(`${ola} Analisamos o seu pedido de ${what} e, desta vez, não conseguimos aprovar.`)}${emailParagraph(`Se quiser entender o motivo ou tiver alguma dúvida, é só responder este e-mail ou escrever para ${escapeHtml(CONTACT_EMAIL)}.`, { muted: true })}`,
-      text: `Olá, ${name}! Não conseguimos aprovar a ${what} do pedido #${id}. Responda este e-mail se tiver dúvida.`,
+      body: `${emailParagraph(`${ola} Analisamos o seu pedido de ${what} e, desta vez, não conseguimos aprovar.`)}${motivoRecusa ? emailCallout(`<p style="margin:0 0 4px;font-size:12px;color:#705A48;">Motivo</p><p style="margin:0;font-size:14px;color:#2C1F14;line-height:1.6;">${escapeHtml(motivoRecusa)}</p>`) : ''}${emailParagraph(`Se não concordar ou tiver alguma dúvida, é só responder este e-mail ou escrever para ${escapeHtml(CONTACT_EMAIL)}.`, { muted: true })}`,
+      text: `Olá, ${name}! Não conseguimos aprovar a ${what} do pedido #${id}.${motivoRecusa ? ` Motivo: ${motivoRecusa}` : ''} Responda este e-mail se tiver dúvida.`,
     },
     concluida: {
       subject: `${What} concluída, pedido #${id}`,

@@ -602,6 +602,40 @@ test('fronha trocada: o painel e a nota de separação mostram qual fronha embal
   await staff.close();
 });
 
+test('recusa exige motivo e o cliente vê o motivo', async ({ page, browser }) => {
+  test.setTimeout(150_000);
+  const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
+  const item = { productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 };
+  const orderRef = await db().collection('orders').add({
+    userId: user.id, status: 'delivered', customerName: 'Gabriela Torres', customerEmail: 'devolve@e2e.mikma',
+    items: [item], address: user.get('address'), totalCents: 42180, delivery: { carrier: 'correios_pac', priceCents: 2190, deliveredAt: new Date().toISOString() },
+    payment: { method: 'pix', txId: 't', paidAt: new Date().toISOString() }, createdAt: new Date().toISOString(),
+  });
+  const retRef = await db().collection('returns').add({
+    orderId: orderRef.id, userId: user.id, customerName: 'Gabriela Torres', type: 'devolucao', reason: 'Desisti da compra', items: [item],
+    devolverPor: 'correios', status: 'solicitada', restocked: false, createdAt: new Date().toISOString(), createdBy: 'cliente',
+  });
+
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto('/painel/trocas');
+  const card = panel.locator('div.border', { hasText: `Pedido #${orderRef.id.slice(-8).toUpperCase()}` }).first();
+  await card.getByRole('button', { name: 'Recusar' }).click();
+  const form = card.getByRole('group', { name: 'Recusar troca' });
+  await form.getByRole('button', { name: 'Confirmar recusa' }).click();
+  await expect(form.getByRole('alert')).toContainText('Escolha o motivo');
+  await form.getByRole('radio', { name: 'Peças lavadas ou com sinais de uso' }).click();
+  await form.getByRole('textbox').fill('As fronhas chegaram com cheiro de amaciante.');
+  await form.getByRole('button', { name: 'Confirmar recusa' }).click();
+  await expect(card.getByText(/Motivo da recusa:/)).toBeVisible();
+  await expect.poll(async () => (await retRef.get()).get('motivoRecusa')).toBe('Peças lavadas ou com sinais de uso. As fronhas chegaram com cheiro de amaciante.');
+  expect((await retRef.get()).get('status')).toBe('recusada');
+
+  await login(page, 'devolve@e2e.mikma', SENHA);
+  await page.goto(`/pedidos/${orderRef.id}`);
+  await expect(page.getByText(/Não foi aprovado. Motivo: Peças lavadas ou com sinais de uso/)).toBeVisible();
+  await staff.close();
+});
+
 test('troca recusada depois de 7 dias: o cliente ainda pede por defeito', async ({ page }) => {
   test.setTimeout(120_000);
   const user = (await db().collection('users').where('email', '==', 'devolve@e2e.mikma').limit(1).get()).docs[0];
