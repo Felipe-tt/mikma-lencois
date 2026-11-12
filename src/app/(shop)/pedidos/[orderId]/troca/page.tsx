@@ -30,6 +30,7 @@ type Troca = ReturnRequest & {
   saldoCents?: number;
   freteCents?: number;
   reenvioOrderId?: string;
+  motivoRecusa?: string;
 };
 
 interface Loja { endereco: string; mapa: string; horario?: string; fuso?: string }
@@ -124,7 +125,7 @@ export default function TrocaPage() {
       : ['A caminho da loja', 'Os Correios já estão com o seu pacote. Acompanhe o trajeto aqui embaixo.'],
     chegou: ['Chegou na loja', 'Estamos conferindo as peças e já te avisamos.'],
     concluida: ['Concluída', t.type === 'troca' ? 'Se a troca gerou um envio novo, o rastreio chega por e-mail e aparece no pedido.' : 'O valor volta pelo mesmo meio de pagamento da compra.'],
-    recusada: ['Não foi aprovada', 'Se tiver dúvida sobre o motivo, fale com a gente pelo WhatsApp.'],
+    recusada: ['Não foi aprovada', t.motivoRecusa ? `Motivo: ${t.motivoRecusa.replace(/[.\s]+$/, '')}. Se não concordar, fale com a gente pelo WhatsApp.` : 'Se tiver dúvida sobre o motivo, fale com a gente pelo WhatsApp.'],
   };
   const [h1, sub] = titulo[atual];
   const mostraCodigo = por === 'correios' && !!r && t.status === 'aprovada' && !r.postadoEm && !r.entregueEm;

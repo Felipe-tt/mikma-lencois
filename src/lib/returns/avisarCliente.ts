@@ -10,6 +10,7 @@ type Devolucao = ReturnRequest & {
   reversa?: { codigoObjeto: string; validade: string };
   devolverPor?: 'correios' | 'uber' | 'loja';
   coletaUber?: { trackingUrl?: string };
+  motivoRecusa?: string;
   avisos?: Partial<Record<AvisoTroca, string>>;
 };
 
@@ -52,7 +53,7 @@ export async function avisarCliente(returnId: string, kind: AvisoTroca): Promise
     }
     const mail = buildTrocaEmail({
       kind, type: d.type, orderId: d.orderId, name, reversa: d.reversa,
-      devolverPor: d.devolverPor, enderecoLoja, coletaUrl: d.coletaUber?.trackingUrl,
+      devolverPor: d.devolverPor, enderecoLoja, coletaUrl: d.coletaUber?.trackingUrl, motivoRecusa: d.motivoRecusa,
     });
     await sendEmail({ to, ...mail, from: 'noreply', replyTo: CONTACT_EMAIL });
     return 'enviado';

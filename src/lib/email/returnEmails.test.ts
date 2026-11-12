@@ -50,4 +50,10 @@ describe('buildTrocaEmail', () => {
     expect(m.html).toContain('Rua Johann Ohf, 1, Blumenau');
     expect(m.html).not.toContain('Correios');
   });
+
+  it('recusada leva o motivo da loja', () => {
+    const m = buildTrocaEmail({ ...base, kind: 'recusada', motivoRecusa: 'Fora do prazo de 7 dias. Entregue em 02/11.' });
+    expect(m.html).toContain('Fora do prazo de 7 dias');
+    expect(m.text).toContain('Motivo: Fora do prazo de 7 dias');
+  });
 });
