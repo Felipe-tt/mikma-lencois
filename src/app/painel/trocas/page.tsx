@@ -16,6 +16,7 @@ import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { ReversaCard, type ReversaView } from '@/components/painel/ReversaCard';
 import { ColetaUberCard, LojaCard, type ColetaUberView } from '@/components/painel/ColetaCards';
 import { EstornoCard, pedirEstorno, type EstornoView } from '@/components/painel/EstornoCard';
+import { RecusaForm } from '@/components/painel/RecusaForm';
 import { ReturnPhotos } from '@/components/order/ReturnPhotos';
 
 const STATUS_LABEL: Record<ReturnStatus, string> = {
@@ -51,6 +52,7 @@ export default function TrocasPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ReturnStatus | 'todas'>('todas');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [recusando, setRecusando] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const [loadError, setLoadError] = useState(false);
 
@@ -115,10 +117,14 @@ export default function TrocasPage() {
     } catch { /* sem conexão: o status já mudou, o aviso fica para depois */ }
   }
 
-  async function setStatus(r: ReturnRequest, status: ReturnStatus) {
+  async function setStatus(r: ReturnRequest, status: ReturnStatus, motivoRecusa?: string) {
     setBusyId(r.id);
     try {
-      await updateDoc(doc(db, 'returns', r.id), { status, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'returns', r.id), {
+        status, updatedAt: serverTimestamp(),
+        ...(status === 'recusada' && motivoRecusa ? { motivoRecusa, recusadaEm: new Date().toISOString() } : {}),
+      });
+      if (status === 'recusada') setRecusando(null);
       showToast(status === 'aprovada' ? 'Aprovada. O cliente recebe um e-mail.' : status === 'recusada' ? 'Recusada. O cliente recebe um e-mail.' : 'Atualizado.');
       // Troca com peça nova: cria o pedido dela (com o PIX da diferença, se houver).
       if (status === 'aprovada' && extras(r).novos?.length) {
@@ -315,11 +321,18 @@ export default function TrocasPage() {
                     className="flex items-center gap-1.5 border border-ink text-ink text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-ink hover:text-paper transition-colors disabled:opacity-50 rounded-full">
                     <IconCheck size={12} /> Aprovar
                   </button>
-                  <button onClick={() => setStatus(r, 'recusada')} disabled={busyId === r.id}
+                  <button onClick={() => setRecusando(r.id)} disabled={busyId === r.id || recusando === r.id}
                     className="flex items-center gap-1.5 border border-mist text-mid text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 hover:bg-warm transition-colors disabled:opacity-50 rounded-xl">
                     <IconX size={12} /> Recusar
                   </button>
                 </div>
+              )}
+              {r.status === 'solicitada' && recusando === r.id && (
+                <RecusaForm defeito={!!(r as { defeito?: boolean }).defeito} busy={busyId === r.id}
+                  onCancel={() => setRecusando(null)} onConfirm={motivo => setStatus(r, 'recusada', motivo)} />
+              )}
+              {r.status === 'recusada' && (r as { motivoRecusa?: string }).motivoRecusa && (
+                <p className="mt-1 text-[12.5px] text-mid"><span className="font-semibold text-ink">Motivo da recusa:</span> {(r as { motivoRecusa?: string }).motivoRecusa}</p>
               )}
 
               {(r.status === 'aprovada' || extras(r).reversa || extras(r).coletaUber) && (
