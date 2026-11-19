@@ -295,7 +295,10 @@ export async function confirmOrderPaid(
     // Tira só o que foi comprado: o que o cliente pôs no carrinho depois de
     // gerar o PIX continua lá (antes o carrinho era esvaziado inteiro).
     const items = remainingCartItems((cartData?.items ?? []) as CartLine[], (order.items ?? []) as CartLine[]);
-    batch.update(cartRef, { items, updatedAt: FieldValue.serverTimestamp(), ...finished });
+    // Cupom usado neste pedido sai do carrinho: com limite por cliente ele
+    // não vale de novo, e ficava lá parecendo aplicado na próxima compra.
+    const usedCoupon = order.couponCode && cartData?.couponCode === order.couponCode ? { couponCode: FieldValue.delete() } : {};
+    batch.update(cartRef, { items, updatedAt: FieldValue.serverTimestamp(), ...finished, ...usedCoupon });
 
     const notifRef = adminDb
       .collection('notifications')

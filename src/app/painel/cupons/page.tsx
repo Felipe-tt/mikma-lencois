@@ -14,9 +14,11 @@ import { formatCurrency } from '@/lib/utils/format';
 type Coupon = {
   id: string; code: string; type: 'percent' | 'fixed'; value: number;
   minOrderCents: number; maxUses: number; usedCount: number; active: boolean; expiresAt: string;
+  maxUsesPerCustomer?: number | null; firstPurchaseOnly?: boolean;
 };
-type FormState = { code: string; type: 'percent' | 'fixed'; value: number; minOrderCents: number; maxUses: number; expiresAt: string; };
-const EMPTY: FormState = { code: '', type: 'percent', value: 10, minOrderCents: 0, maxUses: 100, expiresAt: '' };
+type FormState = { code: string; type: 'percent' | 'fixed'; value: number; minOrderCents: number; maxUses: number; expiresAt: string; perCustomer: number; firstPurchaseOnly: boolean };
+/** perCustomer 0 = sem limite por cliente. Novo cupom: 1 uso por cliente. */
+const EMPTY: FormState = { code: '', type: 'percent', value: 10, minOrderCents: 0, maxUses: 100, expiresAt: '', perCustomer: 1, firstPurchaseOnly: false };
 
 export default function CuponsPage() {
   const [coupons, setCoupons] = useState<Coupon[] | null>(null);
@@ -42,6 +44,7 @@ export default function CuponsPage() {
     if (!(form.value > 0)) { setError('Digite um valor de desconto maior que zero.'); return; }
     if (form.type === 'percent' && form.value > 100) { setError('A porcentagem vai até 100%.'); return; }
     if (form.minOrderCents < 0 || form.maxUses < 1) { setError('Confira o pedido mínimo e o limite de usos.'); return; }
+    if (form.type === 'fixed' && form.minOrderCents > 0 && form.value > form.minOrderCents) { setError('O desconto não pode ser maior que o pedido mínimo.'); return; }
     setSaving(true); setError('');
     try {
       // IMPORTANTE: o código do cupom precisa ser o ID do documento, é
@@ -63,6 +66,8 @@ export default function CuponsPage() {
         value: form.type === 'fixed' ? Math.round(form.value * 100) : form.value,
         minOrderCents: Math.round(form.minOrderCents * 100),
         maxUses: form.maxUses, usedCount: 0, active: true,
+        maxUsesPerCustomer: form.perCustomer > 0 ? form.perCustomer : null,
+        firstPurchaseOnly: form.firstPurchaseOnly,
         // Vale até o fim do dia escolhido no horário de Brasília (só a data
         // virava meia-noite UTC, e o cupom parava às 21h da véspera).
         expiresAt: form.expiresAt ? `${form.expiresAt}T23:59:59-03:00` : null, createdAt: serverTimestamp(),
@@ -167,6 +172,26 @@ export default function CuponsPage() {
               </Field>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Quantas vezes cada cliente pode usar?">
+                {p => (
+                  <Select
+                    value={String(form.perCustomer)}
+                    onChange={v => setForm(f => ({ ...f, perCustomer: Number(v) }))}
+                    options={[{ value: '1', label: '1 vez' }, { value: '2', label: '2 vezes' }, { value: '3', label: '3 vezes' }, { value: '0', label: 'Sem limite' }]}
+                    triggerId={p.id}
+                    triggerClassName="panel-input flex items-center justify-between gap-2 cursor-pointer"
+                  />
+                )}
+              </Field>
+              <label className="flex items-start gap-2.5 sm:mt-7 cursor-pointer">
+                <input type="checkbox" checked={form.firstPurchaseOnly}
+                  onChange={e => setForm(f => ({ ...f, firstPurchaseOnly: e.target.checked }))}
+                  className="mt-0.5 w-4 h-4 accent-ink" />
+                <span className="text-[13px] text-ink leading-snug">Só na primeira compra<span className="block text-[11.5px] text-faint">Quem já tem um pedido pago não consegue usar.</span></span>
+              </label>
+            </div>
+
             <Field label="Data de validade" hint="Deixe em branco para o cupom nunca expirar.">
               {p => (
                 <input {...p} type="date" value={form.expiresAt}
@@ -182,6 +207,8 @@ export default function CuponsPage() {
                   <strong>{form.type === 'percent' ? `${form.value}%` : formatCurrency(Math.round(form.value * 100))} de desconto</strong>
                   {form.minOrderCents > 0 && ` em pedidos acima de ${formatCurrency(Math.round(form.minOrderCents * 100))}`}
                   {` e pode ser usado ${form.maxUses} vez${form.maxUses !== 1 ? 'es' : ''}`}
+                  {form.perCustomer > 0 && ` (${form.perCustomer === 1 ? '1 vez' : `${form.perCustomer} vezes`} por cliente)`}
+                  {form.firstPurchaseOnly && ', só na primeira compra'}
                   {form.expiresAt && ` até ${new Date(form.expiresAt + 'T00:00:00').toLocaleDateString('pt-BR')}`}.
                 </p>
               </div>
@@ -226,6 +253,8 @@ export default function CuponsPage() {
               <div className={`flex items-center justify-between gap-3 text-[11px] text-faint pt-3 border-t border-mist ${!c.active ? '[&>span]:opacity-60' : ''}`}>
                 <span>
                   Usado <strong>{c.usedCount ?? 0}</strong>{c.maxUses ? <> de <strong>{c.maxUses}</strong></> : null} {(c.usedCount ?? 0) === 1 && !c.maxUses ? 'vez' : 'vezes'}{!c.maxUses && ' · sem limite'}
+                  {c.maxUsesPerCustomer ? ` · ${c.maxUsesPerCustomer === 1 ? '1 vez' : `${c.maxUsesPerCustomer} vezes`} por cliente` : ''}
+                  {c.firstPurchaseOnly ? ' · só primeira compra' : ''}
                   {c.expiresAt && ` · Válido até ${new Date(c.expiresAt.length === 10 ? `${c.expiresAt}T12:00:00` : c.expiresAt).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`}
                 </span>
                 <button onClick={() => remove(c.id)} className="inline-flex items-center min-h-10 px-2 -mr-2 text-red-700 hover:text-red-800 font-semibold transition-colors">Apagar</button>

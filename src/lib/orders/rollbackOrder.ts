@@ -15,7 +15,7 @@ import { releaseCouponUse } from '@/lib/orders/couponUsage';
  */
 export async function rollbackUnpaidOrder(orderId: string): Promise<boolean> {
   const orderRef = adminDb.collection('orders').doc(orderId);
-  const couponCode = await adminDb.runTransaction(async (tx): Promise<string | null | false> => {
+  const result = await adminDb.runTransaction(async (tx): Promise<{ code: string | null; uid?: string } | false> => {
     const snap = await tx.get(orderRef);
     if (!snap.exists) return false;
     const order = snap.data()!;
@@ -28,9 +28,9 @@ export async function rollbackUnpaidOrder(orderId: string): Promise<boolean> {
       if (!invSnaps[i].exists) return;
       tx.update(invRefs[i], { reserved: FieldValue.increment(-line.quantity), updatedAt: FieldValue.serverTimestamp() });
     });
-    return (order.couponCode as string | undefined) ?? null;
+    return { code: (order.couponCode as string | undefined) ?? null, uid: order.userId as string | undefined };
   });
-  if (couponCode === false) return false;
-  await releaseCouponUse(couponCode);
+  if (result === false) return false;
+  await releaseCouponUse(result.code, result.uid);
   return true;
 }

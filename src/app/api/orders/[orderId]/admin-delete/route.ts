@@ -51,6 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
 
   const ref = adminDb.collection('orders').doc(orderId);
   let couponCode: string | undefined;
+  let couponUid: string | undefined;
   let uberToCancel: { id: string; sandbox: boolean } | null = null;
 
   try {
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       // cancelado; nos outros casos, devolve agora.
       const couponReleased = order.status === 'cancelled' && !order.payment?.paidAt;
       couponCode = couponReleased ? undefined : (order.couponCode as string | undefined);
+      couponUid = order.userId as string | undefined;
 
       // Quantidade do pedido por SKU (com a fronha trocada, se houver).
       const qtyBySku = new Map<string, number>();
@@ -112,7 +114,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     return NextResponse.json({ error: 'Não foi possível apagar o pedido. Tente de novo.' }, { status: 500 });
   }
 
-  await releaseCouponUse(couponCode);
+  await releaseCouponUse(couponCode, couponUid);
 
   // Rastro fora do pedido: notificações do painel e trocas/devoluções.
   await Promise.all([

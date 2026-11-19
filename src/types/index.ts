@@ -306,6 +306,10 @@ export interface Coupon {
   maxUses?: number
   usedCount: number
   active: boolean
+  /** Usos por cliente (vazio: sem limite por cliente). */
+  maxUsesPerCustomer?: number | null
+  /** Só na primeira compra paga do cliente. */
+  firstPurchaseOnly?: boolean
 }
 
 // ─── Delivery ────────────────────────────────────────────────────────────────

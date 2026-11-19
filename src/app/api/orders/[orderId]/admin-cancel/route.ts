@@ -149,7 +149,7 @@ export async function POST(
     throw err;
   }
 
-  await releaseCouponUse(unpaidCouponCode);
+  await releaseCouponUse(unpaidCouponCode, (cancelled as { userId?: string } | null)?.userId);
 
   // Pedido pago cancelado vira estorno integral, frete incluso: sai da caixa
   // de frete o que entrou na confirmação. Sem isso o saldo ficava inflado e

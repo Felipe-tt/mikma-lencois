@@ -76,7 +76,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   }
 
   // Pedido nunca pago: devolve o uso do cupom.
-  await releaseCouponUse(order.couponCode as string | undefined);
+  await releaseCouponUse(order.couponCode as string | undefined, order.userId as string | undefined);
 
   // Comprovante do cancelamento (só pedidos não pagos chegam aqui: sem reembolso).
   await notifyOrderCancelled(orderId, order, { refund: false, byCustomer: true });
