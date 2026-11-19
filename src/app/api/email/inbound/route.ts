@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { conversationIdFor } from '@/lib/email/conversationId';
 import { Webhook } from 'svix';
 import { Resend } from 'resend';
 import { adminDb, adminStorage } from '@/lib/firebase/admin';
@@ -37,9 +38,6 @@ function isReportAddress(raw: string): boolean {
   return extractEmail(raw) === REPORT_ADDRESS;
 }
 
-function conversationIdFor(email: string): string {
-  return email.toLowerCase().replace(/[^a-z0-9.@_-]/g, '_');
-}
 
 import sanitizeHtmlLib from 'sanitize-html';
 import { resendEventSchema } from './schema';

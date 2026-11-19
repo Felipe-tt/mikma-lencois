@@ -64,6 +64,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         instagramUrl={s.instagramUrl}
         whatsappUrl={s.whatsappUrl}
         tagline={s.storeSlogan}
+        legalName={identity.legalName}
         cnpj={identity.cnpj}
         address={identity.address}
         businessHours={s.businessHours}

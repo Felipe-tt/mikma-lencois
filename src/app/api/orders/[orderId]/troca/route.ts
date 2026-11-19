@@ -5,6 +5,7 @@ import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { notifySeller } from '@/lib/push/notifySeller';
+import { avisarCliente } from '@/lib/returns/avisarCliente';
 import { TROCA_FORA_DO_PRAZO, devolucaoPadrao, motivoFinal, opcoesDevolucao, returnWindow } from '@/lib/returnRequest';
 import { getSettings } from '@/lib/settings';
 import { calcularTroca } from '@/lib/returns/reenvio';
@@ -115,5 +116,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const label = defeito ? 'troca por defeito' : body.type === 'troca' ? 'troca' : 'devolução';
   await notifyInApp({ type: 'new_order', message: `${order.customerName || 'Cliente'} pediu ${label} do pedido ${short}: "${motivo.reason.slice(0, 80)}"`, orderId, url: '/painel/trocas' }).catch(() => {});
   await notifySeller({ title: `Pedido de ${label}`, body: `#${short} · ${motivo.reason.slice(0, 80)}`, url: '/painel/trocas', data: { orderId, event: 'return_requested' } });
+  // Confirmação imediata ao cliente de que o pedido chegou (Decreto 7.962/2013, art. 5º, § 4º).
+  await avisarCliente(ref.id, 'recebida');
   return NextResponse.json({ id: ref.id, status: 'solicitada' });
 }

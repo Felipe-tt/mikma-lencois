@@ -19,6 +19,9 @@ const nextConfig = {
   // da URL chega no mesmo envio. Dados da loja ficam em funções 'use cache'
   // (lib/catalog, lib/settings) que o painel limpa por tag ao salvar.
   cacheComponents: true,
+  // Mesmo comportamento de antes (sem valor, o Next já usava false), só sem
+  // o aviso no build. Ligar exige testar a navegação e a retomada do PPR.
+  partialPrefetching: false,
 
   // A checagem de tipos roda antes, no "npm run build", com o TypeScript 7
   // (compilador nativo, ~1s). A do Next usaria a API do TypeScript 6

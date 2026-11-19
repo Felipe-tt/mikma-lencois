@@ -28,6 +28,8 @@ export const LEGAL_PAGES = [
 
 export type StoreIdentity = {
   name: string;
+  /** Razão social (nome empresarial), quando diferente do nome da loja. */
+  legalName: string;
   cnpj: string;
   cityState: string;
   /** Endereço completo; vazio se a loja ainda não preencheu no painel. */
@@ -37,7 +39,18 @@ export type StoreIdentity = {
   whatsappUrl: string;
 };
 
-/** Dados de identificação do fornecedor (Decreto 7.962/2013), vindos do painel. */
+/** 14 dígitos viram 00.000.000/0000-00; outro formato fica como veio. */
+function formatCnpj(v: string): string {
+  const d = v.replace(/\D/g, '');
+  return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : v;
+}
+
+/**
+ * Dados de identificação do fornecedor (Decreto 7.962/2013, art. 2º: nome
+ * empresarial, CNPJ, endereço físico e eletrônico), vindos do painel. A
+ * razão social e o CNPJ da nota fiscal completam o que faltar nos dados da
+ * loja: antes, com o CNPJ só na aba de nota fiscal, o rodapé saía sem ele.
+ */
 export function storeIdentity(s: StoreSettings): StoreIdentity {
   const city = s.storeCity?.trim() ?? '';
   const state = s.storeState?.trim() ?? '';
@@ -55,9 +68,13 @@ export function storeIdentity(s: StoreSettings): StoreIdentity {
         .join(', ')
     : '';
 
+  const name = s.storeName?.trim() || 'Mikma Lençóis';
+  const razao = s.nfeRazaoSocial?.trim() ?? '';
+  const cnpj = s.storeCnpj?.trim() || s.nfeCnpj?.trim() || '';
   return {
-    name: s.storeName?.trim() || 'Mikma Lençóis',
-    cnpj: s.storeCnpj?.trim() ?? '',
+    name,
+    legalName: razao && razao.toLocaleLowerCase('pt-BR') !== name.toLocaleLowerCase('pt-BR') ? razao : '',
+    cnpj: cnpj ? formatCnpj(cnpj) : '',
     cityState,
     address,
     email: s.storeEmail?.trim() ?? '',

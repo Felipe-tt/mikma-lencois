@@ -9,6 +9,9 @@ import {
   computePixTotalCents,
   computeCardTotalCents,
   type CouponLike,
+  effectiveMonthlyRate,
+  annualRate,
+  interestFreeHint,
 } from './orderPricing';
 
 describe('computeProductsCents', () => {
@@ -231,5 +234,31 @@ describe('validateCoupon: regras por cliente', () => {
 
   it('sem os usos do cliente, as regras por cliente não são checadas', () => {
     expect(validateCoupon({ ...base, maxUsesPerCustomer: 1, firstPurchaseOnly: true }, 10000, now).valid).toBe(true);
+  });
+});
+
+describe('taxa efetiva do parcelamento (CDC art. 52)', () => {
+  it('sem juros dá zero', () => {
+    expect(effectiveMonthlyRate(30000, 10000, 3)).toBe(0);
+    expect(effectiveMonthlyRate(30000, 30000, 1)).toBe(0);
+  });
+
+  it('acha a taxa que faz as parcelas valerem o preço à vista', () => {
+    // 4x com 1,99% sobre o total: R$ 1.000 vira 4 parcelas de R$ 254,98.
+    const i = effectiveMonthlyRate(100000, 25498, 4);
+    expect(i).toBeGreaterThan(0.0078);
+    expect(i).toBeLessThan(0.0081);
+    const pv = 25498 * (1 - (1 + i) ** -4) / i;
+    expect(Math.abs(pv - 100000)).toBeLessThan(1);
+  });
+
+  it('converte a taxa do mês para a do ano com juros compostos', () => {
+    expect(annualRate(0.01)).toBeCloseTo(0.126825, 5);
+    expect(annualRate(0)).toBe(0);
+  });
+
+  it('a dica de parcelas sem juros traz o total no cartão', () => {
+    const hint = interestFreeHint(30000, { abacateFeeCardToCustomer: false });
+    expect(hint).toEqual({ n: 3, perCents: 10000, totalCents: 30000 });
   });
 });

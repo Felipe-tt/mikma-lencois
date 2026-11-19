@@ -34,7 +34,7 @@ function HeaderView({ topbarText, freeShippingThresholdCents = 0, pathname }: Pr
   const { href: waHref } = useWhatsApp();
   const { user, logout, loading: authLoading } = useAuth();
   const count      = useCartCount();
-  const cartTotal  = useCartTotal();
+  const { total: cartTotal, hasCoupon } = useCartTotal();
   const router     = useRouter();
   const [scrolled, setScrolled]     = useState(false);
   const [menuOpen, setMenuOpen]     = useState(false);
@@ -88,7 +88,9 @@ function HeaderView({ topbarText, freeShippingThresholdCents = 0, pathname }: Pr
   const progress = threshold > 0 ? Math.min(100, (cartTotal / threshold) * 100) : 0;
   const freeShippingUnlocked = cartTotal >= threshold && threshold > 0;
   // No checkout o resumo já mostra o frete; a faixa só empurrava a barra de etapas.
-  const showFreeShippingBar = hasFreeShipping && count > 0 && !pathname.startsWith('/checkout');
+  // Com cupom no carrinho a conta é produtos menos o desconto, que só o
+  // carrinho sabe: aqui a barra diria "desbloqueado" sem o servidor dar.
+  const showFreeShippingBar = hasFreeShipping && count > 0 && !hasCoupon && !pathname.startsWith('/checkout');
 
   const isDark = false; // hero is now light, header stays light always
 

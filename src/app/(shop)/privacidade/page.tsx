@@ -36,7 +36,7 @@ export default async function PrivacidadePage() {
         clause(
           <>
             Quem decide como os seus dados são usados neste site é a <B>{id.name}</B>
-            {id.cnpj && <> (CNPJ {id.cnpj})</>}, de {id.address || id.cityState}. Na Lei Geral de
+            {(id.legalName || id.cnpj) && <> ({[id.legalName, id.cnpj && `CNPJ ${id.cnpj}`].filter(Boolean).join(', ')})</>}, de {id.address || id.cityState}. Na Lei Geral de
             Proteção de Dados (LGPD, Lei nº 13.709/2018), isso nos torna a “controladora” dos dados.
           </>,
         ),
@@ -80,7 +80,8 @@ export default async function PrivacidadePage() {
           </>,
           <>
             <B>Dados de acesso:</B> endereço IP, data e hora, navegador e páginas visitadas. Servem
-            para manter o site seguro e evitar fraudes.
+            para manter o site seguro, evitar fraudes e medir a velocidade das páginas, em números
+            gerais e sem cookies.
           </>,
           <>
             <B>Seu aceite:</B> quando você concorda com estas políticas, registramos a data e a
@@ -137,8 +138,8 @@ export default async function PrivacidadePage() {
               dados do pacote.
             </>,
             <>
-              <B>Hospedagem e segurança:</B> as empresas que mantêm o site no ar, guardam os dados e
-              barram robôs e ataques.
+              <B>Hospedagem e segurança:</B> as empresas que mantêm o site no ar, guardam os dados,
+              medem a velocidade das páginas, registram erros do site e barram robôs e ataques.
             </>,
             <>
               <B>E-mail:</B> o serviço que envia as mensagens sobre a sua conta e os seus pedidos.

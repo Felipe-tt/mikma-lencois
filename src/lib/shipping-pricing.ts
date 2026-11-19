@@ -7,6 +7,7 @@
  * vindo do navegador: sempre recalcule aqui e use o valor retornado.
  */
 import { adminDb } from '@/lib/firebase/admin';
+import { freeShippingSuspended } from '@/lib/shipping-ledger';
 import { getUberToken, uberQuote, buildUberAddress, uberDirectConfigured } from '@/lib/uber-direct';
 import type { StoreSettings } from '@/lib/store-settings';
 import { quoteCorreiosContrato } from '@/lib/correiosContrato';
@@ -310,8 +311,7 @@ export async function computeShippingOptions(
   // ultrapassou o teto configurado, o frete grátis é desligado nessa
   // cotação, sem qualquer sinal disso pro cliente (ele só vê o frete
   // normal, como se o threshold não tivesse sido atingido).
-  const maxLossCents = settings.freeShippingMaxLossCents ?? 0;
-  const withinBudget  = maxLossCents <= 0 || ledgerBalanceCents === undefined || ledgerBalanceCents > -maxLossCents;
+  const withinBudget  = !freeShippingSuspended(settings, ledgerBalanceCents);
   const freeShipping  = thresholdMet && withinBudget;
 
   const [originCoords, destCoords] = await Promise.all([

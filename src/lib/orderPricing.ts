@@ -175,10 +175,32 @@ export function maxInstallments(baseCents: number): number {
  * maior parcela sem juros e o valor de cada uma já com a taxa do cartão,
  * igual ao que o checkout cobra. n = 1 quando não há parcelamento sem juros.
  */
-export function interestFreeHint(baseCents: number, fees?: Partial<PublicCardFees>): { n: number; perCents: number } {
+export function interestFreeHint(baseCents: number, fees?: Partial<PublicCardFees>): { n: number; perCents: number; totalCents: number } {
   const max = maxInstallments(baseCents);
   let n = 1;
   for (let k = max; k >= 1; k--) { if (installmentFeeRate(k) === 0) { n = k; break; } }
   const total = computeCardTotalCents({ productsCents: baseCents, couponDiscountCents: 0, shippingCents: 0, feeRate: 0, cardFee: cardFeeFor(fees, n) });
-  return { n, perCents: Math.round(total / n) };
+  return { n, perCents: Math.round(total / n), totalCents: total };
+}
+
+/**
+ * Taxa efetiva de juros ao mês de um parcelamento (CDC art. 52, II: o
+ * cliente vê a taxa, não só o valor dos juros): a taxa i em que n parcelas
+ * iguais de `installmentCents`, a primeira em 30 dias, valem hoje
+ * `principalCents`. 0 quando não há juros. Em fração (0.0079 = 0,79% a.m.).
+ */
+export function effectiveMonthlyRate(principalCents: number, installmentCents: number, n: number): number {
+  if (n <= 1 || principalCents <= 0 || installmentCents * n <= principalCents) return 0;
+  const presentValue = (i: number) => installmentCents * (1 - (1 + i) ** -n) / i;
+  let lo = 1e-9, hi = 1;
+  for (let k = 0; k < 100; k++) {
+    const mid = (lo + hi) / 2;
+    if (presentValue(mid) > principalCents) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/** Taxa ao ano equivalente a uma taxa ao mês (juros compostos). */
+export function annualRate(monthly: number): number {
+  return (1 + monthly) ** 12 - 1;
 }

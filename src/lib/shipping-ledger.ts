@@ -25,6 +25,20 @@ export interface ShippingLedger {
   updatedAt?: string;
 }
 
+/**
+ * Frete grátis suspenso pelo teto de prejuízo do caixa de frete
+ * (settings.freeShippingMaxLossCents). A mesma regra vale na cotação e no
+ * que o site anuncia (faixa, carrinho, cabeçalho): a oferta some junto,
+ * senão o site prometia frete grátis e cobrava (CDC art. 30 e 35).
+ */
+export function freeShippingSuspended(
+  settings: { freeShippingMaxLossCents?: number },
+  ledgerBalanceCents: number | undefined,
+): boolean {
+  const maxLossCents = settings.freeShippingMaxLossCents ?? 0;
+  return maxLossCents > 0 && ledgerBalanceCents !== undefined && ledgerBalanceCents <= -maxLossCents;
+}
+
 /** Lê o saldo atual do caixa de frete. Nunca lança, retorna saldo 0 em caso de erro (fail-open pra não travar cotações). */
 export async function getShippingLedgerBalanceCents(): Promise<number> {
   try {

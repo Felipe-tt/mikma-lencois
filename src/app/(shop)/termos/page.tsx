@@ -26,7 +26,7 @@ export default async function TermosPage() {
         clause(
           <>
             Este site é da <B>{id.name}</B>
-            {id.cnpj && <> (CNPJ {id.cnpj})</>}, de {id.address || id.cityState}. Quando falamos
+            {(id.legalName || id.cnpj) && <> ({[id.legalName, id.cnpj && `CNPJ ${id.cnpj}`].filter(Boolean).join(', ')})</>}, de {id.address || id.cityState}. Quando falamos
             “nós” ou “a loja”, somos nós. Quando falamos “você”, é quem visita o site ou compra
             nele.
           </>,

@@ -1,12 +1,15 @@
 import { NextResponse, connection } from 'next/server';
 import { googleUrl } from '@/lib/googleProfile';
-import { getSettings, getPauseNoticeNow } from '@/lib/settings';
+import { getSettings, getPauseNoticeNow, withPublicOffer } from '@/lib/settings';
+import { getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 
 // Expõe apenas campos públicos (sem dados sensíveis de logística/admin)
 export async function GET() {
   await connection(); // na hora, não no build (o build não lê o banco)
   try {
-    const [s, pausedNotice] = await Promise.all([getSettings(), getPauseNoticeNow()]);
+    const [raw, pausedNotice, ledgerBalanceCents] = await Promise.all([getSettings(), getPauseNoticeNow(), getShippingLedgerBalanceCents()]);
+    // Frete grátis suspenso pelo teto do caixa: o carrinho deixa de prometer.
+    const s = withPublicOffer(raw, ledgerBalanceCents);
     return NextResponse.json({
       freeShippingThresholdCents: s.freeShippingThresholdCents ?? 0,
       creditMinOrderCents: s.creditMinOrderCents ?? 0,
