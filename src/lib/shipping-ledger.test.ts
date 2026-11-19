@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/firebase/admin', () => ({ adminDb: {} }));
 
-const { ledgerFromOrders } = await import('./shipping-ledger');
+const { ledgerFromOrders, freeShippingSuspended } = await import('./shipping-ledger');
 
 describe('ledgerFromOrders', () => {
   it('sem pedidos o caixa fica zerado', () => {
@@ -39,5 +39,16 @@ describe('ledgerFromOrders', () => {
       { status: 'paid', delivery: { carrier: 'correios_pac', realPriceCents: 2500 } },
     ]);
     expect(r.spentCents).toBe(2500);
+  });
+});
+
+describe('freeShippingSuspended', () => {
+  it('suspende quando o prejuízo chega no teto', () => {
+    expect(freeShippingSuspended({ freeShippingMaxLossCents: 50000 }, -50000)).toBe(true);
+    expect(freeShippingSuspended({ freeShippingMaxLossCents: 50000 }, -49999)).toBe(false);
+  });
+  it('teto 0 ou saldo desconhecido nunca suspende', () => {
+    expect(freeShippingSuspended({ freeShippingMaxLossCents: 0 }, -999999)).toBe(false);
+    expect(freeShippingSuspended({ freeShippingMaxLossCents: 50000 }, undefined)).toBe(false);
   });
 });

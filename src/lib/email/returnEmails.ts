@@ -5,7 +5,7 @@ import {
 } from './layout';
 
 /** O que mudou na troca e vale um e-mail para o cliente. */
-export type AvisoTroca = 'aprovada' | 'codigo' | 'coleta' | 'chegou' | 'recusada' | 'concluida';
+export type AvisoTroca = 'recebida' | 'aprovada' | 'codigo' | 'coleta' | 'chegou' | 'recusada' | 'concluida';
 
 export interface TrocaEmailInput {
   kind: AvisoTroca;
@@ -41,6 +41,15 @@ export function buildTrocaEmail({ kind, type, orderId, name, reversa, devolverPo
     : '';
 
   const c = {
+    // Confirmação imediata de que o pedido chegou (Decreto 7.962/2013, art. 5º, § 4º).
+    recebida: {
+      subject: `Recebemos seu pedido de ${what}, pedido #${id}`,
+      title: `Pedido de ${what} recebido`,
+      body: `${emailParagraph(`${ola} Recebemos o seu pedido de ${what} e já estamos analisando.`)}${emailParagraph(type === 'devolucao'
+        ? 'Quando as peças chegarem e forem conferidas, devolvemos o valor pago pelo mesmo meio de pagamento. Te avisamos por e-mail em cada etapa.'
+        : 'Te avisamos por e-mail quando a troca for aprovada, com o jeito de mandar as peças, sem custo.', { muted: true })}`,
+      text: `Olá, ${name}! Recebemos o seu pedido de ${what} do pedido #${id} e já estamos analisando. Te avisamos por e-mail em cada etapa.`,
+    },
     aprovada: devolverPor === 'uber' ? {
       subject: `${What} aprovada, pedido #${id}`,
       title: `${What} aprovada`,

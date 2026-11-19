@@ -59,7 +59,7 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
           ...(it.swapSku && it.swapQtyPerUnit ? { swapSku: it.swapSku, swapQtyPerUnit: it.swapQtyPerUnit } : {}),
         };
       });
-      await addDoc(collection(db, 'returns'), {
+      const ref = await addDoc(collection(db, 'returns'), {
         orderId: order.id,
         userId: order.userId,
         customerName: customerName || '',
@@ -72,6 +72,11 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
         createdAt: new Date().toISOString(),
         createdBy: user?.email || '',
       });
+      // Confirma ao cliente, por e-mail, que o pedido de troca foi registrado
+      // (Decreto 7.962/2013, art. 5º, § 4º). Sem conexão, a troca já ficou salva.
+      user?.getIdToken()
+        .then(token => fetch(`/api/painel/trocas/${ref.id}/avisar`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }))
+        .catch(() => {});
       onDone();
     } catch (err) {
       console.error('[registrar-troca] falha ao salvar', err);

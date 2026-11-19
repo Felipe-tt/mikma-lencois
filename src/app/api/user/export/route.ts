@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { conversationIdFor } from '@/lib/email/conversationId';
 import { withPii } from '@/lib/piiCrypto';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     // Tudo o que a loja guarda ligado à conta (LGPD, direito de acesso),
     // não só perfil e pedidos.
     const email = (await adminAuth.getUser(uid).catch(() => null))?.email?.toLowerCase();
-    const [userSnap, ordersSnap, cartSnap, wishSnap, reviewsSnap, returnsSnap, restockSnap] = await Promise.all([
+    const [userSnap, ordersSnap, cartSnap, wishSnap, reviewsSnap, returnsSnap, restockSnap, messagesSnap, passkeysSnap] = await Promise.all([
       adminDb.doc(`users/${uid}`).get(),
       adminDb.collection('orders').where('userId', '==', uid).get(),
       adminDb.doc(`carts/${uid}`).get(),
@@ -37,6 +38,10 @@ export async function GET(req: NextRequest) {
       adminDb.collection('reviews').where('userId', '==', uid).get(),
       adminDb.collection('returns').where('userId', '==', uid).get(),
       email ? adminDb.collection('restockRequests').where('email', '==', email).get() : null,
+      // Mensagens trocadas com o atendimento por e-mail (a política cita
+      // "mensagens para o atendimento" entre os dados guardados).
+      email ? adminDb.collection('conversations').doc(conversationIdFor(email)).collection('messages').limit(500).get() : null,
+      adminDb.collection('passkeys').where('uid', '==', uid).get(),
     ]);
 
     // CPF e telefone abertos (no banco ficam criptografados), sem os campos
@@ -60,6 +65,15 @@ export async function GET(req: NextRequest) {
       reviews: reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
       returns: returnsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
       restockRequests: restockSnap?.docs.map(d => ({ id: d.id, ...d.data() })) ?? [],
+      supportMessages: messagesSnap?.docs.map(d => {
+        const m = d.data();
+        return { direction: m.direction, subject: m.subject, text: m.text, createdAt: m.createdAt, attachments: (m.attachments ?? []).map((a: { filename?: string }) => a.filename).filter(Boolean) };
+      }) ?? [],
+      // Só o nome e as datas: a chave pública não diz nada sobre a pessoa.
+      passkeys: passkeysSnap.docs.map(d => {
+        const p = d.data();
+        return { name: p.name, createdAt: p.createdAt, lastUsedAt: p.lastUsedAt };
+      }),
     };
 
     const filename = `meus-dados-${Date.now()}.json`; // não expõe uid no filename

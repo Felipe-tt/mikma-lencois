@@ -24,7 +24,7 @@ import Image from 'next/image';
 import { SwapNote } from '@/components/cart/SwapNote';
 import { trackBeginCheckout } from '@/lib/analytics';
 import { cardFeeFor, publicCardFees, type PublicCardFees } from '@/lib/gatewayFees';
-import { computePixTotalCents, computePixDiscountCents, computeCardTotalCents, installmentFeeRate, cardMinCents, maxInstallments } from '@/lib/orderPricing';
+import { computePixTotalCents, computePixDiscountCents, computeCardTotalCents, installmentFeeRate, cardMinCents, maxInstallments, effectiveMonthlyRate, annualRate } from '@/lib/orderPricing';
 import { toAddress, streetLine, cityLine } from '@/lib/address';
 import { LEGAL_VERSION } from '@/lib/legal';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
@@ -607,6 +607,12 @@ export default function CheckoutPage() {
   const installVal   = Math.round(creditTotal / installments);
   // Maior parcelamento sem juros (a tabela cobra juros a partir de certa parcela).
   const noFeeInstall = (() => { for (let n = maxInstall; n >= 1; n--) if (installmentFeeRate(n) === 0) return n; return 1; })();
+  // Taxa efetiva ao mês e ao ano dos juros do parcelamento (CDC art. 52, II).
+  const pct = (v: number) => (v * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rateLabel = (n: number) => {
+    const monthly = effectiveMonthlyRate(creditBase, interestFor(n) / n, n);
+    return `${pct(monthly)}% ao mês, ${pct(annualRate(monthly))}% ao ano`;
+  };
 
   // Cupom aplicado no carrinho: revalida com o mesmo endpoint do carrinho
   // (e a mesma regra das rotas de pagamento) pra mostrar o desconto real.
@@ -1053,6 +1059,12 @@ export default function CheckoutPage() {
                       </div>
                     </button>
 
+                    {/* Restrição da oferta dita às claras (Decreto 7.962/2013, art. 2º, VI):
+                        antes o cartão só sumia, sem dizer por quê. */}
+                    {!cardAllowed && subtotal > 0 && (
+                      <p className="px-4 py-3 text-xs text-faint">Cartão de crédito em pedidos a partir de {formatCurrency(cardMin)}.</p>
+                    )}
+
                     {/* Crédito */}
                     {cardAllowed && (
                       <div className={`transition-colors ${payMethod === 'credit' ? 'bg-warm' : ''}`}>
@@ -1101,7 +1113,7 @@ export default function CheckoutPage() {
                                     <span className="flex-1 min-w-0 text-[13px] text-ink">
                                       <strong className="font-semibold tabular-nums">{n}x {formatCurrency(val)}</strong>
                                       <span className="block text-[11px] text-faint tabular-nums">
-                                        {n === 1 ? 'à vista' : fee > 0 ? `total ${formatCurrency(totalN)} · juros de ${formatCurrency(fee)}` : `total ${formatCurrency(totalN)}`}
+                                        {n === 1 ? 'à vista' : fee > 0 ? `total ${formatCurrency(totalN)} · juros de ${formatCurrency(fee)} (${rateLabel(n)})` : `total ${formatCurrency(totalN)}`}
                                       </span>
                                     </span>
                                     {n > 1 && fee === 0 && (

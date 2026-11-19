@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { STORE_DEFAULTS, withStoreDefaults, type StoreSettings } from '@/lib/store-settings';
 import { serialize } from '@/lib/utils/serialize';
 import { pauseNotice, type PauseSettings } from '@/lib/salesPause';
+import { freeShippingSuspended, getShippingLedgerBalanceCents } from '@/lib/shipping-ledger';
 
 let cached: StoreSettings | null = null;
 let cachedAt = 0;
@@ -26,6 +27,22 @@ export async function getSettings(): Promise<StoreSettings> {
 }
 
 /**
+ * O que o site anuncia segue o que a cotação cobra: com o frete grátis
+ * suspenso pelo teto do caixa de frete, o valor mínimo vira 0 (some a barra
+ * "faltam R$ X") e a faixa de aviso que fala de grátis sai do ar. Antes o
+ * site continuava prometendo frete grátis e a cotação cobrava.
+ */
+export function withPublicOffer(s: StoreSettings, ledgerBalanceCents: number | undefined): StoreSettings {
+  // Sem frete grátis configurado não há oferta para tirar do ar.
+  if (s.freeShippingThresholdCents <= 0 || !freeShippingSuspended(s, ledgerBalanceCents)) return s;
+  return {
+    ...s,
+    freeShippingThresholdCents: 0,
+    topbarText: /gr[aá]tis/i.test(s.topbarText ?? '') ? '' : s.topbarText,
+  };
+}
+
+/**
  * Configurações para as páginas da loja: em cache ('use cache') por 1 min,
  * como o getSettings, e limpas na hora com revalidateTag('settings') quando
  * o painel salva. Entram no HTML estático (prerender parcial).
@@ -36,9 +53,12 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   // Lê direto (sem o cache em memória do getSettings): depois de um
   // revalidateTag('settings') a página já sai com o valor novo.
   try {
-    const snap = await adminDb.collection('settings').doc('store').get();
+    const [snap, ledgerBalanceCents] = await Promise.all([
+      adminDb.collection('settings').doc('store').get(),
+      getShippingLedgerBalanceCents(),
+    ]);
     cacheLife({ stale: 60, revalidate: 60, expire: 86_400 });
-    return serialize<StoreSettings>(withStoreDefaults(snap.exists ? snap.data() : undefined));
+    return serialize<StoreSettings>(withPublicOffer(withStoreDefaults(snap.exists ? snap.data() : undefined), ledgerBalanceCents));
   } catch {
     cacheLife({ stale: 30, revalidate: 60, expire: 300 });
     return STORE_DEFAULTS;

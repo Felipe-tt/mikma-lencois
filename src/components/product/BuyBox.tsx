@@ -154,7 +154,10 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   const lineTotal = product.price * qty;
   // Só anuncia "sem juros" até a última parcela que é de fato sem juros
   // (tabela em lib/orderPricing; a partir de 4x o cartão cobra juros).
-  const { n: maxInstall, perCents: installVal } = interestFreeHint(lineTotal, cardFees);
+  // Com a taxa da operadora repassada, o total no cartão passa do preço:
+  // aparece junto do "sem juros", para o anúncio não esconder a diferença
+  // (CDC art. 31 e Lei 10.962/2004, art. 5º-A).
+  const { n: maxInstall, perCents: installVal, totalCents: cardTotal } = interestFreeHint(lineTotal, cardFees);
   const pixEligible = pixDiscountThresholdCents > 0 && lineTotal >= pixDiscountThresholdCents;
   const pixDiscount = pixEligible ? Math.round(lineTotal * (pixDiscountPct / 100)) : 0;
   const pixTotal = lineTotal - pixDiscount;
@@ -280,6 +283,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
           {maxInstall > 1 && (
             <p className="text-[12px] text-mid mt-1.5">
               em até <strong className="text-ink">{maxInstall}x de {formatCurrency(installVal)}</strong> sem juros
+              {cardTotal > lineTotal && <span className="text-faint"> · {formatCurrency(cardTotal)} no cartão</span>}
             </p>
           )}
           {/* Só fala do desconto quando ele está ao alcance: "10% a partir de
