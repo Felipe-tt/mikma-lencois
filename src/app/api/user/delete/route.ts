@@ -66,7 +66,7 @@ export async function DELETE(req: NextRequest) {
           });
           return data;
         });
-        if (cancelled) await releaseCouponUse(cancelled.couponCode as string | undefined);
+        if (cancelled) await releaseCouponUse(cancelled.couponCode as string | undefined, cancelled.userId as string | undefined);
       } catch (err) {
         console.error('[user/delete] falha ao cancelar pedido', orderDoc.id, err);
       }

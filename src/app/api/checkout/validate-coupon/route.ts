@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { rateLimit } from '@/lib/rateLimit';
 import { validateCoupon } from '@/lib/orderPricing';
 import { getClientIp } from '@/lib/security';
+import { couponCustomerUsage } from '@/lib/orders/couponUsage';
 
 const schema = z.object({
   code: z.string().min(1).max(32).regex(/^[A-Z0-9_-]+$/i),
@@ -42,13 +43,17 @@ export async function POST(req: NextRequest) {
 
     const { code, orderCents } = parsed.data;
 
-    const snap = await adminDb.collection('coupons').doc(code.toUpperCase()).get();
+    const upper = code.toUpperCase();
+    const snap = await adminDb.collection('coupons').doc(upper).get();
     if (!snap.exists) {
       return NextResponse.json({ error: 'Cupom não encontrado' }, { status: 404 });
     }
 
     const coupon = snap.data() as Coupon;
-    const result = validateCoupon(coupon, orderCents);
+    // Mesma regra do pagamento, com os usos deste cliente (limite por
+    // cliente e primeira compra): o aviso aparece já no carrinho.
+    const usage = await couponCustomerUsage(upper, uid);
+    const result = validateCoupon(coupon, orderCents, new Date(), usage);
     if (!result.valid) {
       return NextResponse.json({ error: result.reason }, { status: 400 });
     }

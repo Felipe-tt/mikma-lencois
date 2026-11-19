@@ -204,3 +204,32 @@ describe('cartão: mínimo e parcelas', () => {
     expect(maxInstallments(500000)).toBe(8);
   });
 });
+
+describe('validateCoupon: regras por cliente', () => {
+  const base: CouponLike = { active: true, type: 'percent', value: 10, usedCount: 0, maxUses: 100 };
+  const now = new Date('2026-01-01T12:00:00Z');
+
+  it('bloqueia quem já usou o limite por cliente', () => {
+    const r = validateCoupon({ ...base, maxUsesPerCustomer: 1 }, 10000, now, { uses: 1, hasPaidOrder: true });
+    expect(r).toMatchObject({ valid: false, reason: 'Você já usou este cupom' });
+  });
+
+  it('deixa usar enquanto não bateu o limite por cliente', () => {
+    const r = validateCoupon({ ...base, maxUsesPerCustomer: 2 }, 10000, now, { uses: 1, hasPaidOrder: true });
+    expect(r).toEqual({ valid: true, discountCents: 1000 });
+  });
+
+  it('sem limite por cliente, usos anteriores não importam', () => {
+    expect(validateCoupon(base, 10000, now, { uses: 9, hasPaidOrder: true }).valid).toBe(true);
+  });
+
+  it('primeira compra: bloqueia quem já tem pedido pago', () => {
+    const r = validateCoupon({ ...base, firstPurchaseOnly: true }, 10000, now, { uses: 0, hasPaidOrder: true });
+    expect(r).toMatchObject({ valid: false, reason: 'Este cupom vale só na primeira compra' });
+    expect(validateCoupon({ ...base, firstPurchaseOnly: true }, 10000, now, { uses: 0, hasPaidOrder: false }).valid).toBe(true);
+  });
+
+  it('sem os usos do cliente, as regras por cliente não são checadas', () => {
+    expect(validateCoupon({ ...base, maxUsesPerCustomer: 1, firstPurchaseOnly: true }, 10000, now).valid).toBe(true);
+  });
+});

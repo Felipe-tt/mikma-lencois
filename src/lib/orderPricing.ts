@@ -19,6 +19,18 @@ export interface CouponLike {
   maxUses?: number | null
   usedCount?: number
   minOrderCents?: number | null
+  /** Quantas vezes o mesmo cliente pode usar. Vazio: sem limite por cliente. */
+  maxUsesPerCustomer?: number | null
+  /** Só vale na primeira compra paga do cliente. */
+  firstPurchaseOnly?: boolean
+}
+
+/** O que o cliente já fez com o cupom (lido no servidor, nunca do cliente). */
+export interface CouponCustomerUsage {
+  /** Usos deste cliente em pedidos ainda válidos. */
+  uses: number
+  /** O cliente já tem algum pedido pago. */
+  hasPaidOrder: boolean
 }
 
 export interface CouponResult {
@@ -36,15 +48,23 @@ export function computeProductsCents(items: { unitPrice: number; quantity: numbe
 /**
  * Valida um cupom e calcula o desconto em centavos, se válido.
  * Mesma regra nas três rotas que usam cupom: ativo, não expirado, dentro do
- * limite de usos, e o pedido bate o mínimo exigido (quando houver).
+ * limite de usos (no total e por cliente), primeira compra quando o cupom
+ * pede, e o pedido bate o mínimo exigido (quando houver). Sem `usage`, as
+ * regras por cliente não são checadas (ex.: frete calculado sem login).
  */
-export function validateCoupon(coupon: CouponLike, productsCents: number, now: Date = new Date()): CouponResult {
+export function validateCoupon(coupon: CouponLike, productsCents: number, now: Date = new Date(), usage?: CouponCustomerUsage): CouponResult {
   if (!coupon.active) return { valid: false, reason: 'Cupom inativo', discountCents: 0 };
   if (coupon.expiresAt && new Date(coupon.expiresAt) <= now) {
     return { valid: false, reason: 'Cupom expirado', discountCents: 0 };
   }
   if (coupon.maxUses != null && (coupon.usedCount ?? 0) >= coupon.maxUses) {
     return { valid: false, reason: 'Cupom esgotado', discountCents: 0 };
+  }
+  if (usage && coupon.maxUsesPerCustomer != null && coupon.maxUsesPerCustomer > 0 && usage.uses >= coupon.maxUsesPerCustomer) {
+    return { valid: false, reason: coupon.maxUsesPerCustomer === 1 ? 'Você já usou este cupom' : `Você já usou este cupom ${coupon.maxUsesPerCustomer} vezes`, discountCents: 0 };
+  }
+  if (usage && coupon.firstPurchaseOnly && usage.hasPaidOrder) {
+    return { valid: false, reason: 'Este cupom vale só na primeira compra', discountCents: 0 };
   }
   if (coupon.minOrderCents != null && productsCents < coupon.minOrderCents) {
     return { valid: false, reason: `Pedido mínimo de R$ ${(coupon.minOrderCents / 100).toFixed(2)}`, discountCents: 0 };
