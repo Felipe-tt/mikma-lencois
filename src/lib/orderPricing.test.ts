@@ -232,6 +232,12 @@ describe('validateCoupon: regras por cliente', () => {
     expect(validateCoupon({ ...base, firstPurchaseOnly: true }, 10000, now, { uses: 0, hasPaidOrder: false }).valid).toBe(true);
   });
 
+  it('primeira compra vale uma vez, mesmo sem limite por cliente', () => {
+    // Pedido anterior ainda aguardando pagamento já usou o cupom.
+    const r = validateCoupon({ ...base, firstPurchaseOnly: true }, 10000, now, { uses: 1, hasPaidOrder: false });
+    expect(r).toMatchObject({ valid: false, reason: 'Você já usou este cupom' });
+  });
+
   it('sem os usos do cliente, as regras por cliente não são checadas', () => {
     expect(validateCoupon({ ...base, maxUsesPerCustomer: 1, firstPurchaseOnly: true }, 10000, now).valid).toBe(true);
   });
