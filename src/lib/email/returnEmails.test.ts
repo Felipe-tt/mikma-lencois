@@ -56,4 +56,14 @@ describe('buildTrocaEmail', () => {
     expect(m.html).toContain('Fora do prazo de 7 dias');
     expect(m.text).toContain('Motivo: Fora do prazo de 7 dias');
   });
+
+  it('recebida: confirma na hora que o pedido chegou (Decreto 7.962, art. 5º, § 4º)', () => {
+    const troca = buildTrocaEmail({ ...base, kind: 'recebida' });
+    expect(troca.subject).toMatch(/^Recebemos seu pedido de troca, pedido #XYZ98765/);
+    expect(troca.text).toContain('Recebemos o seu pedido de troca');
+    const devolucao = buildTrocaEmail({ ...base, type: 'devolucao', kind: 'recebida' });
+    expect(devolucao.subject).toMatch(/^Recebemos seu pedido de devolução/);
+    // Devolução parcial volta por PIX no CPF: o e-mail não promete o mesmo meio de pagamento sempre.
+    expect(devolucao.html).toContain('por PIX no CPF');
+  });
 });
