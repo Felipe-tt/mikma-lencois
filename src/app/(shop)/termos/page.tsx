@@ -124,7 +124,7 @@ export default async function TermosPage() {
       title: 'Entrega',
       clauses: [
         clause(
-          'O prazo começa a contar depois que o pagamento é confirmado. Pedidos pagos depois do horário de despacho mostrado no site saem no dia útil seguinte.',
+          'O prazo começa a contar depois que o pagamento é confirmado, em dias úteis (sem fins de semana e feriados nacionais), e já inclui o tempo para postarmos o pedido.',
         ),
         clause('Temos dois jeitos de entregar:', [
           <>

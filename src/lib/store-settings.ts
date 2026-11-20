@@ -47,6 +47,8 @@ export type StoreSettings = {
   originLng: number;
   originCep: string;
   localDeliveryRadiusKm: number;
+  /** Dias úteis para postar o pedido depois do pagamento: entram no prazo mostrado ao cliente. */
+  handlingDays: number;
   // Toggle editável no painel, troca instantaneamente entre credenciais de
   // teste e produção do Uber Direct (env vars separadas), sem precisar de
   // novo deploy. Nunca guarda client_secret aqui, só a flag.
@@ -196,6 +198,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   originLng: 0,
   originCep: '',
   localDeliveryRadiusKm: 10,
+  handlingDays: 1,
   uberDirectSandboxMode: false,
   abacatePaySandboxMode: false,
   defaultItemWeightKg: 0.8,

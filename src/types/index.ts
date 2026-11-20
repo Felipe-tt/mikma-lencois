@@ -178,6 +178,7 @@ export interface Order {
     deliveredAt?: string
     estimatedDelivery?: string
     estimatedDays?: number
+    transitDays?: number        // só o transporte, sem os dias para postar (o e-mail de envio conta daqui)
     // Uber Direct, atualizados pelo webhook
     courierName?: string        // Nome do entregador
     courierPhone?: string       // Telefone mascarado do entregador

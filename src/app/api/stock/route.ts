@@ -24,7 +24,9 @@ export async function GET(req: NextRequest) {
   snaps.forEach((snap, i) => {
     const inv = snap.data();
     // Sem documento de estoque: mesmo comportamento de antes (não limita).
-    out[skus[i]] = inv ? Math.max(0, (inv.quantity ?? 0) - (inv.reserved ?? 0)) : 99;
+    // Sem documento de estoque o pagamento recusa ("não está mais
+    // disponível"): o carrinho mostrava 99 e o cliente só descobria no fim.
+    out[skus[i]] = inv ? Math.max(0, (inv.quantity ?? 0) - (inv.reserved ?? 0)) : 0;
   });
   return NextResponse.json(out, { headers: { 'Cache-Control': 'private, max-age=10' } });
 }

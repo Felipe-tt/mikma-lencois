@@ -421,6 +421,7 @@ export async function POST(req: NextRequest) {
         priceCents: shippingCents,
         realPriceCents: matchedShipping.realPriceCents ?? shippingCents,
         estimatedDays: matchedShipping.estimatedDays,
+        ...(matchedShipping.transitDays !== undefined ? { transitDays: matchedShipping.transitDays } : {}),
         uberSandbox: shippingResult.uberSandbox,
         ...(matchedShipping.quoteId ? { uberQuoteId: matchedShipping.quoteId } : {}),
       },
