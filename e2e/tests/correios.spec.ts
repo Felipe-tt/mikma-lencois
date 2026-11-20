@@ -268,8 +268,8 @@ for (const c of CASOS) {
       await page.goto(`/pedidos/${orderId}`);
       await expect(page.getByText(codigo).first()).toBeVisible();
       await expect(page.getByRole('link', { name: 'Rastrear' }).first()).toHaveAttribute('href', new RegExp(`rastreamento\\.correios\\.com\\.br.*${codigo}`));
-      page.once('dialog', d => d.accept());
       await page.getByRole('button', { name: 'Já recebi meu pedido' }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Já recebi' }).click();
       await expect.poll(async () => (await readOrder(orderId)).status).toBe('delivered');
     });
   });
