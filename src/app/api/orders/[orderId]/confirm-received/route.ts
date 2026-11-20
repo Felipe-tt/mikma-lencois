@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CONTACT_EMAIL } from '@/lib/email/layout';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email';
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
         html: payload.html,
         text: payload.text,
         from: 'noreply',
-        replyTo: 'contato@mikma.com.br',
+        replyTo: CONTACT_EMAIL,
       });
     }
   } catch (err) {

@@ -98,9 +98,20 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
   const trocaOk = janela.ok && janela.troca;
   // Passados os 7 dias, só sobra defeito.
   const tipo: Tipo = trocaOk ? type : 'defeito';
+  // Quanto de cada peça ainda pode voltar: o que já foi trocado ou devolvido
+  // (pedido não recusado) não volta de novo (o servidor confere também).
+  const jaVoltou = new Map<string, number>();
+  for (const r of requests) {
+    if (r.status === 'recusada') continue;
+    for (const i of r.items ?? []) jaVoltou.set(i.sku, (jaVoltou.get(i.sku) ?? 0) + i.quantity);
+  }
+  const resta = (sku: string, comprado: number) => Math.max(0, comprado - (jaVoltou.get(sku) ?? 0));
+  const pecasQueRestam = order.items.filter(i => resta(i.sku, i.quantity) > 0);
 
   async function send() {
-    const items = Object.entries(qty).filter(([, q]) => q > 0).map(([sku, quantity]) => ({ sku, quantity }));
+    const items = pecasQueRestam
+      .map(i => ({ sku: i.sku, quantity: Math.min(qty[i.sku] ?? 0, resta(i.sku, i.quantity)) }))
+      .filter(i => i.quantity > 0);
     if (!items.length) { setError('Escolha pelo menos uma peça.'); return; }
     const conferido = motivoFinal(tipo, motivo || undefined, reason);
     if (!conferido.ok) { setError(conferido.error); return; }
@@ -123,7 +134,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
     } finally { setSending(false); }
   }
 
-  if (current && (ativa || current.status === 'concluida' || (current.status === 'recusada' && !open))) {
+  if (current && (ativa || ((current.status === 'concluida' || current.status === 'recusada') && !open))) {
     const r = current.reversa;
     const porAtual = current.devolverPor ?? 'correios';
     const chegou = !!(r?.entregueEm || current.coletaUber?.entregueEm || current.recebidaEm);
@@ -170,6 +181,14 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
             Fazer um novo pedido
           </button>
         )}
+        {/* Concluída e ainda no prazo: outra peça do pedido pode ter problema
+            (antes só pelo WhatsApp). Só as peças que ainda não voltaram. */}
+        {current.status === 'concluida' && noPrazo && pecasQueRestam.length > 0 && (
+          <button type="button" onClick={() => setOpen(true)}
+            className="mt-3 block text-[13px] font-semibold text-clay hover:text-clay-d underline underline-offset-2">
+            Pedir troca de outra peça
+          </button>
+        )}
       </section>
     );
   }
@@ -212,16 +231,19 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
       {tipo === 'defeito' && <p className="text-[12.5px] text-mid leading-relaxed">Conte o que aconteceu e, se puder, mande fotos do problema.</p>}
       <fieldset className="flex flex-col gap-2">
         <legend className="text-[12px] font-semibold text-mid mb-1">Quais peças?</legend>
-        {order.items.map(i => (
-          <label key={i.sku} className="flex items-center justify-between gap-3 text-[13px] text-ink">
-            <span className="min-w-0">{i.productName}</span>
-            <select value={qty[i.sku] ?? 0} onChange={e => setQty(q => ({ ...q, [i.sku]: Number(e.target.value) }))}
-              aria-label={`Quantidade de ${i.productName}`}
-              className="shrink-0 h-9 rounded-lg border border-mist bg-paper px-2 text-[13px]">
-              {Array.from({ length: i.quantity + 1 }, (_, n) => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </label>
-        ))}
+        {pecasQueRestam.map(i => {
+          const max = resta(i.sku, i.quantity);
+          return (
+            <label key={i.sku} className="flex items-center justify-between gap-3 text-[13px] text-ink">
+              <span className="min-w-0">{i.productName}</span>
+              <select value={Math.min(qty[i.sku] ?? 0, max)} onChange={e => setQty(q => ({ ...q, [i.sku]: Number(e.target.value) }))}
+                aria-label={`Quantidade de ${i.productName}`}
+                className="shrink-0 h-9 rounded-lg border border-mist bg-paper px-2 text-[13px]">
+                {Array.from({ length: max + 1 }, (_, n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+          );
+        })}
       </fieldset>
       {tipo !== 'devolucao' && (
         <NovasPecas order={order} qty={qty} defeito={tipo === 'defeito'} getToken={() => user.getIdToken()} onChange={setTroca} />
