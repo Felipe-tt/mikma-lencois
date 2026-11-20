@@ -209,7 +209,9 @@ export interface Order {
   timeline?: OrderTimelineEvent[]
   nfe?: NfeRecord       // nota fiscal de produção (ver src/lib/nfe)
   nfeTeste?: NfeRecord  // nota de teste, em homologação
-  risk?: OrderRisk      // detector de golpe (ver src/lib/orders/risk.ts)
+  // Detector de golpe: só se o envio está segurado. A avaliação completa
+  // fica em orderRisk/{id}, que só a equipe lê (ver src/lib/orders/risk.ts).
+  risk?: { hold?: boolean }
   customerName?: string
   customerEmail?: string
   // Cancelado com o pacote já com a transportadora: as peças só voltam ao
