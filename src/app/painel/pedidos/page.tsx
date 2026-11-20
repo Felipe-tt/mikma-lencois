@@ -380,6 +380,9 @@ export default function PainelPedidos() {
                   <span className={BADGE[order.status] ?? 'badge'}>
                     {STATUS_LABEL[order.status] ?? order.status}
                   </span>
+                  {order.cancelRequest && order.status !== 'cancelled' && (
+                    <span className="badge-cancelled">Quer desistir</span>
+                  )}
                   <span className="text-[12px] font-mono text-faint bg-warm px-1.5 py-0.5 rounded-md">
                     #{order.id.slice(-8).toUpperCase()}
                   </span>

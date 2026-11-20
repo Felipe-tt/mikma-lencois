@@ -59,6 +59,8 @@ const TIMELINE_LABEL: Record<string, string> = {
   preparing: 'Começou a separar o pedido',
   shipped: 'Pedido despachado',
   delivery_cancelled: 'Entrega cancelada, remetente corrigiu',
+  cancel_requested: 'Cliente pediu para desistir da compra',
+  cancel_withdrawn: 'Cliente decidiu manter o pedido',
   delivered: 'Pedido entregue ao cliente',
   cancelled: 'Pedido cancelado',
 };
@@ -74,6 +76,8 @@ const TIMELINE_ICON_COMP: Record<string, React.FC<{ size?: number; className?: s
   preparing: IconBox,
   shipped: IconTruck,
   delivery_cancelled: IconAlert,
+  cancel_requested: IconAlert,
+  cancel_withdrawn: IconCheck,
   delivered: IconTrophy,
   cancelled: IconX,
 };
@@ -95,6 +99,8 @@ const TIMELINE_TONE: Record<string, string> = {
   preparing:          'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30',
   shipped:            'bg-violet-50 text-violet-700 border-violet-200/80 dark:bg-violet-500/10 dark:text-violet-300 dark:border-violet-500/30',
   delivery_cancelled: 'bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30',
+  cancel_requested:   'bg-red-50 text-red-700 border-red-200/80 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/30',
+  cancel_withdrawn:   'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30',
   delivered:          'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30',
   cancelled:          'bg-red-50 text-red-700 border-red-200/80 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/30',
 };
@@ -193,6 +199,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [cancellingDelivery, setCancellingDelivery] = useState(false);
   const [cancelDeliveryError, setCancelDeliveryError] = useState<string | null>(null);
   const [cancellingOrder, setCancellingOrder] = useState(false);
+  const [keeping, setKeeping] = useState(false);
+  const [keepError, setKeepError] = useState<string | null>(null);
   const [cancelOrderError, setCancelOrderError] = useState<string | null>(null);
   const [simulatingPayment, setSimulatingPayment] = useState(false);
   const [simulatePaymentError, setSimulatePaymentError] = useState<string | null>(null);
@@ -492,6 +500,24 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       setCancelDeliveryError('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setCancellingDelivery(false);
+    }
+  }
+
+  // Cliente desistiu por engano e avisou a loja: tira o pedido de desistência.
+  async function keepOrder() {
+    if (!order) return;
+    const ok = await confirmDialog({ message: 'O cliente quer manter o pedido?', detail: 'O aviso sai e o envio volta a ser liberado.', confirmLabel: 'Manter o pedido' });
+    if (!ok) return;
+    setKeeping(true);
+    setKeepError(null);
+    try {
+      const res = await fetch(`/api/orders/${order.id}/desistir`, { method: 'DELETE', headers: { Authorization: `Bearer ${await user!.getIdToken()}` } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setKeepError(data.error ?? 'Não foi possível agora.');
+    } catch {
+      setKeepError('Erro de conexão. Tente novamente.');
+    } finally {
+      setKeeping(false);
     }
   }
 
@@ -827,6 +853,28 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             </div>
           );
         })()}
+
+        {/* ── Cliente desistiu da compra pelo site (CDC, art. 49) ── */}
+        {order.cancelRequest && order.status !== 'cancelled' && (
+          <div role="alert" className="border-2 border-red-400 bg-red-50 px-5 py-4 rounded-2xl">
+            <p className="text-[14px] font-bold text-ink mb-1">O cliente pediu para desistir da compra</p>
+            <p className="text-[13px] text-ink/80 leading-relaxed">
+              Pedido feito pelo site em {formatDateTime(order.cancelRequest.at)}. É direito dele: cancele e devolva todo o valor, frete incluso.
+              {order.status === 'shipped' ? ' O pedido já saiu: o cliente pode recusar a entrega, e as peças voltam ao estoque quando o pacote chegar.' : ' Não envie.'}
+            </p>
+            <div className="mt-3 flex flex-col sm:flex-row gap-2">
+              <button onClick={handleCancelOrder} disabled={cancellingOrder}
+                className="w-full sm:w-auto px-5 bg-red-600 text-white text-[13px] font-semibold py-2.5 hover:bg-red-700 disabled:opacity-50 transition-colors rounded-full">
+                {cancellingOrder ? 'Cancelando…' : order.payment.paidAt && !order.payment.confirmedManuallyBy ? 'Cancelar e estornar' : 'Cancelar pedido'}
+              </button>
+              <button onClick={keepOrder} disabled={cancellingOrder || keeping}
+                className="w-full sm:w-auto px-5 border border-red-300 bg-white text-red-700 text-[13px] font-semibold py-2.5 hover:bg-red-100 disabled:opacity-50 transition-colors rounded-full">
+                {keeping ? 'Liberando…' : 'Cliente quer manter o pedido'}
+              </button>
+            </div>
+            {keepError && <p role="alert" className="text-[12px] text-red-600 mt-2">{keepError}</p>}
+          </div>
+        )}
 
         {/* ── Detector de golpe (ver src/lib/orders/risk.ts) ── */}
         <RiskCard order={order} user={user} />

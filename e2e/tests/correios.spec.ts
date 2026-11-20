@@ -352,6 +352,61 @@ test('pedido cancelado já com os Correios: o estoque volta só quando o pacote 
   await staff.close();
 });
 
+test('desistir da compra: o cliente pede pelo site, a loja cancela e devolve o dinheiro', async ({ page, browser }) => {
+  test.setTimeout(150_000);
+  const user = (await db().collection('users').where('email', '==', 'cancela@e2e.mikma').limit(1).get()).docs[0];
+  const charge = (await (await fetch(`${ABACATE}/__e2e/charge`, { method: 'POST', body: JSON.stringify({ amount: 42180 }) })).json()).data;
+  const item = { productId: 'p3', productName: 'Jogo de Cama King Malha Cinza', sku: 'p3_v1', variant: { id: 'v1', size: 'king', fabric: 'Malha', colorName: 'Cinza' }, quantity: 1, unitPrice: 39990 };
+  const agora = new Date().toISOString();
+  // Pago e ainda na loja, direto no banco (a compra já é testada acima).
+  const orderRef = await db().collection('orders').add({
+    userId: user.id, status: 'paid', customerName: 'Elisa Moura', customerEmail: 'cancela@e2e.mikma',
+    items: [item], address: user.get('address'), totalCents: 42180, shippingCents: 2190,
+    delivery: { carrier: 'correios_pac', priceCents: 2190 }, selectedShipping: { carrier: 'correios_pac' },
+    payment: { method: 'pix', txId: charge.id, paidAt: agora }, createdAt: agora, timeline: [{ status: 'paid', at: agora }],
+  });
+  const antes = await stockOf('p3_v1');
+
+  // Cliente desiste pelo próprio pedido e vê a confirmação.
+  await login(page, 'cancela@e2e.mikma', SENHA);
+  await page.goto(`/pedidos/${orderRef.id}`);
+  const mudou = page.locator('section', { has: page.getByRole('heading', { name: 'Mudou de ideia?' }) });
+  if (process.env.E2E_SHOTS) await mudou.screenshot({ path: 'test-results/desistir-card.png' });
+  await page.getByRole('button', { name: 'Desistir da compra' }).click();
+  if (process.env.E2E_SHOTS) await page.screenshot({ path: 'test-results/desistir-confirmar.png' });
+  await page.getByRole('dialog').getByRole('button', { name: 'Desistir da compra' }).click();
+  await expect(page.getByText('Você pediu para desistir', { exact: true })).toBeVisible();
+  if (process.env.E2E_SHOTS) await page.getByRole('status').filter({ hasText: 'Você pediu para desistir' }).screenshot({ path: 'test-results/desistir-pedido.png' });
+  expect((await orderRef.get()).get('cancelRequest')).toEqual({ at: expect.any(String) });
+
+  // Desistiu por engano: mantém o pedido; depois desiste de novo.
+  await page.getByRole('button', { name: 'Desistiu por engano? Manter o pedido' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Manter o pedido' }).click();
+  await expect(page.getByRole('button', { name: 'Desistir da compra' })).toBeVisible();
+  expect((await orderRef.get()).get('cancelRequest')).toBeUndefined();
+  await page.getByRole('button', { name: 'Desistir da compra' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Desistir da compra' }).click();
+  await expect(page.getByText('Você pediu para desistir', { exact: true })).toBeVisible();
+
+  // Equipe: aviso no topo do pedido, cancela e estorna dali mesmo.
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto(`/painel/pedidos/${orderRef.id}`);
+  const aviso = panel.getByRole('alert').filter({ hasText: 'O cliente pediu para desistir da compra' });
+  await expect(aviso).toBeVisible();
+  if (process.env.E2E_SHOTS) await aviso.screenshot({ path: 'test-results/desistir-painel.png' });
+  await aviso.getByRole('button', { name: 'Cancelar e estornar' }).click();
+  await panel.getByRole('dialog').getByRole('button', { name: 'Cancelar e estornar' }).click();
+  await expect.poll(async () => (await readOrder(orderRef.id)).status).toBe('cancelled');
+  await expect.poll(async () => (await readOrder(orderRef.id)).payment?.refundStatus).toBe('done');
+  const notas = ((await orderRef.get()).get('timeline') as { note?: string }[]).map(e => e.note);
+  expect(notas).toContain('Cancelado a pedido do cliente');
+  expect(await stockOf('p3_v1')).toBe(antes + 1);
+  await staff.close();
+
+  // O cliente vê que foi cancelado a pedido dele.
+  await expect(page.getByText('Cancelado a seu pedido').first()).toBeVisible();
+});
+
 test('lote: etiquetas do dia geradas de uma vez e impressas num PDF só', async ({ page, browser, baseURL }) => {
   test.setTimeout(300_000);
   const email = 'lote@e2e.mikma';

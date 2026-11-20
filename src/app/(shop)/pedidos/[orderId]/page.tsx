@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { SwapNote } from '@/components/cart/SwapNote';
 import { ReturnRequestCard } from '@/components/order/ReturnRequestCard';
+import { DesistirCard } from '@/components/order/DesistirCard';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 import { db } from '@/lib/firebase/db';
@@ -636,6 +637,11 @@ export default function OrderDetailPage() {
             {order.status === 'delivered' && user && (
               <ReturnRequestCard order={order} user={user}
                 whatsappHref={storeWa ? `${storeWa}${storeWa.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Preciso de ajuda com o pedido #${order.id.slice(-8).toUpperCase()}.`)}` : null} />
+            )}
+
+            {/* Pago e ainda não entregue: desistir pelo próprio site (CDC, art. 49) */}
+            {['paid', 'preparing', 'shipped'].includes(order.status) && user && (
+              <DesistirCard order={order} user={user} />
             )}
 
             {/* Ajuda com o pedido: avaliar, trocar, falar com a loja */}

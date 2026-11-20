@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addBusinessDays, buildCancelled, buildConfirmed, buildPixExpired, buildPixPending, buildShipped,
+  addBusinessDays, buildCancelled, buildConfirmed, buildPixExpired, buildPixPending, buildShipped, buildWithdrawalReceived,
 } from './orderStatusEmails';
 import type { Order } from '@/types';
 
@@ -90,5 +90,22 @@ describe('addBusinessDays', () => {
   it('pula o fim de semana', () => {
     // sexta + 1 dia útil = segunda
     expect(addBusinessDays(new Date('2026-10-16T12:00:00'), 1).getDay()).toBe(1);
+  });
+});
+
+describe('desistência recebida (Decreto 7.962, art. 5º, § 4º)', () => {
+  const at = new Date('2026-11-20T14:30:00Z');
+  it('confirma na hora, com o valor e o horário de Brasília', () => {
+    const e = buildWithdrawalReceived(base, 'Ana', { at });
+    expect(e.subject).toBe('Pedido #12345678 desistência recebida | Mikma Lençóis');
+    expect(e.text).toContain('20/11, 11:30');
+    expect(e.text).toContain('devolver todo o valor pago, R$');
+    expect(e.text).not.toContain('recusar');
+  });
+  it('pedido já saiu: explica que dá para recusar', () => {
+    expect(buildWithdrawalReceived(base, 'Ana', { at, emTransito: true }).text).toContain('recusar o recebimento');
+  });
+  it('escapa o nome no HTML', () => {
+    expect(buildWithdrawalReceived(base, '<b>Ana</b>', { at }).html).not.toContain('<b>Ana</b>');
   });
 });

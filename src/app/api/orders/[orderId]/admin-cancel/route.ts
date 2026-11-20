@@ -76,7 +76,7 @@ export async function POST(
   // a coleta não vir buscar um pedido cancelado.
   let prePostagemToCancel: { id: string; codigoObjeto: string } | null = null;
   // Dados pro e-mail ao cliente, enviado só depois do commit.
-  let cancelled: { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean; emTransito?: boolean } | null = null;
+  let cancelled: { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean; emTransito?: boolean; byCustomer?: boolean } | null = null;
   try {
     await adminDb.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
@@ -113,7 +113,10 @@ export async function POST(
       const pre = (order.delivery as { prePostagem?: { id: string; codigoObjeto: string } } | undefined)?.prePostagem;
       prePostagemToCancel = pre && order.status !== 'shipped' ? { id: pre.id, codigoObjeto: pre.codigoObjeto } : null;
 
-      cancelled = { userId: order.userId as string | undefined, items: order.items, totalCents: order.totalCents as number | undefined, wasPaid: paid, emTransito: order.status === 'shipped' };
+      // Cliente desistiu pelo site: o cancelamento é a pedido dele.
+      const byCustomer = !!(order.cancelRequest as { at?: string } | undefined)?.at;
+      const note = byCustomer && reason === 'Cancelado pelo lojista' ? 'Cancelado a pedido do cliente' : reason;
+      cancelled = { userId: order.userId as string | undefined, items: order.items, totalCents: order.totalCents as number | undefined, wasPaid: paid, emTransito: order.status === 'shipped', byCustomer };
 
       // Pedido que nunca foi pago devolve o uso do cupom (fora da transação).
       unpaidCouponCode = paid ? undefined : (order.couponCode as string | undefined);
@@ -134,7 +137,7 @@ export async function POST(
         ...(paid ? { 'payment.refundStatus': 'pending' } : {}),
         ...(mode === 'await_return' ? { restockPending: true } : {}),
         timeline: FieldValue.arrayUnion(
-          { status: 'cancelled', at: now, note: reason },
+          { status: 'cancelled', at: now, note },
           ...(mode === 'await_return' ? [{ status: 'cancelled', at: now, note: 'O pacote já estava com a transportadora: as peças voltam ao estoque quando ele chegar de volta na loja.' }] : []),
         ),
       });
@@ -209,10 +212,11 @@ export async function POST(
     }
   }
 
-  const c = cancelled as { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean; emTransito?: boolean } | null;
+  const c = cancelled as { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean; emTransito?: boolean; byCustomer?: boolean } | null;
   // O motivo digitado no painel vai no e-mail (o painel diz que o cliente vê).
   if (c) await notifyOrderCancelled(orderId, c, {
     refund: c.wasPaid,
+    byCustomer: c.byCustomer === true,
     ...(reason !== 'Cancelado pelo lojista' ? { reason } : {}),
     emTransito: c.emTransito === true,
   });
