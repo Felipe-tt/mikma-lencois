@@ -3,7 +3,9 @@
  * aberta ou estorno já feito com o pedido ativo: enviar seria mandar o
  * produto sem o dinheiro (antes o painel só avisava e deixava despachar).
  */
-export function shippingBlockReason(order: { payment?: unknown; risk?: unknown; troca?: unknown }): string | null {
+export function shippingBlockReason(order: { payment?: unknown; risk?: unknown; troca?: unknown; cancelRequest?: unknown }): string | null {
+  // Cliente desistiu da compra pelo site: cancelar e devolver, não enviar.
+  if ((order.cancelRequest as { at?: string } | undefined)?.at) return 'O cliente pediu para desistir da compra. Não envie: cancele o pedido e devolva o dinheiro.';
   // Peça nova de troca: só sai depois que as peças antigas chegam e são conferidas.
   if ((order.troca as { aguardandoPecas?: boolean } | undefined)?.aguardandoPecas) return 'Peça nova de troca: aguarde as peças antigas chegarem e conclua a troca antes de enviar.';
   const p = (order.payment ?? {}) as { dispute?: { state?: string }; refundStatus?: string };

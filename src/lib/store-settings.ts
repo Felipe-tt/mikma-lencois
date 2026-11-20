@@ -17,6 +17,8 @@ export type StoreSettings = {
   storePhone: string;
   storeEmail: string;
   storeCnpj: string;
+  /** País onde os produtos são feitos (CDC, art. 31: a oferta diz a origem). Vazio: não aparece. */
+  productOrigin: string;
   instagramUrl: string;
   // Perfil da empresa no Google: o link do perfil (Maps) liga o site a ele
   // nos dados da loja, e o link de avaliação vai nos e-mails e no pedido.
@@ -169,6 +171,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   storePhone: '',
   storeEmail: '',
   storeCnpj: '',
+  productOrigin: '',
   instagramUrl: '',
   googleBusinessUrl: '',
   googleReviewUrl: '',
