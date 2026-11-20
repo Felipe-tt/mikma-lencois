@@ -18,11 +18,13 @@ type Devolucao = ReturnRequest & {
 export function avisoDoStatus(d: Pick<Devolucao, 'status'> & { recebidaEm?: string }): AvisoTroca | null {
   // Entregue no balcão: a equipe marca no painel e o cliente recebe o "chegou".
   if (d.status === 'aprovada' && d.recebidaEm) return 'chegou';
+  // Recém-registrada: confirma ao cliente que o pedido chegou.
+  if (d.status === 'solicitada') return 'recebida';
   return d.status === 'aprovada' || d.status === 'recusada' || d.status === 'concluida' ? d.status : null;
 }
 
 /**
- * Manda ao cliente o e-mail da troca (aprovada, código dos Correios,
+ * Manda ao cliente o e-mail da troca (recebida, aprovada, código dos Correios,
  * entregador da Uber a caminho, chegou, recusada, concluída). Uma vez por tipo: marca `avisos.<tipo>` numa
  * transação antes de enviar, então clique duplo ou duas abas não mandam
  * dois e-mails. Nunca lança; devolve o que aconteceu.

@@ -19,6 +19,7 @@ import { notifyInApp } from '@/lib/push/notifyInApp';
 import { summarizeOrderItems } from '@/lib/push/summarizeOrderItems';
 import { computeProductsCents, validateCoupon, computeCardTotalCents, installmentFeeRate, cardMinCents, maxInstallments } from '@/lib/orderPricing';
 import { MAX_PENDING_ORDERS_PER_USER } from '@/lib/orders/pendingLimit';
+import { consumeCouponUse, couponCustomerUsage } from '@/lib/orders/couponUsage';
 import { z } from 'zod';
 import type { Coupon } from '@/types';
 import { createCheckoutSchema } from './schema';
@@ -160,6 +161,10 @@ export async function POST(req: NextRequest) {
         if (!prod.active) {
           throw new StockError(`"${prod.name}" não está mais disponível. Remova do carrinho e tente novamente.`);
         }
+        // Preço zerado ou inválido no cadastro: não vende de graça.
+        if (!Number.isFinite(prod.price) || prod.price <= 0) {
+          throw new StockError(`"${prod.name}" está sem preço no momento. Remova do carrinho e tente mais tarde.`);
+        }
         // O SKU vem do carrinho (client SDK): sem isso dava pra pagar o
         // preço de um produto e reservar/baixar o estoque de outro.
         if (!ci.sku.startsWith(`${ci.productId}_`)) {
@@ -193,6 +198,7 @@ export async function POST(req: NextRequest) {
     // limite de usos de um cupom).
     let couponDiscountCents = 0;
     let couponCode: string | null = null;
+    let couponPaidBefore = false;
     if (cartCouponCode) {
       const couponRef = adminDb.collection('coupons').doc(cartCouponCode);
       // Só calcula o desconto aqui. O incremento de usedCount (com nova
@@ -200,9 +206,10 @@ export async function POST(req: NextRequest) {
       // mais abaixo: antes ele vinha aqui e saídas antecipadas (pedido
       // idêntico recente, limite de pendentes, sem estoque) gastavam um uso
       // do cupom sem criar pedido nenhum.
-      const discount = await couponRef.get().then(couponSnap => {
+      const discount = await Promise.all([couponRef.get(), couponCustomerUsage(cartCouponCode, uid)]).then(([couponSnap, usage]) => {
         if (!couponSnap.exists) return 0;
-        const result = validateCoupon(couponSnap.data()! as Coupon, productsCents);
+        couponPaidBefore = usage.hasPaidOrder;
+        const result = validateCoupon(couponSnap.data()! as Coupon, productsCents, new Date(), usage);
         return result.valid ? result.discountCents : 0;
       }).catch(() => 0);
       if (discount > 0) {
@@ -341,9 +348,12 @@ export async function POST(req: NextRequest) {
         );
         const couponRef = couponCode ? adminDb.collection('coupons').doc(couponCode) : null;
         const couponSnap = couponRef ? await tx.get(couponRef) : null;
+        // Uso deste cliente lido na mesma transação: dois pedidos ao mesmo
+        // tempo não passam do limite por cliente.
+        const usage = couponCode ? await couponCustomerUsage(couponCode, uid, tx, couponPaidBefore) : undefined;
         if (couponRef) {
           const result = couponSnap?.exists
-            ? validateCoupon(couponSnap.data()! as Coupon, productsCents)
+            ? validateCoupon(couponSnap.data()! as Coupon, productsCents, new Date(), usage)
             : { valid: false, discountCents: 0 };
           if (!result.valid || result.discountCents !== couponDiscountCents) {
             throw new StockError('O cupom aplicado não está mais disponível. Atualize o carrinho e tente novamente.');
@@ -367,7 +377,7 @@ export async function POST(req: NextRequest) {
             updatedAt: FieldValue.serverTimestamp(),
           });
         }
-        if (couponRef) tx.update(couponRef, { usedCount: FieldValue.increment(1) });
+        if (couponCode) consumeCouponUse(tx, couponCode, uid);
       });
     } catch (err) {
       if (err instanceof StockError) {
@@ -415,6 +425,7 @@ export async function POST(req: NextRequest) {
         priceCents: shippingCents,
         realPriceCents: matchedShipping.realPriceCents ?? shippingCents,
         estimatedDays: matchedShipping.estimatedDays,
+        ...(matchedShipping.transitDays !== undefined ? { transitDays: matchedShipping.transitDays } : {}),
         uberSandbox: shippingResult.uberSandbox,
         ...(matchedShipping.quoteId ? { uberQuoteId: matchedShipping.quoteId } : {}),
       },

@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext, type Browser, type Locator, type Page } from '@playwright/test';
 import { ABACATE, addToCart, charges, goToPayment, login, payPix, prepare, staffLogin } from './helpers';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { db, emptyCart, forgetPasskeys, readOrder } from './db';
+import { db, emptyCart, forgetPasskeys, readOrder, stockOf } from './db';
 
 /**
  * Venda pelos Correios do começo ao fim, com o contrato e o Melhor Envio
@@ -315,6 +315,43 @@ test('pedido cancelado com etiqueta: a etiqueta é cancelada nos Correios', asyn
   await staff.close();
 });
 
+test('pedido cancelado já com os Correios: o estoque volta só quando o pacote volta', async ({ page, browser, baseURL }) => {
+  test.setTimeout(240_000);
+  const email = 'cancela@e2e.mikma';
+  await emptyCart(email);
+  await login(page, email, SENHA);
+  await addToCart(page, JOGO_KING.id);
+  const payPixButton = await goToPayment(page);
+  await page.getByRole('radiogroup', { name: 'Opção de entrega' }).getByRole('radio', { name: /Correios PAC/ }).click();
+  const { orderId, charge } = await payWithPix(page, payPixButton);
+  expect((await payPix(baseURL!, charge.id, orderId, charge.amount)).status).toBe(200);
+  await dispatch(browser, orderId, 'Correios PAC', { cancelarAntes: false, confirmar: true });
+  const sku = (await readOrder(orderId)).items![0].sku;
+  const enviado = await stockOf(sku);
+
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto(`/painel/pedidos/${orderId}`);
+  await panel.getByRole('button', { name: 'Cancelar este pedido' }).click();
+  await expect(panel.getByText(/as peças voltam ao estoque quando você marcar/)).toBeVisible();
+  await panel.getByRole('button', { name: 'Cancelar e estornar' }).click();
+  await expect.poll(async () => (await readOrder(orderId)).status).toBe('cancelled');
+  await expect.poll(async () => (await readOrder(orderId)).payment?.refundStatus).toBe('done');
+  // O cliente, com o PIX ainda aberto, vê que o dinheiro volta (antes:
+  // "o pagamento não foi identificado").
+  await expect(page.getByText(/valor pago volta para você/).first()).toBeVisible();
+  // Pacote na estrada: nada volta ao estoque ainda.
+  expect((await readOrder(orderId)).restockPending).toBe(true);
+  expect(await stockOf(sku)).toBe(enviado);
+
+  // O pacote voltou: a equipe confere e devolve ao estoque, uma vez só.
+  await panel.getByRole('button', { name: 'Pacote voltou: devolver ao estoque' }).click();
+  await panel.getByRole('dialog').getByRole('button', { name: 'Devolver ao estoque' }).click();
+  await expect.poll(async () => (await readOrder(orderId)).restockPending).toBe(false);
+  expect(await stockOf(sku)).toBe(enviado + 1);
+  await expect(panel.getByRole('button', { name: 'Pacote voltou: devolver ao estoque' })).toHaveCount(0);
+  await staff.close();
+});
+
 test('lote: etiquetas do dia geradas de uma vez e impressas num PDF só', async ({ page, browser, baseURL }) => {
   test.setTimeout(300_000);
   const email = 'lote@e2e.mikma';
@@ -578,6 +615,19 @@ test('devolução de parte do pedido: a AbacatePay manda PIX no CPF do cliente',
   // O pagamento original não foi estornado inteiro.
   expect((await charges()).find(c => c.id === charge.id)?.status).toBe('PAID');
   await staff.close();
+
+  // Concluída a devolução, o cliente ainda pode pedir troca de outra peça do
+  // pedido, só da que não voltou (a mesma peça não gera um segundo estorno).
+  const cliente = await browser.newContext();
+  await prepare(cliente);
+  const page = await cliente.newPage();
+  await login(page, 'devolve@e2e.mikma', SENHA);
+  await page.goto(`/pedidos/${orderRef.id}`);
+  await page.getByRole('button', { name: 'Pedir troca de outra peça' }).click();
+  const pecas = page.getByRole('group', { name: 'Quais peças?' });
+  await expect(pecas.getByText('Jogo p3_v2')).toBeVisible();
+  await expect(pecas.getByText('Jogo p3_v1')).toHaveCount(0);
+  await cliente.close();
 });
 
 test('fronha trocada: o painel e a nota de separação mostram qual fronha embalar', async ({ browser }) => {

@@ -3,8 +3,7 @@ import { z } from 'zod';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
-import { assessOrderRisk, releaseOrderRisk, storeOrderRisk } from '@/lib/orders/risk';
-import type { OrderRisk } from '@/lib/fraudSignals';
+import { assessOrderRisk, readStoredRisk, releaseOrderRisk, storeOrderRisk } from '@/lib/orders/risk';
 import { effectiveRole } from '@/lib/staffMfa';
 
 /**
@@ -32,7 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orde
   if (who instanceof NextResponse) return who;
   const snap = await adminDb.collection('orders').doc(orderId).get();
   if (!snap.exists) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
-  const stored = snap.get('risk') as OrderRisk | undefined;
+  const stored = await readStoredRisk(orderId);
   if (stored) return NextResponse.json({ risk: stored, stored: true });
   const live = await assessOrderRisk(orderId);
   return NextResponse.json({ risk: live ? { ...live, hold: false } : null, stored: false });
@@ -53,5 +52,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   } else {
     await storeOrderRisk(orderId);
   }
-  return NextResponse.json({ risk: (await adminDb.collection('orders').doc(orderId).get()).get('risk') ?? null });
+  return NextResponse.json({ risk: await readStoredRisk(orderId) });
 }

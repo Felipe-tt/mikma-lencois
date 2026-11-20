@@ -6,6 +6,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { effectiveRole } from '@/lib/staffMfa';
+import { staffName } from '@/lib/staffName';
 
 const bodySchema = z.object({
   note: z.string().trim().max(300).optional(),
@@ -25,13 +26,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
   let uid: string;
-  let email: string | undefined;
+  let quem: string;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
     const role = effectiveRole(decoded);
     if (role !== 'seller' && role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     uid = decoded.uid;
-    email = decoded.email;
+    quem = await staffName(decoded);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       timeline: FieldValue.arrayUnion({
         status: order.status,
         at,
-        note: `Estorno feito, registrado por ${email ?? uid}${note ? ` · ${note}` : ''}`,
+        note: `Estorno feito, registrado por ${quem}${note ? ` · ${note}` : ''}`,
       }),
     });
     return 'OK';

@@ -22,10 +22,10 @@ export default async function TrocasEDevolucoesPage() {
       clauses: [
         clause(
           <>
-            Você tem <B>7 dias corridos</B>, a contar do dia em que recebeu o pedido, para trocar
-            (outro tamanho ou cor) ou devolver. Para devolver, não precisa explicar o motivo: é o
-            direito de arrependimento das compras pela internet (art. 49 do Código de Defesa do
-            Consumidor).
+            Você tem <B>7 dias corridos</B> depois do dia em que recebeu o pedido para trocar
+            (outro tamanho ou cor) ou devolver; se o 7º dia cair em fim de semana ou feriado, vale
+            até o dia útil seguinte. Para devolver, não precisa explicar o motivo: é o direito de
+            arrependimento das compras pela internet (art. 49 do Código de Defesa do Consumidor).
           </>,
         ),
         clause(

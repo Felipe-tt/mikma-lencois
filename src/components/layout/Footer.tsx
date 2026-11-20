@@ -17,7 +17,8 @@ interface Props {
   whatsappUrl?: string;
   reclameAquiUrl?: string;
   tagline?: string;
-  /** Identificação do vendedor (Decreto 7.962/2013): CNPJ e endereço. */
+  /** Identificação do vendedor (Decreto 7.962/2013): razão social, CNPJ e endereço. */
+  legalName?: string;
   cnpj?: string;
   address?: string;
   businessHours?: string;
@@ -40,6 +41,7 @@ function FooterView({
   whatsappUrl,
   reclameAquiUrl,
   tagline = '',
+  legalName,
   cnpj,
   address,
   businessHours,
@@ -60,6 +62,8 @@ function FooterView({
   const year = now !== null ? new Date(now).getFullYear() : BUILD_YEAR;
   // Nome vazio nas configurações virava "© 2026 · Todos os direitos...".
   const storeName = storeNameRaw?.trim() || 'Mikma Lençóis';
+  // Nome empresarial e CNPJ juntos, como pede o Decreto 7.962/2013.
+  const legal = `${legalName ? ` · ${legalName}` : ''}${cnpj ? ` · CNPJ ${cnpj}` : ''}`;
   const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
   const status = businessHours && now !== null ? getOpenStatus(parseBusinessHours(businessHours), businessHoursTimezone) : null;
 
@@ -68,7 +72,7 @@ function FooterView({
   if (pathname.startsWith('/checkout')) return (
     <footer className="border-t border-mist">
       <div className="container-shop py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[12px] text-faint">
-        <p>© {year} {storeName}{cnpj ? ` · CNPJ ${cnpj}` : ''}</p>
+        <p>© {year} {storeName}{legal}</p>
         <nav aria-label="Ajuda" className="flex gap-4">
           <Link href="/trocas-e-devolucoes" className="hover:text-ink transition-colors">Trocas e devoluções</Link>
           <Link href="/privacidade" className="hover:text-ink transition-colors">Privacidade</Link>
@@ -220,7 +224,7 @@ function FooterView({
         {/* ── Rodapé legal ── */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-7">
           <div className="text-[11px] text-paper/55 leading-relaxed">
-            <p>© {year} {storeName}{cnpj ? ` · CNPJ ${cnpj}` : ''} · Todos os direitos reservados</p>
+            <p>© {year} {storeName}{legal} · Todos os direitos reservados</p>
             {address && <p>{address}</p>}
           </div>
           <div className="flex items-center gap-4">

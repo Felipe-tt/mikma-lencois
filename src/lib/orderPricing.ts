@@ -19,6 +19,18 @@ export interface CouponLike {
   maxUses?: number | null
   usedCount?: number
   minOrderCents?: number | null
+  /** Quantas vezes o mesmo cliente pode usar. Vazio: sem limite por cliente. */
+  maxUsesPerCustomer?: number | null
+  /** Só vale na primeira compra paga do cliente (e uma vez só). */
+  firstPurchaseOnly?: boolean
+}
+
+/** O que o cliente já fez com o cupom (lido no servidor, nunca do cliente). */
+export interface CouponCustomerUsage {
+  /** Usos deste cliente em pedidos ainda válidos. */
+  uses: number
+  /** O cliente já tem algum pedido pago. */
+  hasPaidOrder: boolean
 }
 
 export interface CouponResult {
@@ -36,15 +48,28 @@ export function computeProductsCents(items: { unitPrice: number; quantity: numbe
 /**
  * Valida um cupom e calcula o desconto em centavos, se válido.
  * Mesma regra nas três rotas que usam cupom: ativo, não expirado, dentro do
- * limite de usos, e o pedido bate o mínimo exigido (quando houver).
+ * limite de usos (no total e por cliente), primeira compra quando o cupom
+ * pede, e o pedido bate o mínimo exigido (quando houver). Sem `usage`, as
+ * regras por cliente não são checadas (ex.: frete calculado sem login).
  */
-export function validateCoupon(coupon: CouponLike, productsCents: number, now: Date = new Date()): CouponResult {
+export function validateCoupon(coupon: CouponLike, productsCents: number, now: Date = new Date(), usage?: CouponCustomerUsage): CouponResult {
   if (!coupon.active) return { valid: false, reason: 'Cupom inativo', discountCents: 0 };
   if (coupon.expiresAt && new Date(coupon.expiresAt) <= now) {
     return { valid: false, reason: 'Cupom expirado', discountCents: 0 };
   }
   if (coupon.maxUses != null && (coupon.usedCount ?? 0) >= coupon.maxUses) {
     return { valid: false, reason: 'Cupom esgotado', discountCents: 0 };
+  }
+  if (usage && coupon.maxUsesPerCustomer != null && coupon.maxUsesPerCustomer > 0 && usage.uses >= coupon.maxUsesPerCustomer) {
+    return { valid: false, reason: coupon.maxUsesPerCustomer === 1 ? 'Você já usou este cupom' : `Você já usou este cupom ${coupon.maxUsesPerCustomer} vezes`, discountCents: 0 };
+  }
+  // Primeira compra vale uma vez: com um pedido em aberto já usando o cupom,
+  // um segundo pedido ainda não pago passava, e os dois saíam com desconto.
+  if (usage && coupon.firstPurchaseOnly && usage.uses > 0) {
+    return { valid: false, reason: 'Você já usou este cupom', discountCents: 0 };
+  }
+  if (usage && coupon.firstPurchaseOnly && usage.hasPaidOrder) {
+    return { valid: false, reason: 'Este cupom vale só na primeira compra', discountCents: 0 };
   }
   if (coupon.minOrderCents != null && productsCents < coupon.minOrderCents) {
     return { valid: false, reason: `Pedido mínimo de R$ ${(coupon.minOrderCents / 100).toFixed(2)}`, discountCents: 0 };
@@ -155,10 +180,32 @@ export function maxInstallments(baseCents: number): number {
  * maior parcela sem juros e o valor de cada uma já com a taxa do cartão,
  * igual ao que o checkout cobra. n = 1 quando não há parcelamento sem juros.
  */
-export function interestFreeHint(baseCents: number, fees?: Partial<PublicCardFees>): { n: number; perCents: number } {
+export function interestFreeHint(baseCents: number, fees?: Partial<PublicCardFees>): { n: number; perCents: number; totalCents: number } {
   const max = maxInstallments(baseCents);
   let n = 1;
   for (let k = max; k >= 1; k--) { if (installmentFeeRate(k) === 0) { n = k; break; } }
   const total = computeCardTotalCents({ productsCents: baseCents, couponDiscountCents: 0, shippingCents: 0, feeRate: 0, cardFee: cardFeeFor(fees, n) });
-  return { n, perCents: Math.round(total / n) };
+  return { n, perCents: Math.round(total / n), totalCents: total };
+}
+
+/**
+ * Taxa efetiva de juros ao mês de um parcelamento (CDC art. 52, II: o
+ * cliente vê a taxa, não só o valor dos juros): a taxa i em que n parcelas
+ * iguais de `installmentCents`, a primeira em 30 dias, valem hoje
+ * `principalCents`. 0 quando não há juros. Em fração (0.0079 = 0,79% a.m.).
+ */
+export function effectiveMonthlyRate(principalCents: number, installmentCents: number, n: number): number {
+  if (n <= 1 || principalCents <= 0 || installmentCents * n <= principalCents) return 0;
+  const presentValue = (i: number) => installmentCents * (1 - (1 + i) ** -n) / i;
+  let lo = 1e-9, hi = 1;
+  for (let k = 0; k < 100; k++) {
+    const mid = (lo + hi) / 2;
+    if (presentValue(mid) > principalCents) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/** Taxa ao ano equivalente a uma taxa ao mês (juros compostos). */
+export function annualRate(monthly: number): number {
+  return (1 + monthly) ** 12 - 1;
 }

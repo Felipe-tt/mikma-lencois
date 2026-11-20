@@ -26,7 +26,7 @@ export default async function TermosPage() {
         clause(
           <>
             Este site é da <B>{id.name}</B>
-            {id.cnpj && <> (CNPJ {id.cnpj})</>}, de {id.address || id.cityState}. Quando falamos
+            {(id.legalName || id.cnpj) && <> ({[id.legalName, id.cnpj && `CNPJ ${id.cnpj}`].filter(Boolean).join(', ')})</>}, de {id.address || id.cityState}. Quando falamos
             “nós” ou “a loja”, somos nós. Quando falamos “você”, é quem visita o site ou compra
             nele.
           </>,
@@ -124,7 +124,7 @@ export default async function TermosPage() {
       title: 'Entrega',
       clauses: [
         clause(
-          'O prazo começa a contar depois que o pagamento é confirmado. Pedidos pagos depois do horário de despacho mostrado no site saem no dia útil seguinte.',
+          'O prazo começa a contar depois que o pagamento é confirmado, em dias úteis (sem fins de semana e feriados nacionais), e já inclui o tempo para postarmos o pedido.',
         ),
         clause('Temos dois jeitos de entregar:', [
           <>

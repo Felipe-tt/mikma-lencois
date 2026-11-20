@@ -9,6 +9,9 @@ import {
   computePixTotalCents,
   computeCardTotalCents,
   type CouponLike,
+  effectiveMonthlyRate,
+  annualRate,
+  interestFreeHint,
 } from './orderPricing';
 
 describe('computeProductsCents', () => {
@@ -202,5 +205,66 @@ describe('cartão: mínimo e parcelas', () => {
     expect(maxInstallments(10000)).toBe(1);
     expect(maxInstallments(35000)).toBe(3);
     expect(maxInstallments(500000)).toBe(8);
+  });
+});
+
+describe('validateCoupon: regras por cliente', () => {
+  const base: CouponLike = { active: true, type: 'percent', value: 10, usedCount: 0, maxUses: 100 };
+  const now = new Date('2026-01-01T12:00:00Z');
+
+  it('bloqueia quem já usou o limite por cliente', () => {
+    const r = validateCoupon({ ...base, maxUsesPerCustomer: 1 }, 10000, now, { uses: 1, hasPaidOrder: true });
+    expect(r).toMatchObject({ valid: false, reason: 'Você já usou este cupom' });
+  });
+
+  it('deixa usar enquanto não bateu o limite por cliente', () => {
+    const r = validateCoupon({ ...base, maxUsesPerCustomer: 2 }, 10000, now, { uses: 1, hasPaidOrder: true });
+    expect(r).toEqual({ valid: true, discountCents: 1000 });
+  });
+
+  it('sem limite por cliente, usos anteriores não importam', () => {
+    expect(validateCoupon(base, 10000, now, { uses: 9, hasPaidOrder: true }).valid).toBe(true);
+  });
+
+  it('primeira compra: bloqueia quem já tem pedido pago', () => {
+    const r = validateCoupon({ ...base, firstPurchaseOnly: true }, 10000, now, { uses: 0, hasPaidOrder: true });
+    expect(r).toMatchObject({ valid: false, reason: 'Este cupom vale só na primeira compra' });
+    expect(validateCoupon({ ...base, firstPurchaseOnly: true }, 10000, now, { uses: 0, hasPaidOrder: false }).valid).toBe(true);
+  });
+
+  it('primeira compra vale uma vez, mesmo sem limite por cliente', () => {
+    // Pedido anterior ainda aguardando pagamento já usou o cupom.
+    const r = validateCoupon({ ...base, firstPurchaseOnly: true }, 10000, now, { uses: 1, hasPaidOrder: false });
+    expect(r).toMatchObject({ valid: false, reason: 'Você já usou este cupom' });
+  });
+
+  it('sem os usos do cliente, as regras por cliente não são checadas', () => {
+    expect(validateCoupon({ ...base, maxUsesPerCustomer: 1, firstPurchaseOnly: true }, 10000, now).valid).toBe(true);
+  });
+});
+
+describe('taxa efetiva do parcelamento (CDC art. 52)', () => {
+  it('sem juros dá zero', () => {
+    expect(effectiveMonthlyRate(30000, 10000, 3)).toBe(0);
+    expect(effectiveMonthlyRate(30000, 30000, 1)).toBe(0);
+  });
+
+  it('acha a taxa que faz as parcelas valerem o preço à vista', () => {
+    // 4x com 1,99% sobre o total: R$ 1.000 vira 4 parcelas de R$ 254,98.
+    const i = effectiveMonthlyRate(100000, 25498, 4);
+    expect(i).toBeGreaterThan(0.0078);
+    expect(i).toBeLessThan(0.0081);
+    const pv = 25498 * (1 - (1 + i) ** -4) / i;
+    expect(Math.abs(pv - 100000)).toBeLessThan(1);
+  });
+
+  it('converte a taxa do mês para a do ano com juros compostos', () => {
+    expect(annualRate(0.01)).toBeCloseTo(0.126825, 5);
+    expect(annualRate(0)).toBe(0);
+  });
+
+  it('a dica de parcelas sem juros traz o total no cartão', () => {
+    const hint = interestFreeHint(30000, { abacateFeeCardToCustomer: false });
+    expect(hint).toEqual({ n: 3, perCents: 10000, totalCents: 30000 });
   });
 });

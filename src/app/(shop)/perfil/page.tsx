@@ -29,6 +29,8 @@ export default function PerfilPage() {
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Erro da exclusão aparece na própria caixa (o aviso geral fica no topo).
+  const [deleteError, setDeleteError] = useState('');
   const [address, setAddress] = useState<Address | null | undefined>(undefined);
   // Celular editável (o checkout usa para preencher o pedido). O CPF só
   // aparece, parcialmente oculto: não se troca pelo perfil.
@@ -129,7 +131,7 @@ export default function PerfilPage() {
   // apagar de novo (dava erro e a pessoa ficava na página sem aviso), e
   // se a API falhasse o login era apagado mesmo assim, deixando os dados.
   const handleDelete = async () => {
-    setDeleting(true); setError('');
+    setDeleting(true); setDeleteError('');
     try {
       const res = await fetch('/api/user/delete', {
         method: 'DELETE',
@@ -142,7 +144,7 @@ export default function PerfilPage() {
       await logout().catch(() => {});
       router.push('/');
     } catch (err) {
-      setError(userMessage(err, 'Não foi possível excluir a conta agora.'));
+      setDeleteError(userMessage(err, 'Não foi possível excluir a conta agora.'));
       setDeleting(false);
     }
   };
@@ -360,8 +362,11 @@ export default function PerfilPage() {
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-5 animate-fade-in">
                   <p className="text-[13.5px] font-semibold text-red-800 mb-1">Excluir a conta de vez?</p>
                   <p className="text-[12.5px] text-red-700/90 mb-4 leading-relaxed">
-                    Seus dados, favoritos e endereço são apagados e não dá pra desfazer. Pedidos já feitos ficam guardados só pelo tempo que a lei exige.
+                    Seus dados, favoritos, endereço e avaliações são apagados e não dá pra desfazer. Pedidos já feitos ficam guardados só pelo tempo que a lei exige.
                   </p>
+                  {deleteError && (
+                    <p role="alert" className="text-[12.5px] font-medium text-red-800 mb-4 leading-relaxed">{deleteError}</p>
+                  )}
                   <div className="flex flex-wrap gap-2.5">
                     <button
                       onClick={handleDelete}
@@ -370,7 +375,7 @@ export default function PerfilPage() {
                     >
                       {deleting ? 'Excluindo…' : 'Sim, excluir'}
                     </button>
-                    <button onClick={() => setConfirmDelete(false)} className="btn-ghost">
+                    <button onClick={() => { setConfirmDelete(false); setDeleteError(''); }} className="btn-ghost">
                       Cancelar
                     </button>
                   </div>

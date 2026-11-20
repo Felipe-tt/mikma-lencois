@@ -276,10 +276,17 @@ export default function ConfiguracoesPage() {
             <F label="Slogan" hint="Uma frase curta que resume o que você faz"
               value={settings.storeSlogan} onChange={v => set('storeSlogan', v)}
               placeholder="Conforto direto da fábrica" />
-            <F label="CNPJ (opcional)"
-              hint={!settings.storeCnpj ? 'Aparece no rodapé do site' : isValidCnpj(settings.storeCnpj) ? 'CNPJ válido' : 'CNPJ incompleto'}
+            <F label="CNPJ"
+              hint={!settings.storeCnpj ? 'Obrigatório no rodapé do site (Decreto 7.962/2013)' : isValidCnpj(settings.storeCnpj) ? 'CNPJ válido · aparece no rodapé' : 'CNPJ incompleto'}
               value={settings.storeCnpj ?? ''} onChange={v => set('storeCnpj', maskCnpj(v))}
               placeholder="00.000.000/0000-00" maxLength={18} />
+            <F label="Razão social" value={settings.nfeRazaoSocial ?? ''} onChange={v => set('nfeRazaoSocial', v)} maxLength={60}
+              hint="Como está no cartão CNPJ. Aparece no rodapé junto do CNPJ e vai na nota fiscal." />
+            {(!(settings.storeCnpj || settings.nfeCnpj) || !settings.nfeRazaoSocial?.trim() || !settings.storeAddress?.trim() || !settings.storeCity?.trim()) && (
+              <p role="status" className="text-[12px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl px-3.5 py-2.5 leading-snug">
+                A lei do comércio eletrônico (Decreto 7.962/2013) pede que o site mostre CNPJ, razão social e endereço completo. Preencha aqui e em <strong>Onde você fica</strong>.
+              </p>
+            )}
           </Card>
 
           <Card icon="pin" title="Onde você fica" desc="Endereço físico da sua loja, usado também para gerar etiquetas de envio" onPreview={() => setPreview('sobre')}>
@@ -511,6 +518,10 @@ export default function ConfiguracoesPage() {
               value={settings.localDeliveryRadiusKm} onChange={v => set('localDeliveryRadiusKm', v)}
               hint={`Pedidos dentro de ${settings.localDeliveryRadiusKm} km recebem opção de entrega em 1h`}
               min={1} max={100} />
+            <Num label="Dias para postar o pedido"
+              value={settings.handlingDays ?? 1} onChange={v => set('handlingDays', Math.max(0, Math.min(10, Math.round(v))))}
+              hint="Dias úteis, somados ao prazo dos Correios e da Jadlog que o cliente vê. Use 0 se você posta no mesmo dia do pagamento."
+              min={0} max={10} />
             <details className="border border-mist rounded-xl">
               <summary className="px-3 py-2.5 text-[12px] text-faint cursor-pointer select-none">
                 Coordenadas GPS (avançado, só mexa se souber)
@@ -584,7 +595,7 @@ export default function ConfiguracoesPage() {
               onChange={v => set('freeShippingMaxLossCents', Math.round(v * 100))}
               hint={settings.freeShippingMaxLossCents === 0
                 ? 'Digite 0 pra desativar o teto (frete grátis sempre vale, sem limite)'
-                : `Se o "caixa de frete" acumular mais de R$ ${(settings.freeShippingMaxLossCents/100).toFixed(2)} de prejuízo, o frete grátis é desligado sozinho até o saldo se recuperar, o cliente nunca vê isso, só deixa de ver a oferta de frete grátis.`}
+                : `Se o "caixa de frete" acumular R$ ${(settings.freeShippingMaxLossCents/100).toFixed(2)} de prejuízo, o frete grátis é desligado sozinho até o saldo se recuperar. A oferta some do site junto (barra do carrinho e faixa de aviso que fala de grátis), para o site nunca prometer o que não vai cobrar.`}
               min={0} />
             {shippingLedger && (
               <div className="mt-3 flex items-center justify-between rounded-lg bg-[#F0EBE1] px-4 py-3">
@@ -598,6 +609,11 @@ export default function ConfiguracoesPage() {
                   R$ {(shippingLedger.balanceCents/100).toFixed(2)}
                 </p>
               </div>
+            )}
+            {shippingLedger && settings.freeShippingThresholdCents > 0 && settings.freeShippingMaxLossCents > 0 && shippingLedger.balanceCents <= -settings.freeShippingMaxLossCents && (
+              <p role="status" className="mt-2 text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5 leading-snug">
+                Frete grátis desligado agora: o prejuízo do caixa chegou no teto. O site já não anuncia frete grátis. Para voltar, aumente o teto ou espere o saldo se recuperar.
+              </p>
             )}
           </Card>
 

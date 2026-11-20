@@ -178,6 +178,7 @@ export interface Order {
     deliveredAt?: string
     estimatedDelivery?: string
     estimatedDays?: number
+    transitDays?: number        // só o transporte, sem os dias para postar (o e-mail de envio conta daqui)
     // Uber Direct, atualizados pelo webhook
     courierName?: string        // Nome do entregador
     courierPhone?: string       // Telefone mascarado do entregador
@@ -208,9 +209,15 @@ export interface Order {
   timeline?: OrderTimelineEvent[]
   nfe?: NfeRecord       // nota fiscal de produção (ver src/lib/nfe)
   nfeTeste?: NfeRecord  // nota de teste, em homologação
-  risk?: OrderRisk      // detector de golpe (ver src/lib/orders/risk.ts)
+  // Detector de golpe: só se o envio está segurado. A avaliação completa
+  // fica em orderRisk/{id}, que só a equipe lê (ver src/lib/orders/risk.ts).
+  risk?: { hold?: boolean }
   customerName?: string
   customerEmail?: string
+  // Cancelado com o pacote já com a transportadora: as peças só voltam ao
+  // estoque quando a equipe marca que o pacote chegou de volta na loja.
+  restockPending?: boolean
+  restockedAt?: string
 }
 
 // ─── Trocas e devoluções ─────────────────────────────────────────────────────
@@ -241,7 +248,7 @@ export interface ReturnRequest {
   note?: string            // observação interna do vendedor
   createdAt: string
   updatedAt?: string
-  createdBy?: string       // email de quem registrou no painel
+  createdBy?: string       // nome de quem registrou no painel, ou 'cliente'
 }
 
 // ─── Cart ────────────────────────────────────────────────────────────────────
@@ -306,6 +313,10 @@ export interface Coupon {
   maxUses?: number
   usedCount: number
   active: boolean
+  /** Usos por cliente (vazio: sem limite por cliente). */
+  maxUsesPerCustomer?: number | null
+  /** Só na primeira compra paga do cliente. */
+  firstPurchaseOnly?: boolean
 }
 
 // ─── Delivery ────────────────────────────────────────────────────────────────

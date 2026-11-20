@@ -4,14 +4,26 @@ import { describe, expect, it, vi } from 'vitest';
 const DELETE = Symbol('delete');
 vi.mock('firebase-admin/firestore', () => ({ FieldValue: { delete: () => DELETE } }));
 
-const { runRetention, orderCutoffIso, cutoffIso } = await import('./retention');
+const { runRetention, orderCutoffIso, cutoffIso, nfeCutoffIso } = await import('./retention');
 
 type Doc = Record<string, unknown>;
+type Ref = { id: string; delete: () => Promise<void> };
+interface FakeQuery {
+  where: (f: string, op: string, v: unknown) => FakeQuery;
+  orderBy: (f: string) => FakeQuery;
+  limit: (n: number) => FakeQuery;
+  get: () => Promise<{ docs: { id: string; ref: Ref; get: (k: string) => unknown; data: () => Doc }[]; size: number; empty: boolean }>;
+}
 
-/** Firestore mínimo em memória: where/orderBy/limit/get, update/set/delete. */
+/**
+ * Firestore mínimo em memória: where/orderBy/limit/get, update/set/delete,
+ * subcoleções (chave "orders/o1/nfeDocs"), grupo de coleção e lote.
+ */
 function fakeDb(data: Record<string, Record<string, Doc>>) {
-  const ref = (col: string, id: string) => ({
+  const sub = (path: string) => ({ ...query(path), doc: (id: string) => ref(path, id) });
+  const ref = (col: string, id: string): Ref & Record<string, unknown> => ({
     id,
+    collection: (name: string) => sub(`${col}/${id}/${name}`),
     get: async () => ({ exists: !!data[col]?.[id], data: () => data[col]?.[id] }),
     set: async (v: Doc, opt?: { merge?: boolean }) => {
       data[col] ??= {};
@@ -26,22 +38,42 @@ function fakeDb(data: Record<string, Record<string, Doc>>) {
     },
     delete: async () => { delete data[col]?.[id]; },
   });
-  const query = (col: string, filters: [string, string, unknown][] = [], order?: string, lim = Infinity) => ({
-    where: (f: string, op: string, v: unknown) => query(col, [...filters, [f, op, v]], order, lim),
-    orderBy: (f: string) => query(col, filters, f, lim),
-    limit: (n: number) => query(col, filters, order, n),
+  const query = (col: string, filters: [string, string, unknown][] = [], order?: string, lim = Infinity, group = false): FakeQuery => ({
+    where: (f: string, op: string, v: unknown) => query(col, [...filters, [f, op, v]], order, lim, group),
+    orderBy: (f: string) => query(col, filters, f, lim, group),
+    limit: (n: number) => query(col, filters, order, n, group),
     get: async () => {
-      let rows = Object.entries(data[col] ?? {}).filter(([, d]) => filters.every(([f, op, v]) => {
-        const x = d[f] as string;
+      const paths = group ? Object.keys(data).filter(k => k === col || k.endsWith(`/${col}`)) : [col];
+      const all = paths.flatMap(path => Object.entries(data[path] ?? {}).map(([id, d]) => [path, id, d] as const));
+      let rows = all.filter(([, , d]) => filters.every(([f, op, v]) => {
+        const x = f.split('.').reduce<unknown>((o, k) => (o as Doc | undefined)?.[k], d) as string;
         if (x === undefined) return false;
-        return op === '<' ? x < (v as string) : op === '>=' ? x >= (v as string) : op === '==' ? x === v : false;
+        return op === '<' ? x < (v as string) : op === '>=' ? x >= (v as string) : op === '==' ? x === v : op === 'in' ? (v as unknown[]).includes(x) : false;
       }));
-      if (order) rows = rows.filter(([, d]) => d[order] !== undefined).sort(([, a], [, b]) => String(a[order]).localeCompare(String(b[order])));
-      const docs = rows.slice(0, lim).map(([id, d]) => ({ id, ref: ref(col, id), get: (k: string) => d[k], data: () => d }));
+      if (order) rows = rows.filter(([, , d]) => d[order] !== undefined).sort(([, , a], [, , b]) => String(a[order]).localeCompare(String(b[order])));
+      const docs = rows.slice(0, lim).map(([path, id, d]) => ({ id, ref: ref(path, id), get: (k: string) => d[k], data: () => d }));
       return { docs, size: docs.length, empty: docs.length === 0 };
     },
   });
-  return { collection: (col: string) => ({ ...query(col), doc: (id: string) => ref(col, id) }) };
+  return {
+    collection: sub,
+    collectionGroup: (name: string) => query(name, [], undefined, Infinity, true),
+    batch: () => {
+      const dels: Ref[] = [];
+      return { delete: (r: Ref) => { dels.push(r); }, commit: async () => { for (const r of dels) await r.delete(); } };
+    },
+  };
+}
+
+/** Storage falso: guarda o que foi apagado. */
+function fakeFiles() {
+  const prefixes: string[] = [];
+  const paths: string[] = [];
+  return {
+    prefixes, paths,
+    deletePrefix: async (p: string) => { prefixes.push(p); },
+    deletePath: async (p: string) => { paths.push(p); },
+  };
 }
 
 function fakeAuth(users: { uid: string; email?: string; providerData: unknown[]; metadata: { creationTime: string; lastSignInTime?: string } }[]) {
@@ -139,5 +171,86 @@ describe('retenção (LGPD)', () => {
     expect(r.queueDeleted).toBe(1);
     expect(Object.keys(data.restockRequests)).toEqual(['novo']);
     expect(Object.keys(data.maintenance_queue)).toEqual(['novo']);
+  });
+
+  it('tira a avaliação do detector de golpe do pedido (o cliente lê o pedido)', async () => {
+    const risk = { score: 70, level: 'alto', hold: true, signals: [{ reason: 'Mesmo CPF em 3 contas', relatedOrderIds: ['ord_outro'], points: 40 }], assessedAt: daysAgo(1) };
+    const data: Record<string, Record<string, Doc>> = {
+      orders: {
+        velho: { createdAt: daysAgo(10), userId: 'u1', risk },
+        novo: { createdAt: daysAgo(1), userId: 'u2', risk: { hold: false } },
+      },
+    };
+    const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(r.riskMoved).toBe(1);
+    expect(data.orders.velho.risk).toEqual({ hold: true });
+    expect(data.orderRisk.velho).toMatchObject({ level: 'alto', signals: risk.signals });
+    expect(data.orders.novo.risk).toEqual({ hold: false });
+  });
+
+  it('a avaliação de golpe sai junto com os dados pessoais do pedido', async () => {
+    const data: Record<string, Record<string, Doc>> = {
+      orders: {
+        antigo: { createdAt: daysAgo(6 * 365), customerName: 'Ana', userId: 'u1', risk: { hold: false } },
+        novo: { createdAt: daysAgo(10), customerName: 'Bia', userId: 'u2', risk: { hold: false } },
+      },
+      orderRisk: { antigo: { level: 'alto', signals: [] }, novo: { level: 'baixo', signals: [] } },
+    };
+    await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(Object.keys(data.orderRisk)).toEqual(['novo']);
+  });
+
+  it('nota fiscal: 5 anos contados do ano seguinte ao da emissão', async () => {
+    expect(nfeCutoffIso(new Date('2032-03-01T12:00:00Z'))).toBe('2027-01-01T00:00:00.000Z');
+    const data: Record<string, Record<string, Doc>> = {
+      'orders/o1/nfeDocs': {
+        velha: { createdAt: '2020-12-30T10:00:00.000Z', xml: '<nfe/>' },
+        noPrazo: { createdAt: '2021-01-02T10:00:00.000Z', xml: '<nfe/>' },
+      },
+      'orders/o2/nfeDocs': { nova: { createdAt: daysAgo(30), xml: '<nfe/>' } },
+    };
+    const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(r.nfeDeleted).toBe(1);
+    expect(Object.keys(data['orders/o1/nfeDocs'])).toEqual(['noPrazo']);
+    expect(Object.keys(data['orders/o2/nfeDocs'])).toEqual(['nova']);
+  });
+
+  it('atendimento e trocas com mais de 5 anos saem com anexos e fotos', async () => {
+    const data: Record<string, Record<string, Doc>> = {
+      conversations: {
+        velha: { customerEmail: 'a@x.com', lastMessageAt: daysAgo(6 * 365) },
+        nova: { customerEmail: 'b@x.com', lastMessageAt: daysAgo(20) },
+      },
+      'conversations/velha/messages': {
+        email1: { direction: 'inbound', attachments: [{ filename: 'foto.jpg' }] },
+        resposta: { direction: 'outbound', text: 'Oi' },
+      },
+      'conversations/nova/messages': { email2: { direction: 'inbound', attachments: [{ filename: 'nota.pdf' }] } },
+      returns: {
+        velha: { createdAt: daysAgo(6 * 365), fotos: ['returns/u1/1_0.jpg', 'returns/u1/1_1.jpg'] },
+        nova: { createdAt: daysAgo(40), fotos: ['returns/u2/2_0.jpg'] },
+      },
+    };
+    const files = fakeFiles();
+    const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW, files);
+    expect(r).toMatchObject({ conversationsDeleted: 1, returnsDeleted: 1 });
+    expect(Object.keys(data.conversations)).toEqual(['nova']);
+    expect(data['conversations/velha/messages']).toEqual({});
+    expect(Object.keys(data['conversations/nova/messages'])).toEqual(['email2']);
+    expect(files.prefixes).toEqual(['email-attachments/email1/']);
+    expect(Object.keys(data.returns)).toEqual(['nova']);
+    expect(files.paths).toEqual(['returns/u1/1_0.jpg', 'returns/u1/1_1.jpg']);
+  });
+
+  it('tira o e-mail da equipe do status público da manutenção', async () => {
+    const data: Record<string, Record<string, Doc>> = {
+      maintenance: { status: { active: false, updatedBy: 'equipe@loja.com', updatedAt: daysAgo(3) } },
+    };
+    await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(data.maintenance.status).toMatchObject({ active: false, updatedBy: 'Equipe' });
+
+    data.maintenance.status.updatedBy = 'Maria Souza';
+    await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(data.maintenance.status.updatedBy).toBe('Maria Souza');
   });
 });

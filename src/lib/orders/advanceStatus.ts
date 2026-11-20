@@ -1,4 +1,5 @@
 import { FieldValue } from 'firebase-admin/firestore';
+import { CONTACT_EMAIL } from '@/lib/email/layout';
 import { adminDb } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email';
 import type { Order, OrderStatus, User } from '@/types';
@@ -109,7 +110,7 @@ export async function advanceOrderStatus(
           html: payload.html,
           text: payload.text,
           from: 'noreply',
-          replyTo: 'contato@mikma.com.br',
+          replyTo: CONTACT_EMAIL,
         });
       }
     }

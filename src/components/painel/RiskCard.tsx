@@ -10,23 +10,24 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog';
  * segurado, o botão para liberar depois de conferir.
  */
 export function RiskCard({ order, user }: { order: Order; user: { getIdToken: () => Promise<string> } | null }) {
-  const stored = order.risk;
-  const [live, setLive] = useState<RiskAssessment | null>(null);
+  // A avaliação fica numa coleção só da equipe (o cliente lê o pedido): vem
+  // pela API, e é buscada de novo quando o envio é segurado ou liberado.
+  const hold = !!order.risk?.hold;
+  const [risk, setRisk] = useState<(RiskAssessment & Partial<OrderRisk>) | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (stored || !user) return;
+    if (!user) return;
     let cancelled = false;
     user.getIdToken()
       .then(token => fetch(`/api/painel/pedidos/${order.id}/fraud-signals`, { headers: { Authorization: `Bearer ${token}` } }))
       .then(res => (res.ok ? res.json() : null))
-      .then(data => { if (!cancelled && data?.risk) setLive(data.risk); })
+      .then(data => { if (!cancelled) setRisk(data?.risk ?? null); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [stored, order.id, user]);
+  }, [hold, order.id, user]);
 
-  const risk: (RiskAssessment & Partial<OrderRisk>) | null = stored ?? live;
   if (!risk || (risk.level === 'baixo' && risk.signals.length === 0 && !risk.releasedBy)) return null;
 
   async function release() {
@@ -45,7 +46,9 @@ export function RiskCard({ order, user }: { order: Order; user: { getIdToken: ()
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action: 'release' }),
       });
-      if (!res.ok) setError((await res.json().catch(() => ({}))).error ?? 'Não foi possível liberar.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setError(data.error ?? 'Não foi possível liberar.');
+      else if (data.risk) setRisk(data.risk);
     } catch {
       setError('Erro de conexão. Tente de novo.');
     } finally {

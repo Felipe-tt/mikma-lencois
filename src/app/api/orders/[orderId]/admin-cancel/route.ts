@@ -14,6 +14,7 @@ import { uberCancelDelivery } from '@/lib/uber-direct';
 import { cancelPrePostagem } from '@/lib/correiosPrepostagem';
 import { notifyOrderCancelled } from '@/lib/email/cancelledEmail';
 import { effectiveRole } from '@/lib/staffMfa';
+import { isManualDispatch, type CarrierKey } from '@/lib/carriers';
 
 // Statuses que ainda não tiveram o estoque debitado (só reservado)
 const PENDING_STATUSES = new Set(['pending_payment']);
@@ -75,7 +76,7 @@ export async function POST(
   // a coleta não vir buscar um pedido cancelado.
   let prePostagemToCancel: { id: string; codigoObjeto: string } | null = null;
   // Dados pro e-mail ao cliente, enviado só depois do commit.
-  let cancelled: { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean } | null = null;
+  let cancelled: { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean; emTransito?: boolean } | null = null;
   try {
     await adminDb.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
@@ -92,9 +93,14 @@ export async function POST(
       // payment_expired: o webhook já liberou a reserva, não mexe no estoque
       //   (antes caía no ramo "pago" e SOMAVA quantity, inflando o estoque).
       // paid/preparing/shipped: quantity já foi debitado, devolve.
+      // shipped pelos Correios/Jadlog: o pacote está na estrada, as peças não
+      //   estão na loja. Devolver agora deixava vender o que ainda não voltou;
+      //   o estoque volta quando a equipe marca a chegada (repor-estoque).
+      const emTransito = order.status === 'shipped' && isManualDispatch((order.delivery?.carrier ?? '') as CarrierKey);
       const mode = PENDING_STATUSES.has(order.status)
         ? 'release'
-        : NO_STOCK_STATUSES.has(order.status) ? 'none' : 'restock';
+        : NO_STOCK_STATUSES.has(order.status) ? 'none' : emTransito ? 'await_return' : 'restock';
+      const paid = mode === 'restock' || mode === 'await_return';
 
       // Corrida da Uber em andamento: cancela depois do commit. Sem isso o
       // motoboy seguia com o pacote de um pedido já cancelado e o estoque
@@ -107,13 +113,13 @@ export async function POST(
       const pre = (order.delivery as { prePostagem?: { id: string; codigoObjeto: string } } | undefined)?.prePostagem;
       prePostagemToCancel = pre && order.status !== 'shipped' ? { id: pre.id, codigoObjeto: pre.codigoObjeto } : null;
 
-      cancelled = { userId: order.userId as string | undefined, items: order.items, totalCents: order.totalCents as number | undefined, wasPaid: mode === 'restock' };
+      cancelled = { userId: order.userId as string | undefined, items: order.items, totalCents: order.totalCents as number | undefined, wasPaid: paid, emTransito: order.status === 'shipped' };
 
       // Pedido que nunca foi pago devolve o uso do cupom (fora da transação).
-      unpaidCouponCode = mode === 'restock' ? undefined : (order.couponCode as string | undefined);
-      shippingToReverse = mode === 'restock' ? ((order.shippingCents as number | undefined) ?? 0) : 0;
+      unpaidCouponCode = paid ? undefined : (order.couponCode as string | undefined);
+      shippingToReverse = paid ? ((order.shippingCents as number | undefined) ?? 0) : 0;
 
-      const lines = mode === 'none'
+      const lines = mode === 'none' || mode === 'await_return'
         ? []
         : expandStockLines((order.items ?? []) as Array<{ productId: string; sku: string; quantity: number; swapSku?: string; swapQtyPerUnit?: number }>);
       const invRefs = lines.map(l => adminDb.collection('inventory').doc(l.sku));
@@ -125,8 +131,12 @@ export async function POST(
         updatedAt: FieldValue.serverTimestamp(),
         // Pedido pago: fica marcado como estorno pendente até o lojista
         // confirmar no painel que devolveu o dinheiro.
-        ...(mode === 'restock' ? { 'payment.refundStatus': 'pending' } : {}),
-        timeline: FieldValue.arrayUnion({ status: 'cancelled', at: now, note: reason }),
+        ...(paid ? { 'payment.refundStatus': 'pending' } : {}),
+        ...(mode === 'await_return' ? { restockPending: true } : {}),
+        timeline: FieldValue.arrayUnion(
+          { status: 'cancelled', at: now, note: reason },
+          ...(mode === 'await_return' ? [{ status: 'cancelled', at: now, note: 'O pacote já estava com a transportadora: as peças voltam ao estoque quando ele chegar de volta na loja.' }] : []),
+        ),
       });
 
       for (let i = 0; i < lines.length; i++) {
@@ -149,7 +159,7 @@ export async function POST(
     throw err;
   }
 
-  await releaseCouponUse(unpaidCouponCode);
+  await releaseCouponUse(unpaidCouponCode, (cancelled as { userId?: string } | null)?.userId);
 
   // Pedido pago cancelado vira estorno integral, frete incluso: sai da caixa
   // de frete o que entrou na confirmação. Sem isso o saldo ficava inflado e
@@ -199,8 +209,13 @@ export async function POST(
     }
   }
 
-  const c = cancelled as { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean } | null;
-  if (c) await notifyOrderCancelled(orderId, c, { refund: c.wasPaid });
+  const c = cancelled as { userId?: string; items?: unknown; totalCents?: number; wasPaid: boolean; emTransito?: boolean } | null;
+  // O motivo digitado no painel vai no e-mail (o painel diz que o cliente vê).
+  if (c) await notifyOrderCancelled(orderId, c, {
+    refund: c.wasPaid,
+    ...(reason !== 'Cancelado pelo lojista' ? { reason } : {}),
+    emTransito: c.emTransito === true,
+  });
   // Nota fiscal já autorizada: cancela (até 24h) ou avisa da devolução.
   if (c?.wasPaid) await handleNfeOnOrderCancel(orderId);
 

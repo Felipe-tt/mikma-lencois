@@ -23,6 +23,21 @@ describe('conteúdo', () => {
     expect(html).toContain('Lençol &lt;Casal&gt;');
     expect(html).not.toContain('<b>Ana</b>');
   });
+  it('confirmado: como chega, a previsão e o direito de desistir', () => {
+    const { text, html } = buildConfirmed(
+      { ...base, payment: { method: 'pix' }, delivery: { label: 'Correios PAC', estimatedDays: 6, carrier: 'correios_pac' } },
+      'Ana',
+      new Date('2026-11-03T15:00:00Z'),
+    );
+    // terça 03/11 + 6 dias úteis: quarta 11/11
+    expect(text).toContain('Entrega: Correios PAC, previsão até quarta-feira, 11/11.');
+    expect(text).toContain('desistir da compra em até 7 dias');
+    expect(html).toContain('/trocas-e-devolucoes');
+  });
+  it('confirmado: retirada na loja não tem previsão de entrega', () => {
+    const { text } = buildConfirmed({ ...base, payment: { method: 'pix' }, delivery: { label: 'Retirar na loja', estimatedDays: 0, carrier: 'pickup' } }, 'Ana');
+    expect(text).toContain('Entrega: Retirada na loja.');
+  });
   it('cancelado: linha de reembolso só quando foi pago', () => {
     expect(buildCancelled(base, 'Ana', { refund: true }).text).toContain('será devolvido');
     expect(buildCancelled(base, 'Ana', { refund: false }).text).toContain('Nenhuma cobrança foi feita');

@@ -363,6 +363,29 @@ describe('coupons/{code}: só a equipe lê', () => {
   });
 });
 
+describe('orderRisk/{orderId}: avaliação de golpe só a equipe lê', () => {
+  const seed = () =>
+    testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/o1'), { userId: 'buyer1', status: 'paid', risk: { hold: true } });
+      await setDoc(doc(ctx.firestore(), 'orderRisk/o1'), { level: 'alto', hold: true, signals: [{ reason: 'Mesmo CPF em 3 contas', relatedOrderIds: ['o2'] }] });
+    });
+
+  it('CRÍTICO: o dono do pedido não lê a avaliação do próprio pedido', async () => {
+    await seed();
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' });
+    await assertSucceeds(getDoc(doc(buyer.firestore(), 'orders/o1')));
+    await assertFails(getDoc(doc(buyer.firestore(), 'orderRisk/o1')));
+    await assertFails(getDocs(collection(buyer.firestore(), 'orderRisk')));
+  });
+
+  it('a equipe lê, mas ninguém grava pelo app', async () => {
+    await seed();
+    const seller = testEnv.authenticatedContext('seller1', { role: 'seller', ...MFA });
+    await assertSucceeds(getDoc(doc(seller.firestore(), 'orderRisk/o1')));
+    await assertFails(setDoc(doc(seller.firestore(), 'orderRisk/o1'), { hold: false }));
+  });
+});
+
 describe('settings/store: parâmetros de dinheiro e sandbox só o admin altera', () => {
   const seed = () =>
     testEnv.withSecurityRulesDisabled(async (ctx) => {

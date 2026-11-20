@@ -10,6 +10,7 @@ import { IconBox, IconMoney, IconCalendar, IconTrend, IconHourglass, IconProduct
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { PainelPushOptIn } from '@/components/painel/PainelPushOptIn';
+import { refundedCents } from '@/lib/orders/refunded';
 
 const BADGE: Record<string, string> = {
   pending_payment: 'badge-pending', payment_expired: 'badge-pending', paid: 'badge-paid', preparing: 'badge-preparing',
@@ -53,6 +54,8 @@ export default function PainelDashboard() {
   // Pedidos pagos e cancelados (ou pagos depois do cancelamento) com o
   // dinheiro ainda por devolver.
   const [refunds, setRefunds] = useState<Order[] | null>(null);
+  // Cancelados com o pacote na transportadora: o estoque espera a volta.
+  const [awaitingReturn, setAwaitingReturn] = useState<Order[]>([]);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
@@ -76,7 +79,12 @@ export default function PainelDashboard() {
       snap => setRefunds(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))),
       err => { console.error('[painel] estornos pendentes:', err); setRefunds([]); }
     );
-    return () => { unsubRecent(); unsubMonthly(); unsubPending(); unsubRefunds(); };
+    const unsubAwaiting = onSnapshot(
+      query(collection(db, 'orders'), where('restockPending', '==', true)),
+      snap => setAwaitingReturn(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))),
+      err => { console.error('[painel] pacotes para voltar:', err); setAwaitingReturn([]); }
+    );
+    return () => { unsubRecent(); unsubMonthly(); unsubPending(); unsubRefunds(); unsubAwaiting(); };
   }, []);
 
   // Sem isso, uma falha de rede/permissão mostrava a tela zerada como se
@@ -103,9 +111,10 @@ export default function PainelDashboard() {
 
   const kpis = [
     { label: 'Pedidos hoje',    value: today.length,                                      fmt: 'n' as const, desc: 'pedidos pagos',  Icon: IconBox },
-    { label: 'Dinheiro hoje',   value: today.reduce((s, o) => s + o.totalCents, 0),       fmt: 'c' as const, desc: 'receita do dia',  Icon: IconMoney },
+    { label: 'Dinheiro hoje',   value: today.reduce((s, o) => s + o.totalCents - refundedCents(o), 0), fmt: 'c' as const, desc: 'receita do dia',  Icon: IconMoney },
     { label: 'Pedidos no mês',  value: counted.length,                                    fmt: 'n' as const, desc: 'pedidos pagos',  Icon: IconCalendar },
-    { label: 'Dinheiro no mês', value: counted.reduce((s, o) => s + o.totalCents, 0),     fmt: 'c' as const, desc: 'receita do mês', Icon: IconTrend },
+    // Menos as devoluções parciais, como nos Relatórios (antes os dois números não batiam).
+    { label: 'Dinheiro no mês', value: counted.reduce((s, o) => s + o.totalCents - refundedCents(o), 0), fmt: 'c' as const, desc: 'receita do mês', Icon: IconTrend },
   ];
 
   return (
@@ -121,8 +130,24 @@ export default function PainelDashboard() {
       {/* Só aqui no Início: em todas as telas ele ocupava o topo do celular. */}
       <PainelPushOptIn />
 
-      {(waiting > 0 || needAction > 0 || readyToShip > 0 || refunds.length > 0) && (
+      {(waiting > 0 || needAction > 0 || readyToShip > 0 || refunds.length > 0 || awaitingReturn.length > 0) && (
         <div className="flex flex-col gap-2.5 mb-7">
+          {awaitingReturn.length > 0 && (
+            <Link href={awaitingReturn.length === 1 ? `/painel/pedidos/${awaitingReturn[0].id}` : '/painel/pedidos?status=cancelled'} className="group flex items-center justify-between gap-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 px-5 py-4 rounded-2xl hover:bg-amber-100 dark:hover:bg-amber-500/15 transition-colors duration-200">
+              <span className="flex items-center gap-3 min-w-0">
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-amber-500/15 shrink-0">
+                  <IconTruck size={17} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-bold">
+                    {awaitingReturn.length} {awaitingReturn.length === 1 ? 'pacote cancelado voltando' : 'pacotes cancelados voltando'}
+                  </span>
+                  <span className="block text-[11px]">Quando chegar, devolva as peças ao estoque pelo pedido</span>
+                </span>
+              </span>
+              <IconArrowRight size={16} className="shrink-0 opacity-50 group-hover:opacity-90 transition-opacity" />
+            </Link>
+          )}
           {refunds.length > 0 && (
             <Link href={refunds.length === 1 ? `/painel/pedidos/${refunds[0].id}` : '/painel/pedidos?status=cancelled'} className="group flex items-center justify-between gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-300 px-5 py-4 rounded-2xl hover:bg-red-100 dark:hover:bg-red-500/15 transition-colors duration-200">
               <span className="flex items-center gap-3 min-w-0">

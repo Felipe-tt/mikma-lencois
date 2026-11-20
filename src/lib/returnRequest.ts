@@ -6,6 +6,7 @@
  *  - defeito: até 90 dias (CDC art. 26).
  */
 import type { Order } from '@/types';
+import { isBusinessDay } from '@/lib/deliveryDate';
 
 export const DIAS_TROCA = 7;
 export const DIAS_DEFEITO = 90;
@@ -21,7 +22,21 @@ export function deliveredDate(order: Pick<Order, 'delivery' | 'createdAt'>): Dat
   return d && !Number.isNaN(d.getTime()) ? d : null;
 }
 
-const plus = (d: Date, dias: number) => new Date(d.getTime() + dias * 86_400_000);
+/**
+ * Último instante do prazo, contado como manda o Código Civil (art. 132):
+ * dias corridos sem o dia da entrega, até o fim do último dia (horário de
+ * Brasília); caindo em fim de semana ou feriado, vai até o próximo dia útil.
+ * Antes contava horas exatas: entregue às 10h, o 7º dia acabava às 10h.
+ */
+export function fimDoPrazo(entrega: Date, dias: number): Date {
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .format(entrega).split('-').map(Number);
+  // Meio-dia UTC cai no mesmo dia em Brasília.
+  const dia = new Date(Date.UTC(y, m - 1, d + dias, 12));
+  while (!isBusinessDay(dia)) dia.setUTCDate(dia.getUTCDate() + 1);
+  // 23:59:59,999 em Brasília (UTC-3; sem horário de verão desde 2019).
+  return new Date(Date.UTC(dia.getUTCFullYear(), dia.getUTCMonth(), dia.getUTCDate() + 1, 3) - 1);
+}
 
 export const TROCA_FORA_DO_PRAZO = `Troca e devolução valem até ${DIAS_TROCA} dias depois da entrega. Se veio com defeito, escolha "Defeito".`;
 
@@ -33,9 +48,11 @@ export type ReturnWindow =
 export function returnWindow(order: Pick<Order, 'status' | 'delivery' | 'createdAt'>, now = new Date()): ReturnWindow {
   if (order.status !== 'delivered') return { ok: false, reason: 'A troca é pedida depois que o pedido é entregue.' };
   const d = deliveredDate(order) ?? now;
-  const trocaAte = plus(d, DIAS_TROCA);
-  const defeitoAte = plus(d, DIAS_DEFEITO);
-  if (now.getTime() > defeitoAte.getTime()) return { ok: false, reason: `O prazo para defeito (${DIAS_DEFEITO} dias depois da entrega) já passou. Fale com a gente pelo WhatsApp.` };
+  const trocaAte = fimDoPrazo(d, DIAS_TROCA);
+  const defeitoAte = fimDoPrazo(d, DIAS_DEFEITO);
+  // Defeito que só aparece com o uso conta de quando foi percebido (CDC,
+  // art. 26, § 3º): passado o prazo do site, o atendimento resolve.
+  if (now.getTime() > defeitoAte.getTime()) return { ok: false, reason: `Pelo site, defeito vale até ${DIAS_DEFEITO} dias depois da entrega. Se o defeito só apareceu agora, fale com a gente pelo WhatsApp.` };
   return { ok: true, troca: now.getTime() <= trocaAte.getTime(), trocaAte, defeitoAte };
 }
 

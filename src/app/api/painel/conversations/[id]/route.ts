@@ -3,6 +3,8 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { extractBearer } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { effectiveRole } from '@/lib/staffMfa';
+import { deleteConversation } from '@/lib/email/deleteConversation';
+import { storageFiles } from '@/lib/storageFiles';
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -38,20 +40,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Conversa não encontrada' }, { status: 404 });
   }
 
-  // Apaga a subcoleção messages em lotes de 500 (limite do batch do Firestore)
-  const BATCH_SIZE = 500;
-  let deletedMessages = 0;
-  for (;;) {
-    const msgsSnap = await convRef.collection('messages').limit(BATCH_SIZE).get();
-    if (msgsSnap.empty) break;
-    const batch = adminDb.batch();
-    msgsSnap.docs.forEach(d => batch.delete(d.ref));
-    await batch.commit();
-    deletedMessages += msgsSnap.size;
-    if (msgsSnap.size < BATCH_SIZE) break;
-  }
-
-  await convRef.delete();
+  // Mensagens e anexos do cliente no Storage (antes os anexos ficavam).
+  const deletedMessages = await deleteConversation(adminDb, storageFiles(), convRef);
 
   return NextResponse.json({ deleted: true, deletedMessages });
 }

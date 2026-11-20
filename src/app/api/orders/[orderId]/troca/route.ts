@@ -5,6 +5,7 @@ import { extractBearer, validateBody } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { notifySeller } from '@/lib/push/notifySeller';
+import { avisarCliente } from '@/lib/returns/avisarCliente';
 import { TROCA_FORA_DO_PRAZO, devolucaoPadrao, motivoFinal, opcoesDevolucao, returnWindow } from '@/lib/returnRequest';
 import { getSettings } from '@/lib/settings';
 import { calcularTroca } from '@/lib/returns/reenvio';
@@ -71,14 +72,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const pastaOk = new RegExp(`^returns/${uid.replace(/[^A-Za-z0-9_-]/g, '')}/[A-Za-z0-9_-]+\\.jpg$`);
   if (fotos.some(f => !pastaOk.test(f))) return NextResponse.json({ error: 'Foto inválida. Envie de novo.' }, { status: 400 });
 
-  // Itens: só os do pedido, até a quantidade comprada.
+  // Trocas e devoluções anteriores deste pedido (filtro do status aqui, sem
+  // índice composto: são poucas por pedido).
+  const previous = await adminDb.collection('returns').where('orderId', '==', orderId).get();
+  if (previous.docs.some(d => ['solicitada', 'aprovada'].includes(d.get('status')))) return NextResponse.json({ error: 'Já existe um pedido de troca em andamento para esta compra.' }, { status: 409 });
+  // Peça já trocada ou devolvida não volta de novo: sem isso, a mesma peça
+  // podia gerar um segundo estorno depois de a primeira devolução concluir.
+  const jaVoltou = new Map<string, number>();
+  for (const d of previous.docs) {
+    if (d.get('status') === 'recusada') continue;
+    for (const i of (d.get('items') ?? []) as { sku: string; quantity: number }[]) jaVoltou.set(i.sku, (jaVoltou.get(i.sku) ?? 0) + i.quantity);
+  }
+
+  // Itens: só os do pedido, até a quantidade comprada que ainda não voltou.
   const items: ReturnItem[] = [];
   for (const it of body.items) {
     const bought = order.items.find(i => i.sku === it.sku);
     if (!bought) return NextResponse.json({ error: 'Esse item não é deste pedido.' }, { status: 400 });
+    const resta = bought.quantity - (jaVoltou.get(bought.sku) ?? 0);
+    if (resta <= 0) return NextResponse.json({ error: `"${bought.productName}" já foi trocado ou devolvido neste pedido.` }, { status: 409 });
     items.push({
       sku: bought.sku, productId: bought.productId, productName: bought.productName, variant: bought.variant,
-      quantity: Math.min(it.quantity, bought.quantity),
+      quantity: Math.min(it.quantity, resta),
       ...(bought.swapSku ? { swapSku: bought.swapSku, swapQtyPerUnit: bought.swapQtyPerUnit } : {}),
     });
   }
@@ -100,10 +115,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     };
   }
 
-  // Uma solicitação em aberto por pedido.
-  // (filtro do status aqui, sem índice composto: são poucas por pedido)
-  const previous = await adminDb.collection('returns').where('orderId', '==', orderId).get();
-  if (previous.docs.some(d => ['solicitada', 'aprovada'].includes(d.get('status')))) return NextResponse.json({ error: 'Já existe um pedido de troca em andamento para esta compra.' }, { status: 409 });
 
   const now = new Date().toISOString();
   const ref = await adminDb.collection('returns').add({
@@ -115,5 +126,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const label = defeito ? 'troca por defeito' : body.type === 'troca' ? 'troca' : 'devolução';
   await notifyInApp({ type: 'new_order', message: `${order.customerName || 'Cliente'} pediu ${label} do pedido ${short}: "${motivo.reason.slice(0, 80)}"`, orderId, url: '/painel/trocas' }).catch(() => {});
   await notifySeller({ title: `Pedido de ${label}`, body: `#${short} · ${motivo.reason.slice(0, 80)}`, url: '/painel/trocas', data: { orderId, event: 'return_requested' } });
+  // Confirmação imediata ao cliente de que o pedido chegou (Decreto 7.962/2013, art. 5º, § 4º).
+  await avisarCliente(ref.id, 'recebida');
   return NextResponse.json({ id: ref.id, status: 'solicitada' });
 }

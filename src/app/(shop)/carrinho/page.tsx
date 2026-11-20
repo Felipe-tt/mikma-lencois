@@ -603,7 +603,7 @@ export default function CartPage() {
 function PaymentHint({ total, subtotal, pixRule, cardFees }: { total: number; subtotal: number; pixRule: { thresholdCents: number; pct: number } | null; cardFees: PublicCardFees }) {
   const pixEligible = !!pixRule && pixRule.thresholdCents > 0 && pixRule.pct > 0 && subtotal >= pixRule.thresholdCents;
   const pixPrice = pixEligible ? total - Math.round(subtotal * (pixRule!.pct / 100)) : null;
-  const { n: noFee, perCents } = interestFreeHint(total, cardFees);
+  const { n: noFee, perCents, totalCents: cardTotal } = interestFreeHint(total, cardFees);
   if (!pixPrice && noFee < 2) return null;
   return (
     <ul className="px-5 pb-4 -mt-1 flex flex-col gap-1.5 text-[12.5px]">
@@ -616,7 +616,7 @@ function PaymentHint({ total, subtotal, pixRule, cardFees }: { total: number; su
       {noFee >= 2 && (
         <li className="flex justify-between gap-3 text-mid">
           <span>No cartão</span>
-          <span className="tabular-nums">até {noFee}x de {formatCurrency(perCents)} sem juros</span>
+          <span className="tabular-nums text-right">até {noFee}x de {formatCurrency(perCents)} sem juros{cardTotal > total && <span className="block text-[11.5px] text-faint">total {formatCurrency(cardTotal)}</span>}</span>
         </li>
       )}
     </ul>

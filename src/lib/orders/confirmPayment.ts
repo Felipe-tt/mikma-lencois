@@ -295,7 +295,10 @@ export async function confirmOrderPaid(
     // Tira só o que foi comprado: o que o cliente pôs no carrinho depois de
     // gerar o PIX continua lá (antes o carrinho era esvaziado inteiro).
     const items = remainingCartItems((cartData?.items ?? []) as CartLine[], (order.items ?? []) as CartLine[]);
-    batch.update(cartRef, { items, updatedAt: FieldValue.serverTimestamp(), ...finished });
+    // Cupom usado neste pedido sai do carrinho: com limite por cliente ele
+    // não vale de novo, e ficava lá parecendo aplicado na próxima compra.
+    const usedCoupon = order.couponCode && cartData?.couponCode === order.couponCode ? { couponCode: FieldValue.delete() } : {};
+    batch.update(cartRef, { items, updatedAt: FieldValue.serverTimestamp(), ...finished, ...usedCoupon });
 
     const notifRef = adminDb
       .collection('notifications')
@@ -349,7 +352,7 @@ export async function confirmOrderPaid(
       // template (antes entravam crus no HTML). replyTo: o e-mail convida a
       // responder, e antes a resposta ia pro noreply e se perdia.
       const payload = buildConfirmed(
-        { id: orderId, items: order.items as EmailItem[], totalCents: order.totalCents as number, payment: order.payment as { method: string }, productsCents: order.productsCents as number | undefined, shippingCents: order.shippingCents as number | undefined, pixDiscountCents: order.pixDiscountCents as number | undefined, couponDiscountCents: order.couponDiscountCents as number | undefined, discountCents: order.discountCents as number | undefined, couponCode: order.couponCode as string | undefined },
+        { id: orderId, items: order.items as EmailItem[], totalCents: order.totalCents as number, payment: order.payment as { method: string }, productsCents: order.productsCents as number | undefined, shippingCents: order.shippingCents as number | undefined, pixDiscountCents: order.pixDiscountCents as number | undefined, couponDiscountCents: order.couponDiscountCents as number | undefined, discountCents: order.discountCents as number | undefined, couponCode: order.couponCode as string | undefined, delivery: order.delivery as { label?: string; estimatedDays?: number; carrier?: string | null } | undefined },
         customerName,
       );
       await sendEmail({

@@ -62,10 +62,12 @@ export function buildShipped(order: OrderDoc, name: string, now = new Date()): E
   const carrier = order.delivery?.carrier ?? null;
   const rastreioUrl = carrier && code ? getTrackingUrl(carrier, code) : null;
   const carrierLabel = carrier ? carrierName(carrier) : 'transportadora';
-  // Prazo cotado no checkout (dias úteis), contado a partir do despacho.
-  const days = order.delivery?.estimatedDays;
+  // Prazo do transporte (dias úteis), contado a partir do despacho: sem os
+  // dias para postar, que já passaram. Pedido antigo só tem o prazo cheio.
+  const delivery = order.delivery as { transitDays?: number; estimatedDays?: number } | undefined;
+  const days = delivery?.transitDays ?? delivery?.estimatedDays;
   const eta = typeof days === 'number' && days > 0
-    ? addBusinessDays(now, days).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })
+    ? addBusinessDays(now, days).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })
     : null;
   const trackingBlock = code ? emailCallout(`
       <p style="margin:0 0 4px;font-size:11px;color:#7A6656;text-transform:uppercase;letter-spacing:.08em;">Código de rastreio · ${escapeHtml(carrierLabel)}</p>
@@ -119,20 +121,34 @@ export function buildDelivered(order: OrderDoc, name: string): EmailPayload {
 
 /** Pagamento confirmado (PIX ou cartão). */
 export function buildConfirmed(
-  order: { id: string; items: EmailItem[]; totalCents: number; payment: { method: string } } & EmailMoney,
+  order: { id: string; items: EmailItem[]; totalCents: number; payment: { method: string }; delivery?: { label?: string; estimatedDays?: number; carrier?: string | null } } & EmailMoney,
   name: string,
+  now: Date = new Date(),
 ): EmailPayload {
   const id = shortOrderId(order.id);
   const url = orderUrl(order);
   const payMethod = order.payment.method === 'pix' ? 'PIX' : 'cartão de crédito';
+  // Como e quando chega (o prazo já conta os dias para postar), e o direito
+  // de desistir: o cliente guarda o e-mail como comprovante da compra.
+  const days = order.delivery?.estimatedDays;
+  const pickup = order.delivery?.carrier === 'pickup';
+  const eta = !pickup && typeof days === 'number' && days > 0
+    ? addBusinessDays(now, days).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })
+    : null;
+  const entrega = order.delivery?.label
+    ? `${pickup ? 'Retirada na loja' : order.delivery.label}${eta ? `, previsão até ${eta}` : ''}.`
+    : '';
+  const desistir = 'Você pode desistir da compra em até 7 dias depois de receber, sem custo. Veja como em Trocas e Devoluções.';
   const html = emailLayout(`
     ${emailSection({
       eyebrow: `Pedido #${id}`,
       title: 'Pedido confirmado',
       html: `
         ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Recebemos seu pagamento via ${payMethod} e já estamos preparando seu pedido. Obrigado pela compra!`)}
+        ${entrega ? emailParagraph(`<strong>Entrega:</strong> ${escapeHtml(entrega)}`, { muted: true }) : ''}
         ${emailItemsTable(order)}
-        ${emailCta('Acompanhar pedido', url)}`,
+        ${emailCta('Acompanhar pedido', url)}
+        ${emailParagraph(`${desistir.replace('Trocas e Devoluções', `<a href="${BASE_URL}/trocas-e-devolucoes" style="color:#9A4A28;">Trocas e Devoluções</a>`)}`, { muted: true })}`,
     })}
     ${emailSignature()}`, { preheader: `Pagamento de ${formatCurrency(order.totalCents)} confirmado. Já estamos preparando tudo.` });
   const lines = order.items.map(i => `${i.quantity}x ${i.productName}, ${formatCurrency(i.unitPrice * i.quantity)}`);
@@ -144,7 +160,9 @@ export function buildConfirmed(
       `Seu pedido #${id} foi confirmado. Obrigado pela compra!`, '',
       'ITENS:', ...lines, '',
       `Total: ${formatCurrency(order.totalCents)} via ${payMethod}`, '',
+      ...(entrega ? [`Entrega: ${entrega}`, ''] : []),
       `Acompanhe seu pedido: ${url}`, '',
+      `${desistir} ${BASE_URL}/trocas-e-devolucoes`, '',
       'Qualquer dúvida, responda este e-mail.',
       'Equipe Mikma Lençóis',
     ].join('\n'),
@@ -228,11 +246,14 @@ export function buildPixExpired(order: Pick<Order, 'id' | 'totalCents'>, name: s
   };
 }
 
+/** Pedido cancelado com o pacote já a caminho. */
+const TRANSITO = 'O pacote já tinha saído para entrega. Se ele chegar, recuse o recebimento; se já tiver recebido, responda este e-mail que combinamos a devolução, sem custo para você.';
+
 /** Pedido cancelado (pela loja ou pelo cliente). */
 export function buildCancelled(
   order: { id: string; items: EmailItem[]; totalCents: number } & EmailMoney,
   name: string,
-  { refund, byCustomer = false, reason }: { refund: boolean; byCustomer?: boolean; reason?: string },
+  { refund, byCustomer = false, reason, emTransito = false }: { refund: boolean; byCustomer?: boolean; reason?: string; emTransito?: boolean },
 ): EmailPayload {
   const id = shortOrderId(order.id);
   const url = orderUrl(order);
@@ -251,6 +272,7 @@ export function buildCancelled(
         ${emailParagraph(intro)}
         ${reason ? emailParagraph(`Motivo: ${escapeHtml(reason)}`, { muted: true }) : ''}
         ${emailCallout(`<p style="margin:0;font-size:14px;color:#2C1F14;line-height:1.6;">${money}</p>`)}
+        ${emTransito ? emailParagraph(TRANSITO) : ''}
         ${emailParagraph('Se tiver qualquer dúvida, é só responder este e-mail.', { muted: true })}
         ${emailItemsTable(order)}
         ${emailCta('Ver pedido', url)}`,
@@ -263,6 +285,7 @@ export function buildCancelled(
       byCustomer ? `Olá, ${name}. Confirmamos o cancelamento do seu pedido #${id}.` : `Olá, ${name}. Seu pedido #${id} foi cancelado.`,
       ...(reason ? [`Motivo: ${reason}`] : []),
       refund ? `O valor de ${total} será devolvido pelo mesmo meio de pagamento.` : 'Nenhuma cobrança foi feita.',
+      ...(emTransito ? [TRANSITO] : []),
       '', 'Dúvidas? Responda este e-mail.', `Pedido: ${url}`,
     ].join('\n'),
   };

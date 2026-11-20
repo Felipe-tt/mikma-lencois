@@ -36,7 +36,7 @@ export default async function PrivacidadePage() {
         clause(
           <>
             Quem decide como os seus dados são usados neste site é a <B>{id.name}</B>
-            {id.cnpj && <> (CNPJ {id.cnpj})</>}, de {id.address || id.cityState}. Na Lei Geral de
+            {(id.legalName || id.cnpj) && <> ({[id.legalName, id.cnpj && `CNPJ ${id.cnpj}`].filter(Boolean).join(', ')})</>}, de {id.address || id.cityState}. Na Lei Geral de
             Proteção de Dados (LGPD, Lei nº 13.709/2018), isso nos torna a “controladora” dos dados.
           </>,
         ),
@@ -80,7 +80,8 @@ export default async function PrivacidadePage() {
           </>,
           <>
             <B>Dados de acesso:</B> endereço IP, data e hora, navegador e páginas visitadas. Servem
-            para manter o site seguro e evitar fraudes.
+            para manter o site seguro, evitar fraudes e medir a velocidade das páginas, em números
+            gerais e sem cookies.
           </>,
           <>
             <B>Seu aceite:</B> quando você concorda com estas políticas, registramos a data e a
@@ -137,8 +138,8 @@ export default async function PrivacidadePage() {
               dados do pacote.
             </>,
             <>
-              <B>Hospedagem e segurança:</B> as empresas que mantêm o site no ar, guardam os dados e
-              barram robôs e ataques.
+              <B>Hospedagem e segurança:</B> as empresas que mantêm o site no ar, guardam os dados,
+              medem a velocidade das páginas, registram erros do site e barram robôs e ataques.
             </>,
             <>
               <B>E-mail:</B> o serviço que envia as mensagens sobre a sua conta e os seus pedidos.
@@ -181,11 +182,19 @@ export default async function PrivacidadePage() {
         clause('Guardamos cada dado só pelo tempo necessário:', [
           <>
             <B>Conta:</B> enquanto ela existir. Se você excluir a conta, apagamos o seu perfil, o
-            carrinho e as notificações.
+            carrinho, os favoritos, as notificações e as suas avaliações.
           </>,
           <>
-            <B>Pedidos e notas fiscais:</B> por 5 anos, porque a lei fiscal e a do consumidor
-            exigem. Depois disso, os dados pessoais dos pedidos são apagados.
+            <B>Pedidos:</B> por 5 anos, porque a lei fiscal e a do consumidor exigem. Depois disso,
+            os dados pessoais dos pedidos e a análise antifraude deles são apagados.
+          </>,
+          <>
+            <B>Notas fiscais:</B> por 5 anos contados a partir do ano seguinte ao da emissão, o
+            prazo da lei fiscal. Depois disso, são apagadas.
+          </>,
+          <>
+            <B>Trocas e mensagens para o atendimento:</B> por 5 anos, para resolver qualquer
+            reclamação sobre a compra. As fotos e os anexos saem junto.
           </>,
           <>
             <B>Endereço IP dos pedidos:</B> por 1 ano.
@@ -221,7 +230,7 @@ export default async function PrivacidadePage() {
           </>,
         ),
         clause(
-          'Ao excluir a conta, os pedidos que ainda não foram pagos são cancelados. Os pedidos já feitos ficam guardados pelo prazo da lei, como explicado acima.',
+          'Ao excluir a conta, os pedidos que ainda não foram pagos são cancelados. Os pedidos já feitos ficam guardados pelo prazo da lei, como explicado acima. Com um pedido a caminho ou uma troca em andamento, a conta só pode ser excluída depois que eles terminarem: até lá, precisamos dos seus dados para entregar e para devolver o dinheiro.',
         ),
         clause(
           <>

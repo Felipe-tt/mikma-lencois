@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
+import { deleteUserReviews, deletionBlocker } from '@/lib/accountDeletion';
 
 export async function DELETE(req: NextRequest) {
   const token = req.headers.get('authorization')?.split('Bearer ')[1];
@@ -28,6 +29,10 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
+    // Pedido a caminho ou troca em aberto: a conta fica até terminar.
+    const blocker = await deletionBlocker(uid);
+    if (blocker) return NextResponse.json({ error: blocker, blocked: true }, { status: 409 });
+
     // Cancela pedidos não pagos (pendentes e com PIX vencido: este último
     // ficava parado até o cron, sem o cliente que poderia pagar).
     const pendingOrders = await adminDb
@@ -66,7 +71,7 @@ export async function DELETE(req: NextRequest) {
           });
           return data;
         });
-        if (cancelled) await releaseCouponUse(cancelled.couponCode as string | undefined);
+        if (cancelled) await releaseCouponUse(cancelled.couponCode as string | undefined, cancelled.userId as string | undefined);
       } catch (err) {
         console.error('[user/delete] falha ao cancelar pedido', orderDoc.id, err);
       }
@@ -85,6 +90,9 @@ export async function DELETE(req: NextRequest) {
 
     const notifSnap = await adminDb.collection(`notifications/${uid}/items`).get();
     for (const d of notifSnap.docs) batch.delete(d.ref);
+
+    // Avaliações publicadas com o nome da pessoa. Sem derrubar a exclusão.
+    await deleteUserReviews(uid).catch(err => console.error('[user/delete] falha ao apagar avaliações', err));
 
     // E-mail da conta, lido antes de apagá-la, para limpar os avisos abaixo.
     const accountEmail = (await adminAuth.getUser(uid).catch(() => null))?.email?.toLowerCase();

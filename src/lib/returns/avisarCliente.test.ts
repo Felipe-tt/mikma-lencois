@@ -11,7 +11,7 @@ describe('avisoDoStatus', () => {
     expect(avisoDoStatus({ status: 'aprovada' })).toBe('aprovada');
     expect(avisoDoStatus({ status: 'recusada' })).toBe('recusada');
     expect(avisoDoStatus({ status: 'concluida' })).toBe('concluida');
-    expect(avisoDoStatus({ status: 'solicitada' })).toBeNull();
+    expect(avisoDoStatus({ status: 'solicitada' })).toBe('recebida');
   });
   it('entregue no balcão: avisa que chegou', () => {
     expect(avisoDoStatus({ status: 'aprovada', recebidaEm: '2026-11-12T15:00:00Z' })).toBe('chegou');

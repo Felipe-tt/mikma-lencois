@@ -12,6 +12,7 @@ import { notifyInApp } from '@/lib/push/notifyInApp';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { cobrancaAbacate, valorDaDevolucao, type PedidoParaEstorno } from '@/lib/returns/estorno';
 import type { ReturnRequest } from '@/types';
+import { staffName } from '@/lib/staffName';
 
 /**
  * Dinheiro de uma devolução (ou da sobra de uma troca por peça mais barata),
@@ -33,14 +34,14 @@ type Estorno = {
 };
 type Devolucao = ReturnRequest & { estorno?: Estorno; saldoCents?: number; pixTentativas?: number };
 
-async function staff(req: NextRequest): Promise<{ uid: string; email?: string } | NextResponse> {
+async function staff(req: NextRequest): Promise<{ uid: string; quem: string } | NextResponse> {
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
     const role = effectiveRole(decoded);
     if (role !== 'seller' && role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-    return { uid: decoded.uid, email: decoded.email };
+    return { uid: decoded.uid, quem: await staffName(decoded) };
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ret
   const { returnId } = await params;
   const who = await staff(req);
   if (who instanceof NextResponse) return who;
-  const { uid, email } = who;
+  const { uid, quem } = who;
   if (!await rateLimit(`troca-estorno:${uid}`, 10, 60_000)) return NextResponse.json({ error: 'Muitas tentativas. Aguarde um pouco.' }, { status: 429 });
   const parsed = await validateBody(req, schema);
   if (!parsed.ok) return parsed.response;
@@ -161,9 +162,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ret
       updatedAt: FieldValue.serverTimestamp(),
       timeline: FieldValue.arrayUnion({
         status: o?.status ?? 'delivered', at,
-        note: via === 'abacatepay' ? `Devolução: ${brl(valor.cents)} estornados pela AbacatePay por ${email ?? uid}`
-          : via === 'pix' ? `Devolução: ${brl(valor.cents)} enviados por PIX ao CPF do cliente pela AbacatePay (${email ?? uid})`
-          : `Devolução: ${brl(valor.cents)} devolvidos por fora, registrado por ${email ?? uid}`,
+        note: via === 'abacatepay' ? `Devolução: ${brl(valor.cents)} estornados pela AbacatePay por ${quem}`
+          : via === 'pix' ? `Devolução: ${brl(valor.cents)} enviados por PIX ao CPF do cliente pela AbacatePay (${quem})`
+          : `Devolução: ${brl(valor.cents)} devolvidos por fora, registrado por ${quem}`,
       }),
     });
     return !(total && jaFeito);

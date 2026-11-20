@@ -150,7 +150,7 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        await releaseCouponUse(order.couponCode as string | undefined);
+        await releaseCouponUse(order.couponCode as string | undefined, order.userId as string | undefined);
 
         results.cancelled++;
 
