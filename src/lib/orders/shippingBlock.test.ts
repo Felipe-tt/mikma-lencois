@@ -15,4 +15,7 @@ describe('shippingBlockReason', () => {
     expect(shippingBlockReason({ troca: { aguardandoPecas: true } })).toMatch(/troca/);
     expect(shippingBlockReason({ troca: { aguardandoPecas: false } })).toBeNull();
   });
+  it('cliente que desistiu da compra: não envia', () => {
+    expect(shippingBlockReason({ payment: {}, cancelRequest: { at: '2026-11-20T15:00:00Z' } })).toMatch(/desistir/);
+  });
 });

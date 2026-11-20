@@ -22,6 +22,8 @@ export const TIMELINE_LABEL: Record<string, string> = {
   preparing:          'Pedido em preparação',
   shipped:            'Pedido despachado',
   delivery_cancelled: 'Entrega remarcada, novo envio em breve',
+  cancel_requested:   'Você pediu para desistir da compra',
+  cancel_withdrawn:   'Pedido mantido',
   delivered:          'Pedido entregue',
   cancelled:          'Pedido cancelado',
 };
@@ -36,6 +38,7 @@ const NOTE_TEXT: Record<string, string | null> = {
   'Confirmado pelo cliente':      'Você confirmou o recebimento',
   'Cancelado pelo cliente':       'Cancelado por você',
   'Cancelado pelo lojista':       'Cancelado pela loja',
+  'Cancelado a pedido do cliente': 'Cancelado a seu pedido',
   'Conta excluída pelo cliente':  'Cancelado porque a conta foi excluída',
   'Cancelado automaticamente por falta de pagamento após 48h': 'Cancelado por falta de pagamento em 48h',
 };

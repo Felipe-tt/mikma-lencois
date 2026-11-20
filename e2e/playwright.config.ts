@@ -16,6 +16,9 @@ export default defineConfig({
     // um script barrado pela CSP ou pelos Trusted Types quebra o teste aqui.
     ...devices['Pixel 7'],
     trace: 'retain-on-failure',
+    // Navegador já instalado na máquina, quando o da versão do Playwright não
+    // está baixado (ex.: E2E_CHROMIUM=/opt/pw-browsers/chromium npm run e2e).
+    ...(process.env.E2E_CHROMIUM ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM } } : {}),
     screenshot: 'only-on-failure',
   },
 });

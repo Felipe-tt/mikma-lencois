@@ -218,6 +218,9 @@ export interface Order {
   // estoque quando a equipe marca que o pacote chegou de volta na loja.
   restockPending?: boolean
   restockedAt?: string
+  // Cliente pediu, pelo site, para desistir da compra já paga (CDC, art. 49;
+  // Decreto 7.962, art. 5º). A equipe cancela e devolve o dinheiro.
+  cancelRequest?: { at: string }
 }
 
 // ─── Trocas e devoluções ─────────────────────────────────────────────────────

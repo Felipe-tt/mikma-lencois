@@ -291,6 +291,47 @@ export function buildCancelled(
   };
 }
 
+/**
+ * Confirmação imediata do pedido de desistência feito no site (Decreto
+ * 7.962/2013, art. 5º, § 4º). O cancelamento e o estorno vêm depois, pela
+ * equipe, com o e-mail de pedido cancelado.
+ */
+export function buildWithdrawalReceived(
+  order: { id: string; items: EmailItem[]; totalCents: number } & EmailMoney,
+  name: string,
+  { at, emTransito = false }: { at: Date; emTransito?: boolean },
+): EmailPayload {
+  const id = shortOrderId(order.id);
+  const url = orderUrl(order);
+  const total = formatCurrency(order.totalCents);
+  const quando = at.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const devolve = `Vamos cancelar o pedido e devolver todo o valor pago, ${total}, frete incluso, pelo mesmo meio de pagamento.`;
+  const saiu = 'O pedido já saiu para entrega: se ele chegar, você pode recusar o recebimento ou devolver depois, sem custo.';
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Recebemos seu pedido de desistência',
+      html: `
+        ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>. Recebemos em ${quando} o seu pedido para desistir da compra #${id}.`)}
+        ${emailCallout(`<p style="margin:0;font-size:14px;color:#2C1F14;line-height:1.6;">${devolve.replace(total, `<strong>${total}</strong>`)}</p>`)}
+        ${emTransito ? emailParagraph(saiu) : ''}
+        ${emailParagraph('Você recebe outro e-mail quando o cancelamento for feito. Dúvidas? É só responder este e-mail.', { muted: true })}
+        ${emailItemsTable(order)}
+        ${emailCta('Ver pedido', url)}`,
+    })}
+    ${emailSignature()}`, { preheader: `Vamos cancelar o pedido e devolver ${total}.` });
+  return {
+    subject: orderSubject(id, 'desistência recebida'),
+    html,
+    text: [
+      `Olá, ${name}. Recebemos em ${quando} o seu pedido para desistir da compra #${id}.`,
+      devolve,
+      ...(emTransito ? [saiu] : []),
+      '', 'Você recebe outro e-mail quando o cancelamento for feito.', `Pedido: ${url}`,
+    ].join('\n'),
+  };
+}
+
 /** Aviso do cron: pedido sem pagamento há 24h, cancelado em mais 24h. */
 export function buildPaymentReminder(
   order: { id: string; items: EmailItem[]; totalCents: number } & EmailMoney,

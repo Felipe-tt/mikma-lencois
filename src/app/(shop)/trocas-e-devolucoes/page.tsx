@@ -30,6 +30,13 @@ export default async function TrocasEDevolucoesPage() {
         ),
         clause(
           <>
+            Mudou de ideia antes de receber? No próprio pedido, toque em <B>Desistir da compra</B>:
+            confirmamos na hora por e-mail, cancelamos e devolvemos todo o valor, frete incluso. Se o
+            pedido já tiver saído, você também pode recusar o recebimento.
+          </>,
+        ),
+        clause(
+          <>
             As peças precisam voltar <B>sem lavar e sem usar</B>, de preferência com a etiqueta e a
             embalagem.
           </>,

@@ -1,6 +1,6 @@
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { sendEmail, emailEnabled } from '@/lib/email';
-import { buildCancelled, buildRefunded } from '@/lib/email/orderStatusEmails';
+import { buildCancelled, buildRefunded, buildWithdrawalReceived } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL, type EmailItem, type EmailMoney } from '@/lib/email/layout';
 
 /**
@@ -73,5 +73,39 @@ export async function notifyOrderRefunded(
     await sendEmail({ to: email, subject: payload.subject, text: payload.text, html: payload.html, from: 'noreply', replyTo: CONTACT_EMAIL });
   } catch (err) {
     console.error(`[notifyOrderRefunded] falha ao enviar e-mail do pedido ${orderId} (ignorado):`, err);
+  }
+}
+
+/**
+ * Confirma ao cliente, na hora, que o pedido de desistência chegou (Decreto
+ * 7.962/2013, art. 5º, § 4º). Best-effort: nunca lança.
+ */
+export async function notifyWithdrawalReceived(
+  orderId: string,
+  order: { userId?: string; items?: unknown; totalCents?: number } & EmailMoney,
+  opts: { at: Date; emTransito?: boolean },
+): Promise<void> {
+  if (!emailEnabled() || !order.userId) return;
+  try {
+    const uSnap = await adminDb.collection('users').doc(order.userId).get();
+    const userData = uSnap.data() ?? {};
+    let email = userData.email as string | undefined;
+    if (!email) {
+      try { email = (await adminAuth.getUser(order.userId)).email ?? undefined; } catch { /* conta removida */ }
+    }
+    if (!email) return;
+    const firstName = String(userData.name ?? userData.displayName ?? '').split(' ')[0] || 'cliente';
+    const payload = buildWithdrawalReceived(
+      {
+        id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents ?? 0,
+        productsCents: order.productsCents, shippingCents: order.shippingCents, pixDiscountCents: order.pixDiscountCents,
+        couponDiscountCents: order.couponDiscountCents, discountCents: order.discountCents, couponCode: order.couponCode,
+      },
+      firstName,
+      opts,
+    );
+    await sendEmail({ to: email, subject: payload.subject, text: payload.text, html: payload.html, from: 'noreply', replyTo: CONTACT_EMAIL });
+  } catch (err) {
+    console.error('[notifyWithdrawalReceived] falha ao enviar e-mail do pedido %s (ignorado):', orderId, err);
   }
 }
