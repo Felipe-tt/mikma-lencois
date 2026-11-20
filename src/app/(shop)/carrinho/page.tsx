@@ -20,6 +20,7 @@ import { setReturnTo } from '@/lib/auth/returnTo';
 import { MontarJunto } from '@/components/cart/MontarJunto';
 import { LOG_MAX } from '@/lib/sharedCart';
 import { LikeButton } from '@/components/cart/montarUi';
+import { withCurrentPrices, type PriceChange } from '@/lib/cartPrices';
 
 export default function CartPage() {
   // 0 = loja sem frete grátis. Antes começava em R$ 250 e só trocava se a
@@ -33,6 +34,8 @@ export default function CartPage() {
   const [cartLoading, setCartLoading] = useState(true);
   const [stockMap, setStockMap] = useState<Record<string, number>>({}); // sku → disponível
   const [activeMap, setActiveMap] = useState<Record<string, boolean>>({}); // productId → ativo
+  // Preço que mudou desde que o item entrou no carrinho (o carrinho já foi atualizado).
+  const [priceChanges, setPriceChanges] = useState<PriceChange[]>([]);
   const [couponCode, setCouponCode] = useState('');
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
@@ -128,11 +131,23 @@ export default function CartPage() {
     if (items.length === 0) { setActiveMap({}); return; }
     const productIds = Array.from(new Set(items.map(i => i.productId)));
     Promise.all(
-      productIds.map(id => getDoc(doc(db, 'products', id)).then(snap => ({ id, active: snap.exists() ? snap.data().active !== false : false })))
+      productIds.map(id => getDoc(doc(db, 'products', id)).then(snap => ({
+        id,
+        active: snap.exists() ? snap.data().active !== false : false,
+        price: snap.exists() ? snap.data().price as unknown : undefined,
+      })))
     ).then(results => {
       setActiveMap(Object.fromEntries(results.map(r => [r.id, r.active])));
+      // Preço mudou desde que o item entrou: o carrinho passa a mostrar (e o
+      // resumo a somar) o preço que o servidor vai cobrar.
+      const prices = new Map(results.flatMap(r => typeof r.price === 'number' ? [[r.id, r.price] as [string, number]] : []));
+      const synced = withCurrentPrices(items, prices);
+      if (synced && user) {
+        setPriceChanges(synced.changes);
+        updateDoc(doc(db, 'carts', user.uid), { items: synced.items }).catch(() => {});
+      }
     }).catch(() => {});
-  }, [cart]);
+  }, [cart, user]);
 
   // Item esgotado ou com quantidade acima do estoque também trava o botão:
   // antes passava daqui e o erro só aparecia no último passo do checkout.
@@ -351,6 +366,13 @@ export default function CartPage() {
           <div>
             {itemError && (
               <p role="alert" className="mb-2 rounded-2xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-3">{itemError}</p>
+            )}
+            {priceChanges.length > 0 && (
+              <p role="status" className="mb-2 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30 text-sm px-4 py-3">
+                {priceChanges.length === 1
+                  ? <>O preço de <strong>{priceChanges[0].productName}</strong> mudou de {formatCurrency(priceChanges[0].from)} para {formatCurrency(priceChanges[0].to)}.</>
+                  : <>Alguns preços mudaram desde que você adicionou: {priceChanges.map(c => `${c.productName} (agora ${formatCurrency(c.to)})`).join(', ')}.</>}
+              </p>
             )}
             <div className="divide-y divide-mist/70">
               {items.map((item, index) => {
