@@ -7,6 +7,7 @@ import { extractBearer, getClientIp, tooManyRequests } from '@/lib/security';
 import { sanitizePixDescription } from '@/lib/abacatepay';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { StockError } from '@/lib/errors';
+import { getPauseNoticeNow } from '@/lib/settings';
 
 /** Mesmo prazo do cron expire-orders: depois disso o pedido é cancelado. */
 const ORDER_PAYMENT_WINDOW_MS = 48 * 60 * 60 * 1000;
@@ -86,6 +87,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       totalCents: order.totalCents,
     });
   }
+
+  // Vendas pausadas no painel: nenhum pagamento novo (o PIX que já estava
+  // valendo continua). Antes um pedido antigo gerava PIX novo na pausa.
+  const paused = await getPauseNoticeNow();
+  if (paused) return NextResponse.json({ error: paused, code: 'sales_paused' }, { status: 503 });
 
   const createdAtMs = new Date(order.createdAt?.toDate?.() ?? order.createdAt).getTime();
   if (Number.isFinite(createdAtMs) && Date.now() - createdAtMs > ORDER_PAYMENT_WINDOW_MS) {

@@ -66,6 +66,19 @@ describe('customerCancelReason', () => {
   it('pagamento atrasado não aparece como motivo', () => {
     expect(customerCancelReason([{ status: 'cancelled', at, note: 'Pagamento recebido depois do cancelamento (x).' }])).toBeUndefined();
   });
+  it('notas de operação do cancelamento não aparecem (nem o e-mail da equipe)', () => {
+    const notas = [
+      'O pacote já estava com a transportadora: as peças voltam ao estoque quando ele chegar de volta na loja.',
+      'Pacote de volta na loja: peças devolvidas ao estoque por equipe@loja.com.',
+      'Não foi possível cancelar a corrida na Uber automaticamente. Cancele pelo app da Uber.',
+    ];
+    const t = customerTimeline([
+      { status: 'cancelled', at, note: 'Produto com defeito no lote' },
+      ...notas.map(note => ({ status: 'cancelled', at, note })),
+    ]);
+    expect(JSON.stringify(t)).not.toMatch(/equipe@loja|estoque|corrida/);
+    expect(customerCancelReason([{ status: 'cancelled', at, note: 'Produto com defeito no lote' }, ...notas.map(note => ({ status: 'cancelled', at, note }))])).toBe('Produto com defeito no lote');
+  });
 });
 
 describe('anotações internas da equipe', () => {

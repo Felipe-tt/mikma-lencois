@@ -52,7 +52,13 @@ const UBER_TITLE: Record<string, string | null> = {
 };
 
 // Eventos inteiros que são só operação da loja.
-const INTERNAL_EVENT = [/^Pagamento recebido depois d/, /^Contestação/, /^Código de rastreio corrigido/, /^Pedido conferido pela equipe/, /^Segunda cobrança paga/, /^Pagamento pela AbacatePay .*chegou depois/, /^Não foi possível cancelar a etiqueta/];
+// Atenção: no cancelamento, nota que não está aqui aparece para o cliente
+// como motivo. Toda nota de operação gravada com status 'cancelled' entra.
+const INTERNAL_EVENT = [
+  /^Pagamento recebido depois d/, /^Contestação/, /^Código de rastreio corrigido/, /^Pedido conferido pela equipe/,
+  /^Segunda cobrança paga/, /^Pagamento pela AbacatePay .*chegou depois/, /^Não foi possível cancelar a etiqueta/,
+  /^Não foi possível cancelar a corrida/, /^O pacote já estava com a transportadora/, /^Pacote de volta na loja/,
+];
 const REFUND = /^Estorno/;
 
 function cancelReasonIsPublic(note: string): boolean {

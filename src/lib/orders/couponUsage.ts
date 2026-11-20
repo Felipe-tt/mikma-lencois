@@ -89,3 +89,24 @@ export async function releaseCouponUse(couponCode: string | null | undefined, ui
     console.error('[coupon] falha ao devolver uso do cupom', couponCode, err);
   }
 }
+
+/**
+ * Conta de convidado virou conta de verdade (merge-guest): os usos de cupom
+ * do convidado passam para a conta, senão o limite por cliente recomeçava.
+ * Best-effort: nunca lança.
+ */
+export async function moveCouponUsage(code: string, fromUid: string, toUid: string): Promise<void> {
+  const from = couponCustomerRef(code, fromUid);
+  const to = couponCustomerRef(code, toUid);
+  try {
+    await adminDb.runTransaction(async tx => {
+      const snap = await tx.get(from);
+      const usos = (snap.get('usos') as number | undefined) ?? 0;
+      if (!snap.exists) return;
+      if (usos > 0) tx.set(to, { usos: FieldValue.increment(usos), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      tx.delete(from);
+    });
+  } catch (err) {
+    console.error('[coupon] falha ao mover usos do convidado', code, err);
+  }
+}

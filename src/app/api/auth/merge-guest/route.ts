@@ -4,6 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import type { CartItem } from '@/types';
+import { moveCouponUsage } from '@/lib/orders/couponUsage';
 
 const schema = z.object({ guestToken: z.string().min(20).max(4096) });
 
@@ -59,12 +60,23 @@ export async function POST(req: NextRequest) {
     tx.delete(guestCartRef);
   });
 
-  // Pedidos feitos como convidado passam a aparecer na conta.
-  const orders = await adminDb.collection('orders').where('userId', '==', guest.uid).limit(50).get();
+  // Pedidos feitos como convidado passam a aparecer na conta, com as trocas
+  // e avaliações deles (antes ficavam no convidado: o cliente não via o
+  // andamento da troca na conta).
+  const [orders, returns, reviews] = await Promise.all([
+    adminDb.collection('orders').where('userId', '==', guest.uid).limit(50).get(),
+    adminDb.collection('returns').where('userId', '==', guest.uid).limit(50).get(),
+    adminDb.collection('reviews').where('userId', '==', guest.uid).limit(50).get(),
+  ]);
   const batch = adminDb.batch();
   orders.docs.forEach(d => batch.update(d.ref, { userId: account.uid, mergedFromGuest: guest.uid }));
+  returns.docs.forEach(d => batch.update(d.ref, { userId: account.uid }));
+  reviews.docs.forEach(d => batch.update(d.ref, { userId: account.uid }));
   batch.delete(adminDb.collection('users').doc(guest.uid));
   await batch.commit();
+  // Usos de cupom do convidado contam para a conta (limite por cliente).
+  const codes = new Set(orders.docs.map(d => d.get('couponCode')).filter((c): c is string => typeof c === 'string' && c.length > 0));
+  for (const code of codes) await moveCouponUsage(code, guest.uid, account.uid);
   await adminAuth.deleteUser(guest.uid).catch(() => {});
 
   return NextResponse.json({ ok: true, merged: orders.size });
