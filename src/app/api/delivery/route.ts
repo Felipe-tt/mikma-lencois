@@ -158,8 +158,10 @@ export async function POST(req: NextRequest) {
       // Busca dados do cliente (nome + telefone)
       const userSnap   = await adminDb.collection('users').doc(order.userId).get();
       const userData   = withPii(userSnap.data());
-      const customerName  = (userData.name as string | undefined) || 'Cliente';
-      const customerPhone = formatPhone((userData.phone as string | undefined) || '47999999999');
+      const customerName  = (order.customerName as string | undefined) || (userData.name as string | undefined) || 'Cliente';
+      // Sem celular no cadastro, o entregador liga para a loja (antes ia um
+      // número inventado, de alguém qualquer).
+      const customerPhone = formatPhone((userData.phone as string | undefined) || settings.storePhone || '47000000000');
 
       // Monta endereços no formato JSON string exigido pela API Uber Direct
       const pickupAddress = buildUberAddress({
