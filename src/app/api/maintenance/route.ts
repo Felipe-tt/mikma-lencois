@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { maintenanceActionSchema } from './schema';
 import { maintenanceDocId } from '@/lib/maintenanceQueue';
 import { hasSecondFactor } from '@/lib/staffMfa';
+import { staffName } from '@/lib/staffName';
 
 // Validação simples de IPv4/IPv6, evita que um valor arbitrário em
 // body.ip vire parte de um ID de documento no Firestore sem checagem
@@ -59,6 +60,8 @@ export async function POST(req: NextRequest) {
   const parsedBody = await validateBody(req, maintenanceActionSchema);
   if (!parsedBody.ok) return parsedBody.response;
   const body = parsedBody.data;
+  // Nome de quem mudou: o status da manutenção é público (e-mail não).
+  const quem = await staffName(user);
 
   // toggle manutenção
   if (body.action === 'toggle') {
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest) {
     await adminDb.doc('maintenance/status').set({
       active: !current,
       updatedAt: new Date().toISOString(),
-      updatedBy: user.email ?? user.uid,
+      updatedBy: quem,
     }, { merge: true });
 
     // CRÍTICO: purga o cache ISR de todas as páginas.
@@ -94,7 +97,7 @@ export async function POST(req: NextRequest) {
       ip: body.ip,
       released: true,
       releasedAt: new Date().toISOString(),
-      releasedBy: user.email ?? user.uid,
+      releasedBy: quem,
     }, { merge: true });
     return NextResponse.json({ ok: true });
   }
@@ -108,7 +111,7 @@ export async function POST(req: NextRequest) {
       queueSnap.docs.slice(i, i + 400).forEach(d => batch.update(d.ref, {
         released: true,
         releasedAt: new Date().toISOString(),
-        releasedBy: user.email ?? user.uid,
+        releasedBy: quem,
       }));
       await batch.commit();
     }

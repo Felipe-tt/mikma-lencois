@@ -122,6 +122,13 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date()):
     r.riskMoved++;
   }
 
+  // Status da manutenção (público) gravado com o e-mail de quem mudou: fica
+  // só "Equipe". Hoje grava o nome (lib/staffName.ts).
+  const statusRef = db.collection('maintenance').doc('status');
+  if (String((await statusRef.get()).data()?.updatedBy ?? '').includes('@')) {
+    await statusRef.update({ updatedBy: 'Equipe' });
+  }
+
   // Contas de convidado (login anônimo) paradas há 90 dias e sem pedido.
   const guestCutoff = now.getTime() - RETENTION.guestDays * DAY_MS;
   let pageToken: string | undefined;

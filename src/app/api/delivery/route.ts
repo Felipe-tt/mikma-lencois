@@ -33,6 +33,7 @@ import {
   type UberManifestItem,
 } from '@/lib/uber-direct';
 import { effectiveRole } from '@/lib/staffMfa';
+import { staffName } from '@/lib/staffName';
 
 /** Motivo legível da recusa da Uber (sem dados do cliente). */
 function uberMotivo(err: unknown): string {
@@ -400,6 +401,7 @@ export async function DELETE(req: NextRequest) {
     // Correios/Jadlog (despacho manual) e retirada não têm nada a cancelar
     // fora daqui: só volta o pedido pra fila de despacho.
 
+    const quem = await staffName(decoded);
     await adminDb.collection('orders').doc(orderId).update({
       status: 'preparing',
       // Volta pra transportadora que o cliente escolheu. Antes ficava null e
@@ -416,7 +418,7 @@ export async function DELETE(req: NextRequest) {
       timeline: FieldValue.arrayUnion({
         status: 'delivery_cancelled',
         at:    new Date().toISOString(),
-        note:  `Entrega cancelada por ${decoded.email ?? decoded.uid} · Motivo: ${reason}`,
+        note:  `Entrega cancelada por ${quem} · Motivo: ${reason}`,
       }),
     });
 

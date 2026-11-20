@@ -9,6 +9,7 @@ import { refundCharge } from '@/lib/abacatepayApi';
 import { effectiveRole } from '@/lib/staffMfa';
 import { notifyInApp } from '@/lib/push/notifyInApp';
 import { notifySeller } from '@/lib/push/notifySeller';
+import { staffName } from '@/lib/staffName';
 
 const bodySchema = z.object({ reason: z.string().trim().max(300).optional() });
 
@@ -26,13 +27,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
   let uid: string;
-  let email: string | undefined;
+  let quem: string;
   try {
     const decoded = await adminAuth.verifyIdToken(bearer.token, true);
     const role = effectiveRole(decoded);
     if (role !== 'seller' && role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     uid = decoded.uid;
-    email = decoded.email;
+    quem = await staffName(decoded);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       timeline: FieldValue.arrayUnion({
         status: 'cancelled',
         at: new Date().toISOString(),
-        note: `Estorno de ${brl} feito pela AbacatePay por ${email ?? uid}`,
+        note: `Estorno de ${brl} feito pela AbacatePay por ${quem}`,
       }),
     });
     return already ? null : o ?? null;
