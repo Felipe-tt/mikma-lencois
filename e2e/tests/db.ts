@@ -37,6 +37,13 @@ export interface StoredOrder {
   timeline?: Array<{ status: string; note?: string }>;
   troca?: { returnId?: string; origemOrderId?: string; aguardandoPecas?: boolean };
   payment?: { refundStatus?: string };
+  items?: Array<{ sku: string; quantity: number }>;
+  restockPending?: boolean;
+}
+
+/** Quantidade em estoque (sem reservas) de um SKU. */
+export async function stockOf(sku: string): Promise<number> {
+  return ((await db().collection('inventory').doc(sku).get()).get('quantity') as number | undefined) ?? 0;
 }
 
 export async function readOrder(id: string): Promise<StoredOrder> {

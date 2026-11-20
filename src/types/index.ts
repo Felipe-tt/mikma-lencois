@@ -211,6 +211,10 @@ export interface Order {
   risk?: OrderRisk      // detector de golpe (ver src/lib/orders/risk.ts)
   customerName?: string
   customerEmail?: string
+  // Cancelado com o pacote já com a transportadora: as peças só voltam ao
+  // estoque quando a equipe marca que o pacote chegou de volta na loja.
+  restockPending?: boolean
+  restockedAt?: string
 }
 
 // ─── Trocas e devoluções ─────────────────────────────────────────────────────

@@ -413,9 +413,14 @@ export default function OrderDetailPage() {
               <p className="font-display text-[1.3rem] text-ink leading-tight">Este pedido foi cancelado</p>
               {reason && <p className="text-[13.5px] text-mid mt-1.5 leading-relaxed">{reason}</p>}
               <p className="text-[13.5px] text-ink mt-3 leading-relaxed">
-                {wasPaid
-                  ? `O reembolso de ${formatCurrency(order.totalCents)} será feito pelo mesmo meio de pagamento.`
-                  : 'Nenhuma cobrança foi feita.'}
+                {!wasPaid
+                  ? 'Nenhuma cobrança foi feita.'
+                  // Antes dizia "será feito" mesmo com o dinheiro já devolvido.
+                  : order.payment.refundStatus === 'done'
+                  ? `Devolvemos ${formatCurrency(order.totalCents)}${order.payment.refundedAt ? ` em ${formatTs(order.payment.refundedAt)}` : ''}, pelo mesmo meio de pagamento.${order.payment.method === 'card' ? ' No cartão, o valor pode aparecer só na próxima fatura.' : ''}`
+                  : order.payment.refundStatus === 'processing'
+                  ? `Estamos devolvendo ${formatCurrency(order.totalCents)} pelo mesmo meio de pagamento.`
+                  : `O reembolso de ${formatCurrency(order.totalCents)} será feito pelo mesmo meio de pagamento.`}
               </p>
               <Link href="/produtos" className="btn-primary mt-5">Ver produtos</Link>
             </div>

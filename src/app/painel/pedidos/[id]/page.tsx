@@ -186,6 +186,8 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   const [pasteFailed, setPasteFailed] = useState(false);
   const [refunding, setRefunding] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
+  const [restocking, setRestocking] = useState(false);
+  const [restockError, setRestockError] = useState<string | null>(null);
   const [copied, setCopied]       = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [cancellingDelivery, setCancellingDelivery] = useState(false);
@@ -496,14 +498,16 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   async function handleCancelOrder() {
     if (!order || order.status === 'cancelled' || order.status === 'delivered') return;
     // Só pedido já pago teve o estoque debitado (pending_payment/payment_expired não).
-    const willReturnStock = order.status !== 'pending_payment' && order.status !== 'payment_expired';
+    // Já com os Correios/Jadlog: o estoque volta quando o pacote voltar.
+    const emTransito = order.status === 'shipped' && isManualDispatch(order.delivery?.carrier ?? '');
+    const willReturnStock = order.status !== 'pending_payment' && order.status !== 'payment_expired' && !emTransito;
     // Pago pela AbacatePay: confirmar o cancelamento já devolve o dinheiro.
     const pago = !!order.payment.paidAt;
     const estornaAqui = pago && !order.payment.confirmedManuallyBy;
     const total = formatCurrency(order.totalCents);
     const { confirmed, value: reason } = await confirmDialog({
       message: estornaAqui ? `Cancelar e estornar ${total}?` : 'Cancelar este pedido?',
-      detail: `${willReturnStock ? 'O estoque será devolvido. ' : ''}${estornaAqui
+      detail: `${willReturnStock ? 'O estoque será devolvido. ' : ''}${emTransito ? 'O pacote já está com a transportadora: as peças voltam ao estoque quando você marcar que ele chegou de volta. ' : ''}${estornaAqui
         ? `Os ${total} voltam para o cliente pela AbacatePay, no mesmo meio do pagamento. `
         : pago ? `O cliente pagou ${total} por fora: devolva pelo mesmo meio e marque como devolvido. ` : ''}${pago ? 'O cliente recebe um e-mail avisando. ' : ''}Esta ação não tem como desfazer.`,
       withInput: true,
@@ -535,6 +539,29 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
       setCancelOrderError('Erro de conexão. Tente novamente.');
     } finally {
       setCancellingOrder(false);
+    }
+  }
+
+  // Pacote de pedido cancelado voltou para a loja: as peças entram no estoque.
+  async function reporEstoque() {
+    if (!order) return;
+    const { confirmed } = await confirmDialog({
+      message: 'O pacote voltou para a loja?',
+      detail: 'Confira se as peças estão todas no pacote e em bom estado. Elas voltam ao estoque e ficam à venda de novo.',
+      confirmLabel: 'Devolver ao estoque',
+    });
+    if (!confirmed) return;
+    setRestocking(true);
+    setRestockError(null);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch(`/api/painel/pedidos/${order.id}/repor-estoque`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setRestockError(data.error ?? 'Não foi possível devolver ao estoque agora.');
+    } catch {
+      setRestockError('Erro de conexão. Tente de novo.');
+    } finally {
+      setRestocking(false);
     }
   }
 
@@ -843,6 +870,19 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               </button>
             </div>
             {refundError && <p className="text-[12px] text-red-600 mt-2">{refundError}</p>}
+          </div>
+        )}
+
+        {/* ── Cancelado com o pacote na transportadora: estoque espera a volta ── */}
+        {order.status === 'cancelled' && order.restockPending && (
+          <div className="border-2 border-amber-400 bg-amber-50 px-5 py-4 rounded-2xl">
+            <p className="text-[14px] font-bold text-ink mb-1">As peças ainda não voltaram ao estoque</p>
+            <p className="text-[13px] text-ink/80 leading-relaxed">O pedido foi cancelado com o pacote já com a transportadora. Quando ele chegar de volta na loja, confira as peças e devolva ao estoque.</p>
+            <button onClick={reporEstoque} disabled={restocking}
+              className="mt-3 w-full sm:w-auto px-5 bg-ink text-paper text-[13px] font-semibold py-2.5 hover:bg-ink/80 disabled:opacity-50 transition-colors rounded-full">
+              {restocking ? 'Devolvendo…' : 'Pacote voltou: devolver ao estoque'}
+            </button>
+            {restockError && <p role="alert" className="text-[12px] text-red-600 mt-2">{restockError}</p>}
           </div>
         )}
 

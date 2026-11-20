@@ -228,11 +228,14 @@ export function buildPixExpired(order: Pick<Order, 'id' | 'totalCents'>, name: s
   };
 }
 
+/** Pedido cancelado com o pacote já a caminho. */
+const TRANSITO = 'O pacote já tinha saído para entrega. Se ele chegar, recuse o recebimento; se já tiver recebido, responda este e-mail que combinamos a devolução, sem custo para você.';
+
 /** Pedido cancelado (pela loja ou pelo cliente). */
 export function buildCancelled(
   order: { id: string; items: EmailItem[]; totalCents: number } & EmailMoney,
   name: string,
-  { refund, byCustomer = false, reason }: { refund: boolean; byCustomer?: boolean; reason?: string },
+  { refund, byCustomer = false, reason, emTransito = false }: { refund: boolean; byCustomer?: boolean; reason?: string; emTransito?: boolean },
 ): EmailPayload {
   const id = shortOrderId(order.id);
   const url = orderUrl(order);
@@ -251,6 +254,7 @@ export function buildCancelled(
         ${emailParagraph(intro)}
         ${reason ? emailParagraph(`Motivo: ${escapeHtml(reason)}`, { muted: true }) : ''}
         ${emailCallout(`<p style="margin:0;font-size:14px;color:#2C1F14;line-height:1.6;">${money}</p>`)}
+        ${emTransito ? emailParagraph(TRANSITO) : ''}
         ${emailParagraph('Se tiver qualquer dúvida, é só responder este e-mail.', { muted: true })}
         ${emailItemsTable(order)}
         ${emailCta('Ver pedido', url)}`,
@@ -263,6 +267,7 @@ export function buildCancelled(
       byCustomer ? `Olá, ${name}. Confirmamos o cancelamento do seu pedido #${id}.` : `Olá, ${name}. Seu pedido #${id} foi cancelado.`,
       ...(reason ? [`Motivo: ${reason}`] : []),
       refund ? `O valor de ${total} será devolvido pelo mesmo meio de pagamento.` : 'Nenhuma cobrança foi feita.',
+      ...(emTransito ? [TRANSITO] : []),
       '', 'Dúvidas? Responda este e-mail.', `Pedido: ${url}`,
     ].join('\n'),
   };

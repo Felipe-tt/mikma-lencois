@@ -14,7 +14,7 @@ import { CONTACT_EMAIL, type EmailItem, type EmailMoney } from '@/lib/email/layo
 export async function notifyOrderCancelled(
   orderId: string,
   order: { userId?: string; items?: unknown; totalCents?: number } & EmailMoney,
-  opts: { refund: boolean; byCustomer?: boolean },
+  opts: { refund: boolean; byCustomer?: boolean; reason?: string; emTransito?: boolean },
 ): Promise<void> {
   if (!emailEnabled() || !order.userId) return;
   try {

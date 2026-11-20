@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext, type Browser, type Locator, type Page } from '@playwright/test';
 import { ABACATE, addToCart, charges, goToPayment, login, payPix, prepare, staffLogin } from './helpers';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { db, emptyCart, forgetPasskeys, readOrder } from './db';
+import { db, emptyCart, forgetPasskeys, readOrder, stockOf } from './db';
 
 /**
  * Venda pelos Correios do começo ao fim, com o contrato e o Melhor Envio
@@ -312,6 +312,43 @@ test('pedido cancelado com etiqueta: a etiqueta é cancelada nos Correios', asyn
   // A etiqueta é cancelada logo depois de o pedido virar cancelado.
   await expect.poll(() => correiosLog().some(e => e.cancelada === pre.id)).toBe(true);
   await expect(panel.getByText(/os Correios não cancelaram a etiqueta/)).toHaveCount(0);
+  await staff.close();
+});
+
+test('pedido cancelado já com os Correios: o estoque volta só quando o pacote volta', async ({ page, browser, baseURL }) => {
+  test.setTimeout(240_000);
+  const email = 'cancela@e2e.mikma';
+  await emptyCart(email);
+  await login(page, email, SENHA);
+  await addToCart(page, JOGO_KING.id);
+  const payPixButton = await goToPayment(page);
+  await page.getByRole('radiogroup', { name: 'Opção de entrega' }).getByRole('radio', { name: /Correios PAC/ }).click();
+  const { orderId, charge } = await payWithPix(page, payPixButton);
+  expect((await payPix(baseURL!, charge.id, orderId, charge.amount)).status).toBe(200);
+  await dispatch(browser, orderId, 'Correios PAC', { cancelarAntes: false, confirmar: true });
+  const sku = (await readOrder(orderId)).items![0].sku;
+  const enviado = await stockOf(sku);
+
+  const { staff, panel } = await staffPanel(browser);
+  await panel.goto(`/painel/pedidos/${orderId}`);
+  await panel.getByRole('button', { name: 'Cancelar este pedido' }).click();
+  await expect(panel.getByText(/as peças voltam ao estoque quando você marcar/)).toBeVisible();
+  await panel.getByRole('button', { name: 'Cancelar e estornar' }).click();
+  await expect.poll(async () => (await readOrder(orderId)).status).toBe('cancelled');
+  await expect.poll(async () => (await readOrder(orderId)).payment?.refundStatus).toBe('done');
+  // O cliente, com o PIX ainda aberto, vê que o dinheiro volta (antes:
+  // "o pagamento não foi identificado").
+  await expect(page.getByText(/valor pago volta para você/).first()).toBeVisible();
+  // Pacote na estrada: nada volta ao estoque ainda.
+  expect((await readOrder(orderId)).restockPending).toBe(true);
+  expect(await stockOf(sku)).toBe(enviado);
+
+  // O pacote voltou: a equipe confere e devolve ao estoque, uma vez só.
+  await panel.getByRole('button', { name: 'Pacote voltou: devolver ao estoque' }).click();
+  await panel.getByRole('dialog').getByRole('button', { name: 'Devolver ao estoque' }).click();
+  await expect.poll(async () => (await readOrder(orderId)).restockPending).toBe(false);
+  expect(await stockOf(sku)).toBe(enviado + 1);
+  await expect(panel.getByRole('button', { name: 'Pacote voltou: devolver ao estoque' })).toHaveCount(0);
   await staff.close();
 });
 
