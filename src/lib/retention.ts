@@ -2,12 +2,18 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Auth } from 'firebase-admin/auth';
 import { piiPatch } from '@/lib/piiCrypto';
+import { deleteConversation } from '@/lib/email/deleteConversation';
+import type { StoredFiles } from '@/lib/storageFiles';
 
 /**
  * Prazos de retenção (LGPD), os mesmos da Política de Privacidade:
  * - pedido: 5 anos (prazo fiscal e do consumidor); depois disso o pedido
  *   fica só com os números (itens, valores, cidade) e perde nome, e-mail,
- *   endereço e IP;
+ *   endereço, IP e a avaliação do detector de golpe;
+ * - nota fiscal (XML com nome, CPF e endereço): 5 anos contados do 1º de
+ *   janeiro seguinte ao da emissão (CTN, art. 173);
+ * - atendimento e trocas: 5 anos (conversa sem mensagem nova; troca pedida),
+ *   com os anexos e as fotos;
  * - IP de quem fez o pedido: 1 ano (serve para o detector de golpe, que só
  *   compara pedidos recentes);
  * - conta de convidado sem pedido: 90 dias sem uso;
@@ -23,6 +29,7 @@ export const RETENTION = {
   guestDays: 90,
   restockDays: 365,
   maintenanceQueueDays: 30,
+  supportYears: 5,
 } as const;
 
 /** Data limite: o que foi criado antes dela passou do prazo. */
@@ -30,11 +37,26 @@ export function cutoffIso(now: Date, days: number): string {
   return new Date(now.getTime() - days * DAY_MS).toISOString();
 }
 
-export function orderCutoffIso(now: Date): string {
+function yearsAgoIso(now: Date, years: number): string {
   const d = new Date(now);
-  d.setUTCFullYear(d.getUTCFullYear() - RETENTION.orderYears);
+  d.setUTCFullYear(d.getUTCFullYear() - years);
   return d.toISOString();
 }
+
+export function orderCutoffIso(now: Date): string {
+  return yearsAgoIso(now, RETENTION.orderYears);
+}
+
+/**
+ * Nota emitida antes desta data já passou do prazo fiscal: 5 anos contados
+ * do 1º de janeiro seguinte ao da emissão. Em 2032 saem as de 2026.
+ */
+export function nfeCutoffIso(now: Date): string {
+  return new Date(Date.UTC(now.getUTCFullYear() - 5, 0, 1)).toISOString();
+}
+
+/** Sem Storage (testes que não mexem em arquivo). */
+const noFiles: StoredFiles = { deletePrefix: async () => {}, deletePath: async () => {} };
 
 /** Campos que um pedido antigo perde. A cidade e o estado ficam para relatórios. */
 export function anonymizedOrderPatch(address: { city?: string; state?: string } | undefined, nowIso: string) {
@@ -57,15 +79,21 @@ export interface RetentionResult {
   /** Avaliações do detector de golpe que saíram do pedido para orderRisk. */
   riskMoved: number;
   queueDeleted: number;
+  nfeDeleted: number;
+  conversationsDeleted: number;
+  returnsDeleted: number;
 }
 
 // Por rodada: a rotina roda todo dia, então o que sobrar sai no dia seguinte
 // (e cada rodada cabe no tempo de uma requisição).
 const BATCH = 300;
 
-export async function runRetention(db: Firestore, auth: Auth, now = new Date()): Promise<RetentionResult> {
+export async function runRetention(db: Firestore, auth: Auth, now = new Date(), files: StoredFiles = noFiles): Promise<RetentionResult> {
   const nowIso = now.toISOString();
-  const r: RetentionResult = { piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0, riskMoved: 0 };
+  const r: RetentionResult = {
+    piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0, riskMoved: 0,
+    nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0,
+  };
 
   // Perfis antigos com CPF/telefone em claro: criptografa (ver lib/piiCrypto.ts).
   if (process.env.PII_ENCRYPTION_KEY) {
@@ -93,6 +121,8 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date()):
   for (const doc of old.docs) {
     if (!doc.get('anonymizedAt')) {
       await doc.ref.update(anonymizedOrderPatch(doc.get('address'), nowIso));
+      // A avaliação do detector de golpe (outras contas, IPs) sai junto.
+      await db.collection('orderRisk').doc(doc.id).delete();
       r.ordersAnonymized++;
     }
   }
@@ -148,6 +178,31 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date()):
   const restock = await db.collection('restockRequests').where('createdAt', '<', cutoffIso(now, RETENTION.restockDays)).limit(BATCH).get();
   await Promise.all(restock.docs.map(d => d.ref.delete()));
   r.restockDeleted = restock.size;
+
+  // Notas fiscais fora do prazo fiscal. Grupo de coleção (orders/*/nfeDocs):
+  // sem o índice pronto a consulta falha, e o resto da rotina segue.
+  try {
+    const xmls = await db.collectionGroup('nfeDocs').where('createdAt', '<', nfeCutoffIso(now)).limit(BATCH).get();
+    await Promise.all(xmls.docs.map(d => d.ref.delete()));
+    r.nfeDeleted = xmls.size;
+  } catch (err) {
+    console.error('[retention] notas fiscais antigas', err);
+  }
+
+  // Atendimento e trocas com mais de 5 anos, com os anexos e as fotos.
+  const supportCut = yearsAgoIso(now, RETENTION.supportYears);
+  const convs = await db.collection('conversations').where('lastMessageAt', '<', supportCut).limit(50).get();
+  for (const c of convs.docs) {
+    await deleteConversation(db, files, c.ref);
+    r.conversationsDeleted++;
+  }
+  const trocas = await db.collection('returns').where('createdAt', '<', supportCut).limit(BATCH).get();
+  for (const t of trocas.docs) {
+    const fotos = (t.get('fotos') as unknown[] | undefined) ?? [];
+    await Promise.all(fotos.filter((f): f is string => typeof f === 'string').map(f => files.deletePath(f)));
+    await t.ref.delete();
+    r.returnsDeleted++;
+  }
 
   // Fila da manutenção com mais de 30 dias.
   const queue = await db.collection('maintenance_queue').where('lastSeenAt', '<', cutoffIso(now, RETENTION.maintenanceQueueDays)).limit(BATCH).get();

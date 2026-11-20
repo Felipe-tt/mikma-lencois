@@ -185,8 +185,16 @@ export default async function PrivacidadePage() {
             carrinho e as notificações.
           </>,
           <>
-            <B>Pedidos e notas fiscais:</B> por 5 anos, porque a lei fiscal e a do consumidor
-            exigem. Depois disso, os dados pessoais dos pedidos são apagados.
+            <B>Pedidos:</B> por 5 anos, porque a lei fiscal e a do consumidor exigem. Depois disso,
+            os dados pessoais dos pedidos e a análise antifraude deles são apagados.
+          </>,
+          <>
+            <B>Notas fiscais:</B> por 5 anos contados a partir do ano seguinte ao da emissão, o
+            prazo da lei fiscal. Depois disso, são apagadas.
+          </>,
+          <>
+            <B>Trocas e mensagens para o atendimento:</B> por 5 anos, para resolver qualquer
+            reclamação sobre a compra. As fotos e os anexos saem junto.
           </>,
           <>
             <B>Endereço IP dos pedidos:</B> por 1 ano.
