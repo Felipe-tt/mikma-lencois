@@ -182,7 +182,7 @@ export default async function PrivacidadePage() {
         clause('Guardamos cada dado só pelo tempo necessário:', [
           <>
             <B>Conta:</B> enquanto ela existir. Se você excluir a conta, apagamos o seu perfil, o
-            carrinho e as notificações.
+            carrinho, os favoritos, as notificações e as suas avaliações.
           </>,
           <>
             <B>Pedidos:</B> por 5 anos, porque a lei fiscal e a do consumidor exigem. Depois disso,
@@ -230,7 +230,7 @@ export default async function PrivacidadePage() {
           </>,
         ),
         clause(
-          'Ao excluir a conta, os pedidos que ainda não foram pagos são cancelados. Os pedidos já feitos ficam guardados pelo prazo da lei, como explicado acima.',
+          'Ao excluir a conta, os pedidos que ainda não foram pagos são cancelados. Os pedidos já feitos ficam guardados pelo prazo da lei, como explicado acima. Com um pedido a caminho ou uma troca em andamento, a conta só pode ser excluída depois que eles terminarem: até lá, precisamos dos seus dados para entregar e para devolver o dinheiro.',
         ),
         clause(
           <>
