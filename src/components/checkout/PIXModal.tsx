@@ -34,7 +34,8 @@ function useCountdown(expiresAt?: string) {
   return secondsLeft;
 }
 
-type PaymentStatus = 'pending' | 'confirmed' | 'expired' | 'failed';
+/** refunded: pago e depois cancelado (o valor volta para o cliente). */
+type PaymentStatus = 'pending' | 'confirmed' | 'expired' | 'failed' | 'refunded';
 
 function usePaymentStatus(orderId: string, totalCents: number): PaymentStatus {
   const [status, setStatus] = useState<PaymentStatus>('pending');
@@ -59,7 +60,9 @@ function usePaymentStatus(orderId: string, totalCents: number): PaymentStatus {
           items: items.map(i => ({ sku: i.sku, productId: i.productId, productName: i.productName, unitPriceCents: i.unitPrice, quantity: i.quantity })),
         });
       } else if (s === 'cancelled') {
-        setStatus('failed');
+        // Pago e cancelado depois: antes dizia "o pagamento não foi
+        // identificado", com o dinheiro já recebido e voltando.
+        setStatus((data.payment as { paidAt?: unknown } | undefined)?.paidAt ? 'refunded' : 'failed');
       } else if (s === 'payment_expired') {
         setStatus('expired');
       } else if (s === 'pending_payment') {
@@ -90,7 +93,8 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
   const paymentStatus = usePaymentStatus(orderId, totalCents);
   const expired = secondsLeft === 0 || paymentStatus === 'expired';
   const confirmed = paymentStatus === 'confirmed';
-  const failed = paymentStatus === 'failed';
+  const refunded = paymentStatus === 'refunded';
+  const failed = paymentStatus === 'failed' || refunded;
 
   const total = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCents / 100);
 
@@ -177,7 +181,9 @@ export function PIXModal({ qrCode: initialQr, copyPaste: initialCopy, totalCents
                     {failed ? 'Pedido cancelado' : 'Código PIX expirado'}
                   </h3>
                   <p className="text-sm text-faint max-w-[30ch] leading-relaxed">
-                    {failed
+                    {refunded
+                      ? 'O pedido foi cancelado e o valor pago volta para você pelo mesmo meio de pagamento. Os detalhes estão no e-mail.'
+                      : failed
                       ? 'O pagamento não foi identificado e o pedido foi cancelado.'
                       : 'O tempo para pagamento esgotou. Gere um novo código para pagar o mesmo pedido.'}
                   </p>
