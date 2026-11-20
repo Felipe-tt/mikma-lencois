@@ -89,7 +89,7 @@ export interface OpenStatus {
 
 const DOW_TO_KEY: WeekdayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
-function nowInTimeZone(timeZone: string): { dow: number; minutes: number } {
+function nowInTimeZone(timeZone: string, at: Date = new Date()): { dow: number; minutes: number } {
   const fmt = new Intl.DateTimeFormat('en-US', {
     timeZone,
     weekday: 'short',
@@ -97,7 +97,7 @@ function nowInTimeZone(timeZone: string): { dow: number; minutes: number } {
     minute: '2-digit',
     hour12: false,
   });
-  const parts = fmt.formatToParts(new Date());
+  const parts = fmt.formatToParts(at);
   const weekdayStr = parts.find(p => p.type === 'weekday')?.value ?? 'Sun';
   const hourStr = parts.find(p => p.type === 'hour')?.value ?? '00';
   const minuteStr = parts.find(p => p.type === 'minute')?.value ?? '00';
@@ -188,4 +188,46 @@ export function groupConsecutiveDays(hours: BusinessHours): { label: string; tex
     i = j + 1;
   }
   return groups;
+}
+
+export interface DispatchWindow {
+  /** Dá para sair hoje. */
+  today: boolean;
+  /** "hoje", "amanhã" ou o dia da semana ("sábado"). */
+  dayLabel: string;
+  /** Horário a partir do qual sai, quando a loja ainda não abriu (ex.: "08:00"). */
+  from: string | null;
+}
+
+/**
+ * Quando sai um pedido feito agora pela entrega local (Uber) ou fica pronto
+ * para retirar: hoje, se a loja está aberta com pelo menos `prepMinutes`
+ * até fechar (ou ainda abre hoje), senão no próximo dia de funcionamento.
+ * Antes o site prometia "Entrega hoje" até de madrugada e no domingo.
+ */
+export function nextDispatchWindow(
+  hours: BusinessHours,
+  at: Date = new Date(),
+  timeZone = 'America/Sao_Paulo',
+  prepMinutes = 60,
+): DispatchWindow | null {
+  const { dow, minutes } = nowInTimeZone(timeZone, at);
+  const today = hours[DOW_TO_KEY[dow]];
+  if (!today.closed) {
+    const ranges = [...today.ranges].sort((a, b) => timeToMinutes(a.open) - timeToMinutes(b.open));
+    for (const r of ranges) {
+      const open = timeToMinutes(r.open);
+      const close = timeToMinutes(r.close);
+      const start = Math.max(open, minutes);
+      if (close - start >= prepMinutes) return { today: true, dayLabel: 'hoje', from: minutes < open ? r.open : null };
+    }
+  }
+  for (let i = 1; i <= 7; i++) {
+    const key = DOW_TO_KEY[(dow + i) % 7];
+    const day = hours[key];
+    if (day.closed || !day.ranges.length) continue;
+    const first = [...day.ranges].sort((a, b) => timeToMinutes(a.open) - timeToMinutes(b.open))[0];
+    return { today: false, dayLabel: i === 1 ? 'amanhã' : WEEKDAYS.find(w => w.key === key)!.label.split('-')[0].toLowerCase(), from: first.open };
+  }
+  return null;
 }

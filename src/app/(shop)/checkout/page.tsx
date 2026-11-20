@@ -706,7 +706,7 @@ export default function CheckoutPage() {
       {selectedShipping && (
         <div className="flex justify-between text-xs text-faint">
           <span>{selectedShipping.label}</span>
-          <span>{selectedShipping.estimatedDays === 0 ? 'hoje' : `${selectedShipping.estimatedDays} ${selectedShipping.estimatedDays === 1 ? 'dia útil' : 'dias úteis'}`}</span>
+          <span>{selectedShipping.whenLabel ?? (selectedShipping.estimatedDays === 0 ? 'hoje' : `${selectedShipping.estimatedDays} ${selectedShipping.estimatedDays === 1 ? 'dia útil' : 'dias úteis'}`)}</span>
         </div>
       )}
     </>
@@ -1006,7 +1006,9 @@ export default function CheckoutPage() {
                                 {opt.tag && opt.tag !== 'local' && <span className={`whitespace-nowrap text-[10px] font-bold tracking-[0.06em] uppercase rounded-full px-2.5 py-0.5 ${TAG[opt.tag]?.cls}`}>{TAG[opt.tag]?.label}</span>}
                               </div>
                               <p className="text-[11px] text-faint mt-0.5">
-                                {opt.carrier === 'pickup'
+                                {opt.whenLabel
+                                  ? opt.whenLabel
+                                  : opt.carrier === 'pickup'
                                   ? 'Pronto para retirar hoje, no horário da loja'
                                   : opt.estimatedDays === 0
                                   ? 'Chega hoje'
