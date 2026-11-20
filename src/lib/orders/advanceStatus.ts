@@ -76,7 +76,7 @@ export async function advanceOrderStatus(
     const estimatedCost = (order.delivery as { realPriceCents?: number } | undefined)?.realPriceCents ?? 0;
     if (isManualDispatch(carrier) && estimatedCost > 0) {
       try { await recordShippingSpent(estimatedCost); }
-      catch (err) { console.warn(`[shipping-ledger] falha ao registrar gasto do pedido ${orderId}:`, err); }
+      catch (err) { console.warn('[shipping-ledger] falha ao registrar gasto do pedido %s:', orderId, err); }
     }
   }
 

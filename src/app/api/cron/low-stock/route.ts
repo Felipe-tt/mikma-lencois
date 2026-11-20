@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
         lastNotifiedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     } catch (err) {
-      console.error(`[low-stock] erro processando SKU ${low.sku}:`, err);
+      console.error('[low-stock] erro processando SKU %s:', low.sku, err);
       results.errors++;
     }
   }

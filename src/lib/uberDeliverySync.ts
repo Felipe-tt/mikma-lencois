@@ -46,28 +46,30 @@ const STATUS_NOTE: Record<string, string> = {
 // seller (chegou pra coletar, terminou, ou deu problema). "pickup_complete"
 // e "dropoff" ficam só no histórico pra não empilhar push demais no
 // celular pra cada micro-atualização da corrida.
-const PUSH_ON_STATUS: Record<string, (itemsSummary: string) => { title: string; body: string }> = {
-  pickup: (itemsSummary) => ({
+// Map, não objeto: o status vem do webhook da Uber, e num objeto comum
+// "constructor" ou "toString" achariam um método herdado e o chamariam.
+const PUSH_ON_STATUS = new Map<string, (itemsSummary: string) => { title: string; body: string }>(Object.entries({
+  pickup: (itemsSummary: string) => ({
     title: 'Motoboy a caminho da loja 🛵',
     body: `Uber Direct já está indo buscar: ${itemsSummary}. Deixa separado!`,
   }),
-  delivered: (itemsSummary) => ({
+  delivered: (itemsSummary: string) => ({
     title: 'Entrega concluída ✅',
     body: `${itemsSummary} foi entregue pelo Uber Direct.`,
   }),
-  canceled: (itemsSummary) => ({
+  canceled: (itemsSummary: string) => ({
     title: 'Entrega Uber Direct cancelada ⚠️',
     body: `Precisa despachar de novo: ${itemsSummary}`,
   }),
-  returned: (itemsSummary) => ({
+  returned: (itemsSummary: string) => ({
     title: 'Pacote devolvido pelo Uber Direct ⚠️',
     body: `${itemsSummary} voltou pra loja, confira o pedido.`,
   }),
-};
+}));
 
-const IN_APP_TYPE: Record<string, 'uber_pickup' | 'uber_delivered' | 'uber_problem'> = {
-  pickup: 'uber_pickup', delivered: 'uber_delivered', canceled: 'uber_problem', returned: 'uber_problem',
-};
+const IN_APP_TYPE = new Map<string, 'uber_pickup' | 'uber_delivered' | 'uber_problem'>([
+  ['pickup', 'uber_pickup'], ['delivered', 'uber_delivered'], ['canceled', 'uber_problem'], ['returned', 'uber_problem'],
+]);
 
 const ACTIVE_STATUSES = new Set(['pending', 'pickup', 'pickup_complete', 'dropoff']);
 
@@ -231,7 +233,7 @@ export async function applyUberStatus(
     await ensureRoutePoints(orderRef, order, { vehicleType: extra.courier?.vehicle_type });
   }
 
-  const pushBuilder = PUSH_ON_STATUS[uberStatus];
+  const pushBuilder = PUSH_ON_STATUS.get(uberStatus);
   if (pushBuilder) {
     const items = (order.items ?? []) as { productName: string; quantity: number }[];
     const { title, body } = pushBuilder(summarizeOrderItems(items));
@@ -243,7 +245,7 @@ export async function applyUberStatus(
       data: { orderId: orderRef.id, event: `uber_${uberStatus}` },
     });
     await notifyInApp({
-      type: IN_APP_TYPE[uberStatus],
+      type: IN_APP_TYPE.get(uberStatus) ?? 'uber_problem',
       message: `${title}: ${body}`,
       orderId: orderRef.id,
       url: `/painel/pedidos/${orderRef.id}`,

@@ -191,7 +191,7 @@ export async function GET(req: NextRequest) {
         }
       }
     } catch (err) {
-      console.error(`[expire-orders] erro no pedido ${orderId}:`, err);
+      console.error('[expire-orders] erro no pedido %s:', orderId, err);
       results.errors++;
     }
   }

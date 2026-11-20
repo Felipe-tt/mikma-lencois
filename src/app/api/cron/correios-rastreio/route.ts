@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
       // próxima rodada, sem barulho.
       if (!(err instanceof StatusError && err.status === 409)) {
         result.errors++;
-        console.error(`[correios-rastreio] pedido ${o.id}:`, err);
+        console.error('[correios-rastreio] pedido %s:', o.id, err);
       }
     }
   }
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     const sro = objects.get(r.reversa!.codigoObjeto.toUpperCase());
     // Postou na agência: a página da troca mostra a etapa "Postada".
     const postou = !r.reversa!.postadoEm && postedAt(sro);
-    if (postou) await adminDb.collection('returns').doc(r.id).update({ 'reversa.postadoEm': postou }).catch(err => console.error(`[correios-rastreio] devolução ${r.id}:`, err));
+    if (postou) await adminDb.collection('returns').doc(r.id).update({ 'reversa.postadoEm': postou }).catch(err => console.error('[correios-rastreio] devolução %s:', r.id, err));
     const chegou = deliveredAt(sro);
     if (!chegou) continue;
     try {
@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
       await avisarCliente(r.id, 'chegou');
     } catch (err) {
       result.errors++;
-      console.error(`[correios-rastreio] devolução ${r.id}:`, err);
+      console.error('[correios-rastreio] devolução %s:', r.id, err);
     }
   }
   return done(result);

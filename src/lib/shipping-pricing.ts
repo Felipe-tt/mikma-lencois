@@ -385,7 +385,7 @@ export async function computeShippingOptions(
         });
       } catch (e) {
         uberDebug = e instanceof Error ? e.message : String(e);
-        console.warn(`[uber-direct] quote falhou (${uberSandbox ? 'sandbox' : 'produção'}), opção omitida:`, uberDebug);
+        console.warn('[uber-direct] quote falhou (%s), opção omitida:', uberSandbox ? 'sandbox' : 'produção', uberDebug);
       }
     } else {
       uberDebug = uberSandbox
