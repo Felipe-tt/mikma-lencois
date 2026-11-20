@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     // pagamento (senão a cotação mostrava grátis e o checkout cobrava).
     const [ledgerBalanceCents, couponCents] = await Promise.all([
       getShippingLedgerBalanceCents(),
-      cartCouponDiscountCents(cartSnap.data()!.couponCode as string | undefined, productValueCents),
+      cartCouponDiscountCents(cartSnap.data()!.couponCode as string | undefined, productValueCents, uid),
     ]);
     const result = await computeShippingOptions(destCep, settings, productValueCents, totalWeightKg, ledgerBalanceCents, productValueCents - couponCents);
 

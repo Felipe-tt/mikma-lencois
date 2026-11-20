@@ -121,20 +121,34 @@ export function buildDelivered(order: OrderDoc, name: string): EmailPayload {
 
 /** Pagamento confirmado (PIX ou cartão). */
 export function buildConfirmed(
-  order: { id: string; items: EmailItem[]; totalCents: number; payment: { method: string } } & EmailMoney,
+  order: { id: string; items: EmailItem[]; totalCents: number; payment: { method: string }; delivery?: { label?: string; estimatedDays?: number; carrier?: string | null } } & EmailMoney,
   name: string,
+  now: Date = new Date(),
 ): EmailPayload {
   const id = shortOrderId(order.id);
   const url = orderUrl(order);
   const payMethod = order.payment.method === 'pix' ? 'PIX' : 'cartão de crédito';
+  // Como e quando chega (o prazo já conta os dias para postar), e o direito
+  // de desistir: o cliente guarda o e-mail como comprovante da compra.
+  const days = order.delivery?.estimatedDays;
+  const pickup = order.delivery?.carrier === 'pickup';
+  const eta = !pickup && typeof days === 'number' && days > 0
+    ? addBusinessDays(now, days).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })
+    : null;
+  const entrega = order.delivery?.label
+    ? `${pickup ? 'Retirada na loja' : order.delivery.label}${eta ? `, previsão até ${eta}` : ''}.`
+    : '';
+  const desistir = 'Você pode desistir da compra em até 7 dias depois de receber, sem custo. Veja como em Trocas e Devoluções.';
   const html = emailLayout(`
     ${emailSection({
       eyebrow: `Pedido #${id}`,
       title: 'Pedido confirmado',
       html: `
         ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Recebemos seu pagamento via ${payMethod} e já estamos preparando seu pedido. Obrigado pela compra!`)}
+        ${entrega ? emailParagraph(`<strong>Entrega:</strong> ${escapeHtml(entrega)}`, { muted: true }) : ''}
         ${emailItemsTable(order)}
-        ${emailCta('Acompanhar pedido', url)}`,
+        ${emailCta('Acompanhar pedido', url)}
+        ${emailParagraph(`${desistir.replace('Trocas e Devoluções', `<a href="${BASE_URL}/trocas-e-devolucoes" style="color:#9A4A28;">Trocas e Devoluções</a>`)}`, { muted: true })}`,
     })}
     ${emailSignature()}`, { preheader: `Pagamento de ${formatCurrency(order.totalCents)} confirmado. Já estamos preparando tudo.` });
   const lines = order.items.map(i => `${i.quantity}x ${i.productName}, ${formatCurrency(i.unitPrice * i.quantity)}`);
@@ -146,7 +160,9 @@ export function buildConfirmed(
       `Seu pedido #${id} foi confirmado. Obrigado pela compra!`, '',
       'ITENS:', ...lines, '',
       `Total: ${formatCurrency(order.totalCents)} via ${payMethod}`, '',
+      ...(entrega ? [`Entrega: ${entrega}`, ''] : []),
       `Acompanhe seu pedido: ${url}`, '',
+      `${desistir} ${BASE_URL}/trocas-e-devolucoes`, '',
       'Qualquer dúvida, responda este e-mail.',
       'Equipe Mikma Lençóis',
     ].join('\n'),
