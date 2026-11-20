@@ -48,6 +48,8 @@ interface ShipOption {
   priceCents: number;
   estimatedDays: number;
   tag?: 'local' | 'economico' | 'rapido';
+  /** Retirada e entrega local: quando fica pronto ou chega (horário da loja). */
+  whenLabel?: string;
 }
 
 // Mesmos selos do checkout.
@@ -535,7 +537,7 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
                       )}
                     </p>
                     <p className="text-[11px] text-faint">
-                      {o.estimatedDays === 0 ? 'Hoje' : `${o.estimatedDays} ${o.estimatedDays === 1 ? 'dia útil' : 'dias úteis'} · chega até ${estimatedDate(o.estimatedDays)}`}
+                      {o.whenLabel ?? (o.estimatedDays === 0 ? 'Hoje' : `${o.estimatedDays} ${o.estimatedDays === 1 ? 'dia útil' : 'dias úteis'} · chega até ${estimatedDate(o.estimatedDays)}`)}
                     </p>
                   </div>
                   <span className="text-[13px] font-semibold text-ink">

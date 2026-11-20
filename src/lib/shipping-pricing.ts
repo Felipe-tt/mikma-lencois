@@ -8,6 +8,7 @@
  */
 import { adminDb } from '@/lib/firebase/admin';
 import { freeShippingSuspended } from '@/lib/shipping-ledger';
+import { nextDispatchWindow, parseBusinessHours } from '@/lib/business-hours';
 import { getUberToken, uberQuote, buildUberAddress, uberDirectConfigured } from '@/lib/uber-direct';
 import type { StoreSettings } from '@/lib/store-settings';
 import { quoteCorreiosContrato } from '@/lib/correiosContrato';
@@ -21,6 +22,8 @@ export interface ShippingOption {
   estimatedDays: number;
   /** Só o transporte (Correios/Jadlog), sem os dias para postar. */
   transitDays?: number;
+  /** Retirada e entrega local: quando fica pronto ou chega, no horário da loja. */
+  whenLabel?: string;
   available: boolean;
   tag?: 'local' | 'economico' | 'rapido';
   error?: string;
@@ -340,8 +343,17 @@ export async function computeShippingOptions(
   // ser grátis) até para CEP de São Paulo, a 600 km da loja. Mesmo prefixo
   // de CEP cobre o caso de a geolocalização falhar para um vizinho.
   const sameRegion = !!fromCep && destCep.replace(/\D/g, '').slice(0, 3) === fromCep.replace(/\D/g, '').slice(0, 3);
+  // Retirada e entrega local saem no horário da loja: de noite, no domingo ou
+  // perto de fechar, só no próximo dia aberto (antes prometia "hoje").
+  const janela = nextDispatchWindow(parseBusinessHours(settings.businessHours), new Date(), settings.businessHoursTimezone || 'America/Sao_Paulo');
+  const quando = (hoje: string, depois: string) => !janela ? undefined
+    : janela.today ? (janela.from ? `${hoje}, a partir das ${janela.from}` : hoje)
+    : `${depois} ${janela.dayLabel}, a partir das ${janela.from}`;
   if (isLocal || sameRegion) {
-    options.push({ carrier: 'pickup', label: 'Retirar na loja', priceCents: 0, estimatedDays: 0, available: true, tag: 'local' });
+    options.push({
+      carrier: 'pickup', label: 'Retirar na loja', priceCents: 0, estimatedDays: janela && !janela.today ? 1 : 0, available: true, tag: 'local',
+      whenLabel: quando('Pronto para retirar hoje', 'Pronto para retirar'),
+    });
   }
 
   // ── Uber Direct (entrega local no mesmo dia) ──────────────────────────────
@@ -363,9 +375,10 @@ export async function computeShippingOptions(
         const quote = await uberQuote(pickupAddr, dropoffAddr, uberSandbox);
         options.push({
           carrier:       'uber_direct',
-          label:         'Entrega hoje · Entrega expressa',
+          label:         !janela || janela.today ? 'Entrega hoje · Entrega expressa' : 'Entrega expressa',
           priceCents:    quote.feeCents,
-          estimatedDays: 0,
+          estimatedDays: janela && !janela.today ? 1 : 0,
+          whenLabel:     quando('Chega hoje', 'Chega'),
           available:     true,
           tag:           'local',
           quoteId:       quote.quoteId,
