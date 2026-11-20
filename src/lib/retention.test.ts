@@ -32,9 +32,9 @@ function fakeDb(data: Record<string, Record<string, Doc>>) {
     limit: (n: number) => query(col, filters, order, n),
     get: async () => {
       let rows = Object.entries(data[col] ?? {}).filter(([, d]) => filters.every(([f, op, v]) => {
-        const x = d[f] as string;
+        const x = f.split('.').reduce<unknown>((o, k) => (o as Doc | undefined)?.[k], d) as string;
         if (x === undefined) return false;
-        return op === '<' ? x < (v as string) : op === '>=' ? x >= (v as string) : op === '==' ? x === v : false;
+        return op === '<' ? x < (v as string) : op === '>=' ? x >= (v as string) : op === '==' ? x === v : op === 'in' ? (v as unknown[]).includes(x) : false;
       }));
       if (order) rows = rows.filter(([, d]) => d[order] !== undefined).sort(([, a], [, b]) => String(a[order]).localeCompare(String(b[order])));
       const docs = rows.slice(0, lim).map(([id, d]) => ({ id, ref: ref(col, id), get: (k: string) => d[k], data: () => d }));
@@ -139,5 +139,20 @@ describe('retenção (LGPD)', () => {
     expect(r.queueDeleted).toBe(1);
     expect(Object.keys(data.restockRequests)).toEqual(['novo']);
     expect(Object.keys(data.maintenance_queue)).toEqual(['novo']);
+  });
+
+  it('tira a avaliação do detector de golpe do pedido (o cliente lê o pedido)', async () => {
+    const risk = { score: 70, level: 'alto', hold: true, signals: [{ reason: 'Mesmo CPF em 3 contas', relatedOrderIds: ['ord_outro'], points: 40 }], assessedAt: daysAgo(1) };
+    const data: Record<string, Record<string, Doc>> = {
+      orders: {
+        velho: { createdAt: daysAgo(10), userId: 'u1', risk },
+        novo: { createdAt: daysAgo(1), userId: 'u2', risk: { hold: false } },
+      },
+    };
+    const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(r.riskMoved).toBe(1);
+    expect(data.orders.velho.risk).toEqual({ hold: true });
+    expect(data.orderRisk.velho).toMatchObject({ level: 'alto', signals: risk.signals });
+    expect(data.orders.novo.risk).toEqual({ hold: false });
   });
 });

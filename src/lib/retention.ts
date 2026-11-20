@@ -54,6 +54,8 @@ export interface RetentionResult {
   orderIpsRemoved: number;
   guestsDeleted: number;
   restockDeleted: number;
+  /** Avaliações do detector de golpe que saíram do pedido para orderRisk. */
+  riskMoved: number;
   queueDeleted: number;
 }
 
@@ -63,7 +65,7 @@ const BATCH = 300;
 
 export async function runRetention(db: Firestore, auth: Auth, now = new Date()): Promise<RetentionResult> {
   const nowIso = now.toISOString();
-  const r: RetentionResult = { piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0 };
+  const r: RetentionResult = { piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0, riskMoved: 0 };
 
   // Perfis antigos com CPF/telefone em claro: criptografa (ver lib/piiCrypto.ts).
   if (process.env.PII_ENCRYPTION_KEY) {
@@ -108,6 +110,17 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date()):
   }
   const ipRemovedUpTo = withIp.size < BATCH ? ipCut : String(withIp.docs[withIp.size - 1].get('createdAt'));
   await cursorRef.set({ anonymizedUpTo, ipRemovedUpTo, lastRunAt: nowIso }, { merge: true });
+
+  // Pedidos antigos com a avaliação inteira do detector de golpe no próprio
+  // pedido (que o cliente lê): a avaliação vai para orderRisk (só a equipe
+  // lê) e o pedido fica só com o hold. Ver lib/orders/risk.ts.
+  const legacyRisk = await db.collection('orders').where('risk.level', 'in', ['baixo', 'atencao', 'alto']).limit(BATCH).get();
+  for (const doc of legacyRisk.docs) {
+    const risk = doc.get('risk') as { hold?: boolean } & Record<string, unknown>;
+    await db.collection('orderRisk').doc(doc.id).set(risk, { merge: true });
+    await doc.ref.update({ risk: { hold: !!risk.hold } });
+    r.riskMoved++;
+  }
 
   // Contas de convidado (login anônimo) paradas há 90 dias e sem pedido.
   const guestCutoff = now.getTime() - RETENTION.guestDays * DAY_MS;

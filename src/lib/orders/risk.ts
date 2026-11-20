@@ -9,12 +9,25 @@ import { notifySeller } from '@/lib/push/notifySeller';
 import type { Order } from '@/types';
 
 /**
- * Detector de golpe: avalia o pedido quando o pagamento é confirmado e grava
- * o resultado em `order.risk`. Risco alto segura o envio (shippingBlockReason)
- * e a nota automática até alguém da equipe conferir e liberar no painel.
+ * Detector de golpe: avalia o pedido quando o pagamento é confirmado. A
+ * avaliação completa (nota, sinais, pedidos relacionados, quem liberou) fica
+ * em `orderRisk/{orderId}`, que só a equipe lê. No pedido, que o cliente
+ * também lê, fica só `risk.hold`: antes o cliente via pelo navegador os
+ * sinais do detector e os ids de pedidos de outras pessoas ligados ao dele.
+ * Risco alto segura o envio (shippingBlockReason) e a nota automática até
+ * alguém da equipe conferir e liberar no painel.
  */
 
 const DAY = 24 * 60 * 60 * 1000;
+export const orderRiskRef = (orderId: string) => adminDb.collection('orderRisk').doc(orderId);
+
+/** Avaliação gravada: a da coleção da equipe ou, em pedido antigo, a do próprio pedido. */
+export async function readStoredRisk(orderId: string): Promise<OrderRisk | null> {
+  const [priv, order] = await Promise.all([orderRiskRef(orderId).get(), adminDb.collection('orders').doc(orderId).get()]);
+  if (priv.exists) return priv.data() as OrderRisk;
+  const legacy = order.get('risk') as Partial<OrderRisk> | undefined;
+  return legacy && Array.isArray(legacy.signals) ? legacy as OrderRisk : null;
+}
 const declinesRef = (uid: string) => adminDb.collection('cardDeclines').doc(uid);
 
 /** Registra um cartão recusado (para o sinal de "vários cartões testados"). Nunca lança. */
@@ -81,15 +94,19 @@ export async function storeOrderRisk(orderId: string): Promise<OrderRisk | null>
     const assessment = await assessOrderRisk(orderId);
     if (!assessment) return null;
     const ref = adminDb.collection('orders').doc(orderId);
-    const prev = (await ref.get()).get('risk') as OrderRisk | undefined;
+    const prev = await readStoredRisk(orderId);
     const risk: OrderRisk = {
       ...assessment,
       assessedAt: new Date().toISOString(),
       // Já liberado por alguém: reavaliar não volta a segurar.
       hold: assessment.level === 'alto' && !prev?.releasedBy,
-      ...(prev?.releasedBy ? { releasedBy: prev.releasedBy, releasedAt: prev.releasedAt } : {}),
+      ...(prev?.releasedBy ? { releasedBy: prev.releasedBy, ...(prev.releasedAt ? { releasedAt: prev.releasedAt } : {}) } : {}),
     };
-    await ref.update({ risk });
+    const batch = adminDb.batch();
+    batch.set(orderRiskRef(orderId), risk);
+    // No pedido, só se o envio está segurado (o cliente lê o pedido).
+    batch.update(ref, { risk: { hold: risk.hold } });
+    await batch.commit();
     if (risk.hold && !prev?.hold) {
       const code = orderId.slice(-8).toUpperCase();
       await adminDb.collection('notifications').doc('seller').collection('items').doc().set({
@@ -117,15 +134,18 @@ export async function storeOrderRisk(orderId: string): Promise<OrderRisk | null>
 /** Equipe conferiu: libera o envio (fica registrado quem e quando). */
 export async function releaseOrderRisk(orderId: string, by: string): Promise<boolean> {
   const ref = adminDb.collection('orders').doc(orderId);
+  const privRef = orderRiskRef(orderId);
   return adminDb.runTransaction(async tx => {
-    const snap = await tx.get(ref);
-    const risk = snap.get('risk') as OrderRisk | undefined;
-    if (!snap.exists || !risk?.hold) return false;
+    const [snap, priv] = await Promise.all([tx.get(ref), tx.get(privRef)]);
+    const hold = (snap.get('risk') as { hold?: boolean } | undefined)?.hold;
+    if (!snap.exists || !hold) return false;
     const at = new Date().toISOString();
+    // Pedido antigo, com a avaliação inteira no pedido: passa para a coleção
+    // da equipe e o pedido fica só com o hold.
+    const legacy = snap.get('risk') as OrderRisk;
+    tx.set(privRef, { ...(priv.exists ? priv.data() : legacy), hold: false, releasedBy: by, releasedAt: at });
     tx.update(ref, {
-      'risk.hold': false,
-      'risk.releasedBy': by,
-      'risk.releasedAt': at,
+      risk: { hold: false },
       timeline: FieldValue.arrayUnion({ status: snap.get('status'), at, note: 'Pedido conferido pela equipe: envio liberado' }),
       updatedAt: FieldValue.serverTimestamp(),
     });

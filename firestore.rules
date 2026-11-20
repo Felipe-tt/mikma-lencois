@@ -175,6 +175,13 @@ service cloud.firestore {
     }
 
     // ── Coupons ──────────────────────────────────────────────────────────────
+    // Avaliação do detector de golpe (lib/orders/risk.ts): sinais e pedidos
+    // relacionados de outras pessoas. Só a equipe lê; só o servidor grava.
+    match /orderRisk/{orderId} {
+      allow read: if isSellerOrAdmin();
+      allow write: if false;
+    }
+
     match /coupons/{code} {
       // Só a equipe. Antes qualquer cliente logado listava TODOS os cupons
       // (o ID do documento é o próprio código). A validação para o cliente
