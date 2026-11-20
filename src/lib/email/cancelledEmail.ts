@@ -44,7 +44,7 @@ export async function notifyOrderCancelled(
       replyTo: CONTACT_EMAIL,
     });
   } catch (err) {
-    console.error(`[notifyOrderCancelled] falha ao enviar e-mail do pedido ${orderId} (ignorado):`, err);
+    console.error('[notifyOrderCancelled] falha ao enviar e-mail do pedido %s (ignorado):', orderId, err);
   }
 }
 
@@ -72,7 +72,7 @@ export async function notifyOrderRefunded(
     const payload = buildRefunded({ id: orderId, totalCents: order.totalCents ?? 0 }, firstName, method);
     await sendEmail({ to: email, subject: payload.subject, text: payload.text, html: payload.html, from: 'noreply', replyTo: CONTACT_EMAIL });
   } catch (err) {
-    console.error(`[notifyOrderRefunded] falha ao enviar e-mail do pedido ${orderId} (ignorado):`, err);
+    console.error('[notifyOrderRefunded] falha ao enviar e-mail do pedido %s (ignorado):', orderId, err);
   }
 }
 

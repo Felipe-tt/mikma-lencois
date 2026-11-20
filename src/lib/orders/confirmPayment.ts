@@ -219,7 +219,7 @@ export async function confirmOrderPaid(
     });
   } catch (err) {
     if (err instanceof InsufficientStockError) throw err;
-    console.error(`Failed to confirm order ${orderId}:`, err);
+    console.error('Failed to confirm order %s:', orderId, err);
     Sentry.captureException(err, { tags: { route: 'confirm-order-paid' }, extra: { orderId, manual: !!manual } });
     // Relança: o webhook precisa responder erro pro gateway reenviar o
     // evento. Engolir aqui deixava o pedido pago parado e o cron
@@ -274,7 +274,7 @@ export async function confirmOrderPaid(
     const shippingCollected = (order.shippingCents as number) ?? 0;
     if (shippingCollected > 0) await recordShippingCollected(shippingCollected);
   } catch (err) {
-    console.warn(`[shipping-ledger] falha ao registrar coleta do pedido ${orderId}:`, err);
+    console.warn('[shipping-ledger] falha ao registrar coleta do pedido %s:', orderId, err);
   }
 
   // ── Limpa o carrinho do cliente + notifica vendedor ───────────────────
@@ -317,7 +317,7 @@ export async function confirmOrderPaid(
 
     await batch.commit();
   } catch (err) {
-    console.warn(`[confirm-order-paid] falha ao limpar carrinho/notificar (best-effort), pedido ${orderId} já confirmado:`, err);
+    console.warn('[confirm-order-paid] falha ao limpar carrinho/notificar (best-effort), pedido %s já confirmado:', orderId, err);
   }
   console.log(`Order ${orderId} confirmed, ${note}`);
 
@@ -364,7 +364,8 @@ export async function confirmOrderPaid(
         replyTo: CONTACT_EMAIL,
       });
 
-      console.log(`[confirm-order-paid] email de confirmação enviado para ${customerEmail}, pedido ${orderId}`);
+      // Sem o e-mail do cliente no log (dado pessoal desnecessário).
+      console.log('[confirm-order-paid] e-mail de confirmação enviado, pedido %s', orderId);
     }
   } catch (emailErr) {
     // Falha de email não deve quebrar a confirmação, pedido já foi confirmado
@@ -403,7 +404,7 @@ async function alertLateCapture(orderId: string, order: FirebaseFirestore.Docume
       createdAt: FieldValue.serverTimestamp(),
     });
   } catch (err) {
-    console.warn(`[confirm-order-paid] falha ao notificar pagamento atrasado do pedido ${orderId}:`, err);
+    console.warn('[confirm-order-paid] falha ao notificar pagamento atrasado do pedido %s:', orderId, err);
   }
   await notifySeller({
     title: expired ? 'Pagamento em PIX vencido' : 'Pagamento em pedido cancelado',

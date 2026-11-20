@@ -314,7 +314,7 @@ export async function POST(req: NextRequest) {
 
       // Registra o custo real no caixa de frete (best-effort, nunca trava o despacho já feito)
       try { await recordShippingSpent(uberDelivery.feeCents); }
-      catch (err) { console.warn(`[shipping-ledger] falha ao registrar gasto Uber do pedido ${orderId}:`, err); }
+      catch (err) { console.warn('[shipping-ledger] falha ao registrar gasto Uber do pedido %s:', orderId, err); }
 
       return NextResponse.json({
         carrier:     'uber_direct',

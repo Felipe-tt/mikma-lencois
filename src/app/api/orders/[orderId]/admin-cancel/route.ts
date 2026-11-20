@@ -169,7 +169,7 @@ export async function POST(
   // o frete grátis seguia ligado além do teto de prejuízo configurado.
   if (shippingToReverse > 0) {
     try { await recordShippingCollected(-shippingToReverse); }
-    catch (err) { console.warn(`[shipping-ledger] falha ao estornar frete do pedido ${orderId}:`, err); }
+    catch (err) { console.warn('[shipping-ledger] falha ao estornar frete do pedido %s:', orderId, err); }
   }
 
   // Melhor esforço: o pedido já está cancelado. Se a Uber recusar (motoboy

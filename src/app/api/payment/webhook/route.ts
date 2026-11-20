@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       try {
         await expirePixOrder(orderId, data.transparent.id as string | undefined, 'PIX expirou sem pagamento');
       } catch (err) {
-        console.error(`Failed to expire order ${orderId}:`, err);
+        console.error('Failed to expire order %s:', orderId, err);
         Sentry.captureException(err, { tags: { route: 'payment-webhook', step: 'expire-order' }, extra: { orderId } });
         return NextResponse.json({ error: 'Falha ao expirar pedido' }, { status: 500 });
       }

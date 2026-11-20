@@ -122,7 +122,7 @@ export async function quoteCorreiosContrato(fromCep: string, toCep: string, pkg:
         available: true,
       } satisfies ShippingOption;
     } catch (e) {
-      console.warn(`[correios] cotação ${s.codigo} falhou:`, e instanceof Error ? e.message : e);
+      console.warn('[correios] cotação %s falhou:', s.codigo, e instanceof Error ? e.message : e);
       return null;
     }
   }));
