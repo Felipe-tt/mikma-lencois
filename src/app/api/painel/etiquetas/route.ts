@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       results.push({ orderId: id, codigoObjeto: pre.codigoObjeto });
     } catch (err) {
       const message = err instanceof CorreiosError ? err.message : 'Não foi possível falar com os Correios.';
-      if (!(err instanceof CorreiosError)) console.error(`[etiquetas-lote] pedido ${id}:`, err);
+      if (!(err instanceof CorreiosError)) console.error('[etiquetas-lote] pedido %s:', id, err);
       results.push({ orderId: id, error: message });
     }
   }

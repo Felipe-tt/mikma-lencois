@@ -320,12 +320,12 @@ export async function handleNfeOnOrderCancel(orderId: string): Promise<void> {
         await cancelNfe(orderId, 'producao', 'Venda cancelada antes da entrega da mercadoria');
         return;
       } catch (err) {
-        console.warn(`[nfe] cancelamento automático falhou (${orderId}):`, err);
+        console.warn('[nfe] cancelamento automático falhou (%s):', orderId, err);
       }
     }
     await notify(orderId, 'producao', `pedido cancelado com a nota nº ${rec.numero} ainda válida. ${withinWindow ? 'Cancele a nota no painel do pedido.' : 'Passou o prazo de cancelamento: emita a nota de devolução no painel do pedido.'}`);
   } catch (err) {
-    console.error(`[nfe] handleNfeOnOrderCancel falhou (${orderId}):`, err);
+    console.error('[nfe] handleNfeOnOrderCancel falhou (%s):', orderId, err);
   }
 }
 
@@ -339,7 +339,7 @@ export async function autoIssueNfe(orderId: string): Promise<void> {
     if ((await orderRef(orderId).get()).get('risk.hold') === true) return;
     await issueNfe(orderId, config.environment, { by: 'auto' });
   } catch (err) {
-    console.error(`[nfe] emissão automática falhou (${orderId}):`, err);
+    console.error('[nfe] emissão automática falhou (%s):', orderId, err);
     Sentry.captureException(err, { tags: { area: 'nfe' }, extra: { orderId } });
   }
 }

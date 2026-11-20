@@ -125,7 +125,7 @@ export async function storeOrderRisk(orderId: string): Promise<OrderRisk | null>
     }
     return risk;
   } catch (err) {
-    console.error(`[risk] avaliação falhou (${orderId}):`, err);
+    console.error('[risk] avaliação falhou (%s):', orderId, err);
     Sentry.captureException(err, { tags: { area: 'risk' }, extra: { orderId } });
     return null;
   }

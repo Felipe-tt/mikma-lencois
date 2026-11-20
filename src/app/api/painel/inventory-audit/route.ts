@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
         details.push({ sku: m.sku, from: m.currentReserved, to: m.expectedReserved, status: 'pulado' });
       }
     } catch (err) {
-      console.error(`[inventory-audit] falha ao corrigir ${m.sku}:`, err);
+      console.error('[inventory-audit] falha ao corrigir %s:', m.sku, err);
       skipped++;
       details.push({ sku: m.sku, from: m.currentReserved, to: m.expectedReserved, status: 'pulado' });
     }

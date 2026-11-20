@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { conversationIdFor } from '@/lib/email/conversationId';
+import { emailFromHeader, nameFromHeader } from '@/lib/email/address';
+import { stripQuotedHtml } from '@/lib/email/stripQuoted';
 import { Webhook } from 'svix';
 import { Resend } from 'resend';
 import { adminDb, adminStorage } from '@/lib/firebase/admin';
@@ -22,16 +24,8 @@ interface ResendInboundEvent {
 
 type AnyResend = any;
 
-function extractEmail(raw: string): string {
-  const match = raw.match(/<([^>]+)>/);
-  return (match ? match[1] : raw).trim().toLowerCase();
-}
-
-function extractName(raw: string): string | undefined {
-  const match = raw.match(/^([^<]+)</);
-  const name = match?.[1]?.trim().replace(/^"|"$/g, '');
-  return name && name.length > 0 ? name : undefined;
-}
+const extractEmail = emailFromHeader;
+const extractName = nameFromHeader;
 
 const REPORT_ADDRESS = 'relatorios@mikma.com.br';
 function isReportAddress(raw: string): boolean {
@@ -211,44 +205,14 @@ export async function POST(req: NextRequest) {
     return lines.slice(0, cutAt).join('\n').trim();
   }
 
-  /**
-   * HTML: remove elementos que clientes de email usam para encapsular o thread:
-   *   <blockquote>            (Gmail, Apple Mail)
-   *   <div class="gmail_quote">
-   *   <div id="divRplyFwdMsg"> (Outlook)
-   *   <hr> seguido de header   (Outlook)
-   * Estratégia: clona o DOM via regex/string, remove os containers de quote e
-   * retorna o HTML restante. Não temos DOM no Node, mas podemos usar a lib de
-   * sanitização para remover blockquotes e depois limpar.
-   */
-  function stripQuotedHtml(h: string): string {
-    // Remove blocos de quote: <blockquote ...>...</blockquote>
-    let stripped = h.replace(/<blockquote[\s\S]*?<\/blockquote>/gi, '');
-
-    // Gmail: <div class="gmail_quote ...">...</div>
-    stripped = stripped.replace(/<div[^>]*class="[^"]*gmail_quote[^"]*"[\s\S]*?<\/div>/gi, '');
-
-    // Outlook: <div id="divRplyFwdMsg">...</div>
-    stripped = stripped.replace(/<div[^>]*id="divRplyFwdMsg"[\s\S]*?<\/div>/gi, '');
-
-    // Outlook: <div id="appendonsend">...</div>
-    stripped = stripped.replace(/<div[^>]*id="appendonsend"[\s\S]*?<\/div>/gi, '');
-
-    // Remove qualquer <hr> isolado que geralmente separa o histórico
-    stripped = stripped.replace(/<hr[^>]*>/gi, '');
-
-    // <style> injetado pelos clientes de e-mail: o sanitizeHtml descarta
-    // a tag inteira, com o conteúdo.
-
-    // Limpa espaço em branco resultante de tags removidas
-    stripped = stripped.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');
-
-    return stripped.trim();
-  }
-
-  const text: string = stripQuotedText(rawText);
+  // HTML: o histórico citado sai em lib/email/stripQuoted.ts (sem regex no corpo).
+  // Teto de tamanho: o documento do Firestore aceita até 1 MB, e uma imagem
+  // colada no corpo (data:) passava disso; a gravação falhava e a mensagem
+  // se perdia. Grande demais, fica só o texto.
+  const text: string = stripQuotedText(rawText).slice(0, 100_000);
   const strippedHtml = rawHtml ? stripQuotedHtml(rawHtml) : '';
-  const html = strippedHtml ? sanitizeHtml(strippedHtml) : '';
+  const sanitized = strippedHtml ? sanitizeHtml(strippedHtml) : '';
+  const html = sanitized.length <= 600_000 ? sanitized : '';
 
   // ── 2. Busca lista de attachments com download_url ─────────────────────────
   // receiving.get() traz metadados dos attachments mas sem download_url.
