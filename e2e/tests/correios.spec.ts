@@ -578,6 +578,19 @@ test('devolução de parte do pedido: a AbacatePay manda PIX no CPF do cliente',
   // O pagamento original não foi estornado inteiro.
   expect((await charges()).find(c => c.id === charge.id)?.status).toBe('PAID');
   await staff.close();
+
+  // Concluída a devolução, o cliente ainda pode pedir troca de outra peça do
+  // pedido, só da que não voltou (a mesma peça não gera um segundo estorno).
+  const cliente = await browser.newContext();
+  await prepare(cliente);
+  const page = await cliente.newPage();
+  await login(page, 'devolve@e2e.mikma', SENHA);
+  await page.goto(`/pedidos/${orderRef.id}`);
+  await page.getByRole('button', { name: 'Pedir troca de outra peça' }).click();
+  const pecas = page.getByRole('group', { name: 'Quais peças?' });
+  await expect(pecas.getByText('Jogo p3_v2')).toBeVisible();
+  await expect(pecas.getByText('Jogo p3_v1')).toHaveCount(0);
+  await cliente.close();
 });
 
 test('fronha trocada: o painel e a nota de separação mostram qual fronha embalar', async ({ browser }) => {
