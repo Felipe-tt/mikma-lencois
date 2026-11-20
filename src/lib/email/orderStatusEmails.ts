@@ -34,16 +34,23 @@ function orderUrl(order: Pick<Order, 'id'>) {
   return `${BASE_URL}/pedidos/${order.id}`;
 }
 
-export function buildPreparing(order: OrderDoc, name: string): EmailPayload {
+/**
+ * Pedido em separação. Na retirada na loja não há despacho: diz onde e como
+ * buscar (antes prometia "outro e-mail quando for despachado").
+ */
+export function buildPreparing(order: OrderDoc, name: string, pickup?: { address: string }): EmailPayload {
   const id = shortOrderId(order.id);
   const url = orderUrl(order);
+  const proximo = pickup
+    ? `Ele fica pronto para retirada na loja${pickup.address ? `, em ${pickup.address}` : ''}, no horário de funcionamento. Leve o número do pedido (#${id}).`
+    : 'Você recebe outro e-mail assim que ele for despachado.';
   const html = emailLayout(`
     ${emailSection({
       eyebrow: `Pedido #${id}`,
       title: 'Pedido em separação',
       html: `
         ${emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Nossa equipe já começou a separar e embalar o seu pedido com todo cuidado.`)}
-        ${emailParagraph('Você recebe outro e-mail assim que ele for despachado.', { muted: true })}
+        ${emailParagraph(escapeHtml(proximo), { muted: true })}
         ${emailItemsTable(order)}
         ${emailCta('Acompanhar pedido', url)}`,
     })}
@@ -51,7 +58,7 @@ export function buildPreparing(order: OrderDoc, name: string): EmailPayload {
   return {
     subject: orderSubject(id, 'em separação'),
     html,
-    text: `Olá, ${name}! Seu pedido #${id} está sendo separado. Acompanhe em: ${url}`,
+    text: `Olá, ${name}! Seu pedido #${id} está sendo separado. ${proximo} Acompanhe em: ${url}`,
   };
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addBusinessDays, buildCancelled, buildConfirmed, buildPixExpired, buildPixPending, buildShipped, buildWithdrawalReceived,
+  addBusinessDays, buildCancelled, buildConfirmed, buildPixExpired, buildPixPending, buildPreparing, buildShipped, buildWithdrawalReceived,
 } from './orderStatusEmails';
 import type { Order } from '@/types';
 
@@ -90,6 +90,20 @@ describe('addBusinessDays', () => {
   it('pula o fim de semana', () => {
     // sexta + 1 dia útil = segunda
     expect(addBusinessDays(new Date('2026-10-16T12:00:00'), 1).getDay()).toBe(1);
+  });
+});
+
+describe('em separação', () => {
+  const pedido = { ...base, status: 'preparing', payment: { method: 'pix' }, delivery: { carrier: 'correios_pac' } } as unknown as Parameters<typeof buildPreparing>[0];
+  it('entrega: avisa que vem outro e-mail no despacho', () => {
+    expect(buildPreparing(pedido, 'Ana').text).toContain('assim que ele for despachado');
+  });
+  it('retirada: diz onde buscar, sem prometer despacho', () => {
+    const e = buildPreparing(pedido, 'Ana', { address: 'Rua da Fábrica, 100, Itoupava Central, Blumenau/SC' });
+    expect(e.text).toContain('pronto para retirada na loja, em Rua da Fábrica, 100');
+    expect(e.text).toContain('#12345678');
+    expect(e.text).not.toContain('despachado');
+    expect(e.html).not.toContain('despachado');
   });
 });
 
