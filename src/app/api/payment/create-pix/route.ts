@@ -171,6 +171,10 @@ export async function POST(req: NextRequest) {
         if (!prod.active) {
           throw new StockError(`"${prod.name}" não está mais disponível. Remova do carrinho e tente novamente.`);
         }
+        // Preço zerado ou inválido no cadastro: não vende de graça.
+        if (!Number.isFinite(prod.price) || prod.price <= 0) {
+          throw new StockError(`"${prod.name}" está sem preço no momento. Remova do carrinho e tente mais tarde.`);
+        }
         // O SKU vem do carrinho (client SDK): sem isso dava pra pagar o
         // preço de um produto e reservar/baixar o estoque de outro.
         if (!ci.sku.startsWith(`${ci.productId}_`)) {
