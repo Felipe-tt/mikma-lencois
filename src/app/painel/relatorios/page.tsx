@@ -7,6 +7,7 @@ import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/db';
 import { carrierNameVendor, type CarrierKey } from '@/lib/carriers';
 import type { Order } from '@/types';
+import { refundedCents } from '@/lib/orders/refunded';
 
 type Period = '7d' | '30d' | '90d';
 type Stats = {
@@ -36,10 +37,7 @@ function shippingOf(o: Order): { carrier?: string; cents: number } {
 }
 
 // Dinheiro que voltou ao cliente (devolução): estorno total ou parcial.
-function refundedOf(o: Order): number {
-  const p = o.payment as { refundStatus?: string; partialRefundCents?: number } | undefined;
-  return p?.refundStatus === 'done' ? o.totalCents : Math.min(o.totalCents, p?.partialRefundCents ?? 0);
-}
+const refundedOf = refundedCents;
 
 const STATUS_PT: Record<string, string> = {
   paid: 'Pago', preparing: 'Separando', shipped: 'Enviado', delivered: 'Entregue',
