@@ -155,4 +155,16 @@ describe('retenção (LGPD)', () => {
     expect(data.orderRisk.velho).toMatchObject({ level: 'alto', signals: risk.signals });
     expect(data.orders.novo.risk).toEqual({ hold: false });
   });
+
+  it('tira o e-mail da equipe do status público da manutenção', async () => {
+    const data: Record<string, Record<string, Doc>> = {
+      maintenance: { status: { active: false, updatedBy: 'equipe@loja.com', updatedAt: daysAgo(3) } },
+    };
+    await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(data.maintenance.status).toMatchObject({ active: false, updatedBy: 'Equipe' });
+
+    data.maintenance.status.updatedBy = 'Maria Souza';
+    await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(data.maintenance.status.updatedBy).toBe('Maria Souza');
+  });
 });
