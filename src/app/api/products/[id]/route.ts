@@ -6,6 +6,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { safeJson, tooManyRequests, productImageUrlSchema } from '@/lib/security';
 import { revalidateProduct } from '@/lib/revalidateProduct';
 import { hasSecondFactor } from '@/lib/staffMfa';
+import { publicProduct } from '@/lib/utils/serialize';
 
 async function getSeller(req: NextRequest) {
   const auth = req.headers.get('authorization');
@@ -32,7 +33,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const seller = await getSeller(req);
     if (!seller) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
   }
-  return NextResponse.json({ id: snap.id, ...data });
+  // Sem o preço da loja física (só a equipe vê, por /api/painel/preco/[id]).
+  return NextResponse.json(publicProduct({ id: snap.id, ...data }));
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
