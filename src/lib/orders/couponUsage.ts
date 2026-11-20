@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue, type Transaction } from 'firebase-admin/firestore';
 import type { CouponCustomerUsage } from '@/lib/orderPricing';
+import { cpfBlindIndex, readPii } from '@/lib/piiCrypto';
 
 /** Status de pedido que contam como compra paga (para "só na primeira compra"). */
 const PAID_STATUSES = ['paid', 'preparing', 'shipped', 'delivered'];
@@ -9,14 +10,38 @@ const PAID_STATUSES = ['paid', 'preparing', 'shipped', 'delivered'];
 export const couponCustomerRef = (code: string, uid: string) =>
   adminDb.collection('coupons').doc(code).collection('clientes').doc(uid);
 
-/** O cliente já tem pedido pago? Fora da transação (consulta). */
-export async function customerHasPaidOrder(uid: string): Promise<boolean> {
+async function hasPaidOrder(uid: string): Promise<boolean> {
   const snap = await adminDb.collection('orders')
     .where('userId', '==', uid)
     .where('status', 'in', PAID_STATUSES)
     .limit(1)
     .get();
   return !snap.empty;
+}
+
+/**
+ * O cliente já tem pedido pago? Fora da transação (consulta). Conta também
+ * as outras contas com o mesmo CPF (cpfHash, o índice cego do CPF): sem
+ * isso, uma conta nova com o mesmo CPF usava de novo o cupom de primeira
+ * compra.
+ */
+export async function customerHasPaidOrder(uid: string): Promise<boolean> {
+  if (await hasPaidOrder(uid)) return true;
+  // Mesma busca do detector de golpe (lib/orders/risk.ts): pelo HMAC do CPF
+  // e, enquanto houver perfis antigos em claro, pelo campo cpf.
+  const users = adminDb.collection('users');
+  const cpf = readPii((await users.doc(uid).get()).data()).cpf.replace(/\D/g, '');
+  if (cpf.length !== 11) return false;
+  const hash = process.env.PII_ENCRYPTION_KEY ? cpfBlindIndex(cpf) : null;
+  const [byHash, byPlain] = await Promise.all([
+    hash ? users.where('cpfHash', '==', hash).limit(10).get() : { docs: [] },
+    users.where('cpf', '==', cpf).limit(10).get(),
+  ]);
+  const others = new Set([...byHash.docs, ...byPlain.docs].map(d => d.id).filter(id => id !== uid));
+  for (const id of others) {
+    if (await hasPaidOrder(id)) return true;
+  }
+  return false;
 }
 
 /** Uso do cupom por este cliente. Dentro de uma transação quando `tx` vem. */
