@@ -6,6 +6,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { effectiveRole } from '@/lib/staffMfa';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { orderStockLog } from '@/lib/stockHistory';
+import { staffName } from '@/lib/staffName';
 
 /**
  * POST /api/painel/pedidos/[orderId]/repor-estoque (equipe): o pedido foi
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     const role = effectiveRole(decoded);
     if (role !== 'seller' && role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     uid = decoded.uid;
-    who = decoded.email ?? decoded.uid;
+    who = await staffName(decoded);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }

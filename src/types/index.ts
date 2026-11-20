@@ -248,7 +248,7 @@ export interface ReturnRequest {
   note?: string            // observação interna do vendedor
   createdAt: string
   updatedAt?: string
-  createdBy?: string       // email de quem registrou no painel
+  createdBy?: string       // nome de quem registrou no painel, ou 'cliente'
 }
 
 // ─── Cart ────────────────────────────────────────────────────────────────────

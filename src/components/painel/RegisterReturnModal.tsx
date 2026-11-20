@@ -7,6 +7,7 @@ import type { Order, ReturnItem, ReturnType } from '@/types';
 import { IconX } from '@/components/ui/Icon';
 import { Overlay } from '@/components/ui/Overlay';
 import { devolucaoPadrao, opcoesDevolucao, type DevolverPor } from '@/lib/returnRequest';
+import { staffActor } from '@/lib/staffActor';
 
 export const CAMINHO_LABEL: Record<DevolverPor, string> = { correios: 'Correios', uber: 'Uber busca no cliente', loja: 'Cliente entrega na loja' };
 /** Caminhos que a equipe pode escolher: os do pedido e sempre Correios. */
@@ -70,7 +71,8 @@ export function RegisterReturnModal({ order, customerName, onClose, onDone }: Pr
         status: 'solicitada',
         restocked: false,
         createdAt: new Date().toISOString(),
-        createdBy: user?.email || '',
+        // Nome, nunca o e-mail: o cliente lê a própria troca.
+        createdBy: staffActor(user),
       });
       // Confirma ao cliente, por e-mail, que o pedido de troca foi registrado
       // (Decreto 7.962/2013, art. 5º, § 4º). Sem conexão, a troca já ficou salva.
