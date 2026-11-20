@@ -28,6 +28,9 @@ const COMO: Record<DevolverPor, { titulo: string; texto: string; depois: string 
   loja: { titulo: 'Entrego na loja', texto: 'No balcão, quando puder.', depois: 'Aprovado, é só levar as peças na loja.' },
 };
 
+/** Pasta das fotos de um pedido de troca (fora do componente: usa a hora). */
+const pastaDasFotos = (uid: string) => `returns/${uid}/${Date.now()}`;
+
 const dia = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
 /**
@@ -76,7 +79,7 @@ export function ReturnRequestCard({ order, user, whatsappHref }: {
   async function enviarFotos(): Promise<string[]> {
     if (!fotos.length) return [];
     const [{ storage }, { ref, uploadBytes }] = await Promise.all([import('@/lib/firebase/storage'), import('firebase/storage')]);
-    const base = `returns/${user.uid}/${Date.now()}`;
+    const base = pastaDasFotos(user.uid);
     return Promise.all(fotos.map(async (f, i) => {
       const path = `${base}_${i}.jpg`;
       await uploadBytes(ref(storage, path), f.blob, { contentType: 'image/jpeg' });
