@@ -28,6 +28,7 @@ import { computePixTotalCents, computePixDiscountCents, computeCardTotalCents, i
 import { toAddress, streetLine, cityLine } from '@/lib/address';
 import { LEGAL_VERSION } from '@/lib/legal';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
+import { withCurrentPrices, type PriceChange } from '@/lib/cartPrices';
 
 interface CustomerData { name: string; cpf: string; phone: string; email: string }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -179,6 +180,8 @@ export default function CheckoutPage() {
   const router = useRouter();
 
   const [cart, setCart]       = useState<Cart | null>(null);
+  // Preço que mudou desde que o item entrou no carrinho (já atualizado nele).
+  const [priceChanges, setPriceChanges] = useState<PriceChange[]>([]);
   const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
   const beginCheckoutTracked = useRef(false);
   const [cartLoading, setCL]  = useState(true);
@@ -370,11 +373,19 @@ export default function CheckoutPage() {
         if (cancelled) return;
         const foundActive = new Set(snap.docs.filter(d => d.data().active !== false).map(d => d.id));
         const hasUnavailable = productIds.some(id => !foundActive.has(id));
-        if (hasUnavailable) router.replace('/carrinho');
+        if (hasUnavailable) { router.replace('/carrinho'); return; }
+        // Preço mudou desde que o item entrou: o resumo passa a mostrar o que
+        // o servidor vai cobrar (no cartão, o "valor mudou" se repetia).
+        const prices = new Map(snap.docs.flatMap(d => typeof d.data().price === 'number' ? [[d.id, d.data().price as number] as [string, number]] : []));
+        const synced = withCurrentPrices(items, prices);
+        if (synced && user) {
+          setPriceChanges(synced.changes);
+          updateDoc(doc(db, 'carts', user.uid), { items: synced.items }).catch(() => {});
+        }
       })
       .catch(() => { /* falha na checagem não deve travar o checkout */ });
     return () => { cancelled = true; };
-  }, [cart, router]);
+  }, [cart, router, user]);
 
   async function lookupCep(raw: string) {
     const c = onlyDigits(raw);
@@ -811,6 +822,14 @@ export default function CheckoutPage() {
           <form onSubmit={submit} onInput={() => { formTouched.current = true; }} className="flex flex-col gap-3 w-full">
 
             {mobileSummary}
+
+            {priceChanges.length > 0 && (
+              <p role="status" className="rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30 text-sm px-4 py-3">
+                {priceChanges.length === 1
+                  ? <>O preço de <strong>{priceChanges[0].productName}</strong> mudou de {formatCurrency(priceChanges[0].from)} para {formatCurrency(priceChanges[0].to)}. O total abaixo já está atualizado.</>
+                  : <>Alguns preços mudaram desde que você adicionou: {priceChanges.map(c => `${c.productName} (agora ${formatCurrency(c.to)})`).join(', ')}. O total abaixo já está atualizado.</>}
+              </p>
+            )}
 
             {apiError && (
               <div ref={apiErrorRef} role="alert" className="scroll-mt-20 flex items-start gap-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3.5 text-sm rounded-2xl">
