@@ -7,6 +7,8 @@ import { buildPreparing, buildShipped, buildDelivered } from '@/lib/email/orderS
 import { isManualDispatch } from '@/lib/carriers';
 import { recordShippingSpent } from '@/lib/shipping-ledger';
 import { shippingBlockReason } from '@/lib/orders/shippingBlock';
+import { getSettings } from '@/lib/settings';
+import { storeIdentity } from '@/lib/legal';
 
 /**
  * Avança o pedido uma etapa (pago, separando, enviado, entregue) e manda o
@@ -98,8 +100,12 @@ export async function advanceOrderStatus(
         },
       };
 
+      // Retirada na loja: o e-mail de separação diz onde buscar.
+      const pickup = next === 'preparing' && (order.delivery?.carrier ?? (order as { selectedShipping?: { carrier?: string } }).selectedShipping?.carrier) === 'pickup'
+        ? { address: storeIdentity(await getSettings()).address }
+        : undefined;
       const payload =
-        next === 'preparing' ? buildPreparing(updatedOrder, firstName) :
+        next === 'preparing' ? buildPreparing(updatedOrder, firstName, pickup) :
         next === 'shipped'   ? buildShipped(updatedOrder, firstName) :
         next === 'delivered' ? buildDelivered(updatedOrder, firstName) : null;
 
