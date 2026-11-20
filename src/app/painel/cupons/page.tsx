@@ -176,8 +176,9 @@ export default function CuponsPage() {
               <Field label="Quantas vezes cada cliente pode usar?">
                 {p => (
                   <Select
-                    value={String(form.perCustomer)}
+                    value={String(form.firstPurchaseOnly ? 1 : form.perCustomer)}
                     onChange={v => setForm(f => ({ ...f, perCustomer: Number(v) }))}
+                    disabled={form.firstPurchaseOnly}
                     options={[{ value: '1', label: '1 vez' }, { value: '2', label: '2 vezes' }, { value: '3', label: '3 vezes' }, { value: '0', label: 'Sem limite' }]}
                     triggerId={p.id}
                     triggerClassName="panel-input flex items-center justify-between gap-2 cursor-pointer"
@@ -186,9 +187,9 @@ export default function CuponsPage() {
               </Field>
               <label className="flex items-start gap-2.5 sm:mt-7 cursor-pointer">
                 <input type="checkbox" checked={form.firstPurchaseOnly}
-                  onChange={e => setForm(f => ({ ...f, firstPurchaseOnly: e.target.checked }))}
+                  onChange={e => setForm(f => ({ ...f, firstPurchaseOnly: e.target.checked, perCustomer: e.target.checked ? 1 : f.perCustomer }))}
                   className="mt-0.5 w-4 h-4 accent-ink" />
-                <span className="text-[13px] text-ink leading-snug">Só na primeira compra<span className="block text-[11.5px] text-faint">Quem já tem um pedido pago não consegue usar.</span></span>
+                <span className="text-[13px] text-ink leading-snug">Só na primeira compra<span className="block text-[11.5px] text-faint">Uma vez por cliente, e só para quem ainda não tem pedido pago.</span></span>
               </label>
             </div>
 
@@ -207,8 +208,8 @@ export default function CuponsPage() {
                   <strong>{form.type === 'percent' ? `${form.value}%` : formatCurrency(Math.round(form.value * 100))} de desconto</strong>
                   {form.minOrderCents > 0 && ` em pedidos acima de ${formatCurrency(Math.round(form.minOrderCents * 100))}`}
                   {` e pode ser usado ${form.maxUses} vez${form.maxUses !== 1 ? 'es' : ''}`}
-                  {form.perCustomer > 0 && ` (${form.perCustomer === 1 ? '1 vez' : `${form.perCustomer} vezes`} por cliente)`}
-                  {form.firstPurchaseOnly && ', só na primeira compra'}
+                  {form.firstPurchaseOnly ? ' (1 vez por cliente, só na primeira compra)'
+                    : form.perCustomer > 0 && ` (${form.perCustomer === 1 ? '1 vez' : `${form.perCustomer} vezes`} por cliente)`}
                   {form.expiresAt && ` até ${new Date(form.expiresAt + 'T00:00:00').toLocaleDateString('pt-BR')}`}.
                 </p>
               </div>

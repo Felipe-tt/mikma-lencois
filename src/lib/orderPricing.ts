@@ -21,7 +21,7 @@ export interface CouponLike {
   minOrderCents?: number | null
   /** Quantas vezes o mesmo cliente pode usar. Vazio: sem limite por cliente. */
   maxUsesPerCustomer?: number | null
-  /** Só vale na primeira compra paga do cliente. */
+  /** Só vale na primeira compra paga do cliente (e uma vez só). */
   firstPurchaseOnly?: boolean
 }
 
@@ -62,6 +62,11 @@ export function validateCoupon(coupon: CouponLike, productsCents: number, now: D
   }
   if (usage && coupon.maxUsesPerCustomer != null && coupon.maxUsesPerCustomer > 0 && usage.uses >= coupon.maxUsesPerCustomer) {
     return { valid: false, reason: coupon.maxUsesPerCustomer === 1 ? 'Você já usou este cupom' : `Você já usou este cupom ${coupon.maxUsesPerCustomer} vezes`, discountCents: 0 };
+  }
+  // Primeira compra vale uma vez: com um pedido em aberto já usando o cupom,
+  // um segundo pedido ainda não pago passava, e os dois saíam com desconto.
+  if (usage && coupon.firstPurchaseOnly && usage.uses > 0) {
+    return { valid: false, reason: 'Você já usou este cupom', discountCents: 0 };
   }
   if (usage && coupon.firstPurchaseOnly && usage.hasPaidOrder) {
     return { valid: false, reason: 'Este cupom vale só na primeira compra', discountCents: 0 };
