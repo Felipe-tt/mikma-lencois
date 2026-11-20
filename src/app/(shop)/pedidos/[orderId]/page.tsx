@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { SwapNote } from '@/components/cart/SwapNote';
 import { ReturnRequestCard } from '@/components/order/ReturnRequestCard';
 import { DesistirCard } from '@/components/order/DesistirCard';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 import { db } from '@/lib/firebase/db';
@@ -230,7 +231,12 @@ export default function OrderDetailPage() {
 
   async function confirmReceived() {
     if (!order || !user) return;
-    if (!window.confirm('Confirmar que você já recebeu este pedido? Isso marca o pedido como entregue.')) return;
+    const ok = await confirmDialog({
+      message: 'Já recebeu o pedido?',
+      detail: 'O pedido fica marcado como entregue.',
+      confirmLabel: 'Já recebi',
+    });
+    if (!ok) return;
 
     setConfirmingReceived(true);
     setConfirmReceivedError(null);

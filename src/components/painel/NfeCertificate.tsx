@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useId, useState } from 'react';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 type CertInfo = { titular: string; cnpj: string | null; validFrom: string; validTo: string };
 const fmt = (iso: string) => new Date(iso).toLocaleDateString('pt-BR');
@@ -53,7 +54,13 @@ export function NfeCertificate({ user }: { user: { getIdToken: () => Promise<str
   }
 
   async function remove() {
-    if (!confirm('Remover o certificado? Nenhuma nota será emitida até importar outro.')) return;
+    const ok = await confirmDialog({
+      message: 'Remover o certificado?',
+      detail: 'Nenhuma nota fiscal será emitida até você importar outro.',
+      confirmLabel: 'Remover certificado',
+      variant: 'danger',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await api({ method: 'DELETE' });
