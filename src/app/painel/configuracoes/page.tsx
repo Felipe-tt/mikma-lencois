@@ -518,6 +518,10 @@ export default function ConfiguracoesPage() {
               value={settings.localDeliveryRadiusKm} onChange={v => set('localDeliveryRadiusKm', v)}
               hint={`Pedidos dentro de ${settings.localDeliveryRadiusKm} km recebem opção de entrega em 1h`}
               min={1} max={100} />
+            <Num label="Dias para postar o pedido"
+              value={settings.handlingDays ?? 1} onChange={v => set('handlingDays', Math.max(0, Math.min(10, Math.round(v))))}
+              hint="Dias úteis, somados ao prazo dos Correios e da Jadlog que o cliente vê. Use 0 se você posta no mesmo dia do pagamento."
+              min={0} max={10} />
             <details className="border border-mist rounded-xl">
               <summary className="px-3 py-2.5 text-[12px] text-faint cursor-pointer select-none">
                 Coordenadas GPS (avançado, só mexa se souber)

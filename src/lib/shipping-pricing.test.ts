@@ -126,6 +126,14 @@ describe('computeShippingOptions: contrato dos Correios e Melhor Envio', () => {
     expect(options.find(o => o.carrier === 'correios_sedex')).toMatchObject({ priceCents: 0, realPriceCents: 3769 });
   });
 
+  it('o prazo mostrado soma os dias para postar; o do transporte fica guardado', async () => {
+    stubApis(contratoOk);
+    const { options } = await computeShippingOptions('01310100', { ...settings, handlingDays: 1 }, 39990, 1.5);
+    expect(options.find(o => o.carrier === 'correios_pac')).toMatchObject({ estimatedDays: 6, transitDays: 5 });
+    expect(options.find(o => o.carrier === 'correios_sedex')).toMatchObject({ estimatedDays: 2, transitDays: 1 });
+    expect(options.find(o => o.carrier === 'jadlog_package')).toMatchObject({ estimatedDays: 7, transitDays: 6 });
+  });
+
   it('manda ao contrato a caixa do peso do pedido, não a caixa grande', async () => {
     stubApis(contratoOk);
     await computeShippingOptions('01310100', settings, 39990, 1.5);

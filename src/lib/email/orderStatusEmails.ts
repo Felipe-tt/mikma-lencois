@@ -62,10 +62,12 @@ export function buildShipped(order: OrderDoc, name: string, now = new Date()): E
   const carrier = order.delivery?.carrier ?? null;
   const rastreioUrl = carrier && code ? getTrackingUrl(carrier, code) : null;
   const carrierLabel = carrier ? carrierName(carrier) : 'transportadora';
-  // Prazo cotado no checkout (dias úteis), contado a partir do despacho.
-  const days = order.delivery?.estimatedDays;
+  // Prazo do transporte (dias úteis), contado a partir do despacho: sem os
+  // dias para postar, que já passaram. Pedido antigo só tem o prazo cheio.
+  const delivery = order.delivery as { transitDays?: number; estimatedDays?: number } | undefined;
+  const days = delivery?.transitDays ?? delivery?.estimatedDays;
   const eta = typeof days === 'number' && days > 0
-    ? addBusinessDays(now, days).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })
+    ? addBusinessDays(now, days).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })
     : null;
   const trackingBlock = code ? emailCallout(`
       <p style="margin:0 0 4px;font-size:11px;color:#7A6656;text-transform:uppercase;letter-spacing:.08em;">Código de rastreio · ${escapeHtml(carrierLabel)}</p>

@@ -19,6 +19,8 @@ export interface ShippingOption {
   label: string;
   priceCents: number;
   estimatedDays: number;
+  /** Só o transporte (Correios/Jadlog), sem os dias para postar. */
+  transitDays?: number;
   available: boolean;
   tag?: 'local' | 'economico' | 'rapido';
   error?: string;
@@ -414,6 +416,16 @@ export async function computeShippingOptions(
       { carrier: 'correios_sedex', label: 'Correios SEDEX', priceCents: freeShipping ? 0 : 4500, realPriceCents: 4500, estimatedDays: 3,  available: true, tag: 'rapido'    },
       { carrier: 'jadlog_package', label: 'Jadlog Package', priceCents: freeShipping ? 0 : 3200, realPriceCents: 3200, estimatedDays: 5,  available: true, tag: 'economico' }
     );
+  }
+
+  // O prazo mostrado conta também os dias para postar (settings.handlingDays):
+  // o prazo dos Correios começa na postagem, e o site prometia a entrega um
+  // dia antes do possível. Retirada e entrega local saem no mesmo dia.
+  const handling = Math.max(0, Math.min(10, Math.round(settings.handlingDays ?? 0)));
+  for (const o of deduped) {
+    if (o.carrier === 'pickup' || o.carrier === 'uber_direct') continue;
+    o.transitDays = o.estimatedDays;
+    o.estimatedDays += handling;
   }
 
   // Ordena depois do fallback: antes as opções padrão entravam no fim, fora
