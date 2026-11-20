@@ -154,6 +154,8 @@ export default async function ProductPage({ params }: Props) {
     ...(product.yarnCount && /^\d+\/\d+$/.test(product.yarnCount) ? [{ k: 'Título do fio', v: `Fio ${product.yarnCount}` }] : []),
     ...(product.weightGsm ? [{ k: 'Gramatura', v: `${product.weightGsm} g/m²` }] : []),
     ...(product.certifications ?? []).map(cert => ({ k: 'Certificação', v: cert, clay: true })),
+    // Origem do produto (CDC, art. 31), das Configurações.
+    ...(s.productOrigin?.trim() ? [{ k: 'Origem', v: s.productOrigin.trim() }] : []),
   ];
   const productTrusts = [
     s.productTrust1 || 'Entrega local em Blumenau em até 1h',
@@ -181,6 +183,7 @@ export default async function ProductPage({ params }: Props) {
     category: product.category,
     brand: { '@type': 'Brand', name: 'Mikma Lençóis' },
     material: product.composition || DEFAULT_COMPOSITION,
+    ...(s.productOrigin?.trim() ? { countryOfOrigin: s.productOrigin.trim() } : {}),
     offers: {
       '@type': 'Offer',
       url: productUrl,
