@@ -20,7 +20,8 @@ type Devolucao = ReturnRequest & {
   motivoRecusa?: string;
 };
 type Tipo = 'troca' | 'devolucao' | 'defeito';
-const ddmm = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+// Prazo vai até 23:59 de Brasília: a data é a de lá, em qualquer fuso.
+const ddmm = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' });
 
 const COMO: Record<DevolverPor, { titulo: string; texto: string; depois: string }> = {
   correios: { titulo: 'Pelos Correios', texto: 'Em qualquer agência, sem pagar.', depois: 'Aprovado, você recebe um código para postar nos Correios sem pagar nada.' },
