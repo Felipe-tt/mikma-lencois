@@ -20,6 +20,8 @@ export const USERS = {
   cancela: { email: 'cancela@e2e.mikma', password: 'senha-e2e-123', name: 'Elisa Moura', role: 'customer', cpf: '98765432100', address: { cep: '01310100', street: 'Avenida Paulista', number: '4000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
   lote: { email: 'lote@e2e.mikma', password: 'senha-e2e-123', name: 'Fabio Lote', role: 'customer', cpf: '24681357928', address: { cep: '01310100', street: 'Avenida Paulista', number: '5000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
   devolve: { email: 'devolve@e2e.mikma', password: 'senha-e2e-123', name: 'Gabriela Torres', role: 'customer', cpf: '93541134780', address: { cep: '01310100', street: 'Avenida Paulista', number: '6000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
+  // Cliente que começa como visitante e entra na conta no checkout.
+  volta: { email: 'volta@e2e.mikma', password: 'senha-e2e-123', name: 'Helena Prates', role: 'customer', cpf: '71428793860' },
   // Para este CEP a API dos Correios simulada responde "fora do ar".
   semCorreios: { email: 'sem-correios@e2e.mikma', password: 'senha-e2e-123', name: 'Carla Reis', role: 'customer', cpf: '93541134780', address: { cep: '04538133', street: 'Avenida Brigadeiro Faria Lima', number: '3477', neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP' } },
 };

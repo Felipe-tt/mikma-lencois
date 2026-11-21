@@ -103,7 +103,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsub = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           const mapped = await mapUser(firebaseUser);
-          if (!firebaseUser.isAnonymous) void mergeGuestInto(firebaseUser);
+          // Convidado que entrou na conta: o carrinho dele passa para a conta
+          // antes de a conta aparecer. O checkout lê o carrinho da conta na
+          // hora e, vazio, mandava a pessoa de volta para /carrinho.
+          if (!firebaseUser.isAnonymous) await mergeGuestInto(firebaseUser);
           setUser(mapped);
         } else {
           // Sessão encerrada por fora (expirou, outra aba saiu): cookie de staff junto.
@@ -164,6 +167,8 @@ async function mergeGuestInto(account: User) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await account.getIdToken()}` },
       body: JSON.stringify({ guestToken }),
+      // O login espera por isto: rede travada não segura a pessoa na porta.
+      signal: AbortSignal.timeout(8000),
     });
     // Só esquece o convidado com resposta definitiva (feito, ou token que
     // não vale mais). Limite, erro do servidor ou rede: tenta no próximo login.

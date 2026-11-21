@@ -11,6 +11,7 @@ import { auth } from '@/lib/firebase/client';
 import { db } from '@/lib/firebase/db';
 import { fetchMyPii, saveMyPii } from '@/lib/piiClient';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { SIZE_LABEL } from '@/lib/productOptions';
 import { formatCurrency } from '@/lib/utils/format';
 import type { Cart, Address, Order } from '@/types';
@@ -175,6 +176,7 @@ export default function CheckoutPage() {
   // Aceita o convidado ("comprar sem cadastro"): ele informa o e-mail e
   // aceita os termos aqui, na identificação.
   const { buyer: user, isGuest, loading, logout } = useAuth();
+  const { requireAuth } = useAuthModal();
   const [termsOk, setTermsOk] = useState(false);
   const formTouched = useRef(false);
   const router = useRouter();
@@ -852,6 +854,12 @@ export default function CheckoutPage() {
                 {isGuest && (
                   <p className="-mb-1 text-[12px] text-faint">
                     Comprando sem cadastro.{' '}
+                    {/* Quem já tem conta entra aqui mesmo: o carrinho vai junto
+                        (api/auth/merge-guest) e os dados salvos preenchem o resto. */}
+                    <button type="button" onClick={() => requireAuth(() => {}, 'Entre na sua conta. O carrinho vai junto.')} className="font-semibold text-clay underline underline-offset-4 hover:text-ink">
+                      Já tem conta? Entrar
+                    </button>
+                    {' · '}
                     <button type="button" onClick={() => { void logout().then(() => router.push('/')); }} className="underline underline-offset-4 decoration-mist-d hover:text-ink">
                       Não é você? Sair
                     </button>
