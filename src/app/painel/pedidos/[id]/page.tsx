@@ -1185,6 +1185,9 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
             <>
               <Row label="Nome" value={customer.name} />
               <Row label="E-mail" value={customer.email} />
+              {/* Comprou sem cadastro: não tem senha. Para ver o pedido em
+                  outro aparelho, usa "Receber link por e-mail" na página dele. */}
+              <Row label="Cadastro" value={(customer as { guest?: boolean }).guest ? 'Sem cadastro (link de acesso por e-mail)' : null} />
               <Row label="CPF" value={customer.cpf ? customer.cpf : 'Não informado'} />
               {customerPhone && (
                 <div className="flex justify-between items-center gap-4 py-2.5 border-b border-warm">
