@@ -99,6 +99,13 @@ describe('ticket de login', () => {
     expect(await trustLogin(db, token({ auth_time: LOGIN / 1000 + 1 }), LOGIN + 2_000)).toBe(true);
   });
 
+  it('login já confiável continua confiável depois do prazo do ticket', async () => {
+    const db = fakeDb();
+    await issueLoginTicket(db, 'maria@x.com', LOGIN - 5_000);
+    expect(await trustLogin(db, token(), LOGIN + 1_000)).toBe(true);
+    expect(await trustLogin(db, token(), LOGIN + 30 * 24 * 3600_000)).toBe(true);
+  });
+
   it('troca tardia (passou do prazo do ticket) não vale', async () => {
     const db = fakeDb();
     await issueLoginTicket(db, 'maria@x.com', LOGIN - 5_000);

@@ -2,6 +2,7 @@ import { Header } from '@/components/layout/Header';
 import { googleUrl } from '@/lib/googleProfile';
 import { Footer } from '@/components/layout/Footer';
 import { CookieBanner } from '@/components/layout/CookieBanner';
+import { LoginCheckBanner } from '@/components/layout/LoginCheckBanner';
 import { PageTransition } from '@/components/ui/PageTransition';
 import { MaintenanceGate } from '@/components/layout/MaintenanceGate';
 import { getStoreSettings } from '@/lib/settings';
@@ -53,6 +54,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         Pular para o conteúdo
       </a>
       <Header topbarText={pauseNotice(s) ?? s.topbarText} freeShippingThresholdCents={s.freeShippingThresholdCents} />
+      <LoginCheckBanner />
       <main id="conteudo" tabIndex={-1} className="flex-1 focus:outline-none">
         <PageTransition>{children}</PageTransition>
       </main>

@@ -20,6 +20,8 @@ interface AuthUser {
   role: 'buyer' | 'seller' | 'admin';
   isAnonymous: boolean;
   getIdToken: () => Promise<string>;
+  /** Login com senha que não passou pela checagem do site: precisa entrar de novo. */
+  needsRelogin: boolean;
 }
 
 // Token do convidado guardado para, se ele entrar numa conta depois, o
@@ -58,33 +60,35 @@ function clearStaffCookie(force = false) {
 }
 
 /**
- * Logo depois de entrar com senha: troca o ticket que a checagem do site
- * deixou (/api/auth/login, confirmação por e-mail, cadastro, senha nova)
- * por "este login é confiável". Sem isso, CPF, exportar e apagar a conta
- * pedem para entrar de novo (ver lib/auth/loginTicket.ts). Espera a
- * resposta antes de mostrar a conta: o perfil e o checkout leem o CPF em
- * seguida. Uma vez por login, e só nos primeiros minutos.
+ * Login com senha: troca o ticket que a checagem do site deixou
+ * (/api/auth/login, confirmação por e-mail, cadastro, senha nova) por "este
+ * login é confiável" (ver lib/auth/loginTicket.ts). Sem isso, endereço,
+ * pedidos, CPF e a conta pedem para entrar de novo. Espera a resposta antes
+ * de mostrar a conta: as telas leem esses dados em seguida. Pergunta uma vez
+ * por sessão neste navegador; depois de confiável, guarda a marca.
+ * true/false é a resposta do servidor; null, sem resposta (não acusa nada).
  */
-async function trustPasswordLogin(firebaseUser: User, tokenResult: IdTokenResult): Promise<void> {
+async function trustPasswordLogin(firebaseUser: User, tokenResult: IdTokenResult): Promise<boolean | null> {
   // Nunca atrapalha o login: qualquer falha aqui só deixa o login sem a marca.
   try {
-    if (tokenResult.signInProvider !== 'password' || tokenResult.signInSecondFactor) return;
+    if (tokenResult.signInProvider !== 'password' || tokenResult.signInSecondFactor) return true;
     const authMs = Date.parse(tokenResult.authTime);
-    if (!(Date.now() - authMs < 15 * 60 * 1000)) return;
     const flag = `mikma-trust:${firebaseUser.uid}:${authMs}`;
-    try { if (localStorage.getItem(flag)) return; } catch { /* sem storage */ }
+    try { if (localStorage.getItem(flag)) return true; } catch { /* sem storage */ }
     // Rede travada não segura a conta: desiste em 8 s.
     const signal = typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(8000) : undefined;
     const res = await fetch('/api/auth/trust', { method: 'POST', headers: { Authorization: `Bearer ${tokenResult.token}` }, signal });
-    const trusted = res.ok && (await res.json().catch(() => ({}))).trusted === true;
-    if (trusted) { try { localStorage.setItem(flag, '1'); } catch { /* sem storage */ } }
-  } catch { /* segue sem a marca */ }
+    if (!res.ok) return null;
+    const trusted = (await res.json().catch(() => ({}))).trusted;
+    if (trusted === true) { try { localStorage.setItem(flag, '1'); } catch { /* sem storage */ } }
+    return typeof trusted === 'boolean' ? trusted : null;
+  } catch { return null; }
 }
 
 async function mapUser(firebaseUser: User): Promise<AuthUser> {
   const tokenResult = await firebaseUser.getIdTokenResult(true);
   const role = (tokenResult.claims.role as AuthUser['role']) ?? 'buyer';
-  await trustPasswordLogin(firebaseUser, tokenResult);
+  const trusted = await trustPasswordLogin(firebaseUser, tokenResult);
 
   // Seller/admin: manda o cookie que o middleware usa só pra pular a
   // manutenção quando a pessoa está logada como staff. Fire-and-forget -
@@ -114,6 +118,7 @@ async function mapUser(firebaseUser: User): Promise<AuthUser> {
     // por custom token: o Firebase não o marca como anônimo, a marca `guest` sim.
     isAnonymous: firebaseUser.isAnonymous || tokenResult.claims.guest === true,
     getIdToken: () => firebaseUser.getIdToken(),
+    needsRelogin: trusted === false,
   };
 }
 

@@ -26,13 +26,25 @@ service cloud.firestore {
     function isSellerOrAdmin() {
       return hasRole('seller') || hasRole('admin');
     }
+    // Login com senha só abre endereço, pedidos e trocas depois de passar
+    // pela checagem do site: o servidor grava trusted_logins/{uid}_{auth_time}
+    // (src/lib/auth/loginTicket.ts). Sem isso, a senha usada direto no
+    // Firebase Auth, com a chave pública, lia tudo. Google, passkey,
+    // convidado e equipe com segunda etapa não precisam. Logins de antes da
+    // trava (2026-11-22T03:00Z, a mesma data do servidor) continuam valendo.
+    function trustedLogin() {
+      return request.auth.token.firebase.sign_in_provider != 'password'
+        || request.auth.token.firebase.get('sign_in_second_factor', null) != null
+        || request.auth.token.auth_time < 1795316400
+        || exists(/databases/$(database)/documents/trusted_logins/$(request.auth.uid + '_' + string(request.auth.token.auth_time)));
+    }
 
     // ── Users ────────────────────────────────────────────────────────────────
     match /users/{uid} {
       // Seller/admin precisam ler dados do cliente (nome, telefone, endereço)
       // ao visualizar o detalhe de um pedido no painel. Só um por vez (get):
       // listar a coleção inteira baixaria CPF e endereço de todos os clientes.
-      allow get: if isSelf(uid) || isSellerOrAdmin();
+      allow get: if (isSelf(uid) && trustedLogin()) || isSellerOrAdmin();
       allow list: if false;
 
       // WHITELIST de campos que o PRÓPRIO usuário grava pelo SDK (checkout,
@@ -68,12 +80,12 @@ service cloud.firestore {
           && shortStr(a, 'complement', 120) && shortStr(a, 'neighborhood', 120)
           && shortStr(a, 'city', 120) && shortStr(a, 'state', 2);
       }
-      allow create: if isSelf(uid)
+      allow create: if isSelf(uid) && trustedLogin()
         && request.resource.data.keys().hasOnly(editableKeys())
         && validProfile(request.resource.data, request.resource.data.keys());
       // Dono: só os campos da whitelist (o que também impede mexer em role).
       // Admin: pode tudo (promoção de role etc.).
-      allow update: if (isSelf(uid)
+      allow update: if (isSelf(uid) && trustedLogin()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableKeys())
           && validProfile(request.resource.data,
                           request.resource.data.diff(resource.data).affectedKeys()))
@@ -156,7 +168,7 @@ service cloud.firestore {
     match /orders/{orderId} {
       // Comprador lê somente os próprios pedidos
       allow read: if isAuth() && (
-        resource.data.userId == request.auth.uid || isSellerOrAdmin()
+        (resource.data.userId == request.auth.uid && trustedLogin()) || isSellerOrAdmin()
       );
       // Criação via API route (Admin SDK), cliente nunca escreve direto
       allow create: if false;
@@ -198,7 +210,7 @@ service cloud.firestore {
     match /returns/{returnId} {
       // Cliente lê só as próprias solicitações; vendedor/admin lê todas.
       allow read: if isAuth() && (
-        resource.data.userId == request.auth.uid || isSellerOrAdmin()
+        (resource.data.userId == request.auth.uid && trustedLogin()) || isSellerOrAdmin()
       );
       // O cliente pede pelo servidor (/api/orders/[id]/troca, que confere
       // dono, prazo e peças); pelo SDK só seller/admin escreve.

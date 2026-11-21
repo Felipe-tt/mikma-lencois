@@ -10,7 +10,7 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { startAbacatePayMock } from './mocks/abacatepay-server.mjs';
@@ -63,6 +63,19 @@ function run(cmd, args, extra = {}) {
   const r = spawnSync(cmd, args, { stdio: 'inherit', env: { ...env, ...extra } });
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
+
+// Trava do login com senha valendo para todo login dos testes: a data de
+// corte das regras (firestore.rules, trustedLogin) vai para o passado, como
+// LOGIN_TICKET_SINCE faz no servidor. Sem achar a data, para: os testes
+// rodariam sem a trava sem ninguém notar.
+const rules = readFileSync('firestore.rules', 'utf8');
+const cutoff = /request\.auth\.token\.auth_time < \d+/;
+if (!cutoff.test(rules)) throw new Error('firestore.rules: data de corte do login (trustedLogin) não encontrada');
+const rulesRes = await fetch(`http://${env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${env.GCLOUD_PROJECT}:securityRules`, {
+  method: 'PUT',
+  body: JSON.stringify({ rules: { files: [{ name: 'firestore.rules', content: rules.replace(cutoff, 'request.auth.token.auth_time < 0') }] } }),
+});
+if (!rulesRes.ok) throw new Error(`Emulador recusou as regras: ${rulesRes.status} ${await rulesRes.text()}`);
 
 // Dados antes do build, como em produção: as páginas e as configurações
 // em cache ('use cache') saem do build já com a loja preenchida.
