@@ -90,6 +90,9 @@ jobs:
 
           title="$(gh pr view "$num" --json title --jq .title)"
           subject="$title (#$num)"
+          # Título longo do Dependabot: encurta mantendo o nome do pacote
+          # ("bump X from 1 to 2" vira "bump X to 2") antes de desistir dele.
+          [ "${#subject}" -le 72 ] || subject="$(sed -E 's/ from [^ ]+ to / to /; s/ across [0-9]+ director(y|ies)//' <<<"$title") (#$num)"
           [ "${#subject}" -le 72 ] || subject="build(deps): atualização automática (#$num)"
           if gh pr merge "$num" --squash --delete-branch --match-head-commit "$SHA" \
               --subject "$subject" --body "Merge automático: todos os checks passaram."; then
