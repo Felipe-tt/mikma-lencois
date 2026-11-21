@@ -7,9 +7,8 @@ import { maskCep, onlyDigits } from '@/lib/masks';
 import { formatCurrency } from '@/lib/utils/format';
 import { estimatedDate } from '@/lib/deliveryDate';
 import type { ShippingOption } from '@/lib/shipping-pricing';
+import { readTypedCep, saveTypedCep } from '@/lib/cartCep';
 
-/** Último CEP digitado no carrinho, neste aparelho (comodidade, não dado da conta). */
-const CEP_KEY = 'mikma-cep';
 
 type Quote = { option: ShippingOption | null; pickup: boolean };
 
@@ -41,14 +40,13 @@ export function CartShipping({ uid, signature, freeShip, onPrice }: {
   // CEP do endereço salvo na conta; sem ele, o último digitado neste aparelho.
   useEffect(() => {
     let alive = true;
-    let typed = '';
-    try { typed = localStorage.getItem(CEP_KEY) ?? ''; } catch { /* sem storage */ }
+    const typed = readTypedCep();
     getDoc(doc(db, 'users', uid))
       .then(s => onlyDigits(String(s.data()?.address?.cep ?? '')))
       .catch(() => '')
       .then(saved => {
         if (!alive) return;
-        setCep(saved.length === 8 ? saved : typed.length === 8 ? typed : '');
+        setCep(saved.length === 8 ? saved : typed);
         setReady(true);
       });
     return () => { alive = false; };
@@ -92,7 +90,7 @@ export function CartShipping({ uid, signature, freeShip, onPrice }: {
     e.preventDefault();
     const d = onlyDigits(draft);
     if (d.length !== 8) return;
-    try { localStorage.setItem(CEP_KEY, d); } catch { /* sem storage */ }
+    saveTypedCep(d);
     setEditing(false);
     setCep(d);
   }

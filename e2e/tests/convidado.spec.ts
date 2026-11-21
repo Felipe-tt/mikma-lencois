@@ -44,4 +44,14 @@ test('carrinho mostra o frete pelo CEP e o total já com ele', async ({ page }) 
   await expect(page.getByText(/Correios PAC · Chega até/)).toBeVisible();
   await expect(page.getByText(/^R\$\s?21,90$/)).toBeVisible();
   await expect(page.getByText(/^R\$\s?211,80$/)).toBeVisible();
+
+  // No checkout, o endereço já começa pelo CEP digitado no carrinho.
+  await page.goto('/checkout');
+  await page.fill('#co-name', 'Rita Convidada');
+  await page.fill('#co-email', 'rita.convidada@e2e.mikma');
+  await page.fill('#co-cpf', '52998224725');
+  await page.fill('#co-phone', '47999998888');
+  await page.check('#co-terms');
+  await page.getByRole('button', { name: 'Continuar para endereço' }).click();
+  await expect(page.locator('#co-cep')).toHaveValue('01310-100');
 });
