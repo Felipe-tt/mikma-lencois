@@ -30,6 +30,7 @@ import { toAddress, streetLine, cityLine } from '@/lib/address';
 import { LEGAL_VERSION } from '@/lib/legal';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { withCurrentPrices, type PriceChange } from '@/lib/cartPrices';
+import { readTypedCep } from '@/lib/cartCep';
 
 interface CustomerData { name: string; cpf: string; phone: string; email: string }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -312,10 +313,20 @@ export default function CheckoutPage() {
     });
     // CPF e telefone vêm da API (criptografados no banco, ver lib/piiCrypto.ts).
     Promise.all([getDoc(doc(db, 'users', user.uid)), fetchMyPii(user).catch(() => ({ cpf: '', phone: '' }))]).then(([s, pii]) => {
-      // A pessoa já começou a digitar (rede lenta): não sobrescreve nem pula etapa.
-      if (formTouched.current) return;
       const d = s.data();
       const norm = toAddress(d?.address);
+      // Sem endereço salvo: o CEP digitado no produto ou no carrinho para ver
+      // o frete já vem aqui, com a rua buscada (antes digitava de novo). Vale
+      // mesmo com a identificação já tocada: só preenche o que está vazio.
+      const typed = norm ? '' : readTypedCep();
+      if (typed) {
+        setAddr(a => (a.cep ? a : { ...a, cep: maskCep(typed) }));
+        fetch(`https://viacep.com.br/ws/${typed}/json/`).then(r => r.json()).then(v => {
+          if (!v.erro) setAddr(a => (onlyDigits(a.cep) !== typed ? a : { ...a, street: a.street || v.logradouro || '', neighborhood: a.neighborhood || v.bairro || '', city: a.city || v.localidade || '', state: a.state || v.uf || '' }));
+        }).catch(() => { /* ViaCEP fora: a pessoa completa à mão */ });
+      }
+      // A pessoa já começou a digitar (rede lenta): não sobrescreve nem pula etapa.
+      if (formTouched.current) return;
       const savedAddr: Address | null = norm ? { ...norm, cep: maskCep(norm.cep) } : null;
       if (savedAddr) setAddr(savedAddr);
       const c = {

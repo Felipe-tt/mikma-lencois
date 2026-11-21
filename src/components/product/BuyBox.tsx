@@ -25,6 +25,7 @@ import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { useCartCount } from '@/lib/hooks/useCartCount';
 import { savePendingPurchase, readPendingPurchase, clearPendingPurchase, type PendingPurchase } from '@/lib/pendingPurchase';
 import { SizeMeasures, lineForSize } from '@/components/product/SizeMeasures';
+import { saveTypedCep } from '@/lib/cartCep';
 import type { PackageLine } from '@/lib/packageContents';
 
 interface Props {
@@ -277,6 +278,8 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
       const data = await res.json();
       if (!res.ok) { setShipError(data.error || 'Não foi possível calcular'); return; }
       setShipOptions(data.options ?? []);
+      // O carrinho e o checkout aproveitam o CEP (lib/cartCep.ts).
+      saveTypedCep(clean);
     } catch {
       setShipError('Erro de conexão. Tente de novo.');
     } finally {
