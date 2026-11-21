@@ -612,6 +612,19 @@ describe('notifications', () => {
   });
 });
 
+describe('registro de acesso a CPF e telefone', () => {
+  it('ninguém lê nem escreve pelo navegador, nem admin', async () => {
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA }).firestore();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'piiAccessLog/a1'), { by: 'seller1', customer: 'buyer1', at: '2026-11-21T00:00:00.000Z' });
+    });
+    await assertFails(getDoc(doc(admin, 'piiAccessLog/a1')));
+    await assertFails(getDocs(collection(admin, 'piiAccessLog')));
+    await assertFails(setDoc(doc(admin, 'piiAccessLog/a2'), { by: 'x' }));
+    await assertFails(deleteDoc(doc(admin, 'piiAccessLog/a1')));
+  });
+});
+
 describe('carrinho compartilhado (Montar junto)', () => {
   const inDays = (d: number) => Timestamp.fromMillis(Date.now() + d * 86_400_000);
   it('com o link ligado, só quem entrou pelo link atual lê o carrinho', async () => {

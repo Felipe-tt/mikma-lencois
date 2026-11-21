@@ -123,3 +123,25 @@ export async function notifyPasskeyAdded(a: PasskeyAdded): Promise<void> {
   const text = `Nova passkey cadastrada na conta ${account} em ${when}, ${label}, ${place} (IP ${a.ip}), ${how}. Não foi você? Troque a senha agora e apague essa passkey ${where}.`;
   await Promise.allSettled(to.map(addr => sendEmail({ to: addr, subject: 'Nova passkey na conta da Mikma', text, html })));
 }
+
+/**
+ * Conta da equipe passou do teto de CPF e telefone abertos por hora: avisa
+ * os admins e a própria pessoa (se a conta foi invadida, ela fica sabendo).
+ */
+export async function notifyPiiScan(a: { uid: string; email?: string; ip: string; perHour: number }): Promise<void> {
+  const to = await securityRecipients(a.email, true);
+  if (to.length === 0) return;
+  const when = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
+  const who = a.email ?? a.uid;
+  const html = emailLayout(emailSection({
+    eyebrow: 'Segurança da equipe',
+    title: 'Muitos CPFs abertos em pouco tempo',
+    html: [
+      emailParagraph(`A conta <strong>${escapeHtml(who)}</strong> abriu o CPF e o telefone de mais de ${a.perHour} clientes na última hora, mais do que um atendimento normal. As próximas consultas ficam bloqueadas por até uma hora.`),
+      emailParagraph(`<strong>Quando:</strong> ${escapeHtml(when)}<br><strong>IP:</strong> ${escapeHtml(a.ip)}`),
+      emailParagraph('<strong>Não reconhece?</strong> Tire essa pessoa da equipe em Configurações e troque a senha da conta.', { muted: true }),
+    ].join(''),
+  }), { replyHint: false, footerNote: 'E-mail automático de segurança da equipe.', preheader: `Muitos CPFs abertos por ${who}` });
+  const text = `A conta ${who} abriu o CPF e o telefone de mais de ${a.perHour} clientes na última hora (${when}, IP ${a.ip}). As próximas consultas ficam bloqueadas por até uma hora. Não reconhece? Tire essa pessoa da equipe e troque a senha.`;
+  await Promise.allSettled(to.map(addr => sendEmail({ to: addr, subject: 'Alerta: muitos CPFs abertos no painel da Mikma', text, html })));
+}
