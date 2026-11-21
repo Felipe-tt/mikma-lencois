@@ -32,7 +32,7 @@ export function Header(props: Props) {
 
 function HeaderView({ topbarText, freeShippingThresholdCents = 0, pathname }: Props & { pathname: string }) {
   const { href: waHref } = useWhatsApp();
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user, isGuest, logout, loading: authLoading } = useAuth();
   const count      = useCartCount();
   const { total: cartTotal, hasCoupon } = useCartTotal();
   const router     = useRouter();
@@ -358,7 +358,13 @@ function HeaderView({ topbarText, freeShippingThresholdCents = 0, pathname }: Pr
                   </>
                 ) : (
                   <>
-                    <p className="text-[13px] text-mid leading-relaxed mb-4">Entre para acompanhar pedidos e salvar favoritos.</p>
+                    {/* Convidado: as compras sem cadastro deste aparelho ficam em Meus pedidos. */}
+                    {isGuest && (
+                      <NavLink href="/conta/pedidos" className="py-2 mb-2 text-[15px] text-ink hover:text-clay transition-colors">Meus pedidos</NavLink>
+                    )}
+                    <p className="text-[13px] text-mid leading-relaxed mb-4">
+                      {isGuest ? 'Crie sua conta para ver os pedidos em qualquer aparelho e salvar favoritos.' : 'Entre para acompanhar pedidos e salvar favoritos.'}
+                    </p>
                     <div className="grid grid-cols-2 gap-2">
                       <NavLink href="/entrar" onClick={rememberHere} className="btn-outline justify-center text-[13px] py-3">Entrar</NavLink>
                       <NavLink href="/cadastro" onClick={rememberHere} className="btn-clay justify-center text-[13px] py-3">Criar conta</NavLink>

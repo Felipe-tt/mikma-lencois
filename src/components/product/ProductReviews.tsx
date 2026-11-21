@@ -14,7 +14,8 @@ interface Props {
 }
 
 export function ProductReviews({ productId, initialReviews }: Props) {
-  const { user } = useAuth();
+  // Quem comprou sem cadastro também avalia (o pedido entregue é dele).
+  const { buyer: user } = useAuth();
   const [reviews, setReviews] = useState(initialReviews);
   const [eligibleOrderId, setEligibleOrderId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);

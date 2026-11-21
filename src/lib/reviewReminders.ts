@@ -3,6 +3,7 @@ import { sendEmail, emailEnabled } from '@/lib/email';
 import { BASE_URL, CONTACT_EMAIL, emailCta, emailLayout, emailParagraph, emailSection, emailSignature, shortOrderId } from '@/lib/email/layout';
 import { escapeHtml } from '@/lib/html';
 import { googleUrl } from '@/lib/googleProfile';
+import { guestOrderLink } from '@/lib/guestAccess';
 
 /**
  * Lembrete de avaliação: alguns dias depois da entrega, um e-mail só para
@@ -10,10 +11,10 @@ import { googleUrl } from '@/lib/googleProfile';
  * convida a avaliar; este é o único lembrete (o pedido fica marcado com
  * `reviewReminderAt` e nunca recebe outro).
  *
- * Avaliar o produto pede conta com login (convidado anônimo não entra de
- * novo). Com o link de avaliação do Google nas Configurações, o e-mail também
- * convida a avaliar a loja lá, e quem comprou sem cadastro recebe só esse
- * convite.
+ * Quem comprou sem cadastro não tem senha: o e-mail dele leva o link de
+ * acesso do pedido (lib/guestAccess.ts, 7 dias), e ele avalia por ali. Com o
+ * link de avaliação do Google nas Configurações, o e-mail também convida a
+ * avaliar a loja lá.
  */
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -22,6 +23,8 @@ export const REMINDER_AFTER_DAYS = 5;
 /** Entrega mais antiga que isso não recebe lembrete (evita mandar para pedidos velhos). */
 export const REMINDER_WINDOW_DAYS = 21;
 const MAX_PER_RUN = 100;
+/** Link de acesso do convidado no lembrete: dá tempo de abrir o e-mail com calma. */
+const GUEST_LINK_TTL_MS = 7 * DAY;
 /** Erros do Resend que dizem respeito ao destinatário: marca o pedido e segue. */
 const RECIPIENT_ERRORS = new Set(['validation_error', 'missing_required_field', 'invalid_to_address']);
 
@@ -50,10 +53,14 @@ Este é o único lembrete de avaliação deste pedido.`;
   return { subject: 'O que achou da sua compra?', html, text };
 }
 
-export function reviewReminderEmail(name: string, orderId: string, products: PendingProduct[], googleReviewUrl = ''): { subject: string; html: string; text: string } {
+/**
+ * `accessUrl`: convidado. Os links vão para o pedido (que abre sem senha) e
+ * ele avalia de lá; na página do produto, sem a sessão, não teria como.
+ */
+export function reviewReminderEmail(name: string, orderId: string, products: PendingProduct[], googleReviewUrl = '', accessUrl = ''): { subject: string; html: string; text: string } {
   const id = shortOrderId(orderId);
   const one = products.length === 1;
-  const links = products.map(p => ({ ...p, url: `${BASE_URL}/produtos/${encodeURIComponent(p.productId)}#avaliacoes` }));
+  const links = products.map(p => ({ ...p, url: accessUrl || `${BASE_URL}/produtos/${encodeURIComponent(p.productId)}#avaliacoes` }));
   const list = one ? '' : `<ul style="margin:0 0 16px;padding-left:20px;">${links
     .map(p => `<li style="margin:0 0 8px;"><a href="${p.url}" style="color:inherit;">${escapeHtml(p.productName)}</a></li>`)
     .join('')}</ul>`;
@@ -64,7 +71,7 @@ export function reviewReminderEmail(name: string, orderId: string, products: Pen
       html: emailParagraph(`Olá, <strong>${escapeHtml(name)}</strong>! Já faz alguns dias que o seu pedido chegou. Conta pra gente o que achou${one ? ` do <strong>${escapeHtml(links[0].productName)}</strong>` : ''}?`)
         + emailParagraph('Sua avaliação ajuda outras pessoas a escolher e leva menos de um minuto.', { muted: true })
         + list
-        + (one ? emailCta('Avaliar minha compra', links[0].url) : emailCta('Ver meus pedidos', `${BASE_URL}/conta/pedidos`))
+        + (one || accessUrl ? emailCta('Avaliar minha compra', links[0].url) : emailCta('Ver meus pedidos', `${BASE_URL}/conta/pedidos`))
         + (googleReviewUrl ? googleBlock(googleReviewUrl) : ''),
     }) + emailSignature(),
     { preheader: 'Leva menos de um minuto e ajuda outras pessoas a escolher.', footerNote: 'Este é o único lembrete de avaliação deste pedido.' },
@@ -120,17 +127,19 @@ export async function sendReviewReminders(now = new Date()): Promise<{ checked: 
       if (!products.size || !order.userId) { result.skipped++; await mark(products.size ? 'sem conta' : 'ja avaliado'); continue; }
 
       const user = await adminAuth.getUser(order.userId).catch(() => null);
-      const profile = (await adminDb.collection('users').doc(order.userId).get()).data() as { email?: string; name?: string } | undefined;
+      const profile = (await adminDb.collection('users').doc(order.userId).get()).data() as { email?: string; name?: string; guest?: boolean } | undefined;
       const email = profile?.email || user?.email;
-      // Convidado (conta anônima) não consegue entrar de novo para avaliar o
-      // produto, mas pode avaliar a loja no Google.
+      // Convidado entra pelo link de acesso do pedido e avalia de lá. Sem a
+      // marca de convidado (cadastro antigo), só o convite do Google.
       const guest = !!user && !user.providerData.length;
-      if (!user || !email || (guest && !googleReview)) { result.skipped++; await mark('sem login'); continue; }
+      const accessUrl = guest ? guestOrderLink(doc.id, order.userId, profile, GUEST_LINK_TTL_MS) : undefined;
+      if (!user || !email || (guest && !accessUrl && !googleReview)) { result.skipped++; await mark('sem login'); continue; }
 
       const name = (profile?.name ?? user.displayName ?? '').split(' ')[0] || 'cliente';
-      const payload = guest
+      const pending = [...products].map(([productId, productName]) => ({ productId, productName }));
+      const payload = guest && !accessUrl
         ? googleReviewEmail(name, doc.id, googleReview)
-        : reviewReminderEmail(name, doc.id, [...products].map(([productId, productName]) => ({ productId, productName })), googleReview);
+        : reviewReminderEmail(name, doc.id, pending, googleReview, accessUrl);
       try {
         await sendEmail({ to: email, ...payload, from: 'noreply', replyTo: CONTACT_EMAIL });
       } catch (err) {

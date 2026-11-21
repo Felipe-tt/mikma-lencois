@@ -41,3 +41,19 @@ describe('link de acesso do convidado', () => {
     expect(isGuestToken({ firebase: { sign_in_provider: 'google.com' } } as never)).toBe(false);
   });
 });
+
+describe('link do pedido nos e-mails de pagamento', () => {
+  it('convidado recebe o link que já abre o pedido', async () => {
+    const { guestOrderLink } = await import('./guestAccess');
+    const link = guestOrderLink(ORDER, UID, { guest: true })!;
+    expect(link).toMatch(new RegExp(`/pedidos/${ORDER}\\?acesso=`));
+    expect(readGuestAccessToken(new URL(link).searchParams.get('acesso')!)).toEqual({ orderId: ORDER, uid: UID });
+  });
+
+  it('conta de verdade fica com o link normal', async () => {
+    const { guestOrderLink } = await import('./guestAccess');
+    expect(guestOrderLink(ORDER, UID, { guest: false })).toBeUndefined();
+    expect(guestOrderLink(ORDER, UID, {})).toBeUndefined();
+    expect(guestOrderLink(ORDER, UID, undefined)).toBeUndefined();
+  });
+});

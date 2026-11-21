@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'crypto';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { guestAccessMac } from '@/lib/piiCrypto';
+import { BASE_URL } from '@/lib/email/layout';
 
 /**
  * Link de acesso ao pedido de quem comprou sem cadastro. O convidado não tem
@@ -11,8 +12,8 @@ import { guestAccessMac } from '@/lib/piiCrypto';
  */
 export const GUEST_ACCESS_TTL_MS = 24 * 60 * 60 * 1000;
 
-export function guestAccessToken(orderId: string, uid: string, now = Date.now()): string {
-  const body = `${orderId}.${uid}.${now + GUEST_ACCESS_TTL_MS}`;
+export function guestAccessToken(orderId: string, uid: string, now = Date.now(), ttlMs = GUEST_ACCESS_TTL_MS): string {
+  const body = `${orderId}.${uid}.${now + ttlMs}`;
   return `${Buffer.from(body).toString('base64url')}.${guestAccessMac(body)}`;
 }
 
@@ -36,4 +37,14 @@ export function readGuestAccessToken(token: string, now = Date.now()): { orderId
 export function isGuestToken(decoded: Pick<DecodedIdToken, 'firebase'> & { guest?: unknown }): boolean {
   const provider = decoded.firebase?.sign_in_provider;
   return provider === 'anonymous' || (provider === 'custom' && decoded.guest === true);
+}
+
+/**
+ * Link do pedido nos e-mails de pagamento ("falta o PIX", "PIX expirou",
+ * lembrete): para o convidado, já com o acesso, e ele gera outro PIX direto
+ * do app de e-mail. Conta de verdade fica com o link normal (undefined).
+ */
+export function guestOrderLink(orderId: string, uid: string, profile: Record<string, unknown> | undefined, ttlMs = GUEST_ACCESS_TTL_MS): string | undefined {
+  if (profile?.guest !== true) return undefined;
+  return `${BASE_URL}/pedidos/${orderId}?acesso=${guestAccessToken(orderId, uid, Date.now(), ttlMs)}`;
 }

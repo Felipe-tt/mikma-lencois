@@ -30,6 +30,7 @@ import { sendEmail, emailEnabled } from '@/lib/email';
 import { buildPixPending } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
 import { guardGuestPayment, guestUnitsBlock } from '@/lib/guestGuard';
+import { guestOrderLink } from '@/lib/guestAccess';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 
@@ -540,6 +541,7 @@ export async function POST(req: NextRequest) {
         { id: orderId, items: verifiedItems, totalCents: amountCents, productsCents, shippingCents, pixDiscountCents, couponDiscountCents, couponCode: couponCode ?? undefined },
         firstName,
         { copyPaste: pix.brCode, expiresAt: pix.expiresAt, qrCode: pix.brCodeBase64 },
+        guestOrderLink(orderId, uid, userData),
       );
       await sendEmail({
         to: pendingEmailTo,

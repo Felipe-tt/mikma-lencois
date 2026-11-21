@@ -181,10 +181,12 @@ export function buildPixPending(
   order: { id: string; items: EmailItem[]; totalCents: number } & EmailMoney,
   name: string,
   pix: { copyPaste: string; expiresAt?: string | Date | null; qrCode?: string | null },
+  /** Convidado: link que já abre o pedido em qualquer aparelho (lib/guestAccess.ts). */
+  link?: string,
 ): EmailPayload {
   const qr = pixQrAttachment(pix.qrCode);
   const id = shortOrderId(order.id);
-  const url = orderUrl(order);
+  const url = link ?? orderUrl(order);
   const exp = pix.expiresAt ? new Date(pix.expiresAt) : null;
   const expLabel = exp && !Number.isNaN(exp.getTime())
     ? exp.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -227,9 +229,9 @@ export function buildPixPending(
 }
 
 /** PIX venceu sem pagamento: oferece gerar outro. */
-export function buildPixExpired(order: Pick<Order, 'id' | 'totalCents'>, name: string): EmailPayload {
+export function buildPixExpired(order: Pick<Order, 'id' | 'totalCents'>, name: string, link?: string): EmailPayload {
   const id = shortOrderId(order.id);
-  const url = orderUrl(order);
+  const url = link ?? orderUrl(order);
   const total = formatCurrency(order.totalCents);
   const html = emailLayout(`
     ${emailSection({
@@ -343,9 +345,10 @@ export function buildWithdrawalReceived(
 export function buildPaymentReminder(
   order: { id: string; items: EmailItem[]; totalCents: number } & EmailMoney,
   name: string,
+  link?: string,
 ): EmailPayload {
   const id = shortOrderId(order.id);
-  const url = orderUrl(order);
+  const url = link ?? orderUrl(order);
   const total = formatCurrency(order.totalCents);
   const html = emailLayout(`
     ${emailSection({

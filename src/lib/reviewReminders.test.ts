@@ -51,6 +51,9 @@ vi.mock('@/lib/email', () => ({
   },
 }));
 
+// Link de acesso do convidado (lib/guestAccess.ts) é assinado com a chave de PII.
+process.env.PII_ENCRYPTION_KEY = Buffer.alloc(32, 3).toString('base64');
+
 const { sendReviewReminders, reviewReminderEmail } = await import('./reviewReminders');
 
 const NOW = new Date('2026-11-04T12:00:00Z');
@@ -128,6 +131,18 @@ describe('lembrete de avaliação', () => {
     const toAna = sent.find(m => m.to === 'ana@x.com')!;
     expect(toAna.text).toContain('/produtos/a#avaliacoes');
     expect(toAna.text).toContain('Avalie no Google: https://g.page/r/mikma/review');
+  });
+
+  it('convidado recebe o lembrete dos produtos com o link que abre o pedido', async () => {
+    authUsers.hospede = { providerData: [] };
+    data.users.hospede = { email: 'h@x.com', name: 'Helena Prado', guest: true };
+    data.orders = { h1: order('hospede', 6, [['a', 'A'], ['b', 'B']]) };
+    const r = await sendReviewReminders(NOW);
+    expect(r.sent).toBe(1);
+    expect(sent[0].to).toBe('h@x.com');
+    expect(sent[0].text).toMatch(/\/pedidos\/h1\?acesso=/);
+    expect(sent[0].text).not.toContain('#avaliacoes');
+    expect(data.orders.h1.reviewReminderAt).toBeDefined();
   });
 
   it('link salvo que não é do Google é ignorado', async () => {

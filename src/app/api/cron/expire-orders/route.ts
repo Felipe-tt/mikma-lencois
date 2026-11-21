@@ -9,6 +9,7 @@ import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { buildCancelled, buildPaymentReminder } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL, shortOrderId, type EmailItem } from '@/lib/email/layout';
 import { paidReplacement } from '@/lib/orders/replacedOrder';
+import { guestOrderLink } from '@/lib/guestAccess';
 
 // ── Timings ────────────────────────────────────────────────────────────────────
 // Pedido sem pagamento por WARN_AFTER_MS → envia aviso "vai cancelar em 24h"
@@ -201,6 +202,7 @@ export async function GET(req: NextRequest) {
           const payload = buildPaymentReminder(
             { id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents as number, productsCents: order.productsCents as number | undefined, shippingCents: order.shippingCents as number | undefined, pixDiscountCents: order.pixDiscountCents as number | undefined, couponDiscountCents: order.couponDiscountCents as number | undefined, discountCents: order.discountCents as number | undefined, couponCode: order.couponCode as string | undefined },
             customerName.split(' ')[0] || 'cliente',
+            guestOrderLink(orderId, order.userId as string, userData),
           );
           await sendEmail({
             to: customerEmail, subject: payload.subject, text: payload.text, html: payload.html,

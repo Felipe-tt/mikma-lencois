@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { test, expect } from '@playwright/test';
-import { charges, prepare } from './helpers';
-import { cartOf, emptyCart, readOrder } from './db';
+import { charges, payPix, prepare } from './helpers';
+import { cartOf, db, emptyCart, readOrder } from './db';
 
 /** Link de acesso do convidado, como o e-mail manda (chave de PII dos testes, ver e2e/run.mjs). */
 function guestLink(orderId: string, uid: string) {
@@ -110,4 +110,39 @@ test('convidado abre o pedido em outro aparelho pelo link do e-mail', async ({ p
   await expect(phone.getByText('Compras sem cadastro feitas neste aparelho.')).toBeVisible();
   await expect(phone.getByText(`#${orderId.slice(-8).toUpperCase()}`).first()).toBeVisible();
   await other.close();
+});
+
+test('convidado avalia o produto do pedido entregue', async ({ page, baseURL }) => {
+  test.setTimeout(120_000);
+  await page.goto('/produtos/p3');
+  await page.getByRole('button', { name: /^Adicionar ao carrinho$/ }).first().click();
+  await expect(page.getByText(/adicionado|no carrinho/i).first()).toBeVisible();
+  await page.goto('/checkout');
+  await page.fill('#co-name', 'Lia Convidada');
+  await page.fill('#co-email', 'lia.convidada@e2e.mikma');
+  await page.fill('#co-cpf', '52998224725');
+  await page.fill('#co-phone', '47999998888');
+  await page.check('#co-terms');
+  await page.getByRole('button', { name: 'Continuar para endereço' }).click();
+  await page.fill('#co-cep', '01310-100');
+  await page.fill('#co-street', 'Avenida Paulista');
+  await page.fill('#co-number', '950');
+  await page.fill('#co-neighborhood', 'Bela Vista');
+  await page.fill('#co-city', 'São Paulo');
+  await page.click('#co-state');
+  await page.getByRole('option', { name: 'SP', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar para entrega' }).click();
+  await page.getByRole('button', { name: /Pagar .* com PIX/ }).first().click();
+  await expect(page.getByText('Pague com PIX').first()).toBeVisible();
+  const charge = (await charges()).at(-1)!;
+  expect((await payPix(baseURL!, charge.id, charge.externalId!, charge.amount)).status).toBe(200);
+  // Entregue (o caminho até aqui é dos testes dos Correios).
+  await db().collection('orders').doc(charge.externalId!).update({ status: 'delivered' });
+
+  await page.goto('/produtos/p3#avaliacoes');
+  await page.getByRole('button', { name: 'Avaliar produto' }).click();
+  await page.getByPlaceholder(/Conte como foi sua experiência/).fill('Macio e bem costurado.');
+  await page.getByRole('button', { name: /Publicar|Enviar/ }).first().click();
+  await expect(page.getByText('Obrigado! Sua avaliação foi publicada.')).toBeVisible();
+  await expect(page.getByText('Macio e bem costurado.')).toBeVisible();
 });

@@ -92,7 +92,9 @@ export async function POST(req: NextRequest) {
     // Nome real do comprador (o token pode não ter 'name' preenchido).
     if (name === 'Cliente') {
       const userSnap = await adminDb.collection('users').doc(uid).get();
-      name = (userSnap.data()?.name as string | undefined) ?? 'Cliente';
+      // Convidado: o nome que ele deu na compra.
+      const fromOrder = typeof order.customerName === 'string' && order.customerName.trim() ? order.customerName : 'Cliente';
+      name = (userSnap.data()?.name as string | undefined) ?? fromOrder;
     }
 
     // ID fixo por (pedido, produto) + create(): duas requisições ao mesmo
