@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { login, prepare } from './helpers';
+import { db } from './db';
 
 /**
  * Senha vazada não abre o CPF. O Firebase Auth aceita a senha direto, com a
@@ -24,6 +25,12 @@ async function directSignIn(request: APIRequestContext, password = SENHA): Promi
   return (await res.json()).idToken;
 }
 
+const FIRESTORE = `http://${process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080'}/v1/projects/${process.env.GCLOUD_PROJECT || 'demo-mikma'}/databases/(default)/documents`;
+const uidOf = (token: string) => JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).user_id as string;
+/** Lê o próprio perfil (com endereço) direto no Firestore, como o SDK do navegador faz. */
+const readProfile = (request: APIRequestContext, token: string) =>
+  request.get(`${FIRESTORE}/users/${uidOf(token)}`, { headers: { Authorization: `Bearer ${token}` } });
+
 const bearer = (token: string) => ({ ...visitor(), Authorization: `Bearer ${token}` });
 
 test('senha usada direto no Firebase não abre CPF, exportar nem apagar a conta', async ({ request }) => {
@@ -34,6 +41,11 @@ test('senha usada direto no Firebase não abre CPF, exportar nem apagar a conta'
     expect(res.status(), `${method} ${path}`).toBe(403);
     expect((await res.json()).code).toBe('login_check');
   }
+});
+
+test('senha usada direto no Firebase não lê endereço pelo Firestore', async ({ request }) => {
+  const token = await directSignIn(request);
+  expect((await readProfile(request, token)).status()).toBe(403);
 });
 
 test('ticket tirado com senha errada não vale para a senha certa', async ({ request }) => {
@@ -52,6 +64,7 @@ test('login que passou pela checagem do site abre o CPF', async ({ request }) =>
   const pii = await request.get('/api/user/pii', { headers: bearer(token) });
   expect(pii.status()).toBe(200);
   expect((await pii.json()).cpf).toBe('31870459601');
+  expect((await readProfile(request, token)).status()).toBe(200);
 });
 
 test('entrando pela tela, o perfil mostra o CPF', async ({ page }) => {
@@ -59,6 +72,23 @@ test('entrando pela tela, o perfil mostra o CPF', async ({ page }) => {
   await login(page, EMAIL, SENHA);
   await page.goto('/perfil');
   await expect(page.getByText('***.704.596-**')).toBeVisible();
+});
+
+test('login que perdeu a confiança mostra o aviso e leva para entrar de novo', async ({ page }) => {
+  await prepare(page.context());
+  await login(page, EMAIL, SENHA);
+  await page.goto('/perfil');
+  await expect(page.getByText('***.704.596-**')).toBeVisible();
+  await expect(page.getByText('Por segurança, entre de novo')).toHaveCount(0);
+  // Como um login com a senha usada direto no Firebase: sem o registro de confiança.
+  const uid = (await db().collection('users').where('email', '==', EMAIL).limit(1).get()).docs[0].id;
+  const trusted = await db().collection('trusted_logins').where('uid', '==', uid).get();
+  await Promise.all(trusted.docs.map(d => d.ref.delete()));
+  await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('mikma-trust:')).forEach(k => localStorage.removeItem(k)));
+  await page.reload();
+  await expect(page.getByText('Por segurança, entre de novo na sua conta')).toBeVisible();
+  await page.getByRole('button', { name: 'Entrar de novo' }).click();
+  await page.waitForURL(u => u.pathname === '/entrar');
 });
 
 test('monitor: o servidor consegue conferir senha no Firebase', async ({ request }) => {

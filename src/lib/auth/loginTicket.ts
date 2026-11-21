@@ -71,15 +71,17 @@ export async function issueLoginTicket(db: Firestore, email: string, now = Date.
 /**
  * Logo depois de entrar: troca um ticket do e-mail, emitido antes do login,
  * por "este login é confiável". O ticket é gasto, então não vale para um
- * segundo login. Devolve se o login ficou confiável.
+ * segundo login. Devolve se o login é confiável (também serve para só
+ * perguntar, depois: o navegador pergunta uma vez por sessão).
  */
 export async function trustLogin(db: Firestore, decoded: DecodedIdToken, now = Date.now()): Promise<boolean> {
   if (!needsTicket(decoded)) return true;
   const authMs = decoded.auth_time * 1000;
   const email = decoded.email;
-  if (!email || now - authMs > TICKET_TTL_MS) return false;
-  const ticketRef = db.collection(TICKETS).doc(ticketId(email));
   const trustRef = db.collection(TRUSTED).doc(trustId(decoded));
+  // Já confiável (outra aba, navegador sem a marca): vale mesmo depois do prazo do ticket.
+  if (!email || now - authMs > TICKET_TTL_MS) return (await trustRef.get()).exists;
+  const ticketRef = db.collection(TICKETS).doc(ticketId(email));
   return db.runTransaction(async tx => {
     const [ticket, trust] = await Promise.all([tx.get(ticketRef), tx.get(trustRef)]);
     if (trust.exists) return true;

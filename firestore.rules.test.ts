@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { setDoc, getDoc, getDocs, updateDoc, deleteDoc, deleteField, doc, collection, Timestamp } from 'firebase/firestore';
+import { setDoc, getDoc, getDocs, updateDoc, deleteDoc, deleteField, doc, collection, query, where, Timestamp } from 'firebase/firestore';
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 
 // Equipe entra com verificação em duas etapas (as regras exigem, ver
@@ -639,6 +639,62 @@ describe('ticket e login confiável (login com senha)', () => {
       await assertFails(setDoc(doc(db, 'trusted_logins/buyer1_2'), { uid: 'buyer1', authTime: 2, at: 'x' }));
       await assertFails(setDoc(doc(db, 'login_tickets/h2'), { issued: [Date.now()] }));
     }
+  });
+});
+
+describe('login com senha sem passar pela checagem do site', () => {
+  // Depois da trava (2026-11-22T03:00Z); antes dela o login continua valendo.
+  const DEPOIS = 1795316400 + 3600;
+  const ANTES = 1795316400 - 3600;
+  const senha = (authTime = DEPOIS) => testEnv.authenticatedContext('buyer1', {
+    role: 'buyer', auth_time: authTime, firebase: { sign_in_provider: 'password' },
+  }).firestore();
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'users/buyer1'), { name: 'Maria', address: { cep: '89010000' } });
+      await setDoc(doc(db, 'orders/o1'), { userId: 'buyer1', status: 'paid' });
+      await setDoc(doc(db, 'returns/r1'), { userId: 'buyer1', status: 'requested' });
+    });
+  });
+
+  it('sem o login confiável não lê endereço, pedidos nem trocas, nem muda o endereço', async () => {
+    const db = senha();
+    await assertFails(getDoc(doc(db, 'users/buyer1')));
+    await assertFails(updateDoc(doc(db, 'users/buyer1'), { address: { cep: '01310100' } }));
+    await assertFails(getDoc(doc(db, 'orders/o1')));
+    await assertFails(getDocs(query(collection(db, 'orders'), where('userId', '==', 'buyer1'))));
+    await assertFails(getDoc(doc(db, 'returns/r1')));
+  });
+
+  it('com o login confiável (gravado pelo servidor), lê e muda o endereço', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `trusted_logins/buyer1_${DEPOIS}`), { uid: 'buyer1', authTime: DEPOIS, at: 'x' });
+    });
+    const db = senha();
+    await assertSucceeds(getDoc(doc(db, 'users/buyer1')));
+    await assertSucceeds(updateDoc(doc(db, 'users/buyer1'), { address: { cep: '01310100' } }));
+    await assertSucceeds(getDoc(doc(db, 'orders/o1')));
+    await assertSucceeds(getDocs(query(collection(db, 'orders'), where('userId', '==', 'buyer1'))));
+    await assertSucceeds(getDoc(doc(db, 'returns/r1')));
+  });
+
+  it('o login confiável de outra sessão não vale', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `trusted_logins/buyer1_${DEPOIS - 60}`), { uid: 'buyer1', authTime: DEPOIS - 60, at: 'x' });
+    });
+    await assertFails(getDoc(doc(senha(), 'users/buyer1')));
+  });
+
+  it('login de antes da trava, Google, convidado e equipe com segunda etapa seguem iguais', async () => {
+    await assertSucceeds(getDoc(doc(senha(ANTES), 'users/buyer1')));
+    const google = testEnv.authenticatedContext('buyer1', { role: 'buyer', auth_time: DEPOIS, firebase: { sign_in_provider: 'google.com' } }).firestore();
+    await assertSucceeds(getDoc(doc(google, 'orders/o1')));
+    const convidado = testEnv.authenticatedContext('buyer1', { auth_time: DEPOIS, firebase: { sign_in_provider: 'anonymous' } }).firestore();
+    await assertSucceeds(getDoc(doc(convidado, 'returns/r1')));
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', auth_time: DEPOIS, ...MFA }).firestore();
+    await assertSucceeds(getDoc(doc(admin, 'users/buyer1')));
   });
 });
 
