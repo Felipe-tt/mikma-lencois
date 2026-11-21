@@ -10,6 +10,14 @@ name: Saúde do site · rollback automático
 on:
   schedule:
     - cron: '*/10 * * * *'
+  # Também logo depois de cada deploy na main. Em repositório público o
+  # GitHub atrasa o agendamento em horas, e o rollback só vale até 3 h depois
+  # do deploy (scripts/lib/rollback-decision.mjs): um deploy quebrado ficava
+  # no ar sem volta automática.
+  workflow_run:
+    workflows: ["Deploy · Mikma Lençóis"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -29,8 +37,13 @@ concurrency:
 jobs:
   saude:
     name: Saúde do site
+    # Depois de deploy: só o da main deste repositório (nunca o teste de um PR).
+    if: >-
+      github.event_name != 'workflow_run'
+      || (github.event.workflow_run.event != 'pull_request'
+          && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
     steps:
       - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
@@ -54,6 +67,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
+
+      # O App Hosting publica a main sozinho, em paralelo com os testes do
+      # GitHub, e leva alguns minutos para pôr a versão nova no ar.
+      - name: Esperar a versão nova entrar no ar
+        if: github.event_name == 'workflow_run'
+        run: sleep 720
 
       - name: Testar o site
         id: health
