@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { login, prepare, staffLogin } from './helpers';
+import { forgetPasskeys } from './db';
 
 /**
  * Abre as telas da conta do cliente e todas as do painel (seguindo os links
@@ -46,6 +47,9 @@ test('conta do cliente sem erro', async ({ page, baseURL }) => {
 
 test('todas as telas do painel sem erro', async ({ page, baseURL }) => {
   test.setTimeout(300_000);
+  // As contas da equipe são revezadas pelos outros testes: a passkey que um
+  // deles criou não está neste navegador (o login cria outra).
+  await forgetPasskeys('equipe6@e2e.mikma');
   await staffLogin(page, 'equipe6@e2e.mikma', 'senha-e2e-123');
   const start = ['/painel', '/painel/pedidos', '/painel/produtos', '/painel/estoque', '/painel/cupons', '/painel/mensagens', '/painel/relatorios', '/painel/trocas', '/painel/avaliacoes', '/painel/configuracoes', '/painel/manutencao', '/painel/seguranca'];
   const { seen, problems } = await visit(page, baseURL!, start, p => p.startsWith('/painel'), 40);
