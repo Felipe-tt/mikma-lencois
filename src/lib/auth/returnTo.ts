@@ -30,9 +30,22 @@ export function consumeReturnTo(): string | null {
   } catch { /* sessionStorage indisponível */ }
   const local = readLocal();
   try { localStorage.removeItem(LOCAL_KEY); } catch { /* idem */ }
-  // Só caminhos internos (nunca "//outro-site").
-  const path = v ?? local;
-  return path && path.startsWith('/') && !path.startsWith('//') ? path : null;
+  return typeof window === 'undefined' ? null : internalPath(v ?? local, window.location.origin);
+}
+
+/**
+ * Só caminho deste site. "//outro.com", "/\outro.com" e "/<tab>/outro.com" o
+ * navegador lê como outro domínio: a origem é conferida depois de montar a
+ * URL, do jeito que o navegador monta.
+ */
+export function internalPath(path: string | null | undefined, origin: string): string | null {
+  if (!path || !path.startsWith('/') || path.startsWith('//') || path.includes('\\')) return null;
+  try {
+    const url = new URL(path, origin);
+    return url.origin === origin ? url.pathname + url.search + url.hash : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Lê sem apagar (pra mostrar no login por que a pessoa foi mandada pra lá). */
