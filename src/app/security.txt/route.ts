@@ -1,5 +1,6 @@
 import { connection } from 'next/server';
 import { getStoreSettings } from '@/lib/settings';
+import { storeWhatsapp } from '@/lib/whatsapp';
 import { SITE_URL } from '@/lib/agentCatalog';
 
 /**
@@ -13,7 +14,7 @@ export async function GET() {
   const expires = new Date(Date.now() + 180 * 86_400_000).toISOString();
   const contacts = [
     s.storeEmail ? `Contact: mailto:${s.storeEmail}` : null,
-    s.storePhone ? `Contact: https://wa.me/${s.storePhone.replace(/\D/g, '')}` : null,
+    storeWhatsapp({ storePhone: s.storePhone }) ? `Contact: ${storeWhatsapp({ storePhone: s.storePhone })}` : null,
     `Contact: ${SITE_URL}/sobre`,
   ].filter(Boolean);
   const body = [

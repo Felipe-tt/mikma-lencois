@@ -18,6 +18,7 @@ import { ReturnPhotos } from '@/components/order/ReturnPhotos';
 import { BusinessHoursCard } from '@/components/storefront/BusinessHoursCard';
 import type { ColetaUber, DevolverPor } from '@/lib/returns/returnSteps';
 import type { Order, ReturnRequest } from '@/types';
+import { storeWhatsapp } from '@/lib/whatsapp';
 
 type Troca = ReturnRequest & {
   defeito?: boolean;
@@ -70,7 +71,7 @@ export default function TrocaPage() {
 
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
-      const url = d.whatsappUrl || (d.storePhone ? `https://wa.me/55${String(d.storePhone).replace(/\D/g, '').replace(/^55/, '')}` : null);
+      const url = storeWhatsapp(d);
       const rua = [`${d.storeAddress ?? ''}${d.storeNumber ? `, ${d.storeNumber}` : ''}`, d.storeNeighborhood, d.storeCity].filter(Boolean).join(', ');
       if (d.storeAddress) setLoja({ endereco: rua, mapa: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${rua} ${d.storeState ?? ''}`)}`, horario: d.businessHours, fuso: d.businessHoursTimezone });
       if (url) setWhats(`${url}${url.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Tenho uma dúvida sobre a troca do pedido #${orderId.slice(-8).toUpperCase()}.`)}`);

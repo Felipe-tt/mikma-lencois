@@ -1,4 +1,5 @@
 import { getStoreSettings } from '@/lib/settings';
+import { storeWhatsapp } from '@/lib/whatsapp';
 import { BrandLogo } from '@/components/BrandLogo';
 import { BusinessHoursCard } from '@/components/storefront/BusinessHoursCard';
 import Image from 'next/image';
@@ -41,7 +42,7 @@ export default async function SobrePage() {
   timeline = timeline.filter(t => t.year && t.desc);
 
   const whatsappLabel = s.aboutWhatsappLabel || 'Falar no WhatsApp';
-  const whatsappHref = s.whatsappUrl || `https://wa.me/${(s.storePhone ?? '').replace(/\D/g,'')}`;
+  const whatsappHref = storeWhatsapp(s);
 
   // LocalBusiness com horário de funcionamento — Google pode mostrar
   // isso direto no resultado de busca (e no Google Maps, se o negócio
@@ -160,13 +161,13 @@ export default async function SobrePage() {
               </div>
             )}
 
-            <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
+            {whatsappHref && <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-between rounded-2xl px-6 py-4 bg-ink text-paper hover:bg-clay transition-colors duration-200 group">
               <span className="text-[14px] font-semibold">{whatsappLabel}</span>
               <svg aria-hidden="true" className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-            </a>
+            </a>}
 
           </div>
         </div>

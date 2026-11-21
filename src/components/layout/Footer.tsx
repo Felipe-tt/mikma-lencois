@@ -4,6 +4,7 @@ import { WithPathname } from '@/components/ui/Pathname';
 import Image from 'next/image';
 import { parseBusinessHours, getOpenStatus } from '@/lib/business-hours';
 import { CookiePreferencesButton } from '@/components/layout/CookiePreferencesButton';
+import { storeWhatsapp } from '@/lib/whatsapp';
 import { useEffect, useState } from 'react';
 
 const BUILD_YEAR = Number(process.env.NEXT_PUBLIC_BUILD_YEAR) || 2026;
@@ -64,7 +65,8 @@ function FooterView({
   const storeName = storeNameRaw?.trim() || 'Mikma Lençóis';
   // Nome empresarial e CNPJ juntos, como pede o Decreto 7.962/2013.
   const legal = `${legalName ? ` · ${legalName}` : ''}${cnpj ? ` · CNPJ ${cnpj}` : ''}`;
-  const wa = whatsappUrl || (storePhone ? `https://wa.me/${storePhone.replace(/\D/g, '')}` : null);
+  // Número sem o 55 virava outro país no WhatsApp (47... é a Noruega).
+  const wa = storeWhatsapp({ whatsappUrl, storePhone });
   const status = businessHours && now !== null ? getOpenStatus(parseBusinessHours(businessHours), businessHoursTimezone) : null;
 
   // No checkout, só uma linha discreta: o rodapé completo (categorias,

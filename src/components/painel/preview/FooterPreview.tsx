@@ -2,12 +2,13 @@
 
 import type { StoreSettings } from '@/lib/store-settings';
 import { parseBusinessHours, getOpenStatus } from '@/lib/business-hours';
+import { storeWhatsapp } from '@/lib/whatsapp';
 
 /** Espelha src/components/layout/Footer.tsx */
 export function FooterPreview({ s }: { s: StoreSettings }) {
   const year = new Date().getFullYear();
   const storeName = s.storeName || 'Mikma Lençóis';
-  const wa = s.whatsappUrl || (s.storePhone ? `https://wa.me/${s.storePhone.replace(/\D/g, '')}` : null);
+  const wa = storeWhatsapp(s);
   const socialLabels = [s.instagramUrl && 'Instagram', wa && 'WhatsApp'].filter(Boolean) as string[];
   const status = s.businessHours ? getOpenStatus(parseBusinessHours(s.businessHours), s.businessHoursTimezone) : null;
 
