@@ -1,0 +1,76 @@
+name: Segurança · correção automática de vulnerabilidades
+
+# Todo dia confere as dependências (npm audit). Se alguma vulnerabilidade tem
+# correção compatível (npm audit fix, sem --force), abre ou atualiza o PR da
+# branch deps/auditoria e dispara os testes nele. Passando tudo, ele entra
+# sozinho (atualizacoes-merge.yml). Complementa o Dependabot: aqui entram as
+# dependências das dependências, que nem sempre têm PR dele.
+#
+# Mexe só no package-lock.json (--package-lock-only): nenhum pacote é
+# instalado nem executado neste job, que tem permissão de escrita.
+
+on:
+  schedule:
+    - cron: '37 9 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: seguranca-auditoria
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write       # branch deps/auditoria
+      pull-requests: write  # abre o PR
+      actions: write        # dispara os testes no PR
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: deps/auditoria
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+            *.githubusercontent.com:443
+            nodejs.org:443
+            registry.npmjs.org:443
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+
+      - name: Corrigir e abrir o PR
+        run: |
+          set -euo pipefail
+          npm audit fix --package-lock-only --ignore-scripts --no-fund || true
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "Nenhuma vulnerabilidade com correção compatível."
+            exit 0
+          fi
+          # A mesma correção já está no PR aberto: não testa de novo à toa.
+          if git fetch -q origin "$BRANCH" 2>/dev/null && git diff --quiet FETCH_HEAD -- package.json package-lock.json; then
+            echo "O PR já tem esta correção."
+            exit 0
+          fi
+          resumo="$(npm audit --package-lock-only --json 2>/dev/null | jq -r '.metadata.vulnerabilities | "restam \(.total) (críticas \(.critical), altas \(.high))"' || echo "")"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B "$BRANCH"
+          git commit -q -am "build(deps): corrige vulnerabilidades (npm audit fix)"
+          git push -q --force origin "$BRANCH"
+          if [ "$(gh pr list --state open --head "$BRANCH" --json number --jq length)" = "0" ]; then
+            gh pr create --head "$BRANCH" --base main \
+              --title "build(deps): corrige vulnerabilidades (npm audit fix)" \
+              --body "Correção automática do \`npm audit fix\` (só versões compatíveis, sem --force). Depois da correção, $resumo. Entra sozinho quando todos os testes passam."
+          fi
+          # PR aberto pelo GITHUB_TOKEN não dispara os testes sozinho: dispara aqui.
+          gh workflow run deploy.yml --ref "$BRANCH"
+          echo "PR atualizado e testes disparados. $resumo"

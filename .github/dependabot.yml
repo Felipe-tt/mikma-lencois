@@ -1,12 +1,21 @@
 version: 2
 updates:
   # Dependências npm (package.json), inclui patches de segurança de libs
-  # como firebase-admin, next, etc.
+  # como firebase-admin, next, etc. As PRs entram sozinhas na main quando
+  # todos os checks passam (testes, build, e2e, CodeQL e revisão de
+  # dependências): ver .github/workflows/atualizacoes-merge.yml.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # Versão nova só depois de alguns dias publicada: pacote comprometido
+    # costuma ser descoberto e retirado nesse tempo, e aqui o merge é
+    # automático. Correção de segurança não espera (o cooldown não vale
+    # para ela).
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
     groups:
       # Agrupa updates menores num PR só, pra não inundar de PR toda semana.
       # Majors continuam vindo separados (podem quebrar API).
@@ -24,3 +33,5 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 3

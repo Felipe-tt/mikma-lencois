@@ -232,6 +232,12 @@ As rotinas sensíveis ao horário são disparadas por um **Worker da Cloudflare*
 | Backup do Firestore | diário | Cópia do banco comprimida e criptografada, conferida antes de ser guardada por 14 dias |
 | OWASP ZAP | semanal | Varredura dinâmica de segurança |
 | OpenSSF Scorecard | semanal e a cada merge | Nota de segurança do projeto, com os achados no resumo do run |
+| Atualizações (Dependabot) | semanal | PRs de npm e de Actions, com 3 dias de espera depois do lançamento (7 para major). Entram sozinhas na `main` quando todos os checks passam |
+| Vulnerabilidades | diária | `npm audit fix` (só versões compatíveis) no PR `deps/auditoria`, testado e com merge automático |
+
+### Atualizações sem intervenção
+
+O `atualizacoes-merge.yml` faz o merge das PRs do Dependabot e da auditoria de vulnerabilidades quando **todos** os checks do commit passam: testes, regras do Firestore, build, E2E, CodeQL e revisão de dependências. Uma falha passageira roda de novo uma vez. PR de pessoa nunca entra por ali. Depois do merge, o App Hosting publica a `main` e a Saúde do site volta a versão anterior se o site cair. Atualização que quebra os testes fica aberta, sem afetar a loja, até o Dependabot trazer a próxima versão.
 
 Workflows manuais: pentest em produção, infraestrutura do Google Cloud e da Cloudflare, domínio (DNSSEC, CAA, e-mail e HSTS), Turnstile, limpeza de fotos sem uso e definição do primeiro admin.
 
