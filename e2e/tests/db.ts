@@ -39,6 +39,7 @@ export interface StoredOrder {
   payment?: { refundStatus?: string };
   items?: Array<{ sku: string; quantity: number }>;
   restockPending?: boolean;
+  replacedBy?: string;
 }
 
 /** Quantidade em estoque (sem reservas) de um SKU. */

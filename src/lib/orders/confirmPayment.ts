@@ -11,6 +11,7 @@ import { buildConfirmed } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
 import { autoIssueNfe } from '@/lib/nfe/service';
 import { storeOrderRisk } from '@/lib/orders/risk';
+import { cancelOrdersReplacedBy } from '@/lib/orders/replacedOrder';
 
 /**
  * Confirmação manual de um PIX expirado sem estoque livre pra cobrir: a
@@ -320,6 +321,10 @@ export async function confirmOrderPaid(
     console.warn('[confirm-order-paid] falha ao limpar carrinho/notificar (best-effort), pedido %s já confirmado:', orderId, err);
   }
   console.log(`Order ${orderId} confirmed, ${note}`);
+
+  // Pedido velho com o PIX vencido que este substitui (o cliente refez a
+  // compra): sai agora, sem e-mail (lib/orders/replacedOrder.ts).
+  await cancelOrdersReplacedBy(orderId, order).catch(err => console.warn('[confirm-order-paid] pedido refeito %s:', orderId, err));
 
   // Push pro vendedor (best-effort, nunca deve afetar a confirmação do pedido)
   const payMethodLabel = (order.payment as { method: string }).method === 'pix' ? 'PIX' : 'Cartão';

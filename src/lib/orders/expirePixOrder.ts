@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/email';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { buildPixExpired } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
+import { cancelReplaced, paidReplacement } from '@/lib/orders/replacedOrder';
 
 /**
  * PIX venceu sem pagamento: pedido vai para payment_expired e a reserva de
@@ -42,6 +43,14 @@ export async function expirePixOrder(orderId: string, txId: string | undefined, 
     return data;
   });
   if (!order) return false;
+
+  // O cliente já refez a compra e pagou o pedido novo: este sai sem o
+  // "PIX expirou" (lib/orders/replacedOrder.ts).
+  const replacedBy = await paidReplacement(order).catch(() => null);
+  if (replacedBy) {
+    await cancelReplaced(orderId, replacedBy).catch(err => console.warn('[expirePixOrder] pedido refeito %s:', orderId, err));
+    return true;
+  }
 
   try {
     const userSnap = await adminDb.collection('users').doc(order.userId as string).get();
