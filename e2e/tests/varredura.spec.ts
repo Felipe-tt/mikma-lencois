@@ -7,13 +7,20 @@ import { forgetPasskeys } from './db';
  * do próprio painel) atrás de erro de JavaScript, de CSP, resposta 4xx/5xx
  * do site, tela de erro e link de contato sem o 55.
  */
+/** 404 que é resposta de verdade: rastreio sem eventos ainda ("pode levar até 24 h") ou envio sem código. */
+const expected404 = (url: string) => url.includes('/api/tracking/');
+
 async function visit(page: Page, baseURL: string, start: string[], follow: (path: string) => boolean, max: number) {
   const problems: string[] = [];
   let current = '';
-  page.on('console', m => { if (m.type() === 'error') problems.push(`${current} [console] ${m.text().slice(0, 200)}`); });
+  page.on('console', m => {
+    if (m.type() === 'error' && !(m.text().includes('404') && expected404(m.location().url ?? ''))) problems.push(`${current} [console] ${m.text().slice(0, 200)}`);
+  });
   page.on('pageerror', e => problems.push(`${current} [js] ${String(e).slice(0, 200)}`));
   page.on('response', r => {
-    if (r.status() >= 400 && r.url().startsWith(baseURL) && !r.url().includes('/api/app-check')) problems.push(`${current} [http ${r.status()}] ${r.url().replace(baseURL, '')}`);
+    if (r.status() >= 400 && r.url().startsWith(baseURL) && !r.url().includes('/api/app-check') && !(r.status() === 404 && expected404(r.url()))) {
+      problems.push(`${current} [http ${r.status()}] ${r.url().replace(baseURL, '')}`);
+    }
   });
   const seen = new Set<string>();
   const queue = [...start];
