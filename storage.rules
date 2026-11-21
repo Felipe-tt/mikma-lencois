@@ -36,6 +36,13 @@ service firebase.storage {
       allow delete: if isStaff();
     }
 
+    // Anexos dos e-mails que chegam no contato (comprovante, documento, foto
+    // de defeito). Só o servidor grava; a equipe lê pelo painel. Antes cada
+    // anexo ficava público no bucket.
+    match /email-attachments/{emailId}/{file} {
+      allow read: if isStaff();
+    }
+
     // Bloquear tudo mais
     match /{allPaths=**} {
       allow read, write: if false;

@@ -339,7 +339,10 @@ export interface DeliveryQuote {
 export interface EmailAttachment {
   filename: string
   contentType: string
-  url: string       // URL permanente no Firebase Storage
+  /** Caminho privado no Storage (o painel pede o endereço na hora). */
+  path?: string
+  /** Anexos antigos: URL pública de antes (a limpeza diária fecha o acesso). */
+  url?: string
   isImage: boolean
 }
 

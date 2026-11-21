@@ -69,10 +69,12 @@ function fakeDb(data: Record<string, Record<string, Doc>>) {
 function fakeFiles() {
   const prefixes: string[] = [];
   const paths: string[] = [];
+  const privatized: string[] = [];
   return {
-    prefixes, paths,
+    prefixes, paths, privatized,
     deletePrefix: async (p: string) => { prefixes.push(p); },
     deletePath: async (p: string) => { paths.push(p); },
+    privatizePrefix: async (p: string) => { privatized.push(p); return 2; },
   };
 }
 
@@ -241,6 +243,9 @@ describe('retenção (LGPD)', () => {
     expect(data['conversations/velha/messages']).toEqual({});
     expect(Object.keys(data['conversations/nova/messages'])).toEqual(['email2']);
     expect(files.prefixes).toEqual(['email-attachments/email1/']);
+    // Os anexos antigos, que eram públicos, são fechados todo dia (os já fechados não mudam).
+    expect(files.privatized).toEqual(['email-attachments/']);
+    expect(r.attachmentsPrivatized).toBe(2);
     expect(Object.keys(data.returns)).toEqual(['nova']);
     expect(files.paths).toEqual(['returns/u1/1_0.jpg', 'returns/u1/1_1.jpg']);
   });
