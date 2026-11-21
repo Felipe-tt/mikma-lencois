@@ -21,6 +21,7 @@ import { MontarJunto } from '@/components/cart/MontarJunto';
 import { LOG_MAX } from '@/lib/sharedCart';
 import { LikeButton } from '@/components/cart/montarUi';
 import { withCurrentPrices, type PriceChange } from '@/lib/cartPrices';
+import { CartShipping } from '@/components/cart/CartShipping';
 
 export default function CartPage() {
   // 0 = loja sem frete grátis. Antes começava em R$ 250 e só trocava se a
@@ -55,6 +56,8 @@ export default function CartPage() {
   const [pixRule, setPixRule] = useState<{ thresholdCents: number; pct: number } | null>(null);
   const [cardFees, setCardFees] = useState<PublicCardFees>(() => publicCardFees(undefined));
   const headingRef = useRef<HTMLHeadingElement>(null);
+  // Frete da entrega mais barata para o CEP (CartShipping); null = sem CEP ainda.
+  const [shipCents, setShipCents] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
@@ -266,6 +269,9 @@ export default function CartPage() {
   const progress = Math.min(100, threshold > 0 ? (total / threshold) * 100 : 0);
   const freeShip = threshold > 0 && total >= threshold;
   const totalItems = items.reduce((a, i) => a + i.quantity, 0);
+  // O que muda o frete: itens, quantidades e cupom (o frete grátis conta o cupom).
+  const shipSignature = `${items.map(i => `${i.sku}:${i.quantity}`).join(',')}|${cart?.couponCode ?? ''}`;
+  const totalWithShipping = total + (shipCents ?? 0);
 
   if (loading || cartLoading || (items.length > 0 && !stockReady)) return <CartSkeleton />;
 
@@ -561,19 +567,14 @@ export default function CartPage() {
                   </div>
                 )}
 
-                <div className="flex justify-between text-sm">
-                  <span className="text-faint">Frete</span>
-                  <span className={freeShip ? 'text-emerald-700 font-semibold text-xs' : 'text-faint text-xs'}>
-                    {freeShip ? 'Grátis' : 'Calculado no checkout'}
-                  </span>
-                </div>
+                {user && <CartShipping uid={user.uid} signature={shipSignature} freeShip={freeShip} onPrice={setShipCents} />}
               </div>
 
               <div className="px-5 pb-4 border-t border-mist pt-4 flex justify-between items-baseline">
                 <span className="text-sm font-semibold text-ink">Total estimado</span>
-                <span className="font-display text-2xl text-ink">{formatCurrency(total)}</span>
+                <span className="font-display text-2xl text-ink">{formatCurrency(totalWithShipping)}</span>
               </div>
-              <PaymentHint total={total} subtotal={subtotal} pixRule={pixRule} cardFees={cardFees} />
+              <PaymentHint total={totalWithShipping} subtotal={subtotal} pixRule={pixRule} cardFees={cardFees} />
 
               <div className="px-5 pb-5">
                 {hasUnavailableItem ? (

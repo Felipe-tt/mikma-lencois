@@ -14,8 +14,11 @@ import { hasSecondFactor } from '@/lib/staffMfa';
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  if (!await rateLimit(`shipping:ip:${ip}`, 30, 60 * 60 * 1000)) {
-    return tooManyRequests(rateLimitRetryAfter(`shipping:ip:${ip}`));
+  // O carrinho mostra o frete antes do checkout (CartShipping) e cota de novo
+  // quando a quantidade muda: limite próprio, para não gastar o do checkout.
+  const bucket = req.nextUrl.searchParams.get('from') === 'carrinho' ? 'shipping-cart' : 'shipping';
+  if (!await rateLimit(`${bucket}:ip:${ip}`, 30, 60 * 60 * 1000)) {
+    return tooManyRequests(rateLimitRetryAfter(`${bucket}:ip:${ip}`));
   }
 
   try {
@@ -26,8 +29,8 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1], true);
     const uid = decoded.uid;
 
-    if (!await rateLimit(`shipping:uid:${uid}`, 20, 60 * 60 * 1000)) {
-      return tooManyRequests(rateLimitRetryAfter(`shipping:uid:${uid}`));
+    if (!await rateLimit(`${bucket}:uid:${uid}`, 20, 60 * 60 * 1000)) {
+      return tooManyRequests(rateLimitRetryAfter(`${bucket}:uid:${uid}`));
     }
 
     const parsedBody = await validateBody(req, quoteSchema);
