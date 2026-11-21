@@ -7,7 +7,7 @@ import { serialize } from '@/lib/utils/serialize';
 import type { Review } from '@/types';
 import { sanitizeDisplayName } from '@/lib/html';
 import { revalidateTag } from 'next/cache';
-import { shortReviewerName, toPublicReview } from '@/lib/reviews';
+import { publicReviewId, shortReviewerName, toPublicReview } from '@/lib/reviews';
 
 const schema = z.object({
   orderId: z.string().min(1).max(128),
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     // nova pra quem acabou de avaliar e recarregou.
     try { revalidateTag(`avaliacoes-${productId}`, { expire: 0 }); } catch { /* best-effort */ }
 
-    return NextResponse.json({ id: ref.id, userName: shortReviewerName(name) }, { status: 201 });
+    return NextResponse.json({ id: publicReviewId(ref.id), userName: shortReviewerName(name) }, { status: 201 });
   } catch (err) {
     console.error('[reviews] falha ao criar avaliação:', err);
     return NextResponse.json({ error: 'Erro ao salvar avaliação' }, { status: 500 });

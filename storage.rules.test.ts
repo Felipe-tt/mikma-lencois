@@ -26,6 +26,7 @@ beforeAll(async () => {
   // Foto já existente para os testes de leitura e exclusão.
   await testEnv.withSecurityRulesDisabled(async ctx => {
     await uploadBytes(ref(ctx.storage(), 'products/p1/foto.webp'), new Uint8Array([1, 2, 3]), { contentType: 'image/webp' });
+    await uploadBytes(ref(ctx.storage(), 'email-attachments/e1/1_comprovante.pdf'), new Uint8Array([1, 2, 3]), { contentType: 'application/pdf' });
   });
 });
 
@@ -102,5 +103,18 @@ describe('returns/ (fotos da troca)', () => {
   it('só JPEG, sem sobrescrever', async () => {
     await assertFails(uploadBytes(ref(customer(), 'returns/cliente/2.png'), png, { contentType: 'image/png' }));
     await assertFails(uploadBytes(ref(customer(), 'returns/cliente/1.jpg'), png, jpg));
+  });
+});
+
+describe('email-attachments/ (anexos que chegam no contato)', () => {
+  it('a equipe lê; cliente e visitante não', async () => {
+    await assertSucceeds(getBytes(ref(seller(), 'email-attachments/e1/1_comprovante.pdf')));
+    await assertSucceeds(getBytes(ref(admin(), 'email-attachments/e1/1_comprovante.pdf')));
+    await assertFails(getBytes(ref(customer(), 'email-attachments/e1/1_comprovante.pdf')));
+    await assertFails(getBytes(ref(anon(), 'email-attachments/e1/1_comprovante.pdf')));
+  });
+  it('ninguém grava nem apaga pelo navegador, nem a equipe', async () => {
+    await assertFails(uploadBytes(ref(admin(), 'email-attachments/e1/2.pdf'), png, { contentType: 'application/pdf' }));
+    await assertFails(deleteObject(ref(admin(), 'email-attachments/e1/1_comprovante.pdf')));
   });
 });

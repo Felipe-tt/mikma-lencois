@@ -1,4 +1,14 @@
+import { createHash } from 'node:crypto';
 import type { Review } from '@/types';
+
+/**
+ * Id que sai na página: o do documento é `${pedido}_${produto}`, e o id do
+ * pedido de quem avaliou não é público. Mesmo id do documento, mesmo
+ * resultado (serve de chave na lista).
+ */
+export function publicReviewId(docId: string): string {
+  return createHash('sha256').update(`avaliacao:${docId}`).digest('base64url').slice(0, 16);
+}
 
 /** "Maria Silva Souza" -> "Maria S." (sobrenome só a inicial). */
 export function shortReviewerName(name: string | undefined | null): string {
@@ -17,7 +27,7 @@ export type PublicReview = Pick<Review, 'id' | 'productId' | 'userName' | 'ratin
  */
 export function toPublicReview(r: Review): PublicReview {
   return {
-    id: r.id,
+    id: publicReviewId(r.id),
     productId: r.productId,
     userName: shortReviewerName(r.userName),
     rating: r.rating,

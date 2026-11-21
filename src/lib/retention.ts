@@ -56,7 +56,7 @@ export function nfeCutoffIso(now: Date): string {
 }
 
 /** Sem Storage (testes que não mexem em arquivo). */
-const noFiles: StoredFiles = { deletePrefix: async () => {}, deletePath: async () => {} };
+const noFiles: StoredFiles = { deletePrefix: async () => {}, deletePath: async () => {}, privatizePrefix: async () => 0 };
 
 /** Campos que um pedido antigo perde. A cidade e o estado ficam para relatórios. */
 export function anonymizedOrderPatch(address: { city?: string; state?: string } | undefined, nowIso: string) {
@@ -81,6 +81,8 @@ export interface RetentionResult {
   queueDeleted: number;
   nfeDeleted: number;
   conversationsDeleted: number;
+  /** Anexos antigos de e-mail que deixaram de ser públicos. */
+  attachmentsPrivatized: number;
   returnsDeleted: number;
 }
 
@@ -92,7 +94,7 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   const nowIso = now.toISOString();
   const r: RetentionResult = {
     piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0, riskMoved: 0,
-    nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0,
+    nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0, attachmentsPrivatized: 0,
   };
 
   // Perfis antigos com CPF/telefone em claro: criptografa (ver lib/piiCrypto.ts).
@@ -202,6 +204,12 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   for (const c of convs.docs) {
     await deleteConversation(db, files, c.ref);
     r.conversationsDeleted++;
+  }
+  // Anexos de e-mail de antes de ficarem privados: fecha o acesso público.
+  try {
+    r.attachmentsPrivatized = await files.privatizePrefix('email-attachments/');
+  } catch (err) {
+    console.error('[retention] anexos de e-mail', err);
   }
   const trocas = await db.collection('returns').where('createdAt', '<', supportCut).limit(BATCH).get();
   for (const t of trocas.docs) {

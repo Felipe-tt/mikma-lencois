@@ -5,6 +5,8 @@ import { stripQuotedHtml } from '@/lib/email/stripQuoted';
 import { Webhook } from 'svix';
 import { Resend } from 'resend';
 import { adminDb, adminStorage } from '@/lib/firebase/admin';
+import { privateFileMetadata } from '@/lib/storageFiles';
+import { isInlineImage } from '@/lib/email/attachments';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests } from '@/lib/security';
@@ -89,25 +91,38 @@ function sanitizeHtml(html: string): string {
   });
 }
 
+/** Anexo maior que isso não é guardado (e-mail de atendimento não precisa). */
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
 /**
  * Baixa um attachment via download_url do Resend e salva no Firebase Storage.
  * Necessário porque as URLs do Resend expiram; o Storage é permanente.
+ * Privado: só a equipe abre, pelo painel (storage.rules). Antes cada anexo
+ * ficava público no bucket. Fora imagem comum, o navegador baixa em vez de
+ * abrir (um HTML anexado não roda como página). Devolve o caminho no Storage.
  */
 async function uploadToStorage(
   downloadUrl: string,
   filename: string,
   contentType: string,
   emailId: string,
-): Promise<string> {
+): Promise<{ path: string; inline: boolean }> {
   const res = await fetch(downloadUrl, { signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error(`Falha ao baixar anexo ${filename}: ${res.status}`);
+  if (Number(res.headers.get('content-length') ?? 0) > MAX_ATTACHMENT_BYTES) throw new Error(`Anexo grande demais: ${filename}`);
   const buffer = Buffer.from(await res.arrayBuffer());
-  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const path = `email-attachments/${emailId}/${Date.now()}_${safeName}`;
-  const file = adminStorage.bucket().file(path);
-  await file.save(buffer, { metadata: { contentType } });
-  await file.makePublic();
-  return `https://storage.googleapis.com/${adminStorage.bucket().name}/${path}`;
+  if (buffer.length > MAX_ATTACHMENT_BYTES) throw new Error(`Anexo grande demais: ${filename}`);
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+  const path = `email-attachments/${emailId.replace(/[^\w-]/g, '_')}/${Date.now()}_${safeName}`;
+  const inline = isInlineImage(contentType);
+  await adminStorage.bucket().file(path).save(buffer, {
+    metadata: {
+      contentType,
+      ...(inline ? {} : { contentDisposition: `attachment; filename="${safeName}"` }),
+      metadata: privateFileMetadata(),
+    },
+  });
+  return { path, inline };
 }
 
 export async function POST(req: NextRequest) {
@@ -227,7 +242,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 3. Upload de anexos para Firebase Storage (URLs permanentes) ───────────
-  const savedAttachments: { filename: string; contentType: string; url: string; isImage: boolean }[] = [];
+  const savedAttachments: { filename: string; contentType: string; path: string; isImage: boolean }[] = [];
 
   // Filtra imagens inline, já estão embutidas no HTML como data URIs, não precisa salvar separado
   const nonInlineAttachments = attachmentsMeta.filter(
@@ -238,12 +253,12 @@ export async function POST(req: NextRequest) {
     nonInlineAttachments.map(async att => {
       if (!att.download_url) return;
       try {
-        const storageUrl = await uploadToStorage(att.download_url, att.filename, att.content_type, email_id);
+        const saved = await uploadToStorage(att.download_url, att.filename, att.content_type, email_id);
         savedAttachments.push({
           filename: att.filename,
           contentType: att.content_type,
-          url: storageUrl,
-          isImage: att.content_type.startsWith('image/'),
+          path: saved.path,
+          isImage: saved.inline,
         });
       } catch (err) {
         console.warn('Falha ao salvar anexo:', att.filename, err);

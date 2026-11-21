@@ -10,6 +10,7 @@ import { formatTsDateTime } from '@/lib/utils/format';
 import type { EmailMessage, EmailAttachment, Conversation } from '@/types';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { escapeHtml, htmlToText } from '@/lib/html';
+import { attachmentPath } from '@/lib/email/attachments';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 
 const PAGE = 30;
@@ -521,11 +522,38 @@ function ConversationThread({
 
 /* ─── Bubble ──────────────────────────────────────────────────────────────── */
 
+/**
+ * Endereço de cada anexo. Os anexos ficam privados no Storage: só a equipe
+ * logada consegue o endereço (storage.rules). Anexo antigo, ainda sem o
+ * endereço privado, usa a URL pública de antes até a limpeza diária fechar.
+ */
+function useAttachmentUrls(attachments: EmailAttachment[]): (string | null)[] {
+  const [urls, setUrls] = useState<(string | null)[]>([]);
+  const key = attachments.map(a => a.path ?? a.url ?? '').join('|');
+  useEffect(() => {
+    if (!key) return;
+    let alive = true;
+    (async () => {
+      const [{ storage }, { ref, getDownloadURL }] = await Promise.all([import('@/lib/firebase/storage'), import('firebase/storage')]);
+      const out = await Promise.all(attachments.map(async a => {
+        const path = attachmentPath(a);
+        const url = path ? await getDownloadURL(ref(storage, path)).catch(() => null) : null;
+        return url ?? a.url ?? null;
+      }));
+      if (alive) setUrls(out);
+    })().catch(() => {});
+    return () => { alive = false; };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return urls;
+}
+
 function MessageBubble({ msg }: { msg: EmailMessage }) {
   const isOut = msg.direction === 'outbound';
   const attachments: EmailAttachment[] = (msg.attachments as EmailAttachment[] | undefined) ?? [];
-  const images = attachments.filter(a => a.isImage);
-  const files = attachments.filter(a => !a.isImage);
+  const urls = useAttachmentUrls(attachments);
+  const withUrl = attachments.map((att, i) => ({ att, url: urls[i] ?? null }));
+  const images = withUrl.filter(a => a.att.isImage);
+  const files = withUrl.filter(a => !a.att.isImage);
 
   const htmlContent = (msg as { html?: string }).html;
   const textContent = msg.text;
@@ -563,14 +591,16 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
       {/* Imagens */}
       {images.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {images.map((att, i) => (
-            <a key={i} href={att.url} target="_blank" rel="noopener noreferrer">
+          {images.map(({ att, url }, i) => url ? (
+            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
               <img
-                src={att.url}
+                src={url}
                 alt={att.filename}
                 className="max-w-[200px] max-h-[160px] object-cover border border-mist hover:opacity-90 transition-opacity rounded-xl"
               />
             </a>
+          ) : (
+            <span key={i} aria-label={`Carregando ${att.filename}`} className="block w-[120px] h-[90px] rounded-xl border border-mist bg-warm" />
           ))}
         </div>
       )}
@@ -578,10 +608,11 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
       {/* Outros arquivos */}
       {files.length > 0 && (
         <div className="flex flex-col gap-1 w-full">
-          {files.map((att, i) => (
+          {files.map(({ att, url }, i) => (
             <a
               key={i}
-              href={att.url}
+              href={url ?? undefined}
+              aria-disabled={!url}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2 border border-mist bg-white dark:bg-warm hover:bg-warm transition-colors text-[12px] text-mid font-medium rounded-xl"
