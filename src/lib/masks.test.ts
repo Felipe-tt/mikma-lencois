@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import {
-  maskCep, maskCpf, maskCnpj, maskPhone, onlyDigits,
-  isValidCpf, isValidCnpj, isValidCep, isValidPhone,
+  maskCep,
+  maskCpf,
+  maskCnpj,
+  maskPhone,
+  onlyDigits,
+  isValidCpf,
+  isValidCnpj,
+  isValidCep,
+  isValidPhone,
+  displayPhone,
 } from './masks';
 
 describe('maskCep', () => {
@@ -88,4 +96,16 @@ describe('isValidPhone', () => {
   it('aceita 10 dígitos (fixo)', () => expect(isValidPhone('4733334444')).toBe(true));
   it('aceita 11 dígitos (celular)', () => expect(isValidPhone('47999998888')).toBe(true));
   it('rejeita 9 dígitos', () => expect(isValidPhone('473333444')).toBe(false));
+});
+
+describe('displayPhone', () => {
+  it('mostra com máscara, sem o 55', () => {
+    expect(displayPhone('47999990000')).toBe('(47) 99999-0000');
+    expect(displayPhone('+55 47 99999-0000')).toBe('(47) 99999-0000');
+    expect(displayPhone('4733330000')).toBe('(47) 3333-0000');
+  });
+  it('número estranho fica como veio', () => {
+    expect(displayPhone('0800 123 456')).toBe('0800 123 456');
+    expect(displayPhone(' 1234 ')).toBe('1234');
+  });
 });

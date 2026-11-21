@@ -34,6 +34,13 @@ export function maskPhone(v: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
+/** Telefone para mostrar ao cliente: (47) 99999-0000, sem o 55 do Brasil. */
+export function displayPhone(v: string): string {
+  const d = v.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+  // DDD vai de 11 a 99: 0800 e afins ficam como vieram.
+  return (d.length === 10 || d.length === 11) && d[0] !== '0' ? maskPhone(d) : v.trim();
+}
+
 /** Extrai só dígitos */
 export function onlyDigits(v: string): string {
   return v.replace(/\D/g, '');
