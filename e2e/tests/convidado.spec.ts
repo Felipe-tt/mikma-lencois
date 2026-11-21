@@ -119,7 +119,10 @@ test('convidado avalia o produto do pedido entregue', async ({ page, baseURL }) 
   await expect(page.getByText(/adicionado|no carrinho/i).first()).toBeVisible();
   await page.goto('/checkout');
   await page.fill('#co-name', 'Lia Convidada');
-  await page.fill('#co-email', 'lia.convidada@e2e.mikma');
+  // Erro de digitação no e-mail: o checkout sugere a correção.
+  await page.fill('#co-email', 'lia.convidada@gmial.com');
+  await page.getByRole('button', { name: 'lia.convidada@gmail.com' }).click();
+  await expect(page.locator('#co-email')).toHaveValue('lia.convidada@gmail.com');
   await page.fill('#co-cpf', '52998224725');
   await page.fill('#co-phone', '47999998888');
   await page.check('#co-terms');

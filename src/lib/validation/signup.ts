@@ -6,7 +6,6 @@
  * Checagem de entregabilidade do e-mail fica em ./emailDeliverability (so servidor).
  */
 import isEmail from 'validator/lib/isEmail';
-import emailSpellChecker, { POPULAR_DOMAINS, POPULAR_TLDS } from '@zootools/email-spell-checker';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { isValidCpf as isValidCpfLib, isValidPhone as isValidBrPhone } from '@brazilian-utils/brazilian-utils';
 
@@ -86,23 +85,8 @@ export function validateEmail(raw: string): FieldResult {
   return ok(email);
 }
 
-const BR_DOMAINS = [
-  'uol.com', 'uol.com.br', 'bol.com.br', 'terra.com.br', 'ig.com.br', 'globo.com', 'r7.com',
-  'live.com', 'msn.com', 'proton.me', 'protonmail.com', 'icloud.com', 'me.com',
-];
-const BR_TLDS = ['com.br', 'net.br', 'org.br', 'gov.br', 'edu.br', 'br'];
-
 /** Sugere correcao de erro de digitacao (gmial.com), ou null se estiver ok. */
-export function suggestEmailFix(raw: string): string | null {
-  const email = normalizeEmail(raw);
-  if (!email.includes('@')) return null;
-  const hit = emailSpellChecker.run({
-    email,
-    domains: [...POPULAR_DOMAINS, ...BR_DOMAINS],
-    topLevelDomains: [...POPULAR_TLDS, ...BR_TLDS],
-  });
-  return hit && hit.full !== email ? hit.full : null;
-}
+export { suggestEmailFix } from './emailTypo';
 
 // ── Telefone e CPF (opcionais) ───────────────────────────────────────────────
 
