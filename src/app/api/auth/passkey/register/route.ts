@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/security';
+import { getClientIp, verifyAuth } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { listPasskeys, PasskeyError, registerPasskey, registrationOptions } from '@/lib/passkeys';
-import { hasSecondFactor } from '@/lib/staffMfa';
+import { hasSecondFactor, type MfaClaims } from '@/lib/staffMfa';
+import { notifyPasskeyAdded } from '@/lib/staffDevices';
 
 /**
  * Cadastro de passkey pela conta logada, em dois passos no mesmo endereço:
@@ -36,6 +37,14 @@ export async function POST(req: NextRequest) {
     }
     if (body?.step === 'verify' && body.response && typeof body.response === 'object') {
       const passkey = await registerPasskey(uid, body.challengeId, body.response as Parameters<typeof registerPasskey>[2], req.headers.get('user-agent'));
+      // Aviso por e-mail: o alerta não pode impedir a passkey de ser criada.
+      await notifyPasskeyAdded({
+        uid, email, role, claims: auth.decoded as MfaClaims,
+        ip: getClientIp(req),
+        userAgent: req.headers.get('user-agent'),
+        city: req.headers.get('cf-ipcity'),
+        country: req.headers.get('cf-ipcountry'),
+      }).catch(err => console.error('[passkey/register] alerta falhou:', err));
       return NextResponse.json({ passkey });
     }
     return NextResponse.json({ error: 'Pedido inválido' }, { status: 400 });
