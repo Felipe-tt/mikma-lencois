@@ -23,7 +23,7 @@ import { trackAddToCart } from '@/lib/analytics';
 import { useOverlay } from '@/lib/hooks/useOverlay';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { useCartCount } from '@/lib/hooks/useCartCount';
-import { savePendingPurchase, readPendingPurchase, clearPendingPurchase } from '@/lib/pendingPurchase';
+import { savePendingPurchase, readPendingPurchase, clearPendingPurchase, type PendingPurchase } from '@/lib/pendingPurchase';
 import { SizeMeasures, lineForSize } from '@/components/product/SizeMeasures';
 import type { PackageLine } from '@/lib/packageContents';
 
@@ -57,7 +57,7 @@ const SHIP_TAG: Record<string, string> = { economico: 'Econômico', rapido: 'Mai
 
 export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDiscountPct, cardFees, note, swapSku, swapImage, swapQtyPerUnit, maxQty, packageLines = [], packageNote }: Props) {
   // Carrinho e compra aceitam o convidado ("comprar sem cadastro").
-  const { buyer: user, loading } = useAuth();
+  const { buyer: user, loading, startGuest } = useAuth();
   const router = useRouter();
   // Começa no primeiro tamanho com estoque: se o primeiro estivesse
   // esgotado, a página inteira parecia "Fora de estoque".
@@ -125,9 +125,13 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
   // e é retomada quando a pessoa entra, nesta aba ou na aba aberta pelo
   // link de confirmação do cadastro, que volta para esta página.
   const replayedRef = useRef(false);
+  // A mesma compra em memória, para o convidado criado agora (askLogin): o
+  // produto entra mesmo com o localStorage bloqueado.
+  const guestIntent = useRef<PendingPurchase | null>(null);
   useEffect(() => {
     if (!user || replayedRef.current) return;
-    const pending = readPendingPurchase();
+    const pending = guestIntent.current ?? readPendingPurchase();
+    guestIntent.current = null;
     if (!pending || pending.productId !== product.id) return;
     const variant = product.variants.find(v => v.id === pending.variantId);
     replayedRef.current = true;
@@ -138,15 +142,32 @@ export function BuyBox({ product, inventory, pixDiscountThresholdCents, pixDisco
     if (pending.action === 'cart') addToCart(variant, pending.qty); else buyNow(variant, pending.qty);
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function askLogin(action: 'cart' | 'buy') {
+  // Visitante: vira convidado na hora (login anônimo, sem tela no meio) e a
+  // compra segue sozinha pelo efeito acima. Antes o "Adicionar" abria o
+  // login, e quem achava que precisava de cadastro desistia ali. O modal de
+  // entrar só aparece se a sessão de convidado não abrir.
+  async function askLogin(action: 'cart' | 'buy') {
     if (!selectedVariant) return;
-    savePendingPurchase({
+    const pending = {
       productId: product.id,
       variantId: selectedVariant.id,
       qty,
       action,
       returnTo: window.location.pathname + window.location.search,
-    });
+    };
+    savePendingPurchase(pending);
+    guestIntent.current = { ...pending, at: Date.now() };
+    replayedRef.current = false;
+    const busy = action === 'cart' ? setAdding : setBuyingNow;
+    busy(true);
+    if (await startGuest()) {
+      // A sessão abriu; se a conta não chegar à tela (rede caiu no meio), o
+      // botão não fica girando para sempre.
+      setTimeout(() => { if (!replayedRef.current) busy(false); }, 15_000);
+      return;
+    }
+    busy(false);
+    guestIntent.current = null;
     requireAuth(() => {}, action === 'cart'
       ? 'Entre ou continue sem cadastro. Depois disso o produto já entra sozinho.'
       : 'Entre ou continue sem cadastro para finalizar a compra.', { allowGuest: true });

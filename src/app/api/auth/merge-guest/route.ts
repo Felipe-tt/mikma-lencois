@@ -33,17 +33,11 @@ export async function POST(req: NextRequest) {
   }
   if (guest.uid === account.uid) return NextResponse.json({ ok: true, merged: 0 });
 
-  // Só junta se o convidado deu o mesmo e-mail da conta (e a conta tem o
-  // e-mail confirmado). Num computador compartilhado, quem entra depois
-  // numa conta própria não herda os pedidos e o endereço do convidado.
-  const guestEmail = (await adminDb.collection('users').doc(guest.uid).get()).data()?.email;
-  const accountEmail = account.email?.toLowerCase();
-  if (!account.email_verified || !accountEmail || typeof guestEmail !== 'string' || guestEmail.toLowerCase() !== accountEmail) {
-    return NextResponse.json({ ok: true, merged: 0, skipped: 'email' });
-  }
-
-  // Carrinho: soma os itens do convidado aos da conta (mesmo SKU e mesma
-  // observação viram uma linha só).
+  // Carrinho: passa sempre (o token do convidado prova que é o mesmo
+  // navegador). Quem põe produto no carrinho sem login vira convidado na
+  // hora, ainda sem e-mail, e o carrinho sumia quando a pessoa entrava na
+  // conta. Soma os itens aos da conta (mesmo SKU e mesma observação viram
+  // uma linha só).
   const guestCartRef = adminDb.collection('carts').doc(guest.uid);
   const accountCartRef = adminDb.collection('carts').doc(account.uid);
   await adminDb.runTransaction(async tx => {
@@ -59,6 +53,21 @@ export async function POST(req: NextRequest) {
     tx.set(accountCartRef, { userId: account.uid, items: items.slice(0, 50), updatedAt: new Date().toISOString() }, { merge: true });
     tx.delete(guestCartRef);
   });
+
+  // Pedidos, trocas e avaliações só com o mesmo e-mail da conta (e a conta
+  // com o e-mail confirmado). Num computador compartilhado, quem entra
+  // depois numa conta própria não herda as compras do convidado.
+  const guestEmail = (await adminDb.collection('users').doc(guest.uid).get()).data()?.email;
+  const accountEmail = account.email?.toLowerCase();
+  if (!account.email_verified || !accountEmail || typeof guestEmail !== 'string' || guestEmail.toLowerCase() !== accountEmail) {
+    // Convidado sem pedido: o carrinho já passou, não sobra nada dele.
+    const anyOrder = await adminDb.collection('orders').where('userId', '==', guest.uid).limit(1).get();
+    if (anyOrder.empty) {
+      await adminDb.collection('users').doc(guest.uid).delete();
+      await adminAuth.deleteUser(guest.uid).catch(() => {});
+    }
+    return NextResponse.json({ ok: true, merged: 0, skipped: 'email' });
+  }
 
   // Pedidos feitos como convidado passam a aparecer na conta, com as trocas
   // e avaliações deles (antes ficavam no convidado: o cliente não via o
