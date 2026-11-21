@@ -96,6 +96,13 @@ for (let i = 0; i < rounds; i++) {
 const final = results.every(r => r.verdict === 'fail') && results.length === rounds ? 'fail'
   : results.at(-1).verdict === 'ok' ? 'ok' : results.at(-1).verdict === 'fail' ? 'inconclusive' : results.at(-1).verdict;
 console.log(`resultado: ${final}`);
+// Anotações do run: aparecem na tela do Actions e na API de checks, sem
+// precisar abrir o log (que a ferramenta de proteção do runner enche).
+const esc = s => String(s).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+for (const c of results.at(-1).checks) {
+  if (c.verdict === 'fail') console.log(`::error title=Saúde do site::${esc(`${c.name}: ${c.detail}`)}`);
+  if (c.name === 'login') console.log(`::${c.verdict === 'ok' ? 'notice' : 'warning'} title=Saúde do site::${esc(`login: ${c.detail}`)}`);
+}
 if (process.env.GITHUB_OUTPUT) {
   const { appendFileSync } = await import('node:fs');
   appendFileSync(process.env.GITHUB_OUTPUT, `verdict=${final}\n`);
