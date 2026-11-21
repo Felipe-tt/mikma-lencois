@@ -34,6 +34,7 @@ import {
 } from '@/lib/uber-direct';
 import { effectiveRole } from '@/lib/staffMfa';
 import { staffName } from '@/lib/staffName';
+import { GUEST_EMAIL_LINK_TTL_MS, guestOrderLink } from '@/lib/guestAccess';
 
 /** Motivo legível da recusa da Uber (sem dados do cliente). */
 function uberMotivo(err: unknown): string {
@@ -117,10 +118,10 @@ export async function POST(req: NextRequest) {
       // E-mail de entregue (best-effort, o pedido já foi atualizado).
       try {
         const uSnap = await adminDb.collection('users').doc(order.userId).get();
-        const userData = uSnap.data() as { email?: string; name?: string } | undefined;
+        const userData = uSnap.data() as { email?: string; name?: string; guest?: boolean } | undefined;
         if (userData?.email) {
           const firstName = (userData.name ?? '').split(' ')[0] || 'cliente';
-          const payload = buildDelivered({ ...order, status: 'delivered' }, firstName);
+          const payload = buildDelivered({ ...order, status: 'delivered' }, firstName, guestOrderLink(orderId, order.userId, userData, GUEST_EMAIL_LINK_TTL_MS));
           await sendEmail({
             to: userData.email,
             subject: payload.subject,

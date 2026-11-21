@@ -38,9 +38,9 @@ function orderUrl(order: Pick<Order, 'id'>) {
  * Pedido em separação. Na retirada na loja não há despacho: diz onde e como
  * buscar (antes prometia "outro e-mail quando for despachado").
  */
-export function buildPreparing(order: OrderDoc, name: string, pickup?: { address: string }): EmailPayload {
+export function buildPreparing(order: OrderDoc, name: string, pickup?: { address: string }, link?: string): EmailPayload {
   const id = shortOrderId(order.id);
-  const url = orderUrl(order);
+  const url = link ?? orderUrl(order);
   const proximo = pickup
     ? `Ele fica pronto para retirada na loja${pickup.address ? `, em ${pickup.address}` : ''}, no horário de funcionamento. Leve o número do pedido (#${id}).`
     : 'Você recebe outro e-mail assim que ele for despachado.';
@@ -62,9 +62,9 @@ export function buildPreparing(order: OrderDoc, name: string, pickup?: { address
   };
 }
 
-export function buildShipped(order: OrderDoc, name: string, now = new Date()): EmailPayload {
+export function buildShipped(order: OrderDoc, name: string, now = new Date(), link?: string): EmailPayload {
   const id = shortOrderId(order.id);
-  const url = orderUrl(order);
+  const url = link ?? orderUrl(order);
   const code = order.delivery?.trackingCode;
   const carrier = order.delivery?.carrier ?? null;
   const rastreioUrl = carrier && code ? getTrackingUrl(carrier, code) : null;
@@ -99,9 +99,9 @@ export function buildShipped(order: OrderDoc, name: string, now = new Date()): E
   };
 }
 
-export function buildDelivered(order: OrderDoc, name: string): EmailPayload {
+export function buildDelivered(order: OrderDoc, name: string, link?: string): EmailPayload {
   const id = shortOrderId(order.id);
-  const url = orderUrl(order);
+  const url = link ?? orderUrl(order);
   // Avaliação é feita na página do produto; com mais de um produto, a lista
   // de pedidos tem um "Avaliar" para cada um.
   const productIds = [...new Set(order.items.map(i => (i as { productId?: string }).productId).filter(Boolean))];
@@ -131,9 +131,11 @@ export function buildConfirmed(
   order: { id: string; items: EmailItem[]; totalCents: number; payment: { method: string }; delivery?: { label?: string; estimatedDays?: number; carrier?: string | null } } & EmailMoney,
   name: string,
   now: Date = new Date(),
+  /** Convidado: link que já abre o pedido (lib/guestAccess.ts). */
+  link?: string,
 ): EmailPayload {
   const id = shortOrderId(order.id);
-  const url = orderUrl(order);
+  const url = link ?? orderUrl(order);
   const payMethod = order.payment.method === 'pix' ? 'PIX' : 'cartão de crédito';
   // Como e quando chega (o prazo já conta os dias para postar), e o direito
   // de desistir: o cliente guarda o e-mail como comprovante da compra.
