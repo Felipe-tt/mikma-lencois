@@ -45,15 +45,26 @@ const orderRef = (orderId: string) => adminDb.collection('orders').doc(orderId);
 const docsRef = (orderId: string, chave: string) => orderRef(orderId).collection('nfeDocs').doc(chave);
 const counterRef = () => adminDb.collection('secureConfig').doc('nfeNumeracao');
 
-/** Assinatura do link público da DANFE/XML de um pedido. */
+/**
+ * Chave dos links da nota. Sem ela (variável faltando ou curta), nenhum link
+ * é gerado nem aceito. Antes a chave caía para texto vazio, e qualquer um
+ * assinava o link da DANFE de qualquer pedido (nome, CPF e endereço).
+ */
+function docSecret(): string | null {
+  const secret = process.env.STAFF_SESSION_SECRET;
+  return secret && secret.length >= 32 ? secret : null;
+}
+
+/** Assinatura do link público da DANFE/XML de um pedido ('' sem a chave). */
 export function nfeDocToken(orderId: string, env: NfeEnvironment): string {
-  const secret = process.env.STAFF_SESSION_SECRET ?? '';
+  const secret = docSecret();
+  if (!secret) return '';
   return createHmac('sha256', secret).update(`nfe-doc:${orderId}:${env}`).digest('base64url').slice(0, 32);
 }
 export function checkDocToken(orderId: string, env: NfeEnvironment, token: string): boolean {
   const expected = Buffer.from(nfeDocToken(orderId, env));
   const got = Buffer.from(token);
-  return expected.length === got.length && timingSafeEqual(expected, got);
+  return expected.length > 0 && expected.length === got.length && timingSafeEqual(expected, got);
 }
 
 async function writeRecord(orderId: string, env: NfeEnvironment, patch: Partial<NfeRecord>, slot = nfeField(env)) {
