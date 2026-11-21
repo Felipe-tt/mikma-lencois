@@ -185,6 +185,9 @@ export default function OrderDetailPage() {
   // entra como o convidado neste aparelho e tira o código da barra.
   const [opening, setOpening] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('acesso'));
   const [accessError, setAccessError] = useState<string | null>(null);
+  // Convidado do link já aceito: espera a sessão dele chegar (sem piscar o
+  // cartão de acesso entre o login e o pedido).
+  const [openedUid, setOpenedUid] = useState<string | null>(null);
   const accessTried = useRef(false);
   // Conta de verdade aberta aqui: o link não troca de sessão sozinho.
   const accountHere = !!user && !user.isAnonymous;
@@ -200,6 +203,11 @@ export default function OrderDetailPage() {
     }
     if (user && guestAccessUid(token) === user.uid) { queueMicrotask(done); return; }
     openGuestAccess(token)
+      .then(() => {
+        setOpenedUid(guestAccessUid(token));
+        // Se a sessão não chegar (rede caiu), volta o cartão de acesso.
+        setTimeout(() => setOpenedUid(null), 10_000);
+      })
       .catch(err => setAccessError(userMessage(err, 'Não deu para abrir o pedido. Tente de novo.')))
       .finally(done);
   }, [loading, opening, accountHere, user]);
@@ -278,7 +286,7 @@ export default function OrderDetailPage() {
     }
   }
 
-  if (opening && !accountHere) return <OrderDetailSkeleton />;
+  if ((opening || (!!openedUid && user?.uid !== openedUid)) && !accountHere) return <OrderDetailSkeleton />;
   // Sem sessão aqui, ou o pedido não é da sessão aberta: quem tem conta entra,
   // quem comprou sem cadastro recebe o link no e-mail da compra.
   if (!loading && !user) return <GuestOrderAccess orderId={orderId} signedIn={false} error={accessError} />;

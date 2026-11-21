@@ -104,6 +104,11 @@ test('convidado abre o pedido em outro aparelho pelo link do e-mail', async ({ p
   await expect(phone.getByText(`#${orderId.slice(-8).toUpperCase()}`).first()).toBeVisible();
   await expect(phone).toHaveURL(new RegExp(`/pedidos/${orderId}$`));
   await expect(phone.getByText('Abra o seu pedido')).toHaveCount(0);
+
+  // "Meus pedidos" também abre para o convidado (antes mandava ao login).
+  await phone.goto('/conta/pedidos');
+  await expect(phone.getByText('Compras sem cadastro feitas neste aparelho.')).toBeVisible();
+  await expect(phone.getByText(`#${orderId.slice(-8).toUpperCase()}`).first()).toBeVisible();
   await other.close();
 });
 
