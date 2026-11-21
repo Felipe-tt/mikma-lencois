@@ -194,7 +194,9 @@ export function A({ href, children }: { href: string; children: ReactNode }) {
 
 export function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
   return (
-    <div className="overflow-x-auto border border-mist rounded-2xl">
+    // Rola para o lado no celular: com foco, dá para rolar pelo teclado.
+    <div role="region" aria-label={`Tabela: ${head.join(', ')}`} tabIndex={0}
+      className="overflow-x-auto border border-mist rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay">
       <table className="w-full min-w-[34rem] text-left text-[13.5px] leading-snug">
         <thead className="bg-warm/60 text-ink">
           <tr>
