@@ -9,17 +9,16 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 // com vi.useFakeTimers() (a chamada real de rede não avança com
 // vi.advanceTimersByTime(), causando falhas intermitentes).
 //
-// Mockando o client aqui, toda chamada .incr()/.expire() falha na hora
+// Mockando o client aqui, toda transação (.multi().exec()) falha na hora
 // (sem round-trip de rede nenhum), o que faz rateLimit() cair pro
 // fallback em memória sempre, é exatamente esse caminho que este
 // arquivo testa.
 vi.mock('@upstash/redis', () => ({
   Redis: class {
-    incr() {
-      return Promise.reject(new Error('mock: upstash indisponível em teste'));
-    }
-    expire() {
-      return Promise.reject(new Error('mock: upstash indisponível em teste'));
+    multi() {
+      const fail = () => Promise.reject(new Error('mock: upstash indisponível em teste'));
+      const tx = { incr: () => tx, expire: () => tx, exec: fail };
+      return tx;
     }
   },
 }));

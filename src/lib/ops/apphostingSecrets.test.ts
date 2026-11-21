@@ -24,6 +24,11 @@ describe('secretNames', () => {
     ].join('\n');
     expect(secretNames(yaml)).toEqual(['COM_VERSAO', 'ENTRE_ASPAS']);
   });
+
+  it('nome que começa com "-" não vira opção do gcloud', () => {
+    const yaml = ['    secret: --log-http', '    secret: -h', '    secret: _X', '    secret: 9_OK'].join('\n');
+    expect(secretNames(yaml)).toEqual(['9_OK']);
+  });
 });
 
 describe('missingBindings', () => {
