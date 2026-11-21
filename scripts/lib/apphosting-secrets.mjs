@@ -12,10 +12,14 @@ export const REQUIRED_BINDINGS = [
   { role: 'roles/secretmanager.secretVersionManager', member: AGENT },
 ];
 
-/** Nomes dos secrets citados no apphosting.yaml (sem a versão, se houver "@"). */
+/**
+ * Nomes dos secrets citados no apphosting.yaml (sem a versão, se houver "@").
+ * Começa com letra ou número: o nome vira argumento do gcloud, e "-algo"
+ * seria lido como opção (o arquivo pode vir de uma PR).
+ */
 export function secretNames(yamlText) {
   const names = new Set();
-  for (const m of yamlText.matchAll(/^\s*secret:\s*["']?([A-Za-z0-9_-]+)(?:@[^\s"']+)?["']?\s*(?:#.*)?$/gm)) {
+  for (const m of yamlText.matchAll(/^\s*secret:\s*["']?([A-Za-z0-9][A-Za-z0-9_-]*)(?:@[^\s"']+)?["']?\s*(?:#.*)?$/gm)) {
     names.add(m[1]);
   }
   return [...names];
