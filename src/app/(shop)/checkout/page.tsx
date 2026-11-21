@@ -31,6 +31,7 @@ import { LEGAL_VERSION } from '@/lib/legal';
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { withCurrentPrices, type PriceChange } from '@/lib/cartPrices';
 import { readTypedCep } from '@/lib/cartCep';
+import { suggestEmailFix } from '@/lib/validation/emailTypo';
 
 interface CustomerData { name: string; cpf: string; phone: string; email: string }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -195,6 +196,8 @@ export default function CheckoutPage() {
 
   const [addr, setAddr]       = useState<Address>({ cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' });
   const [customer, setCustomer] = useState<CustomerData>({ name: '', cpf: '', phone: '', email: '' });
+  // "gmial.com": o mesmo aviso do cadastro (lib/validation/emailTypo.ts).
+  const emailSuggestion = isGuest ? suggestEmailFix(customer.email) : null;
   const [cepLoading, setCepL] = useState(false);
   const [errors, setErrors]   = useState<Record<string, string>>({});
   const [apiError, setApiErr] = useState('');
@@ -883,6 +886,15 @@ export default function CheckoutPage() {
                       type="email" placeholder="seu@email.com" required hasError={!!shownErrors.email}
                       isValid={EMAIL_RE.test(customer.email.trim())} autoComplete="email" />
                     <Err id="co-email-err" msg={shownErrors.email} />
+                    {/* Convidado com e-mail errado fica sem comprovante, sem
+                        andamento e sem o link de acesso ao pedido. */}
+                    {!shownErrors.email && emailSuggestion && (
+                      <p className="mt-1.5 text-[12px] text-mid">
+                        Você quis dizer{' '}
+                        <button type="button" onClick={() => setCustomer(c => ({ ...c, email: emailSuggestion }))}
+                          className="text-clay font-medium underline underline-offset-2">{emailSuggestion}</button>?
+                      </p>
+                    )}
                     {!shownErrors.email && <p className="text-[11.5px] text-faint mt-1.5">Para o comprovante e o acompanhamento do pedido.</p>}
                   </div>
                 )}
