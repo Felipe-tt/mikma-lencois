@@ -5,6 +5,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import { LEGAL_VERSION } from '@/lib/legal';
 import { verifyRecaptcha } from '@/lib/recaptcha';
+import { isGuestToken } from '@/lib/guestAccess';
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email().max(200),
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   try { decoded = await adminAuth.verifyIdToken(authHeader.slice(7), true); } catch {
     return NextResponse.json({ error: 'Sessão expirada. Recarregue a página.' }, { status: 401 });
   }
-  if (decoded.firebase?.sign_in_provider !== 'anonymous') {
+  if (!isGuestToken(decoded)) {
     return NextResponse.json({ error: 'Só para compra sem cadastro' }, { status: 403 });
   }
 

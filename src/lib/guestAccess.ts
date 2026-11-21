@@ -1,0 +1,39 @@
+import { timingSafeEqual } from 'crypto';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import { guestAccessMac } from '@/lib/piiCrypto';
+
+/**
+ * Link de acesso ao pedido de quem comprou sem cadastro. O convidado não tem
+ * senha: em outro aparelho, ou no navegador do app de e-mail, o "Ver pedido"
+ * caía num login impossível e não dava para acompanhar nem gerar outro PIX.
+ * O link vai só para o e-mail da compra, vale 24 horas e entra como o
+ * convidado (custom token com a marca `guest`).
+ */
+export const GUEST_ACCESS_TTL_MS = 24 * 60 * 60 * 1000;
+
+export function guestAccessToken(orderId: string, uid: string, now = Date.now()): string {
+  const body = `${orderId}.${uid}.${now + GUEST_ACCESS_TTL_MS}`;
+  return `${Buffer.from(body).toString('base64url')}.${guestAccessMac(body)}`;
+}
+
+/** Pedido e convidado do link, se a assinatura confere e não venceu. */
+export function readGuestAccessToken(token: string, now = Date.now()): { orderId: string; uid: string } | null {
+  const [encoded, mac, extra] = token.split('.');
+  if (!encoded || !mac || extra !== undefined) return null;
+  const body = Buffer.from(encoded, 'base64url').toString('utf8');
+  const expected = Buffer.from(guestAccessMac(body));
+  const got = Buffer.from(mac);
+  if (got.length !== expected.length || !timingSafeEqual(got, expected)) return null;
+  const [orderId, uid, exp] = body.split('.');
+  if (!orderId || !uid || !(Number(exp) > now)) return null;
+  return { orderId, uid };
+}
+
+/**
+ * Sessão de convidado: login anônimo ou a volta pelo link acima (o Firebase
+ * marca essa como "custom"; quem distingue é a marca `guest`).
+ */
+export function isGuestToken(decoded: Pick<DecodedIdToken, 'firebase'> & { guest?: unknown }): boolean {
+  const provider = decoded.firebase?.sign_in_provider;
+  return provider === 'anonymous' || (provider === 'custom' && decoded.guest === true);
+}

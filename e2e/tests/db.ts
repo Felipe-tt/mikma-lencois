@@ -37,6 +37,7 @@ export async function cartOf(email: string): Promise<Array<{ sku: string; quanti
 
 export interface StoredOrder {
   status?: string;
+  userId?: string;
   totalCents?: number;
   shippingCents?: number;
   selectedShipping?: { carrier?: string; label?: string; priceCents?: number; estimatedDays?: number };

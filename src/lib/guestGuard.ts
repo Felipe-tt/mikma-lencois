@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { tooManyRequests } from '@/lib/security';
+import { isGuestToken } from '@/lib/guestAccess';
 
 /**
  * Pagamento de convidado ("comprar sem cadastro", login anônimo). Qualquer
@@ -13,7 +14,7 @@ import { tooManyRequests } from '@/lib/security';
  * Devolve uma resposta de erro, ou null para seguir.
  */
 export async function guardGuestPayment(decoded: DecodedIdToken, ip: string): Promise<NextResponse | null> {
-  if (decoded.firebase?.sign_in_provider !== 'anonymous') return null;
+  if (!isGuestToken(decoded)) return null;
   const key = `pay:guest-ip:${ip}`;
   if (!await rateLimit(key, 5, 60 * 60 * 1000)) return tooManyRequests(rateLimitRetryAfter(key));
   // Teto da loja inteira: mesmo trocando de IP, robô não consegue abrir
@@ -32,7 +33,7 @@ export async function guardGuestPayment(decoded: DecodedIdToken, ip: string): Pr
 export const GUEST_MAX_UNITS = 10;
 
 export function guestUnitsBlock(decoded: DecodedIdToken, items: Array<{ quantity: number }>): NextResponse | null {
-  if (decoded.firebase?.sign_in_provider !== 'anonymous') return null;
+  if (!isGuestToken(decoded)) return null;
   const units = items.reduce((n, i) => n + (Number(i.quantity) || 0), 0);
   if (units <= GUEST_MAX_UNITS) return null;
   return NextResponse.json(

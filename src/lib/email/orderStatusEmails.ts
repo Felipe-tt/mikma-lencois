@@ -5,7 +5,7 @@ import type { Order } from '@/types';
 import { escapeHtml } from '@/lib/html';
 import {
   BASE_URL, emailCallout, emailCta, emailItemsTable, emailLayout, emailParagraph,
-  emailSection, emailSignature, orderSubject, shortOrderId, type EmailItem, type EmailMoney,
+  emailSection, emailSignature, orderSubject, shortOrderId, STORE_NAME, type EmailItem, type EmailMoney,
 } from './layout';
 import type { EmailAttachment } from '@/lib/email';
 
@@ -394,5 +394,32 @@ export function buildRefunded(order: Pick<Order, 'id' | 'totalCents'>, name: str
     subject: orderSubject(id, 'estornado'),
     html,
     text: [`Olá, ${name}. Devolvemos ${total} do pedido #${id}.`, when, '', 'Dúvidas? Responda este e-mail.', `Pedido: ${url}`].join('\n'),
+  };
+}
+
+/**
+ * Link de acesso ao pedido de quem comprou sem cadastro (lib/guestAccess.ts):
+ * abre o pedido em qualquer aparelho, sem senha. Vale 24 horas.
+ */
+export function buildGuestAccess(orderId: string, url: string): EmailPayload {
+  const id = shortOrderId(orderId);
+  const html = emailLayout(`
+    ${emailSection({
+      eyebrow: `Pedido #${id}`,
+      title: 'Seu link para abrir o pedido',
+      html: `
+        ${emailParagraph('Você pediu para abrir este pedido em outro aparelho. É só tocar no botão: ele abre o pedido direto, sem senha.')}
+        ${emailCta('Abrir meu pedido', url)}
+        ${emailParagraph('O link vale por 24 horas e só funciona para este pedido. Se não foi você que pediu, pode ignorar este e-mail.', { muted: true })}`,
+    })}
+    ${emailSignature()}`, { preheader: `Abra o pedido #${id} em qualquer aparelho. O link vale por 24 horas.` });
+  return {
+    subject: `Link para abrir o pedido #${id} | ${STORE_NAME}`,
+    html,
+    text: [
+      `Você pediu para abrir o pedido #${id} em outro aparelho. Use o link abaixo (vale por 24 horas):`,
+      url, '',
+      'Se não foi você que pediu, pode ignorar este e-mail.',
+    ].join('\n'),
   };
 }
