@@ -28,8 +28,11 @@ export async function checkPasswordServerSide(email: string, password: string): 
     const body = await res.json().catch(() => null) as { error?: { message?: unknown } } | null;
     // "TOO_MANY_ATTEMPTS_TRY_LATER : Access to this account..." vem com texto depois do código.
     const code = String(body?.error?.message ?? '').split(/[\s:]/)[0];
-    return WRONG.has(code) ? 'wrong' : 'unavailable';
-  } catch {
+    if (WRONG.has(code)) return 'wrong';
+    console.warn('[senha] o Firebase não conferiu:', code || `HTTP ${res.status}`);
+    return 'unavailable';
+  } catch (err) {
+    console.warn('[senha] sem resposta do Firebase:', (err as Error)?.name ?? err);
     return 'unavailable';
   }
 }
