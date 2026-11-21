@@ -11,6 +11,7 @@ type Ref = { id: string; delete: () => Promise<void> };
 interface FakeQuery {
   where: (f: string, op: string, v: unknown) => FakeQuery;
   orderBy: (f: string) => FakeQuery;
+  select: (...f: string[]) => FakeQuery;
   limit: (n: number) => FakeQuery;
   get: () => Promise<{ docs: { id: string; ref: Ref; get: (k: string) => unknown; data: () => Doc }[]; size: number; empty: boolean }>;
 }
@@ -41,6 +42,7 @@ function fakeDb(data: Record<string, Record<string, Doc>>) {
   const query = (col: string, filters: [string, string, unknown][] = [], order?: string, lim = Infinity, group = false): FakeQuery => ({
     where: (f: string, op: string, v: unknown) => query(col, [...filters, [f, op, v]], order, lim, group),
     orderBy: (f: string) => query(col, filters, f, lim, group),
+    select: () => query(col, filters, order, lim, group),
     limit: (n: number) => query(col, filters, order, n, group),
     get: async () => {
       const paths = group ? Object.keys(data).filter(k => k === col || k.endsWith(`/${col}`)) : [col];
@@ -70,8 +72,10 @@ function fakeFiles() {
   const prefixes: string[] = [];
   const paths: string[] = [];
   const privatized: string[] = [];
+  const older: string[] = [];
   return {
-    prefixes, paths, privatized,
+    prefixes, paths, privatized, older,
+    listOlderThan: async (p: string) => older.filter(f => f.startsWith(p)),
     deletePrefix: async (p: string) => { prefixes.push(p); },
     deletePath: async (p: string) => { paths.push(p); },
     privatizePrefix: async (p: string) => { privatized.push(p); return 2; },
@@ -260,5 +264,19 @@ describe('retenção (LGPD)', () => {
     data.maintenance.status.updatedBy = 'Maria Souza';
     await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
     expect(data.maintenance.status.updatedBy).toBe('Maria Souza');
+  });
+});
+
+describe('fotos de troca sem troca', () => {
+  it('apaga a foto com mais de 2 dias que nenhuma troca usa; a da troca fica', async () => {
+    const data: Record<string, Record<string, Doc>> = {
+      returns: { t1: { createdAt: daysAgo(10), fotos: ['returns/u1/1_0.jpg'] } },
+    };
+    const files = fakeFiles();
+    files.older.push('returns/u1/1_0.jpg', 'returns/u9/9_0.jpg', 'returns/u9/9_1.jpg');
+    const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW, files);
+    expect(r.orphanPhotosDeleted).toBe(2);
+    expect(files.paths).toEqual(['returns/u9/9_0.jpg', 'returns/u9/9_1.jpg']);
+    expect(Object.keys(data.returns)).toEqual(['t1']);
   });
 });

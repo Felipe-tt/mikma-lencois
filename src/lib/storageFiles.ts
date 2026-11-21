@@ -13,12 +13,18 @@ export interface StoredFiles {
    * mudaram; os já fechados ficam marcados e não são mexidos de novo.
    */
   privatizePrefix(prefix: string): Promise<number>;
+  /** Caminhos dos arquivos do prefixo criados antes de `beforeMs`. */
+  listOlderThan(prefix: string, beforeMs: number): Promise<string[]>;
 }
 
 export function storageFiles(): StoredFiles {
   return {
     deletePrefix: async prefix => { await adminStorage.bucket().deleteFiles({ prefix }); },
     deletePath: async path => { await adminStorage.bucket().file(path).delete({ ignoreNotFound: true }); },
+    listOlderThan: async (prefix, beforeMs) => {
+      const [found] = await adminStorage.bucket().getFiles({ prefix });
+      return found.filter(f => Date.parse(String(f.metadata.timeCreated ?? '')) < beforeMs).map(f => f.name);
+    },
     privatizePrefix: async prefix => {
       const [found] = await adminStorage.bucket().getFiles({ prefix });
       let changed = 0;
