@@ -38,3 +38,12 @@ describe('storeIdentity (Decreto 7.962/2013)', () => {
     expect(storeIdentity(base).cnpj).toBe('');
   });
 });
+
+describe('storeIdentity: WhatsApp para contato', () => {
+  it('monta pelo telefone, com o 55, quando não há link colado', () => {
+    expect(storeIdentity({ storePhone: '(47) 99999-0000' } as never).whatsappUrl).toBe('https://wa.me/5547999990000');
+  });
+  it('link colado que não é do WhatsApp não aparece', () => {
+    expect(storeIdentity({ whatsappUrl: 'javascript:alert(1)' } as never).whatsappUrl).toBe('');
+  });
+});

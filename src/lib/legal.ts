@@ -1,4 +1,5 @@
 import type { StoreSettings } from '@/lib/store-settings';
+import { storeWhatsapp } from '@/lib/whatsapp';
 
 /**
  * Data da última atualização material dos documentos legais (AAAA-MM-DD).
@@ -79,6 +80,7 @@ export function storeIdentity(s: StoreSettings): StoreIdentity {
     address,
     email: s.storeEmail?.trim() ?? '',
     phone: s.storePhone?.trim() ?? '',
-    whatsappUrl: s.whatsappUrl?.trim() ?? '',
+    // Pelo link colado ou pelo telefone (com o 55); link que não é do WhatsApp não entra.
+    whatsappUrl: storeWhatsapp(s) ?? '',
   };
 }
