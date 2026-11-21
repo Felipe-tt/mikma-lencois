@@ -81,11 +81,16 @@ export function WhatsAppFloat() {
 
   if (!href || !allowed) return null;
   const label = hint ? `Falar no WhatsApp. ${hint}` : 'Falar no WhatsApp';
+  // Região com nome (leitor de tela acha o atendimento) e, escondido, fora
+  // do Tab: antes o foco caía num botão invisível.
   return (
+    <aside aria-label="Atendimento pelo WhatsApp">
     <a
       href={whatsappWithText(href, 'Olá! Vim pelo site da Mikma e tenho uma dúvida.')}
       target="_blank" rel="noopener noreferrer"
       aria-label={label}
+      aria-hidden={!shown}
+      tabIndex={shown ? undefined : -1}
       data-no-print
       className={`wa-float group fixed z-30 right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:right-6 sm:bottom-6 flex items-center h-11 rounded-full border border-mist bg-paper/90 backdrop-blur-md text-mid hover:text-ink shadow-[0_6px_20px_-10px_rgba(40,24,12,0.45)] transition-[opacity,transform,color] duration-300 ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'}`}
     >
@@ -95,5 +100,6 @@ export function WhatsAppFloat() {
         <span className="pr-4 block">{hint || 'Falar no WhatsApp'}</span>
       </span>
     </a>
+    </aside>
   );
 }
