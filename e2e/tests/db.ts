@@ -28,6 +28,13 @@ export async function emptyCart(email: string) {
   if (uid) await db().collection('carts').doc(uid).set({ items: [], couponCode: null, updatedAt: new Date().toISOString() });
 }
 
+/** SKUs (e quantidades) no carrinho da conta. */
+export async function cartOf(email: string): Promise<Array<{ sku: string; quantity: number }>> {
+  const uid = await uidOf(email);
+  if (!uid) return [];
+  return ((await db().collection('carts').doc(uid).get()).get('items') as Array<{ sku: string; quantity: number }> | undefined) ?? [];
+}
+
 export interface StoredOrder {
   status?: string;
   totalCents?: number;
