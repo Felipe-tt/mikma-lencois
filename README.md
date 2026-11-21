@@ -227,7 +227,7 @@ As rotinas sensíveis ao horário são disparadas por um **Worker da Cloudflare*
 | Notas fiscais | 10 min | Emite na SEFAZ as NF-e pendentes |
 | Estoque de volta | 1 h | Envia o "Avise-me quando chegar" quando o produto volta |
 | Estoque baixo | 6 h | Avisa a equipe sobre produtos acabando |
-| Saúde do site | 10 min | Confere a loja e faz rollback automático se o deploy quebrou |
+| Saúde do site | 10 min e depois de cada deploy | Confere a loja e faz rollback automático se o deploy quebrou |
 | Fallback da Cloudflare | 5 min | Se a Cloudflare cair, serve o site direto e volta sozinho depois |
 | Backup do Firestore | diário | Cópia do banco comprimida e criptografada, conferida antes de ser guardada por 14 dias |
 | OWASP ZAP | semanal | Varredura dinâmica de segurança |
