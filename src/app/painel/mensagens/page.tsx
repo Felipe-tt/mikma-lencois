@@ -2,7 +2,7 @@
 import { IconMail, IconMessages, IconAlert, IconTrash } from '@/components/ui/Icon';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, limit } from 'firebase/firestore';
 import { auth } from '@/lib/firebase/client';
 import { db } from '@/lib/firebase/db';
@@ -10,7 +10,8 @@ import { formatTsDateTime } from '@/lib/utils/format';
 import type { EmailMessage, EmailAttachment, Conversation } from '@/types';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { escapeHtml, htmlToText } from '@/lib/html';
-import { attachmentPath } from '@/lib/email/attachments';
+import { attachmentLabel, attachmentPath } from '@/lib/email/attachments';
+import { EmailHtmlFrame } from '@/components/painel/EmailHtmlFrame';
 import { PanelErrorState } from '@/components/painel/PanelErrorState';
 
 const PAGE = 30;
@@ -263,8 +264,20 @@ function ConversationThread({
   const [error, setError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // E-mail em HTML ganha a altura depois de carregar: quem estava no fim da
+  // conversa continua no fim; quem rolou para cima não é puxado. Só rolar
+  // para cima solta do fim (a rolagem suave até o fim não conta).
+  const atBottomRef = useRef(true);
+  const lastTopRef = useRef(0);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const keepAtBottom = useCallback(() => {
+    const el = scrollerRef.current;
+    if (el && atBottomRef.current) el.scrollTop = el.scrollHeight;
+  }, []);
 
   useEffect(() => {
+    atBottomRef.current = true;
+    lastTopRef.current = 0;
     setLoading(true);
     setReply('');
     setError('');
@@ -415,13 +428,22 @@ function ConversationThread({
       </div>
 
       {/* Mensagens */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-4">
+      <div
+        ref={scrollerRef}
+        className="flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-4"
+        onScroll={e => {
+          const el = e.currentTarget;
+          if (el.scrollHeight - el.scrollTop - el.clientHeight < 48) atBottomRef.current = true;
+          else if (el.scrollTop < lastTopRef.current) atBottomRef.current = false;
+          lastTopRef.current = el.scrollTop;
+        }}
+      >
         {loading ? (
           <p className="text-[12px] text-faint text-center mt-8">Carregando mensagens…</p>
         ) : messages.length === 0 ? (
           <p className="text-[12px] text-faint text-center mt-8">Nenhuma mensagem nesta conversa.</p>
         ) : (
-          messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)
+          messages.map(msg => <MessageBubble key={msg.id} msg={msg} onLayout={keepAtBottom} />)
         )}
         <div ref={bottomRef} />
       </div>
@@ -547,7 +569,7 @@ function useAttachmentUrls(attachments: EmailAttachment[]): (string | null)[] {
   return urls;
 }
 
-function MessageBubble({ msg }: { msg: EmailMessage }) {
+function MessageBubble({ msg, onLayout }: { msg: EmailMessage; onLayout: () => void }) {
   const isOut = msg.direction === 'outbound';
   const attachments: EmailAttachment[] = (msg.attachments as EmailAttachment[] | undefined) ?? [];
   const urls = useAttachmentUrls(attachments);
@@ -563,7 +585,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
   const showHtml = !isOut && !htmlIsEmpty && !!htmlContent;
 
   return (
-    <div className={`flex flex-col gap-1.5 max-w-[88%] ${isOut ? 'self-end items-end' : 'self-start items-start'}`}>
+    <div className={`flex flex-col gap-1.5 max-w-[88%] ${isOut ? 'self-end items-end' : 'self-start items-start'} ${showHtml ? 'w-full' : ''}`}>
 
       {/* Assunto (só inbound) */}
       {!isOut && (msg as { subject?: string }).subject && (
@@ -572,21 +594,19 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
         </p>
       )}
 
-      {/* Corpo */}
-      <div className={`text-[13px] leading-relaxed rounded-2xl ${
-        isOut
-          ? 'bg-ink text-paper px-4 py-3 rounded-tl-2xl rounded-bl-md'
-          : 'bg-white dark:bg-warm border border-mist text-ink px-4 py-3 rounded-tr-2xl rounded-br-md'
-      }`}>
-        {showHtml ? (
-          <div
-            className="email-html-body text-[13px] leading-[1.6] break-words overflow-x-auto max-w-full"
-            dangerouslySetInnerHTML={{ __html: htmlContent! }}
-          />
-        ) : (
+      {/* Corpo. O HTML de quem escreveu fica num quadro sem scripts, com o
+          balão desenhado lá dentro (EmailHtmlFrame). */}
+      {showHtml ? (
+        <EmailHtmlFrame html={htmlContent!} onResize={onLayout} />
+      ) : (
+        <div className={`text-[13px] leading-relaxed rounded-2xl ${
+          isOut
+            ? 'bg-ink text-paper px-4 py-3 rounded-tl-2xl rounded-bl-md'
+            : 'bg-white dark:bg-warm border border-mist text-ink px-4 py-3 rounded-tr-2xl rounded-br-md'
+        }`}>
           <p className="whitespace-pre-wrap">{textContent || '(mensagem vazia)'}</p>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Imagens */}
       {images.length > 0 && (
@@ -595,12 +615,12 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
             <a key={i} href={url} target="_blank" rel="noopener noreferrer">
               <img
                 src={url}
-                alt={att.filename}
+                alt={attachmentLabel(att.filename)}
                 className="max-w-[200px] max-h-[160px] object-cover border border-mist hover:opacity-90 transition-opacity rounded-xl"
               />
             </a>
           ) : (
-            <span key={i} aria-label={`Carregando ${att.filename}`} className="block w-[120px] h-[90px] rounded-xl border border-mist bg-warm" />
+            <span key={i} aria-label={`Carregando ${attachmentLabel(att.filename)}`} className="block w-[120px] h-[90px] rounded-xl border border-mist bg-warm" />
           ))}
         </div>
       )}
@@ -620,7 +640,7 @@ function MessageBubble({ msg }: { msg: EmailMessage }) {
               <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
               </svg>
-              {att.filename}
+              <span className="truncate">{attachmentLabel(att.filename)}</span>
             </a>
           ))}
         </div>

@@ -18,3 +18,15 @@ export function attachmentPath(att: { path?: unknown; url?: unknown }): string |
   if (!m) return null;
   try { return decodeURIComponent(m[1]); } catch { return null; }
 }
+
+/**
+ * Caracteres invisíveis e de direção do texto: "fatura\u202Efdp.exe" aparece
+ * na tela como "faturaexe.pdf". Quem manda o e-mail escolhe o nome do anexo.
+ */
+const HIDDEN_CHARS = /[\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g;
+
+/** Nome do anexo como o painel mostra: sem caractere que disfarça a extensão. */
+export function attachmentLabel(filename: unknown): string {
+  const name = typeof filename === 'string' ? filename.replace(HIDDEN_CHARS, '').trim() : '';
+  return (name || 'anexo').slice(0, 120);
+}

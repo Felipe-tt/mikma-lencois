@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attachmentPath, isInlineImage } from './attachments';
+import { attachmentLabel, attachmentPath, isInlineImage } from './attachments';
 
 describe('anexos de e-mail', () => {
   it('só imagem comum abre na conversa; SVG e o resto baixam', () => {
@@ -23,5 +23,13 @@ describe('anexos de e-mail', () => {
     expect(attachmentPath({ url: 'https://evil.com/email-attachments/e1/a.pdf' })).toBeNull();
     expect(attachmentPath({ url: 'https://storage.googleapis.com/b/returns/u1/1.jpg' })).toBeNull();
     expect(attachmentPath({})).toBeNull();
+  });
+
+  it('nome sem caractere que inverte o texto e disfarça a extensão', () => {
+    expect(attachmentLabel('fatura\u202Efdp.exe')).toBe('faturafdp.exe');
+    expect(attachmentLabel('a\u200B\u2066b\u2069.pdf')).toBe('ab.pdf');
+    expect(attachmentLabel('  ')).toBe('anexo');
+    expect(attachmentLabel(undefined)).toBe('anexo');
+    expect(attachmentLabel('x'.repeat(300))).toHaveLength(120);
   });
 });

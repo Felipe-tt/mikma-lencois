@@ -7,10 +7,12 @@ import { Resend } from 'resend';
 import { adminDb, adminStorage } from '@/lib/firebase/admin';
 import { privateFileMetadata } from '@/lib/storageFiles';
 import { isInlineImage } from '@/lib/email/attachments';
+import { sanitizeInboundHtml } from '@/lib/email/sanitize';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests } from '@/lib/security';
 import { z } from 'zod';
+import { resendEventSchema } from './schema';
 
 let _resend: Resend | null = null;
 function getResend(): Resend {
@@ -34,62 +36,6 @@ function isReportAddress(raw: string): boolean {
   return extractEmail(raw) === REPORT_ADDRESS;
 }
 
-
-import sanitizeHtmlLib from 'sanitize-html';
-import { resendEventSchema } from './schema';
-
-/**
- * Remove conteúdo perigoso do HTML de e-mails recebidos antes de salvar e
- * exibir no painel (via dangerouslySetInnerHTML em /painel/mensagens).
- *
- * Esse HTML vem de QUALQUER pessoa que escreva para contato@mikma.com.br -
- * é conteúdo de origem totalmente não confiável. Uma sanitização baseada em
- * regex (substituir <script>, on* etc. manualmente) é conhecidamente
- * contornável (tags malformadas, encodings alternativos, atributos sem
- * aspas...), então usamos uma lib dedicada com allowlist restrita: só as
- * tags e atributos necessários para exibir o corpo de um e-mail formatado,
- * nada que possa executar script ou navegar para fora (sem <a href> com
- * javascript:, sem onXxx, sem <script>/<iframe>/<object>/<style>/<form>).
- */
-function sanitizeHtml(html: string): string {
-  return sanitizeHtmlLib(html, {
-    allowedTags: [
-      'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'span', 'div',
-      'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      'table', 'thead', 'tbody', 'tr', 'td', 'th',
-      'a', 'img',
-    ],
-    allowedAttributes: {
-      a: ['href', 'title', 'target'],
-      img: ['src', 'alt', 'width', 'height'],
-      '*': ['style'],
-    },
-    allowedSchemes: ['http', 'https', 'mailto'],
-    allowedSchemesByTag: {
-      // Imagens inline do Resend vêm como data: URI (base64), restringe
-      // ainda mais para apenas esse uso, não libera data: em outras tags
-      // (em especial não em <a href>, onde data:text/html poderia abrir
-      // uma página com HTML/JS arbitrário disfarçada de link legítimo).
-      img: ['http', 'https', 'data'],
-    },
-    // Remove qualquer CSS que tente navegar/executar via url() perigosa
-    allowedStyles: {
-      '*': {
-        'color': [/^#[0-9a-f]{3,6}$/i, /^rgb/],
-        'background-color': [/^#[0-9a-f]{3,6}$/i, /^rgb/],
-        'font-weight': [/^(bold|normal|[0-9]+)$/],
-        'font-style': [/^italic$/],
-        'text-decoration': [/^underline$/],
-      },
-    },
-    // Links sempre abrem em nova aba e sem repassar referrer/opener
-    transformTags: {
-      a: sanitizeHtmlLib.simpleTransform('a', { target: '_blank', rel: 'noopener noreferrer' }),
-    },
-    disallowedTagsMode: 'discard',
-  });
-}
 
 /** Anexo maior que isso não é guardado (e-mail de atendimento não precisa). */
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
@@ -226,7 +172,7 @@ export async function POST(req: NextRequest) {
   // se perdia. Grande demais, fica só o texto.
   const text: string = stripQuotedText(rawText).slice(0, 100_000);
   const strippedHtml = rawHtml ? stripQuotedHtml(rawHtml) : '';
-  const sanitized = strippedHtml ? sanitizeHtml(strippedHtml) : '';
+  const sanitized = strippedHtml ? sanitizeInboundHtml(strippedHtml) : '';
   const html = sanitized.length <= 600_000 ? sanitized : '';
 
   // ── 2. Busca lista de attachments com download_url ─────────────────────────
