@@ -1,4 +1,5 @@
 import { getStoreSettings } from '@/lib/settings';
+import { storeWhatsapp } from '@/lib/whatsapp';
 import { MaintenanceAdminRedirect } from '@/components/layout/MaintenanceAdminRedirect';
 import { MaintenancePoll } from '@/components/layout/MaintenancePoll';
 
@@ -21,9 +22,7 @@ export default async function ManutencaoPage() {
   const s = await getStoreSettings();
 
   const instagramUrl = s.instagramUrl || null;
-  const whatsappUrl =
-    s.whatsappUrl ||
-    (s.storePhone ? `https://wa.me/${s.storePhone.replace(/\D/g, '')}` : null);
+  const whatsappUrl = storeWhatsapp(s);
 
   return (
     <>

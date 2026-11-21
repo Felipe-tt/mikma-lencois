@@ -33,6 +33,7 @@ import { PIXModal } from '@/components/checkout/PIXModal';
 import { GoogleReviewsOptIn } from '@/components/order/GoogleReviewsOptIn';
 import { GuestOrderAccess } from '@/components/order/GuestOrderAccess';
 import { guestAccessUid, openGuestAccess } from '@/lib/auth/guestAccessClient';
+import { storeWhatsapp } from '@/lib/whatsapp';
 
 // ─── Status steps ─────────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ export default function OrderDetailPage() {
   const [store, setStore] = useState<{ address: string; city: string; hours: { label: string; text: string }[] } | null>(null);
   useEffect(() => {
     fetch('/api/settings/public').then(r => r.json()).then(d => {
-      const url = d.whatsappUrl || (d.storePhone ? `https://wa.me/55${String(d.storePhone).replace(/\D/g, '').replace(/^55/, '')}` : null);
+      const url = storeWhatsapp(d);
       setStoreWa(url);
       if (typeof d.googleReviewUrl === 'string') setGoogleReview(d.googleReviewUrl);
       const street = [d.storeAddress, d.storeNumber].filter(Boolean).join(', ');
