@@ -7,7 +7,8 @@ import { timingSafeEqual } from 'crypto';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { buildCancelled, buildPaymentReminder } from '@/lib/email/orderStatusEmails';
-import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
+import { CONTACT_EMAIL, shortOrderId, type EmailItem } from '@/lib/email/layout';
+import { paidReplacement } from '@/lib/orders/replacedOrder';
 
 // ── Timings ────────────────────────────────────────────────────────────────────
 // Pedido sem pagamento por WARN_AFTER_MS → envia aviso "vai cancelar em 24h"
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   const warnCutoff   = new Date(now - WARN_AFTER_MS);
   const cancelCutoff = new Date(now - CANCEL_AFTER_MS);
 
-  const results = { warned: 0, cancelled: 0, expired: 0, errors: 0 };
+  const results = { warned: 0, cancelled: 0, expired: 0, replaced: 0, errors: 0 };
 
   // ── Busca todos os pedidos ainda pending_payment ───────────────────────────
   const snap = await adminDb
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
     const order = doc.data();
     const orderId = doc.id;
     const createdAt: Date = order.createdAt?.toDate?.() ?? new Date(order.createdAt);
+    let status = order.status as string;
 
     try {
       // ── Confere na AbacatePay o PIX que já passou do vencimento ────────
@@ -60,7 +62,7 @@ export async function GET(req: NextRequest) {
       if (order.status === 'pending_payment' && (pixDue || cardDue)) {
         const synced = await syncOrderPayment(orderId);
         if (synced === 'paid') continue;
-        if (synced === 'expired') results.expired++;
+        if (synced === 'expired') { results.expired++; status = 'payment_expired'; }
         // Consulta falhou: não cancela às cegas um pedido com cobrança de
         // cartão; tenta de novo na próxima rodada (até 7 dias).
         if (synced === 'error' && cardDue && createdAt.getTime() > now - 7 * 24 * 60 * 60 * 1000) {
@@ -68,6 +70,19 @@ export async function GET(req: NextRequest) {
           continue;
         }
       }
+
+      // Menos de 24h: nada a fazer (o e-mail de PIX expirado já avisou).
+      // Entre 24h e 48h, só o lembrete, uma vez.
+      const dueCancel = createdAt < cancelCutoff;
+      const dueWarn = !dueCancel && createdAt < warnCutoff && !order.cancellationWarningSentAt;
+      if (!dueCancel && !dueWarn) continue;
+
+      // Cliente refez a compra e pagou o pedido novo: este sai sem e-mail.
+      // Com o PIX vencido, cancela já; ainda pagável (PIX novo, cartão),
+      // só não manda o lembrete e cancela em 48h, também sem e-mail.
+      const replacedBy = typeof order.replacedBy === 'string' ? order.replacedBy : await paidReplacement(order);
+      if (replacedBy && !order.replacedBy) await doc.ref.update({ replacedBy });
+      if (replacedBy && !dueCancel && status !== 'payment_expired') continue;
 
       // ── Busca e-mail do cliente ─────────────────────────────────────────
       let customerEmail: string | undefined;
@@ -87,8 +102,8 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // ── CANCELAR: pedido criado há mais de 48h ─────────────────────────
-      if (createdAt < cancelCutoff) {
+      // ── CANCELAR: pedido criado há mais de 48h (ou refeito e pago) ──────
+      if (dueCancel || replacedBy) {
         const ref = adminDb.collection('orders').doc(orderId);
         const nowIso = new Date().toISOString();
 
@@ -130,7 +145,9 @@ export async function GET(req: NextRequest) {
             timeline: FieldValue.arrayUnion({
               status: 'cancelled',
               at: nowIso,
-              note: 'Cancelado automaticamente por falta de pagamento após 48h',
+              note: replacedBy
+                ? `Cancelado: o cliente refez a compra no pedido #${shortOrderId(replacedBy)}, já pago`
+                : 'Cancelado automaticamente por falta de pagamento após 48h',
             }),
           });
           for (let i = 0; i < lines.length; i++) {
@@ -153,9 +170,10 @@ export async function GET(req: NextRequest) {
         await releaseCouponUse(order.couponCode as string | undefined, order.userId as string | undefined);
 
         results.cancelled++;
+        if (replacedBy) results.replaced++;
 
-        // E-mail de cancelamento
-        if (customerEmail) {
+        // E-mail de cancelamento (não para quem já comprou de novo)
+        if (customerEmail && !replacedBy) {
           const payload = buildCancelled(
             { id: orderId, items: (order.items ?? []) as EmailItem[], totalCents: order.totalCents as number, productsCents: order.productsCents as number | undefined, shippingCents: order.shippingCents as number | undefined, pixDiscountCents: order.pixDiscountCents as number | undefined, couponDiscountCents: order.couponDiscountCents as number | undefined, discountCents: order.discountCents as number | undefined, couponCode: order.couponCode as string | undefined },
             customerName.split(' ')[0] || 'cliente',
@@ -171,7 +189,7 @@ export async function GET(req: NextRequest) {
       }
 
       // ── AVISAR: pedido criado há mais de 24h mas ainda não avisado ─────
-      if (createdAt < warnCutoff && !order.cancellationWarningSentAt) {
+      if (dueWarn) {
         await adminDb.collection('orders').doc(orderId).update({
           cancellationWarningSentAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),

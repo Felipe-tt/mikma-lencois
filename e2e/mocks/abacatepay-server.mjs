@@ -26,6 +26,12 @@ export function startAbacatePayMock(port = 4010) {
         charges.set(c.id, c);
         return ok(res, c);
       }
+      if (p === '/__e2e/expire') {
+        const c = charges.get(url.searchParams.get('id'));
+        if (!c) return fail(res, 404, 'not found');
+        c.status = 'EXPIRED';
+        return ok(res, c);
+      }
       if (p === '/__e2e/pay') {
         const c = charges.get(url.searchParams.get('id'));
         if (!c) return fail(res, 404, 'not found');

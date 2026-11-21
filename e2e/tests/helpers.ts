@@ -60,6 +60,11 @@ export async function charges(): Promise<Array<{ id: string; status: string; ext
   return (await (await fetch(`${ABACATE}/__e2e/charges`)).json()).data;
 }
 
+/** O PIX venceu na "AbacatePay" (a loja descobre ao consultar a cobrança). */
+export async function expirePix(chargeId: string) {
+  await fetch(`${ABACATE}/__e2e/expire?id=${chargeId}`, { method: 'POST' });
+}
+
 /** Simula o pagamento: marca paga na "AbacatePay" e manda o webhook assinado. */
 export async function payPix(baseURL: string, chargeId: string, orderId: string, amount: number) {
   await fetch(`${ABACATE}/__e2e/pay?id=${chargeId}`, { method: 'POST' });

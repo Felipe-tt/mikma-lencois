@@ -22,6 +22,8 @@ export const USERS = {
   devolve: { email: 'devolve@e2e.mikma', password: 'senha-e2e-123', name: 'Gabriela Torres', role: 'customer', cpf: '93541134780', address: { cep: '01310100', street: 'Avenida Paulista', number: '6000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
   // Cliente que começa como visitante e entra na conta no checkout.
   volta: { email: 'volta@e2e.mikma', password: 'senha-e2e-123', name: 'Helena Prates', role: 'customer', cpf: '71428793860' },
+  // Deixa o PIX vencer e refaz a compra.
+  refaz: { email: 'refaz@e2e.mikma', password: 'senha-e2e-123', name: 'Igor Mendes', role: 'customer', cpf: '29537914852', address: { cep: '01310100', street: 'Avenida Paulista', number: '7000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
   // Para este CEP a API dos Correios simulada responde "fora do ar".
   semCorreios: { email: 'sem-correios@e2e.mikma', password: 'senha-e2e-123', name: 'Carla Reis', role: 'customer', cpf: '93541134780', address: { cep: '04538133', street: 'Avenida Brigadeiro Faria Lima', number: '3477', neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP' } },
 };

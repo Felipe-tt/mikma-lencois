@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { charges, login, payPix, prepare, staffLogin } from './helpers';
+import { addToCart, charges, expirePix, goToPayment, login, payPix, prepare, staffLogin } from './helpers';
+import { db, emptyCart, readOrder } from './db';
 
 test.beforeEach(async ({ context }) => { await prepare(context); });
 
@@ -60,4 +61,32 @@ test('webhook com assinatura falsa é recusado e não paga nada', async ({ reque
     data: { event: 'transparent.completed', data: { transparent: { id: 'pix_char_x', externalId: 'ord_x', status: 'PAID' } } },
   });
   expect(res.status()).toBe(401);
+});
+
+test('PIX venceu e o cliente refez a compra: pago o pedido novo, o velho sai sozinho', async ({ page, baseURL, request }) => {
+  test.setTimeout(180_000);
+  await emptyCart('refaz@e2e.mikma');
+  await login(page, 'refaz@e2e.mikma', 'senha-e2e-123');
+  await addToCart(page, 'p3');
+
+  // Primeiro pedido: o PIX vence sem pagamento.
+  await (await goToPayment(page)).click();
+  await expect(page.getByText('Pague com PIX').first()).toBeVisible();
+  const first = (await charges()).at(-1)!;
+  const oldId = first.externalId!;
+  await expirePix(first.id);
+  await db().collection('orders').doc(oldId).update({ 'payment.expiresAt': new Date(Date.now() - 5 * 60_000).toISOString() });
+  expect((await request.get('/api/cron/expire-orders', { headers: { 'x-cron-secret': 'e2e_cron_secret_0123456789' } })).status()).toBe(200);
+  await expect.poll(async () => (await readOrder(oldId)).status).toBe('payment_expired');
+
+  // O produto continua no carrinho: o cliente refaz e paga.
+  await (await goToPayment(page)).click();
+  await expect.poll(async () => (await charges()).at(-1)!.externalId).not.toBe(oldId);
+  const second = (await charges()).at(-1)!;
+  expect((await payPix(baseURL!, second.id, second.externalId!, second.amount)).status).toBe(200);
+
+  // O pedido velho sai da lista sem cobrar nada nem mandar "pedido cancelado".
+  await expect.poll(async () => (await readOrder(second.externalId!)).status).toBe('paid');
+  await expect.poll(async () => (await readOrder(oldId)).status).toBe('cancelled');
+  expect((await readOrder(oldId)).replacedBy).toBe(second.externalId);
 });
