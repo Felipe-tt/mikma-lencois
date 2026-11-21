@@ -780,13 +780,6 @@ html.dark * { scrollbar-color: #3C3028 transparent; }
 
 } /* fim @layer components (painel admin rework) */
 
-/* ── Email HTML body (painel mensagens) ──────────────────────────── */
-.email-html-body img { max-width: 100%; height: auto; }
-.email-html-body a { color: #C4714A; text-decoration: underline; }
-.email-html-body p { margin: 0 0 0.5em; }
-.email-html-body br { display: block; margin: 0.2em 0; }
-.email-html-body table { border-collapse: collapse; max-width: 100%; }
-.email-html-body td, .email-html-body th { padding: 4px 8px; }
 
 /* ── Overlays: modais, sheets e drawers ──────────────────────────────
    Uma só linguagem de movimento pra tudo que abre por cima da página.
