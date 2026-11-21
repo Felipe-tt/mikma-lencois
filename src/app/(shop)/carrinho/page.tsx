@@ -308,7 +308,7 @@ export default function CartPage() {
           <path d="M16 10a4 4 0 01-8 0"/>
         </svg>
       </div>
-      <h2 id="cart-empty-title" tabIndex={-1} className="font-display font-normal text-ink text-3xl mb-3 focus:outline-none">Carrinho vazio</h2>
+      <h1 id="cart-empty-title" tabIndex={-1} className="font-display font-normal text-ink text-3xl mb-3 focus:outline-none">Carrinho vazio</h1>
       <p className="text-sm text-mid mb-8 max-w-[28ch] leading-relaxed">Explore nossos produtos e escolha os seus lençóis.</p>
       <Link href="/produtos" className="btn-primary px-8 py-3.5 text-sm font-semibold tracking-wide">Ver produtos</Link>
       {!user && (

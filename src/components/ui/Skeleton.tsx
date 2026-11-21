@@ -148,6 +148,7 @@ export function DashboardSkeleton() {
 export function CheckoutSkeleton() {
   return (
     <div className="container-shop py-10 pb-20">
+      <h1 className="sr-only">Finalizar compra</h1>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-12 items-start">
         <div className="flex flex-col gap-6">
           <Skeleton className="h-7 w-48" />
