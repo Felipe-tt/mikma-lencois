@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { parseBusinessHours, getOpenStatus } from '@/lib/business-hours';
 import { CookiePreferencesButton } from '@/components/layout/CookiePreferencesButton';
 import { storeWhatsapp } from '@/lib/whatsapp';
+import { displayPhone } from '@/lib/masks';
 import { useEffect, useState } from 'react';
 
 const BUILD_YEAR = Number(process.env.NEXT_PUBLIC_BUILD_YEAR) || 2026;
@@ -128,7 +129,7 @@ function FooterView({
               {wa && (
                 <li>
                   <a href={wa} target="_blank" rel="noopener noreferrer" className="text-[13px] text-paper/75 hover:text-paper transition-colors duration-150">
-                    WhatsApp{storePhone ? ` · ${storePhone}` : ''}
+                    WhatsApp{storePhone ? ` · ${displayPhone(storePhone)}` : ''}
                   </a>
                 </li>
               )}

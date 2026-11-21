@@ -258,7 +258,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
             <IconMinusCircle size={15} /> Vender
           </button>
           <button onClick={() => setMode('reposicao')}
-            className={`flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors rounded-lg ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
+            className={`flex items-center justify-center gap-1.5 py-3 text-[15px] font-bold normal-case tracking-normal transition-colors rounded-lg ${mode === 'reposicao' ? 'bg-emerald-600 text-white' : 'text-mid'}`}>
             <IconPlusCircle size={15} /> <span className="sm:hidden">Chegou</span><span className="hidden sm:inline">Chegou mercadoria</span>
           </button>
         </div>
@@ -272,7 +272,7 @@ export function NovaVendaSheet({ items, onClose, onDone, embedded = false }: {
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <IconSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
-            <input type="search" aria-label="Buscar produto" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="search" aria-label="Buscar produto" placeholder="Buscar" value={search} onChange={e => setSearch(e.target.value)}
               className="w-full border border-mist bg-white dark:bg-warm pl-8 pr-2 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-clay-l/20 rounded-xl" />
           </div>
           <div className="flex items-center shrink-0 border border-mist bg-white dark:bg-warm rounded-xl">

@@ -1055,7 +1055,8 @@ html.dark .cookie-glass {
    CSS puro (animation-timeline: view()), sem JS. Navegador sem suporte ou
    pessoa com movimento reduzido: nada anima e tudo aparece no lugar. */
 @supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
+  /* Só na tela: na impressão a página não rola e os blocos saíam em branco. */
+  @media screen and (prefers-reduced-motion: no-preference) {
     /* Bloco sobe e aparece ao entrar na tela. */
     .sd-rise {
       animation: sd-rise linear both;

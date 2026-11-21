@@ -126,7 +126,8 @@ export default function ContaPage() {
             </h1>
             <p className="text-[12px] sm:text-[13px] text-mid mt-1 sm:mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <span className="truncate">{user.email}</span>
-              {since && <><span className="text-mist-d" aria-hidden="true">·</span><span>Cliente desde {since}</span></>}
+              {/* No celular a data vai para a linha de baixo: o "·" ficava sozinho no fim da linha. */}
+              {since && <><span className="hidden sm:inline text-mist-d" aria-hidden="true">·</span><span className="basis-full sm:basis-auto">Cliente desde {since}</span></>}
             </p>
           </div>
         </div>
