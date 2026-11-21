@@ -71,6 +71,8 @@ jobs:
               --title "build(deps): corrige vulnerabilidades (npm audit fix)" \
               --body "Correção automática do \`npm audit fix\` (só versões compatíveis, sem --force). Depois da correção, $resumo. Entra sozinho quando todos os testes passam."
           fi
-          # PR aberto pelo GITHUB_TOKEN não dispara os testes sozinho: dispara aqui.
+          # PR aberto pelo GITHUB_TOKEN não dispara os checks sozinho: dispara
+          # aqui os obrigatórios (validate, build-and-deploy e e2e).
+          gh workflow run ci-checks.yml --ref "$BRANCH"
           gh workflow run deploy.yml --ref "$BRANCH"
           echo "PR atualizado e testes disparados. $resumo"
