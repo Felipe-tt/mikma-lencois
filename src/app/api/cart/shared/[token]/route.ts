@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDb } from '@/lib/firebase/admin';
-import { getClientIp, validateBody } from '@/lib/security';
+import { getClientIp, validateBody, verifyAuth } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
-import { applySharedOp, CHAT_MAX, CHAT_TEXT_MAX, LOG_MAX, TOKEN_RE, VIEWER_TTL_MS, type SharedOp } from '@/lib/sharedCart';
+import { applySharedOp, CHAT_MAX, CHAT_TEXT_MAX, LOG_MAX, TOKEN_RE, VIEWER_TTL_MS, withMember, type SharedOp } from '@/lib/sharedCart';
 import type { CartItem } from '@/types';
 
 const id = z.string().min(1).max(120);
@@ -12,6 +12,8 @@ const schema = z.object({
   // Id aleatório do navegador, pra lista de quem está online.
   viewer: z.string().regex(/^[A-Za-z0-9]{8,24}$/).optional(),
   change: z.discriminatedUnion('op', [
+    // Abriu o link: a sessão entra na lista de quem lê o carrinho ao vivo.
+    z.object({ op: z.literal('join') }),
     z.object({ op: z.literal('ping') }),
     z.object({ op: z.literal('like'), sku: id }),
     z.object({ op: z.literal('msg'), text: z.string().trim().min(1).max(CHAT_TEXT_MAX) }),
@@ -32,6 +34,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   if (!parsed.ok) return parsed.response;
   const { by, viewer, change } = parsed.data;
   const who = by || 'Alguém';
+  // Entrar exige uma sessão (o navegador abre uma anônima): é o uid dela que
+  // as regras do Firestore deixam ler o carrinho (share.members).
+  let member: string | null = null;
+  if (change.op === 'join') {
+    const auth = await verifyAuth(req);
+    if (!auth.ok) return auth.response;
+    member = auth.decoded.uid;
+  }
 
   const link = (await adminDb.collection('sharedCarts').doc(token).get()).data();
   if (!link || link.expiresAt.toMillis() < Date.now()) {
@@ -43,8 +53,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       const cart = (await tx.get(cartRef)).data();
       if (cart?.share?.token !== token) return { error: 'Esse link expirou ou foi desligado.' };
       const share = cart.share;
-      if (share.paidAt) return { error: 'Esse pedido já foi finalizado.' };
       const now = Date.now();
+      // Antes da trava de pago: quem abre depois ainda vê o "pedido feito".
+      if (member) {
+        tx.update(cartRef, { 'share.members': withMember(share.members, member, now) });
+        return { ok: true };
+      }
+      if (share.paidAt) return { error: 'Esse pedido já foi finalizado.' };
       // Online: quem mandou sinal nos últimos minutos (os antigos saem).
       const viewers = Object.fromEntries(Object.entries((share.viewers ?? {}) as Record<string, { at: number }>)
         .filter(([, v]) => now - v.at < VIEWER_TTL_MS));

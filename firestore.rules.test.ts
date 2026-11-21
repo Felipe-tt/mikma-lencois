@@ -614,18 +614,28 @@ describe('notifications', () => {
 
 describe('carrinho compartilhado (Montar junto)', () => {
   const inDays = (d: number) => Timestamp.fromMillis(Date.now() + d * 86_400_000);
-  it('com o link ligado, qualquer um lê o carrinho; sem ele, não', async () => {
+  it('com o link ligado, só quem entrou pelo link atual lê o carrinho', async () => {
     const anon = testEnv.unauthenticatedContext().firestore();
+    const friend = testEnv.authenticatedContext('amigo', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+    const old = testEnv.authenticatedContext('antigo', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'carts/buyer1'), { items: [], share: { token: 't', expiresAt: inDays(7) } });
+      await setDoc(doc(ctx.firestore(), 'carts/buyer1'), { items: [], share: { token: 't', expiresAt: inDays(7), members: { amigo: 1 } } });
       await setDoc(doc(ctx.firestore(), 'carts/buyer2'), { items: [] });
-      await setDoc(doc(ctx.firestore(), 'carts/buyer3'), { items: [], share: { token: 'v', expiresAt: inDays(-1) } });
+      await setDoc(doc(ctx.firestore(), 'carts/buyer3'), { items: [], share: { token: 'v', expiresAt: inDays(-1), members: { amigo: 1 } } });
+      // Link de antes da lista de quem entrou: ninguém de fora lê.
+      await setDoc(doc(ctx.firestore(), 'carts/buyer4'), { items: [], share: { token: 'w', expiresAt: inDays(7) } });
     });
-    await assertSucceeds(getDoc(doc(anon, 'carts/buyer1')));
-    await assertFails(getDoc(doc(anon, 'carts/buyer2')));
-    await assertFails(getDoc(doc(anon, 'carts/buyer3')));
-    await assertFails(getDocs(collection(anon, 'carts')));
-    await assertFails(updateDoc(doc(anon, 'carts/buyer1'), { items: [] }));
+    await assertSucceeds(getDoc(doc(friend, 'carts/buyer1')));
+    // Quem guardou o uid de um link antigo (ou nunca entrou) não lê.
+    await assertFails(getDoc(doc(old, 'carts/buyer1')));
+    await assertFails(getDoc(doc(anon, 'carts/buyer1')));
+    await assertFails(getDoc(doc(friend, 'carts/buyer2')));
+    await assertFails(getDoc(doc(friend, 'carts/buyer3')));
+    await assertFails(getDoc(doc(friend, 'carts/buyer4')));
+    await assertFails(getDocs(collection(friend, 'carts')));
+    await assertFails(updateDoc(doc(friend, 'carts/buyer1'), { items: [] }));
+    // A pessoa não se põe na lista sozinha: só a API, que confere o token.
+    await assertFails(updateDoc(doc(old, 'carts/buyer1'), { 'share.members.antigo': 1 }));
   });
 
   it('link: lê pelo token, mas não lista nem escreve', async () => {
