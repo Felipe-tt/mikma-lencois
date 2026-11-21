@@ -3,7 +3,7 @@ import { sendEmail, emailEnabled } from '@/lib/email';
 import { BASE_URL, CONTACT_EMAIL, emailCta, emailLayout, emailParagraph, emailSection, emailSignature, shortOrderId } from '@/lib/email/layout';
 import { escapeHtml } from '@/lib/html';
 import { googleUrl } from '@/lib/googleProfile';
-import { guestOrderLink } from '@/lib/guestAccess';
+import { GUEST_EMAIL_LINK_TTL_MS, guestOrderLink } from '@/lib/guestAccess';
 
 /**
  * Lembrete de avaliação: alguns dias depois da entrega, um e-mail só para
@@ -23,8 +23,6 @@ export const REMINDER_AFTER_DAYS = 5;
 /** Entrega mais antiga que isso não recebe lembrete (evita mandar para pedidos velhos). */
 export const REMINDER_WINDOW_DAYS = 21;
 const MAX_PER_RUN = 100;
-/** Link de acesso do convidado no lembrete: dá tempo de abrir o e-mail com calma. */
-const GUEST_LINK_TTL_MS = 7 * DAY;
 /** Erros do Resend que dizem respeito ao destinatário: marca o pedido e segue. */
 const RECIPIENT_ERRORS = new Set(['validation_error', 'missing_required_field', 'invalid_to_address']);
 
@@ -132,7 +130,7 @@ export async function sendReviewReminders(now = new Date()): Promise<{ checked: 
       // Convidado entra pelo link de acesso do pedido e avalia de lá. Sem a
       // marca de convidado (cadastro antigo), só o convite do Google.
       const guest = !!user && !user.providerData.length;
-      const accessUrl = guest ? guestOrderLink(doc.id, order.userId, profile, GUEST_LINK_TTL_MS) : undefined;
+      const accessUrl = guest ? guestOrderLink(doc.id, order.userId, profile, GUEST_EMAIL_LINK_TTL_MS) : undefined;
       if (!user || !email || (guest && !accessUrl && !googleReview)) { result.skipped++; await mark('sem login'); continue; }
 
       const name = (profile?.name ?? user.displayName ?? '').split(' ')[0] || 'cliente';

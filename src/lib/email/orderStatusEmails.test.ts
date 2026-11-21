@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addBusinessDays, buildCancelled, buildConfirmed, buildPaymentReminder, buildPixExpired, buildPixPending, buildPreparing, buildShipped, buildWithdrawalReceived,
+  addBusinessDays, buildCancelled, buildConfirmed, buildDelivered, buildPaymentReminder, buildPixExpired, buildPixPending, buildPreparing, buildShipped, buildWithdrawalReceived,
 } from './orderStatusEmails';
 import type { Order } from '@/types';
 
@@ -138,5 +138,22 @@ describe('convidado: os e-mails de pagamento já abrem o pedido', () => {
   it('sem link (conta), continua o endereço normal do pedido', () => {
     expect(buildPixExpired(base, 'Ana').text).toContain('/pedidos/abcdefgh12345678');
     expect(buildPixExpired(base, 'Ana').text).not.toContain('acesso=');
+  });
+});
+
+describe('convidado: os e-mails do andamento também abrem o pedido', () => {
+  const link = 'https://mikma.com.br/pedidos/abcdefgh12345678?acesso=xyz.789';
+  const doc = { ...base, payment: { method: 'pix' }, status: 'paid', userId: 'u1', delivery: { carrier: 'correios_pac', trackingCode: 'AA123456789BR', estimatedDays: 5 } } as unknown as Parameters<typeof buildShipped>[0];
+  it('confirmado, em separação, despachado e entregue usam o link de acesso', () => {
+    const emails = [
+      buildConfirmed({ ...base, payment: { method: 'pix' } }, 'Ana', new Date(), link),
+      buildPreparing(doc, 'Ana', undefined, link),
+      buildShipped(doc, 'Ana', new Date(), link),
+      buildDelivered(doc, 'Ana', link),
+    ];
+    for (const e of emails) expect(e.html).toContain('acesso=xyz.789');
+  });
+  it('sem link, o endereço normal do pedido', () => {
+    expect(buildShipped(doc, 'Ana').html).not.toContain('acesso=');
   });
 });

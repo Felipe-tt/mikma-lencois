@@ -9,6 +9,7 @@ import { recordShippingSpent } from '@/lib/shipping-ledger';
 import { shippingBlockReason } from '@/lib/orders/shippingBlock';
 import { getSettings } from '@/lib/settings';
 import { storeIdentity } from '@/lib/legal';
+import { GUEST_EMAIL_LINK_TTL_MS, guestOrderLink } from '@/lib/guestAccess';
 
 /**
  * Avança o pedido uma etapa (pago, separando, enviado, entregue) e manda o
@@ -104,10 +105,12 @@ export async function advanceOrderStatus(
       const pickup = next === 'preparing' && (order.delivery?.carrier ?? (order as { selectedShipping?: { carrier?: string } }).selectedShipping?.carrier) === 'pickup'
         ? { address: storeIdentity(await getSettings()).address }
         : undefined;
+      // Convidado: o botão já abre o pedido, sem senha (lib/guestAccess.ts).
+      const link = guestOrderLink(order.id, order.userId, userData, GUEST_EMAIL_LINK_TTL_MS);
       const payload =
-        next === 'preparing' ? buildPreparing(updatedOrder, firstName, pickup) :
-        next === 'shipped'   ? buildShipped(updatedOrder, firstName) :
-        next === 'delivered' ? buildDelivered(updatedOrder, firstName) : null;
+        next === 'preparing' ? buildPreparing(updatedOrder, firstName, pickup, link) :
+        next === 'shipped'   ? buildShipped(updatedOrder, firstName, new Date(), link) :
+        next === 'delivered' ? buildDelivered(updatedOrder, firstName, link) : null;
 
       if (payload) {
         await sendEmail({

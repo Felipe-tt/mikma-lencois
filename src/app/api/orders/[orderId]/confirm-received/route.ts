@@ -7,6 +7,7 @@ import { extractBearer, getClientIp } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { buildDelivered } from '@/lib/email/orderStatusEmails';
 import type { Order, User } from '@/types';
+import { GUEST_EMAIL_LINK_TTL_MS, guestOrderLink } from '@/lib/guestAccess';
 
 /**
  * POST /api/orders/[orderId]/confirm-received
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     const customerEmail = userData?.email;
     const firstName = (userData?.name ?? '').split(' ')[0] || 'cliente';
     if (customerEmail) {
-      const payload = buildDelivered({ ...order, status: 'delivered' }, firstName);
+      const payload = buildDelivered({ ...order, status: 'delivered' }, firstName, guestOrderLink(orderId, order.userId, userData, GUEST_EMAIL_LINK_TTL_MS));
       await sendEmail({
         to: customerEmail,
         subject: payload.subject,

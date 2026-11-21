@@ -12,6 +12,7 @@ import { CONTACT_EMAIL, type EmailItem } from '@/lib/email/layout';
 import { autoIssueNfe } from '@/lib/nfe/service';
 import { storeOrderRisk } from '@/lib/orders/risk';
 import { cancelOrdersReplacedBy } from '@/lib/orders/replacedOrder';
+import { GUEST_EMAIL_LINK_TTL_MS, guestOrderLink } from '@/lib/guestAccess';
 
 /**
  * Confirmação manual de um PIX expirado sem estoque livre pra cobrir: a
@@ -359,6 +360,8 @@ export async function confirmOrderPaid(
       const payload = buildConfirmed(
         { id: orderId, items: order.items as EmailItem[], totalCents: order.totalCents as number, payment: order.payment as { method: string }, productsCents: order.productsCents as number | undefined, shippingCents: order.shippingCents as number | undefined, pixDiscountCents: order.pixDiscountCents as number | undefined, couponDiscountCents: order.couponDiscountCents as number | undefined, discountCents: order.discountCents as number | undefined, couponCode: order.couponCode as string | undefined, delivery: order.delivery as { label?: string; estimatedDays?: number; carrier?: string | null } | undefined },
         customerName,
+        new Date(),
+        guestOrderLink(orderId, order.userId as string, userData, GUEST_EMAIL_LINK_TTL_MS),
       );
       await sendEmail({
         to: customerEmail,
