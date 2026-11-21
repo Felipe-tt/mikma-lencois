@@ -290,6 +290,8 @@ export interface Cart {
     addedBy?: Record<string, string>
     /** Quem está com o link aberto (id do navegador → nome, último sinal). */
     viewers?: Record<string, { name: string; at: number; owner?: boolean }>
+    /** Sessões que entraram pelo link atual (uid → quando): só elas leem o carrinho. */
+    members?: Record<string, number>
     /** Pedido pago a partir deste carrinho: o link vira só a tela de "pedido feito". */
     /** Recados trocados no "Montar junto", do mais antigo pro mais novo. */
     chat?: SharedCartEdit[]

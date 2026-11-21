@@ -15,6 +15,7 @@ import { getFronhaCount, swapPairsPerUnit } from '@/lib/fronhaSwap';
 import { linesForProduct, packageContents, parseTable, type PackageLine } from '@/lib/packageContents';
 import { withStoreDefaults } from '@/lib/store-settings';
 import { Avatar, ChatBox, LikeButton, OnlineStack, useTabBadge } from '@/components/cart/montarUi';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 type Status = 'loading' | 'ok' | 'off';
 type Tab = 'produtos' | 'carrinho' | 'recados';
@@ -24,6 +25,26 @@ const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 
 function readStorage(key: string) {
   try { return typeof window === 'undefined' ? '' : localStorage.getItem(key) ?? ''; } catch { return ''; }
+}
+
+/**
+ * Entra pelo link: abre uma sessão (anônima, se a pessoa não tem) e a
+ * registra no carrinho. Só quem entrou pelo link atual lê o carrinho
+ * (regras do Firestore): link trocado pelo dono corta quem tinha o antigo.
+ */
+async function joinShared(token: string, startGuest: () => Promise<boolean>): Promise<boolean> {
+  if (!await startGuest()) return false;
+  try {
+    const { auth } = await import('@/lib/firebase/client');
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) return false;
+    const res = await fetch(`/api/cart/shared/${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ change: { op: 'join' } }),
+    });
+    return res.ok;
+  } catch { return false; }
 }
 
 /** Id aleatório deste navegador, pra aparecer uma vez só na lista de online. */
@@ -38,6 +59,7 @@ function viewerId() {
 
 export default function MontarJuntoPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  const { loading: authLoading, startGuest } = useAuth();
   const [status, setStatus] = useState<Status>('loading');
   const [cart, setCart] = useState<Cart | null>(null);
   const [catalog, setCatalog] = useState<Product[]>([]);
@@ -93,19 +115,23 @@ export default function MontarJuntoPage({ params }: { params: Promise<{ token: s
   }, []);
 
   useEffect(() => {
+    // Espera a sessão salva voltar: sem isso, abria uma anônima por cima da conta.
+    if (authLoading) return;
+    let alive = true;
     let unsub: (() => void) | undefined;
-    getDoc(doc(db, 'sharedCarts', token)).then(link => {
-      const uid = link.data()?.uid;
-      if (!uid) { setStatus('off'); return; }
+    (async () => {
+      const uid = (await getDoc(doc(db, 'sharedCarts', token)).catch(() => null))?.data()?.uid;
+      if (!uid || !await joinShared(token, startGuest)) { if (alive) setStatus('off'); return; }
+      if (!alive) return;
       unsub = onSnapshot(doc(db, 'carts', uid), snap => {
         const c = snap.data() as Cart | undefined;
         if (!c || c.share?.token !== token) { setStatus('off'); return; }
         setCart(c);
         setStatus('ok');
       }, () => setStatus('off'));
-    }).catch(() => setStatus('off'));
-    return () => unsub?.();
-  }, [token]);
+    })();
+    return () => { alive = false; unsub?.(); };
+  }, [token, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Dono no checkout: os itens ficam travados até ele voltar ou a trava vencer.
   const locked = !!cart?.share?.lockedUntil && cart.share.lockedUntil > now;

@@ -21,6 +21,18 @@ export const VIEWER_TTL_MS = 2 * 60_000;
 /** Trava do carrinho enquanto o dono está no checkout (renovada enquanto ele fica lá). */
 export const CHECKOUT_LOCK_MS = 20 * 60_000;
 export const TOKEN_RE = /^[A-Za-z0-9_-]{22}$/;
+/** Sessões que entraram pelo link atual (as que podem ler o carrinho ao vivo). */
+export const MEMBERS_MAX = 50;
+
+/**
+ * Lista de quem entrou pelo link (uid da sessão, anônima ou não, e quando),
+ * com esta sessão. Passou do teto: saem as que entraram há mais tempo.
+ */
+export function withMember(members: Record<string, number> | undefined, uid: string, now: number): Record<string, number> {
+  const list = Object.entries(members ?? {}).filter(([k, at]) => k !== uid && typeof at === 'number');
+  list.sort((a, b) => b[1] - a[1]);
+  return Object.fromEntries([[uid, now], ...list.slice(0, MEMBERS_MAX - 1)]);
+}
 
 export type SharedOp =
   | { op: 'add'; productId: string; variantId: string; swapSku?: string | null; quantity?: number }

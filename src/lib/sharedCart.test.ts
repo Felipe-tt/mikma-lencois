@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Firestore } from 'firebase-admin/firestore';
 import type { CartItem } from '@/types';
-import { applySharedOp, lineKey, MAX_SHARED_LINES, MAX_SHARED_QTY, TOKEN_RE } from './sharedCart';
+import { applySharedOp, lineKey, MAX_SHARED_LINES, MAX_SHARED_QTY, MEMBERS_MAX, TOKEN_RE, withMember } from './sharedCart';
 
 type Docs = Record<string, Record<string, Record<string, unknown>>>;
 
@@ -137,5 +137,21 @@ describe('TOKEN_RE', () => {
     expect(TOKEN_RE.test('abcdefghij_-KLMNOPQRST')).toBe(true);
     expect(TOKEN_RE.test('curto')).toBe(false);
     expect(TOKEN_RE.test('abcdefghij/-KLMNOPQRST')).toBe(false);
+  });
+});
+
+describe('withMember: quem entrou pelo link', () => {
+  it('entra com a hora, sem repetir quem já estava', () => {
+    expect(withMember(undefined, 'a', 10)).toEqual({ a: 10 });
+    expect(withMember({ a: 10, b: 20 }, 'a', 30)).toEqual({ a: 30, b: 20 });
+  });
+
+  it('no teto, sai quem entrou há mais tempo', () => {
+    const cheio = Object.fromEntries(Array.from({ length: MEMBERS_MAX }, (_, i) => [`u${i}`, i]));
+    const depois = withMember(cheio, 'novo', 1000);
+    expect(Object.keys(depois)).toHaveLength(MEMBERS_MAX);
+    expect(depois.novo).toBe(1000);
+    expect(depois.u0).toBeUndefined();
+    expect(depois[`u${MEMBERS_MAX - 1}`]).toBe(MEMBERS_MAX - 1);
   });
 });
