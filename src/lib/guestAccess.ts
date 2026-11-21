@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'crypto';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { guestAccessMac } from '@/lib/piiCrypto';
+import { BASE_URL } from '@/lib/email/layout';
 
 /**
  * Link de acesso ao pedido de quem comprou sem cadastro. O convidado não tem
@@ -36,4 +37,14 @@ export function readGuestAccessToken(token: string, now = Date.now()): { orderId
 export function isGuestToken(decoded: Pick<DecodedIdToken, 'firebase'> & { guest?: unknown }): boolean {
   const provider = decoded.firebase?.sign_in_provider;
   return provider === 'anonymous' || (provider === 'custom' && decoded.guest === true);
+}
+
+/**
+ * Link do pedido nos e-mails de pagamento ("falta o PIX", "PIX expirou",
+ * lembrete): para o convidado, já com o acesso, e ele gera outro PIX direto
+ * do app de e-mail. Conta de verdade fica com o link normal (undefined).
+ */
+export function guestOrderLink(orderId: string, uid: string, profile: Record<string, unknown> | undefined): string | undefined {
+  if (profile?.guest !== true) return undefined;
+  return `${BASE_URL}/pedidos/${orderId}?acesso=${guestAccessToken(orderId, uid)}`;
 }

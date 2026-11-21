@@ -5,6 +5,7 @@ import { expandStockLines } from '@/lib/orderStockLines';
 import { buildPixExpired } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
 import { cancelReplaced, paidReplacement } from '@/lib/orders/replacedOrder';
+import { guestOrderLink } from '@/lib/guestAccess';
 
 /**
  * PIX venceu sem pagamento: pedido vai para payment_expired e a reserva de
@@ -61,7 +62,7 @@ export async function expirePixOrder(orderId: string, txId: string | undefined, 
       try { email = (await adminAuth.getUser(order.userId as string)).email; } catch { /* conta removida */ }
     }
     if (email) {
-      const payload = buildPixExpired({ id: orderId, totalCents: order.totalCents as number }, name);
+      const payload = buildPixExpired({ id: orderId, totalCents: order.totalCents as number }, name, guestOrderLink(orderId, order.userId as string, userData));
       await sendEmail({ to: email, subject: payload.subject, text: payload.text, html: payload.html, from: 'noreply', replyTo: CONTACT_EMAIL });
     }
   } catch (err) {

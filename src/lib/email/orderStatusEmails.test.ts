@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addBusinessDays, buildCancelled, buildConfirmed, buildPixExpired, buildPixPending, buildPreparing, buildShipped, buildWithdrawalReceived,
+  addBusinessDays, buildCancelled, buildConfirmed, buildPaymentReminder, buildPixExpired, buildPixPending, buildPreparing, buildShipped, buildWithdrawalReceived,
 } from './orderStatusEmails';
 import type { Order } from '@/types';
 
@@ -121,5 +121,22 @@ describe('desistência recebida (Decreto 7.962, art. 5º, § 4º)', () => {
   });
   it('escapa o nome no HTML', () => {
     expect(buildWithdrawalReceived(base, '<b>Ana</b>', { at }).html).not.toContain('<b>Ana</b>');
+  });
+});
+
+describe('convidado: os e-mails de pagamento já abrem o pedido', () => {
+  const link = 'https://mikma.com.br/pedidos/abcdefgh12345678?acesso=abc.def';
+  it('falta o PIX, PIX expirado e lembrete usam o link de acesso', () => {
+    const pending = buildPixPending(base, 'Ana', { copyPaste: '000201...' }, link);
+    const expired = buildPixExpired(base, 'Ana', link);
+    const reminder = buildPaymentReminder(base, 'Ana', link);
+    for (const e of [pending, expired, reminder]) {
+      expect(e.text).toContain(link);
+      expect(e.html).toContain('acesso=abc.def');
+    }
+  });
+  it('sem link (conta), continua o endereço normal do pedido', () => {
+    expect(buildPixExpired(base, 'Ana').text).toContain('/pedidos/abcdefgh12345678');
+    expect(buildPixExpired(base, 'Ana').text).not.toContain('acesso=');
   });
 });
