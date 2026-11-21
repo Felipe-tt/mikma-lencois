@@ -12,7 +12,7 @@ const listUsers = vi.fn(async () => ({
 vi.mock('@/lib/email', () => ({ sendEmail }));
 vi.mock('@/lib/firebase/admin', () => ({ adminAuth: { listUsers }, adminDb: {} }));
 
-const { notifyPasskeyAdded } = await import('./staffDevices');
+const { notifyPasskeyAdded, notifyPiiScan } = await import('./staffDevices');
 
 const base = { uid: 'u1', ip: '203.0.113.7', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', city: 'Blumenau', country: 'BR' };
 const recipients = () => sendEmail.mock.calls.map(c => (c[0] as { to: string }).to).sort();
@@ -41,5 +41,18 @@ describe('aviso de passkey nova', () => {
   it('o e-mail não deixa passar HTML de quem cadastrou', async () => {
     await notifyPasskeyAdded({ ...base, email: 'cliente@x.com', role: 'buyer', claims: {}, city: '<img src=x onerror=alert(1)>' });
     expect((sendEmail.mock.calls[0][0] as { html: string }).html).not.toContain('<img src=x');
+  });
+});
+
+describe('aviso de muitos CPFs abertos', () => {
+  beforeEach(() => { sendEmail.mockClear(); listUsers.mockClear(); });
+
+  it('avisa a própria pessoa e os admins ativos, com o teto e o IP', async () => {
+    await notifyPiiScan({ uid: 'v1', email: 'vendedor@mikma.com.br', ip: '203.0.113.9', perHour: 120 });
+    expect(recipients()).toEqual(['dona@mikma.com.br', 'vendedor@mikma.com.br']);
+    const { text, subject } = sendEmail.mock.calls[0][0] as { text: string; subject: string };
+    expect(subject).toContain('muitos CPFs');
+    expect(text).toContain('mais de 120 clientes');
+    expect(text).toContain('203.0.113.9');
   });
 });

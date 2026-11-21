@@ -30,6 +30,8 @@ export const RETENTION = {
   restockDays: 365,
   maintenanceQueueDays: 30,
   supportYears: 5,
+  /** Registro de quem da equipe abriu CPF e telefone de cliente. */
+  piiAccessLogDays: 365,
 } as const;
 
 /** Data limite: o que foi criado antes dela passou do prazo. */
@@ -81,6 +83,7 @@ export interface RetentionResult {
   queueDeleted: number;
   nfeDeleted: number;
   conversationsDeleted: number;
+  piiLogDeleted: number;
   /** Anexos antigos de e-mail que deixaram de ser públicos. */
   attachmentsPrivatized: number;
   returnsDeleted: number;
@@ -94,7 +97,7 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   const nowIso = now.toISOString();
   const r: RetentionResult = {
     piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0, riskMoved: 0,
-    nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0, attachmentsPrivatized: 0,
+    nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0, piiLogDeleted: 0, attachmentsPrivatized: 0,
   };
 
   // Perfis antigos com CPF/telefone em claro: criptografa (ver lib/piiCrypto.ts).
@@ -223,6 +226,11 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   const queue = await db.collection('maintenance_queue').where('lastSeenAt', '<', cutoffIso(now, RETENTION.maintenanceQueueDays)).limit(BATCH).get();
   await Promise.all(queue.docs.map(d => d.ref.delete()));
   r.queueDeleted = queue.size;
+
+  // Registro de acesso a CPF e telefone com mais de 1 ano.
+  const piiLog = await db.collection('piiAccessLog').where('at', '<', cutoffIso(now, RETENTION.piiAccessLogDays)).limit(BATCH).get();
+  await Promise.all(piiLog.docs.map(d => d.ref.delete()));
+  r.piiLogDeleted = piiLog.size;
 
   return r;
 }

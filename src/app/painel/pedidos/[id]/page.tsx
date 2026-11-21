@@ -257,14 +257,17 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
   // Cliente buscado uma vez por pedido, não a cada snapshot (antes cada
   // mudança de status refazia a leitura do usuário).
   const orderUserId = order?.userId;
+  const [piiFailed, setPiiFailed] = useState(false);
   useEffect(() => {
     if (!orderUserId) return;
     let alive = true;
     // CPF e telefone vêm da API (criptografados no banco, ver lib/piiCrypto.ts).
-    const pii = user ? fetchCustomerPii(user, orderUserId).catch(() => ({ cpf: '', phone: '' })) : Promise.resolve({ cpf: '', phone: '' });
+    // Falha (inclusive o teto de consultas por hora) não vira "Não informado".
+    const pii = user ? fetchCustomerPii(user, orderUserId).catch(() => null) : Promise.resolve({ cpf: '', phone: '' });
     Promise.all([getDoc(doc(db, 'users', orderUserId)), pii]).then(([uSnap, p]) => {
       if (!alive || !uSnap.exists()) return;
-      const ur: Record<string, unknown> = { ...uSnap.data(), cpf: p.cpf, phone: p.phone };
+      setPiiFailed(p === null);
+      const ur: Record<string, unknown> = { ...uSnap.data(), cpf: p?.cpf ?? '', phone: p?.phone ?? '' };
       const toIso = (v: unknown) => (typeof v === 'object' && v !== null && 'seconds' in v)
         ? new Date((v as { seconds: number }).seconds * 1000).toISOString()
         : typeof v === 'string' ? v : undefined;
@@ -1188,7 +1191,7 @@ export default function PainelPedidoDetalhe({ params }: { params: Promise<{ id: 
               {/* Comprou sem cadastro: não tem senha. Para ver o pedido em
                   outro aparelho, usa "Receber link por e-mail" na página dele. */}
               <Row label="Cadastro" value={(customer as { guest?: boolean }).guest ? 'Sem cadastro (link de acesso por e-mail)' : null} />
-              <Row label="CPF" value={customer.cpf ? customer.cpf : 'Não informado'} />
+              <Row label="CPF" value={customer.cpf ? customer.cpf : piiFailed ? 'Indisponível agora, tente mais tarde' : 'Não informado'} />
               {customerPhone && (
                 <div className="flex justify-between items-center gap-4 py-2.5 border-b border-warm">
                   <span className="text-[12px] text-faint shrink-0">Telefone</span>

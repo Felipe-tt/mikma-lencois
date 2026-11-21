@@ -206,6 +206,10 @@ export default async function PrivacidadePage() {
           <>
             <B>Pedidos de “Avise-me quando chegar”:</B> por até 1 ano.
           </>,
+          <>
+            <B>Registro de quem da equipe abriu o seu CPF ou telefone:</B> por 1 ano, para
+            conferir que só foi usado no atendimento.
+          </>,
         ]),
       ],
     },

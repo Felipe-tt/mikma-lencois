@@ -163,14 +163,17 @@ describe('retenção (LGPD)', () => {
     }
   });
 
-  it('apaga "avise-me" com mais de 1 ano e fila de manutenção com mais de 30 dias', async () => {
+  it('apaga "avise-me" e registro de acesso a CPF com mais de 1 ano, e fila de manutenção com mais de 30 dias', async () => {
     const data: Record<string, Record<string, Doc>> = {
       restockRequests: { velho: { createdAt: daysAgo(400), email: 'a@x.com' }, novo: { createdAt: daysAgo(30), email: 'b@x.com' } },
       maintenance_queue: { velho: { lastSeenAt: daysAgo(40) }, novo: { lastSeenAt: daysAgo(1) } },
+      piiAccessLog: { velho: { at: daysAgo(400), by: 's1', customer: 'c1' }, novo: { at: daysAgo(10), by: 's1', customer: 'c2' } },
     };
     const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
     expect(r.restockDeleted).toBe(1);
     expect(r.queueDeleted).toBe(1);
+    expect(r.piiLogDeleted).toBe(1);
+    expect(Object.keys(data.piiAccessLog)).toEqual(['novo']);
     expect(Object.keys(data.restockRequests)).toEqual(['novo']);
     expect(Object.keys(data.maintenance_queue)).toEqual(['novo']);
   });
