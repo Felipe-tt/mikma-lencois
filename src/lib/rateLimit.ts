@@ -96,11 +96,15 @@ async function upstashRateLimit(key: string, maxRequests: number, windowMs: numb
   const redisKey = `ratelimit:${key}`;
   const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
 
-  const count = await withTimeout(redis.incr(redisKey), UPSTASH_TIMEOUT_MS);
-  if (count === 1) {
-    // Primeira requisição da janela: define o TTL agora.
-    await withTimeout(redis.expire(redisKey, windowSeconds), UPSTASH_TIMEOUT_MS);
-  }
+  // Soma e prazo numa transação só. Antes eram duas chamadas: se o EXPIRE
+  // falhasse (timeout de 1,5 s, rede), a chave ficava sem prazo e nunca
+  // mais zerava; numa chave geral (pay:guest:global, send-reset:global) a
+  // rota travava para todo mundo. NX só põe prazo em chave que não tem,
+  // então a próxima chamada também conserta uma chave que ficou sem.
+  const [count] = await withTimeout(
+    redis.multi().incr(redisKey).expire(redisKey, windowSeconds, 'NX').exec<[number, number]>(),
+    UPSTASH_TIMEOUT_MS,
+  );
 
   return count <= maxRequests;
 }
