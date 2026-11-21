@@ -284,7 +284,7 @@ export default function ConfiguracoesPage() {
               hint="Como está no cartão CNPJ. Aparece no rodapé junto do CNPJ e vai na nota fiscal." />
             <F label="País de origem dos produtos" value={settings.productOrigin ?? ''} onChange={v => set('productOrigin', v)} maxLength={40}
               placeholder="Brasil"
-              hint={settings.productOrigin?.trim() ? 'Aparece na ficha de cada produto.' : 'Obrigatório pelo Código de Defesa do Consumidor (art. 31): aparece na ficha de cada produto.'} />
+              hint="Aparece na ficha de cada produto (o Código de Defesa do Consumidor pede a origem)." />
             {(!(settings.storeCnpj || settings.nfeCnpj) || !settings.nfeRazaoSocial?.trim() || !settings.storeAddress?.trim() || !settings.storeCity?.trim()) && (
               <p role="status" className="text-[12px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl px-3.5 py-2.5 leading-snug">
                 A lei do comércio eletrônico (Decreto 7.962/2013) pede que o site mostre CNPJ, razão social e endereço completo. Preencha aqui e em <strong>Onde você fica</strong>.
