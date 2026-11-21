@@ -17,7 +17,7 @@ export type StoreSettings = {
   storePhone: string;
   storeEmail: string;
   storeCnpj: string;
-  /** País onde os produtos são feitos (CDC, art. 31: a oferta diz a origem). Vazio: não aparece. */
+  /** País onde os produtos são feitos (CDC, art. 31: a oferta diz a origem). Padrão: Brasil. */
   productOrigin: string;
   instagramUrl: string;
   // Perfil da empresa no Google: o link do perfil (Maps) liga o site a ele
@@ -171,7 +171,7 @@ export const STORE_DEFAULTS: StoreSettings = {
   storePhone: '',
   storeEmail: '',
   storeCnpj: '',
-  productOrigin: '',
+  productOrigin: 'Brasil',
   instagramUrl: '',
   googleBusinessUrl: '',
   googleReviewUrl: '',
@@ -278,6 +278,8 @@ const LEGACY_COPY: Array<[string, string]> = [
 /** Padrões + o que está salvo, com os textos antigos corrigidos. */
 export function withStoreDefaults(saved: Record<string, unknown> | undefined): StoreSettings {
   const merged = { ...STORE_DEFAULTS, ...(saved ?? {}) } as StoreSettings;
+  // Origem salva vazia (antes de existir o padrão) volta para Brasil.
+  if (!String(merged.productOrigin ?? '').trim()) merged.productOrigin = STORE_DEFAULTS.productOrigin;
   if (typeof merged.aboutTimeline === 'string') {
     let t = merged.aboutTimeline;
     for (const [from, to] of LEGACY_COPY) t = t.split(from).join(to);
