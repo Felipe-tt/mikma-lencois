@@ -32,6 +32,8 @@ export const RETENTION = {
   supportYears: 5,
   /** Registro de quem da equipe abriu CPF e telefone de cliente. */
   piiAccessLogDays: 365,
+  /** Foto de troca enviada que não entrou em nenhuma troca. */
+  orphanReturnPhotoHours: 48,
 } as const;
 
 /** Data limite: o que foi criado antes dela passou do prazo. */
@@ -58,7 +60,7 @@ export function nfeCutoffIso(now: Date): string {
 }
 
 /** Sem Storage (testes que não mexem em arquivo). */
-const noFiles: StoredFiles = { deletePrefix: async () => {}, deletePath: async () => {}, privatizePrefix: async () => 0 };
+const noFiles: StoredFiles = { deletePrefix: async () => {}, deletePath: async () => {}, privatizePrefix: async () => 0, listOlderThan: async () => [] };
 
 /** Campos que um pedido antigo perde. A cidade e o estado ficam para relatórios. */
 export function anonymizedOrderPatch(address: { city?: string; state?: string } | undefined, nowIso: string) {
@@ -84,6 +86,8 @@ export interface RetentionResult {
   nfeDeleted: number;
   conversationsDeleted: number;
   piiLogDeleted: number;
+  /** Fotos de troca enviadas e nunca usadas numa troca. */
+  orphanPhotosDeleted: number;
   /** Anexos antigos de e-mail que deixaram de ser públicos. */
   attachmentsPrivatized: number;
   returnsDeleted: number;
@@ -97,7 +101,7 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   const nowIso = now.toISOString();
   const r: RetentionResult = {
     piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0, riskMoved: 0,
-    nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0, piiLogDeleted: 0, attachmentsPrivatized: 0,
+    nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0, piiLogDeleted: 0, attachmentsPrivatized: 0, orphanPhotosDeleted: 0,
   };
 
   // Perfis antigos com CPF/telefone em claro: criptografa (ver lib/piiCrypto.ts).
@@ -208,6 +212,24 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
     await deleteConversation(db, files, c.ref);
     r.conversationsDeleted++;
   }
+  // Fotos de troca enviadas que não entraram em troca nenhuma (a pessoa
+  // desistiu no meio, ou alguém enchendo o Storage, que aceita foto de
+  // qualquer sessão): saem em 2 dias.
+  try {
+    const old = await files.listOlderThan('returns/', now.getTime() - RETENTION.orphanReturnPhotoHours * 3_600_000);
+    if (old.length) {
+      const used = new Set<string>();
+      for (const t of (await db.collection('returns').select('fotos').get()).docs) {
+        for (const f of (t.get('fotos') as unknown[] | undefined) ?? []) if (typeof f === 'string') used.add(f);
+      }
+      const orphans = old.filter(p => !used.has(p)).slice(0, BATCH);
+      await Promise.all(orphans.map(p => files.deletePath(p)));
+      r.orphanPhotosDeleted = orphans.length;
+    }
+  } catch (err) {
+    console.error('[retention] fotos de troca sem troca', err);
+  }
+
   // Anexos de e-mail de antes de ficarem privados: fecha o acesso público.
   try {
     r.attachmentsPrivatized = await files.privatizePrefix('email-attachments/');
