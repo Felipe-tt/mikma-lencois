@@ -34,6 +34,8 @@ export const RETENTION = {
   piiAccessLogDays: 365,
   /** Foto de troca enviada que não entrou em nenhuma troca. */
   orphanReturnPhotoHours: 48,
+  /** Login marcado como confiável (lib/auth/loginTicket.ts): depois disso, CPF pede para entrar de novo. */
+  trustedLoginDays: 180,
 } as const;
 
 /** Data limite: o que foi criado antes dela passou do prazo. */
@@ -91,6 +93,8 @@ export interface RetentionResult {
   /** Anexos antigos de e-mail que deixaram de ser públicos. */
   attachmentsPrivatized: number;
   returnsDeleted: number;
+  /** Tickets de login vencidos e logins confiáveis antigos. */
+  loginTicketsDeleted: number;
 }
 
 // Por rodada: a rotina roda todo dia, então o que sobrar sai no dia seguinte
@@ -102,6 +106,7 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   const r: RetentionResult = {
     piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0, riskMoved: 0,
     nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0, piiLogDeleted: 0, attachmentsPrivatized: 0, orphanPhotosDeleted: 0,
+    loginTicketsDeleted: 0,
   };
 
   // Perfis antigos com CPF/telefone em claro: criptografa (ver lib/piiCrypto.ts).
@@ -253,6 +258,14 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   const piiLog = await db.collection('piiAccessLog').where('at', '<', cutoffIso(now, RETENTION.piiAccessLogDays)).limit(BATCH).get();
   await Promise.all(piiLog.docs.map(d => d.ref.delete()));
   r.piiLogDeleted = piiLog.size;
+
+  // Ticket de login que ninguém usou e login confiável antigo (ver lib/auth/loginTicket.ts).
+  const [tickets, trusted] = await Promise.all([
+    db.collection('login_tickets').where('expiresAt', '<', now.toISOString()).limit(BATCH).get(),
+    db.collection('trusted_logins').where('at', '<', cutoffIso(now, RETENTION.trustedLoginDays)).limit(BATCH).get(),
+  ]);
+  await Promise.all([...tickets.docs, ...trusted.docs].map(d => d.ref.delete()));
+  r.loginTicketsDeleted = tickets.size + trusted.size;
 
   return r;
 }

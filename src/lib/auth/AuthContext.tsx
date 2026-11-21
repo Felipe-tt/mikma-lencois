@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import type { User } from 'firebase/auth';
+import type { IdTokenResult, User } from 'firebase/auth';
 
 // O SDK do Auth baixa depois da página montar, não junto com ela: o
 // cabeçalho só precisa dele para mostrar a conta, e ninguém espera por isso.
@@ -57,9 +57,34 @@ function clearStaffCookie(force = false) {
   fetch('/api/auth/session', { method: 'DELETE', keepalive: true }).catch(() => {});
 }
 
+/**
+ * Logo depois de entrar com senha: troca o ticket que a checagem do site
+ * deixou (/api/auth/login, confirmação por e-mail, cadastro, senha nova)
+ * por "este login é confiável". Sem isso, CPF, exportar e apagar a conta
+ * pedem para entrar de novo (ver lib/auth/loginTicket.ts). Espera a
+ * resposta antes de mostrar a conta: o perfil e o checkout leem o CPF em
+ * seguida. Uma vez por login, e só nos primeiros minutos.
+ */
+async function trustPasswordLogin(firebaseUser: User, tokenResult: IdTokenResult): Promise<void> {
+  // Nunca atrapalha o login: qualquer falha aqui só deixa o login sem a marca.
+  try {
+    if (tokenResult.signInProvider !== 'password' || tokenResult.signInSecondFactor) return;
+    const authMs = Date.parse(tokenResult.authTime);
+    if (!(Date.now() - authMs < 15 * 60 * 1000)) return;
+    const flag = `mikma-trust:${firebaseUser.uid}:${authMs}`;
+    try { if (localStorage.getItem(flag)) return; } catch { /* sem storage */ }
+    // Rede travada não segura a conta: desiste em 8 s.
+    const signal = typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(8000) : undefined;
+    const res = await fetch('/api/auth/trust', { method: 'POST', headers: { Authorization: `Bearer ${tokenResult.token}` }, signal });
+    const trusted = res.ok && (await res.json().catch(() => ({}))).trusted === true;
+    if (trusted) { try { localStorage.setItem(flag, '1'); } catch { /* sem storage */ } }
+  } catch { /* segue sem a marca */ }
+}
+
 async function mapUser(firebaseUser: User): Promise<AuthUser> {
   const tokenResult = await firebaseUser.getIdTokenResult(true);
   const role = (tokenResult.claims.role as AuthUser['role']) ?? 'buyer';
+  await trustPasswordLogin(firebaseUser, tokenResult);
 
   // Seller/admin: manda o cookie que o middleware usa só pra pular a
   // manutenção quando a pessoa está logada como staff. Fire-and-forget -

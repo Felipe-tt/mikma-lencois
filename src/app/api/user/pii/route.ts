@@ -5,6 +5,7 @@ import { verifyAuth } from '@/lib/security';
 import { rateLimit } from '@/lib/rateLimit';
 import { piiPatch, readPii } from '@/lib/piiCrypto';
 import { validateCpf, validatePhone } from '@/lib/validation/signup';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 
 /**
  * CPF e telefone do próprio perfil. Ficam criptografados no banco (ver
@@ -14,6 +15,9 @@ import { validateCpf, validatePhone } from '@/lib/validation/signup';
 export async function GET(req: NextRequest) {
   const auth = await verifyAuth(req, { allowWithoutSecondFactor: true });
   if (!auth.ok) return auth.response;
+  // Senha usada direto no Firebase, sem a checagem do site: não mostra.
+  const untrusted = await requireTrustedLogin(adminDb, auth.decoded);
+  if (untrusted) return untrusted;
   const snap = await adminDb.collection('users').doc(auth.decoded.uid).get();
   return NextResponse.json(readPii(snap.data()), { headers: { 'Cache-Control': 'private, no-store' } });
 }

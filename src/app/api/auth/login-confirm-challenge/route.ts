@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
+import { timingSafeEqual } from 'node:crypto';
+import { issueLoginTicket } from '@/lib/auth/loginTicket';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -39,7 +41,9 @@ export async function POST(req: NextRequest) {
     await ref.delete();
     return NextResponse.json({ error: 'Link inválido. Faça login novamente.' }, { status: 429 });
   }
-  if (data.token !== token) {
+  const expected = Buffer.from(String(data.token ?? ''));
+  const given = Buffer.from(token);
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) {
     await ref.update({ attempts: (data.attempts ?? 0) + 1 });
     return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
   }
@@ -50,6 +54,9 @@ export async function POST(req: NextRequest) {
   // expiresAt cuida da limpeza (o doc nunca é reaproveitado, o próximo
   // login gera um token novo e sobrescreve).
   await ref.update({ confirmed: true, confirmedAt: new Date().toISOString() });
+  // A senha foi conferida antes do e-mail sair: a aba que espera pode
+  // entrar e o login vale para CPF e conta (ver lib/auth/loginTicket.ts).
+  await issueLoginTicket(adminDb, email).catch(err => console.error('[login-confirm] ticket', err));
 
   return NextResponse.json({ ok: true });
 }

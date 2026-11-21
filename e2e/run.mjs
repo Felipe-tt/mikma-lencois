@@ -42,6 +42,9 @@ const env = {
   // Chave de teste (32 bytes) para a criptografia de CPF e telefone.
   PII_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
   NEXT_TELEMETRY_DISABLED: '1',
+  // Todo login dos testes passa pela trava do login com senha (ver
+  // src/lib/auth/loginTicket.ts), mesmo antes da data em que ela começou.
+  LOGIN_TICKET_SINCE: '2000-01-01T00:00:00Z',
   // Frete como em produção: contrato dos Correios e Melhor Envio, os dois
   // simulados (e2e/mocks/correios.mjs e e2e/mocks/melhorenvio.mjs).
   CORREIOS_CWS: CORREIOS_E2E.cws,

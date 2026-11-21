@@ -11,6 +11,8 @@ export const USERS = {
   // Equipe dos testes dos Correios: cada login no painel cria uma passkey, e o
   // limite é 10 por conta a cada 10 minutos. Uma conta por teste.
   ...Object.fromEntries([1, 2, 3, 4, 5, 6].map(n => [`equipe${n}`, { email: `equipe${n}@e2e.mikma`, password: 'senha-e2e-123', name: `Equipe ${n}`, role: 'admin' }])),
+  // Login com senha direto no Firebase, sem a checagem do site (entrar.spec.ts).
+  seguro: { email: 'seguro@e2e.mikma', password: 'senha-e2e-123', name: 'Sofia Guerra', role: 'customer', cpf: '31870459601' },
   // Clientes de São Paulo, um por teste dos Correios (sem retirada na loja,
   // o frete sai do contrato). CPF próprio: o detector de golpe soma pontos
   // quando o mesmo CPF aparece em várias contas.
