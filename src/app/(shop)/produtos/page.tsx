@@ -116,6 +116,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
   const allCount = categories.reduce((n, c) => n + c.count, 0);
   const hasFilter = !!(categoria || tamanho);
   // "Todos" do tamanho conta a categoria inteira, não o que o filtro deixou.
+  // Na busca não mostra conta: dizia "4 itens" ao lado de "0 resultados".
   const catCount = categoria ? categories.find(c => c.name === categoria)?.count ?? total : allCount;
 
   return (
@@ -190,7 +191,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                           {sz.key ? <BedGlyph widthCm={sz.w} pillows={sz.key === 'solteiro' || sz.key === 'berco' ? 1 : 2} on={on} /> : <AllBedsGlyph on={on} />}
                         </span>
                         <span className={`text-[12.5px] leading-none ${on ? 'font-semibold text-ink' : 'text-ink'}`}>{sz.label}</span>
-                        <span className="text-[10px] leading-none text-faint tabular-nums">{dims ? `${dims[0]} x ${dims[1]}` : `${catCount} ${catCount === 1 ? 'item' : 'itens'}`}</span>
+                        <span className="text-[10px] leading-none text-faint tabular-nums">{dims ? `${dims[0]} x ${dims[1]}` : search ? '\u00a0' : `${catCount} ${catCount === 1 ? 'item' : 'itens'}`}</span>
                       </Link>
                     </li>
                   );
