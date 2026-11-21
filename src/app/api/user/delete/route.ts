@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { deleteUserReviews, deletionBlocker } from '@/lib/accountDeletion';
@@ -11,12 +13,17 @@ export async function DELETE(req: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
 
   let uid: string;
+  let decoded: DecodedIdToken;
   try {
-    const decoded = await adminAuth.verifyIdToken(token, true); // checkRevoked=true
+    decoded = await adminAuth.verifyIdToken(token, true); // checkRevoked=true
     uid = decoded.uid;
   } catch {
     return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
   }
+
+  // Senha usada direto no Firebase, sem a checagem do site: não deixa.
+  const untrusted = await requireTrustedLogin(adminDb, decoded);
+  if (untrusted) return untrusted;
 
   // Rate limit: 3 tentativas por usuário por hora (evita loop de delete/recriação)
   const key = `delete:${uid}`;

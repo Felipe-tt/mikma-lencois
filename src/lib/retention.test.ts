@@ -182,6 +182,17 @@ describe('retenção (LGPD)', () => {
     expect(Object.keys(data.maintenance_queue)).toEqual(['novo']);
   });
 
+  it('apaga ticket de login vencido e login confiável com mais de 180 dias', async () => {
+    const data: Record<string, Record<string, Doc>> = {
+      login_tickets: { vencido: { issued: [1], expiresAt: daysAgo(1) }, valendo: { issued: [2], expiresAt: new Date(NOW.getTime() + 60_000).toISOString() } },
+      trusted_logins: { velho: { uid: 'u1', authTime: 1, at: daysAgo(200) }, novo: { uid: 'u1', authTime: 2, at: daysAgo(5) } },
+    };
+    const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(r.loginTicketsDeleted).toBe(2);
+    expect(Object.keys(data.login_tickets)).toEqual(['valendo']);
+    expect(Object.keys(data.trusted_logins)).toEqual(['novo']);
+  });
+
   it('tira a avaliação do detector de golpe do pedido (o cliente lê o pedido)', async () => {
     const risk = { score: 70, level: 'alto', hold: true, signals: [{ reason: 'Mesmo CPF em 3 contas', relatedOrderIds: ['ord_outro'], points: 40 }], assessedAt: daysAgo(1) };
     const data: Record<string, Record<string, Doc>> = {

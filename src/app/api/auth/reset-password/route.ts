@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
+import { issueLoginTicket } from '@/lib/auth/loginTicket';
 
 const verifySchema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -106,6 +107,8 @@ export async function POST(req: NextRequest) {
     await adminDb.collection('users').doc(user.uid).update({ updatedAt: new Date().toISOString() });
 
     await ref.delete();
+    // O navegador entra em seguida com a senha nova.
+    await issueLoginTicket(adminDb, email).catch(err => console.error('[reset-password] ticket', err));
 
     // NÃO usar createCustomToken aqui, exige iam.serviceAccounts.signBlob
     // na service account do Cloud Run, que não funciona de forma estável

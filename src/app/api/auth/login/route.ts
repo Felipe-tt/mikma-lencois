@@ -9,6 +9,8 @@ import { sendEmail } from '@/lib/email';
 import { actionButtonEmailHtml } from '@/lib/email-templates';
 import { passwordLeaked } from '@/lib/leakedCredentials';
 import { HONEY_LOGIN_EMAILS, triggerHoneytoken } from '@/lib/honeytoken';
+import { checkPasswordServerSide } from '@/lib/auth/passwordCheck';
+import { issueLoginTicket } from '@/lib/auth/loginTicket';
 
 const schema = z.object({
   email: z.string().email().max(256),
@@ -17,37 +19,6 @@ const schema = z.object({
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mikma.com.br';
-const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-
-/**
- * Confirma a senha direto na API REST do Identity Toolkit (o mesmo
- * endpoint que o SDK do cliente usa por baixo dos panos pra
- * signInWithEmailAndPassword). Só precisa da API key pública, sem
- * nenhuma permissão IAM especial — diferente de createCustomToken, que
- * este projeto evita de propósito (ver reset-password/route.ts).
- *
- * Usado só no caso "challenge": precisamos confirmar que é a senha
- * certa ANTES de mandar e-mail de verificação, senão qualquer um digita
- * um e-mail alheio com senha errada e a gente manda e-mail pra caixa de
- * entrada de estranho (spam/enumeração).
- */
-async function verifyPasswordServerSide(email: string, password: string): Promise<boolean> {
-  if (!FIREBASE_API_KEY) return false;
-  try {
-    const res = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, returnSecureToken: false }),
-        signal: AbortSignal.timeout(8000),
-      }
-    );
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -95,7 +66,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (outcome === 'pass') {
-      // Rate limit e reCAPTCHA ok, o Firebase Auth no cliente faz a validação real da senha
+      // A senha é conferida aqui também: o ticket só sai para a senha certa
+      // que passou pelo reCAPTCHA e não apareceu em vazamento. Sem isso,
+      // dava para tirar o ticket com uma senha qualquer e entrar com a
+      // vazada direto no Firebase (ver lib/auth/loginTicket.ts).
+      const check = await checkPasswordServerSide(emailLower, password);
+      if (check === 'wrong') return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 400 });
+      // Sem conferir agora (rede, conta desativada): o login segue no
+      // navegador, sem ticket; CPF e apagar a conta pedem para entrar de novo.
+      if (check === 'ok') await issueLoginTicket(adminDb, emailLower).catch(err => console.error('[login] ticket', err));
       return NextResponse.json({ ok: true });
     }
 
@@ -110,8 +89,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const passwordOk = await verifyPasswordServerSide(emailLower, password);
-    if (!passwordOk) {
+    const check = await checkPasswordServerSide(emailLower, password);
+    if (check === 'unavailable') {
+      return NextResponse.json({ error: 'Não foi possível conferir agora. Tente de novo em alguns minutos.' }, { status: 503 });
+    }
+    if (check === 'wrong') {
       // Mesma mensagem genérica de sempre, não revela se foi a senha ou
       // o e-mail que estava errado.
       return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 400 });

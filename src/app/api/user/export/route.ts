@@ -3,18 +3,25 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { conversationIdFor } from '@/lib/email/conversationId';
 import { withPii } from '@/lib/piiCrypto';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get('authorization')?.split('Bearer ')[1];
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let uid: string;
+  let decoded: DecodedIdToken;
   try {
-    const decoded = await adminAuth.verifyIdToken(token, true); // checkRevoked=true
+    decoded = await adminAuth.verifyIdToken(token, true); // checkRevoked=true
     uid = decoded.uid;
   } catch {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
+
+  // Senha usada direto no Firebase, sem a checagem do site: não deixa.
+  const untrusted = await requireTrustedLogin(adminDb, decoded);
+  if (untrusted) return untrusted;
 
   // Rate limit: 5 exports por usuário por hora
   const key = `export:${uid}`;

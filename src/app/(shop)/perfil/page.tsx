@@ -112,7 +112,10 @@ export default function PerfilPage() {
       const res = await fetch('/api/user/export', {
         headers: { Authorization: `Bearer ${await user.getIdToken()}` },
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.code === 'login_check' ? data.error : '');
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -120,8 +123,8 @@ export default function PerfilPage() {
       a.download = 'meus-dados.json';
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
-      setError('Não foi possível exportar seus dados agora. Tente de novo em alguns minutos.');
+    } catch (err) {
+      setError((err instanceof Error && err.message) || 'Não foi possível exportar seus dados agora. Tente de novo em alguns minutos.');
     } finally {
       setExporting(false);
     }

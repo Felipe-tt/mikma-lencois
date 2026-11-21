@@ -625,6 +625,23 @@ describe('registro de acesso a CPF e telefone', () => {
   });
 });
 
+describe('ticket e login confiável (login com senha)', () => {
+  it('ninguém lê nem grava pelo navegador: o dono não cria o próprio login confiável', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' }).firestore();
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA }).firestore();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'trusted_logins/buyer1_1'), { uid: 'buyer1', authTime: 1, at: '2026-11-21T00:00:00.000Z' });
+      await setDoc(doc(ctx.firestore(), 'login_tickets/h1'), { issued: [1], expiresAt: '2026-11-21T00:15:00.000Z' });
+    });
+    for (const db of [buyer, admin]) {
+      await assertFails(getDoc(doc(db, 'trusted_logins/buyer1_1')));
+      await assertFails(getDocs(collection(db, 'login_tickets')));
+      await assertFails(setDoc(doc(db, 'trusted_logins/buyer1_2'), { uid: 'buyer1', authTime: 2, at: 'x' }));
+      await assertFails(setDoc(doc(db, 'login_tickets/h2'), { issued: [Date.now()] }));
+    }
+  });
+});
+
 describe('carrinho compartilhado (Montar junto)', () => {
   const inDays = (d: number) => Timestamp.fromMillis(Date.now() + d * 86_400_000);
   it('com o link ligado, só quem entrou pelo link atual lê o carrinho', async () => {

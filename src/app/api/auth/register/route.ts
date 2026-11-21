@@ -10,6 +10,7 @@ import { sanitizeDisplayName } from '@/lib/html';
 import { validateEmail, validatePhone, validateCpf } from '@/lib/validation/signup';
 import { piiPatch } from '@/lib/piiCrypto';
 import { checkPassword, PASSWORD_MAX } from '@/lib/validation/password';
+import { issueLoginTicket } from '@/lib/auth/loginTicket';
 
 const schema = z
   .object({
@@ -129,6 +130,8 @@ export async function POST(req: NextRequest) {
 
     // Remove verificação usada
     await verifyRef.delete();
+    // O navegador entra em seguida com a senha que acabou de criar.
+    await issueLoginTicket(adminDb, email).catch(err => console.error('[register] ticket', err));
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error: unknown) {
