@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
@@ -75,6 +76,8 @@ export async function POST(req: NextRequest) {
       // Sem conferir agora (rede, conta desativada): o login segue no
       // navegador, sem ticket; CPF e apagar a conta pedem para entrar de novo.
       if (check === 'ok') await issueLoginTicket(adminDb, emailLower).catch(err => console.error('[login] ticket', err));
+      // Sem ticket, CPF e conta pedem para entrar de novo: a equipe precisa saber.
+      else if (check === 'unavailable') Sentry.captureMessage('Login sem ticket: o servidor não conseguiu conferir a senha no Firebase', 'warning');
       return NextResponse.json({ ok: true });
     }
 

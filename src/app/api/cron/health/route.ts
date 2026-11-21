@@ -6,6 +6,7 @@ import { checkCorreiosContrato } from '@/lib/correiosContrato';
 import { packageFor } from '@/lib/shipping-pricing';
 import { remetenteFrom, remetenteProblems } from '@/lib/correiosPrepostagem';
 import { withStoreDefaults } from '@/lib/store-settings';
+import { checkPasswordServerSide } from '@/lib/auth/passwordCheck';
 
 /**
  * GET /api/cron/health (com x-cron-secret): saúde do servidor para o
@@ -19,6 +20,13 @@ import { withStoreDefaults } from '@/lib/store-settings';
  *
  * `appCheck`: o servidor consegue emitir token do App Check (provedor
  * próprio, src/app/api/app-check). Só informa, não conta para o `ok`.
+ *
+ * `login`: só com ?login=1 (monitor pós-deploy, scripts/site-health.mjs). O
+ * servidor confere no Firebase Auth a senha de um e-mail que não existe:
+ * "senha errada" é a resposta certa. Sem isso, nenhum login com senha
+ * ganha o ticket (lib/auth/loginTicket.ts) e CPF e conta pedem para entrar
+ * de novo. Só informa, não conta para o `ok`. Fora do cron de minutos:
+ * tantas tentativas do mesmo servidor fariam o Firebase limitá-lo.
  *
  * `correios`: só com ?correios=1 (monitor correios-cws.yml). O servidor gera
  * um token e cota PAC e SEDEX pelo contrato, da loja até São Paulo, com um
@@ -79,10 +87,15 @@ export async function GET(req: NextRequest) {
       correios = { configured: true, token: false, pacCents: 0, sedexCents: 0 };
     }
   }
+  let login: boolean | null = null;
+  if (req.nextUrl.searchParams.get('login') === '1') {
+    login = (await checkPasswordServerSide('checagem-saude@example.invalid', `saude-${started}`)) === 'wrong';
+  }
+
   const env = Object.fromEntries(REQUIRED_ENV.map(k => [k, !!process.env[k]]));
   const ok = firestore && Object.values(env).every(Boolean) && (signing !== false || !!envPrivateKey());
   return NextResponse.json(
-    { ok, firestore, signing, appCheck, env, ...(correios ? { correios } : {}), version: process.env.NEXT_PUBLIC_BUILD_VERSION ?? '', ms: Date.now() - started },
+    { ok, firestore, signing, appCheck, ...(login === null ? {} : { login }), env, ...(correios ? { correios } : {}), version: process.env.NEXT_PUBLIC_BUILD_VERSION ?? '', ms: Date.now() - started },
     { status: ok ? 200 : 503, headers: { 'Cache-Control': 'no-store' } },
   );
 }

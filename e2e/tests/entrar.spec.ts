@@ -60,3 +60,11 @@ test('entrando pela tela, o perfil mostra o CPF', async ({ page }) => {
   await page.goto('/perfil');
   await expect(page.getByText('***.704.596-**')).toBeVisible();
 });
+
+test('monitor: o servidor consegue conferir senha no Firebase', async ({ request }) => {
+  // É o que scripts/site-health.mjs confere no site publicado depois de cada deploy.
+  const headers = { 'x-cron-secret': 'e2e_cron_secret_0123456789' };
+  expect((await (await request.get('/api/cron/health?login=1', { headers })).json()).login).toBe(true);
+  // O monitor de minutos (Cloudflare) não passa o parâmetro e não chama o Firebase.
+  expect((await (await request.get('/api/cron/health', { headers })).json())).not.toHaveProperty('login');
+});

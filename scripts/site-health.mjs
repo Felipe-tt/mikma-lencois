@@ -64,7 +64,8 @@ async function round() {
   }
 
   if (SECRET) {
-    const h = await get('/api/cron/health', { 'x-cron-secret': SECRET });
+    // login=1: o servidor também confere senha no Firebase (ver a rota).
+    const h = await get('/api/cron/health?login=1', { 'x-cron-secret': SECRET });
     let data = {};
     try { data = JSON.parse(h.body); } catch { /* corpo não-JSON */ }
     // 401/404: segredo ou rota fora de sincronia (configuração), não site quebrado.
@@ -73,6 +74,10 @@ async function round() {
       // Só o banco fora: problema do Google, não do deploy.
       add('health', 'inconclusive', 'Firestore indisponível');
     } else add('health', h.status === 200 && data.ok ? 'ok' : 'fail', `HTTP ${h.status} ${h.body.slice(0, 200)}`);
+    // Só aviso (nunca derruba o veredito): Firebase Auth fora não é culpa do deploy.
+    if (typeof data.login === 'boolean') {
+      add('login', data.login ? 'ok' : 'aviso', data.login ? 'senha conferida pelo servidor' : 'o servidor não conseguiu conferir senha no Firebase: logins ficam sem ticket');
+    }
   }
 
   const verdict = checks.some(c => c.verdict === 'fail') ? 'fail' : checks.some(c => c.verdict === 'inconclusive') ? 'inconclusive' : 'ok';
