@@ -29,9 +29,10 @@ import { trackPurchase } from '@/lib/analytics';
 import { requestNewPix, type NewPix } from '@/lib/orders/requestNewPix';
 import { nfeDocUrl } from '@/lib/nfe/links';
 import { setReturnTo } from '@/lib/auth/returnTo';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { PIXModal } from '@/components/checkout/PIXModal';
 import { GoogleReviewsOptIn } from '@/components/order/GoogleReviewsOptIn';
+import { GuestOrderAccess } from '@/components/order/GuestOrderAccess';
+import { guestAccessUid, openGuestAccess } from '@/lib/auth/guestAccessClient';
 
 // ─── Status steps ─────────────────────────────────────────────────────────────
 
@@ -180,16 +181,42 @@ export default function OrderDetailPage() {
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState('');
 
+  // Link de acesso de quem comprou sem cadastro (?acesso=, lib/guestAccess.ts):
+  // entra como o convidado neste aparelho e tira o código da barra.
+  const [opening, setOpening] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('acesso'));
+  const [accessError, setAccessError] = useState<string | null>(null);
+  // Convidado do link já aceito: espera a sessão dele chegar (sem piscar o
+  // cartão de acesso entre o login e o pedido).
+  const [openedUid, setOpenedUid] = useState<string | null>(null);
+  const accessTried = useRef(false);
+  // Conta de verdade aberta aqui: o link não troca de sessão sozinho.
+  const accountHere = !!user && !user.isAnonymous;
   useEffect(() => {
-    // Link do e-mail ("Gerar novo PIX", "Pedido enviado"): depois do login
-    // o cliente volta pra este pedido, não pra home.
-    if (!loading && !user) { setReturnTo(window.location.pathname); router.replace('/entrar'); }
-  }, [user, loading, router]);
+    if (loading || accessTried.current || !opening) return;
+    accessTried.current = true;
+    const token = new URLSearchParams(window.location.search).get('acesso') ?? '';
+    const done = () => { window.history.replaceState(null, '', window.location.pathname); setOpening(false); };
+    if (accountHere) {
+      // Só aparece se o pedido não for desta conta (senão ele abre normalmente).
+      queueMicrotask(() => { setAccessError('Este pedido foi feito sem cadastro. Saia da sua conta neste aparelho e abra o link do e-mail de novo.'); done(); });
+      return;
+    }
+    if (user && guestAccessUid(token) === user.uid) { queueMicrotask(done); return; }
+    openGuestAccess(token)
+      .then(() => {
+        setOpenedUid(guestAccessUid(token));
+        // Se a sessão não chegar (rede caiu), volta o cartão de acesso.
+        setTimeout(() => setOpenedUid(null), 10_000);
+      })
+      .catch(err => setAccessError(userMessage(err, 'Não deu para abrir o pedido. Tente de novo.')))
+      .finally(done);
+  }, [loading, opening, accountHere, user]);
 
   useEffect(() => {
     if (!user || !orderId) return;
     return onSnapshot(doc(db, 'orders', orderId), snap => {
       if (!snap.exists()) { setNotFound(true); return; }
+      setNotFound(false);
       const data = { id: snap.id, ...snap.data() } as Order;
       // Pago com a página aberta: mostra a confirmação animada no lugar do PIX.
       const was = prevStatus.current;
@@ -259,15 +286,11 @@ export default function OrderDetailPage() {
     }
   }
 
-  if (notFound) return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16">
-      <EmptyState
-        title="Pedido não encontrado"
-        description="Confira se você entrou com a mesma conta usada na compra."
-        actions={[{ label: 'Meus pedidos', href: '/conta/pedidos', variant: 'primary' }]}
-      />
-    </div>
-  );
+  if ((opening || (!!openedUid && user?.uid !== openedUid)) && !accountHere) return <OrderDetailSkeleton />;
+  // Sem sessão aqui, ou o pedido não é da sessão aberta: quem tem conta entra,
+  // quem comprou sem cadastro recebe o link no e-mail da compra.
+  if (!loading && !user) return <GuestOrderAccess orderId={orderId} signedIn={false} error={accessError} />;
+  if (notFound) return <GuestOrderAccess orderId={orderId} signedIn error={accessError} />;
   if (loading || !order) return <OrderDetailSkeleton />;
 
   const isCancelled = order.status === 'cancelled';

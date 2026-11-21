@@ -85,7 +85,9 @@ async function mapUser(firebaseUser: User): Promise<AuthUser> {
     displayName: firebaseUser.displayName,
     photoURL: firebaseUser.photoURL,
     role,
-    isAnonymous: firebaseUser.isAnonymous,
+    // Convidado que voltou pelo link do e-mail (api/auth/guest-access) entra
+    // por custom token: o Firebase não o marca como anônimo, a marca `guest` sim.
+    isAnonymous: firebaseUser.isAnonymous || tokenResult.claims.guest === true,
     getIdToken: () => firebaseUser.getIdToken(),
   };
 }
@@ -106,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Convidado que entrou na conta: o carrinho dele passa para a conta
           // antes de a conta aparecer. O checkout lê o carrinho da conta na
           // hora e, vazio, mandava a pessoa de volta para /carrinho.
-          if (!firebaseUser.isAnonymous) await mergeGuestInto(firebaseUser);
+          if (!mapped.isAnonymous) await mergeGuestInto(firebaseUser);
           setUser(mapped);
         } else {
           // Sessão encerrada por fora (expirou, outra aba saiu): cookie de staff junto.
@@ -118,8 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Mantém o token do convidado em dia (o Firebase renova de hora em hora):
       // um token vencido não serviria para provar a posse no merge.
       unsubToken = onIdTokenChanged(auth, async (firebaseUser) => {
-        if (!firebaseUser?.isAnonymous) return;
-        try { localStorage.setItem(GUEST_TOKEN_KEY, await firebaseUser.getIdToken()); } catch { /* sem storage */ }
+        if (!firebaseUser) return;
+        const result = await firebaseUser.getIdTokenResult().catch(() => null);
+        if (!result || (!firebaseUser.isAnonymous && result.claims.guest !== true)) return;
+        try { localStorage.setItem(GUEST_TOKEN_KEY, result.token); } catch { /* sem storage */ }
       });
     }).catch(() => { if (alive) setLoading(false); });
     return () => { alive = false; unsub(); unsubToken(); };
@@ -128,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     const { auth, signOut } = await loadAuth();
     // Convidado que sai (computador compartilhado): esquece a sessão dele.
-    if (auth.currentUser?.isAnonymous) { try { localStorage.removeItem(GUEST_TOKEN_KEY); } catch { /* ok */ } }
+    if (user?.isAnonymous) { try { localStorage.removeItem(GUEST_TOKEN_KEY); } catch { /* ok */ } }
     clearStaffCookie(true);
     await signOut(auth);
     setUser(null);

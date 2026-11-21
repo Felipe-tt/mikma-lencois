@@ -1,6 +1,14 @@
+import { createHmac } from 'node:crypto';
 import { test, expect } from '@playwright/test';
-import { prepare } from './helpers';
-import { cartOf, emptyCart } from './db';
+import { charges, prepare } from './helpers';
+import { cartOf, emptyCart, readOrder } from './db';
+
+/** Link de acesso do convidado, como o e-mail manda (chave de PII dos testes, ver e2e/run.mjs). */
+function guestLink(orderId: string, uid: string) {
+  const body = `${orderId}.${uid}.${Date.now() + 60 * 60_000}`;
+  const mac = createHmac('sha256', Buffer.alloc(32, 1)).update(`guest-access:${body}`).digest('base64url');
+  return `${Buffer.from(body).toString('base64url')}.${mac}`;
+}
 
 test.beforeEach(async ({ context }) => { await prepare(context); });
 
@@ -54,4 +62,52 @@ test('carrinho mostra o frete pelo CEP e o total já com ele', async ({ page }) 
   await page.check('#co-terms');
   await page.getByRole('button', { name: 'Continuar para endereço' }).click();
   await expect(page.locator('#co-cep')).toHaveValue('01310-100');
+});
+
+test('convidado abre o pedido em outro aparelho pelo link do e-mail', async ({ page, browser }) => {
+  test.setTimeout(120_000);
+  // Compra sem cadastro neste aparelho.
+  await page.goto('/produtos/p4');
+  await page.getByRole('button', { name: /^Adicionar ao carrinho$/ }).first().click();
+  await expect(page.getByText(/adicionado|no carrinho/i).first()).toBeVisible();
+  await page.goto('/checkout');
+  await page.fill('#co-name', 'Joana Visitante');
+  await page.fill('#co-email', 'joana.visitante@e2e.mikma');
+  await page.fill('#co-cpf', '52998224725');
+  await page.fill('#co-phone', '47999998888');
+  await page.check('#co-terms');
+  await page.getByRole('button', { name: 'Continuar para endereço' }).click();
+  await page.fill('#co-cep', '01310-100');
+  await page.fill('#co-street', 'Avenida Paulista');
+  await page.fill('#co-number', '900');
+  await page.fill('#co-neighborhood', 'Bela Vista');
+  await page.fill('#co-city', 'São Paulo');
+  await page.click('#co-state');
+  await page.getByRole('option', { name: 'SP', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar para entrega' }).click();
+  await page.getByRole('button', { name: /Pagar .* com PIX/ }).first().click();
+  await expect(page.getByText('Pague com PIX').first()).toBeVisible();
+  const orderId = (await charges()).at(-1)!.externalId!;
+  const uid = (await readOrder(orderId)).userId!;
+
+  // Outro aparelho, sem sessão: em vez do login impossível, o link por e-mail.
+  const other = await browser.newContext();
+  await prepare(other);
+  const phone = await other.newPage();
+  await phone.goto(`/pedidos/${orderId}`);
+  await expect(phone.getByText('Abra o seu pedido')).toBeVisible();
+  await phone.getByRole('button', { name: 'Receber link por e-mail' }).click();
+  await expect(phone.getByText(/o link chegou no e-mail da compra/)).toBeVisible();
+
+  // O link do e-mail (assinado com a chave de teste) abre o pedido ali.
+  await phone.goto(`/pedidos/${orderId}?acesso=${guestLink(orderId, uid)}`);
+  await expect(phone.getByText(`#${orderId.slice(-8).toUpperCase()}`).first()).toBeVisible();
+  await expect(phone).toHaveURL(new RegExp(`/pedidos/${orderId}$`));
+  await expect(phone.getByText('Abra o seu pedido')).toHaveCount(0);
+
+  // "Meus pedidos" também abre para o convidado (antes mandava ao login).
+  await phone.goto('/conta/pedidos');
+  await expect(phone.getByText('Compras sem cadastro feitas neste aparelho.')).toBeVisible();
+  await expect(phone.getByText(`#${orderId.slice(-8).toUpperCase()}`).first()).toBeVisible();
+  await other.close();
 });

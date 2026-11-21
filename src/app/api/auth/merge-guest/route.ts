@@ -5,6 +5,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, validateBody } from '@/lib/security';
 import type { CartItem } from '@/types';
 import { moveCouponUsage } from '@/lib/orders/couponUsage';
+import { isGuestToken } from '@/lib/guestAccess';
 
 const schema = z.object({ guestToken: z.string().min(20).max(4096) });
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
-  if (guest.firebase?.sign_in_provider !== 'anonymous' || account.firebase?.sign_in_provider === 'anonymous') {
+  if (!isGuestToken(guest) || isGuestToken(account)) {
     return NextResponse.json({ error: 'Nada a juntar' }, { status: 400 });
   }
   if (guest.uid === account.uid) return NextResponse.json({ ok: true, merged: 0 });

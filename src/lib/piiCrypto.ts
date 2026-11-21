@@ -46,6 +46,14 @@ export function decryptPii(value: unknown): string {
   return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
 }
 
+/**
+ * Assinatura do link de acesso ao pedido de convidado (lib/guestAccess.ts).
+ * Mesma chave do cpfHash, com rótulo próprio: uma não serve pela outra.
+ */
+export function guestAccessMac(body: string): string {
+  return createHmac('sha256', key()).update(`guest-access:${body}`).digest('base64url');
+}
+
 /** HMAC do CPF (só dígitos): igual para o mesmo CPF, sem revelar qual é. */
 export function cpfBlindIndex(cpf: string): string {
   return createHmac('sha256', key()).update(`cpf:${cpf.replace(/\D/g, '')}`).digest('base64url');

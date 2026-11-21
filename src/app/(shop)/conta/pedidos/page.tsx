@@ -41,7 +41,9 @@ const LABELS: Record<string, string> = {
 interface PixModalData { qrCode: string; copyPaste: string; orderId: string; totalCents: number; expiresAt?: string }
 
 export default function PedidosPage() {
-  const { user, loading } = useAuth();
+  // Quem comprou sem cadastro também vê os pedidos deste aparelho (antes
+  // "Meus pedidos" mandava o convidado para um login que ele não tem).
+  const { buyer: user, isGuest, loading } = useAuth();
   const router = useRouter();
   const [orders, setOrders]           = useState<Order[]>([]);
   const [ordersLoading, setOL]        = useState(true);
@@ -105,15 +107,28 @@ export default function PedidosPage() {
       <div className="border-b border-mist bg-warm/60">
         <div className="container-shop py-6 sm:py-8 flex items-end justify-between gap-4">
           <div>
-            <Link href="/conta" className="group relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
-              Área do cliente
-            </Link>
+            {!isGuest && (
+              <Link href="/conta" className="group relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] inline-flex items-center gap-1.5 text-[12px] font-medium text-mid hover:text-ink transition-colors duration-150 mb-5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+                Área do cliente
+              </Link>
+            )}
             <h1 className="font-display font-normal text-ink text-[1.9rem] sm:text-4xl leading-[1.05] tracking-[-0.015em]">Meus pedidos</h1>
+            {isGuest && (
+              <p className="mt-2 text-[13px] text-mid leading-relaxed max-w-[52ch]">
+                Compras sem cadastro feitas neste aparelho.{' '}
+                <Link href="/cadastro" onClick={() => setReturnTo('/conta/pedidos')} className="font-semibold text-clay underline underline-offset-4 hover:text-ink">
+                  Crie sua conta
+                </Link>{' '}
+                com o mesmo e-mail para vê-las em qualquer lugar.
+              </p>
+            )}
           </div>
-          <Link href="/perfil" className="inline-flex items-center h-9 px-4 shrink-0 rounded-full border border-mist-d text-[13px] font-medium text-mid hover:text-ink hover:border-ink hover:bg-paper transition-colors mb-1">
-            Meus dados
-          </Link>
+          {!isGuest && (
+            <Link href="/perfil" className="inline-flex items-center h-9 px-4 shrink-0 rounded-full border border-mist-d text-[13px] font-medium text-mid hover:text-ink hover:border-ink hover:bg-paper transition-colors mb-1">
+              Meus dados
+            </Link>
+          )}
         </div>
       </div>
 
