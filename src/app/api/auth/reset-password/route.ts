@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
-import { issueLoginTicket } from '@/lib/auth/loginTicket';
+import { forgetTrustedLogins, issueLoginTicket } from '@/lib/auth/loginTicket';
 import { checkAuthStamp, restampAccount } from '@/lib/auth/authStamp';
 import { alertEmailChangedOutside } from '@/lib/auth/accountAlerts';
 
@@ -113,6 +113,8 @@ export async function POST(req: NextRequest) {
 
     // Revoga todos os tokens anteriores, força logout em outras sessões
     await adminAuth.revokeRefreshTokens(user.uid);
+    // E no banco, onde as regras não sabem de revogação.
+    await forgetTrustedLogins(adminDb, user.uid).catch(err => console.error('[reset-password] logins confiáveis', err));
     // Senha nova pelo site: a marca da conta acompanha.
     await restampAccount(adminDb, adminAuth, user.uid).catch(err => console.error('[reset-password] marca', err));
 

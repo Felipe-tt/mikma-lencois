@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { verifyAuth } from '@/lib/security';
 import { STAFF_SESSION_COOKIE } from '@/lib/staffSession';
 import { restampAccount } from '@/lib/auth/authStamp';
+import { forgetTrustedLogins } from '@/lib/auth/loginTicket';
 
 /**
  * "Sair de todos os aparelhos": invalida todos os logins da pessoa. As APIs
@@ -15,6 +16,8 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   await adminAuth.revokeRefreshTokens(auth.decoded.uid);
+  // O banco também: as regras do Firestore não sabem de revogação.
+  await forgetTrustedLogins(adminDb, auth.decoded.uid);
   // Mudança feita pelo site: a marca da conta acompanha (lib/auth/authStamp.ts).
   await restampAccount(adminDb, adminAuth, auth.decoded.uid).catch(err => console.error('[revoke-sessions] marca', err));
 

@@ -193,6 +193,27 @@ async function trustGoogleLogin(db: Firestore, decoded: DecodedIdToken, now: num
   return true;
 }
 
+/**
+ * Sair de todos os aparelhos, senha nova, "Não fui eu" depois de confirmar
+ * e conta apagada: os logins confiáveis da conta saem. As rotas da API já
+ * barram o token revogado (checkRevoked), mas as regras do Firestore não
+ * sabem de revogação: sem isso, quem tinha entrado seguia lendo endereço e
+ * pedidos direto no banco até o token vencer (até 1 hora).
+ */
+export async function forgetTrustedLogins(db: Firestore, uid: string): Promise<number> {
+  const PAGE = 300;
+  let total = 0;
+  for (;;) {
+    const snap = await db.collection(TRUSTED).where('uid', '==', uid).limit(PAGE).get();
+    if (snap.empty) return total;
+    const batch = db.batch();
+    snap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    total += snap.size;
+    if (snap.size < PAGE) return total;
+  }
+}
+
 /** O login deste token é confiável para as rotas sensíveis? */
 export async function isTrustedLogin(db: Firestore, decoded: DecodedIdToken): Promise<boolean> {
   if (!needsTrust(decoded)) return true;

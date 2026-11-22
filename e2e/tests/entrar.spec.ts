@@ -18,9 +18,9 @@ let ip = 0;
 const visitor = () => ({ 'x-mikma-edge': 'e2e-edge', 'cf-connecting-ip': `198.51.100.${++ip}` });
 
 /** Entra direto no Firebase Auth (emulador), sem passar pelo site. */
-async function directSignIn(request: APIRequestContext, password = SENHA): Promise<string> {
+async function directSignIn(request: APIRequestContext, password = SENHA, email = EMAIL): Promise<string> {
   const res = await request.post(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=e2e-fake-api-key`, {
-    data: { email: EMAIL, password, returnSecureToken: true },
+    data: { email, password, returnSecureToken: true },
   });
   expect(res.ok()).toBe(true);
   return (await res.json()).idToken;
@@ -69,6 +69,27 @@ test('login que passou pela checagem do site abre o CPF', async ({ request }) =>
   expect(pii.status()).toBe(200);
   expect((await pii.json()).cpf).toBe('31870459601');
   expect((await readProfile(request, token)).status()).toBe(200);
+});
+
+test('sair de todos os aparelhos corta na hora quem lia o endereço direto no banco', async ({ request }) => {
+  const CONTA = 'sair-todos@e2e.mikma';
+  await forgetTrustedLogins(CONTA);
+  // Alguém entrou pela checagem do site com a senha da conta e lê o perfil, com endereço.
+  const pre = await (await request.post('/api/auth/login', { headers: visitor(), data: { email: CONTA, password: SENHA } })).json();
+  const outro = await directSignIn(request, SENHA, CONTA);
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(outro), data: { ticket: pre.ticket } })).json()).toEqual({ trusted: true });
+  const antes = await readProfile(request, outro);
+  expect(antes.status()).toBe(200);
+  expect(JSON.stringify(await antes.json())).toContain('Avenida Paulista');
+  // A dona, no aparelho dela, sai de todos. O Firebase marca a revogação em
+  // segundos: ela cai depois do segundo em que o outro entrou, como na vida real.
+  await new Promise(r => setTimeout(r, 1100));
+  const dona = await directSignIn(request, SENHA, CONTA);
+  expect((await request.post('/api/auth/revoke-sessions', { headers: bearer(dona) })).ok()).toBe(true);
+  // O token do outro aparelho só vence em até 1 hora, mas o banco já recusa,
+  // e as rotas da API também (token revogado).
+  expect((await readProfile(request, outro)).status()).toBe(403);
+  expect((await request.get('/api/user/pii', { headers: bearer(outro) })).status()).toBe(401);
 });
 
 test('entrando pela tela, o perfil mostra o CPF', async ({ page }) => {

@@ -7,6 +7,7 @@ import { getClientIp } from '@/lib/security';
 import { generateActionToken } from '@/lib/auth-token';
 import { checkChallengeLink, DENY_WINDOW_MS } from '@/lib/auth/loginChallenge';
 import { restampAccount } from '@/lib/auth/authStamp';
+import { forgetTrustedLogins } from '@/lib/auth/loginTicket';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -45,12 +46,13 @@ export async function POST(req: NextRequest) {
   if (!user || user.disabled) return NextResponse.json({ ok: true });
 
   // Tinha confirmado sem querer: o ticket ainda não usado sai e as sessões
-  // abertas da conta caem (a aba pode ter entrado).
+  // abertas da conta caem, no banco também (a aba pode ter entrado).
   if (data.confirmed === true) {
     if (typeof data.challengeHash === 'string') {
       await adminDb.collection('login_tickets').doc(data.challengeHash).delete().catch(() => {});
     }
     await adminAuth.revokeRefreshTokens(user.uid).catch(err => console.error('[login-deny] revoke', err));
+    await forgetTrustedLogins(adminDb, user.uid).catch(err => console.error('[login-deny] logins confiáveis', err));
     await restampAccount(adminDb, adminAuth, user.uid).catch(err => console.error('[login-deny] marca', err));
   }
 
