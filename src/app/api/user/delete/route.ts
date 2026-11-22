@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { forgetTrustedLogins, requireTrustedLogin } from '@/lib/auth/loginTicket';
+import { forgetUserDevices } from '@/lib/userDevices';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
@@ -127,6 +128,7 @@ export async function DELETE(req: NextRequest) {
     await adminAuth.deleteUser(uid);
     await forgetAuthStamp(adminDb, uid).catch(err => console.error('[user/delete] marca', err));
     await forgetTrustedLogins(adminDb, uid).catch(err => console.error('[user/delete] logins confiáveis', err));
+    await forgetUserDevices(adminDb, uid).catch(err => console.error('[user/delete] aparelhos', err));
 
     return NextResponse.json({ ok: true });
   } catch (err) {

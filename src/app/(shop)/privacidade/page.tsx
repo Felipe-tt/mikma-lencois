@@ -214,6 +214,12 @@ export default async function PrivacidadePage() {
             <B>Registro dos logins que passaram pela checagem de segurança:</B> por 180 dias.
           </>,
           <>
+            <B>Aparelhos em que você entrou na conta</B> (o tipo, como “Android · Chrome”, as datas e
+            um código do aparelho que não dá para ler de volta), para avisar quando alguém entrar por
+            um aparelho novo: cada um sai da lista 13 meses depois do último acesso por ele, e todos
+            saem quando a conta é apagada.
+          </>,
+          <>
             <B>Links de segurança enviados por e-mail</B> (confirmar o login, criar senha nova,
             confirmar o cadastro), com o endereço IP de quem pediu: apagados 1 dia depois de vencer.
           </>,
@@ -260,6 +266,7 @@ export default async function PrivacidadePage() {
           'senha, CPF e telefone ficam criptografados;',
           'cada cliente só tem acesso aos próprios dados, e só a nossa equipe acessa o painel da loja, com verificação em duas etapas;',
           'o site tem proteção contra robôs, ataques e tentativas repetidas de login;',
+          'quando alguém entra na sua conta por um aparelho novo, avisamos você por e-mail;',
           'os dados do cartão vão direto para a empresa de pagamento e não passam por nós.',
         ]),
         clause(

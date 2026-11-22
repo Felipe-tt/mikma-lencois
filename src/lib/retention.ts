@@ -44,6 +44,12 @@ export const RETENTION = {
    * IP: 1 dia depois de vencer. O "Não fui eu" do login vale 1 dia.
    */
   emailLinkDays: 1,
+  /**
+   * Aparelhos em que o cliente entrou (lib/userDevices.ts): cada um sai da
+   * lista 13 meses depois do último login por ele (o cookie dura 1 ano), e a
+   * lista toda sai quando a conta passa esse tempo sem login.
+   */
+  knownDeviceDays: 400,
 } as const;
 
 /** Data limite: o que foi criado antes dela passou do prazo. */
@@ -105,6 +111,8 @@ export interface RetentionResult {
   loginTicketsDeleted: number;
   /** Links por e-mail vencidos (confirmar login, senha nova, cadastro). */
   emailLinksDeleted: number;
+  /** Listas de aparelhos de contas sem login há 13 meses. */
+  deviceListsDeleted: number;
 }
 
 // Por rodada: a rotina roda todo dia, então o que sobrar sai no dia seguinte
@@ -116,7 +124,7 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   const r: RetentionResult = {
     piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0, riskMoved: 0,
     nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0, piiLogDeleted: 0, attachmentsPrivatized: 0, orphanPhotosDeleted: 0,
-    loginTicketsDeleted: 0, emailLinksDeleted: 0,
+    loginTicketsDeleted: 0, emailLinksDeleted: 0, deviceListsDeleted: 0,
   };
 
   // Perfis antigos com CPF/telefone em claro: criptografa (ver lib/piiCrypto.ts).
@@ -283,6 +291,11 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
     .map(col => db.collection(col).where('expiresAt', '<', linkCut).limit(BATCH).get()));
   await Promise.all(links.flatMap(s => s.docs.map(d => d.ref.delete())));
   r.emailLinksDeleted = links.reduce((n, s) => n + s.size, 0);
+
+  // Aparelhos de conta sem login há 13 meses (o login atualiza updatedAt).
+  const devices = await db.collection('userDevices').where('updatedAt', '<', cutoffIso(now, RETENTION.knownDeviceDays)).limit(BATCH).get();
+  await Promise.all(devices.docs.map(d => d.ref.delete()));
+  r.deviceListsDeleted = devices.size;
 
   return r;
 }

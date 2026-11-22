@@ -17,6 +17,8 @@ export const USERS = {
   trocaSenha: { email: 'troca-senha@e2e.mikma', password: 'senha-e2e-123', name: 'Tânia Souto', role: 'customer' },
   trocaEmail: { email: 'troca-email@e2e.mikma', password: 'senha-e2e-123', name: 'Elaine Moraes', role: 'customer' },
   vinculo: { email: 'vinculo@e2e.mikma', password: 'senha-e2e-123', name: 'Vera Lins', role: 'customer' },
+  // Aviso por e-mail de acesso por aparelho novo (aparelho-novo.spec.ts).
+  aparelho: { email: 'aparelho@e2e.mikma', password: 'senha-e2e-123', name: 'Alice Paes', role: 'customer' },
   // "Sair de todos os aparelhos" corta quem lia o endereço direto no banco (entrar.spec.ts).
   sairTodos: { email: 'sair-todos@e2e.mikma', password: 'senha-e2e-123', name: 'Rita Campos', role: 'customer', address: { cep: '01310100', street: 'Avenida Paulista', number: '8000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP' } },
   // Atendimento: abre a conversa com e-mail em HTML (mensagens.spec.ts).
