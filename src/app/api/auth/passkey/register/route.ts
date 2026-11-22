@@ -4,6 +4,8 @@ import { rateLimit } from '@/lib/rateLimit';
 import { listPasskeys, PasskeyError, registerPasskey, registrationOptions } from '@/lib/passkeys';
 import { hasSecondFactor, type MfaClaims } from '@/lib/staffMfa';
 import { notifyPasskeyAdded } from '@/lib/staffDevices';
+import { adminDb } from '@/lib/firebase/admin';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 import { requestPlace } from '@/lib/requestPlace';
 
 /**
@@ -21,6 +23,12 @@ export async function POST(req: NextRequest) {
   if (!await rateLimit(`passkey-register:${uid}`, 10, 10 * 60_000)) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde alguns minutos.' }, { status: 429 });
   }
+  // Entrar com passkey vale como login confiável. Sem esta trava, quem tem só
+  // a senha entrava direto no Firebase (pulando a checagem do site),
+  // cadastrava a própria passkey e, entrando por ela, abria CPF, endereço,
+  // pedidos e a conta (ver lib/auth/loginTicket.ts).
+  const untrusted = await requireTrustedLogin(adminDb, auth.decoded);
+  if (untrusted) return untrusted;
 
   const body = await req.json().catch(() => null) as { step?: string; challengeId?: unknown; response?: unknown } | null;
   try {
