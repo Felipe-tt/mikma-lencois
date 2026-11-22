@@ -1,0 +1,69 @@
+name: Segurança · alertas do código abertos
+
+# Dependência vulnerável se corrige sozinha (Dependabot e seguranca-auditoria.yml,
+# com merge automático em atualizacoes-merge.yml). Alerta do CodeQL é no
+# código: precisa de uma correção escrita. Este workflow mantém a issue
+# "Alertas de segurança do código" (etiqueta seguranca-codigo) com a lista do
+# que está aberto na main, todo dia e depois de cada análise do CodeQL na main,
+# e fecha a issue quando não sobra nenhum. A rotina diária de correção lê a
+# issue, corrige no código e abre o PR.
+
+on:
+  workflow_run:
+    workflows: [CodeQL]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: '7 10 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: seguranca-alertas
+
+jobs:
+  listar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      security-events: read  # lê os alertas do CodeQL
+      issues: write          # abre, atualiza e fecha a issue
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EVENT: ${{ github.event_name }}
+      TITLE: Alertas de segurança do código
+      LABEL: seguranca-codigo
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+
+      - name: Atualizar a issue
+        run: |
+          set -euo pipefail
+          # Logo depois da análise, o GitHub ainda está processando o resultado.
+          if [ "$EVENT" = workflow_run ]; then sleep 90; fi
+          # O \(...) é do jq, não do shell: as aspas simples são de propósito.
+          # shellcheck disable=SC2016
+          alerts="$(gh api --paginate "repos/$GITHUB_REPOSITORY/code-scanning/alerts?state=open&ref=refs/heads/main&per_page=100" \
+            --jq '.[] | "- [#\(.number)](\(.html_url)) **\(.rule.security_severity_level // .rule.severity)**: \(.rule.description) (`\(.rule.id)`), em `\(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)`"')"
+          issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label "$LABEL" --json number --jq '.[0].number // empty')"
+          if [ -z "$alerts" ]; then
+            echo "Nenhum alerta do CodeQL aberto na main."
+            if [ -n "$issue" ]; then
+              gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --comment "Nenhum alerta do CodeQL aberto na main."
+            fi
+            exit 0
+          fi
+          n="$(printf '%s\n' "$alerts" | wc -l | tr -d ' ')"
+          body="$(printf 'O CodeQL tem %s alerta(s) aberto(s) na main:\n\n%s\n\nA rotina diária de correção lê esta lista, corrige no código e abre o PR. A issue fecha sozinha quando não sobrar nenhum.\n' "$n" "$alerts")"
+          if [ -n "$issue" ]; then
+            gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh label create "$LABEL" --repo "$GITHUB_REPOSITORY" --color B60205 --description "Alerta do CodeQL aberto na main (automático)" 2>/dev/null || true
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label "$LABEL" --body "$body"
+          fi
+          printf '%s\n' "$alerts" | tee -a "$GITHUB_STEP_SUMMARY"
