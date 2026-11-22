@@ -91,6 +91,28 @@ test('ticket da dona da conta não serve para quem entra direto com a senha', as
   expect(await (await request.post('/api/auth/trust', { headers: bearer(dela), data: { ticket: dona.ticket } })).json()).toEqual({ trusted: true });
 });
 
+test('senha usada direto no Firebase não cria, não vê nem apaga passkey', async ({ request }) => {
+  // Entrar com passkey vale como login confiável: cadastrar uma com a senha
+  // vazada pularia a checagem do site.
+  const intruso = await directSignIn(request);
+  for (const [method, path, data] of [
+    ['POST', '/api/auth/passkey/register', { step: 'options' }],
+    ['GET', '/api/auth/passkey', undefined],
+    ['DELETE', `/api/auth/passkey?id=${'a'.repeat(20)}`, undefined],
+  ] as const) {
+    const res = await request.fetch(path, { method, headers: bearer(intruso), data });
+    expect(res.status(), `${method} ${path}`).toBe(403);
+    expect((await res.json()).code).toBe('login_check');
+  }
+  // Quem passou pela checagem do site cria normalmente (recebe o desafio do aparelho).
+  const dona = await (await request.post('/api/auth/login', { headers: visitor(), data: { email: EMAIL, password: SENHA } })).json();
+  const dela = await directSignIn(request);
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(dela), data: { ticket: dona.ticket } })).json()).toEqual({ trusted: true });
+  const opcoes = await request.post('/api/auth/passkey/register', { headers: bearer(dela), data: { step: 'options' } });
+  expect(opcoes.status()).toBe(200);
+  expect((await opcoes.json()).challengeId).toEqual(expect.any(String));
+});
+
 test('confirmação por e-mail: o andamento e a entrada são só da aba que pediu', async ({ request }) => {
   const challenge = 'c'.repeat(43);
   const linkToken = 'l'.repeat(43);
