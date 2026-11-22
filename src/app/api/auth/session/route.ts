@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getClientIp, verifyAuth } from '@/lib/security';
 import { signStaffSession, STAFF_SESSION_COOKIE, STAFF_SESSION_MAX_AGE_SECONDS } from '@/lib/staffSession';
 import { DEVICE_COOKIE, DEVICE_COOKIE_MAX_AGE, newDeviceId, noteStaffDevice } from '@/lib/staffDevices';
+import { isDeviceId } from '@/lib/userDevices';
 import type { MfaClaims } from '@/lib/staffMfa';
 import { requestPlace } from '@/lib/requestPlace';
 
@@ -36,7 +37,9 @@ export async function POST(req: NextRequest) {
 
   // Aparelho novo da equipe: avisa por e-mail (ver lib/staffDevices.ts).
   // Falha aqui não pode impedir a pessoa de usar o painel.
-  const deviceId = req.cookies.get(DEVICE_COOKIE)?.value || newDeviceId();
+  // Só o formato que o servidor gera; qualquer outra coisa vira um id novo.
+  const saved = req.cookies.get(DEVICE_COOKIE)?.value;
+  const deviceId = isDeviceId(saved) ? saved : newDeviceId();
   try {
     await noteStaffDevice({
       uid: auth.decoded.uid,

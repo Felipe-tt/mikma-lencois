@@ -6,6 +6,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { addMemberSchema, removeMemberSchema } from './schema';
 import { restampAccount } from '@/lib/auth/authStamp';
+import { forgetStaffDevices } from '@/lib/staffDevices';
 
 // IMPORTANTE: só 'admin' pode gerenciar a equipe, não 'seller'.
 // Se qualquer seller pudesse promover outros sellers, uma única conta
@@ -131,6 +132,8 @@ export async function DELETE(req: NextRequest) {
   // As regras do banco recusam na hora quem tem essa marca: sem ela, o
   // token antigo (com o papel) ainda valia por até 1h direto no Firestore.
   await adminDb.collection('staffRevoked').doc(uid).set({ at: FieldValue.serverTimestamp(), by: auth.decoded.uid });
+  // Os aparelhos que a pessoa usava no painel deixam de ter motivo para ficar guardados.
+  await forgetStaffDevices(uid).catch(err => console.error('[team] aparelhos', err));
 
   return NextResponse.json({ ok: true });
 }
