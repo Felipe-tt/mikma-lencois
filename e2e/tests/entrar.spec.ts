@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { login, prepare } from './helpers';
-import { db } from './db';
+import { db, forgetTrustedLogins } from './db';
 import { createHash } from 'node:crypto';
 
 /**
@@ -33,6 +33,9 @@ const readProfile = (request: APIRequestContext, token: string) =>
   request.get(`${FIRESTORE}/users/${uidOf(token)}`, { headers: { Authorization: `Bearer ${token}` } });
 
 const bearer = (token: string) => ({ ...visitor(), Authorization: `Bearer ${token}` });
+
+// Cada teste começa sem login confiável da conta (ver forgetTrustedLogins).
+test.beforeEach(async () => { await forgetTrustedLogins(EMAIL); });
 
 test('senha usada direto no Firebase não abre CPF, exportar nem apagar a conta', async ({ request }) => {
   const token = await directSignIn(request);
