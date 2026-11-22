@@ -5,7 +5,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
 import { timingSafeEqual } from 'node:crypto';
-import { issueLoginTicket } from '@/lib/auth/loginTicket';
+import { issueChallengeTicket } from '@/lib/auth/loginTicket';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -54,9 +54,11 @@ export async function POST(req: NextRequest) {
   // expiresAt cuida da limpeza (o doc nunca é reaproveitado, o próximo
   // login gera um token novo e sobrescreve).
   await ref.update({ confirmed: true, confirmedAt: new Date().toISOString() });
-  // A senha foi conferida antes do e-mail sair: a aba que espera pode
-  // entrar e o login vale para CPF e conta (ver lib/auth/loginTicket.ts).
-  await issueLoginTicket(adminDb, email).catch(err => console.error('[login-confirm] ticket', err));
+  // A senha foi conferida antes do e-mail sair: a aba que espera (e só ela,
+  // que tem o id do desafio) entra e o login vale para a conta.
+  if (typeof data.challengeHash === 'string') {
+    await issueChallengeTicket(adminDb, email, data.challengeHash).catch(err => console.error('[login-confirm] ticket', err));
+  }
 
   return NextResponse.json({ ok: true });
 }

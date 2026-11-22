@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { BrandLogo } from '@/components/BrandLogo';
 import { IconAlert } from '@/components/ui/Icon';
 import { withSecondFactor } from '@/lib/auth/secondFactor';
+import { rememberLoginTicket } from '@/lib/auth/loginTicketClient';
 
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
@@ -87,6 +88,7 @@ function ResetForm() {
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
+      rememberLoginTicket(d.ticket);
 
       // Login automático: a pessoa acabou de definir esta senha agora
       // mesmo, então já temos tudo para autenticar direto no client,

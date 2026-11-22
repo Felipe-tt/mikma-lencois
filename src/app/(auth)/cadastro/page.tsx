@@ -19,6 +19,7 @@ import { checkPassword, PASSWORD_MAX, PASSWORD_MIN, type PasswordReport } from '
 import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
 import { withSecondFactor } from '@/lib/auth/secondFactor';
+import { rememberLoginTicket } from '@/lib/auth/loginTicketClient';
 
 type Step = 'email' | 'awaiting' | 'password' | 'done';
 
@@ -235,6 +236,7 @@ function RegisterContent() {
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error);
+      rememberLoginTicket(d.ticket);
       await withSecondFactor(() => signInWithEmailAndPassword(auth, normalizeEmail(email), password));
       setStep('done');
       setTimeout(() => router.push(consumeReturnTo() ?? '/'), 2000);

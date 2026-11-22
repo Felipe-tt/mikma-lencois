@@ -16,6 +16,7 @@ import { getRecaptchaToken } from '@/lib/recaptcha-client';
 import { IconAlert } from '@/components/ui/Icon';
 import { PasswordInput } from '@/components/auth/PasswordInput';
 import { withSecondFactor } from '@/lib/auth/secondFactor';
+import { readLoginTicket, rememberLoginTicket } from '@/lib/auth/loginTicketClient';
 
 
 // ── Modal recuperação de senha ────────────────────────────────────────────────
@@ -165,7 +166,7 @@ export default function LoginPage() {
         return;
       }
       try {
-        const res = await fetch(`/api/auth/login-challenge-status?email=${encodeURIComponent(email)}`);
+        const res = await fetch(`/api/auth/login-challenge-status?email=${encodeURIComponent(email)}&challenge=${encodeURIComponent(readLoginTicket() ?? '')}`);
         const d = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (d.expired) {
@@ -206,6 +207,8 @@ export default function LoginPage() {
       if (!rl.ok) {
         throw new Error(rlData.error || 'Erro ao entrar');
       }
+      // O ticket (ou o id do desafio, que vira o ticket) fica só nesta aba.
+      rememberLoginTicket(rlData.requiresEmailChallenge ? rlData.challenge : rlData.ticket);
       if (rlData.requiresEmailChallenge) {
         setAwaitingChallenge(true);
         setLoading(false);

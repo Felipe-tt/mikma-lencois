@@ -1,6 +1,7 @@
 'use client';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import type { IdTokenResult, User } from 'firebase/auth';
+import { forgetLoginTicket, readLoginTicket } from '@/lib/auth/loginTicketClient';
 
 // O SDK do Auth baixa depois da página montar, não junto com ela: o
 // cabeçalho só precisa dele para mostrar a conta, e ninguém espera por isso.
@@ -77,8 +78,15 @@ async function trustPasswordLogin(firebaseUser: User, tokenResult: IdTokenResult
     try { if (localStorage.getItem(flag)) return true; } catch { /* sem storage */ }
     // Rede travada não segura a conta: desiste em 8 s.
     const signal = typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(8000) : undefined;
-    const res = await fetch('/api/auth/trust', { method: 'POST', headers: { Authorization: `Bearer ${tokenResult.token}` }, signal });
+    // O ticket que a checagem deu a esta aba (lib/auth/loginTicketClient).
+    const res = await fetch('/api/auth/trust', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenResult.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket: readLoginTicket() ?? undefined }),
+      signal,
+    });
     if (!res.ok) return null;
+    forgetLoginTicket();
     const trusted = (await res.json().catch(() => ({}))).trusted;
     if (trusted === true) { try { localStorage.setItem(flag, '1'); } catch { /* sem storage */ } }
     return typeof trusted === 'boolean' ? trusted : null;

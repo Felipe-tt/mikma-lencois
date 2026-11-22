@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { login, prepare } from './helpers';
 import { db } from './db';
+import { createHash } from 'node:crypto';
 
 /**
  * Senha vazada não abre o CPF. O Firebase Auth aceita a senha direto, com a
@@ -57,10 +58,10 @@ test('ticket tirado com senha errada não vale para a senha certa', async ({ req
 });
 
 test('login que passou pela checagem do site abre o CPF', async ({ request }) => {
-  const pre = await request.post('/api/auth/login', { headers: visitor(), data: { email: EMAIL, password: SENHA } });
-  expect(await pre.json()).toEqual({ ok: true });
+  const pre = await (await request.post('/api/auth/login', { headers: visitor(), data: { email: EMAIL, password: SENHA } })).json();
+  expect(pre).toEqual({ ok: true, ticket: expect.any(String) });
   const token = await directSignIn(request);
-  expect(await (await request.post('/api/auth/trust', { headers: bearer(token) })).json()).toEqual({ trusted: true });
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(token), data: { ticket: pre.ticket } })).json()).toEqual({ trusted: true });
   const pii = await request.get('/api/user/pii', { headers: bearer(token) });
   expect(pii.status()).toBe(200);
   expect((await pii.json()).cpf).toBe('31870459601');
@@ -72,6 +73,43 @@ test('entrando pela tela, o perfil mostra o CPF', async ({ page }) => {
   await login(page, EMAIL, SENHA);
   await page.goto('/perfil');
   await expect(page.getByText('***.704.596-**')).toBeVisible();
+});
+
+test('ticket da dona da conta não serve para quem entra direto com a senha', async ({ request }) => {
+  // A dona passa pela checagem; o ticket fica no navegador dela.
+  const dona = await (await request.post('/api/auth/login', { headers: visitor(), data: { email: EMAIL, password: SENHA } })).json();
+  // Quem tem a senha entra direto e tenta trocar sem o ticket, ou com um inventado.
+  const intruso = await directSignIn(request);
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(intruso) })).json()).toEqual({ trusted: false });
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(intruso), data: { ticket: 'A'.repeat(43) } })).json()).toEqual({ trusted: false });
+  expect((await request.get('/api/user/pii', { headers: bearer(intruso) })).status()).toBe(403);
+  // A dona, com o ticket dela, entra normalmente.
+  const dela = await directSignIn(request);
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(dela), data: { ticket: dona.ticket } })).json()).toEqual({ trusted: true });
+});
+
+test('confirmação por e-mail: o andamento e a entrada são só da aba que pediu', async ({ request }) => {
+  const challenge = 'c'.repeat(43);
+  const linkToken = 'l'.repeat(43);
+  await db().collection('login_challenges').doc(EMAIL).set({
+    email: EMAIL, token: linkToken, challengeHash: createHash('sha256').update(challenge).digest('hex'),
+    expiresAt: Date.now() + 10 * 60_000, attempts: 0, confirmed: false, ip: 'x', createdAt: new Date().toISOString(),
+  });
+  const status = async (c?: string) => (await (await request.get(
+    `/api/auth/login-challenge-status?email=${encodeURIComponent(EMAIL)}${c ? `&challenge=${c}` : ''}`, { headers: visitor() },
+  )).json()).confirmed;
+  // A dona clica no link do e-mail.
+  expect((await request.post('/api/auth/login-confirm-challenge', { headers: visitor(), data: { email: EMAIL, token: linkToken } })).ok()).toBe(true);
+  // Quem só sabe o e-mail não descobre que ela confirmou; a aba que pediu, sim.
+  expect(await status()).toBe(false);
+  expect(await status('d'.repeat(43))).toBe(false);
+  expect(await status(challenge)).toBe(true);
+  // E é a aba que pediu que entra com o login confiável (o id do desafio vira o ticket).
+  const intruso = await directSignIn(request);
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(intruso) })).json()).toEqual({ trusted: false });
+  const aba = await directSignIn(request);
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(aba), data: { ticket: challenge } })).json()).toEqual({ trusted: true });
+  await db().collection('login_challenges').doc(EMAIL).delete();
 });
 
 test('login que perdeu a confiança mostra o aviso e leva para entrar de novo', async ({ page }) => {

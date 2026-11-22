@@ -108,14 +108,14 @@ export async function POST(req: NextRequest) {
 
     await ref.delete();
     // O navegador entra em seguida com a senha nova.
-    await issueLoginTicket(adminDb, email).catch(err => console.error('[reset-password] ticket', err));
+    const ticket = await issueLoginTicket(adminDb, email).catch(err => { console.error('[reset-password] ticket', err); return undefined; });
 
     // NÃO usar createCustomToken aqui, exige iam.serviceAccounts.signBlob
     // na service account do Cloud Run, que não funciona de forma estável
     // neste ambiente de Firebase Hosting com webframeworks (ver mesmo
     // aviso em google-verify/route.ts). O login automático é feito pelo
     // client, que já tem a senha nova em mãos (signInWithEmailAndPassword).
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(ticket ? { ok: true, ticket } : { ok: true });
   } catch (err) {
     console.error('[reset-password]', err);
     return NextResponse.json({ error: 'Erro interno. Tente novamente.' }, { status: 500 });
