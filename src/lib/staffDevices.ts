@@ -70,6 +70,14 @@ export async function noteStaffDevice(a: Access): Promise<boolean> {
   return true;
 }
 
+/**
+ * Saiu da equipe ou apagou a conta: a lista de aparelhos sai junto. Se a
+ * pessoa voltar para a equipe, o primeiro aparelho conta de novo.
+ */
+export async function forgetStaffDevices(uid: string): Promise<void> {
+  await adminDb.collection('staffDevices').doc(uid).delete();
+}
+
 /** A própria pessoa e, se for da equipe, os admins. */
 async function securityRecipients(email: string | undefined, staff: boolean): Promise<string[]> {
   const to = new Set<string>();

@@ -9,10 +9,12 @@ const listUsers = vi.fn(async () => ({
     { email: 'cliente@x.com', customClaims: { role: 'buyer' }, disabled: false },
   ],
 }));
+const deleted: string[] = [];
+const collection = vi.fn((col: string) => ({ doc: (id: string) => ({ delete: async () => { deleted.push(`${col}/${id}`); } }) }));
 vi.mock('@/lib/email', () => ({ sendEmail }));
-vi.mock('@/lib/firebase/admin', () => ({ adminAuth: { listUsers }, adminDb: {} }));
+vi.mock('@/lib/firebase/admin', () => ({ adminAuth: { listUsers }, adminDb: { collection } }));
 
-const { notifyPasskeyAdded, notifyPiiScan } = await import('./staffDevices');
+const { forgetStaffDevices, notifyPasskeyAdded, notifyPiiScan } = await import('./staffDevices');
 
 const base = { uid: 'u1', ip: '203.0.113.7', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', place: 'Blumenau, SC, Brasil' };
 const recipients = () => sendEmail.mock.calls.map(c => (c[0] as { to: string }).to).sort();
@@ -54,5 +56,12 @@ describe('aviso de muitos CPFs abertos', () => {
     expect(subject).toContain('muitos CPFs');
     expect(text).toContain('mais de 120 clientes');
     expect(text).toContain('203.0.113.9');
+  });
+});
+
+describe('lista de aparelhos da equipe', () => {
+  it('sai inteira quando a pessoa deixa a equipe ou apaga a conta', async () => {
+    await forgetStaffDevices('v1');
+    expect(deleted).toEqual(['staffDevices/v1']);
   });
 });
