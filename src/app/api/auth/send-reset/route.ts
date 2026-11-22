@@ -8,6 +8,8 @@ import { sendEmail } from '@/lib/email';
 import { generateActionToken } from '@/lib/auth-token';
 import { actionButtonEmailHtml } from '@/lib/email-templates';
 import { verifyRecaptcha } from '@/lib/recaptcha';
+import { checkAuthStamp } from '@/lib/auth/authStamp';
+import { alertEmailChangedOutside } from '@/lib/auth/accountAlerts';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -52,6 +54,14 @@ export async function POST(req: NextRequest) {
   try {
     const user = await adminAuth.getUserByEmail(email);
     if (user.disabled) return OK;
+    // E-mail da conta trocado fora do site (lib/auth/authStamp.ts): o link
+    // daria a conta a quem trocou. Responde igual e avisa o e-mail antigo.
+    const recorded = (await adminDb.collection('users').doc(user.uid).get()).get('email');
+    const account = await checkAuthStamp(adminDb, user, recorded);
+    if (account.status === 'emailChanged') {
+      await alertEmailChangedOutside({ uid: user.uid, email: account.email }, email);
+      return OK;
+    }
     firstName = (user.displayName || '').split(' ')[0] || 'você';
   } catch {
     // não existe, retorna OK mesmo assim (não revela)

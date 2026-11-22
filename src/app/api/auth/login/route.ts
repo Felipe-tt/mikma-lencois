@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
 import { checkRecaptchaScore } from '@/lib/recaptcha';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { generateActionToken } from '@/lib/auth-token';
 import { sendEmail } from '@/lib/email';
 import { loginChallengeEmail } from '@/lib/email/loginChallengeEmail';
@@ -14,6 +14,8 @@ import { passwordLeaked } from '@/lib/leakedCredentials';
 import { HONEY_LOGIN_EMAILS, triggerHoneytoken } from '@/lib/honeytoken';
 import { checkPasswordServerSide } from '@/lib/auth/passwordCheck';
 import { hashTicket, issueLoginTicket } from '@/lib/auth/loginTicket';
+import { checkAccountByEmail } from '@/lib/auth/authStamp';
+import { alertEmailChangedOutside } from '@/lib/auth/accountAlerts';
 
 const schema = z.object({
   email: z.string().email().max(256),
@@ -69,43 +71,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (outcome === 'pass') {
-      // A senha é conferida aqui também: o ticket só sai para a senha certa
-      // que passou pelo reCAPTCHA e não apareceu em vazamento. Sem isso,
-      // dava para tirar o ticket com uma senha qualquer e entrar com a
-      // vazada direto no Firebase (ver lib/auth/loginTicket.ts).
-      const check = await checkPasswordServerSide(emailLower, password);
-      if (check === 'wrong') return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 400 });
+    // A senha é conferida aqui: o ticket só sai para a senha certa. Sem
+    // isso, dava para tirar o ticket com uma senha qualquer e entrar com a
+    // vazada direto no Firebase (ver lib/auth/loginTicket.ts).
+    const check = await checkPasswordServerSide(emailLower, password);
+    // Mesma mensagem genérica de sempre: não revela se foi a senha ou o e-mail.
+    if (check === 'wrong') return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 400 });
+    if (check === 'unavailable') {
+      if (outcome === 'challenge') {
+        return NextResponse.json({ error: 'Não foi possível conferir agora. Tente de novo em alguns minutos.' }, { status: 503 });
+      }
       // Sem conferir agora (rede, conta desativada): o login segue no
-      // navegador, sem ticket; CPF e apagar a conta pedem para entrar de novo.
+      // navegador, sem ticket; CPF e a conta pedem para entrar de novo, e a
+      // equipe precisa saber.
+      Sentry.captureMessage('Login sem ticket: o servidor não conseguiu conferir a senha no Firebase', 'warning');
+      return NextResponse.json({ ok: true });
+    }
+
+    // Senha certa. A conta mudou fora do site (lib/auth/authStamp.ts)? Quem
+    // tem a senha vazada podia trocá-la direto no Firebase e entrar aqui com
+    // a nova, que não está em vazamento nenhum.
+    const account = await checkAccountByEmail(adminDb, adminAuth, emailLower)
+      .catch(err => { console.error('[login] marca da conta', err); return null; });
+    if (account?.status === 'emailChanged') {
+      await alertEmailChangedOutside({ uid: account.uid, email: account.email }, emailLower);
+      return NextResponse.json(
+        { error: 'Por segurança, esta conta está travada. Fale com a gente para liberar.', code: 'account_locked' },
+        { status: 403 },
+      );
+    }
+    const reason = account?.status === 'changed' ? 'changed' : outcome === 'challenge' ? (leaked ? 'leaked' : 'suspicious') : null;
+    if (!reason) {
       // O ticket vai só para este navegador (ver lib/auth/loginTicket.ts).
-      const ticket = check === 'ok'
-        ? await issueLoginTicket(adminDb, emailLower).catch(err => { console.error('[login] ticket', err); return undefined; })
-        : undefined;
-      // Sem ticket, CPF e conta pedem para entrar de novo: a equipe precisa saber.
-      if (check === 'unavailable') Sentry.captureMessage('Login sem ticket: o servidor não conseguiu conferir a senha no Firebase', 'warning');
+      const ticket = await issueLoginTicket(adminDb, emailLower).catch(err => { console.error('[login] ticket', err); return undefined; });
       return NextResponse.json(ticket ? { ok: true, ticket } : { ok: true });
     }
 
-    // outcome === 'challenge': score suspeito, mas não claramente bot.
-    // Confirma a senha antes de mandar e-mail (evita mandar pra caixa de
-    // entrada de estranho só porque alguem digitou o e-mail errado).
+    // Confirmação por e-mail: senha em vazamento, acesso fora do normal ou
+    // senha trocada fora do site. A senha já foi conferida, então o e-mail
+    // só sai para a dona da conta, nunca para quem errou o endereço.
     const challengeKey = `login-challenge:email:${emailLower}`;
     if (!await rateLimit(challengeKey, 3, 15 * 60 * 1000)) {
       return NextResponse.json(
         { error: 'Muitas tentativas de confirmação. Aguarde alguns minutos.' },
         { status: 429 }
       );
-    }
-
-    const check = await checkPasswordServerSide(emailLower, password);
-    if (check === 'unavailable') {
-      return NextResponse.json({ error: 'Não foi possível conferir agora. Tente de novo em alguns minutos.' }, { status: 503 });
-    }
-    if (check === 'wrong') {
-      // Mesma mensagem genérica de sempre, não revela se foi a senha ou
-      // o e-mail que estava errado.
-      return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 400 });
     }
 
     const token = generateActionToken();
@@ -122,6 +132,7 @@ export async function POST(req: NextRequest) {
       expiresAt,
       attempts: 0,
       confirmed: false,
+      reason,
       ip,
       createdAt: new Date().toISOString(),
     });
@@ -136,7 +147,7 @@ export async function POST(req: NextRequest) {
       device: deviceLabel(req.headers.get('user-agent')),
       place: requestPlace(req.headers),
       ip,
-      leaked,
+      reason,
     });
 
     try {

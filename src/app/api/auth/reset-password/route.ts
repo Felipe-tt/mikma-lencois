@@ -7,6 +7,8 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
 import { issueLoginTicket } from '@/lib/auth/loginTicket';
+import { checkAuthStamp, restampAccount } from '@/lib/auth/authStamp';
+import { alertEmailChangedOutside } from '@/lib/auth/accountAlerts';
 
 const verifySchema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -96,12 +98,23 @@ export async function POST(req: NextRequest) {
 
   try {
     const user = await adminAuth.getUserByEmail(email);
+    // E-mail da conta trocado fora do site (lib/auth/authStamp.ts): o link
+    // não vale, senão quem trocou o e-mail ficava com a conta.
+    const recorded = (await adminDb.collection('users').doc(user.uid).get()).get('email');
+    const account = await checkAuthStamp(adminDb, user, recorded);
+    if (account.status === 'emailChanged') {
+      await ref.delete();
+      await alertEmailChangedOutside({ uid: user.uid, email: account.email }, email);
+      return NextResponse.json({ error: 'Por segurança, esta conta está travada. Fale com a gente para liberar.', code: 'account_locked' }, { status: 403 });
+    }
 
     // Atualiza senha no Firebase Auth
     await adminAuth.updateUser(user.uid, { password: newPassword });
 
     // Revoga todos os tokens anteriores, força logout em outras sessões
     await adminAuth.revokeRefreshTokens(user.uid);
+    // Senha nova pelo site: a marca da conta acompanha.
+    await restampAccount(adminDb, adminAuth, user.uid).catch(err => console.error('[reset-password] marca', err));
 
     // Só carimba a atualização. A senha vive apenas no Firebase Auth.
     await adminDb.collection('users').doc(user.uid).update({ updatedAt: new Date().toISOString() });

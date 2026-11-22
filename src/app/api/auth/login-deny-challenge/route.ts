@@ -6,6 +6,7 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
 import { generateActionToken } from '@/lib/auth-token';
 import { checkChallengeLink, DENY_WINDOW_MS } from '@/lib/auth/loginChallenge';
+import { restampAccount } from '@/lib/auth/authStamp';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
       await adminDb.collection('login_tickets').doc(data.challengeHash).delete().catch(() => {});
     }
     await adminAuth.revokeRefreshTokens(user.uid).catch(err => console.error('[login-deny] revoke', err));
+    await restampAccount(adminDb, adminAuth, user.uid).catch(err => console.error('[login-deny] marca', err));
   }
 
   // Mesmo formato do "esqueci minha senha" (api/auth/send-reset).
