@@ -2,14 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import {
-  TICKET_TTL_MS, googleMatchesAccount, hashTicket, isTicketShape, isTrustedLogin, issueChallengeTicket, issueLoginTicket,
-  needsTicket, requireTrustedLogin, trustLogin, trustRequiredSinceMs,
+  TICKET_TTL_MS, forgetTrustedLogins, googleMatchesAccount, hashTicket, isTicketShape, isTrustedLogin, issueChallengeTicket,
+  issueLoginTicket, needsTicket, requireTrustedLogin, trustLogin, trustRequiredSinceMs,
 } from './loginTicket';
 import { saveAuthStamp } from './authStamp';
 
 type Data = Record<string, unknown>;
 
-/** Firestore em memória: doc, get/set e transação (aplica as escritas no fim). */
+/** Firestore em memória: doc, get/set, consulta por igualdade, lote e transação (aplica as escritas no fim). */
 function fakeDb() {
   const docs = new Map<string, Data>();
   const snapOf = (path: string) => {
@@ -24,7 +24,22 @@ function fakeDb() {
         get: async () => snapOf(`${col}/${id}`),
         set: async (v: Data) => { docs.set(`${col}/${id}`, { ...v }); },
       }),
+      where: (field: string, _op: '==', value: unknown) => ({
+        limit: (n: number) => ({
+          get: async () => {
+            const hits = [...docs].filter(([p, d]) => p.startsWith(`${col}/`) && d[field] === value).slice(0, n);
+            return { empty: hits.length === 0, size: hits.length, docs: hits.map(([p]) => ({ ref: { path: p } })) };
+          },
+        }),
+      }),
     }),
+    batch: () => {
+      const ops: Array<() => void> = [];
+      return {
+        delete: (ref: { path: string }) => { ops.push(() => docs.delete(ref.path)); },
+        commit: async () => { ops.forEach(o => o()); },
+      };
+    },
     runTransaction: async <T,>(fn: (tx: unknown) => Promise<T>) => {
       const writes: Array<() => void> = [];
       const tx = {
@@ -173,5 +188,27 @@ describe('provedor que o site não usa', () => {
       expect(await isTrustedLogin(db, token({}, { sign_in_provider: p }))).toBe(false);
     }
     expect(await isTrustedLogin(db, token({ auth_time: Date.parse('2026-11-22T08:00:00Z') / 1000 }, { sign_in_provider: 'phone' }))).toBe(true);
+  });
+});
+
+describe('sair de todos os aparelhos e senha nova', () => {
+  it('os logins confiáveis da conta saem; os de outras contas ficam', async () => {
+    const db = fakeDb();
+    const entrar = async (uid: string, email: string, segundos: number) => {
+      const ticket = await issueLoginTicket(db, email, LOGIN - 5_000);
+      const t = token({ uid, email, auth_time: LOGIN / 1000 + segundos });
+      expect(await trustLogin(db, t, ticket, LOGIN + segundos * 1000 + 1_000)).toBe(true);
+      return t;
+    };
+    const celular = await entrar('u1', 'maria@x.com', 0);
+    const invasor = await entrar('u1', 'maria@x.com', 60);
+    const outra = await entrar('u2', 'joana@x.com', 0);
+
+    expect(await forgetTrustedLogins(db, 'u1')).toBe(2);
+    // O token de quem entrou ainda não venceu, mas o login deixa de valer.
+    expect(await isTrustedLogin(db, invasor)).toBe(false);
+    expect(await isTrustedLogin(db, celular)).toBe(false);
+    expect(await isTrustedLogin(db, outra)).toBe(true);
+    expect(await forgetTrustedLogins(db, 'u1')).toBe(0);
   });
 });
