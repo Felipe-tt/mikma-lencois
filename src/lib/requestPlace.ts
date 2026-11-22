@@ -40,3 +40,13 @@ export function requestPlace(headers: Headers): string | null {
   const parts = [city, /^[A-Z0-9]{1,3}$/.test(region) ? region : '', country].filter(Boolean);
   return parts.length ? parts.join(', ') : null;
 }
+
+/**
+ * País da requisição em código ISO ("BR"; "T1" é a rede Tor), só de header
+ * provado da Cloudflare, como requestPlace. null quando não dá para saber.
+ */
+export function requestCountry(headers: Headers): string | null {
+  if (!cameThroughEdge(headers)) return null;
+  const code = (headers.get('cf-ipcountry') ?? '').trim().toUpperCase();
+  return /^[A-Z][A-Z0-9]$/.test(code) && code !== 'XX' ? code : null;
+}

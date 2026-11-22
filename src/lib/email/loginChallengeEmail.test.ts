@@ -29,6 +29,13 @@ describe('e-mail de confirmação de login', () => {
     expect(html).not.toContain('ninguém entra');
   });
 
+  it('lugar novo: diz que veio de onde a conta nunca entrou, num aparelho novo', () => {
+    const { text } = loginChallengeEmail({ ...base, reason: 'newplace', place: 'Moscou, Rússia' });
+    expect(text).toContain('veio de um lugar de onde a sua conta nunca entrou, num aparelho que ela ainda não usou');
+    expect(text).toContain('Moscou, Rússia (IP 203.0.113.9)');
+    expect(text).toContain('Quem tentou entrar sabe a sua senha');
+  });
+
   it('senha em vazamento: diz o motivo e pede para trocar mesmo se foi a pessoa', () => {
     const { html, text } = loginChallengeEmail({ ...base, reason: 'leaked' });
     for (const out of [html, text]) {

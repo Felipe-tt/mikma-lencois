@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
-import { customerLoginVia, forgetUserDevices, isDeviceId, noteCustomerLogin, type DeviceAlertDeps } from './userDevices';
+import { customerLoginVia, forgetUserDevices, isDeviceId, noteCustomerLogin, unusualLoginPlace, type DeviceAlertDeps } from './userDevices';
 
 type Data = Record<string, unknown>;
 
@@ -73,7 +73,7 @@ function deps(over: Partial<DeviceAlertDeps> = {}) {
   return { d, sent };
 }
 
-const access = (deviceId: string, userAgent = ANDROID) => ({ deviceId, userAgent, ip: '200.1.2.3', place: 'Blumenau, Santa Catarina, Brasil' });
+const access = (deviceId: string, userAgent = ANDROID, country: string | null = 'BR') => ({ deviceId, userAgent, ip: '200.1.2.3', place: 'Blumenau, Santa Catarina, Brasil', country });
 const devicesOf = (db: ReturnType<typeof fakeDb>) => (db.docs.get('userDevices/u1')?.devices ?? []) as Array<{ label: string; lastSeen: string }>;
 
 describe('quem recebe o aviso', () => {
@@ -217,5 +217,72 @@ describe('aviso de acesso por aparelho novo', () => {
   it('falha no envio do e-mail sobe para quem chamou (a rota segura e segue o login)', async () => {
     const send = vi.fn(async () => { throw new Error('resend fora do ar'); });
     await expect(noteCustomerLogin(fakeDb(), login(), access(CELULAR), deps({ send }).d, NOW)).rejects.toThrow('resend fora do ar');
+  });
+});
+
+describe('países de onde a conta entrou', () => {
+  it('guarda o país de cada login que valeu, o mais recente por último, até 10; a rede Tor nunca', async () => {
+    const db = fakeDb();
+    const { d } = deps();
+    await noteCustomerLogin(db, login(), access(CELULAR, ANDROID, 'BR'), d, NOW);
+    await noteCustomerLogin(db, login(), access(CELULAR, ANDROID, 'PT'), d, NOW + 1);
+    await noteCustomerLogin(db, login(), access(CELULAR, ANDROID, 'BR'), d, NOW + 2);
+    await noteCustomerLogin(db, login(), access(CELULAR, ANDROID, 'T1'), d, NOW + 3);
+    await noteCustomerLogin(db, login(), access(CELULAR, ANDROID, null), d, NOW + 4);
+    expect(db.docs.get('userDevices/u1')?.countries).toEqual(['PT', 'BR']);
+    for (const [i, c] of ['AR', 'UY', 'CL', 'PY', 'BO', 'PE', 'CO', 'EC', 'VE', 'MX'].entries()) {
+      await noteCustomerLogin(db, login(), access(CELULAR, ANDROID, c), d, NOW + 10 + i);
+    }
+    expect(db.docs.get('userDevices/u1')?.countries).toEqual(['AR', 'UY', 'CL', 'PY', 'BO', 'PE', 'CO', 'EC', 'VE', 'MX']);
+  });
+});
+
+describe('login de lugar novo (pede a confirmação por e-mail)', () => {
+  async function account() {
+    const db = fakeDb();
+    await noteCustomerLogin(db, login(), access(CELULAR, ANDROID, 'BR'), deps().d, NOW);
+    return db;
+  }
+
+  it('aparelho novo, de um país de onde a conta nunca entrou: pede', async () => {
+    expect(await unusualLoginPlace(await account(), 'u1', OUTRO, 'RU', NOW + DAY)).toBe(true);
+  });
+
+  it('aparelho novo, do país de costume: não pede (o aviso de acesso novo cobre)', async () => {
+    expect(await unusualLoginPlace(await account(), 'u1', OUTRO, 'BR', NOW + DAY)).toBe(false);
+  });
+
+  it('o aparelho de sempre, viajando: não pede', async () => {
+    expect(await unusualLoginPlace(await account(), 'u1', CELULAR, 'PT', NOW + DAY)).toBe(false);
+  });
+
+  it('rede Tor num aparelho novo pede sempre, mesmo sem países guardados; no aparelho de sempre, não', async () => {
+    const db = await account();
+    expect(await unusualLoginPlace(db, 'u1', OUTRO, 'T1', NOW + DAY)).toBe(true);
+    expect(await unusualLoginPlace(db, 'u1', CELULAR, 'T1', NOW + DAY)).toBe(false);
+    expect(await unusualLoginPlace(fakeDb(), 'u1', undefined, 'T1', NOW)).toBe(true);
+  });
+
+  it('sem países guardados (conta nova ou de antes disto) ou sem saber o país: não pede', async () => {
+    expect(await unusualLoginPlace(fakeDb(), 'u1', OUTRO, 'RU', NOW)).toBe(false);
+    expect(await unusualLoginPlace(await account(), 'u1', OUTRO, null, NOW + DAY)).toBe(false);
+  });
+
+  it('aparelho sem uso há 13 meses conta como novo; cookie estranho também', async () => {
+    const db = await account();
+    expect(await unusualLoginPlace(db, 'u1', CELULAR, 'RU', NOW + 401 * DAY)).toBe(true);
+    expect(await unusualLoginPlace(db, 'u1', 'x', 'RU', NOW + DAY)).toBe(true);
+  });
+});
+
+describe('login que a dona acabou de confirmar pelo e-mail', () => {
+  it('não manda o aviso de acesso novo de novo; sem a confirmação, manda', async () => {
+    const db = fakeDb();
+    await noteCustomerLogin(db, login({ auth_time: (NOW - 2 * DAY) / 1000 }), access(CELULAR), deps().d, NOW);
+    const confirmed = deps({ confirmedByEmail: async () => true });
+    expect(await noteCustomerLogin(db, login(), access(OUTRO), confirmed.d, NOW)).toBe('remembered');
+    expect(confirmed.sent).toHaveLength(0);
+    const other = deps({ confirmedByEmail: async () => false });
+    expect(await noteCustomerLogin(db, login({ auth_time: (NOW - 1_000) / 1000 }), access('mais-um-aparelho-aaaaaaa'), other.d, NOW)).toBe('alerted');
   });
 });

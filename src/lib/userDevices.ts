@@ -18,7 +18,8 @@ import { DAY_MS, RETENTION } from '@/lib/retention';
  * Firebase para fugir do aviso fica sem endereço, pedidos e CPF.
  *
  * O aparelho é o cookie da equipe (id aleatório, HttpOnly, 1 ano). No banco
- * ficam só o hash dele, o tipo do aparelho e as datas (userDevices/{uid}).
+ * ficam só o hash dele, o tipo do aparelho e as datas (userDevices/{uid}),
+ * e os países de onde a conta entrou (até 10), para unusualLoginPlace.
  */
 const COLLECTION = 'userDevices';
 const MAX_DEVICES = 20;
@@ -35,6 +36,9 @@ const SIGNUP_GRACE_MS = 24 * 3600_000;
 const FRESH_LOGIN_MS = 15 * 60_000;
 
 const hashId = (id: string) => createHash('sha256').update(id).digest('hex').slice(0, 32);
+const MAX_COUNTRIES = 10;
+/** Rede Tor: nunca vira lugar de costume. */
+const TOR = 'T1';
 
 /** Cookie que o navegador manda: base64url, do tamanho que o servidor gera. */
 export const isDeviceId = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{20,64}$/.test(v);
@@ -55,7 +59,7 @@ interface Device { id: string; label: string; firstSeen: string; lastSeen?: stri
  * auth_time do login que pode gerar aviso; volta `alert: true` só uma vez
  * por login, mesmo com várias abas pedindo ao mesmo tempo.
  */
-async function rememberDevice(db: Firestore, uid: string, deviceId: string, label: string, now: number, alertFor: number | null) {
+async function rememberDevice(db: Firestore, uid: string, deviceId: string, label: string, country: string | null, now: number, alertFor: number | null) {
   const ref = db.collection(COLLECTION).doc(uid);
   const hash = hashId(deviceId);
   return db.runTransaction(async tx => {
@@ -69,7 +73,10 @@ async function rememberDevice(db: Firestore, uid: string, deviceId: string, labe
       : [...recent, { id: hash, label, firstSeen: iso, lastSeen: iso }].slice(-MAX_DEVICES);
     const seen: 'known' | 'new' | 'first' = known ? 'known' : all.length === 0 ? 'first' : 'new';
     const alert = seen !== 'known' && alertFor !== null && snap.get('alertedLogin') !== alertFor;
-    tx.set(ref, { devices, updatedAt: iso, ...(alert ? { alertedLogin: alertFor } : {}) }, { merge: true });
+    // Países de onde a conta entrou com login que valeu, o mais recente por último.
+    const before = (snap.get('countries') as string[] | undefined) ?? [];
+    const countries = country && country !== TOR ? [...before.filter(c => c !== country), country].slice(-MAX_COUNTRIES) : before;
+    tx.set(ref, { devices, countries, updatedAt: iso, ...(alert ? { alertedLogin: alertFor } : {}) }, { merge: true });
     return { seen, alert };
   });
 }
@@ -79,6 +86,8 @@ export interface LoginAccess {
   userAgent: string | null;
   ip: string;
   place: string | null;
+  /** País (requestCountry): entra na lista de países da conta. */
+  country: string | null;
 }
 
 export interface DeviceAlertDeps {
@@ -89,6 +98,13 @@ export interface DeviceAlertDeps {
   send: (mail: { to: string; subject: string; text: string; html: string }) => Promise<unknown>;
   /** Base dos links do e-mail. */
   appUrl: string;
+  /**
+   * Este login (o mesmo ticket) acabou de ser aprovado pela dona no e-mail
+   * de confirmação de login: o aviso só repetiria o que ela aprovou. Vale
+   * só para esse login, e não para a conta toda: outro login logo depois
+   * ainda avisa.
+   */
+  confirmedByEmail?: () => Promise<boolean>;
 }
 
 export type DeviceOutcome = 'skipped' | 'known' | 'remembered' | 'limited' | 'alerted';
@@ -101,7 +117,7 @@ export async function noteCustomerLogin(
   if (!via || !decoded.email || !isDeviceId(access.deviceId)) return 'skipped';
   const fresh = now - decoded.auth_time * 1000 <= FRESH_LOGIN_MS;
   const label = deviceLabel(access.userAgent);
-  const { seen, alert } = await rememberDevice(db, decoded.uid, access.deviceId, label, now, fresh ? decoded.auth_time : null);
+  const { seen, alert } = await rememberDevice(db, decoded.uid, access.deviceId, label, access.country, now, fresh ? decoded.auth_time : null);
   if (seen === 'known') return 'known';
   if (!alert) return 'remembered';
   if (seen === 'first') {
@@ -109,6 +125,7 @@ export async function noteCustomerLogin(
     const created = Date.parse((await deps.getUser(decoded.uid).catch(() => null))?.metadata.creationTime ?? '');
     if (now - created < SIGNUP_GRACE_MS) return 'remembered';
   }
+  if (await deps.confirmedByEmail?.().catch(() => false)) return 'remembered';
   if (!await deps.allowAlert(decoded.uid)) return 'limited';
 
   await db.collection(COLLECTION).doc(decoded.uid).set({ lastAlertAt: new Date(now).toISOString() }, { merge: true });
@@ -123,6 +140,26 @@ export async function noteCustomerLogin(
   });
   await deps.send({ to: decoded.email, ...mail });
   return 'alerted';
+}
+
+/**
+ * Login com senha num aparelho que a conta não usa, vindo de um país de onde
+ * ela nunca entrou (ou pela rede Tor): a checagem do site pede a confirmação
+ * por e-mail (/api/auth/login), em vez de só avisar depois. Quem pegou a
+ * senha de alguém daqui e tenta de fora não entra. Sem países guardados
+ * (conta nova, ou de antes disto) só a rede Tor pede.
+ */
+export async function unusualLoginPlace(
+  db: Firestore, uid: string, deviceId: string | undefined, country: string | null, now = Date.now(),
+): Promise<boolean> {
+  if (!country) return false;
+  const snap = await db.collection(COLLECTION).doc(uid).get();
+  const devices: Device[] = snap.exists ? (snap.get('devices') as Device[] | undefined) ?? [] : [];
+  const hash = isDeviceId(deviceId) ? hashId(deviceId) : null;
+  if (hash && devices.some(d => d.id === hash && now - Date.parse(d.lastSeen ?? d.firstSeen) < DEVICE_FORGET_MS)) return false;
+  if (country === TOR) return true;
+  const countries: string[] = snap.exists ? (snap.get('countries') as string[] | undefined) ?? [] : [];
+  return countries.length > 0 && !countries.includes(country);
 }
 
 /** Conta apagada: a lista de aparelhos sai junto. */

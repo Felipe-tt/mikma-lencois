@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { headerText, requestPlace } from './requestPlace';
+import { headerText, requestCountry, requestPlace } from './requestPlace';
 
 const edge = (h: Record<string, string>) => new Headers({ 'x-mikma-edge': 'segredo', ...h });
 
@@ -32,5 +32,19 @@ describe('de onde veio o acesso (e-mail de segurança)', () => {
     const place = requestPlace(edge({ 'cf-ipcity': `<b>x</b>${'a'.repeat(200)}`, 'cf-region-code': '<script>' }));
     expect(place).not.toMatch(/[<>]/);
     expect(place!.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe('país do acesso (trava de lugar novo no login)', () => {
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  it('código do país, só com a prova da Cloudflare', () => {
+    vi.stubEnv('EDGE_SHARED_SECRET', 'segredo');
+    expect(requestCountry(edge({ 'cf-ipcountry': 'BR' }))).toBe('BR');
+    expect(requestCountry(edge({ 'cf-ipcountry': ' pt ' }))).toBe('PT');
+    expect(requestCountry(edge({ 'cf-ipcountry': 'T1' }))).toBe('T1');
+    for (const v of ['XX', '', 'BRA', '<b>', '1A']) expect(requestCountry(edge({ 'cf-ipcountry': v }))).toBeNull();
+    expect(requestCountry(new Headers({ 'cf-ipcountry': 'BR' }))).toBeNull();
+    expect(requestCountry(new Headers({ 'x-mikma-edge': 'errado', 'cf-ipcountry': 'RU' }))).toBeNull();
   });
 });

@@ -4,10 +4,10 @@ import type { DecodedIdToken } from 'firebase-admin/auth';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp, tooManyRequests, verifyAuth } from '@/lib/security';
-import { TICKET_TTL_MS, isTicketShape, needsGoogleCheck, needsTicket, trustLogin } from '@/lib/auth/loginTicket';
+import { TICKET_TTL_MS, hashTicket, isTicketShape, needsGoogleCheck, needsTicket, trustLogin } from '@/lib/auth/loginTicket';
 import { DEVICE_COOKIE, DEVICE_COOKIE_MAX_AGE, newDeviceId } from '@/lib/staffDevices';
 import { customerLoginVia, isDeviceId, noteCustomerLogin } from '@/lib/userDevices';
-import { requestPlace } from '@/lib/requestPlace';
+import { requestCountry, requestPlace } from '@/lib/requestPlace';
 import { emailEnabled, sendEmail } from '@/lib/email';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mikma.com.br';
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     Sentry.captureMessage('Login com senha sem ticket logo depois de entrar', 'warning');
   }
   const res = NextResponse.json({ trusted }, { headers: { 'Cache-Control': 'private, no-store' } });
-  if (trusted) await noteDevice(req, auth.decoded, res);
+  if (trusted) await noteDevice(req, auth.decoded, res, ticket);
   return res;
 }
 
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
  * entra com a senha de outra pessoa precisa desta troca para ver os dados
  * da conta. Falha no aviso nunca segura o login.
  */
-async function noteDevice(req: NextRequest, decoded: DecodedIdToken, res: NextResponse) {
+async function noteDevice(req: NextRequest, decoded: DecodedIdToken, res: NextResponse, ticket: string | undefined) {
   if (!customerLoginVia(decoded)) return;
   const saved = req.cookies.get(DEVICE_COOKIE)?.value;
   const deviceId = isDeviceId(saved) ? saved : newDeviceId();
@@ -62,12 +62,19 @@ async function noteDevice(req: NextRequest, decoded: DecodedIdToken, res: NextRe
       userAgent: req.headers.get('user-agent'),
       ip: getClientIp(req),
       place: requestPlace(req.headers),
+      country: requestCountry(req.headers),
     }, {
       getUser: uid => adminAuth.getUser(uid),
       allowAlert: uid => rateLimit(`new-device-alert:${uid}`, 3, 60 * 60 * 1000),
       // Sem e-mail configurado (prévia, testes): o aviso fica só registrado.
       send: async mail => { if (emailEnabled()) await sendEmail({ ...mail, from: 'noreply' }); },
       appUrl: APP_URL,
+      // Entrou pelo ticket do e-mail de confirmação de login que a dona aprovou.
+      confirmedByEmail: async () => {
+        if (!ticket || !decoded.email) return false;
+        const c = (await adminDb.collection('login_challenges').doc(decoded.email.toLowerCase()).get()).data();
+        return c?.confirmed === true && c.denied !== true && c.challengeHash === hashTicket(ticket);
+      },
     });
   } catch (err) {
     console.error('[trust] aviso de aparelho novo', err);

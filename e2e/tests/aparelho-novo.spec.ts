@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { login, prepare } from './helpers';
 import { db, forgetTrustedLogins } from './db';
 
@@ -81,4 +81,60 @@ test('"Criar senha nova" do aviso abre o Esqueci minha senha, mesmo com a conta 
   // Fechou: a conta aberta segue para a loja, como em /entrar.
   await page.getByRole('button', { name: 'Fechar' }).click();
   await page.waitForURL(u => !u.pathname.startsWith('/entrar'));
+});
+
+/** Entra direto no Firebase Auth (emulador), como o navegador faz depois da checagem do site. */
+async function directSignIn(request: APIRequestContext): Promise<string> {
+  const auth = `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099'}/identitytoolkit.googleapis.com/v1`;
+  const res = await request.post(`${auth}/accounts:signInWithPassword?key=e2e-fake-api-key`, { data: { email: EMAIL, password: SENHA, returnSecureToken: true } });
+  expect(res.ok()).toBe(true);
+  return (await res.json()).idToken;
+}
+
+test('senha certa num aparelho novo, de um país de onde a conta nunca entrou, pede a confirmação por e-mail', async ({ playwright, baseURL }) => {
+  const uid = await uidOf(EMAIL);
+  await db().collection('userDevices').doc(uid).delete();
+  await db().collection('login_challenges').doc(EMAIL).delete();
+  await forgetTrustedLogins(EMAIL);
+  let ip = 0;
+  // Cada aparelho é um contexto à parte: só manda o cookie de aparelho que receber aqui.
+  const devices: APIRequestContext[] = [];
+  const device = async (cookie?: string) => {
+    const ctx = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { 'x-mikma-edge': 'e2e-edge', ...(cookie ? { Cookie: cookie } : {}) } });
+    devices.push(ctx);
+    return ctx;
+  };
+  const from = (country: string) => ({ 'cf-connecting-ip': `198.51.104.${++ip}`, 'cf-ipcountry': country });
+  const siteLogin = (ctx: APIRequestContext, country: string) =>
+    ctx.post('/api/auth/login', { headers: from(country), data: { email: EMAIL, password: SENHA } });
+
+  try {
+    // A dona entra do Brasil, no celular: o Brasil vira lugar de costume da conta.
+    const celular = await device();
+    const pre = await (await siteLogin(celular, 'BR')).json();
+    expect(pre).toEqual({ ok: true, ticket: expect.any(String) });
+    const token = await directSignIn(celular);
+    const trust = await celular.post('/api/auth/trust', { headers: { ...from('BR'), Authorization: `Bearer ${token}` }, data: { ticket: pre.ticket } });
+    expect(await trust.json()).toEqual({ trusted: true });
+    const cookie = /mikma_dev=[A-Za-z0-9_-]+/.exec(trust.headers()['set-cookie'] ?? '')?.[0];
+    expect(cookie).toBeTruthy();
+    expect((await devicesDoc(uid))?.countries).toEqual(['BR']);
+
+    // Outro aparelho, de outro país, com a senha certa: sem ticket, só pela confirmação por e-mail.
+    const res = await siteLogin(await device(), 'RU');
+    expect((await res.json()).ticket).toBeUndefined();
+    expect((await db().collection('login_challenges').doc(EMAIL).get()).get('reason')).toBe('newplace');
+    await db().collection('login_challenges').doc(EMAIL).delete();
+
+    // O celular de sempre, viajando: entra direto.
+    expect(await (await siteLogin(await device(cookie), 'PT')).json()).toEqual({ ok: true, ticket: expect.any(String) });
+    // Aparelho novo, mas do Brasil: entra (e o aviso de acesso novo avisa a dona).
+    expect(await (await siteLogin(await device(), 'BR')).json()).toEqual({ ok: true, ticket: expect.any(String) });
+    // Pela rede Tor, num aparelho novo: confirmação por e-mail.
+    expect((await (await siteLogin(await device(), 'T1')).json()).ticket).toBeUndefined();
+    expect((await db().collection('login_challenges').doc(EMAIL).get()).get('reason')).toBe('newplace');
+  } finally {
+    await Promise.all(devices.map(d => d.dispose()));
+    await db().collection('login_challenges').doc(EMAIL).delete();
+  }
 });
