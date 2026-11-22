@@ -128,13 +128,19 @@ function ForgotPasswordModal({ defaultEmail, onClose }: { defaultEmail: string; 
 const noopSubscribe = () => () => {};
 
 export default function LoginPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  // "Criar senha nova" do e-mail de acesso novo (lib/email/newDeviceEmail.ts)
+  // abre o "Esqueci minha senha", mesmo com a conta aberta neste aparelho.
+  // Espera saber quem está conectado, para já trazer o e-mail da conta.
+  const forgotFromEmail = useSyncExternalStore(noopSubscribe, () => new URLSearchParams(window.location.search).get('esqueci') === '1', () => false);
+  const [forgotFromEmailClosed, setForgotFromEmailClosed] = useState(false);
+  const forgotOpen = showForgot || (forgotFromEmail && !forgotFromEmailClosed && !authLoading);
   // Quando o reCAPTCHA vem com score "suspeito, mas não claramente bot",
   // a API pede confirmação extra por e-mail antes de liberar o login
   // (ver checkRecaptchaScore em src/lib/recaptcha.ts). Essa tela some
@@ -146,7 +152,7 @@ export default function LoginPage() {
   // navegador: no servidor não há sessionStorage.
   const returnReason = useSyncExternalStore(noopSubscribe, () => returnToReason(peekReturnTo()), () => null);
 
-  useEffect(() => { if (user) router.push(consumeReturnTo() ?? '/'); }, [user, router]);
+  useEffect(() => { if (user && !forgotOpen) router.push(consumeReturnTo() ?? '/'); }, [user, router, forgotOpen]);
 
   // Poll pra saber se a pessoa já confirmou pelo link do e-mail. Assim
   // que confirmar, completa o login de verdade com a senha que já está
@@ -256,10 +262,10 @@ export default function LoginPage() {
 
   return (
     <>
-      {showForgot && (
+      {forgotOpen && (
         <ForgotPasswordModal
-          defaultEmail={email}
-          onClose={() => setShowForgot(false)}
+          defaultEmail={email || user?.email || ''}
+          onClose={() => { setShowForgot(false); setForgotFromEmailClosed(true); }}
         />
       )}
 

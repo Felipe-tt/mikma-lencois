@@ -9,7 +9,7 @@ import { storeWhatsapp } from '@/lib/whatsapp';
  * users/{uid}.lgpdConsent.version no cadastro, para provar a qual texto cada
  * cliente deu o aceite. Atualizar sempre que houver mudança relevante.
  */
-export const LEGAL_UPDATED_AT = '2026-11-21';
+export const LEGAL_UPDATED_AT = '2026-11-22';
 export const LEGAL_VERSION = LEGAL_UPDATED_AT;
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 // Montado à mão a partir da string: new Date('2026-10-07') é meia-noite UTC

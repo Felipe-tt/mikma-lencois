@@ -207,6 +207,15 @@ describe('retenção (LGPD)', () => {
     expect(Object.keys(data.email_verifications)).toEqual([]);
   });
 
+  it('apaga a lista de aparelhos de conta sem login há 13 meses', async () => {
+    const data: Record<string, Record<string, Doc>> = {
+      userDevices: { parada: { devices: [{ id: 'a' }], updatedAt: daysAgo(401) }, ativa: { devices: [{ id: 'b' }], updatedAt: daysAgo(30) } },
+    };
+    const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(r.deviceListsDeleted).toBe(1);
+    expect(Object.keys(data.userDevices)).toEqual(['ativa']);
+  });
+
   it('tira a avaliação do detector de golpe do pedido (o cliente lê o pedido)', async () => {
     const risk = { score: 70, level: 'alto', hold: true, signals: [{ reason: 'Mesmo CPF em 3 contas', relatedOrderIds: ['ord_outro'], points: 40 }], assessedAt: daysAgo(1) };
     const data: Record<string, Record<string, Doc>> = {
