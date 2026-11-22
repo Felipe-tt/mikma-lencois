@@ -28,6 +28,7 @@ import { sanitizeSwaps, type ProductLookup } from '@/lib/fronhaSwap';
 import { createCardCharge } from '@/lib/abacatepayApi';
 import { cardFeeFor } from '@/lib/gatewayFees';
 import { confirmOrderPaid } from '@/lib/orders/confirmPayment';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 // Ver nota equivalente em create-pix/route.ts.
@@ -58,6 +59,11 @@ export async function POST(req: NextRequest) {
     // Convidado: precisa ter feito o registro com reCAPTCHA; limite por IP.
     const guestBlock = await guardGuestPayment(decoded, ip);
     if (guestBlock) return guestBlock;
+    // Senha usada direto no Firebase, sem a checagem do site: não compra no
+    // nome da conta. O pedido e a nota fiscal sairiam com o nome e o CPF da
+    // pessoa, para entregar onde o invasor quisesse.
+    const untrusted = await requireTrustedLogin(adminDb, decoded);
+    if (untrusted) return untrusted;
 
     // 10/h: no cartão no site, cada cartão recusado é uma nova tentativa.
     if (!await rateLimit(`checkout:uid:${uid}`, 10, 60 * 60 * 1000)) {

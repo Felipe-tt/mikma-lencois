@@ -7,6 +7,8 @@ import { notifyWithdrawalReceived } from '@/lib/email/cancelledEmail';
 import { notifySeller } from '@/lib/push/notifySeller';
 import { withdrawalBlockReason } from '@/lib/orders/withdrawal';
 import { effectiveRole } from '@/lib/staffMfa';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 
 /**
  * POST /api/orders/[orderId]/desistir
@@ -26,12 +28,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
 
-  let uid: string;
+  let decoded: DecodedIdToken;
   try {
-    uid = (await adminAuth.verifyIdToken(bearer.token, true)).uid;
+    decoded = await adminAuth.verifyIdToken(bearer.token, true);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
+  const uid = decoded.uid;
+  // Senha usada direto no Firebase, sem a checagem do site: não mexe nos pedidos.
+  const untrusted = await requireTrustedLogin(adminDb, decoded);
+  if (untrusted) return untrusted;
   if (!await rateLimit(`desistir:${uid}`, 10, 60 * 60_000)) return tooManyRequests(rateLimitRetryAfter(`desistir:${uid}`));
 
   const ref = adminDb.collection('orders').doc(orderId);
@@ -94,16 +100,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ o
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
 
-  let uid: string;
-  let staff: boolean;
+  let decoded: DecodedIdToken;
   try {
-    const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    uid = decoded.uid;
-    const role = effectiveRole(decoded);
-    staff = role === 'seller' || role === 'admin';
+    decoded = await adminAuth.verifyIdToken(bearer.token, true);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
+  const uid = decoded.uid;
+  const role = effectiveRole(decoded);
+  const staff = role === 'seller' || role === 'admin';
+  // Senha usada direto no Firebase, sem a checagem do site: não mexe nos pedidos.
+  const untrusted = await requireTrustedLogin(adminDb, decoded);
+  if (untrusted) return untrusted;
   if (!await rateLimit(`desistir:${uid}`, 10, 60 * 60_000)) return tooManyRequests(rateLimitRetryAfter(`desistir:${uid}`));
 
   const ref = adminDb.collection('orders').doc(orderId);

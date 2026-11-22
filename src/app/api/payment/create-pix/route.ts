@@ -31,6 +31,7 @@ import { buildPixPending } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
 import { guardGuestPayment, guestUnitsBlock, isUnverifiedAccount } from '@/lib/guestGuard';
 import { guestOrderLink } from '@/lib/guestAccess';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
 
@@ -71,6 +72,11 @@ export async function POST(req: NextRequest) {
     // Convidado: precisa ter feito o registro com reCAPTCHA; limite por IP.
     const guestBlock = await guardGuestPayment(decoded, ip);
     if (guestBlock) return guestBlock;
+    // Senha usada direto no Firebase, sem a checagem do site: não compra no
+    // nome da conta. O pedido e a nota fiscal sairiam com o nome e o CPF da
+    // pessoa, para entregar onde o invasor quisesse.
+    const untrusted = await requireTrustedLogin(adminDb, decoded);
+    if (untrusted) return untrusted;
 
     // Rate limit por usuário (mais restrito, 5 PIX por hora)
     if (!await rateLimit(`pix:uid:${uid}`, 5, 60 * 60 * 1000)) {
