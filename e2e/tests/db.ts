@@ -22,6 +22,19 @@ export async function forgetPasskeys(email: string) {
   await Promise.all(snap.docs.map(d => d.ref.delete()));
 }
 
+/**
+ * Sem login confiável da conta (trusted_logins). O Firebase marca o login em
+ * segundos (auth_time) e a marca de confiança é por conta e segundo: a que um
+ * teste deixou valeria para o "entrar direto" do teste seguinte, se ele
+ * caísse no mesmo segundo.
+ */
+export async function forgetTrustedLogins(email: string) {
+  const uid = await uidOf(email);
+  if (!uid) return;
+  const snap = await db().collection('trusted_logins').where('uid', '==', uid).get();
+  await Promise.all(snap.docs.map(d => d.ref.delete()));
+}
+
 /** Carrinho vazio: uma tentativa anterior do mesmo teste pode ter deixado item. */
 export async function emptyCart(email: string) {
   const uid = await uidOf(email);
