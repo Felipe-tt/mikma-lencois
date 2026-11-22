@@ -29,13 +29,20 @@ service cloud.firestore {
     // Login com senha só abre endereço, pedidos e trocas depois de passar
     // pela checagem do site: o servidor grava trusted_logins/{uid}_{auth_time}
     // (src/lib/auth/loginTicket.ts). Sem isso, a senha usada direto no
-    // Firebase Auth, com a chave pública, lia tudo. Google, passkey,
-    // convidado e equipe com segunda etapa não precisam. Logins de antes da
-    // trava (2026-11-22T03:00Z, a mesma data do servidor) continuam valendo.
+    // Firebase Auth, com a chave pública, lia tudo. Google também: com a
+    // senha, dava para vincular o próprio Google à conta e entrar por ele.
+    // Passkey, convidado e equipe com segunda etapa não precisam; cliente com
+    // segunda etapa e provedor que o site não usa, sim. Logins de antes da
+    // trava (as mesmas datas do servidor) continuam valendo.
     function trustedLogin() {
-      return request.auth.token.firebase.sign_in_provider != 'password'
-        || request.auth.token.firebase.get('sign_in_second_factor', null) != null
-        || request.auth.token.auth_time < 1795316400
+      let provider = request.auth.token.firebase.sign_in_provider;
+      // Segunda etapa só isenta a equipe: em conta de cliente, foi cadastrada por fora.
+      let staffSecondFactor = request.auth.token.firebase.get('sign_in_second_factor', null) != null
+        && request.auth.token.get('role', '') in ['seller', 'admin'];
+      return provider == 'custom' || provider == 'anonymous' || staffSecondFactor
+        || (provider == 'password' && request.auth.token.auth_time < 1795316400)
+        // Google e o resto: conferidos pelo servidor a partir de 2026-11-23T06:00Z (lib/auth/loginTicket.ts).
+        || (provider != 'password' && request.auth.token.auth_time < 1795413600)
         || exists(/databases/$(database)/documents/trusted_logins/$(request.auth.uid + '_' + string(request.auth.token.auth_time)));
     }
 

@@ -100,3 +100,46 @@ test('conta sem mudança por fora segue entrando com ticket, e a senha nova pelo
     await restore(request, uid, EMAIL);
   }
 });
+
+/** Entrada pelo Google no emulador: o id_token de teste é um JSON com sub e e-mail. */
+const googlePostBody = (sub: string, email: string) =>
+  `id_token=${encodeURIComponent(JSON.stringify({ sub, email, email_verified: true }))}&providerId=google.com`;
+async function signInWithGoogle(request: APIRequestContext, sub: string, email: string, linkTo?: string): Promise<string> {
+  const res = await request.post(`${AUTH}/accounts:signInWithIdp?key=e2e-fake-api-key`, {
+    data: { postBody: googlePostBody(sub, email), requestUri: 'http://localhost', returnSecureToken: true, ...(linkTo ? { idToken: linkTo } : {}) },
+  });
+  expect(res.ok(), await res.text()).toBe(true);
+  return (await res.json()).idToken;
+}
+const bearer = (token: string) => ({ ...visitor(), Authorization: `Bearer ${token}` });
+
+test('Google de outra pessoa vinculado com a senha da conta não abre a conta', async ({ request }) => {
+  const EMAIL = 'vinculo@e2e.mikma';
+  const uid = await uidOf(EMAIL);
+  const unlink = () => request.post(`${AUTH}/projects/${PROJECT}/accounts:update`, {
+    headers: { Authorization: 'Bearer owner' }, data: { localId: uid, deleteProvider: ['google.com'] },
+  });
+  await unlink();
+  await restore(request, uid, EMAIL);
+  try {
+    // Quem tem a senha entra direto e vincula o próprio Google à conta.
+    const signIn = await request.post(`${AUTH}/accounts:signInWithPassword?key=e2e-fake-api-key`, { data: { email: EMAIL, password: SENHA, returnSecureToken: true } });
+    await signInWithGoogle(request, 'google-do-invasor', 'invasor-google@exemplo.com', (await signIn.json()).idToken);
+    // Depois entra pelo Google dele, já na conta da pessoa.
+    const token = await signInWithGoogle(request, 'google-do-invasor', 'invasor-google@exemplo.com');
+    expect(JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).user_id).toBe(uid);
+    expect(await (await request.post('/api/auth/trust', { headers: bearer(token) })).json()).toEqual({ trusted: false });
+    const pii = await request.get('/api/user/pii', { headers: bearer(token) });
+    expect(pii.status()).toBe(403);
+    expect((await pii.json()).code).toBe('login_check');
+  } finally {
+    await unlink();
+    await restore(request, uid, EMAIL);
+  }
+});
+
+test('Google da própria pessoa entra normalmente', async ({ request }) => {
+  const token = await signInWithGoogle(request, `google-${Date.now()}`, `google-${Date.now()}@exemplo.com`);
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(token) })).json()).toEqual({ trusted: true });
+  expect((await request.get('/api/user/pii', { headers: bearer(token) })).status()).toBe(200);
+});

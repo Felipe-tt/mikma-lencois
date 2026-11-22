@@ -69,8 +69,9 @@ function run(cmd, args, extra = {}) {
 // LOGIN_TICKET_SINCE faz no servidor. Sem achar a data, para: os testes
 // rodariam sem a trava sem ninguém notar.
 const rules = readFileSync('firestore.rules', 'utf8');
-const cutoff = /request\.auth\.token\.auth_time < \d+/;
-if (!cutoff.test(rules)) throw new Error('firestore.rules: data de corte do login (trustedLogin) não encontrada');
+// Todas as datas de corte (senha e Google).
+const cutoff = /request\.auth\.token\.auth_time < \d+/g;
+if (!rules.match(cutoff)?.length) throw new Error('firestore.rules: data de corte do login (trustedLogin) não encontrada');
 const rulesRes = await fetch(`http://${env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${env.GCLOUD_PROJECT}:securityRules`, {
   method: 'PUT',
   body: JSON.stringify({ rules: { files: [{ name: 'firestore.rules', content: rules.replace(cutoff, 'request.auth.token.auth_time < 0') }] } }),

@@ -687,7 +687,27 @@ describe('login com senha sem passar pela checagem do site', () => {
     await assertFails(getDoc(doc(senha(), 'users/buyer1')));
   });
 
-  it('login de antes da trava, Google, convidado e equipe com segunda etapa seguem iguais', async () => {
+  it('Google depois da data dele: sem o login confiável não lê; com ele, lê', async () => {
+    const GOOGLE_DEPOIS = 1795413600 + 3600;
+    const google = testEnv.authenticatedContext('buyer1', { role: 'buyer', auth_time: GOOGLE_DEPOIS, firebase: { sign_in_provider: 'google.com' } }).firestore();
+    await assertFails(getDoc(doc(google, 'users/buyer1')));
+    await assertFails(getDoc(doc(google, 'orders/o1')));
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `trusted_logins/buyer1_${GOOGLE_DEPOIS}`), { uid: 'buyer1', authTime: GOOGLE_DEPOIS, at: 'x', via: 'google' });
+    });
+    await assertSucceeds(getDoc(doc(google, 'users/buyer1')));
+    await assertSucceeds(getDoc(doc(google, 'orders/o1')));
+  });
+
+  it('cliente com segunda etapa (cadastrada por fora) e provedor que o site não usa precisam do registro', async () => {
+    const GOOGLE_DEPOIS = 1795413600 + 3600;
+    const clienteTotp = testEnv.authenticatedContext('buyer1', { role: 'buyer', auth_time: DEPOIS, ...MFA }).firestore();
+    await assertFails(getDoc(doc(clienteTotp, 'users/buyer1')));
+    const telefone = testEnv.authenticatedContext('buyer1', { role: 'buyer', auth_time: GOOGLE_DEPOIS, firebase: { sign_in_provider: 'phone' } }).firestore();
+    await assertFails(getDoc(doc(telefone, 'orders/o1')));
+  });
+
+  it('login de antes da trava, Google de antes da data dele, convidado e equipe com segunda etapa seguem iguais', async () => {
     await assertSucceeds(getDoc(doc(senha(ANTES), 'users/buyer1')));
     const google = testEnv.authenticatedContext('buyer1', { role: 'buyer', auth_time: DEPOIS, firebase: { sign_in_provider: 'google.com' } }).firestore();
     await assertSucceeds(getDoc(doc(google, 'orders/o1')));
