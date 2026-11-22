@@ -210,6 +210,13 @@ export default async function PrivacidadePage() {
             <B>Registro de quem da equipe abriu o seu CPF ou telefone:</B> por 1 ano, para
             conferir que só foi usado no atendimento.
           </>,
+          <>
+            <B>Registro dos logins que passaram pela checagem de segurança:</B> por 180 dias.
+          </>,
+          <>
+            <B>Links de segurança enviados por e-mail</B> (confirmar o login, criar senha nova,
+            confirmar o cadastro), com o endereço IP de quem pediu: apagados 1 dia depois de vencer.
+          </>,
         ]),
       ],
     },

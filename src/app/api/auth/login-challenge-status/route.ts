@@ -12,7 +12,7 @@ const schema = z.object({
 });
 
 /**
- * Só devolve confirmed:true/false — nunca revela se o e-mail existe ou
+ * Só devolve confirmed (e denied/expired), nunca revela se o e-mail existe ou
  * não (login_challenges/{email} só existe quando a senha já foi
  * confirmada certa, ver login/route.ts), nem nenhum outro dado.
  * Chamado a cada poucos segundos pela tela de login enquanto ela espera
@@ -37,6 +37,8 @@ export async function GET(req: NextRequest) {
   const expected = Buffer.from(String(data.challengeHash ?? ''));
   const given = Buffer.from(hashTicket(parsed.data.challenge));
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return NextResponse.json({ confirmed: false });
+  // A dona da conta clicou em "Não fui eu" no e-mail.
+  if (data.denied === true) return NextResponse.json({ confirmed: false, denied: true });
   if (Date.now() > data.expiresAt) return NextResponse.json({ confirmed: false, expired: true });
 
   return NextResponse.json({ confirmed: data.confirmed === true });

@@ -4,6 +4,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { listPasskeys, PasskeyError, registerPasskey, registrationOptions } from '@/lib/passkeys';
 import { hasSecondFactor, type MfaClaims } from '@/lib/staffMfa';
 import { notifyPasskeyAdded } from '@/lib/staffDevices';
+import { requestPlace } from '@/lib/requestPlace';
 
 /**
  * Cadastro de passkey pela conta logada, em dois passos no mesmo endereço:
@@ -42,8 +43,7 @@ export async function POST(req: NextRequest) {
         uid, email, role, claims: auth.decoded as MfaClaims,
         ip: getClientIp(req),
         userAgent: req.headers.get('user-agent'),
-        city: req.headers.get('cf-ipcity'),
-        country: req.headers.get('cf-ipcountry'),
+        place: requestPlace(req.headers),
       }).catch(err => console.error('[passkey/register] alerta falhou:', err));
       return NextResponse.json({ passkey });
     }
