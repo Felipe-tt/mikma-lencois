@@ -5,6 +5,7 @@ import { verifyAuth, getClientIp, validateBody } from '@/lib/security';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { addMemberSchema, removeMemberSchema } from './schema';
+import { restampAccount } from '@/lib/auth/authStamp';
 
 // IMPORTANTE: só 'admin' pode gerenciar a equipe, não 'seller'.
 // Se qualquer seller pudesse promover outros sellers, uma única conta
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
   // e já vem com a role nova, sem isso a promoção só valeria depois que
   // o token dele expirasse sozinho (até 1h).
   await adminAuth.revokeRefreshTokens(targetUser.uid);
+  await restampAccount(adminDb, adminAuth, targetUser.uid).catch(err => console.error('[team] marca', err));
 
   // Voltou pra equipe: tira a marca de acesso revogado.
   await adminDb.collection('staffRevoked').doc(targetUser.uid).delete();
@@ -124,6 +126,7 @@ export async function DELETE(req: NextRequest) {
   const existingClaims = (targetUser.customClaims ?? {}) as Record<string, unknown>;
   await adminAuth.setCustomUserClaims(uid, { ...existingClaims, role: 'buyer' });
   await adminAuth.revokeRefreshTokens(uid);
+  await restampAccount(adminDb, adminAuth, uid).catch(err => console.error('[team] marca', err));
   await adminDb.collection('team').doc(uid).delete();
   // As regras do banco recusam na hora quem tem essa marca: sem ela, o
   // token antigo (com o papel) ainda valia por até 1h direto no Firestore.

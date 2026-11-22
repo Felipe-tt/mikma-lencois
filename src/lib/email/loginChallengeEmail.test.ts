@@ -8,7 +8,7 @@ const base = {
   device: 'Windows · Chrome',
   place: 'Blumenau, SC, Brasil',
   ip: '203.0.113.9',
-  leaked: false,
+  reason: 'suspicious' as const,
 };
 
 describe('e-mail de confirmação de login', () => {
@@ -30,12 +30,21 @@ describe('e-mail de confirmação de login', () => {
   });
 
   it('senha em vazamento: diz o motivo e pede para trocar mesmo se foi a pessoa', () => {
-    const { html, text } = loginChallengeEmail({ ...base, leaked: true });
+    const { html, text } = loginChallengeEmail({ ...base, reason: 'leaked' });
     for (const out of [html, text]) {
       expect(out).toContain('já apareceu em vazamentos de dados');
       expect(out).toContain('troque a senha por uma que você não use em nenhum outro site');
     }
     expect(loginChallengeEmail(base).text).not.toContain('vazamentos');
+  });
+
+  it('senha trocada fora do site: diz isso e que quem trocou está tentando entrar', () => {
+    const { html, text } = loginChallengeEmail({ ...base, reason: 'changed' });
+    for (const out of [html, text]) {
+      expect(out).toContain('A senha da conta foi trocada fora do site da Mikma');
+      expect(out).toContain('Quem trocou a senha está tentando entrar na sua conta.');
+      expect(out).not.toContain('vazamentos');
+    }
   });
 
   it('sem local conhecido, mostra só o IP; e o aparelho não injeta HTML', () => {

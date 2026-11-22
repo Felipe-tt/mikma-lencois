@@ -1,11 +1,12 @@
 import { plural } from '@/lib/plural';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
 import { issueChallengeTicket } from '@/lib/auth/loginTicket';
 import { checkChallengeLink } from '@/lib/auth/loginChallenge';
+import { saveAuthStamp } from '@/lib/auth/authStamp';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
@@ -43,6 +44,11 @@ export async function POST(req: NextRequest) {
   // (login-challenge-status) para saber que pode entrar. O próximo login
   // sobrescreve, e a limpeza diária apaga os antigos (lib/retention.ts).
   await ref.update({ confirmed: true, confirmedAt: new Date().toISOString() });
+  // Quem confirmou tem o e-mail da conta: o estado dela agora (por exemplo,
+  // a senha trocada fora do site) passa a valer (lib/auth/authStamp.ts).
+  // Só se o e-mail da conta ainda for este.
+  const user = await adminAuth.getUserByEmail(email).catch(() => null);
+  if (user && user.email?.toLowerCase() === email) await saveAuthStamp(adminDb, user).catch(err => console.error('[login-confirm] marca', err));
   // A senha foi conferida antes do e-mail sair: a aba que espera (e só ela,
   // que tem o id do desafio) entra e o login vale para a conta.
   if (typeof data.challengeHash === 'string') {

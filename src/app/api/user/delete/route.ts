@@ -7,6 +7,7 @@ import type { DecodedIdToken } from 'firebase-admin/auth';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { deleteUserReviews, deletionBlocker } from '@/lib/accountDeletion';
+import { forgetAuthStamp } from '@/lib/auth/authStamp';
 
 export async function DELETE(req: NextRequest) {
   const token = req.headers.get('authorization')?.split('Bearer ')[1];
@@ -124,6 +125,7 @@ export async function DELETE(req: NextRequest) {
     // Revoga tokens antes de deletar, evita uso de token após exclusão
     await adminAuth.revokeRefreshTokens(uid);
     await adminAuth.deleteUser(uid);
+    await forgetAuthStamp(adminDb, uid).catch(err => console.error('[user/delete] marca', err));
 
     return NextResponse.json({ ok: true });
   } catch (err) {

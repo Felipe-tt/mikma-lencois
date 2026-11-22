@@ -13,6 +13,9 @@ export const USERS = {
   ...Object.fromEntries([1, 2, 3, 4, 5, 6].map(n => [`equipe${n}`, { email: `equipe${n}@e2e.mikma`, password: 'senha-e2e-123', name: `Equipe ${n}`, role: 'admin' }])),
   // Login com senha direto no Firebase, sem a checagem do site (entrar.spec.ts).
   seguro: { email: 'seguro@e2e.mikma', password: 'senha-e2e-123', name: 'Sofia Guerra', role: 'customer', cpf: '31870459601' },
+  // Senha e e-mail trocados direto no Firebase, fora do site (conta-mudada.spec.ts).
+  trocaSenha: { email: 'troca-senha@e2e.mikma', password: 'senha-e2e-123', name: 'Tânia Souto', role: 'customer' },
+  trocaEmail: { email: 'troca-email@e2e.mikma', password: 'senha-e2e-123', name: 'Elaine Moraes', role: 'customer' },
   // Atendimento: abre a conversa com e-mail em HTML (mensagens.spec.ts).
   atende: { email: 'atende@e2e.mikma', password: 'senha-e2e-123', name: 'Equipe Atendimento', role: 'admin' },
   // Clientes de São Paulo, um por teste dos Correios (sem retirada na loja,

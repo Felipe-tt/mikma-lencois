@@ -11,6 +11,7 @@ import { validateEmail, validatePhone, validateCpf } from '@/lib/validation/sign
 import { piiPatch } from '@/lib/piiCrypto';
 import { checkPassword, PASSWORD_MAX } from '@/lib/validation/password';
 import { issueLoginTicket } from '@/lib/auth/loginTicket';
+import { saveAuthStamp } from '@/lib/auth/authStamp';
 
 const schema = z
   .object({
@@ -130,6 +131,8 @@ export async function POST(req: NextRequest) {
 
     // Remove verificação usada
     await verifyRef.delete();
+    // A conta nasce com a marca (lib/auth/authStamp.ts).
+    await saveAuthStamp(adminDb, userRecord).catch(err => console.error('[register] marca', err));
     // O navegador entra em seguida com a senha que acabou de criar.
     const ticket = await issueLoginTicket(adminDb, email).catch(err => { console.error('[register] ticket', err); return undefined; });
 
