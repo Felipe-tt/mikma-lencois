@@ -48,6 +48,9 @@ test('senha trocada direto no Firebase: entrar pelo site com a nova não dá tic
   try {
     // A dona entra pelo site: a conta ganha a marca.
     expect(await (await siteLogin(request, EMAIL, SENHA)).json()).toEqual({ ok: true, ticket: expect.any(String) });
+    // O Firebase guarda a hora da mudança em segundos: a troca tem de cair
+    // depois do segundo em que a conta foi arrumada acima.
+    await new Promise(r => setTimeout(r, 1100));
     // Quem tem a senha vazada troca por uma nova, que não está em vazamento nenhum.
     await changeOutside(request, EMAIL, { password: 'Nova-senha-do-invasor-9' });
     const res = await siteLogin(request, EMAIL, 'Nova-senha-do-invasor-9');

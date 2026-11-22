@@ -17,6 +17,9 @@ import type { Firestore } from 'firebase-admin/firestore';
  * que a conta mudou por fora:
  * - senha (ou sessões): a entrada pede confirmação pelo e-mail da conta;
  * - e-mail: não entra nem recebe senha nova, e o e-mail antigo é avisado.
+ * A hora vem em segundos: uma troca no mesmo segundo de uma mudança do site
+ * passaria, mas para trocar é preciso uma sessão, e as mudanças do site
+ * (senha nova, sair de todos os aparelhos) derrubam as sessões.
  */
 const STAMPS = 'auth_stamps';
 
