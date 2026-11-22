@@ -61,7 +61,7 @@ function clearStaffCookie(force = false) {
 }
 
 /**
- * Login com senha: troca o ticket que a checagem do site deixou
+ * Login com senha ou Google: troca o ticket que a checagem do site deixou
  * (/api/auth/login, confirmação por e-mail, cadastro, senha nova) por "este
  * login é confiável" (ver lib/auth/loginTicket.ts). Sem isso, endereço,
  * pedidos, CPF e a conta pedem para entrar de novo. Espera a resposta antes
@@ -72,7 +72,9 @@ function clearStaffCookie(force = false) {
 async function trustPasswordLogin(firebaseUser: User, tokenResult: IdTokenResult): Promise<boolean | null> {
   // Nunca atrapalha o login: qualquer falha aqui só deixa o login sem a marca.
   try {
-    if (tokenResult.signInProvider !== 'password' || tokenResult.signInSecondFactor) return true;
+    // Só passkey e convidado (tokens do próprio site) dispensam a conferência
+    // do servidor; ele decide o resto (lib/auth/loginTicket.ts).
+    if (tokenResult.signInProvider === 'custom' || tokenResult.signInProvider === 'anonymous') return true;
     const authMs = Date.parse(tokenResult.authTime);
     const flag = `mikma-trust:${firebaseUser.uid}:${authMs}`;
     try { if (localStorage.getItem(flag)) return true; } catch { /* sem storage */ }

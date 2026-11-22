@@ -16,6 +16,7 @@ export const USERS = {
   // Senha e e-mail trocados direto no Firebase, fora do site (conta-mudada.spec.ts).
   trocaSenha: { email: 'troca-senha@e2e.mikma', password: 'senha-e2e-123', name: 'Tânia Souto', role: 'customer' },
   trocaEmail: { email: 'troca-email@e2e.mikma', password: 'senha-e2e-123', name: 'Elaine Moraes', role: 'customer' },
+  vinculo: { email: 'vinculo@e2e.mikma', password: 'senha-e2e-123', name: 'Vera Lins', role: 'customer' },
   // Atendimento: abre a conversa com e-mail em HTML (mensagens.spec.ts).
   atende: { email: 'atende@e2e.mikma', password: 'senha-e2e-123', name: 'Equipe Atendimento', role: 'admin' },
   // Clientes de São Paulo, um por teste dos Correios (sem retirada na loja,

@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { DecodedIdToken } from 'firebase-admin/auth';
+import type { DecodedIdToken, UserRecord } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
+import { checkAuthStamp } from '@/lib/auth/authStamp';
 
 /**
  * Login com senha passa pela checagem do site (/api/auth/login): limite de
@@ -16,8 +17,13 @@ import { NextResponse } from 'next/server';
  * aleatório que o banco guarda só como hash. Logo depois de entrar, o
  * navegador troca o ticket por "este login é confiável" (/api/auth/trust).
  * Quem entra direto no Firebase não tem o ticket, nem descobre quando a
- * dona da conta confirmou o próprio login. Google, passkey, convidado e
- * equipe com segunda etapa não precisam: a senha sozinha não entra por eles.
+ * dona da conta confirmou o próprio login. Passkey, convidado e equipe com
+ * segunda etapa não precisam: a senha sozinha não entra por eles. Cliente
+ * com segunda etapa e provedor que o site não usa precisam (staffSecondFactor,
+ * foreignProvider): só foram parar na conta por fora.
+ *
+ * Google também passa por conferência (trustGoogleLogin): com a senha, dava
+ * para vincular a própria conta Google à da pessoa e entrar por ela.
  */
 
 /** Quanto tempo o ticket espera o login acontecer. */
@@ -25,15 +31,21 @@ export const TICKET_TTL_MS = 15 * 60 * 1000;
 /** Folga de relógio entre o servidor e o Firebase Auth. */
 const CLOCK_SKEW_MS = 60 * 1000;
 const TRUST_REQUIRED_SINCE = '2026-11-22T03:00:00Z';
+/**
+ * Google: depois do deploy (quem entrou pelo Google com a página antiga
+ * aberta não perde a conta no meio). A mesma data está em firestore.rules.
+ */
+const GOOGLE_TRUST_SINCE = '2026-11-23T06:00:00Z';
 
 /**
  * Logins feitos antes desta trava continuam valendo: ninguém precisa entrar
  * de novo por causa dela. Os testes ponta a ponta antecipam a data
  * (LOGIN_TICKET_SINCE); data inválida volta à padrão, nunca libera tudo.
  */
-export function trustRequiredSinceMs(): number {
+export function trustRequiredSinceMs(provider: 'password' | 'google.com' = 'password'): number {
   const t = Date.parse(process.env.LOGIN_TICKET_SINCE ?? '');
-  return Number.isFinite(t) ? t : Date.parse(TRUST_REQUIRED_SINCE);
+  if (Number.isFinite(t)) return t;
+  return Date.parse(provider === 'google.com' ? GOOGLE_TRUST_SINCE : TRUST_REQUIRED_SINCE);
 }
 
 const TICKETS = 'login_tickets';
@@ -48,11 +60,50 @@ function trustId(decoded: DecodedIdToken): string {
   return `${decoded.uid}_${decoded.auth_time}`;
 }
 
+type FirebaseClaims = { sign_in_provider?: string; sign_in_second_factor?: string } | undefined;
+const providerOf = (decoded: DecodedIdToken) => (decoded.firebase as FirebaseClaims)?.sign_in_provider;
+
+/**
+ * Segunda etapa só isenta a equipe, que a cadastra pelo painel. O site
+ * nunca cadastra segunda etapa para cliente: numa conta de cliente, ela foi
+ * cadastrada por fora, por quem tinha a senha (o Firebase deixa).
+ */
+function staffSecondFactor(decoded: DecodedIdToken): boolean {
+  const role = (decoded as { role?: unknown }).role;
+  return !!(decoded.firebase as FirebaseClaims)?.sign_in_second_factor && (role === 'seller' || role === 'admin');
+}
+
 /** Este login precisou passar pela checagem do site para ser confiável? */
 export function needsTicket(decoded: DecodedIdToken): boolean {
-  const fb = decoded.firebase as { sign_in_provider?: string; sign_in_second_factor?: string } | undefined;
-  if (fb?.sign_in_provider !== 'password' || fb.sign_in_second_factor) return false;
+  if (providerOf(decoded) !== 'password' || staffSecondFactor(decoded)) return false;
   return decoded.auth_time * 1000 >= trustRequiredSinceMs();
+}
+
+/** Entrada pelo Google que precisa da conferência do servidor (trustGoogleLogin). */
+export function needsGoogleCheck(decoded: DecodedIdToken): boolean {
+  if (providerOf(decoded) !== 'google.com' || staffSecondFactor(decoded)) return false;
+  return decoded.auth_time * 1000 >= trustRequiredSinceMs('google.com');
+}
+
+/**
+ * Provedor que o site não usa (telefone, Facebook...): só pode ter sido
+ * vinculado por fora, com a senha da conta. Nunca vale. Passkey e convidado
+ * (custom, anonymous) entram por tokens do próprio site.
+ */
+function foreignProvider(decoded: DecodedIdToken): boolean {
+  const p = providerOf(decoded);
+  if (!p || ['password', 'google.com', 'custom', 'anonymous'].includes(p) || staffSecondFactor(decoded)) return false;
+  return decoded.auth_time * 1000 >= trustRequiredSinceMs('google.com');
+}
+
+const needsTrust = (decoded: DecodedIdToken) => needsTicket(decoded) || needsGoogleCheck(decoded) || foreignProvider(decoded);
+const lower = (v: unknown) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
+
+/** Toda conta Google vinculada tem o e-mail da conta (o site nunca vincula outra). */
+export function googleMatchesAccount(user: Pick<UserRecord, 'email' | 'providerData'>): boolean {
+  const email = lower(user.email);
+  const google = user.providerData.filter(p => p.providerId === 'google.com');
+  return !!email && google.length > 0 && google.every(p => lower(p.email) === email);
 }
 
 /** Ticket que o navegador manda: base64url, do tamanho que o servidor gera. */
@@ -97,7 +148,14 @@ export async function issueChallengeTicket(db: Firestore, email: string, challen
  * gasto. Sem ticket, só diz se o login já era confiável (o navegador
  * pergunta uma vez por sessão).
  */
-export async function trustLogin(db: Firestore, decoded: DecodedIdToken, ticket?: string, now = Date.now()): Promise<boolean> {
+export interface TrustDeps {
+  /** Conta no Firebase Auth (adminAuth.getUser), para conferir a entrada pelo Google. */
+  getUser?: (uid: string) => Promise<Pick<UserRecord, 'uid' | 'email' | 'tokensValidAfterTime' | 'providerData'>>;
+}
+
+export async function trustLogin(db: Firestore, decoded: DecodedIdToken, ticket?: string, now = Date.now(), deps: TrustDeps = {}): Promise<boolean> {
+  if (needsGoogleCheck(decoded)) return trustGoogleLogin(db, decoded, now, deps);
+  if (foreignProvider(decoded)) return false;
   if (!needsTicket(decoded)) return true;
   const authMs = decoded.auth_time * 1000;
   const email = decoded.email;
@@ -118,9 +176,26 @@ export async function trustLogin(db: Firestore, decoded: DecodedIdToken, ticket?
   });
 }
 
+/**
+ * Entrada pelo Google: quem tinha só a senha vinculava a própria conta
+ * Google à da pessoa (o Firebase deixa, direto pelo navegador) e entrava
+ * por ela. Vale se todo Google vinculado tem o e-mail da conta e a conta
+ * não mudou fora do site (lib/auth/authStamp.ts).
+ */
+async function trustGoogleLogin(db: Firestore, decoded: DecodedIdToken, now: number, deps: TrustDeps): Promise<boolean> {
+  const trustRef = db.collection(TRUSTED).doc(trustId(decoded));
+  if ((await trustRef.get()).exists) return true;
+  const user = await deps.getUser?.(decoded.uid).catch(() => null);
+  if (!user || !googleMatchesAccount(user)) return false;
+  const recorded = (await db.collection('users').doc(user.uid).get()).get('email');
+  if ((await checkAuthStamp(db, user, recorded)).status !== 'ok') return false;
+  await trustRef.set({ uid: decoded.uid, authTime: decoded.auth_time, at: new Date(now).toISOString(), via: 'google' });
+  return true;
+}
+
 /** O login deste token é confiável para as rotas sensíveis? */
 export async function isTrustedLogin(db: Firestore, decoded: DecodedIdToken): Promise<boolean> {
-  if (!needsTicket(decoded)) return true;
+  if (!needsTrust(decoded)) return true;
   return (await db.collection(TRUSTED).doc(trustId(decoded)).get()).exists;
 }
 

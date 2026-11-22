@@ -2,9 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import {
-  TICKET_TTL_MS, hashTicket, isTicketShape, isTrustedLogin, issueChallengeTicket, issueLoginTicket,
+  TICKET_TTL_MS, googleMatchesAccount, hashTicket, isTicketShape, isTrustedLogin, issueChallengeTicket, issueLoginTicket,
   needsTicket, requireTrustedLogin, trustLogin, trustRequiredSinceMs,
 } from './loginTicket';
+import { saveAuthStamp } from './authStamp';
 
 type Data = Record<string, unknown>;
 
@@ -52,7 +53,9 @@ describe('quem precisa da checagem do site', () => {
     expect(needsTicket(token({}, { sign_in_provider: 'google.com' }))).toBe(false);
     expect(needsTicket(token({}, { sign_in_provider: 'custom' }))).toBe(false);
     expect(needsTicket(token({}, { sign_in_provider: 'anonymous' }))).toBe(false);
-    expect(needsTicket(token({}, { sign_in_provider: 'password', sign_in_second_factor: 'totp' }))).toBe(false);
+    // Segunda etapa só isenta a equipe: o site nunca cadastra uma para cliente.
+    expect(needsTicket(token({ role: 'admin' }, { sign_in_provider: 'password', sign_in_second_factor: 'totp' }))).toBe(false);
+    expect(needsTicket(token({}, { sign_in_provider: 'password', sign_in_second_factor: 'totp' }))).toBe(true);
     expect(needsTicket(token({ auth_time: Date.parse('2026-11-20T12:00:00Z') / 1000 }))).toBe(false);
   });
 
@@ -116,10 +119,10 @@ describe('ticket do navegador que passou pela checagem', () => {
     expect(await trustLogin(db, token(), challenge, LOGIN + 1_000)).toBe(true);
   });
 
-  it('Google e convidado são confiáveis sem ticket', async () => {
+  it('passkey e convidado são confiáveis sem ticket; Google de antes da data também', async () => {
     const db = fakeDb();
-    expect(await trustLogin(db, token({}, { sign_in_provider: 'google.com' }))).toBe(true);
     expect(await isTrustedLogin(db, token({}, { sign_in_provider: 'custom' }))).toBe(true);
+    expect(await trustLogin(db, token({ auth_time: Date.parse('2026-11-22T08:00:00Z') / 1000 }, { sign_in_provider: 'google.com' }))).toBe(true);
   });
 
   it('nem o e-mail nem o ticket ficam legíveis no banco', async () => {
@@ -128,5 +131,47 @@ describe('ticket do navegador que passou pela checagem', () => {
     const stored = JSON.stringify([...db.docs.entries()]);
     expect(stored).not.toContain('maria');
     expect(stored).not.toContain(ticket);
+  });
+});
+
+describe('entrada pelo Google', () => {
+  const google = () => token({}, { sign_in_provider: 'google.com' });
+  const conta = (googleEmail: string, over: Record<string, unknown> = {}) => ({
+    uid: 'u1', email: 'maria@x.com', tokensValidAfterTime: 'Sat, 21 Nov 2026 10:00:00 GMT',
+    providerData: [{ providerId: 'password', email: 'maria@x.com' }, { providerId: 'google.com', email: googleEmail }],
+    ...over,
+  }) as never;
+
+  it('vale se o Google vinculado é da própria conta (mesmo e-mail)', async () => {
+    const db = fakeDb();
+    expect(await trustLogin(db, google(), undefined, LOGIN + 1_000, { getUser: async () => conta('Maria@X.com') })).toBe(true);
+    expect(await isTrustedLogin(db, google())).toBe(true);
+  });
+
+  it('Google de outra pessoa vinculado com a senha da conta não vale', async () => {
+    const db = fakeDb();
+    expect(await trustLogin(db, google(), undefined, LOGIN + 1_000, { getUser: async () => conta('invasor@gmail.com') })).toBe(false);
+    expect((await requireTrustedLogin(db, google()))?.status).toBe(403);
+    expect(googleMatchesAccount(conta('invasor@gmail.com'))).toBe(false);
+    // Sem conferir a conta (sem getUser), também não.
+    expect(await trustLogin(fakeDb(), google())).toBe(false);
+  });
+
+  it('conta mudada fora do site também não vale pelo Google', async () => {
+    const db = fakeDb();
+    await saveAuthStamp(db, conta('maria@x.com'));
+    const mudada = conta('maria@x.com', { tokensValidAfterTime: 'Sun, 22 Nov 2026 04:00:00 GMT' });
+    expect(await trustLogin(db, google(), undefined, LOGIN + 1_000, { getUser: async () => mudada })).toBe(false);
+  });
+});
+
+describe('provedor que o site não usa', () => {
+  it('telefone ou Facebook vinculados por fora nunca valem; de antes da data, seguem', async () => {
+    const db = fakeDb();
+    for (const p of ['phone', 'facebook.com']) {
+      expect(await trustLogin(db, token({}, { sign_in_provider: p }), 'x'.repeat(43))).toBe(false);
+      expect(await isTrustedLogin(db, token({}, { sign_in_provider: p }))).toBe(false);
+    }
+    expect(await isTrustedLogin(db, token({ auth_time: Date.parse('2026-11-22T08:00:00Z') / 1000 }, { sign_in_provider: 'phone' }))).toBe(true);
   });
 });
