@@ -642,6 +642,22 @@ describe('ticket e login confiável (login com senha)', () => {
   });
 });
 
+describe('aparelhos conhecidos da conta (aviso de acesso novo)', () => {
+  it('ninguém lê nem grava pelo navegador: nem a dona apaga a lista para o próximo acesso sair sem aviso', async () => {
+    const buyer = testEnv.authenticatedContext('buyer1', { role: 'buyer' }).firestore();
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', ...MFA }).firestore();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'userDevices/buyer1'), { devices: [{ id: 'h1', label: 'Android · Chrome' }], updatedAt: '2026-11-21T00:00:00.000Z' });
+    });
+    for (const db of [buyer, admin]) {
+      await assertFails(getDoc(doc(db, 'userDevices/buyer1')));
+      await assertFails(getDocs(collection(db, 'userDevices')));
+      await assertFails(setDoc(doc(db, 'userDevices/buyer1'), { devices: [{ id: 'h2' }] }));
+      await assertFails(deleteDoc(doc(db, 'userDevices/buyer1')));
+    }
+  });
+});
+
 describe('login com senha sem passar pela checagem do site', () => {
   // Depois da trava (2026-11-22T03:00Z); antes dela o login continua valendo.
   const DEPOIS = 1795316400 + 3600;

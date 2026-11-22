@@ -29,6 +29,7 @@ export default async function PoliticaDeCookiesPage() {
   const rows: ReactNode[][] = [
     ['Manter você conectado', 'Lembra que você entrou na sua conta, para não pedir a senha a cada página.', 'Essencial', 'Até você sair da conta'],
     ['Segurança dos formulários', 'Confere se quem está entrando ou se cadastrando é uma pessoa, e não um robô.', 'Essencial', 'Até 6 meses'],
+    ['Aparelho conhecido', 'Lembra que este aparelho já entrou na sua conta, para avisarmos por e-mail quando alguém entrar por um aparelho novo.', 'Essencial', '1 ano'],
     ['Sua escolha sobre cookies', 'Guarda o que você respondeu no aviso de cookies.', 'Essencial', '12 meses'],
     ['Tema claro ou escuro', 'Lembra o visual que você escolheu para o site.', 'Preferência', 'Até você limpar o navegador'],
     ...(hasAnalytics
