@@ -12,9 +12,11 @@ export interface LoginChallengeInfo {
   ip: string;
   /**
    * Por que pedimos a confirmação: senha em vazamento público, acesso fora
-   * do normal (reCAPTCHA) ou senha trocada fora do site (lib/auth/authStamp.ts).
+   * do normal (reCAPTCHA), senha trocada fora do site (lib/auth/authStamp.ts)
+   * ou aparelho novo vindo de um lugar de onde a conta nunca entrou
+   * (lib/userDevices.ts).
    */
-  reason: 'leaked' | 'suspicious' | 'changed';
+  reason: 'leaked' | 'suspicious' | 'changed' | 'newplace';
 }
 
 /**
@@ -30,6 +32,7 @@ export function loginChallengeEmail(a: LoginChallengeInfo): { subject: string; h
     leaked: 'A senha usada já apareceu em vazamentos de dados de outros sites, por isso pedimos esta confirmação.',
     suspicious: 'Algo nesse acesso fugiu do normal, por isso pedimos esta confirmação.',
     changed: 'A senha da conta foi trocada fora do site da Mikma, e quem entrou usou a senha nova. Por isso pedimos esta confirmação.',
+    newplace: 'O acesso veio de um lugar de onde a sua conta nunca entrou, num aparelho que ela ainda não usou, por isso pedimos esta confirmação.',
   }[a.reason];
   const intro = a.reason === 'changed' ? 'Alguém entrou com a senha nova da sua conta' : 'Alguém digitou a senha certa da sua conta';
   const notYou = a.reason === 'changed'

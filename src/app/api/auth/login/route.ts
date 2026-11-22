@@ -7,15 +7,17 @@ import { checkRecaptchaScore } from '@/lib/recaptcha';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { generateActionToken } from '@/lib/auth-token';
 import { sendEmail } from '@/lib/email';
-import { loginChallengeEmail } from '@/lib/email/loginChallengeEmail';
+import { loginChallengeEmail, type LoginChallengeInfo } from '@/lib/email/loginChallengeEmail';
 import { deviceLabel } from '@/lib/passkeys';
-import { requestPlace } from '@/lib/requestPlace';
 import { passwordLeaked } from '@/lib/leakedCredentials';
 import { HONEY_LOGIN_EMAILS, triggerHoneytoken } from '@/lib/honeytoken';
 import { checkPasswordServerSide } from '@/lib/auth/passwordCheck';
 import { hashTicket, issueLoginTicket } from '@/lib/auth/loginTicket';
 import { checkAccountByEmail } from '@/lib/auth/authStamp';
 import { alertEmailChangedOutside } from '@/lib/auth/accountAlerts';
+import { DEVICE_COOKIE } from '@/lib/staffDevices';
+import { unusualLoginPlace } from '@/lib/userDevices';
+import { requestCountry, requestPlace } from '@/lib/requestPlace';
 
 const schema = z.object({
   email: z.string().email().max(256),
@@ -100,7 +102,14 @@ export async function POST(req: NextRequest) {
         { status: 403 },
       );
     }
-    const reason = account?.status === 'changed' ? 'changed' : outcome === 'challenge' ? (leaked ? 'leaked' : 'suspicious') : null;
+    let reason: LoginChallengeInfo['reason'] | null = account?.status === 'changed' ? 'changed' : outcome === 'challenge' ? (leaked ? 'leaked' : 'suspicious') : null;
+    // Aparelho que a conta não usa, de um país de onde ela nunca entrou (ou
+    // pela rede Tor): confirma por e-mail antes de entrar (lib/userDevices.ts).
+    if (!reason && account) {
+      const unusual = await unusualLoginPlace(adminDb, account.uid, req.cookies.get(DEVICE_COOKIE)?.value, requestCountry(req.headers))
+        .catch(err => { console.error('[login] país de costume', err); return false; });
+      if (unusual) reason = 'newplace';
+    }
     if (!reason) {
       // O ticket vai só para este navegador (ver lib/auth/loginTicket.ts).
       const ticket = await issueLoginTicket(adminDb, emailLower).catch(err => { console.error('[login] ticket', err); return undefined; });
