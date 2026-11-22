@@ -4,14 +4,18 @@ import { z } from 'zod';
 import { adminDb } from '@/lib/firebase/admin';
 import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { getClientIp } from '@/lib/security';
-import { timingSafeEqual } from 'node:crypto';
 import { issueChallengeTicket } from '@/lib/auth/loginTicket';
+import { checkChallengeLink } from '@/lib/auth/loginChallenge';
 
 const schema = z.object({
   email: z.string().email().max(256).toLowerCase(),
   token: z.string().min(20).max(100),
 });
 
+/**
+ * "Sim, fui eu", na página do link do e-mail. A página só chama esta rota
+ * no clique: abrir o link não confirma (antivírus de e-mail abre links).
+ */
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   const ipKey = `login-confirm:${ip}`;
@@ -27,32 +31,17 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Link inválido' }, { status: 400 });
 
   const { email, token } = parsed.data;
-  const ref = adminDb.collection('login_challenges').doc(email);
-  const snap = await ref.get();
-
-  if (!snap.exists) return NextResponse.json({ error: 'Link expirado. Faça login novamente.' }, { status: 400 });
-
-  const data = snap.data()!;
-  if (Date.now() > data.expiresAt) {
-    await ref.delete();
-    return NextResponse.json({ error: 'Link expirado. Faça login novamente.' }, { status: 400 });
+  const link = await checkChallengeLink(adminDb, email, token);
+  if (!link.ok) return link.response;
+  const { ref, data } = link;
+  if (data.denied === true) {
+    return NextResponse.json({ error: 'Esta tentativa foi bloqueada pelo "Não fui eu". Para entrar, faça login de novo.' }, { status: 400 });
   }
-  if (data.attempts >= 10) {
-    await ref.delete();
-    return NextResponse.json({ error: 'Link inválido. Faça login novamente.' }, { status: 429 });
-  }
-  const expected = Buffer.from(String(data.token ?? ''));
-  const given = Buffer.from(token);
-  if (expected.length !== given.length || !timingSafeEqual(expected, given)) {
-    await ref.update({ attempts: (data.attempts ?? 0) + 1 });
-    return NextResponse.json({ error: 'Link inválido ou já utilizado.' }, { status: 400 });
-  }
+  if (data.confirmed === true) return NextResponse.json({ ok: true });
 
-  // Não deleta o doc aqui: a aba original ainda precisa fazer uma última
-  // checagem (login-challenge-status) pra saber que pode prosseguir com
-  // o signInWithEmailAndPassword. Só marca confirmado; o próprio TTL de
-  // expiresAt cuida da limpeza (o doc nunca é reaproveitado, o próximo
-  // login gera um token novo e sobrescreve).
+  // Não apaga o desafio: a aba que espera ainda consulta o andamento
+  // (login-challenge-status) para saber que pode entrar. O próximo login
+  // sobrescreve, e a limpeza diária apaga os antigos (lib/retention.ts).
   await ref.update({ confirmed: true, confirmedAt: new Date().toISOString() });
   // A senha foi conferida antes do e-mail sair: a aba que espera (e só ela,
   // que tem o id do desafio) entra e o login vale para a conta.

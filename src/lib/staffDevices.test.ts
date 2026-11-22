@@ -14,7 +14,7 @@ vi.mock('@/lib/firebase/admin', () => ({ adminAuth: { listUsers }, adminDb: {} }
 
 const { notifyPasskeyAdded, notifyPiiScan } = await import('./staffDevices');
 
-const base = { uid: 'u1', ip: '203.0.113.7', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', city: 'Blumenau', country: 'BR' };
+const base = { uid: 'u1', ip: '203.0.113.7', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', place: 'Blumenau, SC, Brasil' };
 const recipients = () => sendEmail.mock.calls.map(c => (c[0] as { to: string }).to).sort();
 
 describe('aviso de passkey nova', () => {
@@ -27,7 +27,7 @@ describe('aviso de passkey nova', () => {
     expect(subject).toBe('Nova passkey na conta da Mikma');
     expect(text).toContain('vendedor@mikma.com.br (vendedor)');
     expect(text).toContain('só com a senha');
-    expect(text).toContain('203.0.113.7');
+    expect(text).toContain('Blumenau, SC, Brasil (IP 203.0.113.7)');
     expect(html).toContain('no Painel, em Segurança');
   });
 
@@ -39,7 +39,7 @@ describe('aviso de passkey nova', () => {
   });
 
   it('o e-mail não deixa passar HTML de quem cadastrou', async () => {
-    await notifyPasskeyAdded({ ...base, email: 'cliente@x.com', role: 'buyer', claims: {}, city: '<img src=x onerror=alert(1)>' });
+    await notifyPasskeyAdded({ ...base, email: 'cliente@x.com', role: 'buyer', claims: {}, place: '<img src=x onerror=alert(1)>' });
     expect((sendEmail.mock.calls[0][0] as { html: string }).html).not.toContain('<img src=x');
   });
 });

@@ -29,8 +29,8 @@ interface Access {
   deviceId: string;
   ip: string;
   userAgent: string | null;
-  city?: string | null;
-  country?: string | null;
+  /** Cidade e país, só de header provado da Cloudflare (lib/requestPlace.ts). */
+  place?: string | null;
 }
 
 /** Registra o aparelho; devolve true se era novo e o alerta foi enviado. */
@@ -50,7 +50,7 @@ export async function noteStaffDevice(a: Access): Promise<boolean> {
   if (!isNew || firstEver) return false;
 
   const when = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
-  const place = [a.city, a.country].filter(Boolean).join(', ') || 'local desconhecido';
+  const place = a.place || 'local desconhecido';
   const mfa = hasSecondFactor(a.claims) ? 'com verificação em duas etapas' : 'só com senha ou Google, sem verificação em duas etapas';
   const html = emailLayout(emailSection({
     eyebrow: 'Segurança da equipe',
@@ -90,8 +90,8 @@ interface PasskeyAdded {
   claims: MfaClaims;
   ip: string;
   userAgent: string | null;
-  city?: string | null;
-  country?: string | null;
+  /** Cidade e país, só de header provado da Cloudflare (lib/requestPlace.ts). */
+  place?: string | null;
 }
 
 /**
@@ -106,7 +106,7 @@ export async function notifyPasskeyAdded(a: PasskeyAdded): Promise<void> {
   const to = await securityRecipients(a.email, staff);
   if (to.length === 0) return;
   const when = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
-  const place = [a.city, a.country].filter(Boolean).join(', ') || 'local desconhecido';
+  const place = a.place || 'local desconhecido';
   const label = deviceLabel(a.userAgent);
   const how = hasSecondFactor(a.claims) ? 'entrando com a verificação em duas etapas' : 'entrando só com a senha ou o Google';
   const account = `${a.email ?? a.uid}${staff ? ` (${a.role === 'admin' ? 'admin' : 'vendedor'})` : ''}`;

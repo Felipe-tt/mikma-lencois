@@ -3,6 +3,7 @@ import { getClientIp, verifyAuth } from '@/lib/security';
 import { signStaffSession, STAFF_SESSION_COOKIE, STAFF_SESSION_MAX_AGE_SECONDS } from '@/lib/staffSession';
 import { DEVICE_COOKIE, DEVICE_COOKIE_MAX_AGE, newDeviceId, noteStaffDevice } from '@/lib/staffDevices';
 import type { MfaClaims } from '@/lib/staffMfa';
+import { requestPlace } from '@/lib/requestPlace';
 
 /**
  * Chamada pelo AuthContext no cliente sempre que o estado de auth do
@@ -45,8 +46,7 @@ export async function POST(req: NextRequest) {
       deviceId,
       ip: getClientIp(req),
       userAgent: req.headers.get('user-agent'),
-      city: req.headers.get('cf-ipcity'),
-      country: req.headers.get('cf-ipcountry'),
+      place: requestPlace(req.headers),
     });
   } catch (err) {
     console.error('staff device alert failed:', err);

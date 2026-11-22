@@ -137,6 +137,62 @@ test('confirmação por e-mail: o andamento e a entrada são só da aba que pedi
   await db().collection('login_challenges').doc(EMAIL).delete();
 });
 
+/** Desafio de confirmação por e-mail já com a senha conferida (o que o login grava). */
+async function seedChallenge(challenge: string, linkToken: string) {
+  await db().collection('login_challenges').doc(EMAIL).set({
+    email: EMAIL, token: linkToken, challengeHash: createHash('sha256').update(challenge).digest('hex'),
+    expiresAt: Date.now() + 10 * 60_000, attempts: 0, confirmed: false, ip: 'x', createdAt: new Date().toISOString(),
+  });
+}
+const challengeStatus = async (request: APIRequestContext, challenge: string) => (await request.get(
+  `/api/auth/login-challenge-status?email=${encodeURIComponent(EMAIL)}&challenge=${challenge}`, { headers: visitor() },
+)).json();
+const confirmLink = (linkToken: string, extra = '') => `/confirmar-login?email=${encodeURIComponent(EMAIL)}&token=${linkToken}${extra}`;
+
+test('link de confirmação de login: abrir não confirma, só o clique em "Sim, fui eu"', async ({ page, request }) => {
+  await prepare(page.context());
+  const challenge = 'e'.repeat(43);
+  const linkToken = 'f'.repeat(43);
+  await seedChallenge(challenge, linkToken);
+  // Token errado não apaga o desafio (antes, 10 erros com o e-mail dela invalidavam o link).
+  for (let i = 0; i < 10; i++) {
+    const res = await request.post('/api/auth/login-confirm-challenge', { headers: visitor(), data: { email: EMAIL, token: 'z'.repeat(43) } });
+    expect(res.status()).toBe(400);
+  }
+  // Antivírus de e-mail abre o link sozinho: só abrir não pode confirmar.
+  await page.goto(confirmLink(linkToken));
+  await expect(page.getByRole('heading', { name: 'Foi você que tentou entrar?' })).toBeVisible();
+  await page.waitForTimeout(1500);
+  expect(await challengeStatus(request, challenge)).toEqual({ confirmed: false });
+  await page.getByRole('button', { name: 'Sim, fui eu' }).click();
+  await expect(page.getByRole('heading', { name: 'Login confirmado!' })).toBeVisible();
+  expect(await challengeStatus(request, challenge)).toEqual({ confirmed: true });
+  await db().collection('login_challenges').doc(EMAIL).delete();
+  await db().collection('login_tickets').doc(createHash('sha256').update(challenge).digest('hex')).delete();
+});
+
+test('"Não fui eu" bloqueia a tentativa e já leva a criar senha nova', async ({ page, request }) => {
+  await prepare(page.context());
+  const challenge = 'g'.repeat(43);
+  const linkToken = 'h'.repeat(43);
+  await seedChallenge(challenge, linkToken);
+  await page.goto(confirmLink(linkToken, '&acao=negar'));
+  await expect(page.getByRole('heading', { name: 'Bloquear esta tentativa?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Bloquear e criar senha nova' }).click();
+  await expect(page.getByRole('heading', { name: 'Tentativa bloqueada' })).toBeVisible();
+  // A aba que esperava fica sabendo e não entra; o link não confirma mais.
+  expect(await challengeStatus(request, challenge)).toEqual({ confirmed: false, denied: true });
+  const depois = await request.post('/api/auth/login-confirm-challenge', { headers: visitor(), data: { email: EMAIL, token: linkToken } });
+  expect(depois.status()).toBe(400);
+  expect((await depois.json()).error).toContain('bloqueada');
+  // Quem tentou entrar sabe a senha: o botão abre a tela de senha nova com um link válido.
+  await page.getByRole('link', { name: 'Criar senha nova' }).click();
+  await expect(page).toHaveURL(/\/redefinir-senha\?email=/);
+  await expect(page.getByLabel('Nova senha', { exact: true })).toBeVisible();
+  await db().collection('login_challenges').doc(EMAIL).delete();
+  await db().collection('password_resets').doc(EMAIL).delete();
+});
+
 test('login que perdeu a confiança mostra o aviso e leva para entrar de novo', async ({ page }) => {
   await prepare(page.context());
   await login(page, EMAIL, SENHA);

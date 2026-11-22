@@ -18,7 +18,10 @@ import type { StoredFiles } from '@/lib/storageFiles';
  *   compara pedidos recentes);
  * - conta de convidado sem pedido: 90 dias sem uso;
  * - pedido de "Avise-me quando chegar": 1 ano;
- * - fila da manutenção: 30 dias.
+ * - fila da manutenção: 30 dias;
+ * - login confiável: 180 dias;
+ * - links por e-mail (confirmar login, senha nova, cadastro): 1 dia depois
+ *   de vencer.
  * A mesma rotina criptografa o CPF e o telefone que ainda estejam em claro
  * em perfis antigos.
  */
@@ -36,6 +39,11 @@ export const RETENTION = {
   orphanReturnPhotoHours: 48,
   /** Login marcado como confiável (lib/auth/loginTicket.ts): depois disso, CPF pede para entrar de novo. */
   trustedLoginDays: 180,
+  /**
+   * Links por e-mail (confirmar login, senha nova, cadastro), com e-mail e
+   * IP: 1 dia depois de vencer. O "Não fui eu" do login vale 1 dia.
+   */
+  emailLinkDays: 1,
 } as const;
 
 /** Data limite: o que foi criado antes dela passou do prazo. */
@@ -95,6 +103,8 @@ export interface RetentionResult {
   returnsDeleted: number;
   /** Tickets de login vencidos e logins confiáveis antigos. */
   loginTicketsDeleted: number;
+  /** Links por e-mail vencidos (confirmar login, senha nova, cadastro). */
+  emailLinksDeleted: number;
 }
 
 // Por rodada: a rotina roda todo dia, então o que sobrar sai no dia seguinte
@@ -106,7 +116,7 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   const r: RetentionResult = {
     piiEncrypted: 0, ordersAnonymized: 0, orderIpsRemoved: 0, guestsDeleted: 0, restockDeleted: 0, queueDeleted: 0, riskMoved: 0,
     nfeDeleted: 0, conversationsDeleted: 0, returnsDeleted: 0, piiLogDeleted: 0, attachmentsPrivatized: 0, orphanPhotosDeleted: 0,
-    loginTicketsDeleted: 0,
+    loginTicketsDeleted: 0, emailLinksDeleted: 0,
   };
 
   // Perfis antigos com CPF/telefone em claro: criptografa (ver lib/piiCrypto.ts).
@@ -266,6 +276,13 @@ export async function runRetention(db: Firestore, auth: Auth, now = new Date(), 
   ]);
   await Promise.all([...tickets.docs, ...trusted.docs].map(d => d.ref.delete()));
   r.loginTicketsDeleted = tickets.size + trusted.size;
+
+  // Links por e-mail vencidos: ficavam para sempre, com e-mail e IP.
+  const linkCut = now.getTime() - RETENTION.emailLinkDays * DAY_MS;
+  const links = await Promise.all(['login_challenges', 'password_resets', 'email_verifications']
+    .map(col => db.collection(col).where('expiresAt', '<', linkCut).limit(BATCH).get()));
+  await Promise.all(links.flatMap(s => s.docs.map(d => d.ref.delete())));
+  r.emailLinksDeleted = links.reduce((n, s) => n + s.size, 0);
 
   return r;
 }
