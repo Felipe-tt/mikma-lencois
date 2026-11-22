@@ -29,7 +29,7 @@ import { watchPixFee } from '@/lib/orders/gatewayFeeWatch';
 import { sendEmail, emailEnabled } from '@/lib/email';
 import { buildPixPending } from '@/lib/email/orderStatusEmails';
 import { CONTACT_EMAIL } from '@/lib/email/layout';
-import { guardGuestPayment, guestUnitsBlock } from '@/lib/guestGuard';
+import { guardGuestPayment, guestUnitsBlock, isUnverifiedAccount } from '@/lib/guestGuard';
 import { guestOrderLink } from '@/lib/guestAccess';
 
 const ABACATEPAY_BASE = 'https://api.abacatepay.com/v2';
@@ -534,7 +534,10 @@ export async function POST(req: NextRequest) {
     // "Recebemos seu pedido, falta o PIX": só aqui, na criação do pedido (o
     // caminho de reaproveitar um PIX recente retorna antes e não reenvia).
     // Best-effort: falha de e-mail não pode impedir o cliente de pagar.
-    const pendingEmailTo = (userData.email as string | undefined) || decoded.email;
+    // E-mail que ninguém confirmou (conta criada direto no Firebase) não
+    // recebe: a loja não manda e-mail em nome dela para qualquer endereço.
+    // O PIX aparece na tela do mesmo jeito.
+    const pendingEmailTo = isUnverifiedAccount(decoded) ? undefined : (userData.email as string | undefined) || decoded.email;
     if (emailEnabled() && pendingEmailTo && pix.brCode) {
       const firstName = String(userData.name ?? userData.displayName ?? '').split(' ')[0] || 'cliente';
       const payload = buildPixPending(
