@@ -131,9 +131,9 @@ export async function POST(req: NextRequest) {
     // Remove verificação usada
     await verifyRef.delete();
     // O navegador entra em seguida com a senha que acabou de criar.
-    await issueLoginTicket(adminDb, email).catch(err => console.error('[register] ticket', err));
+    const ticket = await issueLoginTicket(adminDb, email).catch(err => { console.error('[register] ticket', err); return undefined; });
 
-    return NextResponse.json({ success: true }, { status: 201 });
+    return NextResponse.json(ticket ? { success: true, ticket } : { success: true }, { status: 201 });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : '';
     if (msg.includes('email-already-exists')) {

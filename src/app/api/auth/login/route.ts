@@ -11,7 +11,7 @@ import { actionButtonEmailHtml } from '@/lib/email-templates';
 import { passwordLeaked } from '@/lib/leakedCredentials';
 import { HONEY_LOGIN_EMAILS, triggerHoneytoken } from '@/lib/honeytoken';
 import { checkPasswordServerSide } from '@/lib/auth/passwordCheck';
-import { issueLoginTicket } from '@/lib/auth/loginTicket';
+import { hashTicket, issueLoginTicket } from '@/lib/auth/loginTicket';
 
 const schema = z.object({
   email: z.string().email().max(256),
@@ -75,10 +75,13 @@ export async function POST(req: NextRequest) {
       if (check === 'wrong') return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 400 });
       // Sem conferir agora (rede, conta desativada): o login segue no
       // navegador, sem ticket; CPF e apagar a conta pedem para entrar de novo.
-      if (check === 'ok') await issueLoginTicket(adminDb, emailLower).catch(err => console.error('[login] ticket', err));
+      // O ticket vai só para este navegador (ver lib/auth/loginTicket.ts).
+      const ticket = check === 'ok'
+        ? await issueLoginTicket(adminDb, emailLower).catch(err => { console.error('[login] ticket', err); return undefined; })
+        : undefined;
       // Sem ticket, CPF e conta pedem para entrar de novo: a equipe precisa saber.
-      else if (check === 'unavailable') Sentry.captureMessage('Login sem ticket: o servidor não conseguiu conferir a senha no Firebase', 'warning');
-      return NextResponse.json({ ok: true });
+      if (check === 'unavailable') Sentry.captureMessage('Login sem ticket: o servidor não conseguiu conferir a senha no Firebase', 'warning');
+      return NextResponse.json(ticket ? { ok: true, ticket } : { ok: true });
     }
 
     // outcome === 'challenge': score suspeito, mas não claramente bot.
@@ -103,11 +106,16 @@ export async function POST(req: NextRequest) {
     }
 
     const token = generateActionToken();
+    // Id do desafio: só esta aba recebe. Consulta o andamento com ele e, depois
+    // da confirmação, ele vira o ticket do login (quem só tem a senha não sabe
+    // quando a dona da conta confirmou, nem tem o ticket).
+    const challenge = generateActionToken();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 min
 
     await adminDb.collection('login_challenges').doc(emailLower).set({
       email: emailLower,
       token,
+      challengeHash: hashTicket(challenge),
       expiresAt,
       attempts: 0,
       confirmed: false,
@@ -140,7 +148,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não conseguimos enviar o e-mail de confirmação. Tente novamente.' }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: false, requiresEmailChallenge: true, email: emailLower });
+    return NextResponse.json({ ok: false, requiresEmailChallenge: true, email: emailLower, challenge });
   } catch {
     return NextResponse.json({ error: 'Não foi possível concluir agora. Tente de novo.' }, { status: 500 });
   }

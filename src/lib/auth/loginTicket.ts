@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
@@ -10,12 +10,14 @@ import { NextResponse } from 'next/server';
  * a senha direto, com a chave pública do site, e aí nada disso roda: quem
  * tem uma senha vazada entrava assim e lia o CPF da pessoa.
  *
- * Por isso as rotas mais sensíveis (CPF e telefone, exportar e apagar a
- * conta) só aceitam login com senha que passou pela checagem. A checagem
- * deixa um ticket para o e-mail; logo depois de entrar, o navegador troca o
- * ticket por "este login é confiável" (/api/auth/trust). Google, passkey,
- * convidado e equipe com segunda etapa não precisam: a senha sozinha não
- * entra por eles.
+ * Por isso a conta (CPF e telefone, endereço, pedidos, exportar e apagar)
+ * só abre para login com senha que passou pela checagem. A checagem
+ * entrega um ticket ao navegador que passou por ela, e só a ele: um valor
+ * aleatório que o banco guarda só como hash. Logo depois de entrar, o
+ * navegador troca o ticket por "este login é confiável" (/api/auth/trust).
+ * Quem entra direto no Firebase não tem o ticket, nem descobre quando a
+ * dona da conta confirmou o próprio login. Google, passkey, convidado e
+ * equipe com segunda etapa não precisam: a senha sozinha não entra por eles.
  */
 
 /** Quanto tempo o ticket espera o login acontecer. */
@@ -37,10 +39,10 @@ export function trustRequiredSinceMs(): number {
 const TICKETS = 'login_tickets';
 const TRUSTED = 'trusted_logins';
 
+const sha256 = (v: string) => createHash('sha256').update(v).digest('hex');
+
 /** O e-mail não fica legível no banco, só o hash. */
-function ticketId(email: string): string {
-  return createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
-}
+const emailHash = (email: string) => sha256(email.trim().toLowerCase());
 
 function trustId(decoded: DecodedIdToken): string {
   return `${decoded.uid}_${decoded.auth_time}`;
@@ -53,42 +55,64 @@ export function needsTicket(decoded: DecodedIdToken): boolean {
   return decoded.auth_time * 1000 >= trustRequiredSinceMs();
 }
 
+/** Ticket que o navegador manda: base64url, do tamanho que o servidor gera. */
+export function isTicketShape(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]{32,128}$/.test(value);
+}
+
 /**
  * A checagem do site aprovou um login com senha (senha conferida no
- * servidor, confirmação por e-mail, cadastro ou senha nova). Guarda até 5
- * tickets recentes por e-mail: dois aparelhos entrando juntos não se atrapalham.
+ * servidor, confirmação por e-mail, cadastro ou senha nova). Devolve o
+ * ticket, que vai só para o navegador que passou pela checagem. `ticket`
+ * permite usar um valor que esse navegador já tem (o id do desafio por e-mail).
  */
-export async function issueLoginTicket(db: Firestore, email: string, now = Date.now()): Promise<void> {
-  const ref = db.collection(TICKETS).doc(ticketId(email));
-  await db.runTransaction(async tx => {
-    const snap = await tx.get(ref);
-    const issued = ((snap.get('issued') as number[] | undefined) ?? []).filter(t => now - t < TICKET_TTL_MS).slice(-4);
-    issued.push(now);
-    tx.set(ref, { issued, expiresAt: new Date(now + TICKET_TTL_MS).toISOString() });
+export async function issueLoginTicket(db: Firestore, email: string, now = Date.now(), ticket = randomBytes(32).toString('base64url')): Promise<string> {
+  await db.collection(TICKETS).doc(sha256(ticket)).set({
+    emailHash: emailHash(email),
+    issuedAt: now,
+    expiresAt: new Date(now + TICKET_TTL_MS).toISOString(),
+  });
+  return ticket;
+}
+
+/** Hash do ticket (é o que fica no banco). */
+export const hashTicket = sha256;
+
+/**
+ * Confirmação por e-mail: o ticket é o id do desafio, que só a aba que
+ * pediu o login tem (o banco guarda o hash dele no desafio). O link do
+ * e-mail pode ser aberto em outro aparelho; quem entra é a aba que esperava.
+ */
+export async function issueChallengeTicket(db: Firestore, email: string, challengeHash: string, now = Date.now()): Promise<void> {
+  await db.collection(TICKETS).doc(challengeHash).set({
+    emailHash: emailHash(email),
+    issuedAt: now,
+    expiresAt: new Date(now + TICKET_TTL_MS).toISOString(),
   });
 }
 
 /**
- * Logo depois de entrar: troca um ticket do e-mail, emitido antes do login,
- * por "este login é confiável". O ticket é gasto, então não vale para um
- * segundo login. Devolve se o login é confiável (também serve para só
- * perguntar, depois: o navegador pergunta uma vez por sessão).
+ * Logo depois de entrar: troca o ticket deste navegador, emitido para o
+ * mesmo e-mail antes do login, por "este login é confiável". O ticket é
+ * gasto. Sem ticket, só diz se o login já era confiável (o navegador
+ * pergunta uma vez por sessão).
  */
-export async function trustLogin(db: Firestore, decoded: DecodedIdToken, now = Date.now()): Promise<boolean> {
+export async function trustLogin(db: Firestore, decoded: DecodedIdToken, ticket?: string, now = Date.now()): Promise<boolean> {
   if (!needsTicket(decoded)) return true;
   const authMs = decoded.auth_time * 1000;
   const email = decoded.email;
   const trustRef = db.collection(TRUSTED).doc(trustId(decoded));
-  // Já confiável (outra aba, navegador sem a marca): vale mesmo depois do prazo do ticket.
-  if (!email || now - authMs > TICKET_TTL_MS) return (await trustRef.get()).exists;
-  const ticketRef = db.collection(TICKETS).doc(ticketId(email));
+  // Sem ticket, ou depois do prazo: vale só se já era confiável (outra aba, navegador sem a marca).
+  if (!ticket || !isTicketShape(ticket) || !email || now - authMs > TICKET_TTL_MS) return (await trustRef.get()).exists;
+  const ticketRef = db.collection(TICKETS).doc(sha256(ticket));
   return db.runTransaction(async tx => {
-    const [ticket, trust] = await Promise.all([tx.get(ticketRef), tx.get(trustRef)]);
+    const [t, trust] = await Promise.all([tx.get(ticketRef), tx.get(trustRef)]);
     if (trust.exists) return true;
-    const issued = (ticket.get('issued') as number[] | undefined) ?? [];
-    const match = issued.find(t => t <= authMs + CLOCK_SKEW_MS && t >= authMs - TICKET_TTL_MS);
-    if (match === undefined) return false;
-    tx.set(ticketRef, { issued: issued.filter(t => t !== match) }, { merge: true });
+    if (!t.exists || t.get('emailHash') !== emailHash(email)) return false;
+    const issuedAt = t.get('issuedAt') as number;
+    // O ticket sai antes do login: até 15 min antes, com folga de 1 min de relógio.
+    if (!(issuedAt <= authMs + CLOCK_SKEW_MS && issuedAt >= authMs - TICKET_TTL_MS)) return false;
+    tx.delete(ticketRef);
     tx.set(trustRef, { uid: decoded.uid, authTime: decoded.auth_time, at: new Date(now).toISOString() });
     return true;
   });
