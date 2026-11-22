@@ -193,6 +193,20 @@ describe('retenção (LGPD)', () => {
     expect(Object.keys(data.trusted_logins)).toEqual(['novo']);
   });
 
+  it('apaga link por e-mail vencido há mais de 1 dia (login, senha nova, cadastro)', async () => {
+    const ms = (h: number) => NOW.getTime() - h * 3600_000;
+    const data: Record<string, Record<string, Doc>> = {
+      login_challenges: { 'velho@x.com': { ip: '1.2.3.4', expiresAt: ms(25) }, 'hoje@x.com': { ip: '1.2.3.4', expiresAt: ms(2) } },
+      password_resets: { 'velho@x.com': { ip: '1.2.3.4', expiresAt: ms(48) }, 'novo@x.com': { ip: '1.2.3.4', expiresAt: ms(-0.25) } },
+      email_verifications: { 'velho@x.com': { ip: '1.2.3.4', expiresAt: ms(30) } },
+    };
+    const r = await runRetention(fakeDb(data) as never, fakeAuth([]) as never, NOW);
+    expect(r.emailLinksDeleted).toBe(3);
+    expect(Object.keys(data.login_challenges)).toEqual(['hoje@x.com']);
+    expect(Object.keys(data.password_resets)).toEqual(['novo@x.com']);
+    expect(Object.keys(data.email_verifications)).toEqual([]);
+  });
+
   it('tira a avaliação do detector de golpe do pedido (o cliente lê o pedido)', async () => {
     const risk = { score: 70, level: 'alto', hold: true, signals: [{ reason: 'Mesmo CPF em 3 contas', relatedOrderIds: ['ord_outro'], points: 40 }], assessedAt: daysAgo(1) };
     const data: Record<string, Record<string, Doc>> = {

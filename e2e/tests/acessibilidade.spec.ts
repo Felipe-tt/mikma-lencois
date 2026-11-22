@@ -8,7 +8,9 @@ import { prepare } from './helpers';
  * nem resposta 4xx/5xx do próprio site.
  */
 const AXE = readFileSync(`${process.cwd()}/node_modules/axe-core/axe.min.js`, 'utf8');
-const PAGES = ['/', '/produtos', '/produtos/p1', '/produtos/p3', '/carrinho', '/checkout', '/sobre', '/privacidade', '/termos', '/trocas-e-devolucoes', '/guia-de-tamanhos', '/entrar', '/cadastro', '/politica-de-cookies'];
+const PAGES = ['/', '/produtos', '/produtos/p1', '/produtos/p3', '/carrinho', '/checkout', '/sobre', '/privacidade', '/termos', '/trocas-e-devolucoes', '/guia-de-tamanhos', '/entrar', '/cadastro', '/politica-de-cookies',
+  // Página do link do e-mail de confirmação de login (pergunta "Foi você?").
+  `/confirmar-login?email=alguem%40e2e.mikma&token=${'t'.repeat(43)}`];
 
 test.beforeEach(async ({ context }) => { await prepare(context); });
 

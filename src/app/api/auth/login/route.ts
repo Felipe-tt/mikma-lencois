@@ -7,7 +7,9 @@ import { checkRecaptchaScore } from '@/lib/recaptcha';
 import { adminDb } from '@/lib/firebase/admin';
 import { generateActionToken } from '@/lib/auth-token';
 import { sendEmail } from '@/lib/email';
-import { actionButtonEmailHtml } from '@/lib/email-templates';
+import { loginChallengeEmail } from '@/lib/email/loginChallengeEmail';
+import { deviceLabel } from '@/lib/passkeys';
+import { requestPlace } from '@/lib/requestPlace';
 import { passwordLeaked } from '@/lib/leakedCredentials';
 import { HONEY_LOGIN_EMAILS, triggerHoneytoken } from '@/lib/honeytoken';
 import { checkPasswordServerSide } from '@/lib/auth/passwordCheck';
@@ -57,7 +59,8 @@ export async function POST(req: NextRequest) {
     // Senha que já apareceu em vazamento público (a Cloudflare compara e
     // manda o header; ver infra-manutencao.yml): mesmo com reCAPTCHA bom,
     // pede a confirmação por e-mail. Quem só tem a senha vazada não entra.
-    if (outcome === 'pass' && passwordLeaked(req.headers.get('exposed-credential-check'))) outcome = 'challenge';
+    const leaked = passwordLeaked(req.headers.get('exposed-credential-check'));
+    if (outcome === 'pass' && leaked) outcome = 'challenge';
 
     if (outcome === 'block') {
       return NextResponse.json(
@@ -123,26 +126,21 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     });
 
-    const actionUrl = `${APP_URL}/confirmar-login?email=${encodeURIComponent(emailLower)}&token=${token}`;
-    const firstName = emailLower.split('@')[0];
-
-    const html = actionButtonEmailHtml({
-      greetingName: firstName,
-      introText: `Detectamos algo diferente do normal neste login na <strong>Mikma Lençóis</strong>. Pra continuar, confirme clicando no botão abaixo:`,
-      buttonLabel: 'Confirmar login',
-      actionUrl,
-      expiryNote: 'Este link é válido por 10 minutos. A tela onde você digitou a senha vai continuar sozinha assim que você confirmar.',
-      securityNote: '<strong>Não foi você?</strong> Ignore este e-mail — sem clicar no link, ninguém entra na sua conta.',
+    // A página do link pede o clique em "Sim, fui eu" ou "Não fui eu": abrir
+    // o link não confirma nada (antivírus de e-mail abre links sozinho).
+    const confirmUrl = `${APP_URL}/confirmar-login?email=${encodeURIComponent(emailLower)}&token=${token}`;
+    const mail = loginChallengeEmail({
+      confirmUrl,
+      denyUrl: `${confirmUrl}&acao=negar`,
+      when: new Date(),
+      device: deviceLabel(req.headers.get('user-agent')),
+      place: requestPlace(req.headers),
+      ip,
+      leaked,
     });
 
     try {
-      await sendEmail({
-        to: emailLower,
-        subject: 'Confirme seu login, Mikma Lençóis',
-        text: `Detectamos algo diferente do normal neste login.\n\nClique no link abaixo para confirmar (válido por 10 minutos):\n${actionUrl}\n\nSe não foi você, ignore este e-mail.\n\nMikma Lençóis`,
-        html,
-        from: 'noreply',
-      });
+      await sendEmail({ to: emailLower, subject: mail.subject, text: mail.text, html: mail.html, from: 'noreply' });
     } catch (err) {
       console.error('[login] falha ao enviar e-mail de confirmação', err);
       return NextResponse.json({ error: 'Não conseguimos enviar o e-mail de confirmação. Tente novamente.' }, { status: 500 });

@@ -174,6 +174,11 @@ export default function LoginPage() {
           setAwaitingChallenge(false);
           return;
         }
+        if (d.denied) {
+          setAwaitingChallenge(false);
+          setError('Esta entrada foi bloqueada pelo "Não fui eu" do e-mail. Se foi você, entre de novo.');
+          return;
+        }
         if (d.confirmed) {
           setAwaitingChallenge(false);
           try {
