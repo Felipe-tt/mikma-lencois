@@ -8,6 +8,8 @@ import type { Review } from '@/types';
 import { sanitizeDisplayName } from '@/lib/html';
 import { revalidateTag } from 'next/cache';
 import { publicReviewId, shortReviewerName, toPublicReview } from '@/lib/reviews';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 
 const schema = z.object({
   orderId: z.string().min(1).max(128),
@@ -37,15 +39,17 @@ export async function POST(req: NextRequest) {
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
 
-  let uid: string;
-  let name: string;
+  let decoded: DecodedIdToken;
   try {
-    const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    uid = decoded.uid;
-    name = sanitizeDisplayName(decoded.name as string | undefined) || 'Cliente';
+    decoded = await adminAuth.verifyIdToken(bearer.token, true);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
+  const uid = decoded.uid;
+  let name = sanitizeDisplayName(decoded.name as string | undefined) || 'Cliente';
+  // Senha usada direto no Firebase, sem a checagem do site: não avalia em nome da pessoa.
+  const untrusted = await requireTrustedLogin(adminDb, decoded);
+  if (untrusted) return untrusted;
 
   if (!await rateLimit(`reviews:ip:${ip}`, 20, 60 * 60 * 1000) || !await rateLimit(`reviews:uid:${uid}`, 10, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`reviews:uid:${uid}`));

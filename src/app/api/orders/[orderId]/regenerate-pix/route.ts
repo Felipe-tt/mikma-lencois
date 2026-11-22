@@ -8,6 +8,8 @@ import { sanitizePixDescription } from '@/lib/abacatepay';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { StockError } from '@/lib/errors';
 import { getPauseNoticeNow } from '@/lib/settings';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 
 /** Mesmo prazo do cron expire-orders: depois disso o pedido é cancelado. */
 const ORDER_PAYMENT_WINDOW_MS = 48 * 60 * 60 * 1000;
@@ -41,13 +43,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
 
-  let uid: string;
+  let decoded: DecodedIdToken;
   try {
-    const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    uid = decoded.uid;
+    decoded = await adminAuth.verifyIdToken(bearer.token, true);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
+  const uid = decoded.uid;
+  // Senha usada direto no Firebase, sem a checagem do site: não mexe nos pedidos.
+  const untrusted = await requireTrustedLogin(adminDb, decoded);
+  if (untrusted) return untrusted;
 
   // Dual rate limit: por IP e por usuário (mais restrito)
   const ipKey  = `regen-pix:ip:${ip}`;

@@ -7,6 +7,8 @@ import { getSettings } from '@/lib/settings';
 import { calcularTroca } from '@/lib/returns/reenvio';
 import { novosSchema } from '@/lib/returns/novosSchema';
 import type { Order } from '@/types';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 
 /**
  * POST /api/orders/[orderId]/troca/cotacao: antes de pedir a troca, o
@@ -23,10 +25,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const { orderId } = await params;
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
-  let uid: string;
-  try { uid = (await adminAuth.verifyIdToken(bearer.token, true)).uid; } catch {
+  let decoded: DecodedIdToken;
+  try { decoded = await adminAuth.verifyIdToken(bearer.token, true); } catch {
     return NextResponse.json({ error: 'Sua sessão expirou. Entre de novo.' }, { status: 401 });
   }
+  const uid = decoded.uid;
+  // Senha usada direto no Firebase, sem a checagem do site: não mexe nos pedidos.
+  const untrusted = await requireTrustedLogin(adminDb, decoded);
+  if (untrusted) return untrusted;
   if (!await rateLimit(`troca-cotacao:${uid}`, 30, 60 * 60_000)) return NextResponse.json({ error: 'Muitas tentativas. Tente de novo mais tarde.' }, { status: 429 });
   const parsed = await validateBody(req, schema, 8_192);
   if (!parsed.ok) return parsed.response;

@@ -6,19 +6,24 @@ import { extractBearer, tooManyRequests } from '@/lib/security';
 import { expandStockLines } from '@/lib/orderStockLines';
 import { releaseCouponUse } from '@/lib/orders/couponUsage';
 import { notifyOrderCancelled } from '@/lib/email/cancelledEmail';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
 
-  let uid: string;
+  let decoded: DecodedIdToken;
   try {
-    const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    uid = decoded.uid;
+    decoded = await adminAuth.verifyIdToken(bearer.token, true);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
+  const uid = decoded.uid;
+  // Senha usada direto no Firebase, sem a checagem do site: não mexe nos pedidos.
+  const untrusted = await requireTrustedLogin(adminDb, decoded);
+  if (untrusted) return untrusted;
 
   if (!await rateLimit(`cancel:${uid}`, 10, 60 * 60 * 1000)) {
     return tooManyRequests(rateLimitRetryAfter(`cancel:${uid}`));

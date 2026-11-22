@@ -8,6 +8,8 @@ import { rateLimit, rateLimitRetryAfter } from '@/lib/rateLimit';
 import { buildDelivered } from '@/lib/email/orderStatusEmails';
 import type { Order, User } from '@/types';
 import { GUEST_EMAIL_LINK_TTL_MS, guestOrderLink } from '@/lib/guestAccess';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import { requireTrustedLogin } from '@/lib/auth/loginTicket';
 
 /**
  * POST /api/orders/[orderId]/confirm-received
@@ -32,13 +34,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const bearer = extractBearer(req);
   if ('response' in bearer) return bearer.response;
 
-  let uid: string;
+  let decoded: DecodedIdToken;
   try {
-    const decoded = await adminAuth.verifyIdToken(bearer.token, true);
-    uid = decoded.uid;
+    decoded = await adminAuth.verifyIdToken(bearer.token, true);
   } catch {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
+  const uid = decoded.uid;
+  // Senha usada direto no Firebase, sem a checagem do site: não mexe nos pedidos.
+  const untrusted = await requireTrustedLogin(adminDb, decoded);
+  if (untrusted) return untrusted;
 
   const ip = getClientIp(req);
   const key = `confirm-received:${uid}`;

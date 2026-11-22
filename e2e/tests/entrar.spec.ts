@@ -47,6 +47,34 @@ test('senha usada direto no Firebase não abre CPF, exportar nem apagar a conta'
   }
 });
 
+test('senha usada direto no Firebase não troca CPF e telefone, não mexe nos pedidos, não compra nem avalia', async ({ request }) => {
+  const token = await directSignIn(request);
+  expect(await (await request.post('/api/auth/trust', { headers: bearer(token) })).json()).toEqual({ trusted: false });
+  const profile = db().collection('users').doc(uidOf(token));
+  const before = (await profile.get()).data();
+  // A recusa vem antes de procurar o pedido: o id não importa.
+  const calls: Array<[string, string, object?]> = [
+    ['PUT', '/api/user/pii', { phone: '(47) 99999-0000', cpf: '529.982.247-25' }],
+    ['POST', '/api/orders/qualquer/cancel'],
+    ['POST', '/api/orders/qualquer/desistir'],
+    ['DELETE', '/api/orders/qualquer/desistir'],
+    ['POST', '/api/orders/qualquer/confirm-received'],
+    ['POST', '/api/orders/qualquer/troca', { type: 'troca' }],
+    ['POST', '/api/orders/qualquer/troca/cotacao', {}],
+    ['POST', '/api/orders/qualquer/regenerate-pix'],
+    ['POST', '/api/payment/create-pix', {}],
+    ['POST', '/api/payment/create-checkout', {}],
+    ['POST', '/api/reviews', { orderId: 'qualquer', productId: 'qualquer', rating: 1, comment: 'avaliação falsa' }],
+  ];
+  for (const [method, path, data] of calls) {
+    const res = await request.fetch(path, { method, headers: bearer(token), ...(data ? { data } : {}) });
+    expect(res.status(), `${method} ${path}`).toBe(403);
+    expect((await res.json()).code, `${method} ${path}`).toBe('login_check');
+  }
+  // CPF e telefone da conta seguem os mesmos.
+  expect((await profile.get()).data()).toEqual(before);
+});
+
 test('senha usada direto no Firebase não lê endereço pelo Firestore', async ({ request }) => {
   const token = await directSignIn(request);
   expect((await readProfile(request, token)).status()).toBe(403);
