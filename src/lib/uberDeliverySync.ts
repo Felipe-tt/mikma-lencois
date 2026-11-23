@@ -234,7 +234,7 @@ export async function applyUberStatus(
   }
 
   const pushBuilder = PUSH_ON_STATUS.get(uberStatus);
-  if (pushBuilder) {
+  if (typeof pushBuilder === 'function') {
     const items = (order.items ?? []) as { productName: string; quantity: number }[];
     const { title, body } = pushBuilder(summarizeOrderItems(items));
     // Best-effort, notifySeller nunca lança, só loga falha internamente.
