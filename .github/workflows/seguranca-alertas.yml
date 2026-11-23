@@ -56,8 +56,17 @@ jobs:
       - name: Corrigir os alertas abertos
         run: |
           set -euo pipefail
+          # O merge automático dispara o CodeQL da main e esta lista juntos:
+          # espera a análise da main terminar, para ler os alertas já atualizados.
+          [ "$EVENT" = workflow_run ] || sleep 30
+          waited=0
+          for _ in $(seq 1 30); do
+            [ "$(gh run list --workflow codeql.yml --branch main --limit 5 --json status --jq '[.[] | select(.status != "completed")] | length')" = 0 ] && break
+            waited=1
+            sleep 30
+          done
           # Logo depois da análise, o GitHub ainda está processando o resultado.
-          if [ "$EVENT" = workflow_run ]; then sleep 90; fi
+          if [ "$EVENT" = workflow_run ] || [ "$waited" = 1 ]; then sleep 90; fi
           main_sha="$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)"
           gh api --paginate "repos/$GH_REPO/code-scanning/alerts?state=open&ref=refs/heads/main&per_page=100" \
             --jq '.[] | [.number, (.rule.security_severity_level // .rule.severity), .rule.id, .rule.description, .most_recent_instance.location.path, (.most_recent_instance.location.start_line | tostring), .html_url] | @tsv' \
@@ -96,8 +105,17 @@ jobs:
               continue
             fi
             # Já entrou uma correção automática e o alerta continua: não repete à toa.
-            merged_pr="$(gh pr list --state merged --head "$branch" --json number --jq '.[0].number // empty')"
-            if [ -n "$merged_pr" ]; then note "a correção automática (PR #$merged_pr) não fechou o alerta. Precisa de uma pessoa."; continue; fi
+            merged="$(gh pr list --state merged --head "$branch" --json number,mergedAt --jq '.[0] // empty | "\(.number) \(.mergedAt)"')"
+            if [ -n "$merged" ]; then
+              merged_pr="${merged%% *}"
+              # Acabou de entrar: o CodeQL da main ainda vai confirmar.
+              if [ $(( $(date +%s) - $(date -d "${merged#* }" +%s) )) -lt 7200 ]; then
+                note "a correção entrou no PR #$merged_pr; o CodeQL da main ainda vai confirmar."
+              else
+                note "a correção automática (PR #$merged_pr) não fechou o alerta. Precisa de uma pessoa."
+              fi
+              continue
+            fi
             if [ "$fixes" -ge "$MAX_FIXES" ]; then note "na fila da próxima rodada."; continue; fi
             fixes=$((fixes + 1))
 
