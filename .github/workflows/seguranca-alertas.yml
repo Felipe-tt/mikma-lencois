@@ -1,12 +1,18 @@
-name: Segurança · alertas do código abertos
+name: Segurança · correção automática dos alertas do código
 
-# Dependência vulnerável se corrige sozinha (Dependabot e seguranca-auditoria.yml,
-# com merge automático em atualizacoes-merge.yml). Alerta do CodeQL é no
-# código: precisa de uma correção escrita. Este workflow mantém a issue
-# "Alertas de segurança do código" (etiqueta seguranca-codigo) com a lista do
-# que está aberto na main, todo dia e depois de cada análise do CodeQL na main,
-# e fecha a issue quando não sobra nenhum. A rotina diária de correção lê a
-# issue, corrige no código e abre o PR.
+# Dependência vulnerável já se corrige sozinha (Dependabot e
+# seguranca-auditoria.yml). Este cuida dos alertas do CodeQL, que são no
+# código. Para cada alerta aberto na main:
+#   1. pede a correção ao Copilot Autofix do GitHub (grátis em repositório
+#      público);
+#   2. grava a correção numa branch seguranca/codeql-<número>, abre o PR e
+#      dispara os testes, o build, o e2e e o CodeQL nela;
+#   3. passando tudo, e com o alerta fechado na branch, o PR entra sozinho
+#      (atualizacoes-merge.yml), e o CodeQL da main fecha o alerta.
+# O que não der para corrigir sozinho (o Autofix não trouxe correção, a
+# correção não passou nos testes ou não fechou o alerta) fica na issue
+# "Alertas de segurança do código" (etiqueta seguranca-codigo), que fecha
+# sozinha quando não sobra nenhum alerta.
 
 on:
   workflow_run:
@@ -23,17 +29,23 @@ concurrency:
   group: seguranca-alertas
 
 jobs:
-  listar:
+  corrigir:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 40
     permissions:
-      security-events: read  # lê os alertas do CodeQL
-      issues: write          # abre, atualiza e fecha a issue
+      security-events: write  # lê os alertas e pede a correção ao Copilot Autofix
+      contents: write         # branch e commit da correção
+      pull-requests: write    # abre o PR
+      actions: write          # dispara os testes no PR
+      issues: write           # issue com o que não deu para corrigir sozinho
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       EVENT: ${{ github.event_name }}
       TITLE: Alertas de segurança do código
       LABEL: seguranca-codigo
+      # Por rodada: o resto fica para a próxima (todo dia e a cada CodeQL da main).
+      MAX_FIXES: '5'
     steps:
       - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
@@ -41,29 +53,103 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
 
-      - name: Atualizar a issue
+      - name: Corrigir os alertas abertos
         run: |
           set -euo pipefail
           # Logo depois da análise, o GitHub ainda está processando o resultado.
           if [ "$EVENT" = workflow_run ]; then sleep 90; fi
-          # O \(...) é do jq, não do shell: as aspas simples são de propósito.
+          main_sha="$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)"
+          gh api --paginate "repos/$GH_REPO/code-scanning/alerts?state=open&ref=refs/heads/main&per_page=100" \
+            --jq '.[] | [.number, (.rule.security_severity_level // .rule.severity), .rule.id, .rule.description, .most_recent_instance.location.path, (.most_recent_instance.location.start_line | tostring), .html_url] | @tsv' \
+            > "$RUNNER_TEMP/alertas.tsv"
+
+          report=""
+          fixes=0
+          # As crases são do Markdown: as aspas simples são de propósito.
           # shellcheck disable=SC2016
-          alerts="$(gh api --paginate "repos/$GITHUB_REPOSITORY/code-scanning/alerts?state=open&ref=refs/heads/main&per_page=100" \
-            --jq '.[] | "- [#\(.number)](\(.html_url)) **\(.rule.security_severity_level // .rule.severity)**: \(.rule.description) (`\(.rule.id)`), em `\(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)`"')"
-          issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label "$LABEL" --json number --jq '.[0].number // empty')"
-          if [ -z "$alerts" ]; then
-            echo "Nenhum alerta do CodeQL aberto na main."
-            if [ -n "$issue" ]; then
-              gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --comment "Nenhum alerta do CodeQL aberto na main."
+          note() { report+="$(printf -- '- [#%s](%s) **%s**: %s (`%s`), em `%s:%s`: %s' "$n" "$url" "$sev" "$desc" "$rule" "$path" "$line" "$1")"$'\n'; }
+          while IFS=$'\t' read -r n sev rule desc path line url; do
+            [ -n "$n" ] || continue
+            branch="seguranca/codeql-$n"
+            open_pr="$(gh pr list --state open --head "$branch" --json number --jq '.[0].number // empty')"
+            if [ -n "$open_pr" ]; then
+              # PR da correção já aberto: vê em que pé está.
+              head_sha="$(gh pr view "$open_pr" --json headRefOid --jq .headRefOid)"
+              runs="$(gh api "repos/$GH_REPO/commits/$head_sha/check-runs?per_page=100")"
+              failed="$(jq '[.check_runs[] | select(.status == "completed" and ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length' <<<"$runs")"
+              running="$(jq '[.check_runs[] | select(.status != "completed")] | length' <<<"$runs")"
+              analyzed="$(gh api "repos/$GH_REPO/code-scanning/analyses?ref=refs/heads/$branch&per_page=20" --jq "[.[] | select(.commit_sha == \"$head_sha\")] | length" || echo 0)"
+              still_open="$(gh api --paginate "repos/$GH_REPO/code-scanning/alerts?ref=refs/heads/$branch&state=open&per_page=100" --jq ".[] | select(.number == $n) | .number" || echo erro)"
+              if [ "$failed" != 0 ]; then
+                note "a correção do PR #$open_pr não passou nos testes. Precisa de uma pessoa."
+              elif [ "$running" != 0 ]; then
+                note "correção automática no PR #$open_pr, com os testes rodando."
+              elif [ "$analyzed" != 0 ] && [ -n "$still_open" ]; then
+                note "a correção do PR #$open_pr não fechou o alerta. Precisa de uma pessoa."
+              else
+                # Tudo verde e o PR não entrou: o CodeQL da branch não tinha
+                # terminado quando o merge automático olhou. Confere de novo.
+                if [ "$analyzed" = 0 ]; then gh workflow run codeql.yml --ref "$branch" || true; fi
+                gh workflow run deploy.yml --ref "$branch" || true
+                note "correção automática no PR #$open_pr, conferindo de novo para o merge."
+              fi
+              continue
             fi
+            # Já entrou uma correção automática e o alerta continua: não repete à toa.
+            merged_pr="$(gh pr list --state merged --head "$branch" --json number --jq '.[0].number // empty')"
+            if [ -n "$merged_pr" ]; then note "a correção automática (PR #$merged_pr) não fechou o alerta. Precisa de uma pessoa."; continue; fi
+            if [ "$fixes" -ge "$MAX_FIXES" ]; then note "na fila da próxima rodada."; continue; fi
+            fixes=$((fixes + 1))
+
+            # 1. Pede a correção ao Copilot Autofix e espera ficar pronta (até 5 min).
+            status="$(gh api -X POST "repos/$GH_REPO/code-scanning/alerts/$n/autofix" --jq .status 2>"$RUNNER_TEMP/erro" || echo indisponivel)"
+            for _ in $(seq 1 20); do
+              [ "$status" = pending ] || break
+              sleep 15
+              status="$(gh api "repos/$GH_REPO/code-scanning/alerts/$n/autofix" --jq .status 2>>"$RUNNER_TEMP/erro" || echo indisponivel)"
+            done
+            if [ "$status" != success ]; then
+              echo "::warning::alerta #$n: Copilot Autofix $status: $(tr '\n' ' ' < "$RUNNER_TEMP/erro" | cut -c1-300)"
+              note "o Copilot Autofix não trouxe correção ($status). Precisa de uma pessoa."
+              continue
+            fi
+
+            # 2. Branch a partir da main (ou volta a ela, se sobrou de outra tentativa) e o commit da correção.
+            gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/heads/$branch" -f sha="$main_sha" >/dev/null 2>&1 \
+              || gh api -X PATCH "repos/$GH_REPO/git/refs/heads/$branch" -f sha="$main_sha" -F force=true >/dev/null
+            if ! gh api -X POST "repos/$GH_REPO/code-scanning/alerts/$n/autofix/commits" \
+                -f target_ref="refs/heads/$branch" -f message="fix(seguranca): corrige o alerta #$n do CodeQL" >/dev/null 2>"$RUNNER_TEMP/erro"; then
+              echo "::warning::alerta #$n: não gravou a correção: $(tr '\n' ' ' < "$RUNNER_TEMP/erro" | cut -c1-300)"
+              note "não deu para gravar a correção na branch. Precisa de uma pessoa."
+              continue
+            fi
+
+            # 3. PR e testes. PR aberto pelo GITHUB_TOKEN não dispara os checks sozinho.
+            # shellcheck disable=SC2016
+            body="$(printf 'Correção automática do Copilot Autofix para o [alerta #%s](%s) do CodeQL: %s (`%s`), em `%s:%s`.\n\nOs testes, o build, o e2e e o CodeQL rodam nesta branch. Passando tudo, e com o alerta fechado nela, o PR entra sozinho (atualizacoes-merge.yml).\n' "$n" "$url" "$desc" "$rule" "$path" "$line")"
+            if ! pr_url="$(gh pr create --head "$branch" --base main --title "fix(seguranca): alerta #$n do CodeQL (correção automática)" --body "$body" 2>"$RUNNER_TEMP/erro")"; then
+              echo "::error::alerta #$n: o PR não abriu: $(tr '\n' ' ' < "$RUNNER_TEMP/erro" | cut -c1-300)"
+              note "a correção está na branch $branch, mas o PR não abriu (o GitHub Actions precisa poder abrir PR: Settings, Actions, General, Workflow permissions). Precisa de uma pessoa."
+              continue
+            fi
+            for wf in ci-checks.yml deploy.yml codeql.yml; do
+              gh workflow run "$wf" --ref "$branch" || echo "::warning::não disparou $wf na $branch"
+            done
+            note "correção automática em $pr_url."
+          done < "$RUNNER_TEMP/alertas.tsv"
+
+          # Issue com a situação de cada alerta; fecha quando não sobra nenhum.
+          issue="$(gh issue list --state open --label "$LABEL" --json number --jq '.[0].number // empty')"
+          if [ -z "$report" ]; then
+            echo "Nenhum alerta do CodeQL aberto na main."
+            if [ -n "$issue" ]; then gh issue close "$issue" --comment "Nenhum alerta do CodeQL aberto na main."; fi
             exit 0
           fi
-          n="$(printf '%s\n' "$alerts" | wc -l | tr -d ' ')"
-          body="$(printf 'O CodeQL tem %s alerta(s) aberto(s) na main:\n\n%s\n\nA rotina diária de correção lê esta lista, corrige no código e abre o PR. A issue fecha sozinha quando não sobrar nenhum.\n' "$n" "$alerts")"
+          body="$(printf 'Alertas do CodeQL abertos na main e o que a correção automática fez com cada um:\n\n%s\nEsta issue é atualizada sozinha (seguranca-alertas.yml) e fecha quando não sobrar nenhum alerta.\n' "$report")"
           if [ -n "$issue" ]; then
-            gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+            gh issue edit "$issue" --body "$body"
           else
-            gh label create "$LABEL" --repo "$GITHUB_REPOSITORY" --color B60205 --description "Alerta do CodeQL aberto na main (automático)" 2>/dev/null || true
-            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label "$LABEL" --body "$body"
+            gh label create "$LABEL" --color B60205 --description "Alerta do CodeQL aberto na main (automático)" 2>/dev/null || true
+            gh issue create --title "$TITLE" --label "$LABEL" --body "$body"
           fi
-          printf '%s\n' "$alerts" | tee -a "$GITHUB_STEP_SUMMARY"
+          printf '%s' "$report" | tee -a "$GITHUB_STEP_SUMMARY"

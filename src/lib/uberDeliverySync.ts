@@ -17,7 +17,6 @@ import { getSettings } from '@/lib/settings';
 import { geocodeCep } from '@/lib/shipping-pricing';
 import { fetchRoute, type RoutePoint } from '@/lib/routing';
 import { uberGetDelivery } from '@/lib/uber-direct';
-import { uberPushMessage } from '@/lib/uberMessages';
 
 type DocRef = FirebaseFirestore.DocumentReference;
 type DocData = FirebaseFirestore.DocumentData;
@@ -42,6 +41,31 @@ const STATUS_NOTE: Record<string, string> = {
   canceled:        'Entrega Uber Direct cancelada',
   returned:        'Pacote devolvido pelo Uber Direct',
 };
+
+// Nem todo status vira notificação, só os que exigem atenção/ação do
+// seller (chegou pra coletar, terminou, ou deu problema). "pickup_complete"
+// e "dropoff" ficam só no histórico pra não empilhar push demais no
+// celular pra cada micro-atualização da corrida.
+// Map, não objeto: o status vem do webhook da Uber, e num objeto comum
+// "constructor" ou "toString" achariam um método herdado e o chamariam.
+const PUSH_ON_STATUS = new Map<string, (itemsSummary: string) => { title: string; body: string }>(Object.entries({
+  pickup: (itemsSummary: string) => ({
+    title: 'Motoboy a caminho da loja 🛵',
+    body: `Uber Direct já está indo buscar: ${itemsSummary}. Deixa separado!`,
+  }),
+  delivered: (itemsSummary: string) => ({
+    title: 'Entrega concluída ✅',
+    body: `${itemsSummary} foi entregue pelo Uber Direct.`,
+  }),
+  canceled: (itemsSummary: string) => ({
+    title: 'Entrega Uber Direct cancelada ⚠️',
+    body: `Precisa despachar de novo: ${itemsSummary}`,
+  }),
+  returned: (itemsSummary: string) => ({
+    title: 'Pacote devolvido pelo Uber Direct ⚠️',
+    body: `${itemsSummary} voltou pra loja, confira o pedido.`,
+  }),
+}));
 
 const IN_APP_TYPE = new Map<string, 'uber_pickup' | 'uber_delivered' | 'uber_problem'>([
   ['pickup', 'uber_pickup'], ['delivered', 'uber_delivered'], ['canceled', 'uber_problem'], ['returned', 'uber_problem'],
@@ -209,11 +233,10 @@ export async function applyUberStatus(
     await ensureRoutePoints(orderRef, order, { vehicleType: extra.courier?.vehicle_type });
   }
 
-  // Aviso para a equipe (lib/uberMessages.ts): só coleta, entrega e problema.
-  const items = (order.items ?? []) as { productName: string; quantity: number }[];
-  const push = uberPushMessage(uberStatus, summarizeOrderItems(items));
-  if (push) {
-    const { title, body } = push;
+  const pushBuilder = PUSH_ON_STATUS.get(uberStatus);
+  if (pushBuilder) {
+    const items = (order.items ?? []) as { productName: string; quantity: number }[];
+    const { title, body } = pushBuilder(summarizeOrderItems(items));
     // Best-effort, notifySeller nunca lança, só loga falha internamente.
     await notifySeller({
       title,
