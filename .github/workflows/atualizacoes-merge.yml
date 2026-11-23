@@ -1,9 +1,10 @@
 name: Atualizações · merge automático
 
-# Atualização de dependência (Dependabot) e correção de vulnerabilidade
-# (seguranca-auditoria.yml) entram sozinhas na main quando TODOS os checks do
+# Atualização de dependência (Dependabot), correção de vulnerabilidade
+# (seguranca-auditoria.yml) e correção de alerta do CodeQL
+# (seguranca-alertas.yml) entram sozinhas na main quando TODOS os checks do
 # commit passaram: testes, regras do Firestore, build, e2e, CodeQL e a revisão
-# de dependências. O App Hosting publica a main sozinho, e a rotina de saúde
+# de dependências. A do CodeQL só entra se o alerta fechou na branch. O App Hosting publica a main sozinho, e a rotina de saúde
 # (saude-site.yml) volta a versão anterior se o site cair depois.
 #
 # Roda quando o workflow de deploy (o que tem o e2e) termina num PR. Não faz
@@ -33,6 +34,7 @@ jobs:
       pull-requests: write  # merge
       actions: write        # rodar de novo o que falhou e disparar o teste da main
       checks: read
+      security-events: read # o alerta do CodeQL fechou na branch da correção
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -54,7 +56,7 @@ jobs:
           set -euo pipefail
           # Só branches de atualização automática...
           case "$BRANCH" in
-            dependabot/*|deps/auditoria) ;;
+            dependabot/*|deps/auditoria|seguranca/codeql-*) ;;
             *) echo "Não é atualização automática."; exit 0 ;;
           esac
           pr="$(gh pr list --state open --head "$BRANCH" --json number,author,headRefOid,isDraft --jq '.[0] // empty')"
@@ -88,6 +90,20 @@ jobs:
           bad="$(checks '[.check_runs[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not)) | .name] | join(", ")')"
           if [ -n "$bad" ]; then echo "PR #$num: ainda sem passar: $bad. Fica aberta."; exit 0; fi
 
+          # Correção de alerta do CodeQL: só entra se o CodeQL analisou este
+          # commit e o alerta não aparece mais na branch.
+          if [[ "$BRANCH" == seguranca/codeql-* ]]; then
+            n="${BRANCH#seguranca/codeql-}"
+            if ! [[ "$n" =~ ^[0-9]+$ ]]; then echo "Branch estranha: $BRANCH."; exit 0; fi
+            sleep 60  # o GitHub ainda processa o resultado do CodeQL
+            analyzed="$(gh api "repos/$GH_REPO/code-scanning/analyses?ref=refs/heads/$BRANCH&per_page=20" --jq "[.[] | select(.commit_sha == \"$SHA\")] | length" || echo 0)"
+            still_open="$(gh api --paginate "repos/$GH_REPO/code-scanning/alerts?ref=refs/heads/$BRANCH&state=open&per_page=100" --jq ".[] | select(.number == $n) | .number" || echo erro)"
+            if [ "$analyzed" = "0" ] || [ -n "$still_open" ]; then
+              echo "PR #$num: o alerta #$n não fechou nesta branch (análises do commit: $analyzed). Fica aberta."
+              exit 0
+            fi
+          fi
+
           title="$(gh pr view "$num" --json title --jq .title)"
           subject="$title (#$num)"
           # Título longo do Dependabot: encurta mantendo o nome do pacote
@@ -100,6 +116,8 @@ jobs:
             # Merge feito pelo GITHUB_TOKEN não dispara workflows: roda a
             # validação na main (o site, o App Hosting publica sozinho).
             gh workflow run deploy.yml --ref main || echo "::warning::não disparou o teste da main"
+            # Nem o CodeQL: sem ele, o alerta corrigido não fecha na main.
+            gh workflow run codeql.yml --ref main || echo "::warning::não disparou o CodeQL da main"
           else
             echo "::warning::PR #$num: o merge não foi aceito agora (conflito ou regra da branch). O Dependabot refaz a PR e ela é testada de novo."
           fi

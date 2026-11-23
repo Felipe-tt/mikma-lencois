@@ -11,6 +11,10 @@ on:
     branches: [main]
   schedule:
     - cron: '23 9 * * 1'
+  # Disparado pela correção automática (seguranca-alertas.yml) na branch do
+  # PR e pelo merge automático na main: o que o GITHUB_TOKEN faz não dispara
+  # o push nem o pull_request.
+  workflow_dispatch:
 
 permissions:
   contents: read
