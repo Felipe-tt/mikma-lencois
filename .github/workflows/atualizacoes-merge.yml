@@ -4,45 +4,57 @@ name: Atualizações · merge automático
 # (seguranca-auditoria.yml) e correção de alerta do CodeQL
 # (seguranca-alertas.yml) entram sozinhas na main quando TODOS os checks do
 # commit passaram: testes, regras do Firestore, build, e2e, CodeQL e a revisão
-# de dependências. A do CodeQL só entra se o alerta fechou na branch. O App Hosting publica a main sozinho, e a rotina de saúde
-# (saude-site.yml) volta a versão anterior se o site cair depois.
+# de dependências. A do CodeQL só entra se o alerta fechou na branch.
 #
-# Roda quando o workflow de deploy (o que tem o e2e) termina num PR. Não faz
-# checkout nem roda o código do PR: só lê os checks e faz o merge pela API.
-# PR de pessoa (ou de outro bot) nunca entra por aqui.
+# Dois jeitos de rodar:
+# - quando o workflow de deploy (o que tem o e2e) termina num PR do
+#   Dependabot;
+# - a cada 15 minutos, varrendo os PRs abertos pelos bots. Os testes que o
+#   próprio GitHub Actions dispara (nos PRs das correções automáticas) não
+#   acordam outro workflow quando terminam: regra do GitHub. Sem a varredura,
+#   esses PRs ficavam verdes e parados.
+# Não faz checkout nem roda o código do PR: só lê os checks e faz o merge
+# pela API. PR de pessoa (ou de outro bot) nunca entra por aqui.
 
 on:
   workflow_run:
     workflows: ["Deploy · Mikma Lençóis"]
     types: [completed]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 permissions: {}
 
 concurrency:
-  group: atualizacoes-merge-${{ github.event.workflow_run.head_branch }}
+  group: atualizacoes-merge-${{ github.event.workflow_run.head_branch || 'varredura' }}
   cancel-in-progress: false
 
 jobs:
   merge:
     if: >-
-      (github.event.workflow_run.event == 'pull_request' || github.event.workflow_run.event == 'workflow_dispatch')
-      && github.event.workflow_run.head_branch != 'main'
+      github.event_name != 'workflow_run'
+      || ((github.event.workflow_run.event == 'pull_request' || github.event.workflow_run.event == 'workflow_dispatch')
+          && github.event.workflow_run.head_branch != 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: write       # merge
       pull-requests: write  # merge
-      actions: write        # rodar de novo o que falhou e disparar o teste da main
+      actions: write        # rodar de novo o que falhou e disparar os testes da main
       checks: read
       security-events: read # o alerta do CodeQL fechou na branch da correção
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
+      EVENT: ${{ github.event_name }}
       RUN_ID: ${{ github.event.workflow_run.id }}
       ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
       CONCLUSION: ${{ github.event.workflow_run.conclusion }}
       SHA: ${{ github.event.workflow_run.head_sha }}
       BRANCH: ${{ github.event.workflow_run.head_branch }}
+      # Os checks que a regra da main exige.
+      REQUIRED: 'validate e2e build-and-deploy'
     steps:
       - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
@@ -54,70 +66,104 @@ jobs:
       - name: Conferir os checks e fazer o merge
         run: |
           set -euo pipefail
-          # Só branches de atualização automática...
-          case "$BRANCH" in
-            dependabot/*|deps/auditoria|seguranca/codeql-*) ;;
-            *) echo "Não é atualização automática."; exit 0 ;;
-          esac
-          pr="$(gh pr list --state open --head "$BRANCH" --json number,author,headRefOid,isDraft --jq '.[0] // empty')"
-          if [ -z "$pr" ]; then echo "Sem PR aberto para a branch."; exit 0; fi
-          num="$(jq -r .number <<<"$pr")"
-          author="$(jq -r .author.login <<<"$pr")"
-          # ...aberta por um dos bots de atualização, no mesmo commit testado.
-          case "$author" in
-            dependabot|app/dependabot|'dependabot[bot]'|github-actions|app/github-actions|'github-actions[bot]') ;;
-            *) echo "PR #$num é de $author: fica para revisão."; exit 0 ;;
-          esac
-          if [ "$(jq -r .headRefOid <<<"$pr")" != "$SHA" ]; then echo "PR #$num mudou depois deste teste."; exit 0; fi
-          if [ "$(jq -r .isDraft <<<"$pr")" = "true" ]; then echo "PR #$num é rascunho."; exit 0; fi
+          merged=0
 
-          if [ "$CONCLUSION" != "success" ]; then
-            # Falha passageira (rede, runner): roda de novo, uma vez, o que falhou.
-            if [ "$CONCLUSION" = "failure" ] && [ "$ATTEMPT" = "1" ]; then
-              gh run rerun "$RUN_ID" --failed && echo "PR #$num: rodando de novo o que falhou."
-            else
-              echo "PR #$num: os testes não passaram ($CONCLUSION). Fica aberta."
+          # Só branches de atualização automática, abertas por um dos bots.
+          automatic_branch() {
+            case "$1" in dependabot/*|deps/auditoria|seguranca/codeql-*) return 0 ;; *) return 1 ;; esac
+          }
+          bot_author() {
+            case "$1" in dependabot|app/dependabot|'dependabot[bot]'|github-actions|app/github-actions|'github-actions[bot]') return 0 ;; *) return 1 ;; esac
+          }
+
+          # Faz o merge do PR $1 (branch $2, commit $3) se tudo passou.
+          # $4 = 1 espera os checks terminarem (logo depois do deploy); 0 só olha.
+          try_merge() {
+            local num="$1" branch="$2" sha="$3" wait="$4" checks bad missing title subject n analyzed still_open
+            if [ "$wait" = 1 ]; then
+              # Os outros checks do mesmo commit (CodeQL, revisão de dependências...).
+              for _ in $(seq 1 40); do
+                [ "$(gh api "repos/$GH_REPO/commits/$sha/check-runs?per_page=100" --jq '[.check_runs[] | select(.status != "completed")] | length')" = "0" ] && break
+                sleep 30
+              done
             fi
-            exit 0
-          fi
+            checks="$(gh api "repos/$GH_REPO/commits/$sha/check-runs?per_page=100")"
+            bad="$(jq -r '[.check_runs[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not)) | .name] | join(", ")' <<<"$checks")"
+            if [ -n "$bad" ]; then echo "PR #$num: ainda sem passar: $bad. Fica aberta."; return 0; fi
+            # Sem os checks obrigatórios (ainda não rodaram), nada de merge.
+            missing=""
+            for c in $REQUIRED; do
+              jq -e --arg c "$c" '[.check_runs[] | select(.name == $c and .conclusion == "success")] | length > 0' <<<"$checks" >/dev/null || missing+=" $c"
+            done
+            if [ -n "$missing" ]; then echo "PR #$num: faltam os checks:$missing. Fica aberta."; return 0; fi
 
-          # Os outros checks do mesmo commit (CodeQL, revisão de dependências...).
-          checks() { gh api "repos/$GH_REPO/commits/$SHA/check-runs?per_page=100" --jq "$1"; }
-          for _ in $(seq 1 40); do
-            [ "$(checks '[.check_runs[] | select(.status != "completed")] | length')" = "0" ] && break
-            sleep 30
-          done
-          bad="$(checks '[.check_runs[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not)) | .name] | join(", ")')"
-          if [ -n "$bad" ]; then echo "PR #$num: ainda sem passar: $bad. Fica aberta."; exit 0; fi
+            # Correção de alerta do CodeQL: só entra se o CodeQL analisou este
+            # commit e o alerta não aparece mais na branch.
+            if [[ "$branch" == seguranca/codeql-* ]]; then
+              n="${branch#seguranca/codeql-}"
+              if ! [[ "$n" =~ ^[0-9]+$ ]]; then echo "Branch estranha: $branch."; return 0; fi
+              [ "$wait" = 1 ] && sleep 60  # o GitHub ainda processa o resultado do CodeQL
+              analyzed="$(gh api "repos/$GH_REPO/code-scanning/analyses?ref=refs/heads/$branch&per_page=20" --jq "[.[] | select(.commit_sha == \"$sha\")] | length" || echo 0)"
+              still_open="$(gh api --paginate "repos/$GH_REPO/code-scanning/alerts?ref=refs/heads/$branch&state=open&per_page=100" --jq ".[] | select(.number == $n) | .number" || echo erro)"
+              if [ "$analyzed" = "0" ] || [ -n "$still_open" ]; then
+                echo "PR #$num: o alerta #$n não fechou nesta branch (análises do commit: $analyzed). Fica aberta."
+                return 0
+              fi
+            fi
 
-          # Correção de alerta do CodeQL: só entra se o CodeQL analisou este
-          # commit e o alerta não aparece mais na branch.
-          if [[ "$BRANCH" == seguranca/codeql-* ]]; then
-            n="${BRANCH#seguranca/codeql-}"
-            if ! [[ "$n" =~ ^[0-9]+$ ]]; then echo "Branch estranha: $BRANCH."; exit 0; fi
-            sleep 60  # o GitHub ainda processa o resultado do CodeQL
-            analyzed="$(gh api "repos/$GH_REPO/code-scanning/analyses?ref=refs/heads/$BRANCH&per_page=20" --jq "[.[] | select(.commit_sha == \"$SHA\")] | length" || echo 0)"
-            still_open="$(gh api --paginate "repos/$GH_REPO/code-scanning/alerts?ref=refs/heads/$BRANCH&state=open&per_page=100" --jq ".[] | select(.number == $n) | .number" || echo erro)"
-            if [ "$analyzed" = "0" ] || [ -n "$still_open" ]; then
-              echo "PR #$num: o alerta #$n não fechou nesta branch (análises do commit: $analyzed). Fica aberta."
+            title="$(gh pr view "$num" --json title --jq .title)"
+            subject="$title (#$num)"
+            # Título longo do Dependabot: encurta mantendo o nome do pacote
+            # ("bump X from 1 to 2" vira "bump X to 2") antes de desistir dele.
+            [ "${#subject}" -le 72 ] || subject="$(sed -E 's/ from [^ ]+ to / to /; s/ across [0-9]+ director(y|ies)//' <<<"$title") (#$num)"
+            [ "${#subject}" -le 72 ] || subject="build(deps): atualização automática (#$num)"
+            if gh pr merge "$num" --squash --delete-branch --match-head-commit "$sha" \
+                --subject "$subject" --body "Merge automático: todos os checks passaram."; then
+              echo "PR #$num: merge feito."
+              merged=1
+            else
+              echo "::warning::PR #$num: o merge não foi aceito agora (conflito ou regra da branch). Fica para a próxima rodada."
+            fi
+          }
+
+          if [ "$EVENT" = workflow_run ]; then
+            # Logo depois do deploy de um PR: o PR daquela branch, no commit testado.
+            if ! automatic_branch "$BRANCH"; then echo "Não é atualização automática."; exit 0; fi
+            pr="$(gh pr list --state open --head "$BRANCH" --json number,author,headRefOid,isDraft --jq '.[0] // empty')"
+            if [ -z "$pr" ]; then echo "Sem PR aberto para a branch."; exit 0; fi
+            num="$(jq -r .number <<<"$pr")"
+            if ! bot_author "$(jq -r .author.login <<<"$pr")"; then echo "PR #$num é de pessoa: fica para revisão."; exit 0; fi
+            if [ "$(jq -r .headRefOid <<<"$pr")" != "$SHA" ]; then echo "PR #$num mudou depois deste teste."; exit 0; fi
+            if [ "$(jq -r .isDraft <<<"$pr")" = "true" ]; then echo "PR #$num é rascunho."; exit 0; fi
+            if [ "$CONCLUSION" != "success" ]; then
+              # Falha passageira (rede, runner): roda de novo, uma vez, o que falhou.
+              if [ "$CONCLUSION" = "failure" ] && [ "$ATTEMPT" = "1" ]; then
+                gh run rerun "$RUN_ID" --failed && echo "PR #$num: rodando de novo o que falhou."
+              else
+                echo "PR #$num: os testes não passaram ($CONCLUSION). Fica aberta."
+              fi
               exit 0
             fi
+            try_merge "$num" "$BRANCH" "$SHA" 1
+          else
+            # Varredura: todo PR aberto pelos bots numa branch automática.
+            gh pr list --state open --json number,headRefName,headRefOid,author,isDraft \
+              --jq '.[] | [.number, .headRefName, .headRefOid, .author.login, .isDraft] | @tsv' > "$RUNNER_TEMP/prs.tsv"
+            while IFS=$'\t' read -r num branch sha author draft; do
+              [ -n "$num" ] || continue
+              automatic_branch "$branch" || continue
+              bot_author "$author" || continue
+              [ "$draft" = "false" ] || continue
+              try_merge "$num" "$branch" "$sha" 0
+            done < "$RUNNER_TEMP/prs.tsv"
           fi
 
-          title="$(gh pr view "$num" --json title --jq .title)"
-          subject="$title (#$num)"
-          # Título longo do Dependabot: encurta mantendo o nome do pacote
-          # ("bump X from 1 to 2" vira "bump X to 2") antes de desistir dele.
-          [ "${#subject}" -le 72 ] || subject="$(sed -E 's/ from [^ ]+ to / to /; s/ across [0-9]+ director(y|ies)//' <<<"$title") (#$num)"
-          [ "${#subject}" -le 72 ] || subject="build(deps): atualização automática (#$num)"
-          if gh pr merge "$num" --squash --delete-branch --match-head-commit "$SHA" \
-              --subject "$subject" --body "Merge automático: todos os checks passaram."; then
-            echo "PR #$num: merge feito."
-            # Merge feito pelo GITHUB_TOKEN não dispara workflows: roda a
-            # validação na main (o site, o App Hosting publica sozinho).
-            gh workflow run deploy.yml --ref main || echo "::warning::não disparou o teste da main"
-            # Nem o CodeQL: sem ele, o alerta corrigido não fecha na main.
-            gh workflow run codeql.yml --ref main || echo "::warning::não disparou o CodeQL da main"
-          else
-            echo "::warning::PR #$num: o merge não foi aceito agora (conflito ou regra da branch). O Dependabot refaz a PR e ela é testada de novo."
+          if [ "$merged" = 1 ]; then
+            # Merge feito pelo GITHUB_TOKEN não dispara workflows: roda aqui a
+            # validação da main (o App Hosting publica sozinho), o CodeQL (sem
+            # ele o alerta corrigido não fecha), a saúde do site e a lista de
+            # alertas (que espera o CodeQL da main terminar).
+            for wf in deploy.yml codeql.yml saude-site.yml seguranca-alertas.yml; do
+              gh workflow run "$wf" --ref main || echo "::warning::não disparou $wf na main"
+            done
           fi
